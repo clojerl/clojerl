@@ -95,7 +95,7 @@ char_type(_, _) -> symbol.
 
 -spec read_number(state()) -> state().
 read_number(#{forms := Forms, src := Src} = State) ->
-  {SrcRest, Current} = consume(Src, [number, symbol]),
+  {Current, SrcRest} = consume(Src, [number, symbol]),
   Number = clj_utils:parse_number(Current),
   State#{forms => [Number | Forms],
          src   => SrcRest}.
@@ -125,19 +125,59 @@ read_string(#{src := <<>>}) ->
   throw(<<"EOF while reading string">>).
 
 -spec escape_char(binary()) -> {binary(), binary()}.
-escape_char(<<Char, Rest/binary>>) ->
-  Escaped =
-    case Char of
-      $t -> <<"\t">>;
-      $r -> <<"\r">>;
-      $n -> <<"\n">>;
-      $\ -> <<"\\">>;
-      $" -> <<"\"">>;
-      $b -> <<"\b">>;
-      $f -> <<"\f">>;
-      $u -> <<"unicode">>
-    end,
-  {Escaped, Rest}.
+escape_char(<<Char, Rest/binary>> = Src) ->
+  case Char of
+    $t -> {<<"\t">>, Rest};
+    $r -> {<<"\r">>, Rest};
+    $n -> {<<"\n">>, Rest};
+    $\ -> {<<"\\">>, Rest};
+    $" -> {<<"\"">>, Rest};
+    $b -> {<<"\b">>, Rest};
+    $f -> {<<"\f">>, Rest};
+    $u ->
+      %% Hexa unicode
+      {CodePoint, NewRest} = unicode_char(Rest, 16, 4, true),
+      {unicode:characters_to_binary([CodePoint]), NewRest};
+    _  ->
+      %% Octal unicode
+      case char_type(Char, Rest) of
+        number ->
+          case unicode_char(Src, 8, 3, false) of
+            {CodePoint, _} when CodePoint > 8#337 ->
+              throw(<<"Octal escape sequence must be in range [0, 377]">>);
+            {CodePoint, NewRest} ->
+              {unicode:characters_to_binary([CodePoint]), NewRest}
+          end;
+        _ ->
+          throw(<<"Unsupported escape character: \\", Char>>)
+      end
+  end.
+
+-spec unicode_char(binary(), integer(), integer(), Exact :: boolean()) ->
+  {binary(), binary()}.
+unicode_char(Src, Base, Length, IsExact) ->
+  {Number, Rest} = consume(Src, [number, symbol]),
+  Size = case IsExact of
+           true -> size(Number);
+           false -> Length
+         end,
+  case Size of
+    Length ->
+      try
+        EscapedChar = binary_to_integer(Number, Base),
+        {EscapedChar, Rest}
+      catch
+        _:badarg ->
+          BaseBin = integer_to_binary(Base),
+          throw(<<"Number '", Number/binary,
+                  "' is not in base ", BaseBin/binary >>)
+      end;
+    NumLength ->
+      LengthBin = integer_to_binary(Length),
+      NumLengthBin = integer_to_binary(NumLength),
+      throw(<<"Invalid character length: ", NumLengthBin/binary,
+              ", should be ", LengthBin/binary>>)
+  end.
 
 read_keyword(_) -> keyword.
 
@@ -182,5 +222,5 @@ do_consume(<<X, Rest/binary>> = Src, Acc, Types) ->
   Type = char_type(X, Rest),
   case lists:member(Type, Types) of
     true -> do_consume(Rest, <<Acc/binary, X>>, Types);
-    false -> {Src, Acc}
+    false -> {Acc, Src}
   end.
