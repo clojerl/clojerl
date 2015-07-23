@@ -11,6 +11,9 @@
 -define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
 -define(RATIO_PATTERN, "^([-+]?[0-9]+)/([0-9]+)$").
 
+-type ratio() :: {ratio, integer(), integer()}.
+
+-spec parse_number(binary()) -> integer() | float() | ratio().
 parse_number(Number) ->
   Result = case number_type(Number) of
              int       -> parse_int(Number);
@@ -28,6 +31,7 @@ parse_number(Number) ->
 
 %% @doc Valid integers can be either in decimal, octal, hexadecimal or any
 %%      base specified (e.g. `2R010` is binary for `2`).
+-spec parse_int(binary()) -> integer() | undefined.
 parse_int(IntBin) ->
   {match, [_ | Groups]} = re:run(IntBin, ?INT_PATTERN, [{capture, all, list}]),
   case int_properties(Groups) of
@@ -39,6 +43,9 @@ parse_int(IntBin) ->
       undefined
   end.
 
+-spec int_properties([string()]) -> {zero | undefined | {integer(), string()},
+                                     boolean(),
+                                     boolean()}.
 int_properties(Groups) ->
   Props = lists:map(fun(X) -> X =/= "" end, Groups),
   Result =
@@ -49,13 +56,16 @@ int_properties(Groups) ->
       [_, _, _, _, true | _]-> {8, nth(5, Groups)};
       [_, _, _, _, _ ,_, true | _]->
         Base = list_to_integer(lists:nth(6, Groups)),
-        {Base, lists:nth(7, Groups)}
+        {Base, lists:nth(7, Groups)};
+      _ ->
+        undefined
     end,
 
   Arbitrary = nth(8, Props, false),
   Negate = nth(1, Props),
   {Result, Arbitrary, case Negate of true -> -1; false -> 1 end}.
 
+-spec parse_float(binary()) -> float().
 parse_float(FloatBin) ->
   {match, [_ | Groups]} = re:run(FloatBin, ?FLOAT_PATTERN, [{capture, all, list}]),
   Decimal = nth(3, Groups, "") =/= "",
@@ -70,6 +80,7 @@ parse_float(FloatBin) ->
       list_to_float(FloatStr)
   end.
 
+-spec parse_ratio(binary()) -> ratio().
 parse_ratio(RatioBin) ->
   {match, [_ | Groups]} = re:run(RatioBin, ?RATIO_PATTERN, [{capture, all, list}]),
   Numerator = nth(1, Groups),
@@ -79,7 +90,7 @@ parse_ratio(RatioBin) ->
    list_to_integer(Denominator)}.
 
 number_type(Number) ->
-  Regex = #{int => ?INT_PATTERN,
+  Regex = #{int   => ?INT_PATTERN,
             float => ?FLOAT_PATTERN,
             ratio => ?RATIO_PATTERN},
   Fun = fun(Type, RE, Acc) ->
