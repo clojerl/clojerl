@@ -5,7 +5,8 @@
 -export(
    [
     number/1,
-    string/1
+    string/1,
+    keyword/1
    ]
   ).
 
@@ -37,7 +38,7 @@ number(_Config) ->
 
   [0, 1, 2.0, 3.0e-10] = clj_reader:read_all(<<"0N 1 2.0 3e-10">>),
 
-  {comment, ""}.
+  {comments, ""}.
 
 string(_Config) ->
   <<"hello">> = clj_reader:read(<<"\"hello\"">>),
@@ -82,4 +83,15 @@ string(_Config) ->
        catch _:_ -> ok
        end,
 
-  {comment, ""}.
+  {comments, ""}.
+
+keyword(_Config) ->
+  Env = #{ns => 'some-ns'},
+
+  {keyword, nil, 'hello-world'} =
+    clj_reader:read(<<":hello-world">>, Env),
+
+  {keyword, 'some-ns', 'hello-world'} =
+    clj_reader:read(<<"::hello-world">>, Env),
+
+  {comments, ""}.

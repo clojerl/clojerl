@@ -1,14 +1,16 @@
 -module(clj_reader).
 
--export([read/1, read_all/1]).
+-export([
+         read/1,
+         read/2,
+         read_all/1,
+         read_all/2
+        ]).
 
--type attrs() :: #{}.
--type ast_node() :: #{type => atom,
-                      attrs => attrs(),
-                      children => [atom()]}.
+-include("include/clj_types.hrl").
 
 -type state() :: #{src => binary(),
-                   forms => [ast_node()]}.
+                   forms => [sexpr()]}.
 
 -type char_type() :: whitespace | number | string
                    | keyword | comment | quote
@@ -18,16 +20,25 @@
                    | unmatched_delim | char
                    | arg | dispatch | symbol.
 
--spec read(binary()) -> ast_node().
+-spec read(binary()) -> sexpr().
 read(Src) ->
-  State = #{src => Src, forms => []},
+  read(Src, clj_env:empty_env()).
+
+-spec read(binary(), clj_env:env()) -> sexpr().
+read(Src, Env) ->
+  State = #{src => Src, forms => [], env => Env},
   #{forms := Forms} = dispatch(State),
   hd(Forms).
 
--spec read_all(state()) -> [ast_node()].
+-spec read_all(state()) -> [sexpr()].
 read_all(Src) ->
+  read_all(Src, clj_env:empty_env()).
+
+-spec read_all(state(), clj_env:env()) -> [sexpr()].
+read_all(Src, Env) ->
   State = #{src => Src,
             forms => [],
+            env => Env,
             all => true},
   #{forms := Forms} = dispatch(State),
   lists:reverse(Forms).
@@ -191,7 +202,10 @@ unicode_char(Src, Base, Length, IsExact) ->
 %% Keyword
 %%------------------------------------------------------------------------------
 
-read_keyword(_) -> keyword.
+read_keyword(#{forms := Forms,
+             src := <<_, Src/binary>>} = State) ->
+  State#{forms => [keyword | Forms],
+         src => Src}.
 
 %%------------------------------------------------------------------------------
 %% Comment
@@ -278,7 +292,10 @@ read_dispatch(_) -> dispatch.
 %% Symbol
 %%------------------------------------------------------------------------------
 
-read_symbol(_) -> symbol.
+read_symbol(#{forms := Forms,
+              src := <<_, Src/binary>>} = State) ->
+  State#{forms => [symbol | Forms],
+         src => Src}.
 
 %%------------------------------------------------------------------------------
 %% Utility functions
