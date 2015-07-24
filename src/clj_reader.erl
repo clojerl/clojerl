@@ -19,7 +19,9 @@ read(Src) ->
 
 -spec read(binary(), clj_env:env()) -> sexpr().
 read(Src, Env) ->
-  State = #{src => Src, forms => [], env => Env},
+  State = #{src => Src,
+            forms => [],
+            env => Env},
   #{forms := Forms} = dispatch(State),
   hd(Forms).
 
@@ -39,29 +41,30 @@ read_all(Src, Env) ->
 -spec dispatch(state()) -> state().
 dispatch(#{src := <<>>} = State) ->
   State;
-dispatch(#{src := Src} = State) ->
-  <<First, Rest/binary>> = Src,
-  NewState = case clj_utils:char_type(First, Rest) of
-               whitespace -> dispatch(State#{src => Rest});
-               number -> read_number(State);
-               string -> read_string(State);
-               keyword -> read_keyword(State);
-               comment -> read_comment(State);
-               quote -> read_quote(State);
-               deref -> read_deref(State);
-               meta -> read_meta(State);
-               syntax_quote -> read_syntax_quote(State);
-               unquote -> read_unquote(State);
-               list -> read_list(State);
-               vector -> read_vector(State);
-               map -> read_map(State);
-               unmatched_delim -> read_unmatched_delim(State);
-               char -> read_char(State);
-               arg -> read_arg(State);
-               dispatch -> read_dispatch(State);
-               symbol -> read_symbol(State)
-             end,
-  next(NewState).
+dispatch(State) ->
+  next(read_one(State)).
+
+read_one(#{src := <<First, Rest/binary>>} = State) ->
+  case clj_utils:char_type(First, Rest) of
+    whitespace -> dispatch(State#{src => Rest});
+    number -> read_number(State);
+    string -> read_string(State);
+    keyword -> read_keyword(State);
+    comment -> read_comment(State);
+    quote -> read_quote(State);
+    deref -> read_deref(State);
+    meta -> read_meta(State);
+    syntax_quote -> read_syntax_quote(State);
+    unquote -> read_unquote(State);
+    list -> read_list(State);
+    vector -> read_vector(State);
+    map -> read_map(State);
+    unmatched_delim -> read_unmatched_delim(State);
+    char -> read_char(State);
+    arg -> read_arg(State);
+    dispatch -> read_dispatch(State);
+    symbol -> read_symbol(State)
+  end.
 
 -spec next(state()) -> state().
 next(#{all := true} = State) -> dispatch(State);
@@ -166,7 +169,7 @@ unicode_char(Src, Base, Length, IsExact) ->
 %%------------------------------------------------------------------------------
 
 read_keyword(#{forms := Forms,
-               src := <<_, Src/binary>>,
+               src := <<$:, Src/binary>>,
                env := Env} = State) ->
   {Token, RestSrc} = read_token(Src),
   Keyword = case clj_utils:parse_symbol(Token) of
@@ -186,6 +189,25 @@ read_keyword(#{forms := Forms,
          src => RestSrc}.
 
 %%------------------------------------------------------------------------------
+%% Symbol
+%%------------------------------------------------------------------------------
+
+read_symbol(#{forms := Forms,
+              src := Src} = State) ->
+  {Token, RestSrc} = read_token(Src),
+  Symbol = case clj_utils:parse_symbol(Token) of
+             {undefined, Name} ->
+               clj_symbol:new(binary_to_atom(Name, utf8));
+             {Namespace, Name} ->
+               clj_symbol:new(binary_to_atom(Namespace, utf8),
+                              binary_to_atom(Name, utf8));
+             undefined ->
+               throw(<<"Invalid symbol ", Token/binary>>)
+           end,
+  State#{forms => [Symbol | Forms],
+         src => RestSrc}.
+
+%%------------------------------------------------------------------------------
 %% Comment
 %%------------------------------------------------------------------------------
 
@@ -196,16 +218,17 @@ read_comment(#{src := Src} = State) ->
 %% Quote
 %%------------------------------------------------------------------------------
 
-read_quote(_) -> quote.
+read_quote(#{src := <<$', Src/binary>>} = State) ->
+  Quote = clj_symbol:new('quote'),
+  wrapped_read(Quote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
 %% Deref
 %%------------------------------------------------------------------------------
 
-read_deref(#{forms := Forms,
-             src := <<_, Src/binary>>} = State) ->
-  State#{forms => [deref | Forms],
-         src => Src}.
+read_deref(#{src := <<$@, Src/binary>>} = State) ->
+  Quote = clj_symbol:new('deref'),
+  wrapped_read(Quote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
 %% Meta
@@ -268,15 +291,6 @@ read_arg(_) -> arg.
 read_dispatch(_) -> dispatch.
 
 %%------------------------------------------------------------------------------
-%% Symbol
-%%------------------------------------------------------------------------------
-
-read_symbol(#{forms := Forms,
-              src := <<_, Src/binary>>} = State) ->
-  State#{forms => [symbol | Forms],
-         src => Src}.
-
-%%------------------------------------------------------------------------------
 %% Utility functions
 %%------------------------------------------------------------------------------
 
@@ -314,3 +328,8 @@ skip_line(Src) ->
   NotNewline = fun(C) -> C =/= $\n andalso C =/= $\r end,
   {_, RestSrc} = consume(Src, NotNewline),
   RestSrc.
+
+wrapped_read(Symbol, State) ->
+  NewState = read_one(State),
+  #{forms := [Expr | Forms]} = NewState,
+  NewState#{forms => [[Symbol, Expr] | Forms]}.

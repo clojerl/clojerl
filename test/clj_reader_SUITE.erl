@@ -7,7 +7,9 @@
     number/1,
     string/1,
     keyword/1,
-    comments/1
+    symbol/1,
+    comment/1,
+    quote/1
    ]
   ).
 
@@ -131,7 +133,38 @@ keyword(_Config) ->
 
   {comments, ""}.
 
-comments(_Config) ->
+symbol(_Config) ->
+
+  Symbol1 = clj_symbol:new('hello-world'),
+  Symbol1 = clj_reader:read(<<"hello-world">>),
+
+  Symbol2 = clj_symbol:new('some-ns', 'hello-world'),
+  Symbol2 = clj_reader:read(<<"some-ns/hello-world">>),
+
+  Symbol3 = clj_symbol:new('another-ns', 'hello-world'),
+  Symbol3 = clj_reader:read(<<"another-ns/hello-world">>),
+
+  Symbol4 = clj_symbol:new('some-ns', '/'),
+  Symbol4 = clj_reader:read(<<"some-ns//">>),
+
+  ct:comment("Error: empty name after namespace"),
+  ok = try clj_reader:read(<<"some-ns/">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Error: colon as last char"),
+  ok = try clj_reader:read(<<"hello-world:">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Error: numeric first char in name"),
+  ok = try clj_reader:read(<<"42hello-world">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+comment(_Config) ->
   BlaKeyword = clj_keyword:new(bla),
 
   ct:comment("Error: single semi-colon"),
@@ -142,5 +175,17 @@ comments(_Config) ->
 
   ct:comment("Error: a bunch semi-colon"),
   [1, BlaKeyword] = clj_reader:read_all(<<"1 ;;;; coment\n :bla ">>),
+
+  {comments, ""}.
+
+quote(_Config) ->
+  QuoteSymbol = clj_symbol:new(quote),
+  ListSymbol = clj_symbol:new(list),
+
+  ct:comment("Quote number"),
+  [QuoteSymbol, 1] = clj_reader:read(<<"'1">>),
+
+  ct:comment("Quote symbol"),
+  [QuoteSymbol, ListSymbol] = clj_reader:read(<<"'list">>),
 
   {comments, ""}.
