@@ -6,7 +6,8 @@
    [
     number/1,
     string/1,
-    keyword/1
+    keyword/1,
+    comments/1
    ]
   ).
 
@@ -127,5 +128,19 @@ keyword(_Config) ->
   ok = try clj_reader:read(<<":42hello-world">>)
        catch _:_ -> ok
        end,
+
+  {comments, ""}.
+
+comments(_Config) ->
+  BlaKeyword = clj_keyword:new(bla),
+
+  ct:comment("Error: single semi-colon"),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 ; coment\n :bla ">>),
+
+  ct:comment("Error: two semi-colon"),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;; coment\n :bla ">>),
+
+  ct:comment("Error: a bunch semi-colon"),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;;;; coment\n :bla ">>),
 
   {comments, ""}.

@@ -189,7 +189,8 @@ read_keyword(#{forms := Forms,
 %% Comment
 %%------------------------------------------------------------------------------
 
-read_comment(_) -> comment.
+read_comment(#{src := Src} = State) ->
+  State#{src => skip_line(Src)}.
 
 %%------------------------------------------------------------------------------
 %% Quote
@@ -308,3 +309,8 @@ is_macro_terminating(Char) ->
   lists:member(Char,
                [$", $;, $@, $^, $`, $~, $(,
                 $), $[, $], ${, $}, $\\ ]).
+
+skip_line(Src) ->
+  NotNewline = fun(C) -> C =/= $\n andalso C =/= $\r end,
+  {_, RestSrc} = consume(Src, NotNewline),
+  RestSrc.
