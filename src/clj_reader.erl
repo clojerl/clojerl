@@ -10,15 +10,8 @@
 -include("include/clj_types.hrl").
 
 -type state() :: #{src => binary(),
-                   forms => [sexpr()]}.
-
--type char_type() :: whitespace | number | string
-                   | keyword | comment | quote
-                   | deref | meta | syntax_quote
-                   | unquote | list | vector
-                   | map | unmatched_delim | char
-                   | unmatched_delim | char
-                   | arg | dispatch | symbol.
+                   forms => [sexpr()],
+                   env => map()}.
 
 -spec read(binary()) -> sexpr().
 read(Src) ->
@@ -48,7 +41,7 @@ dispatch(#{src := <<>>} = State) ->
   State;
 dispatch(#{src := Src} = State) ->
   <<First, Rest/binary>> = Src,
-  NewState = case char_type(First, Rest) of
+  NewState = case clj_utils:char_type(First, Rest) of
                whitespace -> dispatch(State#{src => Rest});
                number -> read_number(State);
                string -> read_string(State);
@@ -73,36 +66,6 @@ dispatch(#{src := Src} = State) ->
 -spec next(state()) -> state().
 next(#{all := true} = State) -> dispatch(State);
 next(State) -> State.
-
--spec char_type(non_neg_integer(), binary()) -> char_type().
-char_type(X, _)
-  when X == $\n; X == $\t; X == $\r; X == $ ; X == $,->
-  whitespace;
-char_type(X, _)
-  when X >= $0, X =< $9 ->
-  number;
-char_type(X, <<Y, _/binary>>)
-  when (X == $+ orelse X == $-),
-       Y >= $0, Y =< $9 ->
-  number;
-char_type($", _) -> string;
-char_type($:, _) -> keyword;
-char_type($;, _) -> comment;
-char_type($', _) -> quote;
-char_type($@, _) -> deref;
-char_type($^, _) -> meta;
-char_type($`, _) -> syntax_quote;
-char_type($~, _) -> unquote;
-char_type($(, _) -> list;
-char_type($[, _) -> vector;
-char_type(${, _) -> map;
-char_type(X, _)
-  when X == $); X == $]; X == $} ->
-  unmatched_delim;
-char_type($\\, _) -> char;
-char_type($%, _) -> arg;
-char_type($#, _) -> dispatch;
-char_type(_, _) -> symbol.
 
 %%------------------------------------------------------------------------------
 %% Numbers
@@ -159,7 +122,7 @@ escape_char(<<Char, Rest/binary>> = Src) ->
       {unicode:characters_to_binary([CodePoint]), NewRest};
     _  ->
       %% Octal unicode
-      case char_type(Char, Rest) of
+      case clj_utils:char_type(Char, Rest) of
         number ->
           case unicode_char(Src, 8, 3, false) of
             {CodePoint, _} when CodePoint > 8#337 ->
@@ -203,9 +166,24 @@ unicode_char(Src, Base, Length, IsExact) ->
 %%------------------------------------------------------------------------------
 
 read_keyword(#{forms := Forms,
-             src := <<_, Src/binary>>} = State) ->
-  State#{forms => [keyword | Forms],
-         src => Src}.
+               src := <<_, Src/binary>>,
+               env := Env} = State) ->
+  {Token, RestSrc} = read_token(Src),
+  Keyword = case clj_utils:parse_symbol(Token) of
+              {undefined, <<$:, Name/binary>>} ->
+                Namespace = maps:get(ns, Env),
+                clj_keyword:new(Namespace,
+                                binary_to_atom(Name, utf8));
+              {undefined, Name} ->
+                clj_keyword:new(binary_to_atom(Name, utf8));
+              {Namespace, Name} ->
+                clj_keyword:new(binary_to_atom(Namespace, utf8),
+                                binary_to_atom(Name, utf8));
+              undefined ->
+                throw(<<"Invalid token: :", Token/binary>>)
+            end,
+  State#{forms => [Keyword | Forms],
+         src => RestSrc}.
 
 %%------------------------------------------------------------------------------
 %% Comment
@@ -301,15 +279,32 @@ read_symbol(#{forms := Forms,
 %% Utility functions
 %%------------------------------------------------------------------------------
 
--spec consume(binary(), [char_type()]) -> {binary(), binary()}.
-consume(Src, Types) ->
-  do_consume(Src, <<>>, Types).
+-spec consume(binary(), [clj_utils:char_type()] | fun()) -> {binary(), binary()}.
+consume(Src, TypesOrPred) ->
+  do_consume(Src, <<>>, TypesOrPred).
 
-do_consume(<<>>, Acc, _Types) ->
+do_consume(<<>>, Acc, _) ->
   {Acc, <<>>};
+do_consume(<<X, Rest/binary>> = Src, Acc, Pred) when is_function(Pred) ->
+  case Pred(X) of
+    true -> do_consume(Rest, <<Acc/binary, X>>, Pred);
+    false -> {Acc, Src}
+  end;
 do_consume(<<X, Rest/binary>> = Src, Acc, Types) ->
-  Type = char_type(X, Rest),
+  Type = clj_utils:char_type(X, Rest),
   case lists:member(Type, Types) of
     true -> do_consume(Rest, <<Acc/binary, X>>, Types);
     false -> {Acc, Src}
   end.
+
+read_token(Src) ->
+  Fun = fun(Char) ->
+            (clj_utils:char_type(Char, <<>>) =/= whitespace)
+              andalso (not is_macro_terminating(Char))
+        end,
+  consume(Src, Fun).
+
+is_macro_terminating(Char) ->
+  lists:member(Char,
+               [$", $;, $@, $^, $`, $~, $(,
+                $), $[, $], ${, $}, $\\ ]).

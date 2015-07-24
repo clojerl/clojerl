@@ -1,8 +1,13 @@
 -module(clj_utils).
 
 -export([
-         parse_number/1
+         char_type/1,
+         char_type/2,
+         parse_number/1,
+         parse_symbol/1
         ]).
+
+-include("include/clj_types.hrl").
 
 -define(INT_PATTERN,
         "^([-+]?)"
@@ -11,7 +16,17 @@
 -define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
 -define(RATIO_PATTERN, "^([-+]?[0-9]+)/([0-9]+)$").
 
--type ratio() :: {ratio, integer(), integer()}.
+-type char_type() :: whitespace | number | string
+                   | keyword | comment | quote
+                   | deref | meta | syntax_quote
+                   | unquote | list | vector
+                   | map | unmatched_delim | char
+                   | unmatched_delim | char
+                   | arg | dispatch | symbol.
+
+%%------------------------------------------------------------------------------
+%% Exported functions
+%%------------------------------------------------------------------------------
 
 -spec parse_number(binary()) -> integer() | float() | ratio().
 parse_number(Number) ->
@@ -28,6 +43,77 @@ parse_number(Number) ->
     _ ->
       Result
   end.
+
+-spec parse_symbol(binary()) -> {namespace(), name()}.
+parse_symbol(<<>>) ->
+  undefined;
+parse_symbol(<<"::", _/binary>>) ->
+  undefined;
+parse_symbol(<<"/">>) ->
+  {undefined, <<"/">>};
+parse_symbol(Str) ->
+  case binary:last(Str) of
+    $: -> undefined;
+    _ ->
+      case binary:split(Str, <<"/">>) of
+        [_Namespace, <<>>] ->
+          undefined;
+        [Namespace, <<"/">>] ->
+          {Namespace, <<"/">>};
+        [Namespace, Name] ->
+          verify_symbol_name({Namespace, Name});
+        [Name] ->
+          verify_symbol_name({undefined, Name})
+      end
+  end.
+
+verify_symbol_name({_, Name} = Result) ->
+  NotNumeric = fun(<<C, _/binary>>) -> char_type(C) =/= number end,
+  NoEndColon = fun(X) -> binary:last(X) =/= $: end,
+  NoSlash = fun(X) -> binary:match(X, <<"/">>) == nomatch end,
+  ApplyPred = fun(Fun) -> Fun(Name) end,
+  case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoSlash]) of
+    true -> Result;
+    false -> undefined
+  end.
+
+-spec char_type(non_neg_integer()) -> char_type().
+char_type(X) -> char_type(X, <<>>).
+
+-spec char_type(non_neg_integer(), binary()) -> char_type().
+char_type(X, _)
+  when X == $\n; X == $\t; X == $\r; X == $ ; X == $,->
+  whitespace;
+char_type(X, _)
+  when X >= $0, X =< $9 ->
+  number;
+char_type(X, <<Y, _/binary>>)
+  when (X == $+ orelse X == $-),
+       Y >= $0, Y =< $9 ->
+  number;
+char_type($", _) -> string;
+char_type($:, _) -> keyword;
+char_type($;, _) -> comment;
+char_type($', _) -> quote;
+char_type($@, _) -> deref;
+char_type($^, _) -> meta;
+char_type($`, _) -> syntax_quote;
+char_type($~, _) -> unquote;
+char_type($(, _) -> list;
+char_type($[, _) -> vector;
+char_type(${, _) -> map;
+char_type(X, _)
+  when X == $); X == $]; X == $} ->
+  unmatched_delim;
+char_type($\\, _) -> char;
+char_type($%, _) -> arg;
+char_type($#, _) -> dispatch;
+char_type(_, _) -> symbol.
+
+
+%%------------------------------------------------------------------------------
+%% Internal helper functions
+%%------------------------------------------------------------------------------
 
 %% @doc Valid integers can be either in decimal, octal, hexadecimal or any
 %%      base specified (e.g. `2R010` is binary for `2`).

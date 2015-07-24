@@ -88,10 +88,44 @@ string(_Config) ->
 keyword(_Config) ->
   Env = #{ns => 'some-ns'},
 
-  {keyword, nil, 'hello-world'} =
-    clj_reader:read(<<":hello-world">>, Env),
+  Keyword1 = clj_keyword:new('hello-world'),
+  Keyword1 = clj_reader:read(<<":hello-world">>, Env),
 
-  {keyword, 'some-ns', 'hello-world'} =
-    clj_reader:read(<<"::hello-world">>, Env),
+  Keyword2 = clj_keyword:new('some-ns', 'hello-world'),
+  Keyword2 = clj_reader:read(<<"::hello-world">>, Env),
+
+  Keyword3 = clj_keyword:new('another-ns', 'hello-world'),
+  Keyword3 = clj_reader:read(<<":another-ns/hello-world">>, Env),
+
+  Keyword4 = clj_keyword:new('/'),
+  Keyword4 = clj_reader:read(<<":/">>, Env),
+
+  Keyword5 = clj_keyword:new('some-ns', '/'),
+  Keyword5 = clj_reader:read(<<":some-ns//">>, Env),
+
+  ct:comment("Error: triple colon :::"),
+  ok = try clj_reader:read(<<":::hello-world">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Error: empty name after namespace"),
+  ok = try clj_reader:read(<<":some-ns/">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Error: colon as last char"),
+  ok = try clj_reader:read(<<":hello-world:">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Error: single colon"),
+  ok = try clj_reader:read(<<":">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Error: numeric first char in name"),
+  ok = try clj_reader:read(<<":42hello-world">>)
+       catch _:_ -> ok
+       end,
 
   {comments, ""}.

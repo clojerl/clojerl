@@ -9,4 +9,10 @@
                        name => name(),
                        meta => map()}.
 
--type sexpr() :: number() | string() | keyword() | symbol().
+-type sexpr()     :: number() | string() | keyword() | symbol().
+
+%% Unsupported / Unused
+
+-type ratio()     :: #{type => ratio,
+                       denom => integer(),
+                       enum => integer()}.
