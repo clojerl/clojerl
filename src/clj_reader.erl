@@ -329,6 +329,8 @@ skip_line(Src) ->
   {_, RestSrc} = consume(Src, NotNewline),
   RestSrc.
 
+wrapped_read(_Symbol, #{src := <<>>}) ->
+  throw(<<"EOF">>);
 wrapped_read(Symbol, State) ->
   NewState = read_one(State),
   #{forms := [Expr | Forms]} = NewState,

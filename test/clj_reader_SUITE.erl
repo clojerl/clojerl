@@ -9,7 +9,8 @@
     keyword/1,
     symbol/1,
     comment/1,
-    quote/1
+    quote/1,
+    deref/1
    ]
   ).
 
@@ -134,7 +135,6 @@ keyword(_Config) ->
   {comments, ""}.
 
 symbol(_Config) ->
-
   Symbol1 = clj_symbol:new('hello-world'),
   Symbol1 = clj_reader:read(<<"hello-world">>),
 
@@ -187,5 +187,33 @@ quote(_Config) ->
 
   ct:comment("Quote symbol"),
   [QuoteSymbol, ListSymbol] = clj_reader:read(<<"'list">>),
+
+  ct:comment("Quote space symbol  "),
+  [QuoteSymbol, ListSymbol] = clj_reader:read(<<"' list">>),
+
+  ct:comment("Error: only provide ' "),
+  ok = try clj_reader:read(<<"'">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+deref(_Config) ->
+  DerefSymbol = clj_symbol:new(deref),
+  ListSymbol = clj_symbol:new(list),
+
+  ct:comment("Deref number :P"),
+  [DerefSymbol, 1] = clj_reader:read(<<"@1">>),
+
+  ct:comment("Deref symbol :P"),
+  [DerefSymbol, ListSymbol] = clj_reader:read(<<"@list">>),
+
+  ct:comment("Deref symbol :P and read other stuff"),
+  [[DerefSymbol, ListSymbol], 42.0] = clj_reader:read_all(<<"@list 42.0">>),
+
+  ct:comment("Error: only provide @ "),
+  ok = try clj_reader:read(<<"@">>)
+       catch _:_ -> ok
+       end,
 
   {comments, ""}.
