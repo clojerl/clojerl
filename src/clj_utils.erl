@@ -8,7 +8,7 @@
         "^([-+]?)"
         "(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|"
         "([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?$").
--define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
+-define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
 -define(RATIO_PATTERN, "^([-+]?[0-9]+)/([0-9]+)$").
 
 -type ratio() :: {ratio, integer(), integer()}.
@@ -54,7 +54,7 @@ int_properties(Groups) ->
       [_, _, true | _]-> {10, nth(3, Groups)};
       [_, _, _, true | _]-> {16, nth(4, Groups)};
       [_, _, _, _, true | _]-> {8, nth(5, Groups)};
-      [_, _, _, _, _ ,_, true | _]->
+      [_, _, _, _, _, _, true | _]->
         Base = list_to_integer(lists:nth(6, Groups)),
         {Base, lists:nth(7, Groups)};
       _ ->
