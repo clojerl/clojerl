@@ -11,6 +11,8 @@
 
 -type sexpr()     :: number() | string() | keyword() | symbol().
 
+-type meta()      :: map().
+
 %% Unsupported / Unused
 
 -type ratio()     :: #{type => ratio,

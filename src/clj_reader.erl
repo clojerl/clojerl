@@ -44,6 +44,11 @@ dispatch(#{src := <<>>} = State) ->
 dispatch(State) ->
   next(read_one(State)).
 
+-spec read_one(state()) -> state().
+read_one(#{src := <<>>}) ->
+  %% If we got here it's because we were expecting something
+  %% and it wasn't there.
+  throw(<<"EOF">>);
 read_one(#{src := <<First, Rest/binary>>} = State) ->
   case clj_utils:char_type(First, Rest) of
     whitespace -> dispatch(State#{src => Rest});
@@ -234,7 +239,14 @@ read_deref(#{src := <<$@, Src/binary>>} = State) ->
 %% Meta
 %%------------------------------------------------------------------------------
 
-read_meta(_) -> meta.
+read_meta(#{src := <<$^, Src/binary>>} = State) ->
+  {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
+  Meta = clj_utils:desugar_meta(SugaredMeta),
+
+  {Expr, State2} = pop_form(read_one(State1)),
+  NewExpr = clj_meta:attach(Meta, Expr),
+
+  push_form(NewExpr, State2).
 
 %%------------------------------------------------------------------------------
 %% Syntax quote
@@ -329,9 +341,15 @@ skip_line(Src) ->
   {_, RestSrc} = consume(Src, NotNewline),
   RestSrc.
 
-wrapped_read(_Symbol, #{src := <<>>}) ->
-  throw(<<"EOF">>);
 wrapped_read(Symbol, State) ->
   NewState = read_one(State),
   #{forms := [Expr | Forms]} = NewState,
   NewState#{forms => [[Symbol, Expr] | Forms]}.
+
+-spec pop_form(state()) -> {sexpr(), state()}.
+pop_form(#{forms := [Expr | Forms]} = State) ->
+  {Expr, State#{forms => Forms}}.
+
+-spec push_form(sexpr(), state()) -> state().
+push_form(Expr, #{forms := Forms} = State) ->
+  State#{forms => [Expr | Forms]}.
