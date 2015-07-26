@@ -42,16 +42,22 @@ read_all(Src, Env) ->
 dispatch(#{src := <<>>} = State) ->
   State;
 dispatch(State) ->
-  next(read_one(State)).
+  next(read_one(State, false)).
 
 -spec read_one(state()) -> state().
-read_one(#{src := <<>>}) ->
+read_one(State) ->
+  read_one(State, true).
+
+-spec read_one(state(), boolean()) -> state().
+read_one(#{src := <<>>}, true) ->
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
   throw(<<"EOF">>);
-read_one(#{src := <<First, Rest/binary>>} = State) ->
+read_one(#{src := <<>>} = State, false) ->
+  State;
+read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
   case clj_utils:char_type(First, Rest) of
-    whitespace -> dispatch(State#{src => Rest});
+    whitespace -> read_one(State#{src => Rest}, ThrowEof);
     number -> read_number(State);
     string -> read_string(State);
     keyword -> read_keyword(State);
@@ -274,20 +280,53 @@ read_unquote(#{src := <<$~, Src/binary>>} = State) ->
 %% List
 %%------------------------------------------------------------------------------
 
-read_list(#{src := <<$(, Src/binary>>} = State) ->
-  State#{src => Src}.
+read_list(#{src := <<$(, Src/binary>>,
+            forms := Forms} = State) ->
+  #{src := RestSrc,
+    forms := List} = read_until($), State#{src => Src, forms => []}),
+
+  State#{src => RestSrc,
+         forms => [lists:reverse(List) | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Vector
 %%------------------------------------------------------------------------------
 
-read_vector(_) -> vector.
+read_vector(#{src := <<$[, Src/binary>>,
+              forms := Forms} = State) ->
+  #{src := RestSrc,
+    forms := ReversedVector} =
+    read_until($], State#{src => Src, forms => []}),
+
+  Vector = lists:reverse(ReversedVector),
+
+  State#{src => RestSrc,
+         forms => [array:from_list(Vector) | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Map
 %%------------------------------------------------------------------------------
 
-read_map(_) -> map.
+read_map(#{src := <<${, Src/binary>>,
+           forms := Forms} = State) ->
+  #{src := RestSrc,
+    forms := ReversedItems} =
+    read_until($}, State#{src => Src, forms => []}),
+
+  case length(ReversedItems) of
+    X when X rem 2 == 0 ->
+      Items = lists:reverse(ReversedItems),
+      KeyValues = build_key_values([], Items),
+      State#{src => RestSrc,
+             forms => [maps:from_list(KeyValues) | Forms]};
+    _ ->
+      throw(<<"Map literal must contain an even number of forms">>)
+  end.
+
+build_key_values(KeyValues, []) ->
+  lists:reverse(KeyValues);
+build_key_values(KeyValues, [K, V | Items]) ->
+  build_key_values([{K, V} | KeyValues], Items).
 
 %%------------------------------------------------------------------------------
 %% Unmatched delimiter
@@ -335,6 +374,7 @@ do_consume(<<X, Rest/binary>> = Src, Acc, Types) ->
     false -> {Acc, Src}
   end.
 
+-spec read_token(binary()) -> {binary(), binary()}.
 read_token(Src) ->
   Fun = fun(Char) ->
             (clj_utils:char_type(Char, <<>>) =/= whitespace)
@@ -342,6 +382,13 @@ read_token(Src) ->
         end,
   consume(Src, Fun).
 
+-spec read_until(char(), state()) -> state().
+read_until(Delim, #{src := <<Delim, Src/binary>>} = State) ->
+  State#{src => Src};
+read_until(Delim, State) ->
+  read_until(Delim, read_one(State)).
+
+-spec is_macro_terminating(char()) -> boolean().
 is_macro_terminating(Char) ->
   lists:member(Char,
                [$", $;, $@, $^, $`, $~, $(,

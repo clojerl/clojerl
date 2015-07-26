@@ -12,7 +12,12 @@
     quote/1,
     deref/1,
     meta/1,
-    unquote/1
+    syntax_quote/1,
+    unquote/1,
+    list/1,
+    vector/1,
+    map/1,
+    unmatched_delim/1
    ]
   ).
 
@@ -170,13 +175,13 @@ comment(_Config) ->
   BlaKeyword = clj_keyword:new(bla),
 
   ct:comment("Error: single semi-colon"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 ; coment\n :bla ">>),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 ; comment\n :bla ">>),
 
   ct:comment("Error: two semi-colon"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;; coment\n :bla ">>),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;; comment\n :bla ">>),
 
   ct:comment("Error: a bunch semi-colon"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;;;; coment\n :bla ">>),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;;;; comment\n :bla ">>),
 
   {comments, ""}.
 
@@ -237,6 +242,9 @@ meta(_Config) ->
 
   {comments, ""}.
 
+syntax_quote(_Config) ->
+  throw(unimplemented).
+
 unquote(_Config) ->
   UnquoteSymbol = clj_symbol:new('clojure.core', 'unquote'),
   UnquoteSplicingSymbol = clj_symbol:new('clojure.core', 'unquote-splicing'),
@@ -250,6 +258,67 @@ unquote(_Config) ->
 
   ct:comment("Unquote nothing"),
   ok = try clj_reader:read(<<"~">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+list(_Config) ->
+  HelloWorldKeyword = clj_keyword:new('hello-world'),
+  HelloWorldSymbol = clj_symbol:new('hello-world'),
+
+  ct:comment("List"),
+  [HelloWorldKeyword, HelloWorldSymbol] = clj_reader:read(<<"(:hello-world hello-world)">>),
+
+  ct:comment("List without closing paren"),
+  ok = try clj_reader:read(<<"(1 42.0">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+vector(_Config) ->
+  HelloWorldKeyword = clj_keyword:new('hello-world'),
+  HelloWorldSymbol = clj_symbol:new('hello-world'),
+
+  ct:comment("Vector"),
+  Vector = array:from_list([HelloWorldKeyword, HelloWorldSymbol]),
+  Vector = clj_reader:read(<<"[:hello-world hello-world]">>),
+
+  ct:comment("Vector without closing bracket"),
+  ok = try clj_reader:read(<<"[1 42.0">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+map(_Config) ->
+  HelloWorldKeyword = clj_keyword:new('hello-world'),
+  HelloWorldSymbol = clj_symbol:new('hello-world'),
+
+  ct:comment("Map"),
+  #{HelloWorldKeyword := HelloWorldSymbol} = clj_reader:read(<<"{:hello-world hello-world}">>),
+
+  ct:comment("Map without closing braces"),
+  ok = try clj_reader:read(<<"{1 42.0">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+unmatched_delim(_Config) ->
+  ct:comment("Single closing paren"),
+  ok = try clj_reader:read_all(<<"{1 42.0} )">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Single closing bracket"),
+  ok = try clj_reader:read_all(<<"{1 42.0} ]">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Single closing braces"),
+  ok = try clj_reader:read_all(<<"{1 42.0} } ">>)
        catch _:_ -> ok
        end,
 
