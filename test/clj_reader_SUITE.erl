@@ -17,7 +17,8 @@
     list/1,
     vector/1,
     map/1,
-    unmatched_delim/1
+    unmatched_delim/1,
+    char/1
    ]
   ).
 
@@ -304,6 +305,11 @@ map(_Config) ->
        catch _:_ -> ok
        end,
 
+  ct:comment("Literal map with odd number of expressions"),
+  ok = try clj_reader:read(<<"{1 42.0 :a}">>)
+       catch _:_ -> ok
+       end,
+
   {comments, ""}.
 
 unmatched_delim(_Config) ->
@@ -319,6 +325,46 @@ unmatched_delim(_Config) ->
 
   ct:comment("Single closing braces"),
   ok = try clj_reader:read_all(<<"{1 42.0} } ">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+char(_Config) ->
+  ct:comment("Read single char"),
+  <<"a">> = clj_reader:read(<<"\\a">>),
+
+  <<"\n">> = clj_reader:read(<<"\\newline">>),
+  <<" ">> = clj_reader:read(<<"\\space">>),
+  <<"\t">> = clj_reader:read(<<"\\tab">>),
+  <<"\b">> = clj_reader:read(<<"\\backspace">>),
+  <<"\f">> = clj_reader:read(<<"\\formfeed">>),
+  <<"\r">> = clj_reader:read(<<"\\return">>),
+
+  <<"©"/utf8>> = clj_reader:read(<<"\\u00A9">>),
+  <<"ß"/utf8>> = clj_reader:read(<<"\\o337">>),
+
+  ct:comment("Char EOF"),
+  ok = try clj_reader:read_all(<<"12 \\">>)
+       catch _:_ -> ok
+       end,
+
+  ok = try clj_reader:read_all(<<"12 \\ ">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Octal char wrong length"),
+  ok = try clj_reader:read_all(<<"12 \\o0337">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Octal char wrong range"),
+  ok = try clj_reader:read_all(<<"12 \\o477">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Unsupported char"),
+  ok = try clj_reader:read_all(<<"42.0 \\ab">>)
        catch _:_ -> ok
        end,
 

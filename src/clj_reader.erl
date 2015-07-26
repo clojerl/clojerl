@@ -338,7 +338,39 @@ read_unmatched_delim(_) -> throw(unmatched_delim).
 %% Character
 %%------------------------------------------------------------------------------
 
-read_char(_) -> char.
+read_char(#{src := <<$\\, Src/binary>>,
+            forms := Forms} = State) ->
+  {Token, RestSrc} = read_token(Src),
+  Char =
+    case Token of
+      <<>> -> throw(<<"EOF">>);
+      Ch when size(Ch) == 1-> Ch;
+      <<"newline">> -> $\n;
+      <<"space">> -> $ ;
+      <<"tab">> -> $\t;
+      <<"backspace">> -> $\b;
+      <<"formfeed">> -> $\f;
+      <<"return">> -> $\r;
+      <<$u, RestToken/binary>> ->
+        {Ch, _} = unicode_char(RestToken, 16, 4, true),
+        Ch;
+      <<$o, RestToken/binary>> ->
+        case size(RestToken) of
+          Size when Size > 3 ->
+            SizeBin = integer_to_binary(Size),
+            throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
+          Size ->
+            case unicode_char(RestToken, 8, Size, true) of
+              {Ch, _} when Ch > 8#377 ->
+                throw(<<"Octal escape sequence must be in range [0, 377]">>);
+              {Ch, _} -> Ch
+            end
+        end;
+      Ch -> throw(<<"Unsupported character: \\", Ch/binary>>)
+    end,
+
+  CharBin = unicode:characters_to_binary([Char]),
+  State#{src => RestSrc, forms => [CharBin | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Argument
