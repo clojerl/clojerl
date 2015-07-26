@@ -3,7 +3,10 @@
  incl_mods,
   [
    clj_reader,
-   clj_utils
+   clj_utils,
+   clj_env,
+   clj_symbol,
+   clj_keyword
   ]
 }.
 %% Export coverage data for jenkins.

@@ -10,7 +10,9 @@
     symbol/1,
     comment/1,
     quote/1,
-    deref/1
+    deref/1,
+    meta/1,
+    unquote/1
    ]
   ).
 
@@ -213,6 +215,41 @@ deref(_Config) ->
 
   ct:comment("Error: only provide @ "),
   ok = try clj_reader:read(<<"@">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+meta(_Config) ->
+  ct:comment("Meta keyword"),
+  1 = clj_reader:read(<<"^:private 1">>),
+
+  ct:comment("Meta symbol"),
+  1 = clj_reader:read(<<"^private 1">>),
+
+  ct:comment("Meta number"),
+  1 = clj_reader:read(<<"^1 1">>),
+
+  ct:comment("Meta without"),
+  ok = try clj_reader:read(<<"^:private">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+unquote(_Config) ->
+  UnquoteSymbol = clj_symbol:new('clojure.core', 'unquote'),
+  UnquoteSplicingSymbol = clj_symbol:new('clojure.core', 'unquote-splicing'),
+  HelloWorldSymbol = clj_symbol:new('hello-world'),
+
+  ct:comment("Unquote"),
+  [UnquoteSymbol, HelloWorldSymbol] = clj_reader:read(<<"~hello-world">>),
+
+  ct:comment("Unquote splicing"),
+  [UnquoteSplicingSymbol, HelloWorldSymbol] = clj_reader:read(<<"~@hello-world">>),
+
+  ct:comment("Unquote nothing"),
+  ok = try clj_reader:read(<<"~">>)
        catch _:_ -> ok
        end,
 

@@ -252,19 +252,30 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
-read_syntax_quote(_) -> syntax_quote.
+read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
+  SyntaxQuote = clj_symbol:new('syntax-quote'),
+  wrapped_read(SyntaxQuote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
 %% Unquote
 %%------------------------------------------------------------------------------
 
-read_unquote(_) -> unquote.
+read_unquote(#{src := <<$~, Src/binary>>} = State) ->
+  case Src of
+    <<$@, RestSrc/binary>> ->
+      UnquoteSplicing = clj_symbol:new('clojure.core', 'unquote-splicing'),
+      wrapped_read(UnquoteSplicing, State#{src => RestSrc});
+    _ ->
+      UnquoteSplicing = clj_symbol:new('clojure.core', 'unquote'),
+      wrapped_read(UnquoteSplicing, State#{src => Src})
+  end.
 
 %%------------------------------------------------------------------------------
 %% List
 %%------------------------------------------------------------------------------
 
-read_list(_) -> list.
+read_list(#{src := <<$(, Src/binary>>} = State) ->
+  State#{src => Src}.
 
 %%------------------------------------------------------------------------------
 %% Vector
