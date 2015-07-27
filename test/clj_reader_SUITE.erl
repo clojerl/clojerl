@@ -20,6 +20,7 @@
     set/1,
     unmatched_delim/1,
     char/1,
+    var/1,
     regex/1,
     discard/1
    ]
@@ -178,14 +179,17 @@ symbol(_Config) ->
 comment(_Config) ->
   BlaKeyword = clj_keyword:new(bla),
 
-  ct:comment("Error: single semi-colon"),
+  ct:comment("Single semi-colon"),
   [1, BlaKeyword] = clj_reader:read_all(<<"1 ; comment\n :bla ">>),
 
-  ct:comment("Error: two semi-colon"),
+  ct:comment("Two semi-colon"),
   [1, BlaKeyword] = clj_reader:read_all(<<"1 ;; comment\n :bla ">>),
 
-  ct:comment("Error: a bunch semi-colon"),
+  ct:comment("A bunch of semi-colons"),
   [1, BlaKeyword] = clj_reader:read_all(<<"1 ;;;; comment\n :bla ">>),
+
+  ct:comment("Comment reader"),
+  [1, BlaKeyword] = clj_reader:read_all(<<"1 #! comment\n :bla ">>),
 
   {comments, ""}.
 
@@ -238,6 +242,9 @@ meta(_Config) ->
 
   ct:comment("Meta number"),
   1 = clj_reader:read(<<"^1 1">>),
+
+  ct:comment("Reader meta number"),
+  1 = clj_reader:read(<<"#^1 1">>),
 
   ct:comment("Meta without"),
   ok = try clj_reader:read(<<"^:private">>)
@@ -391,9 +398,23 @@ char(_Config) ->
 
   {comments, ""}.
 
+var(_Config) ->
+  VarSymbol = clj_symbol:new('var'),
+  ListSymbol = clj_symbol:new('list'),
+
+  ct:comment(""),
+  [VarSymbol, ListSymbol] = clj_reader:read(<<"#'list">>),
+
+  {comments, ""}.
+
 regex(_Config) ->
   {ok, Regex} = re:compile(<<".?el\\.lo">>),
   Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
+
+  ct:comment("EOF: unterminated regex"),
+  ok = try clj_reader:read_all(<<"#\"a*">>)
+       catch _:_ -> ok
+       end,
 
   {comments, ""}.
 
