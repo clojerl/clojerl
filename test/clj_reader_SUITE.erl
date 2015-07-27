@@ -17,8 +17,11 @@
     list/1,
     vector/1,
     map/1,
+    set/1,
     unmatched_delim/1,
-    char/1
+    char/1,
+    regex/1,
+    discard/1
    ]
   ).
 
@@ -315,6 +318,21 @@ map(_Config) ->
 
   {comments, ""}.
 
+set(_Config) ->
+  HelloWorldKeyword = clj_keyword:new('hello-world'),
+  HelloWorldSymbol = clj_symbol:new('hello-world'),
+
+  ct:comment("Set"),
+  Set = gb_sets:from_list([HelloWorldKeyword, HelloWorldSymbol]),
+  Set = clj_reader:read(<<"#{:hello-world hello-world}">>),
+
+  ct:comment("Set without closing braces"),
+  ok = try clj_reader:read(<<"#{1 42.0">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
 unmatched_delim(_Config) ->
   ct:comment("Single closing paren"),
   ok = try clj_reader:read_all(<<"{1 42.0} )">>)
@@ -370,5 +388,18 @@ char(_Config) ->
   ok = try clj_reader:read_all(<<"42.0 \\ab">>)
        catch _:_ -> ok
        end,
+
+  {comments, ""}.
+
+regex(_Config) ->
+  {ok, Regex} = re:compile(<<".?el\\.lo">>),
+  Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
+
+  {comments, ""}.
+
+discard(_Config) ->
+  [1] = clj_reader:read_all(<<"#_:hello 1">>),
+
+  1 = clj_reader:read(<<"#_:hello 1">>),
 
   {comments, ""}.

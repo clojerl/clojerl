@@ -23,7 +23,10 @@ read(Src, Env) ->
             forms => [],
             env => Env},
   #{forms := Forms} = dispatch(State),
-  hd(Forms).
+  case Forms of
+    [] -> throw(<<"EOF">>);
+    [H | _] -> H
+  end.
 
 -spec read_all(state()) -> [sexpr()].
 read_all(Src) ->
@@ -450,13 +453,16 @@ read_regex(#{src := <<Ch, Src/binary>>} = State) ->
 %% #_ discard
 %%------------------------------------------------------------------------------
 
-read_discard(State) -> State.
+read_discard(State) ->
+  {_, NewState} = pop_form(read_one(State)),
+  NewState.
 
 %%------------------------------------------------------------------------------
 %% #? cond
 %%------------------------------------------------------------------------------
 
-read_cond(State) -> State.
+read_cond(State) ->
+  State.
 
 %%------------------------------------------------------------------------------
 %% Utility functions
