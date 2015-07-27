@@ -382,7 +382,81 @@ read_arg(_) -> arg.
 %% Reader dispatch
 %%------------------------------------------------------------------------------
 
-read_dispatch(_) -> dispatch.
+read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
+  <<Ch, RestSrc/binary>> = Src,
+  NewState = State#{src => RestSrc},
+  case Ch of
+    $^ -> read_meta(State#{src => Src}); %% deprecated
+    $' ->
+      VarSymbol = clj_symbol:new('var'),
+      wrapped_read(VarSymbol, NewState);
+    $( -> read_fn(NewState);
+    $= -> read_eval(NewState);
+    ${ -> read_set(NewState);
+    $< -> NewState;
+    $" -> read_regex(NewState);
+    $! -> read_comment(NewState);
+    $_ -> read_discard(NewState);
+    $? -> read_cond(NewState)
+  end.
+
+%%------------------------------------------------------------------------------
+%% #() fn
+%%------------------------------------------------------------------------------
+
+read_fn(State) -> State.
+
+%%------------------------------------------------------------------------------
+%% #= eval
+%%------------------------------------------------------------------------------
+
+read_eval(State) -> State.
+
+%%------------------------------------------------------------------------------
+%% #{} set
+%%------------------------------------------------------------------------------
+
+read_set(#{src := Src,
+           forms := Forms} = State) ->
+  #{src := RestSrc,
+    forms := ReversedItems} =
+    read_until($}, State#{src => Src, forms => []}),
+
+  Items = lists:reverse(ReversedItems),
+  State#{src => RestSrc,
+         forms => [gb_sets:from_list(Items) | Forms]}.
+
+%%------------------------------------------------------------------------------
+%% #"" regex
+%%------------------------------------------------------------------------------
+
+read_regex(#{src := <<>>}) ->
+  throw(<<"EOF">>);
+read_regex(#{src := <<$\\, Ch, Src/binary>>} = State) ->
+  Current = maps:get(current, State, <<>>),
+  NewState = State#{src => Src, current => <<Current/binary, $\\, Ch>>},
+  read_regex(NewState);
+read_regex(#{src := <<$", Src/binary>>,
+             forms := Forms} = State) ->
+  Current = maps:get(current, State, <<>>),
+  {ok, Regex} = re:compile(Current),
+  State#{src => Src, forms => [Regex | Forms]};
+read_regex(#{src := <<Ch, Src/binary>>} = State) ->
+  Current = maps:get(current, State, <<>>),
+  NewState = State#{src => Src, current => <<Current/binary, Ch>>},
+  read_regex(NewState).
+
+%%------------------------------------------------------------------------------
+%% #_ discard
+%%------------------------------------------------------------------------------
+
+read_discard(State) -> State.
+
+%%------------------------------------------------------------------------------
+%% #? cond
+%%------------------------------------------------------------------------------
+
+read_cond(State) -> State.
 
 %%------------------------------------------------------------------------------
 %% Utility functions

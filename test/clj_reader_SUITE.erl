@@ -268,6 +268,9 @@ list(_Config) ->
   HelloWorldKeyword = clj_keyword:new('hello-world'),
   HelloWorldSymbol = clj_symbol:new('hello-world'),
 
+  ct:comment("Empty List"),
+  [] = clj_reader:read(<<"()">>),
+
   ct:comment("List"),
   [HelloWorldKeyword, HelloWorldSymbol] = clj_reader:read(<<"(:hello-world hello-world)">>),
 
