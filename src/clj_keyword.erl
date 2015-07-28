@@ -10,7 +10,7 @@
 
 -spec new(atom()) -> keyword().
 new(Name) ->
-  new(undefined, Name).
+  new('_', Name).
 
 -spec new(atom(), atom()) -> keyword().
 new(Namespace, Name) ->

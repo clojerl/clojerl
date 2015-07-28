@@ -10,7 +10,7 @@
 
 -spec new(atom()) -> symbol().
 new(Name) ->
-  new(undefined, Name).
+  new('_', Name).
 
 -spec new(atom(), atom()) -> symbol().
 new(Namespace, Name) ->
