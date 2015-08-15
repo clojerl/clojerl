@@ -5,7 +5,8 @@
          char_type/2,
          parse_number/1,
          parse_symbol/1,
-         desugar_meta/1
+         desugar_meta/1,
+         type/1
         ]).
 
 -include("include/clj_types.hrl").
@@ -125,6 +126,10 @@ desugar_meta(Meta) ->
           Meta
       end
   end.
+
+-spec type(any()) -> atom().
+type(X) when is_atom(X) -> element(1, X);
+type(_) -> undefined.
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

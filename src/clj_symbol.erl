@@ -14,10 +14,7 @@ new(Name) ->
 
 -spec new(atom(), atom()) -> symbol().
 new(Namespace, Name) ->
-  #{type => symbol,
-    ns => Namespace,
-    name => Name}.
+  {symbol, #{ns => Namespace, name => Name}}.
 
 -spec is(sexpr()) -> boolean().
-is(#{type := symbol}) -> true;
-is(_) -> false.
+is(X) -> clj_utils:type(X) == symbol.

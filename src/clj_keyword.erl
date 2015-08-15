@@ -14,10 +14,7 @@ new(Name) ->
 
 -spec new(atom(), atom()) -> keyword().
 new(Namespace, Name) ->
-  #{type => keyword,
-    ns => Namespace,
-    name => Name}.
+  {keyword, #{ns => Namespace, name => Name}}.
 
 -spec is(sexpr()) -> boolean().
-is(#{type := keyword}) -> true;
-is(_) -> false.
+is(X) -> clj_utils:type(X) == keyword.
