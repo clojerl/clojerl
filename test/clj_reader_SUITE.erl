@@ -20,9 +20,14 @@
     set/1,
     unmatched_delim/1,
     char/1,
+    arg/1,
+    fn/1,
+    eval/1,
     var/1,
     regex/1,
-    discard/1
+    unreadable_form/1,
+    discard/1,
+    'cond'/1
    ]
   ).
 
@@ -398,6 +403,25 @@ char(_Config) ->
 
   {comments, ""}.
 
+arg(_Config) ->
+  ct:comment("Read argument"),
+  clj_reader:read(<<"%1">>),
+
+  {comments, ""}.
+
+
+fn(_Config) ->
+  ct:comment("Read anonymous fn"),
+  clj_reader:read(<<"#(do 1)">>),
+
+  {comments, ""}.
+
+eval(_Config) ->
+  ct:comment("Read eval"),
+  clj_reader:read(<<"#=1">>),
+
+  {comments, ""}.
+
 var(_Config) ->
   VarSymbol = clj_symbol:new('var'),
   ListSymbol = clj_symbol:new('list'),
@@ -418,9 +442,21 @@ regex(_Config) ->
 
   {comments, ""}.
 
+unreadable_form(_Config) ->
+  ct:comment("Read unreadable"),
+  clj_reader:read(<<"#<1>">>),
+
+  {comments, ""}.
+
 discard(_Config) ->
   [1] = clj_reader:read_all(<<"#_:hello 1">>),
 
   1 = clj_reader:read(<<"#_:hello 1">>),
+
+  {comments, ""}.
+
+'cond'(_Config) ->
+  ct:comment("Read cond"),
+  clj_reader:read(<<"#? 1">>),
 
   {comments, ""}.

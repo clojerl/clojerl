@@ -379,7 +379,7 @@ read_char(#{src := <<$\\, Src/binary>>,
 %% Argument
 %%------------------------------------------------------------------------------
 
-read_arg(_) -> arg.
+read_arg(_) -> throw(unimplemented).
 
 %%------------------------------------------------------------------------------
 %% Reader dispatch
@@ -396,7 +396,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
     $( -> read_fn(NewState);
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
-    $< -> NewState;
+    $< -> throw(unimplemented);
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
@@ -407,13 +407,13 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
 %% #() fn
 %%------------------------------------------------------------------------------
 
-read_fn(State) -> State.
+read_fn(_State) -> throw(unimplemented).
 
 %%------------------------------------------------------------------------------
 %% #= eval
 %%------------------------------------------------------------------------------
 
-read_eval(State) -> State.
+read_eval(_State) -> throw(unimplemented).
 
 %%------------------------------------------------------------------------------
 %% #{} set
@@ -461,8 +461,7 @@ read_discard(State) ->
 %% #? cond
 %%------------------------------------------------------------------------------
 
-read_cond(State) ->
-  State.
+read_cond(_State) -> throw(unimplemented).
 
 %%------------------------------------------------------------------------------
 %% Utility functions
