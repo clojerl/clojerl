@@ -128,7 +128,7 @@ desugar_meta(Meta) ->
   end.
 
 -spec type(any()) -> atom().
-type(X) when is_atom(X) -> element(1, X);
+type(X) when is_tuple(X) -> element(1, X);
 type(_) -> undefined.
 
 %%------------------------------------------------------------------------------

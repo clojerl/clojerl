@@ -1,13 +1,13 @@
 -type namespace() :: atom().
 -type name()      :: atom().
--type keyword()   :: #{type => keyword,
-                       ns => namespace(),
-                       name => name(),
-                       meta => map()}.
--type symbol()    :: #{type => symbol,
-                       ns => namespace(),
-                       name => name(),
-                       meta => map()}.
+-type keyword()   :: {keyword,
+                      #{ns => namespace(),
+                        name => name()}}.
+-type symbol()    :: {symbol,
+                      #{ns => namespace(),
+                        name => name()}}.
+
+-type vector()    :: {vector, array:array()}.
 
 -type sexpr()     :: number() | string() | keyword() | symbol().
 

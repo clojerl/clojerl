@@ -51,7 +51,7 @@ dispatch(State) ->
 read_one(State) ->
   read_one(State, true).
 
--spec read_one(state(), boolean()) -> state().
+-spec read_one(state(), ThrowEof :: boolean()) -> state().
 read_one(#{src := <<>>}, true) ->
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
@@ -298,13 +298,13 @@ read_list(#{src := <<$(, Src/binary>>,
 read_vector(#{src := <<$[, Src/binary>>,
               forms := Forms} = State) ->
   #{src := RestSrc,
-    forms := ReversedVector} =
+    forms := ReversedItems} =
     read_until($], State#{src => Src, forms => []}),
 
-  Vector = lists:reverse(ReversedVector),
-
+  Items = lists:reverse(ReversedItems),
+  Vector = clj_vector:new(Items),
   State#{src => RestSrc,
-         forms => [array:from_list(Vector) | Forms]}.
+         forms => [Vector | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Map
@@ -400,7 +400,9 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
-    $? -> read_cond(NewState)
+    $? -> read_cond(NewState);
+    $: -> read_erl_fun(NewState);
+    X -> throw({unsupported_reader, <<"#", X>>})
   end.
 
 %%------------------------------------------------------------------------------
@@ -462,6 +464,29 @@ read_discard(State) ->
 %%------------------------------------------------------------------------------
 
 read_cond(_State) -> throw(unimplemented).
+
+%%------------------------------------------------------------------------------
+%% #: cond
+%%------------------------------------------------------------------------------
+
+read_erl_fun(State) ->
+  {First, State1} = pop_form(read_one(State)),
+  {Second, State2 = #{forms := Forms}} = pop_form(read_one(State1)),
+
+  case {clj_utils:type(First), clj_utils:type(Second)} of
+    {symbol, vector} ->
+      Module = clj_symbol:namespace(First),
+      Function = clj_symbol:name(First),
+      Arity = clj_vector:first(Second),
+
+      Fun = fun Module:Function/Arity,
+
+      State2#{forms => [Fun | Forms]};
+    X ->
+      erlang:display(X),
+      throw(<<"Reader literal '#:' expects a symbol"
+              " followed by a vector with one element.">>)
+  end.
 
 %%------------------------------------------------------------------------------
 %% Utility functions

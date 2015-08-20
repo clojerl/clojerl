@@ -301,7 +301,7 @@ vector(_Config) ->
   HelloWorldSymbol = clj_symbol:new('hello-world'),
 
   ct:comment("Vector"),
-  Vector = array:from_list([HelloWorldKeyword, HelloWorldSymbol]),
+  Vector = clj_vector:new([HelloWorldKeyword, HelloWorldSymbol]),
   Vector = clj_reader:read(<<"[:hello-world hello-world]">>),
 
   ct:comment("Vector without closing bracket"),

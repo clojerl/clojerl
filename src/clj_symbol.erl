@@ -3,6 +3,8 @@
 -export([
          new/1,
          new/2,
+         namespace/1,
+         name/1,
          is/1
         ]).
 
@@ -15,6 +17,14 @@ new(Name) ->
 -spec new(atom(), atom()) -> symbol().
 new(Namespace, Name) ->
   {symbol, #{ns => Namespace, name => Name}}.
+
+-spec namespace(symbol()) -> binary().
+namespace({symbol, #{ns := Namespace}}) ->
+  Namespace.
+
+-spec name(symbol()) -> binary().
+name({symbol, #{name := Name}}) ->
+  Name.
 
 -spec is(sexpr()) -> boolean().
 is(X) -> clj_utils:type(X) == symbol.
