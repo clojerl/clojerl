@@ -286,10 +286,12 @@ read_unquote(#{src := <<$~, Src/binary>>} = State) ->
 read_list(#{src := <<$(, Src/binary>>,
             forms := Forms} = State) ->
   #{src := RestSrc,
-    forms := List} = read_until($), State#{src => Src, forms => []}),
+    forms := ReversedItems} = read_until($), State#{src => Src, forms => []}),
 
-  State#{src => RestSrc,
-         forms => [lists:reverse(List) | Forms]}.
+  Items = lists:reverse(ReversedItems),
+  List = clj_list:new(Items),
+
+  State#{src => RestSrc, forms => [List | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Vector
@@ -319,17 +321,11 @@ read_map(#{src := <<${, Src/binary>>,
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      KeyValues = build_key_values([], Items),
-      State#{src => RestSrc,
-             forms => [maps:from_list(KeyValues) | Forms]};
+      Map = clj_map:new(Items),
+      State#{src => RestSrc, forms => [Map | Forms]};
     _ ->
       throw(<<"Map literal must contain an even number of forms">>)
   end.
-
-build_key_values(KeyValues, []) ->
-  lists:reverse(KeyValues);
-build_key_values(KeyValues, [K, V | Items]) ->
-  build_key_values([{K, V} | KeyValues], Items).
 
 %%------------------------------------------------------------------------------
 %% Unmatched delimiter
@@ -428,8 +424,9 @@ read_set(#{src := Src,
     read_until($}, State#{src => Src, forms => []}),
 
   Items = lists:reverse(ReversedItems),
+  Set = clj_set:new(Items),
   State#{src => RestSrc,
-         forms => [gb_sets:from_list(Items) | Forms]}.
+         forms => [Set | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #"" regex
@@ -466,7 +463,7 @@ read_discard(State) ->
 read_cond(_State) -> throw(unimplemented).
 
 %%------------------------------------------------------------------------------
-%% #: cond
+%% #: erlang function
 %%------------------------------------------------------------------------------
 
 read_erl_fun(State) ->
@@ -478,9 +475,7 @@ read_erl_fun(State) ->
       Module = clj_symbol:namespace(First),
       Function = clj_symbol:name(First),
       Arity = clj_vector:first(Second),
-
       Fun = fun Module:Function/Arity,
-
       State2#{forms => [Fun | Forms]};
     X ->
       erlang:display(X),

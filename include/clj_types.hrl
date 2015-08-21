@@ -7,7 +7,11 @@
                       #{ns => namespace(),
                         name => name()}}.
 
+-type 'list*'()   :: {list, list()}.
 -type vector()    :: {vector, array:array()}.
+-type 'map*'()    :: {map, map()}.
+-type set()       :: {set, gb_sets:set()}.
+
 
 -type sexpr()     :: number() | string() | keyword() | symbol().
 

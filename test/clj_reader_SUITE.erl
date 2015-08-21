@@ -284,10 +284,12 @@ list(_Config) ->
   HelloWorldSymbol = clj_symbol:new('hello-world'),
 
   ct:comment("Empty List"),
-  [] = clj_reader:read(<<"()">>),
+  EmptyList = clj_list:new([]),
+  EmptyList = clj_reader:read(<<"()">>),
 
   ct:comment("List"),
-  [HelloWorldKeyword, HelloWorldSymbol] = clj_reader:read(<<"(:hello-world hello-world)">>),
+  List = clj_list:new([HelloWorldKeyword, HelloWorldSymbol]),
+  List = clj_reader:read(<<"(:hello-world hello-world)">>),
 
   ct:comment("List without closing paren"),
   ok = try clj_reader:read(<<"(1 42.0">>)
@@ -316,7 +318,9 @@ map(_Config) ->
   HelloWorldSymbol = clj_symbol:new('hello-world'),
 
   ct:comment("Map"),
-  #{HelloWorldKeyword := HelloWorldSymbol} = clj_reader:read(<<"{:hello-world hello-world}">>),
+  Map = clj_map:new([HelloWorldKeyword, HelloWorldSymbol,
+                     HelloWorldSymbol, HelloWorldKeyword]),
+  Map = clj_reader:read(<<"{:hello-world hello-world, hello-world :hello-world}">>),
 
   ct:comment("Map without closing braces"),
   ok = try clj_reader:read(<<"{1 42.0">>)
@@ -335,7 +339,7 @@ set(_Config) ->
   HelloWorldSymbol = clj_symbol:new('hello-world'),
 
   ct:comment("Set"),
-  Set = gb_sets:from_list([HelloWorldKeyword, HelloWorldSymbol]),
+  Set = clj_set:new([HelloWorldKeyword, HelloWorldSymbol]),
   Set = clj_reader:read(<<"#{:hello-world hello-world}">>),
 
   ct:comment("Set without closing braces"),
