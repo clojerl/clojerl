@@ -4,13 +4,13 @@
 
 -type type() :: any().
 
--callback name(any()) -> binary() | 'clojerl.Symbol':type().
--callback namespace(any()) -> 'clojerl.Symbol':type().
+-callback name(any()) -> binary().
+-callback namespace(any()) -> binary().
 
--spec name(type()) -> any().
+-spec name(type()) -> binary().
 name(X) ->
   'clojerl.protocol':resolve('Named', name, [X]).
 
--spec namespace(type()) -> type().
+-spec namespace(type()) -> binary().
 namespace(X) ->
   'clojerl.protocol':resolve('Named', namespace, [X]).

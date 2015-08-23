@@ -8,11 +8,11 @@
 
 -include("include/clj_types.hrl").
 
--spec new(atom()) -> keyword().
+-spec new(binary()) -> keyword().
 new(Name) ->
-  new('_', Name).
+  new(undefined, Name).
 
--spec new(atom(), atom()) -> keyword().
+-spec new(binary(), binary()) -> keyword().
 new(Namespace, Name) ->
   {?MODULE, #{ns => Namespace, name => Name}}.
 
