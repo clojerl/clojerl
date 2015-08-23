@@ -107,7 +107,8 @@ string(_Config) ->
   {comments, ""}.
 
 keyword(_Config) ->
-  Env = #{ns => <<"some-ns">>},
+  SomeNsSymbol = 'clojerl.Symbol':new(<<"some-ns">>),
+  Env = clj_env:in_ns(SomeNsSymbol, clj_env:default()),
 
   Keyword1 = 'clojerl.Keyword':new(<<"hello-world">>),
   Keyword1 = clj_reader:read(<<":hello-world">>, Env),

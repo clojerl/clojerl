@@ -15,7 +15,7 @@
 
 -spec read(binary()) -> sexpr().
 read(Src) ->
-  read(Src, clj_env:empty_env()).
+  read(Src, clj_env:default()).
 
 -spec read(binary(), clj_env:env()) -> sexpr().
 read(Src, Env) ->
@@ -30,7 +30,7 @@ read(Src, Env) ->
 
 -spec read_all(state()) -> [sexpr()].
 read_all(Src) ->
-  read_all(Src, clj_env:empty_env()).
+  read_all(Src, clj_env:default()).
 
 -spec read_all(state(), clj_env:env()) -> [sexpr()].
 read_all(Src, Env) ->
@@ -188,7 +188,8 @@ read_keyword(#{forms := Forms,
   {Token, RestSrc} = read_token(Src),
   Keyword = case clj_utils:parse_symbol(Token) of
               {undefined, <<$:, Name/binary>>} ->
-                Namespace = maps:get(ns, Env),
+                NsSym = clj_env:current_ns(Env),
+                Namespace = clj_core:name(NsSym),
                 'clojerl.Keyword':new(Namespace, Name);
               {undefined, Name} ->
                 'clojerl.Keyword':new(Name);

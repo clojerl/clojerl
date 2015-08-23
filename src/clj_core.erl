@@ -10,7 +10,8 @@
          fourth/1,
          name/1,
          namespace/1,
-         symbol/1, symbol/2
+         symbol/1, symbol/2,
+         'symbol?'/1
         ]).
 
 -spec count(any()) -> integer().
@@ -52,6 +53,10 @@ symbol(Name) ->
 -spec symbol(atom(), atom()) -> 'clojerl.Symbol':type().
 symbol(Namespace, Name) ->
   'clojerl.Symbol':new(Namespace, Name).
+
+-spec 'symbol?'(any()) -> boolean().
+'symbol?'(X) ->
+  type(X) == 'clojerl.Symbol'.
 
 -spec type(any()) -> atom().
 type(X) when is_tuple(X) -> element(1, X);
