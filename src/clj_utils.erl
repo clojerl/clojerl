@@ -5,8 +5,7 @@
          char_type/2,
          parse_number/1,
          parse_symbol/1,
-         desugar_meta/1,
-         type/1
+         desugar_meta/1
         ]).
 
 -include("include/clj_types.hrl").
@@ -114,22 +113,18 @@ char_type(_, _) -> symbol.
 
 -spec desugar_meta(map() | keyword() | symbol() | string()) -> map().
 desugar_meta(Meta) ->
-  case clj_keyword:is(Meta) of
+  case 'clojerl.Keyword':is(Meta) of
     true ->
       maps:put(Meta, true, #{});
     false ->
-      case clj_symbol:is(Meta) orelse is_binary(Meta) of
+      case 'clojerl.Symbol':is(Meta) orelse is_binary(Meta) of
         true ->
-          Tag = clj_keyword:new(tag),
+          Tag = 'clojerl.Keyword':new(tag),
           maps:put(Tag, Meta, #{});
         false ->
           Meta
       end
   end.
-
--spec type(any()) -> atom().
-type(X) when is_tuple(X) -> element(1, X);
-type(_) -> undefined.
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

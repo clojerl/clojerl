@@ -3,10 +3,10 @@
  incl_mods,
   [
    clj_env,
-   clj_keyword,
    clj_meta,
    clj_reader,
-   clj_symbol,
+   'clojerl.Symbol',
+   'clojerl.Keyword',
    clj_utils
   ]
 }.

@@ -1,16 +1,17 @@
--module(clj_map).
+-module('clojerl.Map').
 
 -export([
          new/1
         ]).
 
--include("include/clj_types.hrl").
+-type type() :: {?MODULE, map()}.
 
--spec new(list()) -> 'map*'().
+-spec new(list()) -> type().
 new(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  {map, maps:from_list(KeyValuePairs)}.
+  {?MODULE, maps:from_list(KeyValuePairs)}.
 
+-spec build_key_values(list(), list()) -> [{any(), any()}].
 build_key_values(KeyValues, []) ->
   lists:reverse(KeyValues);
 build_key_values(KeyValues, [K, V | Items]) ->

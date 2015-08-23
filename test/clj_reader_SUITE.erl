@@ -109,19 +109,19 @@ string(_Config) ->
 keyword(_Config) ->
   Env = #{ns => 'some-ns'},
 
-  Keyword1 = clj_keyword:new('hello-world'),
+  Keyword1 = 'clojerl.Keyword':new('hello-world'),
   Keyword1 = clj_reader:read(<<":hello-world">>, Env),
 
-  Keyword2 = clj_keyword:new('some-ns', 'hello-world'),
+  Keyword2 = 'clojerl.Keyword':new('some-ns', 'hello-world'),
   Keyword2 = clj_reader:read(<<"::hello-world">>, Env),
 
-  Keyword3 = clj_keyword:new('another-ns', 'hello-world'),
+  Keyword3 = 'clojerl.Keyword':new('another-ns', 'hello-world'),
   Keyword3 = clj_reader:read(<<":another-ns/hello-world">>, Env),
 
-  Keyword4 = clj_keyword:new('/'),
+  Keyword4 = 'clojerl.Keyword':new('/'),
   Keyword4 = clj_reader:read(<<":/">>, Env),
 
-  Keyword5 = clj_keyword:new('some-ns', '/'),
+  Keyword5 = 'clojerl.Keyword':new('some-ns', '/'),
   Keyword5 = clj_reader:read(<<":some-ns//">>, Env),
 
   ct:comment("Error: triple colon :::"),
@@ -152,17 +152,22 @@ keyword(_Config) ->
   {comments, ""}.
 
 symbol(_Config) ->
-  Symbol1 = clj_symbol:new('hello-world'),
+  Symbol1 = 'clojerl.Symbol':new('hello-world'),
   Symbol1 = clj_reader:read(<<"hello-world">>),
 
-  Symbol2 = clj_symbol:new('some-ns', 'hello-world'),
+  Symbol2 = 'clojerl.Symbol':new('some-ns', 'hello-world'),
   Symbol2 = clj_reader:read(<<"some-ns/hello-world">>),
 
-  Symbol3 = clj_symbol:new('another-ns', 'hello-world'),
+  Symbol3 = 'clojerl.Symbol':new('another-ns', 'hello-world'),
   Symbol3 = clj_reader:read(<<"another-ns/hello-world">>),
 
-  Symbol4 = clj_symbol:new('some-ns', '/'),
+  Symbol4 = 'clojerl.Symbol':new('some-ns', '/'),
   Symbol4 = clj_reader:read(<<"some-ns//">>),
+
+  ct:comment("nil, true & false"),
+  undefined = clj_reader:read(<<"nil">>),
+  true = clj_reader:read(<<"true">>),
+  false = clj_reader:read(<<"false">>),
 
   ct:comment("Error: empty name after namespace"),
   ok = try clj_reader:read(<<"some-ns/">>)
@@ -182,7 +187,7 @@ symbol(_Config) ->
   {comments, ""}.
 
 comment(_Config) ->
-  BlaKeyword = clj_keyword:new(bla),
+  BlaKeyword = 'clojerl.Keyword':new(bla),
 
   ct:comment("Single semi-colon"),
   [1, BlaKeyword] = clj_reader:read_all(<<"1 ; comment\n :bla ">>),
@@ -199,8 +204,8 @@ comment(_Config) ->
   {comments, ""}.
 
 quote(_Config) ->
-  QuoteSymbol = clj_symbol:new(quote),
-  ListSymbol = clj_symbol:new(list),
+  QuoteSymbol = 'clojerl.Symbol':new(quote),
+  ListSymbol = 'clojerl.Symbol':new(list),
 
   ct:comment("Quote number"),
   [QuoteSymbol, 1] = clj_reader:read(<<"'1">>),
@@ -219,8 +224,8 @@ quote(_Config) ->
   {comments, ""}.
 
 deref(_Config) ->
-  DerefSymbol = clj_symbol:new(deref),
-  ListSymbol = clj_symbol:new(list),
+  DerefSymbol = 'clojerl.Symbol':new(deref),
+  ListSymbol = 'clojerl.Symbol':new(list),
 
   ct:comment("Deref number :P"),
   [DerefSymbol, 1] = clj_reader:read(<<"@1">>),
@@ -262,9 +267,9 @@ syntax_quote(_Config) ->
   throw(unimplemented).
 
 unquote(_Config) ->
-  UnquoteSymbol = clj_symbol:new('clojure.core', 'unquote'),
-  UnquoteSplicingSymbol = clj_symbol:new('clojure.core', 'unquote-splicing'),
-  HelloWorldSymbol = clj_symbol:new('hello-world'),
+  UnquoteSymbol = 'clojerl.Symbol':new('clojure.core', 'unquote'),
+  UnquoteSplicingSymbol = 'clojerl.Symbol':new('clojure.core', 'unquote-splicing'),
+  HelloWorldSymbol = 'clojerl.Symbol':new('hello-world'),
 
   ct:comment("Unquote"),
   [UnquoteSymbol, HelloWorldSymbol] = clj_reader:read(<<"~hello-world">>),
@@ -280,15 +285,15 @@ unquote(_Config) ->
   {comments, ""}.
 
 list(_Config) ->
-  HelloWorldKeyword = clj_keyword:new('hello-world'),
-  HelloWorldSymbol = clj_symbol:new('hello-world'),
+  HelloWorldKeyword = 'clojerl.Keyword':new('hello-world'),
+  HelloWorldSymbol = 'clojerl.Symbol':new('hello-world'),
 
   ct:comment("Empty List"),
-  EmptyList = clj_list:new([]),
+  EmptyList = 'clojerl.List':new([]),
   EmptyList = clj_reader:read(<<"()">>),
 
   ct:comment("List"),
-  List = clj_list:new([HelloWorldKeyword, HelloWorldSymbol]),
+  List = 'clojerl.List':new([HelloWorldKeyword, HelloWorldSymbol]),
   List = clj_reader:read(<<"(:hello-world hello-world)">>),
 
   ct:comment("List without closing paren"),
@@ -299,11 +304,11 @@ list(_Config) ->
   {comments, ""}.
 
 vector(_Config) ->
-  HelloWorldKeyword = clj_keyword:new('hello-world'),
-  HelloWorldSymbol = clj_symbol:new('hello-world'),
+  HelloWorldKeyword = 'clojerl.Keyword':new('hello-world'),
+  HelloWorldSymbol = 'clojerl.Symbol':new('hello-world'),
 
   ct:comment("Vector"),
-  Vector = clj_vector:new([HelloWorldKeyword, HelloWorldSymbol]),
+  Vector = 'clojerl.Vector':new([HelloWorldKeyword, HelloWorldSymbol]),
   Vector = clj_reader:read(<<"[:hello-world hello-world]">>),
 
   ct:comment("Vector without closing bracket"),
@@ -314,12 +319,12 @@ vector(_Config) ->
   {comments, ""}.
 
 map(_Config) ->
-  HelloWorldKeyword = clj_keyword:new('hello-world'),
-  HelloWorldSymbol = clj_symbol:new('hello-world'),
+  HelloWorldKeyword = 'clojerl.Keyword':new('hello-world'),
+  HelloWorldSymbol = 'clojerl.Symbol':new('hello-world'),
 
   ct:comment("Map"),
-  Map = clj_map:new([HelloWorldKeyword, HelloWorldSymbol,
-                     HelloWorldSymbol, HelloWorldKeyword]),
+  Map = 'clojerl.Map':new([HelloWorldKeyword, HelloWorldSymbol,
+                           HelloWorldSymbol, HelloWorldKeyword]),
   Map = clj_reader:read(<<"{:hello-world hello-world, hello-world :hello-world}">>),
 
   ct:comment("Map without closing braces"),
@@ -335,11 +340,11 @@ map(_Config) ->
   {comments, ""}.
 
 set(_Config) ->
-  HelloWorldKeyword = clj_keyword:new('hello-world'),
-  HelloWorldSymbol = clj_symbol:new('hello-world'),
+  HelloWorldKeyword = 'clojerl.Keyword':new('hello-world'),
+  HelloWorldSymbol = 'clojerl.Symbol':new('hello-world'),
 
   ct:comment("Set"),
-  Set = clj_set:new([HelloWorldKeyword, HelloWorldSymbol]),
+  Set = 'clojerl.Set':new([HelloWorldKeyword, HelloWorldSymbol]),
   Set = clj_reader:read(<<"#{:hello-world hello-world}">>),
 
   ct:comment("Set without closing braces"),
@@ -427,8 +432,8 @@ eval(_Config) ->
   {comments, ""}.
 
 var(_Config) ->
-  VarSymbol = clj_symbol:new('var'),
-  ListSymbol = clj_symbol:new('list'),
+  VarSymbol = 'clojerl.Symbol':new('var'),
+  ListSymbol = 'clojerl.Symbol':new('list'),
 
   ct:comment(""),
   [VarSymbol, ListSymbol] = clj_reader:read(<<"#'list">>),
@@ -453,9 +458,9 @@ unreadable_form(_Config) ->
   {comments, ""}.
 
 discard(_Config) ->
-  [1] = clj_reader:read_all(<<"#_:hello 1">>),
+  [1] = clj_reader:read_all(<<"#_ :hello 1">>),
 
-  1 = clj_reader:read(<<"#_:hello 1">>),
+  1 = clj_reader:read(<<"#_ :hello 1">>),
 
   {comments, ""}.
 

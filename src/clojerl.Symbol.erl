@@ -1,4 +1,4 @@
--module(clj_symbol).
+-module('clojerl.Symbol').
 
 -export([
          new/1,
@@ -27,4 +27,4 @@ name({symbol, #{name := Name}}) ->
   Name.
 
 -spec is(sexpr()) -> boolean().
-is(X) -> clj_utils:type(X) == symbol.
+is(X) -> clj_core:type(X) == ?MODULE.

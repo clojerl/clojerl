@@ -1,4 +1,4 @@
--module(clj_keyword).
+-module('clojerl.Keyword').
 
 -export([
          new/1,
@@ -14,7 +14,7 @@ new(Name) ->
 
 -spec new(atom(), atom()) -> keyword().
 new(Namespace, Name) ->
-  {keyword, #{ns => Namespace, name => Name}}.
+  {?MODULE, #{ns => Namespace, name => Name}}.
 
 -spec is(sexpr()) -> boolean().
-is(X) -> clj_utils:type(X) == keyword.
+is(X) -> clj_core:type(X) == ?MODULE.

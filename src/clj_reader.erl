@@ -189,13 +189,13 @@ read_keyword(#{forms := Forms,
   Keyword = case clj_utils:parse_symbol(Token) of
               {undefined, <<$:, Name/binary>>} ->
                 Namespace = maps:get(ns, Env),
-                clj_keyword:new(Namespace,
-                                binary_to_atom(Name, utf8));
+                'clojerl.Keyword':new(Namespace,
+                                      binary_to_atom(Name, utf8));
               {undefined, Name} ->
-                clj_keyword:new(binary_to_atom(Name, utf8));
+                'clojerl.Keyword':new(binary_to_atom(Name, utf8));
               {Namespace, Name} ->
-                clj_keyword:new(binary_to_atom(Namespace, utf8),
-                                binary_to_atom(Name, utf8));
+                'clojerl.Keyword':new(binary_to_atom(Namespace, utf8),
+                                      binary_to_atom(Name, utf8));
               undefined ->
                 throw(<<"Invalid token: :", Token/binary>>)
             end,
@@ -211,10 +211,15 @@ read_symbol(#{forms := Forms,
   {Token, RestSrc} = read_token(Src),
   Symbol = case clj_utils:parse_symbol(Token) of
              {undefined, Name} ->
-               clj_symbol:new(binary_to_atom(Name, utf8));
+               case Name of
+                 <<"nil">> -> undefined;
+                 <<"true">> -> true;
+                 <<"false">> -> false;
+                 _ -> 'clojerl.Symbol':new(binary_to_atom(Name, utf8))
+               end;
              {Namespace, Name} ->
-               clj_symbol:new(binary_to_atom(Namespace, utf8),
-                              binary_to_atom(Name, utf8));
+               'clojerl.Symbol':new(binary_to_atom(Namespace, utf8),
+                                    binary_to_atom(Name, utf8));
              undefined ->
                throw(<<"Invalid symbol ", Token/binary>>)
            end,
@@ -233,7 +238,7 @@ read_comment(#{src := Src} = State) ->
 %%------------------------------------------------------------------------------
 
 read_quote(#{src := <<$', Src/binary>>} = State) ->
-  Quote = clj_symbol:new('quote'),
+  Quote = 'clojerl.Symbol':new('quote'),
   wrapped_read(Quote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
@@ -241,7 +246,7 @@ read_quote(#{src := <<$', Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_deref(#{src := <<$@, Src/binary>>} = State) ->
-  Quote = clj_symbol:new('deref'),
+  Quote = 'clojerl.Symbol':new('deref'),
   wrapped_read(Quote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
@@ -262,7 +267,7 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
-  SyntaxQuote = clj_symbol:new('syntax-quote'),
+  SyntaxQuote = 'clojerl.Symbol':new('syntax-quote'),
   wrapped_read(SyntaxQuote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
@@ -272,10 +277,10 @@ read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
 read_unquote(#{src := <<$~, Src/binary>>} = State) ->
   case Src of
     <<$@, RestSrc/binary>> ->
-      UnquoteSplicing = clj_symbol:new('clojure.core', 'unquote-splicing'),
+      UnquoteSplicing = 'clojerl.Symbol':new('clojure.core', 'unquote-splicing'),
       wrapped_read(UnquoteSplicing, State#{src => RestSrc});
     _ ->
-      UnquoteSplicing = clj_symbol:new('clojure.core', 'unquote'),
+      UnquoteSplicing = 'clojerl.Symbol':new('clojure.core', 'unquote'),
       wrapped_read(UnquoteSplicing, State#{src => Src})
   end.
 
@@ -289,7 +294,7 @@ read_list(#{src := <<$(, Src/binary>>,
     forms := ReversedItems} = read_until($), State#{src => Src, forms => []}),
 
   Items = lists:reverse(ReversedItems),
-  List = clj_list:new(Items),
+  List = 'clojerl.List':new(Items),
 
   State#{src => RestSrc, forms => [List | Forms]}.
 
@@ -304,7 +309,7 @@ read_vector(#{src := <<$[, Src/binary>>,
     read_until($], State#{src => Src, forms => []}),
 
   Items = lists:reverse(ReversedItems),
-  Vector = clj_vector:new(Items),
+  Vector = 'clojerl.Vector':new(Items),
   State#{src => RestSrc,
          forms => [Vector | Forms]}.
 
@@ -321,7 +326,7 @@ read_map(#{src := <<${, Src/binary>>,
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = clj_map:new(Items),
+      Map = 'clojerl.Map':new(Items),
       State#{src => RestSrc, forms => [Map | Forms]};
     _ ->
       throw(<<"Map literal must contain an even number of forms">>)
@@ -387,7 +392,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
   case Ch of
     $^ -> read_meta(State#{src => Src}); %% deprecated
     $' ->
-      VarSymbol = clj_symbol:new('var'),
+      VarSymbol = 'clojerl.Symbol':new('var'),
       wrapped_read(VarSymbol, NewState);
     $( -> read_fn(NewState);
     $= -> read_eval(NewState);
@@ -424,7 +429,7 @@ read_set(#{src := Src,
     read_until($}, State#{src => Src, forms => []}),
 
   Items = lists:reverse(ReversedItems),
-  Set = clj_set:new(Items),
+  Set = 'clojerl.Set':new(Items),
   State#{src => RestSrc,
          forms => [Set | Forms]}.
 
@@ -454,7 +459,7 @@ read_regex(#{src := <<Ch, Src/binary>>} = State) ->
 
 read_discard(State) ->
   {_, NewState} = pop_form(read_one(State)),
-  NewState.
+  read_one(NewState).
 
 %%------------------------------------------------------------------------------
 %% #? cond
@@ -470,11 +475,11 @@ read_erl_fun(State) ->
   {First, State1} = pop_form(read_one(State)),
   {Second, State2 = #{forms := Forms}} = pop_form(read_one(State1)),
 
-  case {clj_utils:type(First), clj_utils:type(Second)} of
+  case {clj_core:type(First), clj_core:type(Second)} of
     {symbol, vector} ->
-      Module = clj_symbol:namespace(First),
-      Function = clj_symbol:name(First),
-      Arity = clj_vector:first(Second),
+      Module = 'clojerl.Symbol':namespace(First),
+      Function = 'clojerl.Symbol':name(First),
+      Arity = clj_core:first(Second),
       Fun = fun Module:Function/Arity,
       State2#{forms => [Fun | Forms]};
     X ->
