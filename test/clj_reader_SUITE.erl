@@ -304,6 +304,10 @@ list(_Config) ->
   List = 'clojerl.List':new([HelloWorldKeyword, HelloWorldSymbol]),
   List = clj_reader:read(<<"(:hello-world hello-world)">>),
 
+  ct:comment("List & space"),
+  List = 'clojerl.List':new([HelloWorldKeyword, HelloWorldSymbol]),
+  List = clj_reader:read(<<"(:hello-world hello-world )">>),
+
   ct:comment("List without closing paren"),
   ok = try clj_reader:read(<<"(1 42.0">>)
        catch _:_ -> ok

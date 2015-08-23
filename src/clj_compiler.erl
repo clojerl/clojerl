@@ -100,45 +100,47 @@ analyze_seq(Op, List, State) ->
   end.
 
 -spec analyze_special_form(any(), 'clojerl.List':type(), state()) -> state().
-analyze_special_form('def', List, State) ->
-  Docstring = case {clj_core:count(List), clj_core:third(List)} of
-                {4, Str} when is_binary(Str) -> Str;
-                _ -> undefined
-              end,
+analyze_special_form(<<"def">>, List, State) ->
+  Docstring =
+    case {clj_core:count(List), clj_core:third(List)} of
+      {4, Str} when is_binary(Str) -> Str;
+      _ -> undefined
+    end,
   case clj_core:count(List) of
-    C when C < 2 ->
+    C when C == 2;
+           C == 3, Docstring == undefined;
+           C == 4, Docstring =/= undefined  ->
+      State;
+    1 ->
       throw(<<"Too few arguments to def">>);
-    C when C > 3, Docstring == undefined; C > 4, Docstring =/= undefined  ->
-      throw(<<"Too many arguments to def">>);
     _ ->
-      erlang:display({special, def}),
-      State
+      throw(<<"Too many arguments to def">>)
   end.
 
 special_forms() ->
   SymbolFun = fun clj_core:symbol/1,
-  [SymbolFun('def'),
-   SymbolFun('loop*'),
-   SymbolFun('recur'),
-   SymbolFun('if'),
-   SymbolFun('case*'),
-   SymbolFun('let*'),
-   SymbolFun('letfn*'),
-   SymbolFun('do'),
-   SymbolFun('fn*'),
-   SymbolFun('quote'),
-   SymbolFun('var'),
-   SymbolFun('import*'),
-   SymbolFun('deftype*'),
-   SymbolFun('reify*'),
-   SymbolFun('try'),
+  [SymbolFun(<<"def">>),
+   SymbolFun(<<"loop*">>),
+   SymbolFun(<<"recur">>),
+   SymbolFun(<<"if">>),
+   SymbolFun(<<"case*">>),
+   SymbolFun(<<"let*">>),
+   SymbolFun(<<"letfn*">>),
+   SymbolFun(<<"do">>),
+   SymbolFun(<<"fn*">>),
+   SymbolFun(<<"quote">>),
+   SymbolFun(<<"var">>),
+   SymbolFun(<<"import*">>),
+   SymbolFun(<<"deftype*">>),
+   SymbolFun(<<"reify*">>),
+   SymbolFun(<<"try">>),
    %% SymbolFun('monitor-enter') => fun analyze_def/2,
    %% SymbolFun('monitor-exit') => fun analyze_def/2,
    %% SymbolFun('new') => fun analyze_def/2,
    %% SymbolFun('&') => fun analyze_def/2
-   SymbolFun('throw'),
-   SymbolFun('catch'),
-   SymbolFun('finally')
+   SymbolFun(<<"throw">>),
+   SymbolFun(<<"catch">>),
+   SymbolFun(<<"finally">>)
   ].
 
 -spec analyze_invoke('clojerl.List':type(), state()) -> state().
@@ -147,7 +149,6 @@ analyze_invoke(_List, State) ->
 
 -spec analyze_symbol(symbol(), state()) -> state().
 analyze_symbol(_, State) ->
-  erlang:display(analyze_symbol),
   State.
 
 %%------------------------------------------------------------------------------
@@ -156,10 +157,10 @@ analyze_symbol(_, State) ->
 
 -spec emit_code(state()) -> ok.
 emit_code(State = #{exprs := Exprs}) ->
-  AbstractSyntaxForms = lists:map(fun erl_syntax:revert/1, Exprs),
-  %%erlang:display(AbstractSyntaxForms),
-  erlang:display(erl_eval:expr_list(AbstractSyntaxForms, [])),
-  %%compile:forms(AbstractSyntaxForms),
+  _AbstractSyntaxForms = lists:map(fun erl_syntax:revert/1, Exprs),
+  %% erlang:display(AbstractSyntaxForms),
+  %% erlang:display(erl_eval:expr_list(AbstractSyntaxForms, [])),
+  %% compile:forms(AbstractSyntaxForms),
   State.
 
 %%------------------------------------------------------------------------------

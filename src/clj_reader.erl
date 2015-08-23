@@ -520,8 +520,13 @@ read_token(Src) ->
 -spec read_until(char(), state()) -> state().
 read_until(Delim, #{src := <<Delim, Src/binary>>} = State) ->
   State#{src => Src};
-read_until(Delim, State) ->
-  read_until(Delim, read_one(State)).
+read_until(Delim, #{src := <<X, Src/binary>>} = State) ->
+  case clj_utils:char_type(X) of
+    whitespace ->
+      read_until(Delim, State#{src => Src});
+    _ ->
+      read_until(Delim, read_one(State))
+  end.
 
 -spec is_macro_terminating(char()) -> boolean().
 is_macro_terminating(Char) ->
