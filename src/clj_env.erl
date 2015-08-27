@@ -47,13 +47,13 @@ in_ns(Env, NsSym) ->
   case get_ns(Env, NsSym) of
     undefined ->
       Ns = clj_namespace:new(NsSym),
-      current_ns(NsSym, add_ns(Ns, Env));
+      current_ns(add_ns(Env, Ns), NsSym);
     _ ->
-      current_ns(NsSym, Env)
+      current_ns(Env, NsSym)
   end.
 
--spec add_ns(clj_namespace:namespace(), env()) -> env().
-add_ns(Ns, Env = #{namespaces := Namespaces}) ->
+-spec add_ns(env(), clj_namespace:namespace()) -> env().
+add_ns(Env = #{namespaces := Namespaces}, Ns) ->
   NsSym = clj_namespace:name(Ns),
   case get_ns(Env, NsSym) of
     undefined ->
@@ -67,8 +67,8 @@ add_ns(Ns, Env = #{namespaces := Namespaces}) ->
 current_ns(#{current_ns := CurrentNs}) ->
   CurrentNs.
 
--spec current_ns('clojerl.Symbol':type(), env()) -> env().
-current_ns(CurrentNs, Env) ->
+-spec current_ns(env(), 'clojerl.Symbol':type()) -> env().
+current_ns(Env, CurrentNs) ->
   case get_ns(Env, CurrentNs) of
     undefined ->
       throw(<<"The specified namespace does not exist">>);
@@ -76,8 +76,9 @@ current_ns(CurrentNs, Env) ->
       Env#{current_ns => CurrentNs}
   end.
 
--spec update_ns('clojerl.Symbol':type(), function(), env()) -> clj_namespace:namespace().
-update_ns(Name, Fun, Env = #{namespaces := Nss}) ->
+-spec update_ns(env(), 'clojerl.Symbol':type(), function()) ->
+  clj_namespace:namespace().
+update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
   case maps:get(Name, Nss, undefined) of
     undefined ->
       Env;
@@ -95,8 +96,8 @@ get_ns(_Env = #{namespaces := Nss}, SymNs) ->
 get_local(_Env = #{locals := Locals}, Sym) ->
   maps:get(Sym, Locals, undefined).
 
--spec update_var('clojerl.Var':type(), env()) -> clj_namespace:namespace().
-update_var(Var, Env) ->
+-spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
+update_var(Env, Var) ->
   VarNsSym = 'clojerl.Var':namespace(Var),
   Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,
-  update_ns(VarNsSym, Fun, Env).
+  update_ns(Env, VarNsSym, Fun).

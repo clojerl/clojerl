@@ -132,7 +132,7 @@ parse_special_form(<<"def">>, List, Env) ->
       %% TODO: show warning when not dynamic but name suggests otherwise.
       %% TODO: Read metadata from symbol and add it to Var.
 
-      Env2 = clj_env:update_var(Var1, Env1),
+      Env2 = clj_env:update_var(Env1, Var1),
       Init = case Docstring of
                undefined -> third(List);
                _ -> fourth(List)
@@ -182,7 +182,7 @@ lookup_var(VarSymbol, true, Env) ->
     CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
       NameSym = symbol(name(VarSymbol)),
       Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-      NewEnv = clj_env:update_ns(CurrentNs, Fun, Env),
+      NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
       lookup_var(VarSymbol, false, NewEnv);
     _ ->
       {undefined, Env}
