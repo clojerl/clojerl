@@ -1,4 +1,4 @@
--module('clojerl.Vector.Counted').
+-module('clojerl.Vector.clojerl.Counted').
 
 -export([count/1]).
 

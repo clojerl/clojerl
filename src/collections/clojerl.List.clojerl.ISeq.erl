@@ -1,4 +1,4 @@
--module('clojerl.List.ISeq').
+-module('clojerl.List.clojerl.ISeq').
 
 -behaviour('clojerl.ISeq').
 

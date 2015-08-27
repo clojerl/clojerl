@@ -1,4 +1,4 @@
--module('clojerl.Map.Counted').
+-module('clojerl.Map.clojerl.Counted').
 
 -behaviour('clojerl.Counted').
 

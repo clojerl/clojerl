@@ -1,4 +1,4 @@
--module('clojerl.Symbol.Named').
+-module('clojerl.Symbol.clojerl.Named').
 -behavior('clojerl.Named').
 
 -export([name/1, namespace/1]).

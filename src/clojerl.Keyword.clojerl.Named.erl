@@ -1,4 +1,4 @@
--module('clojerl.Keyword.Named').
+-module('clojerl.Keyword.clojerl.Named').
 -behavior('clojerl.Named').
 
 -export([name/1, namespace/1]).
