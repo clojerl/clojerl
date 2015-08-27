@@ -6,6 +6,7 @@
 resolve(ProtocolName, Function, Args = [Head | _]) ->
   Type = clj_core:type(Head),
   Module = list_to_atom(atom_to_list(Type) ++ "." ++ atom_to_list(ProtocolName)),
+
   try
     erlang:apply(Module, Function, Args)
   catch

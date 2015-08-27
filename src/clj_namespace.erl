@@ -4,6 +4,7 @@
          new/1,
          name/1,
          intern/2,
+         update_var/2,
          lookup/2
         ]).
 
@@ -20,9 +21,10 @@ new(Name) ->
 -spec name(namespace()) -> 'clojerl.Symbol':type().
 name(_Ns = #{name := Name}) -> Name.
 
--spec intern('clojerl.Symbol':type(), namespace()) -> namespace().
-intern(Symbol, Namespace = #{name := NsName,
-                             mappings := Mappings}) ->
+-spec intern(namespace(), 'clojerl.Symbol':type()) -> namespace().
+intern(Namespace = #{name := NsName,
+                     mappings := Mappings},
+       Symbol) ->
   case 'clojerl.Symbol':namespace(Symbol) of
     undefined ->
       Var = 'clojerl.Var':new(NsName, Symbol),
@@ -32,6 +34,12 @@ intern(Symbol, Namespace = #{name := NsName,
       throw(<<"Can't intern namespace-qualified symbol">>)
   end.
 
--spec lookup('clojerl.Symbol':type(), namespace()) -> namespace().
-lookup(Symbol, _Namespace = #{mappings := Mappings}) ->
+-spec update_var(namespace(), 'clojerl.Var':type()) -> namespace().
+update_var(Namespace = #{mappings := Mappings}, Var) ->
+  VarNameSym = 'clojerl.Var':name(Var),
+  NewMappings = maps:put(VarNameSym, Var, Mappings),
+  Namespace#{mappings => NewMappings}.
+
+-spec lookup(namespace(), 'clojerl.Symbol':type()) -> namespace().
+lookup(_Namespace = #{mappings := Mappings}, Symbol) ->
   maps:get(Symbol, Mappings, undefined).

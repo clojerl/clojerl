@@ -11,7 +11,12 @@
          name/1,
          namespace/1,
          symbol/1, symbol/2,
-         'symbol?'/1
+         keyword/1, keyword/2,
+         'symbol?'/1,
+         deref/1,
+         meta/1,
+         get/2, get/3,
+         boolean/1
         ]).
 
 -spec count(any()) -> integer().
@@ -46,17 +51,47 @@ name(X) ->
 namespace(X) ->
   'clojerl.Named':namespace(X).
 
--spec symbol(atom()) -> 'clojerl.Symbol':type().
+-spec symbol(binary()) -> 'clojerl.Symbol':type().
 symbol(Name) ->
   'clojerl.Symbol':new(Name).
 
--spec symbol(atom(), atom()) -> 'clojerl.Symbol':type().
+-spec symbol(binary(), binary()) -> 'clojerl.Symbol':type().
 symbol(Namespace, Name) ->
   'clojerl.Symbol':new(Namespace, Name).
+
+-spec keyword(binary()) -> 'clojerl.Keyword':type().
+keyword(Name) ->
+  'clojerl.Keyword':new(Name).
+
+-spec keyword(binary(), binary()) -> 'clojerl.Keyword':type().
+keyword(Namespace, Name) ->
+  'clojerl.Keyword':new(Namespace, Name).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
   type(X) == 'clojerl.Symbol'.
+
+-spec deref(any()) -> any().
+deref(X) ->
+  'clojerl.IDeref':deref(X).
+
+-spec meta(any()) -> any().
+meta(X) ->
+  'clojerl.IMeta':meta(X).
+
+-spec get(any(), any()) -> any().
+get(undefined, _Key) -> undefined;
+get(X, Key) -> 'clojerl.ILookup':get(X, Key).
+
+-spec get(any(), any(), any()) -> any().
+get(undefined, _Key, _NotFound) -> undefined;
+get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
+
+-spec boolean(any()) -> boolean().
+boolean(undefined) -> false;
+boolean(false) -> false;
+boolean(_) -> true.
+
 
 -spec type(any()) -> atom().
 type(X) when is_tuple(X) -> element(1, X);
