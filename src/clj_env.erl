@@ -2,7 +2,7 @@
 
 -export([
          default/0,
-         add_expr/2,
+         push_expr/2,
          pop_expr/1,
          in_ns/2,
          add_ns/2,
@@ -10,13 +10,14 @@
          current_ns/2,
          update_ns/3,
          get_ns/2,
+         get_local/2,
          update_var/2
         ]).
 
--type env() :: #{current_ns => 'clojerl.Symbol':type(),
-                 locals => #{'clojerl.Symbol':type() => any()},
+-type env() :: #{namespaces => [],
                  exprs => [],
-                 namespaces => []}.
+                 current_ns => 'clojerl.Symbol':type(),
+                 locals => #{'clojerl.Symbol':type() => any()}}.
 
 -export_type([env/0]).
 
@@ -24,15 +25,15 @@
 default() ->
   UserSym = clj_core:symbol(<<"user">>),
   UserNs = clj_namespace:new(UserSym),
-  #{namespaces     => #{UserSym => UserNs},
-    exprs          => [],
-    current_ns     => UserSym,
-    local_bindings => #{}}.
+  #{namespaces => #{UserSym => UserNs},
+    exprs      => [],
+    current_ns => UserSym,
+    locals     => #{}}.
 
--spec add_expr(env(), erl_syntax:syntaxTree()) -> env().
-add_expr(Env = #{exprs := Exprs}, Expr) ->
+-spec push_expr(env(), erl_syntax:syntaxTree()) -> env().
+push_expr(Env = #{exprs := Exprs}, Expr) ->
   Env#{exprs => [Expr | Exprs]};
-add_expr(Env, Expr) ->
+push_expr(Env, Expr) ->
   Env#{exprs => [Expr]}.
 
 -spec pop_expr(env()) -> env().
@@ -41,9 +42,9 @@ pop_expr(Env = #{exprs := [H | Exprs]}) ->
 pop_expr(Env) ->
   {undefined, Env}.
 
--spec in_ns('clojerl.Symbol':type(), env()) -> env().
-in_ns(NsSym, Env) ->
-  case get_ns(NsSym, Env) of
+-spec in_ns(env(), 'clojerl.Symbol':type()) -> env().
+in_ns(Env, NsSym) ->
+  case get_ns(Env, NsSym) of
     undefined ->
       Ns = clj_namespace:new(NsSym),
       current_ns(NsSym, add_ns(Ns, Env));
@@ -54,7 +55,7 @@ in_ns(NsSym, Env) ->
 -spec add_ns(clj_namespace:namespace(), env()) -> env().
 add_ns(Ns, Env = #{namespaces := Namespaces}) ->
   NsSym = clj_namespace:name(Ns),
-  case get_ns(NsSym, Env) of
+  case get_ns(Env, NsSym) of
     undefined ->
       NewNamespaces = maps:put(NsSym, Ns, Namespaces),
       Env#{namespaces => NewNamespaces};
@@ -68,7 +69,7 @@ current_ns(#{current_ns := CurrentNs}) ->
 
 -spec current_ns('clojerl.Symbol':type(), env()) -> env().
 current_ns(CurrentNs, Env) ->
-  case get_ns(CurrentNs, Env) of
+  case get_ns(Env, CurrentNs) of
     undefined ->
       throw(<<"The specified namespace does not exist">>);
     _ ->
@@ -86,9 +87,13 @@ update_ns(Name, Fun, Env = #{namespaces := Nss}) ->
       Env#{namespaces => NewNss}
   end.
 
--spec get_ns('clojerl.Symbol':type(), env()) -> clj_namespace:namespace().
-get_ns(SymNs, _Env = #{namespaces := Nss}) ->
+-spec get_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
+get_ns(_Env = #{namespaces := Nss}, SymNs) ->
   maps:get(SymNs, Nss, undefined).
+
+-spec get_local(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
+get_local(_Env = #{locals := Locals}, Sym) ->
+  maps:get(Sym, Locals, undefined).
 
 -spec update_var('clojerl.Var':type(), env()) -> clj_namespace:namespace().
 update_var(Var, Env) ->

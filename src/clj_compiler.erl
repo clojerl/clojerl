@@ -8,38 +8,34 @@
 
 -include("include/clj_types.hrl").
 
--type state() :: #{current_ns => symbol(),
-                   local_bindings => #{symbol() => any()},
-                   namespaces => []}.
-
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
 
 -spec compile_files([file:filename_all()]) -> ok.
 compile_files(Files) ->
-  State = clj_analyzer:analyze_files(Files),
-  emit_code(State).
+  Env = clj_analyzer:analyze_files(Files),
+  emit_code(Env).
 
 -spec compile_file(file:filename_all()) -> ok.
 compile_file(File) ->
-  State = clj_analyzer:analyze_file(File),
-  emit_code(State).
+  Env = clj_analyzer:analyze_file(File),
+  emit_code(Env).
 
--spec compile(binary()) -> state().
+-spec compile(binary()) -> clj_env:env().
 compile(Src) when is_binary(Src) ->
   Forms = clj_reader:read_all(Src),
-  State = clj_analyzer:analyze(Forms),
-  emit_code(State).
+  Env = clj_analyzer:analyze(Forms),
+  emit_code(Env).
 
 %%------------------------------------------------------------------------------
 %% Code Emission
 %%------------------------------------------------------------------------------
 
--spec emit_code(state()) -> ok.
-emit_code(State = #{exprs := Exprs}) ->
+-spec emit_code(clj_env:env()) -> ok.
+emit_code(Env = #{exprs := Exprs}) ->
   _AbstractSyntaxForms = lists:map(fun erl_syntax:revert/1, Exprs),
   %% erlang:display(AbstractSyntaxForms),
   %% erlang:display(erl_eval:expr_list(AbstractSyntaxForms, [])),
   %% compile:forms(AbstractSyntaxForms),
-  State.
+  Env.
