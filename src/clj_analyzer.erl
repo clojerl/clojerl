@@ -23,7 +23,7 @@ macroexpand_1(Form, Env) ->
     is_special(Op)
     orelse (not clj_core:'symbol?'(Op))
     orelse (MacroVar == undefined)
-    orelse 'clojerl.Var':is_macro(MacroVar)
+    orelse (not 'clojerl.Var':is_macro(MacroVar))
   of
     true -> Form;
     false ->
