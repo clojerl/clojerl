@@ -25,10 +25,11 @@ is_special(S) ->
 
 -spec analyze(any()) -> clj_env:env().
 analyze(Forms) ->
-  lists:foldl(fun analyze/2, clj_env:default(), Forms).
+  Fun = fun(Form, Env) -> analyze(Env, Form) end,
+  lists:foldl(Fun, clj_env:default(), Forms).
 
--spec macroexpand_1('clojerl.List':type(), clj_env:env()) -> any().
-macroexpand_1(Form, Env) ->
+-spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
+macroexpand_1(Env, Form) ->
   Op = first(Form),
   {MacroVar, Env} = lookup_var(Op, false, Env),
   case
@@ -45,40 +46,40 @@ macroexpand_1(Form, Env) ->
       erlang:apply(Fun, Args)
   end.
 
--spec macroexpand('clojerl.List':type(), clj_env:env()) -> any().
-macroexpand(Form, Env) ->
-  case macroexpand_1(Form, Env) of
+-spec macroexpand(clj_env:env(), 'clojerl.List':type()) -> any().
+macroexpand(Env, Form) ->
+  case macroexpand_1(Env, Form) of
     Form -> {Form, Env};
-    ExpandedForm -> macroexpand_1(ExpandedForm, Env)
+    ExpandedForm -> macroexpand_1(Env, ExpandedForm)
   end.
 
 %%------------------------------------------------------------------------------
 %% Internal
 %%------------------------------------------------------------------------------
 
--spec analyze(any(), clj_env:env()) -> clj_env:env().
-analyze(nil, Env) ->
+-spec analyze(clj_env:env(), any()) -> clj_env:env().
+analyze(Env, nil) ->
   Expr = erl_syntax:abstract(undefined),
   clj_env:push_expr(Env, Expr);
-analyze(Boolean, Env) when is_boolean(Boolean) ->
+analyze(Env, Boolean) when is_boolean(Boolean) ->
   Expr = erl_syntax:abstract(Boolean),
   clj_env:push_expr(Env, Expr);
-analyze(String, Env) when is_binary(String) ->
+analyze(Env, String) when is_binary(String) ->
   Expr = erl_syntax:abstract(String),
   clj_env:push_expr(Env, Expr);
-analyze(Number, Env) when is_number(Number) ->
+analyze(Env, Number) when is_number(Number) ->
   Expr = erl_syntax:abstract(Number),
   clj_env:push_expr(Env, Expr);
-analyze(Form, Env) ->
+analyze(Env, Form) ->
   case type(Form) of
     'clojerl.Symbol' ->
-      analyze_symbol(Form, Env);
+      analyze_symbol(Env, Form);
     'clojerl.Keyword' ->
       Expr = erl_syntax:abstract(Form),
       clj_env:push_expr(Env, Expr);
     'clojerl.List' ->
       Op = first(Form),
-      analyze_seq(Op, Form, Env);
+      analyze_seq(Env, Op, Form);
     'clojerl.Vector' ->
       Expr = erl_syntax:abstract(Form),
       clj_env:push_expr(Env, Expr);
@@ -92,21 +93,21 @@ analyze(Form, Env) ->
       throw({invalid_form, Form, Env})
   end.
 
--spec analyze_seq(any(), 'clojerl.List':type(), clj_env:env()) -> clj_env:env().
-analyze_seq(undefined, _List, _Env) ->
+-spec analyze_seq(clj_env:env(), any(), 'clojerl.List':type()) -> clj_env:env().
+analyze_seq(_Env, undefined, _List) ->
   throw(<<"Can't call nil">>);
-analyze_seq(Op, List, Env) ->
-  case macroexpand_1(List, Env) of
+analyze_seq(Env, Op, List) ->
+  case macroexpand_1(Env, List) of
     List ->
       case lists:member(Op, special_forms()) of
         true ->
           Name = name(Op),
           parse_special_form(Name, List, Env);
         false ->
-          analyze_invoke(List, Env)
+          analyze_invoke(Env, List)
       end;
     ExpandedList ->
-      analyze(ExpandedList, Env)
+      analyze(Env, ExpandedList)
   end.
 
 -spec parse_special_form(any(), 'clojerl.List':type(), clj_env:env()) -> clj_env:env().
@@ -137,7 +138,7 @@ parse_special_form(<<"def">>, List, Env) ->
                undefined -> third(List);
                _ -> fourth(List)
              end,
-      {InitExpr, Env3} = clj_env:pop_expr(analyze(Init, Env2)),
+      {InitExpr, Env3} = clj_env:pop_expr(analyze(Env2, Init)),
       Expr = #{type => def,
                var => Var1,
                init => InitExpr},
@@ -170,7 +171,9 @@ validate_def_args(List) ->
 lookup_var(VarSymbol, Env) ->
   lookup_var(VarSymbol, true, Env).
 
--spec lookup_var('clojerl.Symbol':type(), CreateNew :: boolean(), clj_env:env()) ->
+-spec lookup_var('clojerl.Symbol':type(),
+                 CreateNew :: boolean(),
+                 clj_env:env()) ->
   {'clojerl.Var':type(), clj_env:env()}.
 lookup_var(VarSymbol, true, Env) ->
   NsSym = case namespace(VarSymbol) of
@@ -234,14 +237,14 @@ special_forms() ->
    symbol(<<"finally">>)
   ].
 
--spec analyze_invoke('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-analyze_invoke(Form, Env) ->
-  Env1 = analyze(first(Form), Env),
+-spec analyze_invoke(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+analyze_invoke(Env, Form) ->
+  Env1 = analyze(Env, first(Form)),
   {_SymExpr, Env2} = clj_env:pop_expr(Env1),
   Env2.
 
--spec analyze_symbol('clojerl.Symbol':type(), clj_env:env()) -> clj_env:env().
-analyze_symbol(Symbol, Env) ->
+-spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
+analyze_symbol(Env, Symbol) ->
   case {namespace(Symbol), clj_env:get_local(Env, Symbol)} of
     {undefined, Local} when Local =/= undefined ->
       clj_env:push_expr(Env, Symbol);

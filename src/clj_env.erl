@@ -88,15 +88,18 @@ update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
       Env#{namespaces => NewNss}
   end.
 
--spec get_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
+-spec get_ns(env(), 'clojerl.Symbol':type()) ->
+  clj_namespace:namespace().
 get_ns(_Env = #{namespaces := Nss}, SymNs) ->
   maps:get(SymNs, Nss, undefined).
 
--spec get_local(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
+-spec get_local(env(), 'clojerl.Symbol':type()) ->
+  clj_namespace:namespace().
 get_local(_Env = #{locals := Locals}, Sym) ->
   maps:get(Sym, Locals, undefined).
 
--spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
+-spec update_var(env(), 'clojerl.Var':type()) ->
+  clj_namespace:namespace().
 update_var(Env, Var) ->
   VarNsSym = 'clojerl.Var':namespace(Var),
   Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,
