@@ -11,7 +11,8 @@
          update_ns/3,
          get_ns/2,
          get_local/2,
-         update_var/2
+         update_var/2,
+         find_var/2
         ]).
 
 -type env() :: #{namespaces => [],
@@ -104,3 +105,14 @@ update_var(Env, Var) ->
   VarNsSym = 'clojerl.Var':namespace(Var),
   Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,
   update_ns(Env, VarNsSym, Fun).
+
+-spec find_var(env(), 'clojerl.Symbol':type()) -> 'clojerl.Var':type().
+find_var(Env, Symbol) ->
+  NsSym = clj_core:symbol(clj_core:namespace(Symbol)),
+  case get_ns(Env, NsSym) of
+    undefined ->
+      undefined;
+    Ns ->
+      NameSym = clj_core:symbol(clj_core:name(Symbol)),
+      clj_namespace:def(Ns, NameSym)
+  end.

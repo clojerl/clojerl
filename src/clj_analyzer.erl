@@ -14,7 +14,7 @@
          deref/1,
          name/1, namespace/1,
          meta/1,
-         keyword/1, symbol/1,
+         keyword/1, symbol/1, symbol/2,
          boolean/1,
          get/2,
          type/1]).
@@ -197,18 +197,17 @@ lookup_var(VarSymbol, false, Env) ->
   case {NsStr, NameStr} of
     {undefined, Name} when Name == <<"ns">>;
                            Name == <<"in-ns">> ->
-      ClojureCoreSym = symbol(<<"clojure.core">>),
-      Ns = clj_env:get_ns(Env, ClojureCoreSym),
-      Var = clj_namespace:lookup(Ns, VarSymbol),
+      ClojureCoreSym = symbol(<<"clojure.core">>, Name),
+      Var = clj_env:find_var(Env, ClojureCoreSym),
       {Var, Env};
     {undefined, _} ->
       CurrentNsSym = clj_env:current_ns(Env),
-      Ns = clj_env:get_ns(Env, CurrentNsSym),
-      Var = clj_namespace:lookup(Ns, VarSymbol),
+      Symbol = symbol(name(CurrentNsSym), NameStr),
+      Var = clj_env:find_var(Env, Symbol),
       {Var, Env};
     {NsStr, NameStr} ->
-      Ns = clj_env:get_ns(Env, symbol(NsStr)),
-      Var = clj_namespace:lookup(Ns, symbol(NameStr)),
+      Symbol = symbol(NsStr, NameStr),
+      Var = clj_env:find_var(Env, Symbol),
       {Var, Env}
   end.
 
@@ -245,9 +244,36 @@ analyze_invoke(Env, Form) ->
 
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
+  Expr = #{env => Env, form => Symbol, op => var},
   case {namespace(Symbol), clj_env:get_local(Env, Symbol)} of
-    {undefined, Local} when Local =/= undefined ->
-      clj_env:push_expr(Env, Symbol);
+    {undefined, Local} ->
+      clj_env:push_expr(Env, Expr#{info => Local});
     _ ->
-      clj_env:push_expr(Env, Symbol)
+      case resolve(Env, Symbol) of
+        undefined ->
+          Str = clj_core:str([Symbol]),
+          throw(<<"Unable to resolve var: ", Str/binary," in this context">>);
+        Var ->
+          clj_env:push_expr(Env, Expr#{info => Var})
+      end
+  end.
+
+-spec resolve(clj_env:env(), 'clojerl.Symbol':env()) -> any() | undefined.
+resolve(Env, Symbol) ->
+  CurrentNs = clj_env:get_ns(Env, clj_env:current_ns(Env)),
+  Local = clj_env:get_local(Env, Symbol),
+  NsStr = namespace(Symbol),
+  UsedVar = clj_namespace:use(CurrentNs, Symbol),
+  CurNsVar = clj_namespace:def(CurrentNs, Symbol),
+  case {Local, NsStr, UsedVar, CurNsVar} of
+    {Local, _, _, _} when Local =/= undefined ->
+      Local;
+    {_, NsStr, _, _} when NsStr =/= undefined ->
+      clj_env:find_var(Env, Symbol);
+    {_, _, UsedVar, _} when UsedVar =/= undefined ->
+      UsedVar;
+    {_, _, _, CurNsVar} when CurNsVar =/= undefined ->
+      CurNsVar;
+    _ ->
+      undefined
   end.

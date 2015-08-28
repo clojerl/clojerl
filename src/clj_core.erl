@@ -16,7 +16,8 @@
          deref/1,
          meta/1,
          get/2, get/3,
-         boolean/1
+         boolean/1,
+         str/1
         ]).
 
 -spec count(any()) -> integer().
@@ -92,6 +93,12 @@ boolean(undefined) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
 
+-spec str(any()) -> any().
+str(L) when is_list(L) ->
+  Strs = lists:map(fun str/1, L),
+  binary_join(Strs, <<>>);
+str(X) ->
+  'clojerl.Stringable':str(X).
 
 -spec type(any()) -> atom().
 type(X) when is_tuple(X) -> element(1, X);
@@ -99,3 +106,16 @@ type(X) when is_binary(X) -> string;
 type(X) when is_integer(X) -> integer;
 type(X) when is_float(X) -> float;
 type(undefined) -> nil.
+
+-spec binary_join([binary()], binary()) -> binary().
+binary_join([], _Sep) ->
+  <<>>;
+binary_join([Part], _Sep) ->
+  Part;
+binary_join(List, Sep) ->
+  lists:foldr(fun (A, B) ->
+                  case bit_size(B) of
+                    0 -> <<A/binary, Sep/binary, B/binary>>;
+                    _ -> A
+                  end
+              end, <<>>, List).
