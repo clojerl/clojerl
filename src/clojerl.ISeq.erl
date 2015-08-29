@@ -9,8 +9,8 @@
 
 -spec first(type()) -> any().
 first(Seq) ->
-  'clojerl.protocol':resolve('ISeq', first, [Seq]).
+  'clojerl.protocol':resolve(?MODULE, first, [Seq]).
 
 -spec next(type()) -> type().
 next(Seq) ->
-  'clojerl.protocol':resolve('ISeq', next, [Seq]).
+  'clojerl.protocol':resolve(?MODULE, next, [Seq]).
