@@ -58,31 +58,45 @@ macroexpand(Env, Form) ->
 %%------------------------------------------------------------------------------
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
-analyze(Env, nil) ->
-  Expr = erl_syntax:abstract(undefined),
+analyze(Env, undefined) ->
+  Expr = #{op => constant,
+           env => #{}, %% Env
+           tag => nil,
+           form => undefined},
   clj_env:push_expr(Env, Expr);
 analyze(Env, Boolean) when is_boolean(Boolean) ->
-  Expr = erl_syntax:abstract(Boolean),
+  Expr = #{op => constant,
+           env => #{}, %% Env
+           tag => boolean,
+           form => Boolean},
   clj_env:push_expr(Env, Expr);
 analyze(Env, String) when is_binary(String) ->
-  Expr = erl_syntax:abstract(String),
+  Expr = #{op => constant,
+           env => #{}, %% Env
+           tag => string,
+           form => String},
   clj_env:push_expr(Env, Expr);
 analyze(Env, Number) when is_number(Number) ->
-  Expr = erl_syntax:abstract(Number),
+  Expr = #{op => constant,
+           env => #{}, %% Env
+           tag => number,
+           form => Number},
   clj_env:push_expr(Env, Expr);
 analyze(Env, Form) ->
   case type(Form) of
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
     'clojerl.Keyword' ->
-      Expr = erl_syntax:abstract(Form),
+      Expr = #{op => constant,
+               env => #{}, %% Env
+               tag => 'clojerl.Keyword',
+               form => Form},
       clj_env:push_expr(Env, Expr);
     'clojerl.List' ->
       Op = first(Form),
       analyze_seq(Env, Op, Form);
     'clojerl.Vector' ->
-      Expr = erl_syntax:abstract(Form),
-      clj_env:push_expr(Env, Expr);
+      analyze_vector(Env, Form);
     'clojerl.Map' ->
       Expr = erl_syntax:abstract(Form),
       clj_env:push_expr(Env, Expr);
@@ -239,14 +253,29 @@ special_forms() ->
 -spec analyze_invoke(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_invoke(Env, Form) ->
   Env1 = analyze(Env, first(Form)),
-  {_SymExpr, Env2} = clj_env:pop_expr(Env1),
-  Env2.
+
+  Args = rest(Form),
+  FoldFun = fun(F, E) -> analyze(E, F) end,
+  Env2 = lists:foldl(FoldFun, Env1, 'clojerl.List':to_list(Args)),
+
+  ArgCount = clj_core:count(Args),
+  {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
+  {FExpr, Env4} = clj_env:pop_expr(Env3),
+
+  InvokeExpr = #{op => invoke,
+                 env => #{}, %% Env4
+                 form => Form,
+                 f => FExpr,
+                 args => ArgsExpr},
+  clj_env:push_expr(Env4, InvokeExpr).
 
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
-  Expr = #{env => Env, form => Symbol, op => var},
+  Expr = #{op => var,
+           env => #{}, %%Env,
+           form => Symbol},
   case {namespace(Symbol), clj_env:get_local(Env, Symbol)} of
-    {undefined, Local} ->
+    {undefined, Local} when Local =/= undefined ->
       clj_env:push_expr(Env, Expr#{info => Local});
     _ ->
       case resolve(Env, Symbol) of
@@ -277,3 +306,18 @@ resolve(Env, Symbol) ->
     _ ->
       undefined
   end.
+
+-spec analyze_vector(clj_env:env(), 'clojerl.Vector':type()) -> clj_env:env().
+analyze_vector(Env, Vector) ->
+  Items = 'clojerl.Vector':to_list(Vector),
+  FoldFun = fun(F, E) -> analyze(E, F) end,
+  Env1 = lists:foldl(FoldFun, Env, Items),
+
+  Count = clj_core:count(Vector),
+  {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
+
+  VectorExpr = #{op => vector,
+                 env => #{},
+                 form => Vector,
+                 items => ItemsExpr},
+  clj_env:push_expr(Env2, VectorExpr).

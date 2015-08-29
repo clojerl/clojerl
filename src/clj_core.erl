@@ -5,6 +5,7 @@
          count/1,
          first/1,
          next/1,
+         rest/1,
          second/1,
          third/1,
          fourth/1,
@@ -13,6 +14,7 @@
          symbol/1, symbol/2,
          keyword/1, keyword/2,
          'symbol?'/1,
+         'keyword?'/1,
          deref/1,
          meta/1,
          get/2, get/3,
@@ -24,13 +26,17 @@
 count(Seq) ->
   'clojerl.Counted':count(Seq).
 
+-spec first(any()) -> any().
+first(undefined) -> undefined;
+first(Seq) -> 'clojerl.ISeq':first(Seq).
+
 -spec next(any()) -> any().
 next(undefined) -> undefined;
 next(Seq) -> 'clojerl.ISeq':next(Seq).
 
--spec first(any()) -> any().
-first(undefined) -> undefined;
-first(Seq) -> 'clojerl.ISeq':first(Seq).
+-spec rest(any()) -> any().
+rest(undefined) -> undefined;
+rest(Seq) -> 'clojerl.ISeq':more(Seq).
 
 -spec second(any()) -> any().
 second(Seq) ->
@@ -71,6 +77,10 @@ keyword(Namespace, Name) ->
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
   type(X) == 'clojerl.Symbol'.
+
+-spec 'keyword?'(any()) -> boolean().
+'keyword?'(X) ->
+  type(X) == 'clojerl.Keyword'.
 
 -spec deref(any()) -> any().
 deref(X) ->

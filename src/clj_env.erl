@@ -4,6 +4,7 @@
          default/0,
          push_expr/2,
          pop_expr/1,
+         last_exprs/2,
          in_ns/2,
          add_ns/2,
          current_ns/1,
@@ -42,6 +43,13 @@ pop_expr(Env = #{exprs := [H | Exprs]}) ->
   {H, Env#{exprs => Exprs}};
 pop_expr(Env) ->
   {undefined, Env}.
+
+-spec last_exprs(env(), integer()) -> env().
+last_exprs(Env = #{exprs := AllExprs}, N) when N >= 0 ->
+  Exprs = lists:sublist(AllExprs, N),
+  RestExprs = lists:sublist(AllExprs, N + 1, length(AllExprs)),
+  {lists:reverse(Exprs),
+   Env#{exprs => RestExprs}}.
 
 -spec in_ns(env(), 'clojerl.Symbol':type()) -> env().
 in_ns(Env, NsSym) ->
