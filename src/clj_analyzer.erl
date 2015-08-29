@@ -103,8 +103,7 @@ analyze(Env, Form) ->
       Expr = erl_syntax:abstract(Form),
       clj_env:push_expr(Env, Expr);
     'clojerl.Set' ->
-      Expr = erl_syntax:abstract(Form),
-      clj_env:push_expr(Env, Expr);
+      analyze_set(Env, Form);
     _ ->
       throw({invalid_form, Form, Env})
   end.
@@ -154,6 +153,7 @@ parse_special_form(<<"def">>, List, Env) ->
                undefined -> third(List);
                _ -> fourth(List)
              end,
+
       {InitExpr, Env3} = clj_env:pop_expr(analyze(Env2, Init)),
       VarExpr = #{op => def,
                   env => ?DEBUG(Env3),
@@ -163,6 +163,7 @@ parse_special_form(<<"def">>, List, Env) ->
                   doc => Docstring,
                   init => InitExpr,
                   dynamic => IsDynamic},
+
       clj_env:push_expr(Env3, VarExpr)
   end.
 
@@ -326,5 +327,20 @@ analyze_vector(Env, Vector) ->
   VectorExpr = #{op => vector,
                  env => ?DEBUG(Env2),
                  form => Vector,
+                 items => ItemsExpr},
+  clj_env:push_expr(Env2, VectorExpr).
+
+-spec analyze_set(clj_env:env(), 'clojerl.Set':type()) -> clj_env:env().
+analyze_set(Env, Set) ->
+  Items = 'clojerl.Set':to_list(Set),
+  FoldFun = fun(F, E) -> analyze(E, F) end,
+  Env1 = lists:foldl(FoldFun, Env, Items),
+
+  Count = clj_core:count(Set),
+  {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
+
+  VectorExpr = #{op => set,
+                 env => ?DEBUG(Env2),
+                 form => Set,
                  items => ItemsExpr},
   clj_env:push_expr(Env2, VectorExpr).
