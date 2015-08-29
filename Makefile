@@ -8,5 +8,6 @@ include erlang.mk
 
 CT_OPTS = -cover test/clojerl.spec
 
+COMPILE_FIRST = clojerl.Named
 
 SHELL_OPTS += -name ${PROJECT}@`hostname` -s sync
