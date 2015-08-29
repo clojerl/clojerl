@@ -19,6 +19,8 @@
          get/2,
          type/1]).
 
+-define(DEBUG(X), undefined).
+
 -spec is_special(any()) -> boolean().
 is_special(S) ->
   lists:member(S, special_forms()).
@@ -60,25 +62,25 @@ macroexpand(Env, Form) ->
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env, undefined) ->
   Expr = #{op => constant,
-           env => #{}, %% Env
+           env => ?DEBUG(Env),
            tag => nil,
            form => undefined},
   clj_env:push_expr(Env, Expr);
 analyze(Env, Boolean) when is_boolean(Boolean) ->
   Expr = #{op => constant,
-           env => #{}, %% Env
+           env => ?DEBUG(Env),
            tag => boolean,
            form => Boolean},
   clj_env:push_expr(Env, Expr);
 analyze(Env, String) when is_binary(String) ->
   Expr = #{op => constant,
-           env => #{}, %% Env
+           env => ?DEBUG(Env),
            tag => string,
            form => String},
   clj_env:push_expr(Env, Expr);
 analyze(Env, Number) when is_number(Number) ->
   Expr = #{op => constant,
-           env => #{}, %% Env
+           env => ?DEBUG(Env),
            tag => number,
            form => Number},
   clj_env:push_expr(Env, Expr);
@@ -88,7 +90,7 @@ analyze(Env, Form) ->
       analyze_symbol(Env, Form);
     'clojerl.Keyword' ->
       Expr = #{op => constant,
-               env => #{}, %% Env
+               env => ?DEBUG(Env),
                tag => 'clojerl.Keyword',
                form => Form},
       clj_env:push_expr(Env, Expr);
@@ -153,10 +155,15 @@ parse_special_form(<<"def">>, List, Env) ->
                _ -> fourth(List)
              end,
       {InitExpr, Env3} = clj_env:pop_expr(analyze(Env2, Init)),
-      Expr = #{type => def,
-               var => Var1,
-               init => InitExpr},
-      clj_env:push_expr(Env3, Expr)
+      VarExpr = #{op => def,
+                  env => ?DEBUG(Env3),
+                  form => List,
+                  name => VarSymbol,
+                  var => Var1,
+                  doc => Docstring,
+                  init => InitExpr,
+                  dynamic => IsDynamic},
+      clj_env:push_expr(Env3, VarExpr)
   end.
 
 -spec validate_def_args('clojerl.List':type()) -> undefined | binary().
@@ -263,7 +270,7 @@ analyze_invoke(Env, Form) ->
   {FExpr, Env4} = clj_env:pop_expr(Env3),
 
   InvokeExpr = #{op => invoke,
-                 env => #{}, %% Env4
+                 env => ?DEBUG(Env4),
                  form => Form,
                  f => FExpr,
                  args => ArgsExpr},
@@ -317,7 +324,7 @@ analyze_vector(Env, Vector) ->
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
   VectorExpr = #{op => vector,
-                 env => #{},
+                 env => ?DEBUG(Env2),
                  form => Vector,
                  items => ItemsExpr},
   clj_env:push_expr(Env2, VectorExpr).
