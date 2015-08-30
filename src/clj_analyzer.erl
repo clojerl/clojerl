@@ -100,8 +100,7 @@ analyze(Env, Form) ->
     'clojerl.Vector' ->
       analyze_vector(Env, Form);
     'clojerl.Map' ->
-      Expr = erl_syntax:abstract(Form),
-      clj_env:push_expr(Env, Expr);
+      analyze_map(Env, Form);
     'clojerl.Set' ->
       analyze_set(Env, Form);
     _ ->
@@ -329,6 +328,26 @@ analyze_vector(Env, Vector) ->
                  form => Vector,
                  items => ItemsExpr},
   clj_env:push_expr(Env2, VectorExpr).
+
+-spec analyze_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
+analyze_map(Env, Map) ->
+  FoldFun = fun(F, E) -> analyze(E, F) end,
+
+  Keys = 'clojerl.Map':keys(Map),
+  Vals = 'clojerl.Map':vals(Map),
+
+  Count = clj_core:count(Map),
+  Env1 = lists:foldl(FoldFun, Env, Keys),
+  {KeysExpr, Env2} = clj_env:last_exprs(Env1, Count),
+  Env3 = lists:foldl(FoldFun, Env2, Vals),
+  {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
+
+  MapExpr = #{op => map,
+              env => ?DEBUG(Env4),
+              form => Map,
+              keys => KeysExpr,
+              vals => ValsExpr},
+  clj_env:push_expr(Env4, MapExpr).
 
 -spec analyze_set(clj_env:env(), 'clojerl.Set':type()) -> clj_env:env().
 analyze_set(Env, Set) ->
