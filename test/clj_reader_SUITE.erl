@@ -108,7 +108,7 @@ string(_Config) ->
 
 keyword(_Config) ->
   SomeNsSymbol = 'clojerl.Symbol':new(<<"some-ns">>),
-  Env = clj_env:in_ns(SomeNsSymbol, clj_env:default()),
+  Env = clj_env:in_ns(clj_env:default(), SomeNsSymbol),
 
   Keyword1 = 'clojerl.Keyword':new(<<"hello-world">>),
   Keyword1 = clj_reader:read(<<":hello-world">>, Env),
@@ -249,17 +249,33 @@ deref(_Config) ->
   {comments, ""}.
 
 meta(_Config) ->
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+
+  PrivateKeyword = clj_core:keyword(<<"private">>),
+  TagKeyword = clj_core:keyword(<<"tag">>),
+  PrivateSym = clj_core:symbol(<<"private">>),
+
+  MetadataKw = #{PrivateKeyword => true},
+  MetadataSym = #{TagKeyword => PrivateSym},
+
+  HelloWithMetaKw = clj_core:with_meta(HelloKeyword, MetadataKw),
+  HelloWithMetaSym = clj_core:with_meta(HelloKeyword, MetadataSym),
+
   ct:comment("Meta keyword"),
-  1 = clj_reader:read(<<"^:private 1">>),
+  HelloWithMetaKw = clj_reader:read(<<"^:private :hello">>),
 
   ct:comment("Meta symbol"),
-  1 = clj_reader:read(<<"^private 1">>),
+  HelloWithMetaSym = clj_reader:read(<<"^private :hello">>),
 
   ct:comment("Meta number"),
-  1 = clj_reader:read(<<"^1 1">>),
+  ok = try clj_reader:read(<<"^1 1">>)
+       catch _:_ -> ok
+       end,
 
   ct:comment("Reader meta number"),
-  1 = clj_reader:read(<<"#^1 1">>),
+  ok = try clj_reader:read(<<"#^1 1">>)
+       catch _:_ -> ok
+       end,
 
   ct:comment("Meta without"),
   ok = try clj_reader:read(<<"^:private">>)

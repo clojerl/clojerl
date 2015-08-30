@@ -6,15 +6,17 @@
          is/1
         ]).
 
--include("include/clj_types.hrl").
 
--spec new(binary()) -> keyword().
+-type type() :: {?MODULE, #{ns => binary() | undefined,
+                            name => binary()}}.
+
+-spec new(binary()) -> 'clojerl.Keyword':type().
 new(Name) ->
   new(undefined, Name).
 
--spec new(binary(), binary()) -> keyword().
+-spec new(binary(), binary()) -> 'clojerl.Keyword':type().
 new(Namespace, Name) ->
   {?MODULE, #{ns => Namespace, name => Name}}.
 
--spec is(sexpr()) -> boolean().
+-spec is(any()) -> boolean().
 is(X) -> clj_core:type(X) == ?MODULE.

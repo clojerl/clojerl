@@ -8,8 +8,6 @@
          desugar_meta/1
         ]).
 
--include("include/clj_types.hrl").
-
 -define(INT_PATTERN,
         "^([-+]?)"
         "(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|"
@@ -45,7 +43,8 @@ parse_number(Number) ->
       Result
   end.
 
--spec parse_symbol(binary()) -> {namespace(), name()}.
+-spec parse_symbol(binary()) ->
+  {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()}.
 parse_symbol(<<>>) ->
   undefined;
 parse_symbol(<<"::", _/binary>>) ->
@@ -111,7 +110,10 @@ char_type($%, _) -> arg;
 char_type($#, _) -> dispatch;
 char_type(_, _) -> symbol.
 
--spec desugar_meta(map() | keyword() | symbol() | string()) -> map().
+-spec desugar_meta('clojerl.Map':type() |
+                   'clojerl.Keyword':type() |
+                   'clojerl.Symbol':type() |
+                   string()) -> map().
 desugar_meta(Meta) ->
   case 'clojerl.Keyword':is(Meta) of
     true ->
@@ -119,7 +121,7 @@ desugar_meta(Meta) ->
     false ->
       case 'clojerl.Symbol':is(Meta) orelse is_binary(Meta) of
         true ->
-          Tag = 'clojerl.Keyword':new(tag),
+          Tag = 'clojerl.Keyword':new(<<"tag">>),
           maps:put(Tag, Meta, #{});
         false ->
           Meta
@@ -180,6 +182,10 @@ parse_float(FloatBin) ->
       FloatStr = nth(2, Groups) ++ ".0" ++ nth(4, Groups),
       list_to_float(FloatStr)
   end.
+
+-type ratio() :: #{type => ratio,
+                   denom => integer(),
+                   enum => integer()}.
 
 -spec parse_ratio(binary()) -> ratio().
 parse_ratio(RatioBin) ->

@@ -7,17 +7,15 @@
          read_all/2
         ]).
 
--include("include/clj_types.hrl").
-
 -type state() :: #{src => binary(),
-                   forms => [sexpr()],
+                   forms => [any()],
                    env => map()}.
 
--spec read(binary()) -> sexpr().
+-spec read(binary()) -> any().
 read(Src) ->
   read(Src, clj_env:default()).
 
--spec read(binary(), clj_env:env()) -> sexpr().
+-spec read(binary(), clj_env:env()) -> any().
 read(Src, Env) ->
   State = #{src => Src,
             forms => [],
@@ -28,11 +26,11 @@ read(Src, Env) ->
     [H | _] -> H
   end.
 
--spec read_all(state()) -> [sexpr()].
+-spec read_all(state()) -> [any()].
 read_all(Src) ->
   read_all(Src, clj_env:default()).
 
--spec read_all(state(), clj_env:env()) -> [sexpr()].
+-spec read_all(state(), clj_env:env()) -> [any()].
 read_all(Src, Env) ->
   State = #{src => Src,
             forms => [],
@@ -256,7 +254,7 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
   Meta = clj_utils:desugar_meta(SugaredMeta),
 
   {Expr, State2} = pop_form(read_one(State1)),
-  NewExpr = clj_meta:attach(Meta, Expr),
+  NewExpr = 'clojerl.IMeta':with_meta(Expr, Meta),
 
   push_form(NewExpr, State2).
 
@@ -545,10 +543,10 @@ wrapped_read(Symbol, State) ->
   List = 'clojerl.List':new([Symbol, Expr]),
   push_form(List, NewState).
 
--spec pop_form(state()) -> {sexpr(), state()}.
+-spec pop_form(state()) -> {any(), state()}.
 pop_form(#{forms := [Expr | Forms]} = State) ->
   {Expr, State#{forms => Forms}}.
 
--spec push_form(sexpr(), state()) -> state().
+-spec push_form(any(), state()) -> state().
 push_form(Expr, #{forms := Forms} = State) ->
   State#{forms => [Expr | Forms]}.

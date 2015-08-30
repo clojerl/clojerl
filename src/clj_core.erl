@@ -16,7 +16,7 @@
          'symbol?'/1,
          'keyword?'/1,
          deref/1,
-         meta/1,
+         meta/1, with_meta/2,
          get/2, get/3,
          boolean/1,
          str/1
@@ -89,6 +89,10 @@ deref(X) ->
 -spec meta(any()) -> any().
 meta(X) ->
   'clojerl.IMeta':meta(X).
+
+-spec with_meta(any(), any()) -> any().
+with_meta(X, Meta) ->
+  'clojerl.IMeta':with_meta(X, Meta).
 
 -spec get(any(), any()) -> any().
 get(undefined, _Key) -> undefined;
