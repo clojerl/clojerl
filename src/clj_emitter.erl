@@ -29,11 +29,15 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
 
   ExportAst = export_attribute([{val, 0}]),
 
+  VarAtom = erl_syntax:atom(var),
+  VarAst = erl_syntax:abstract(Var),
+  VarAttributeAst = erl_syntax:attribute(VarAtom, [VarAst]),
+
   InitAst = ast(InitExpr),
   ClauseAst =  erl_syntax:clause([], [], InitAst),
   FunctionAst = function_form(val, [ClauseAst]),
 
-  [ModuleAst, ExportAst, FunctionAst];
+  [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
 ast(#{op := constant, form := Form}) ->
   [erl_syntax:abstract(Form)];
 ast(#{op := var} = _Form) ->
