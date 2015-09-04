@@ -10,30 +10,47 @@
 %% Public API
 %%------------------------------------------------------------------------------
 
--spec compile_files([file:filename_all()]) -> ok.
-compile_files(Files) ->
-  Env = clj_analyzer:analyze_files(Files),
-  emit_code(Env).
+-spec compile_files([file:filename_all()]) -> clj_env:env().
+compile_files(Files) when is_list(Files) ->
+  compile_files(Files, clj_env:default()).
 
--spec compile_file(file:filename_all()) -> ok.
-compile_file(File) ->
-  Env = clj_analyzer:analyze_file(File),
-  emit_code(Env).
+-spec compile_files([file:filename_all()], clj_env:env()) -> clj_env:env().
+compile_files(Files, Env) when is_list(Files) ->
+  lists:foldl(fun compile_file/2, Env, Files).
+
+-spec compile_file(file:filename_all()) -> clj_env:env().
+compile_file(File) when is_binary(File) ->
+  compile_file(File, clj_env:default()).
+
+-spec compile_file(file:filename_all(), clj_env:env()) -> clj_env:env().
+compile_file(File, Env) when is_binary(File) ->
+  case file:read_file(File) of
+    {ok, Src} -> compile(Src, Env);
+    Error -> throw(Error)
+  end.
 
 -spec compile(binary()) -> clj_env:env().
 compile(Src) when is_binary(Src) ->
+  compile(Src, clj_env:default()).
+
+-spec compile(binary(), clj_env:env()) -> clj_env:env().
+compile(Src, Env) when is_binary(Src) ->
   Forms = clj_reader:read_all(Src),
-  Env = clj_analyzer:analyze(Forms),
-  emit_code(Env).
+  Fun = fun(Form, EnvAcc) ->
+            NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
+            emit_code(NewEnvAcc)
+        end,
+  lists:foldl(Fun, Env, Forms).
 
 %%------------------------------------------------------------------------------
 %% Code Emission
 %%------------------------------------------------------------------------------
 
 -spec emit_code(clj_env:env()) -> ok.
-emit_code(Env = #{exprs := Exprs}) ->
-  _AbstractSyntaxForms = lists:map(fun erl_syntax:revert/1, Exprs),
-  %% erlang:display(AbstractSyntaxForms),
+emit_code(Env0) ->
+  {Expr, Env} = clj_env:pop_expr(Env0),
+  AbstractSyntaxForm = erl_syntax:revert(Expr),
+  io:format("~p~n=========================~n", [AbstractSyntaxForm]),
   %% erlang:display(erl_eval:expr_list(AbstractSyntaxForms, [])),
   %% compile:forms(AbstractSyntaxForms),
   Env.

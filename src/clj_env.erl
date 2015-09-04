@@ -44,7 +44,7 @@ pop_expr(Env = #{exprs := [H | Exprs]}) ->
 pop_expr(Env) ->
   {undefined, Env}.
 
--spec last_exprs(env(), integer()) -> env().
+-spec last_exprs(env(), integer()) -> {[any()], env()}.
 last_exprs(Env = #{exprs := AllExprs}, N) when N >= 0 ->
   Exprs = lists:sublist(AllExprs, N),
   RestExprs = lists:sublist(AllExprs, N + 1, length(AllExprs)),

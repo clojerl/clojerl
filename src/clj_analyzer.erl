@@ -1,7 +1,7 @@
 -module(clj_analyzer).
 
 -export([
-         analyze/1,
+         analyze/2,
          macroexpand/2,
          macroexpand_1/2,
          is_special/1
@@ -24,11 +24,6 @@
 -spec is_special(any()) -> boolean().
 is_special(S) ->
   lists:member(S, special_forms()).
-
--spec analyze(any()) -> clj_env:env().
-analyze(Forms) ->
-  Fun = fun(Form, Env) -> analyze(Env, Form) end,
-  lists:foldl(Fun, clj_env:default(), Forms).
 
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand_1(Env, Form) ->
