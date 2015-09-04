@@ -1,8 +1,10 @@
 PROJECT = clojerl
 
 DEPS = sync
-
 dep_sync = git git://github.com/inaka/sync.git 0.1.3
+
+TEST_DEPS = xref_runner
+dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.2
 
 include erlang.mk
 
