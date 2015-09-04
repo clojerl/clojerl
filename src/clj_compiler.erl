@@ -38,19 +38,6 @@ compile(Src, Env) when is_binary(Src) ->
   Forms = clj_reader:read_all(Src),
   Fun = fun(Form, EnvAcc) ->
             NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
-            emit_code(NewEnvAcc)
+            clj_emitter:emit(NewEnvAcc)
         end,
   lists:foldl(Fun, Env, Forms).
-
-%%------------------------------------------------------------------------------
-%% Code Emission
-%%------------------------------------------------------------------------------
-
--spec emit_code(clj_env:env()) -> ok.
-emit_code(Env0) ->
-  {Expr, Env} = clj_env:pop_expr(Env0),
-  AbstractSyntaxForm = erl_syntax:revert(Expr),
-  io:format("~p~n=========================~n", [AbstractSyntaxForm]),
-  %% erlang:display(erl_eval:expr_list(AbstractSyntaxForms, [])),
-  %% compile:forms(AbstractSyntaxForms),
-  Env.
