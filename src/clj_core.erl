@@ -119,6 +119,7 @@ type(X) when is_tuple(X) -> element(1, X);
 type(X) when is_binary(X) -> string;
 type(X) when is_integer(X) -> integer;
 type(X) when is_float(X) -> float;
+type(X) when is_boolean(X) -> boolean;
 type(undefined) -> nil.
 
 -spec binary_join([binary()], binary()) -> binary().
