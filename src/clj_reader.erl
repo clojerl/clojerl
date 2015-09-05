@@ -261,8 +261,9 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
-  SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
-  wrapped_read(SyntaxQuote, State#{src => Src}).
+  %% SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
+  %% wrapped_read(SyntaxQuote, State#{src => Src}).
+  throw(unimplemented).
 
 %%------------------------------------------------------------------------------
 %% Unquote
@@ -474,17 +475,29 @@ read_erl_fun(State) ->
   {First, State1} = pop_form(read_one(State)),
   {Second, State2 = #{forms := Forms}} = pop_form(read_one(State1)),
 
-  case {clj_core:type(First), clj_core:type(Second)} of
-    {symbol, vector} ->
+  case valid_erl_fun(First, Second) of
+    true ->
       Module = clj_core:namespace(First),
       Function = clj_core:name(First),
+      ModuleAtom = binary_to_existing_atom(Module, utf8),
+      FunctionAtom = binary_to_existing_atom(Function, utf8),
+
       Arity = clj_core:first(Second),
-      Fun = fun Module:Function/Arity,
+      Fun = fun ModuleAtom:FunctionAtom/Arity,
       State2#{forms => [Fun | Forms]};
-    X ->
-      erlang:display(X),
-      throw(<<"Reader literal '#:' expects a symbol"
+    false ->
+      throw(<<"Reader literal '#:' expects a fully-qualified symbol"
               " followed by a vector with one element.">>)
+  end.
+
+valid_erl_fun(First, Second) ->
+  case {clj_core:type(First), clj_core:type(Second)} of
+    {'clojerl.Symbol', 'clojerl.Vector'} ->
+      Module = clj_core:namespace(First),
+      Count = clj_core:count(Second),
+      Module =/= undefined andalso Count == 1;
+    _ ->
+      false
   end.
 
 %%------------------------------------------------------------------------------
@@ -492,7 +505,7 @@ read_erl_fun(State) ->
 %%------------------------------------------------------------------------------
 
 -spec consume(binary(), [clj_utils:char_type()] | fun()) ->
-  {binary(), binary()}.
+                 {binary(), binary()}.
 consume(Src, TypesOrPred) ->
   do_consume(Src, <<>>, TypesOrPred).
 

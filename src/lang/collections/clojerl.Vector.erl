@@ -9,7 +9,7 @@
 
 -spec new(list()) -> type().
 new(Items) ->
-  {?MODULE, array:from_list(Items)}.
+  {?MODULE, array:from_list(Items, none)}.
 
 -spec to_list(type()) -> list().
 to_list({_, Items}) ->
