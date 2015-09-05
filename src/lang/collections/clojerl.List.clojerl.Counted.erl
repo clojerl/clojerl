@@ -1,4 +1,4 @@
--module('clojerl.List.Counted').
+-module('clojerl.List.clojerl.Counted').
 
 -behaviour('clojerl.Counted').
 

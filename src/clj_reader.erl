@@ -7,17 +7,15 @@
          read_all/2
         ]).
 
--include("include/clj_types.hrl").
-
 -type state() :: #{src => binary(),
-                   forms => [sexpr()],
+                   forms => [any()],
                    env => map()}.
 
--spec read(binary()) -> sexpr().
+-spec read(binary()) -> any().
 read(Src) ->
-  read(Src, clj_env:empty_env()).
+  read(Src, clj_env:default()).
 
--spec read(binary(), clj_env:env()) -> sexpr().
+-spec read(binary(), clj_env:env()) -> any().
 read(Src, Env) ->
   State = #{src => Src,
             forms => [],
@@ -28,11 +26,11 @@ read(Src, Env) ->
     [H | _] -> H
   end.
 
--spec read_all(state()) -> [sexpr()].
+-spec read_all(state()) -> [any()].
 read_all(Src) ->
-  read_all(Src, clj_env:empty_env()).
+  read_all(Src, clj_env:default()).
 
--spec read_all(state(), clj_env:env()) -> [sexpr()].
+-spec read_all(state(), clj_env:env()) -> [any()].
 read_all(Src, Env) ->
   State = #{src => Src,
             forms => [],
@@ -188,14 +186,13 @@ read_keyword(#{forms := Forms,
   {Token, RestSrc} = read_token(Src),
   Keyword = case clj_utils:parse_symbol(Token) of
               {undefined, <<$:, Name/binary>>} ->
-                Namespace = maps:get(ns, Env),
-                'clojerl.Keyword':new(Namespace,
-                                      binary_to_atom(Name, utf8));
+                NsSym = clj_env:current_ns(Env),
+                Namespace = clj_core:name(NsSym),
+                'clojerl.Keyword':new(Namespace, Name);
               {undefined, Name} ->
-                'clojerl.Keyword':new(binary_to_atom(Name, utf8));
+                'clojerl.Keyword':new(Name);
               {Namespace, Name} ->
-                'clojerl.Keyword':new(binary_to_atom(Namespace, utf8),
-                                      binary_to_atom(Name, utf8));
+                'clojerl.Keyword':new(Namespace, Name);
               undefined ->
                 throw(<<"Invalid token: :", Token/binary>>)
             end,
@@ -215,11 +212,10 @@ read_symbol(#{forms := Forms,
                  <<"nil">> -> undefined;
                  <<"true">> -> true;
                  <<"false">> -> false;
-                 _ -> 'clojerl.Symbol':new(binary_to_atom(Name, utf8))
+                 _ -> 'clojerl.Symbol':new(Name)
                end;
              {Namespace, Name} ->
-               'clojerl.Symbol':new(binary_to_atom(Namespace, utf8),
-                                    binary_to_atom(Name, utf8));
+               'clojerl.Symbol':new(Namespace, Name);
              undefined ->
                throw(<<"Invalid symbol ", Token/binary>>)
            end,
@@ -238,7 +234,7 @@ read_comment(#{src := Src} = State) ->
 %%------------------------------------------------------------------------------
 
 read_quote(#{src := <<$', Src/binary>>} = State) ->
-  Quote = 'clojerl.Symbol':new('quote'),
+  Quote = 'clojerl.Symbol':new(<<"quote">>),
   wrapped_read(Quote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
@@ -246,7 +242,7 @@ read_quote(#{src := <<$', Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_deref(#{src := <<$@, Src/binary>>} = State) ->
-  Quote = 'clojerl.Symbol':new('deref'),
+  Quote = 'clojerl.Symbol':new(<<"deref">>),
   wrapped_read(Quote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
@@ -258,7 +254,7 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
   Meta = clj_utils:desugar_meta(SugaredMeta),
 
   {Expr, State2} = pop_form(read_one(State1)),
-  NewExpr = clj_meta:attach(Meta, Expr),
+  NewExpr = 'clojerl.IMeta':with_meta(Expr, Meta),
 
   push_form(NewExpr, State2).
 
@@ -267,7 +263,7 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
-  SyntaxQuote = 'clojerl.Symbol':new('syntax-quote'),
+  SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
   wrapped_read(SyntaxQuote, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
@@ -277,10 +273,12 @@ read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
 read_unquote(#{src := <<$~, Src/binary>>} = State) ->
   case Src of
     <<$@, RestSrc/binary>> ->
-      UnquoteSplicing = 'clojerl.Symbol':new('clojure.core', 'unquote-splicing'),
+      UnquoteSplicing = 'clojerl.Symbol':new(<<"clojure.core">>,
+                                             <<"unquote-splicing">>),
       wrapped_read(UnquoteSplicing, State#{src => RestSrc});
     _ ->
-      UnquoteSplicing = 'clojerl.Symbol':new('clojure.core', 'unquote'),
+      UnquoteSplicing = 'clojerl.Symbol':new(<<"clojure.core">>,
+                                             <<"unquote">>),
       wrapped_read(UnquoteSplicing, State#{src => Src})
   end.
 
@@ -392,7 +390,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
   case Ch of
     $^ -> read_meta(State#{src => Src}); %% deprecated
     $' ->
-      VarSymbol = 'clojerl.Symbol':new('var'),
+      VarSymbol = 'clojerl.Symbol':new(<<"var">>),
       wrapped_read(VarSymbol, NewState);
     $( -> read_fn(NewState);
     $= -> read_eval(NewState);
@@ -477,8 +475,8 @@ read_erl_fun(State) ->
 
   case {clj_core:type(First), clj_core:type(Second)} of
     {symbol, vector} ->
-      Module = 'clojerl.Symbol':namespace(First),
-      Function = 'clojerl.Symbol':name(First),
+      Module = clj_core:namespace(First),
+      Function = clj_core:name(First),
       Arity = clj_core:first(Second),
       Fun = fun Module:Function/Arity,
       State2#{forms => [Fun | Forms]};
@@ -521,8 +519,13 @@ read_token(Src) ->
 -spec read_until(char(), state()) -> state().
 read_until(Delim, #{src := <<Delim, Src/binary>>} = State) ->
   State#{src => Src};
-read_until(Delim, State) ->
-  read_until(Delim, read_one(State)).
+read_until(Delim, #{src := <<X, Src/binary>>} = State) ->
+  case clj_utils:char_type(X) of
+    whitespace ->
+      read_until(Delim, State#{src => Src});
+    _ ->
+      read_until(Delim, read_one(State))
+  end.
 
 -spec is_macro_terminating(char()) -> boolean().
 is_macro_terminating(Char) ->
@@ -536,14 +539,14 @@ skip_line(Src) ->
   RestSrc.
 
 wrapped_read(Symbol, State) ->
-  NewState = read_one(State),
-  #{forms := [Expr | Forms]} = NewState,
-  NewState#{forms => [[Symbol, Expr] | Forms]}.
+  {Expr, NewState} = pop_form(read_one(State)),
+  List = 'clojerl.List':new([Symbol, Expr]),
+  push_form(List, NewState).
 
--spec pop_form(state()) -> {sexpr(), state()}.
+-spec pop_form(state()) -> {any(), state()}.
 pop_form(#{forms := [Expr | Forms]} = State) ->
   {Expr, State#{forms => Forms}}.
 
--spec push_form(sexpr(), state()) -> state().
+-spec push_form(any(), state()) -> state().
 push_form(Expr, #{forms := Forms} = State) ->
   State#{forms => [Expr | Forms]}.

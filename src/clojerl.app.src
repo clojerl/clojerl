@@ -3,7 +3,7 @@
   [
    {description, "Clojure for the Erlang VM"},
    {vsn, "0.2.5"},
-   {applications, [kernel, stdlib, zipper]},
+   {applications, [kernel, stdlib]},
    {modules, []},
    {registered, []}
   ]
