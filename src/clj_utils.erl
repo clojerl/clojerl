@@ -170,7 +170,8 @@ int_properties(Groups) ->
 
 -spec parse_float(binary()) -> float().
 parse_float(FloatBin) ->
-  {match, [_ | Groups]} = re:run(FloatBin, ?FLOAT_PATTERN, [{capture, all, list}]),
+  {match, [_ | Groups]} =
+    re:run(FloatBin, ?FLOAT_PATTERN, [{capture, all, list}]),
   Decimal = nth(3, Groups, "") =/= "",
   case Decimal of
     true ->
@@ -189,7 +190,8 @@ parse_float(FloatBin) ->
 
 -spec parse_ratio(binary()) -> ratio().
 parse_ratio(RatioBin) ->
-  {match, [_ | Groups]} = re:run(RatioBin, ?RATIO_PATTERN, [{capture, all, list}]),
+  {match, [_ | Groups]} =
+    re:run(RatioBin, ?RATIO_PATTERN, [{capture, all, list}]),
   Numerator = nth(1, Groups),
   Denominator = nth(2, Groups),
   {ratio,

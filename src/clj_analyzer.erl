@@ -21,9 +21,14 @@
 
 -define(DEBUG(X), undefined).
 
+-spec analyze(clj_env:env(), any()) -> clj_env:env().
+analyze(Env0, Form) ->
+  {Expr, Env} = clj_env:pop_expr(analyze_form(Env0, Form)),
+  clj_env:push_expr(Env, Expr#{top_level => true}).
+
 -spec is_special(any()) -> boolean().
 is_special(S) ->
-  lists:member(S, special_forms()).
+  maps:is_key(S, special_forms()).
 
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand_1(Env, Form) ->
@@ -54,32 +59,58 @@ macroexpand(Env, Form) ->
 %% Internal
 %%------------------------------------------------------------------------------
 
--spec analyze(clj_env:env(), any()) -> clj_env:env().
-analyze(Env, undefined) ->
+-spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
+special_forms() ->
+  #{symbol(<<"def">>) => fun parse_def/2,
+    symbol(<<"loop*">>) => undefined,
+    symbol(<<"recur">>) => undefined,
+    symbol(<<"if">>) => undefined,
+    symbol(<<"case*">>) => undefined,
+    symbol(<<"let*">>) => undefined,
+    symbol(<<"letfn*">>) => undefined,
+    symbol(<<"do">>) => undefined,
+    symbol(<<"fn*">>) => undefined,
+    symbol(<<"quote">>) => undefined,
+    symbol(<<"var">>) => undefined,
+    symbol(<<"import*">>) => undefined,
+    symbol(<<"deftype*">>) => undefined,
+    symbol(<<"reify*">>) => undefined,
+    symbol(<<"try">>) => undefined,
+    %% symbol(<<"monitor-enter">>),
+    %% symbol(<<"monitor-exit">>),
+    %% symbol(<<"new">>),
+    %% symbol(<<"&">>),
+    symbol(<<"throw">>) => undefined,
+    symbol(<<"catch">>) => undefined,
+    symbol(<<"finally">>) => undefined
+   }.
+
+-spec analyze_form(clj_env:env(), any()) -> clj_env:env().
+analyze_form(Env, undefined) ->
   Expr = #{op => constant,
            env => ?DEBUG(Env),
            tag => nil,
            form => undefined},
   clj_env:push_expr(Env, Expr);
-analyze(Env, Boolean) when is_boolean(Boolean) ->
+analyze_form(Env, Boolean) when is_boolean(Boolean) ->
   Expr = #{op => constant,
            env => ?DEBUG(Env),
            tag => boolean,
            form => Boolean},
   clj_env:push_expr(Env, Expr);
-analyze(Env, String) when is_binary(String) ->
+analyze_form(Env, String) when is_binary(String) ->
   Expr = #{op => constant,
            env => ?DEBUG(Env),
            tag => string,
            form => String},
   clj_env:push_expr(Env, Expr);
-analyze(Env, Number) when is_number(Number) ->
+analyze_form(Env, Number) when is_number(Number) ->
   Expr = #{op => constant,
            env => ?DEBUG(Env),
            tag => number,
            form => Number},
   clj_env:push_expr(Env, Expr);
-analyze(Env, Form) ->
+analyze_form(Env, Form) ->
   case type(Form) of
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
@@ -108,19 +139,18 @@ analyze_seq(_Env, undefined, _List) ->
 analyze_seq(Env, Op, List) ->
   case macroexpand_1(Env, List) of
     List ->
-      case lists:member(Op, special_forms()) of
-        true ->
-          Name = name(Op),
-          parse_special_form(Name, List, Env);
-        false ->
-          analyze_invoke(Env, List)
+      case maps:get(Op, special_forms(), undefined) of
+        undefined ->
+          analyze_invoke(Env, List);
+        ParseFun ->
+          ParseFun(List, Env)
       end;
     ExpandedList ->
-      analyze(Env, ExpandedList)
+      analyze_form(Env, ExpandedList)
   end.
 
--spec parse_special_form(any(), 'clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_special_form(<<"def">>, List, Env) ->
+-spec parse_def('clojerl.List':type(), clj_env:env()) -> clj_env:env().
+parse_def(List, Env) ->
   Docstring = validate_def_args(List),
   VarSymbol = second(List),
   case lookup_var(VarSymbol, Env) of
@@ -130,7 +160,8 @@ parse_special_form(<<"def">>, List, Env) ->
       VarNsSym = 'clojerl.Var':namespace(Var),
       case {clj_env:current_ns(Env1), namespace(VarSymbol)} of
         {VarNsSym, _} -> ok;
-        {_ , undefined} ->  throw(<<"Can't create defs outside of current ns">>);
+        {_ , undefined} ->
+          throw(<<"Can't create defs outside of current ns">>);
         _ -> ok
       end,
 
@@ -148,7 +179,8 @@ parse_special_form(<<"def">>, List, Env) ->
                _ -> fourth(List)
              end,
 
-      {InitExpr, Env3} = clj_env:pop_expr(analyze(Env2, Init)),
+      ExprEnv2 = clj_env:context(Env2, expr),
+      {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
       VarExpr = #{op => def,
                   env => ?DEBUG(Env3),
                   form => List,
@@ -227,37 +259,12 @@ lookup_var(VarSymbol, false, Env) ->
       {Var, Env}
   end.
 
-special_forms() ->
-  [symbol(<<"def">>),
-   symbol(<<"loop*">>),
-   symbol(<<"recur">>),
-   symbol(<<"if">>),
-   symbol(<<"case*">>),
-   symbol(<<"let*">>),
-   symbol(<<"letfn*">>),
-   symbol(<<"do">>),
-   symbol(<<"fn*">>),
-   symbol(<<"quote">>),
-   symbol(<<"var">>),
-   symbol(<<"import*">>),
-   symbol(<<"deftype*">>),
-   symbol(<<"reify*">>),
-   symbol(<<"try">>),
-   %% symbol('monitor-enter') => fun analyze_def/2,
-   %% symbol('monitor-exit') => fun analyze_def/2,
-   %% symbol('new') => fun analyze_def/2,
-   %% symbol('&') => fun analyze_def/2
-   symbol(<<"throw">>),
-   symbol(<<"catch">>),
-   symbol(<<"finally">>)
-  ].
-
 -spec analyze_invoke(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_invoke(Env, Form) ->
-  Env1 = analyze(Env, first(Form)),
+  Env1 = analyze_form(Env, first(Form)),
 
   Args = rest(Form),
-  FoldFun = fun(F, E) -> analyze(E, F) end,
+  FoldFun = fun(F, E) -> analyze_form(E, F) end,
   Env2 = lists:foldl(FoldFun, Env1, 'clojerl.List':to_list(Args)),
 
   ArgCount = clj_core:count(Args),
@@ -274,7 +281,7 @@ analyze_invoke(Env, Form) ->
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
   Expr = #{op => var,
-           env => #{}, %%Env,
+           env => ?DEBUG(Env),
            form => Symbol},
   case {namespace(Symbol), clj_env:get_local(Env, Symbol)} of
     {undefined, Local} when Local =/= undefined ->
@@ -283,7 +290,7 @@ analyze_symbol(Env, Symbol) ->
       case resolve(Env, Symbol) of
         undefined ->
           Str = clj_core:str([Symbol]),
-          throw(<<"Unable to resolve var: ", Str/binary," in this context">>);
+          throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
         Var ->
           clj_env:push_expr(Env, Expr#{info => Var})
       end
@@ -312,10 +319,12 @@ resolve(Env, Symbol) ->
 -spec analyze_vector(clj_env:env(), 'clojerl.Vector':type()) -> clj_env:env().
 analyze_vector(Env, Vector) ->
   Items = 'clojerl.Vector':to_list(Vector),
-  FoldFun = fun(F, E) -> analyze(E, F) end,
-  Env1 = lists:foldl(FoldFun, Env, Items),
+  FoldFun = fun(F, E) -> analyze_form(E, F) end,
 
   Count = clj_core:count(Vector),
+  ExprEnv = clj_env:context(Env, expr),
+
+  Env1 = lists:foldl(FoldFun, ExprEnv, Items),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
   VectorExpr = #{op => vector,
@@ -326,13 +335,15 @@ analyze_vector(Env, Vector) ->
 
 -spec analyze_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
 analyze_map(Env, Map) ->
-  FoldFun = fun(F, E) -> analyze(E, F) end,
+  FoldFun = fun(F, E) -> analyze_form(E, F) end,
 
   Keys = 'clojerl.Map':keys(Map),
   Vals = 'clojerl.Map':vals(Map),
 
   Count = clj_core:count(Map),
-  Env1 = lists:foldl(FoldFun, Env, Keys),
+  ExprEnv = clj_env:context(Env, expr),
+
+  Env1 = lists:foldl(FoldFun, ExprEnv, Keys),
   {KeysExpr, Env2} = clj_env:last_exprs(Env1, Count),
   Env3 = lists:foldl(FoldFun, Env2, Vals),
   {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
@@ -347,8 +358,9 @@ analyze_map(Env, Map) ->
 -spec analyze_set(clj_env:env(), 'clojerl.Set':type()) -> clj_env:env().
 analyze_set(Env, Set) ->
   Items = 'clojerl.Set':to_list(Set),
-  FoldFun = fun(F, E) -> analyze(E, F) end,
-  Env1 = lists:foldl(FoldFun, Env, Items),
+  FoldFun = fun(F, E) -> analyze_form(E, F) end,
+  ExprEnv = clj_env:context(Env, expr),
+  Env1 = lists:foldl(FoldFun, ExprEnv, Items),
 
   Count = clj_core:count(Set),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),

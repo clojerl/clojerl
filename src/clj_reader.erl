@@ -123,6 +123,7 @@ read_string(#{src := <<>>}) ->
 
 -spec escape_char(binary()) -> {binary(), binary()}.
 escape_char(<<Char, Rest/binary>> = Src) ->
+  CharType = clj_utils:char_type(Char, Rest),
   case Char of
     $t -> {<<"\t">>, Rest};
     $r -> {<<"\r">>, Rest};
@@ -135,23 +136,20 @@ escape_char(<<Char, Rest/binary>> = Src) ->
       %% Hexa unicode
       {CodePoint, NewRest} = unicode_char(Rest, 16, 4, true),
       {unicode:characters_to_binary([CodePoint]), NewRest};
-    _  ->
+    _ when CharType == number ->
       %% Octal unicode
-      case clj_utils:char_type(Char, Rest) of
-        number ->
-          case unicode_char(Src, 8, 3, false) of
-            {CodePoint, _} when CodePoint > 8#337 ->
-              throw(<<"Octal escape sequence must be in range [0, 377]">>);
-            {CodePoint, NewRest} ->
-              {unicode:characters_to_binary([CodePoint]), NewRest}
-          end;
-        _ ->
-          throw(<<"Unsupported escape character: \\", Char>>)
-      end
+      case unicode_char(Src, 8, 3, false) of
+        {CodePoint, _} when CodePoint > 8#337 ->
+          throw(<<"Octal escape sequence must be in range [0, 377]">>);
+        {CodePoint, NewRest} ->
+          {unicode:characters_to_binary([CodePoint]), NewRest}
+      end;
+    _ ->
+      throw(<<"Unsupported escape character: \\", Char>>)
   end.
 
 -spec unicode_char(binary(), integer(), integer(), Exact :: boolean()) ->
-  {binary(), binary()}.
+                      {binary(), binary()}.
 unicode_char(Src, Base, Length, IsExact) ->
   {Number, Rest} = consume(Src, [number, symbol]),
   Size = case IsExact of
@@ -263,8 +261,9 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
-  SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
-  wrapped_read(SyntaxQuote, State#{src => Src}).
+  %% SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
+  %% wrapped_read(SyntaxQuote, State#{src => Src}).
+  throw(unimplemented).
 
 %%------------------------------------------------------------------------------
 %% Unquote
@@ -357,22 +356,25 @@ read_char(#{src := <<$\\, Src/binary>>,
         {Ch, _} = unicode_char(RestToken, 16, 4, true),
         Ch;
       <<$o, RestToken/binary>> ->
-        case size(RestToken) of
-          Size when Size > 3 ->
-            SizeBin = integer_to_binary(Size),
-            throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
-          Size ->
-            case unicode_char(RestToken, 8, Size, true) of
-              {Ch, _} when Ch > 8#377 ->
-                throw(<<"Octal escape sequence must be in range [0, 377]">>);
-              {Ch, _} -> Ch
-            end
-        end;
+        read_octal_char(RestToken);
       Ch -> throw(<<"Unsupported character: \\", Ch/binary>>)
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
   State#{src => RestSrc, forms => [CharBin | Forms]}.
+
+-spec read_octal_char(binary()) -> char().
+read_octal_char(RestToken) when size(RestToken) > 3 ->
+  Size = size(RestToken),
+  SizeBin = integer_to_binary(Size),
+  throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
+read_octal_char(RestToken)  ->
+  Size = size(RestToken),
+  case unicode_char(RestToken, 8, Size, true) of
+    {Ch, _} when Ch > 8#377 ->
+      throw(<<"Octal escape sequence must be in range [0, 377]">>);
+    {Ch, _} -> Ch
+  end.
 
 %%------------------------------------------------------------------------------
 %% Argument
@@ -473,24 +475,37 @@ read_erl_fun(State) ->
   {First, State1} = pop_form(read_one(State)),
   {Second, State2 = #{forms := Forms}} = pop_form(read_one(State1)),
 
-  case {clj_core:type(First), clj_core:type(Second)} of
-    {symbol, vector} ->
+  case valid_erl_fun(First, Second) of
+    true ->
       Module = clj_core:namespace(First),
       Function = clj_core:name(First),
+      ModuleAtom = binary_to_existing_atom(Module, utf8),
+      FunctionAtom = binary_to_existing_atom(Function, utf8),
+
       Arity = clj_core:first(Second),
-      Fun = fun Module:Function/Arity,
+      Fun = fun ModuleAtom:FunctionAtom/Arity,
       State2#{forms => [Fun | Forms]};
-    X ->
-      erlang:display(X),
-      throw(<<"Reader literal '#:' expects a symbol"
+    false ->
+      throw(<<"Reader literal '#:' expects a fully-qualified symbol"
               " followed by a vector with one element.">>)
+  end.
+
+valid_erl_fun(First, Second) ->
+  case {clj_core:type(First), clj_core:type(Second)} of
+    {'clojerl.Symbol', 'clojerl.Vector'} ->
+      Module = clj_core:namespace(First),
+      Count = clj_core:count(Second),
+      Module =/= undefined andalso Count == 1;
+    _ ->
+      false
   end.
 
 %%------------------------------------------------------------------------------
 %% Utility functions
 %%------------------------------------------------------------------------------
 
--spec consume(binary(), [clj_utils:char_type()] | fun()) -> {binary(), binary()}.
+-spec consume(binary(), [clj_utils:char_type()] | fun()) ->
+                 {binary(), binary()}.
 consume(Src, TypesOrPred) ->
   do_consume(Src, <<>>, TypesOrPred).
 

@@ -4,6 +4,7 @@
 
 -export(
    [
+    eof/1,
     number/1,
     string/1,
     keyword/1,
@@ -27,7 +28,9 @@
     regex/1,
     unreadable_form/1,
     discard/1,
-    'cond'/1
+    'cond'/1,
+    erl_fun/1,
+    unsupported_reader/1
    ]
   ).
 
@@ -36,6 +39,14 @@ all() ->
   ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
   Exports = ?MODULE:module_info(exports),
   [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+
+eof(_Config) ->
+  ct:comment("Read empty binary"),
+  ok = try clj_reader:read(<<"">>)
+       catch _:<<"EOF">> -> ok
+       end,
+
+  {comments, ""}.
 
 number(_Config) ->
   0 = clj_reader:read(<<"0">>),
@@ -285,7 +296,10 @@ meta(_Config) ->
   {comments, ""}.
 
 syntax_quote(_Config) ->
-  throw(unimplemented).
+  ct:comment("Read syntax-quote"),
+  clj_reader:read(<<"`1">>),
+
+  {comments, ""}.
 
 unquote(_Config) ->
   UnquoteSymbol = 'clojerl.Symbol':new(<<"clojure.core">>, <<"unquote">>),
@@ -447,7 +461,6 @@ arg(_Config) ->
 
   {comments, ""}.
 
-
 fn(_Config) ->
   ct:comment("Read anonymous fn"),
   clj_reader:read(<<"#(do 1)">>),
@@ -497,5 +510,43 @@ discard(_Config) ->
 'cond'(_Config) ->
   ct:comment("Read cond"),
   clj_reader:read(<<"#? 1">>),
+
+  {comments, ""}.
+
+erl_fun(_Config) ->
+  ct:comment("Read Erlang function"),
+  SomeFunction1 = fun some:function/1,
+  SomeFunction1 = clj_reader:read(<<"#:some/function[1]">>),
+
+  SomeFunction2 = fun some:function/2,
+  SomeFunction2 = clj_reader:read(<<"#: some/function[2]">>),
+
+  ct:comment("Don't provide a fully qualified symbol"),
+  ok = try clj_reader:read_all(<<"#:function[1]">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Don't provide a vector"),
+  ok = try clj_reader:read_all(<<"#:some/function">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Don't provide a symbol"),
+  ok = try clj_reader:read_all(<<"#:1[1]">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Provide a vector with more than one element"),
+  ok = try clj_reader:read_all(<<"#:some/function[1, 2]">>)
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+unsupported_reader(_Config) ->
+  ct:comment("Try unsupported reader"),
+  ok = try clj_reader:read(<<"#-:something">>)
+       catch _:_ -> ok
+       end,
 
   {comments, ""}.
