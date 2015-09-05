@@ -5,9 +5,13 @@
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
-  Forms = lists:map(fun erl_syntax:revert/1, ast(Expr)),
-  {ok, Name, Binary} = compile:forms(Forms),
-  code:load_binary(Name, "", Binary),
+  case lists:map(fun erl_syntax:revert/1, ast(Expr)) of
+    [] ->
+      ok;
+    Forms ->
+      {ok, Name, Binary} = compile:forms(Forms),
+      code:load_binary(Name, "", Binary)
+  end,
 
   HR = lists:duplicate(80, $=),
   io:format("~p~n~s~n", [Expr, HR]),
@@ -38,8 +42,11 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
   FunctionAst = function_form(val, [ClauseAst]),
 
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
-ast(#{op := constant, form := Form}) ->
-  [erl_syntax:abstract(Form)];
+ast(#{op := constant, form := Form} = Expr) ->
+  case maps:get(top_level, Expr, false) of
+    true -> [];
+    false -> [erl_syntax:abstract(Form)]
+  end;
 ast(#{op := var} = _Form) ->
   io:format("{{{ Resolve var's value and emit it. }}}~n").
 

@@ -2,6 +2,7 @@
 
 -export([
          default/0,
+         context/2,
          push_expr/2,
          pop_expr/1,
          last_exprs/2,
@@ -16,7 +17,10 @@
          find_var/2
         ]).
 
+-type context() :: expr | return | statement.
+
 -type env() :: #{namespaces => [],
+                 context => context(),
                  exprs => [],
                  current_ns => 'clojerl.Symbol':type(),
                  locals => #{'clojerl.Symbol':type() => any()}}.
@@ -28,9 +32,13 @@ default() ->
   UserSym = clj_core:symbol(<<"user">>),
   UserNs = clj_namespace:new(UserSym),
   #{namespaces => #{UserSym => UserNs},
+    context    => expr,
     exprs      => [],
     current_ns => UserSym,
     locals     => #{}}.
+
+-spec context(env(), context()) -> env().
+context(Env, Ctx) -> Env#{context => Ctx}.
 
 -spec push_expr(env(), erl_syntax:syntaxTree()) -> env().
 push_expr(Env = #{exprs := Exprs}, Expr) ->
@@ -97,18 +105,15 @@ update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
       Env#{namespaces => NewNss}
   end.
 
--spec get_ns(env(), 'clojerl.Symbol':type()) ->
-  clj_namespace:namespace().
+-spec get_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
 get_ns(_Env = #{namespaces := Nss}, SymNs) ->
   maps:get(SymNs, Nss, undefined).
 
--spec get_local(env(), 'clojerl.Symbol':type()) ->
-  clj_namespace:namespace().
+-spec get_local(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
 get_local(_Env = #{locals := Locals}, Sym) ->
   maps:get(Sym, Locals, undefined).
 
--spec update_var(env(), 'clojerl.Var':type()) ->
-  clj_namespace:namespace().
+-spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
 update_var(Env, Var) ->
   VarNsSym = 'clojerl.Var':namespace(Var),
   Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,

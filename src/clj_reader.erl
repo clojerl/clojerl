@@ -123,6 +123,7 @@ read_string(#{src := <<>>}) ->
 
 -spec escape_char(binary()) -> {binary(), binary()}.
 escape_char(<<Char, Rest/binary>> = Src) ->
+  CharType = clj_utils:char_type(Char, Rest),
   case Char of
     $t -> {<<"\t">>, Rest};
     $r -> {<<"\r">>, Rest};
@@ -135,23 +136,20 @@ escape_char(<<Char, Rest/binary>> = Src) ->
       %% Hexa unicode
       {CodePoint, NewRest} = unicode_char(Rest, 16, 4, true),
       {unicode:characters_to_binary([CodePoint]), NewRest};
-    _  ->
+    _ when CharType == number ->
       %% Octal unicode
-      case clj_utils:char_type(Char, Rest) of
-        number ->
-          case unicode_char(Src, 8, 3, false) of
-            {CodePoint, _} when CodePoint > 8#337 ->
-              throw(<<"Octal escape sequence must be in range [0, 377]">>);
-            {CodePoint, NewRest} ->
-              {unicode:characters_to_binary([CodePoint]), NewRest}
-          end;
-        _ ->
-          throw(<<"Unsupported escape character: \\", Char>>)
-      end
+      case unicode_char(Src, 8, 3, false) of
+        {CodePoint, _} when CodePoint > 8#337 ->
+          throw(<<"Octal escape sequence must be in range [0, 377]">>);
+        {CodePoint, NewRest} ->
+          {unicode:characters_to_binary([CodePoint]), NewRest}
+      end;
+    _ ->
+      throw(<<"Unsupported escape character: \\", Char>>)
   end.
 
 -spec unicode_char(binary(), integer(), integer(), Exact :: boolean()) ->
-  {binary(), binary()}.
+                      {binary(), binary()}.
 unicode_char(Src, Base, Length, IsExact) ->
   {Number, Rest} = consume(Src, [number, symbol]),
   Size = case IsExact of
@@ -357,22 +355,25 @@ read_char(#{src := <<$\\, Src/binary>>,
         {Ch, _} = unicode_char(RestToken, 16, 4, true),
         Ch;
       <<$o, RestToken/binary>> ->
-        case size(RestToken) of
-          Size when Size > 3 ->
-            SizeBin = integer_to_binary(Size),
-            throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
-          Size ->
-            case unicode_char(RestToken, 8, Size, true) of
-              {Ch, _} when Ch > 8#377 ->
-                throw(<<"Octal escape sequence must be in range [0, 377]">>);
-              {Ch, _} -> Ch
-            end
-        end;
+        read_octal_char(RestToken);
       Ch -> throw(<<"Unsupported character: \\", Ch/binary>>)
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
   State#{src => RestSrc, forms => [CharBin | Forms]}.
+
+-spec read_octal_char(binary()) -> char().
+read_octal_char(RestToken) when size(RestToken) > 3 ->
+  Size = size(RestToken),
+  SizeBin = integer_to_binary(Size),
+  throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
+read_octal_char(RestToken)  ->
+  Size = size(RestToken),
+  case unicode_char(RestToken, 8, Size, true) of
+    {Ch, _} when Ch > 8#377 ->
+      throw(<<"Octal escape sequence must be in range [0, 377]">>);
+    {Ch, _} -> Ch
+  end.
 
 %%------------------------------------------------------------------------------
 %% Argument
@@ -490,7 +491,8 @@ read_erl_fun(State) ->
 %% Utility functions
 %%------------------------------------------------------------------------------
 
--spec consume(binary(), [clj_utils:char_type()] | fun()) -> {binary(), binary()}.
+-spec consume(binary(), [clj_utils:char_type()] | fun()) ->
+  {binary(), binary()}.
 consume(Src, TypesOrPred) ->
   do_consume(Src, <<>>, TypesOrPred).
 
