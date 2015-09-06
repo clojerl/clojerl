@@ -86,40 +86,10 @@ special_forms() ->
    }.
 
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
-analyze_form(Env, undefined) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => nil,
-           form => undefined},
-  clj_env:push_expr(Env, Expr);
-analyze_form(Env, Boolean) when is_boolean(Boolean) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => boolean,
-           form => Boolean},
-  clj_env:push_expr(Env, Expr);
-analyze_form(Env, String) when is_binary(String) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => string,
-           form => String},
-  clj_env:push_expr(Env, Expr);
-analyze_form(Env, Number) when is_number(Number) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => number,
-           form => Number},
-  clj_env:push_expr(Env, Expr);
 analyze_form(Env, Form) ->
   case type(Form) of
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
-    'clojerl.Keyword' ->
-      Expr = #{op => constant,
-               env => ?DEBUG(Env),
-               tag => 'clojerl.Keyword',
-               form => Form},
-      clj_env:push_expr(Env, Expr);
     'clojerl.List' ->
       Op = first(Form),
       analyze_seq(Env, Op, Form);
@@ -130,8 +100,16 @@ analyze_form(Env, Form) ->
     'clojerl.Set' ->
       analyze_set(Env, Form);
     _ ->
-      throw({invalid_form, Form, Env})
+      analyze_const(Env, Form)
   end.
+
+-spec analyze_const(clj_env:env(), any()) -> clj_env:env().
+analyze_const(Env, Constant) ->
+  Expr = #{op => constant,
+           env => ?DEBUG(Env),
+           tag => clj_core:type(Constant),
+           form => Constant},
+  clj_env:push_expr(Env, Expr).
 
 -spec analyze_seq(clj_env:env(), any(), 'clojerl.List':type()) -> clj_env:env().
 analyze_seq(_Env, undefined, _List) ->
@@ -143,14 +121,14 @@ analyze_seq(Env, Op, List) ->
         undefined ->
           analyze_invoke(Env, List);
         ParseFun ->
-          ParseFun(List, Env)
+          ParseFun(Env, List)
       end;
     ExpandedList ->
       analyze_form(Env, ExpandedList)
   end.
 
--spec parse_def('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_def(List, Env) ->
+-spec parse_def(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_def(Env, List) ->
   Docstring = validate_def_args(List),
   VarSymbol = second(List),
   case lookup_var(VarSymbol, Env) of
@@ -200,14 +178,14 @@ validate_def_args(List) ->
       {4, Str} when is_binary(Str) -> Str;
       _ -> undefined
     end,
-  case type(second(List)) of
-    'clojerl.Symbol' -> ok;
-    _ -> throw(<<"First argument to def must be a Symbol">>)
-  end,
   case count(List) of
     C when C == 2;
            C == 3, Docstring == undefined;
            C == 4, Docstring =/= undefined  ->
+      case type(second(List)) of
+        'clojerl.Symbol' -> ok;
+        _ -> throw(<<"First argument to def must be a symbol">>)
+      end,
       Docstring;
     1 ->
       throw(<<"Too few arguments to def">>);

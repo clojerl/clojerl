@@ -6,6 +6,7 @@
          push_expr/2,
          pop_expr/1,
          last_exprs/2,
+         exprs/1,
          in_ns/2,
          add_ns/2,
          current_ns/1,
@@ -58,6 +59,9 @@ last_exprs(Env = #{exprs := AllExprs}, N) when N >= 0 ->
   RestExprs = lists:sublist(AllExprs, N + 1, length(AllExprs)),
   {lists:reverse(Exprs),
    Env#{exprs => RestExprs}}.
+
+-spec exprs(env()) -> [any()].
+exprs(#{exprs := AllExprs}) -> lists:reverse(AllExprs).
 
 -spec in_ns(env(), 'clojerl.Symbol':type()) -> env().
 in_ns(Env, NsSym) ->

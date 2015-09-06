@@ -10,7 +10,6 @@
   'clj_namespace',
   'clj_reader',
   'clj_utils',
-  'clojerl.app.src',
   'clojerl.Keyword.clojerl.IMeta',
   'clojerl.Keyword.clojerl.Named',
   'clojerl.Keyword',

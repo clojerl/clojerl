@@ -16,4 +16,4 @@ SHELL_OPTS += -name ${PROJECT}@`hostname` -s sync
 
 # Generate a list of all modules for the cover.spec
 print-all-modules:
-	find src -type f | xargs basename | sed -e 's/\.erl//' | sed -e "s/\(.*\)/'\1',/"
+	find src -type f -name "*.erl" | xargs basename | sed -e 's/\.erl//' | sed -e "s/\(.*\)/'\1',/"
