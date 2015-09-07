@@ -83,6 +83,29 @@ def(_Config) ->
            ok
        end,
 
+  ct:comment("Qualified var that doesn't exist"),
+  ok = try analyze_one(<<"(def x/y)">>)
+       catch _:Reason4 ->
+           <<"Can't refer to qualified var that doesn't exist">> = Reason4,
+           ok
+       end,
+
+  ct:comment("Create def outside current namespace"),
+  ok = try analyze_all(<<"(ns bla) (def x 1) (ns user) (def bla/x 2)">>)
+       catch _:Reason5 ->
+           <<"Can't create defs outside of current ns">> = Reason5,
+           ok
+       end,
+
+  #{op := def,
+    doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
+
+  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y user/x)">>),
+
+  #{op := def} = analyze_one(<<"(def user/x 1)">>),
+
+  [#{op := def}] = analyze_all(<<"(ns bla) (def x 1)">>),
+
   {comments, ""}.
 
 -spec invoke(config()) -> result().
