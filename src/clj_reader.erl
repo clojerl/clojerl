@@ -260,7 +260,7 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
-read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
+read_syntax_quote(#{src := <<$`, _Src/binary>>} = _State) ->
   %% SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
   %% wrapped_read(SyntaxQuote, State#{src => Src}).
   throw(unimplemented).

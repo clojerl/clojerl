@@ -23,8 +23,10 @@
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->
-  {Expr, Env} = clj_env:pop_expr(analyze_form(Env0, Form)),
-  clj_env:push_expr(Env, Expr#{top_level => true}).
+  case clj_env:pop_expr(analyze_form(Env0, Form)) of
+    {undefined, Env} -> Env;
+    {Expr, Env} -> clj_env:push_expr(Env, Expr#{top_level => true})
+  end.
 
 -spec is_special(any()) -> boolean().
 is_special(S) ->
@@ -61,65 +63,37 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{symbol(<<"def">>) => fun parse_def/2,
-    symbol(<<"loop*">>) => undefined,
-    symbol(<<"recur">>) => undefined,
-    symbol(<<"if">>) => undefined,
-    symbol(<<"case*">>) => undefined,
-    symbol(<<"let*">>) => undefined,
-    symbol(<<"letfn*">>) => undefined,
-    symbol(<<"do">>) => undefined,
-    symbol(<<"fn*">>) => undefined,
-    symbol(<<"quote">>) => undefined,
-    symbol(<<"var">>) => undefined,
-    symbol(<<"import*">>) => undefined,
-    symbol(<<"deftype*">>) => undefined,
-    symbol(<<"reify*">>) => undefined,
-    symbol(<<"try">>) => undefined,
-    %% symbol(<<"monitor-enter">>),
-    %% symbol(<<"monitor-exit">>),
-    %% symbol(<<"new">>),
-    %% symbol(<<"&">>),
-    symbol(<<"throw">>) => undefined,
-    symbol(<<"catch">>) => undefined,
-    symbol(<<"finally">>) => undefined
+  #{
+     symbol(<<"ns">>) => fun parse_ns/2,
+     symbol(<<"def">>) => fun parse_def/2,
+     symbol(<<"loop*">>) => undefined,
+     symbol(<<"recur">>) => undefined,
+     symbol(<<"if">>) => undefined,
+     symbol(<<"case*">>) => undefined,
+     symbol(<<"let*">>) => undefined,
+     symbol(<<"letfn*">>) => undefined,
+     symbol(<<"do">>) => undefined,
+     symbol(<<"fn*">>) => undefined,
+     symbol(<<"quote">>) => undefined,
+     symbol(<<"var">>) => undefined,
+     symbol(<<"import*">>) => undefined,
+     symbol(<<"deftype*">>) => undefined,
+     symbol(<<"reify*">>) => undefined,
+     symbol(<<"try">>) => undefined,
+     %% symbol(<<"monitor-enter">>),
+     %% symbol(<<"monitor-exit">>),
+     %% symbol(<<"new">>),
+     %% symbol(<<"&">>),
+     symbol(<<"throw">>) => undefined,
+     symbol(<<"catch">>) => undefined,
+     symbol(<<"finally">>) => undefined
    }.
 
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
-analyze_form(Env, undefined) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => nil,
-           form => undefined},
-  clj_env:push_expr(Env, Expr);
-analyze_form(Env, Boolean) when is_boolean(Boolean) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => boolean,
-           form => Boolean},
-  clj_env:push_expr(Env, Expr);
-analyze_form(Env, String) when is_binary(String) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => string,
-           form => String},
-  clj_env:push_expr(Env, Expr);
-analyze_form(Env, Number) when is_number(Number) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => number,
-           form => Number},
-  clj_env:push_expr(Env, Expr);
 analyze_form(Env, Form) ->
   case type(Form) of
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
-    'clojerl.Keyword' ->
-      Expr = #{op => constant,
-               env => ?DEBUG(Env),
-               tag => 'clojerl.Keyword',
-               form => Form},
-      clj_env:push_expr(Env, Expr);
     'clojerl.List' ->
       Op = first(Form),
       analyze_seq(Env, Op, Form);
@@ -130,8 +104,16 @@ analyze_form(Env, Form) ->
     'clojerl.Set' ->
       analyze_set(Env, Form);
     _ ->
-      throw({invalid_form, Form, Env})
+      analyze_const(Env, Form)
   end.
+
+-spec analyze_const(clj_env:env(), any()) -> clj_env:env().
+analyze_const(Env, Constant) ->
+  Expr = #{op => constant,
+           env => ?DEBUG(Env),
+           tag => clj_core:type(Constant),
+           form => Constant},
+  clj_env:push_expr(Env, Expr).
 
 -spec analyze_seq(clj_env:env(), any(), 'clojerl.List':type()) -> clj_env:env().
 analyze_seq(_Env, undefined, _List) ->
@@ -143,14 +125,25 @@ analyze_seq(Env, Op, List) ->
         undefined ->
           analyze_invoke(Env, List);
         ParseFun ->
-          ParseFun(List, Env)
+          ParseFun(Env, List)
       end;
     ExpandedList ->
       analyze_form(Env, ExpandedList)
   end.
 
--spec parse_def('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_def(List, Env) ->
+-spec parse_ns(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_ns(Env, List) ->
+  Second = clj_core:second(List),
+  case clj_core:'symbol?'(Second) of
+    true ->
+      {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
+      NewEnv;
+    false ->
+      throw(<<"First argument to ns must a symbol">>)
+  end.
+
+-spec parse_def(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_def(Env, List) ->
   Docstring = validate_def_args(List),
   VarSymbol = second(List),
   case lookup_var(VarSymbol, Env) of
@@ -160,9 +153,8 @@ parse_def(List, Env) ->
       VarNsSym = 'clojerl.Var':namespace(Var),
       case {clj_env:current_ns(Env1), namespace(VarSymbol)} of
         {VarNsSym, _} -> ok;
-        {_ , undefined} ->
-          throw(<<"Can't create defs outside of current ns">>);
-        _ -> ok
+        {_ , undefined} -> ok;
+        _ -> throw(<<"Can't create defs outside of current ns">>)
       end,
 
       Meta = meta(VarSymbol),
@@ -200,14 +192,14 @@ validate_def_args(List) ->
       {4, Str} when is_binary(Str) -> Str;
       _ -> undefined
     end,
-  case type(second(List)) of
-    'clojerl.Symbol' -> ok;
-    _ -> throw(<<"First argument to def must be a Symbol">>)
-  end,
   case count(List) of
     C when C == 2;
            C == 3, Docstring == undefined;
            C == 4, Docstring =/= undefined  ->
+      case type(second(List)) of
+        'clojerl.Symbol' -> ok;
+        _ -> throw(<<"First argument to def must be a symbol">>)
+      end,
       Docstring;
     1 ->
       throw(<<"Too few arguments to def">>);
@@ -219,16 +211,13 @@ validate_def_args(List) ->
 lookup_var(VarSymbol, Env) ->
   lookup_var(VarSymbol, true, Env).
 
--spec lookup_var('clojerl.Symbol':type(),
-                 CreateNew :: boolean(),
-                 clj_env:env()) ->
+-spec lookup_var('clojerl.Symbol':type(), boolean(), clj_env:env()) ->
   {'clojerl.Var':type(), clj_env:env()}.
-lookup_var(VarSymbol, true, Env) ->
+lookup_var(VarSymbol, true = _CreateNew, Env) ->
   NsSym = case namespace(VarSymbol) of
             undefined -> undefined;
             NsStr -> symbol(NsStr)
           end,
-
   case clj_env:current_ns(Env) of
     CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
       NameSym = symbol(name(VarSymbol)),
@@ -236,7 +225,7 @@ lookup_var(VarSymbol, true, Env) ->
       NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
       lookup_var(VarSymbol, false, NewEnv);
     _ ->
-      {undefined, Env}
+      lookup_var(VarSymbol, false, Env)
   end;
 lookup_var(VarSymbol, false, Env) ->
   NsStr = namespace(VarSymbol),
@@ -298,7 +287,7 @@ analyze_symbol(Env, Symbol) ->
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) -> any() | undefined.
 resolve(Env, Symbol) ->
-  CurrentNs = clj_env:get_ns(Env, clj_env:current_ns(Env)),
+  CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local = clj_env:get_local(Env, Symbol),
   NsStr = namespace(Symbol),
   UsedVar = clj_namespace:use(CurrentNs, Symbol),

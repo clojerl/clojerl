@@ -19,7 +19,8 @@
          meta/1, with_meta/2,
          get/2, get/3,
          boolean/1,
-         str/1
+         str/1,
+         list/1
         ]).
 
 -spec count(any()) -> integer().
@@ -107,13 +108,6 @@ boolean(undefined) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
 
--spec str(any()) -> any().
-str(L) when is_list(L) ->
-  Strs = lists:map(fun str/1, L),
-  binary_join(Strs, <<>>);
-str(X) ->
-  'clojerl.Stringable':str(X).
-
 -spec type(any()) -> atom().
 type(X) when is_tuple(X) -> element(1, X);
 type(X) when is_binary(X) -> string;
@@ -121,6 +115,13 @@ type(X) when is_integer(X) -> integer;
 type(X) when is_float(X) -> float;
 type(X) when is_boolean(X) -> boolean;
 type(undefined) -> nil.
+
+-spec str(any()) -> any().
+str(L) when is_list(L) ->
+  Strs = lists:map(fun str/1, L),
+  binary_join(Strs, <<>>);
+str(X) ->
+  'clojerl.Stringable':str(X).
 
 -spec binary_join([binary()], binary()) -> binary().
 binary_join([], _Sep) ->
@@ -134,3 +135,7 @@ binary_join(List, Sep) ->
                     _ -> A
                   end
               end, <<>>, List).
+
+-spec 'list'(list()) -> 'clojerl.List':type().
+list(Items) ->
+  'clojerl.List':new(Items).

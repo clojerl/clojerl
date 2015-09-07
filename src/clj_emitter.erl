@@ -4,23 +4,26 @@
 
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
-  {Expr, Env} = clj_env:pop_expr(Env0),
-  case lists:map(fun erl_syntax:revert/1, ast(Expr)) of
-    [] ->
-      ok;
-    Forms ->
-      {ok, Name, Binary} = compile:forms(Forms),
-      code:load_binary(Name, "", Binary)
-  end,
-
-  HR = lists:duplicate(80, $=),
-  io:format("~p~n~s~n", [Expr, HR]),
-
-  Env.
+  case clj_env:pop_expr(Env0) of
+    {undefined, _} ->
+      Env0;
+    {Expr, Env} ->
+      HR = lists:duplicate(80, $=),
+      io:format("~p~n~s~n", [Expr, HR]),
+      Forms = lists:map(fun erl_syntax:revert/1, ast(Expr)),
+      compile_forms(Forms),
+      Env
+  end.
 
 %%------------------------------------------------------------------------------
-%% AST
+%% Internal functions
 %%------------------------------------------------------------------------------
+
+compile_forms([]) ->
+  ok;
+compile_forms(Forms) ->
+  {ok, Name, Binary} = compile:forms(Forms),
+  code:load_binary(Name, "", Binary).
 
 -spec ast(map()) -> [erl_syntax:syntaxTree()].
 ast(#{op := def, var := Var, init := InitExpr} = _Form) ->

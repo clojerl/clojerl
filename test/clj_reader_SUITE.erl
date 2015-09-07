@@ -119,7 +119,7 @@ string(_Config) ->
 
 keyword(_Config) ->
   SomeNsSymbol = 'clojerl.Symbol':new(<<"some-ns">>),
-  Env = clj_env:in_ns(clj_env:default(), SomeNsSymbol),
+  {_Ns, Env} = clj_env:find_or_create_ns(clj_env:default(), SomeNsSymbol),
 
   Keyword1 = 'clojerl.Keyword':new(<<"hello-world">>),
   Keyword1 = clj_reader:read(<<":hello-world">>, Env),
