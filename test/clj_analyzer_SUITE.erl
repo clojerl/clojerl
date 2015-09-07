@@ -4,9 +4,13 @@
 
 -export([
          constants/1,
-         invoke/1,
+         ns/1,
          def/1,
-         symbol/1
+         invoke/1,
+         symbol/1,
+         vector/1,
+         map/1,
+         set/1
         ]).
 
 -spec all() -> [atom()].
@@ -57,6 +61,21 @@ constants(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
   #{op := constant,
     form := HelloKeyword} = analyze_one(<<":hello">>),
+
+  {comments, ""}.
+
+-spec ns(config()) -> result().
+ns(_Config) ->
+  ct:comment("Not a symbol"),
+  ok = try analyze_one(<<"(ns 1)">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Change namespace and analyze keyword"),
+  HelloKeyword = clj_core:keyword(<<"bla">>, <<"hello">>),
+
+  [#{op := constant,
+     form := HelloKeyword}] = analyze_all(<<"(ns bla) ::hello">>),
 
   {comments, ""}.
 
@@ -149,6 +168,24 @@ symbol(_Config) ->
   [_,
    #{op := var,
      form := HelloSymbol}] = analyze_all(<<"(def hello 1) hello">>),
+
+  {comments, ""}.
+
+-spec vector(config()) -> result().
+vector(_Config) ->
+  #{op := vector} = analyze_one(<<"[\"hello\" :x 1]">>),
+
+  {comments, ""}.
+
+-spec 'map'(config()) -> result().
+map(_Config) ->
+  #{op := map} = analyze_one(<<"{:name 1 :lastname 2}">>),
+
+  {comments, ""}.
+
+-spec set(config()) -> result().
+set(_Config) ->
+  #{op := set} = analyze_one(<<"#{:name :lastname}">>),
 
   {comments, ""}.
 
