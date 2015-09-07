@@ -142,11 +142,21 @@ parse_ns(Env, List) ->
       throw(<<"First argument to ns must a symbol">>)
   end.
 
-
 -spec parse_quote(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_quote(Env, List) ->
+  case clj_core:count(List) of
+    2 -> ok;
+    Count ->
+      CountBin = integer_to_binary(Count - 1),
+      throw(<<"Wrong number of args to quote, had: ", CountBin/binary>>)
+  end,
   Second = clj_core:second(List),
-  analyze_const(Env, Second).
+  {ConstExpr, NewEnv} = clj_env:pop_expr(analyze_const(Env, Second)),
+  Expr = #{op => quote,
+           env => ?DEBUG(Env),
+           expr => ConstExpr,
+           form => List},
+  clj_env:push_expr(NewEnv, Expr).
 
 -spec parse_def(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_def(Env, List) ->
