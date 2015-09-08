@@ -35,9 +35,8 @@ compile(Src) when is_binary(Src) ->
 
 -spec compile(binary(), clj_env:env()) -> clj_env:env().
 compile(Src, Env) when is_binary(Src) ->
-  Forms = clj_reader:read_all(Src),
   Fun = fun(Form, EnvAcc) ->
             NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
             clj_emitter:emit(NewEnvAcc)
         end,
-  lists:foldl(Fun, Env, Forms).
+  clj_reader:read_fold(Fun, Src, Env).
