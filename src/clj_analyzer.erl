@@ -66,6 +66,7 @@ special_forms() ->
   #{
      symbol(<<"ns">>) => fun parse_ns/2,
      symbol(<<"def">>) => fun parse_def/2,
+     symbol(<<"quote">>) => fun parse_quote/2,
      symbol(<<"loop*">>) => undefined,
      symbol(<<"recur">>) => undefined,
      symbol(<<"if">>) => undefined,
@@ -74,7 +75,6 @@ special_forms() ->
      symbol(<<"letfn*">>) => undefined,
      symbol(<<"do">>) => undefined,
      symbol(<<"fn*">>) => undefined,
-     symbol(<<"quote">>) => undefined,
      symbol(<<"var">>) => undefined,
      symbol(<<"import*">>) => undefined,
      symbol(<<"deftype*">>) => undefined,
@@ -141,6 +141,22 @@ parse_ns(Env, List) ->
     false ->
       throw(<<"First argument to ns must a symbol">>)
   end.
+
+-spec parse_quote(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_quote(Env, List) ->
+  case clj_core:count(List) of
+    2 -> ok;
+    Count ->
+      CountBin = integer_to_binary(Count - 1),
+      throw(<<"Wrong number of args to quote, had: ", CountBin/binary>>)
+  end,
+  Second = clj_core:second(List),
+  {ConstExpr, NewEnv} = clj_env:pop_expr(analyze_const(Env, Second)),
+  Expr = #{op => quote,
+           env => ?DEBUG(Env),
+           expr => ConstExpr,
+           form => List},
+  clj_env:push_expr(NewEnv, Expr).
 
 -spec parse_def(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_def(Env, List) ->

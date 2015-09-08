@@ -6,6 +6,7 @@
          constants/1,
          ns/1,
          def/1,
+         quote/1,
          invoke/1,
          symbol/1,
          vector/1,
@@ -124,6 +125,25 @@ def(_Config) ->
   #{op := def} = analyze_one(<<"(def user/x 1)">>),
 
   [#{op := def}] = analyze_all(<<"(ns bla) (def x 1)">>),
+
+  {comments, ""}.
+
+-spec quote(config()) -> result().
+quote(_Config) ->
+  ct:comment("Quote with reader macro"),
+  #{op := quote,
+    expr := #{op := constant}} = analyze_one(<<"'(user/x 1)">>),
+
+  ct:comment("Quote with quote symbol"),
+  #{op := quote,
+    expr := #{op := constant}} = analyze_one(<<"(quote (user/x 1))">>),
+
+  ct:comment("More than one arg to quote"),
+  ok = try analyze_all(<<"(quote 1 2 3)">>)
+       catch _:Reason ->
+           <<"Wrong number of args to quote, had: 3">> = Reason,
+           ok
+       end,
 
   {comments, ""}.
 
