@@ -220,9 +220,8 @@ analyze_one(Src) ->
   Expr.
 
 analyze_all(Src) ->
-  Forms = clj_reader:read_all(Src),
   Fun = fun(Form, EnvAcc) ->
             clj_analyzer:analyze(EnvAcc, Form)
         end,
-  NewEnv = lists:foldl(Fun, clj_env:default(), Forms),
-  clj_env:exprs(NewEnv).
+  Env = clj_reader:read_fold(Fun, Src),
+  clj_env:exprs(Env).

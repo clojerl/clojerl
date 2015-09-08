@@ -43,8 +43,13 @@ all() ->
 eof(_Config) ->
   ct:comment("Read empty binary"),
   ok = try clj_reader:read(<<"">>)
-       catch _:<<"EOF">> -> ok
-       end,
+       catch _:_ -> ok end,
+
+  ok = try clj_reader:read(<<" , , , , ">>)
+       catch _:_ -> ok end,
+
+  ok = try clj_reader:read(<<", , , \t \n ,, ">>)
+       catch _:_ -> ok end,
 
   {comments, ""}.
 

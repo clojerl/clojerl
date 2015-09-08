@@ -1,6 +1,8 @@
 -module(clj_reader).
 
 -export([
+         read_fold/2,
+         read_fold/3,
          read/1,
          read/2,
          read_all/1,
@@ -11,19 +13,49 @@
                    forms => [any()],
                    env => map()}.
 
--spec read(binary()) -> any().
+-spec new_state(binary(), any(), boolean()) -> state().
+new_state(Src, Env, ReadAll) ->
+  #{src => Src,
+    forms => [],
+    env => Env,
+    all => ReadAll
+   }.
+
+-type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
+
+-spec read_fold(read_fold_fun(), binary()) -> clj_env:env().
+read_fold(Fun, Src) ->
+  read_fold(Fun, Src, clj_env:default()).
+
+-spec read_fold(read_fold_fun(), binary(), clj_env:env()) -> clj_env:env().
+read_fold(Fun, Src, Env) ->
+  State = new_state(Src, Env, false),
+  read_fold_loop(Fun, State).
+
+-spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
+read_fold_loop(Fun, State) ->
+  NewState = dispatch(State),
+  case dispatch(State) of
+    #{forms := [], env := Env} ->
+      Env;
+    NewState = #{forms := [Form], env := Env} ->
+      NewEnv = Fun(Form, Env),
+      read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
+  end.
+
+-spec read(binary()) -> {any(), binary()} | eof.
 read(Src) ->
   read(Src, clj_env:default()).
 
--spec read(binary(), clj_env:env()) -> any().
+%% @doc Reads the next form from the input. Returns a tuple with two elements:
+%%      the form and a binary with the unconsumed output.
+-spec read(binary(), clj_env:env()) -> {any(), binary()} | eof.
 read(Src, Env) ->
-  State = #{src => Src,
-            forms => [],
-            env => Env},
+  State = new_state(Src, Env, false),
   #{forms := Forms} = dispatch(State),
   case Forms of
     [] -> throw(<<"EOF">>);
-    [H | _] -> H
+    [Form] -> Form
   end.
 
 -spec read_all(state()) -> [any()].
@@ -32,29 +64,28 @@ read_all(Src) ->
 
 -spec read_all(state(), clj_env:env()) -> [any()].
 read_all(Src, Env) ->
-  State = #{src => Src,
-            forms => [],
-            env => Env,
-            all => true},
+  State = new_state(Src, Env, true),
   #{forms := Forms} = dispatch(State),
   lists:reverse(Forms).
 
 -spec dispatch(state()) -> state().
 dispatch(#{src := <<>>} = State) ->
   State;
+dispatch(#{all := true} = State) ->
+  dispatch(read_one(State, false));
 dispatch(State) ->
-  next(read_one(State, false)).
+  read_one(State, false).
 
 -spec read_one(state()) -> state().
 read_one(State) ->
   read_one(State, true).
 
--spec read_one(state(), ThrowEof :: boolean()) -> state().
-read_one(#{src := <<>>}, true) ->
+-spec read_one(state(), boolean()) -> state().
+read_one(#{src := <<>>}, true = _ThrowEof) ->
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
   throw(<<"EOF">>);
-read_one(#{src := <<>>} = State, false) ->
+read_one(#{src := <<>>} = State, false = _ThrowEof) ->
   State;
 read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
   case clj_utils:char_type(First, Rest) of
@@ -77,10 +108,6 @@ read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
     dispatch -> read_dispatch(State);
     symbol -> read_symbol(State)
   end.
-
--spec next(state()) -> state().
-next(#{all := true} = State) -> dispatch(State);
-next(State) -> State.
 
 %%------------------------------------------------------------------------------
 %% Numbers
