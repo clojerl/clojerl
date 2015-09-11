@@ -14,6 +14,7 @@ first({_, [First | _]}) -> First.
 
 -spec next('clojerl.List':type()) -> undefined | 'clojerl.List':type().
 next({_, []}) -> undefined;
+next({_, [_ | []]}) -> undefined;
 next({T, [_ | Rest]}) -> {T, Rest}.
 
 -spec more('clojerl.List':type()) -> undefined | 'clojerl.List':type().

@@ -278,19 +278,94 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
   {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
   Meta = clj_utils:desugar_meta(SugaredMeta),
 
-  {Expr, State2} = pop_form(read_one(State1)),
-  NewExpr = 'clojerl.IMeta':with_meta(Expr, Meta),
+  {Form, State2} = pop_form(read_one(State1)),
+  NewForm = 'clojerl.IMeta':with_meta(Form, Meta),
 
-  push_form(NewExpr, State2).
+  push_form(NewForm, State2).
 
 %%------------------------------------------------------------------------------
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
-read_syntax_quote(#{src := <<$`, _Src/binary>>} = _State) ->
-  %% SyntaxQuote = 'clojerl.Symbol':new(<<"syntax-quote">>),
-  %% wrapped_read(SyntaxQuote, State#{src => Src}).
-  throw(unimplemented).
+read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
+  {Form, NewState} = pop_form(read_one(State#{src => Src})),
+
+  NewFormWithMeta = add_meta(Form, syntax_quote(Form)),
+  push_form(NewFormWithMeta, NewState).
+
+syntax_quote(Form) ->
+  IsSpecial = clj_analyzer:is_special(Form),
+  IsSymbol = clj_core:'symbol?'(Form),
+  IsUnquote = is_unquote(Form),
+  IsUnquoteSpl = is_unquote_splicing(Form),
+  IsColl = clj_core:'coll?'(Form),
+  IsLiteral = is_literal(Form),
+
+  QuoteSymbol = clj_core:symbol(<<"quote">>),
+  case {IsSpecial, IsSymbol, IsUnquote, IsUnquoteSpl, IsColl, IsLiteral} of
+    {true, _, _, _, _, _} ->
+      clj_core:list([QuoteSymbol, Form]);
+    {_, true, _, _, _, _} ->
+      Form;
+    {_, _, true, _, _, _} ->
+      clj_core:second(Form);
+    {_, _, _, true, _, _} ->
+      throw(<<"unquote-splice not in list">>);
+    {_, _, _, _, true, _} ->
+      case clj_core:'list?'(Form) of
+        true -> syntax_quote_coll(Form);
+        false -> throw(<<"Unsupported Collection type in syntax quote">>)
+      end;
+    {_, _, _, _, _, true} ->
+      Form;
+    _ ->
+      clj_core:list([QuoteSymbol, Form])
+  end.
+
+syntax_quote_coll(List) ->
+  ExpandedItems = lists:reverse(expand_list(List, [])),
+  ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
+  clj_core:list([ConcatSymbol | ExpandedItems]).
+
+expand_list(undefined, Result) ->
+  Result;
+expand_list(List, Result) ->
+  Item = clj_core:first(List),
+  ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
+  NewItem = case {is_unquote(Item), is_unquote_splicing(Item)} of
+              {true, _} -> clj_core:list([ListSymbol, clj_core:second(Item)]);
+              {_, true} -> clj_core:second(Item);
+              _ -> clj_core:list([ListSymbol, syntax_quote(Item)])
+            end,
+  expand_list(clj_core:next(List), [NewItem | Result]).
+
+add_meta(Form, Result) ->
+  case clj_core:'meta?'(Form) of
+    true ->
+      WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
+      Meta = syntax_quote(clj_core:meta(Form)),
+      clj_core:list([WithMetaSym, Result, Meta]);
+    false ->
+      Result
+  end.
+
+is_unquote(Form) ->
+  clj_core:'seq?'(Form) andalso
+    clj_core:first(Form) == clj_core:symbol(<<"clojure.core">>, <<"unquote">>).
+
+is_unquote_splicing(Form) ->
+  clj_core:'seq?'(Form) andalso
+    clj_core:first(Form) == clj_core:symbol(<<"clojure.core">>,
+                                            <<"unquote-splicing">>).
+
+is_literal(Form) ->
+  clj_core:'keyword?'(Form)
+    orelse clj_core:'number?'(Form)
+    orelse clj_core:'char?'(Form)
+    orelse clj_core:'string?'(Form)
+    orelse clj_core:'nil?'(Form)
+    orelse clj_core:'boolean?'(Form)
+    orelse clj_core:'regex?'(Form).
 
 %%------------------------------------------------------------------------------
 %% Unquote
@@ -581,14 +656,14 @@ skip_line(Src) ->
   RestSrc.
 
 wrapped_read(Symbol, State) ->
-  {Expr, NewState} = pop_form(read_one(State)),
-  List = 'clojerl.List':new([Symbol, Expr]),
+  {Form, NewState} = pop_form(read_one(State)),
+  List = 'clojerl.List':new([Symbol, Form]),
   push_form(List, NewState).
 
 -spec pop_form(state()) -> {any(), state()}.
-pop_form(#{forms := [Expr | Forms]} = State) ->
-  {Expr, State#{forms => Forms}}.
+pop_form(#{forms := [Form | Forms]} = State) ->
+  {Form, State#{forms => Forms}}.
 
 -spec push_form(any(), state()) -> state().
-push_form(Expr, #{forms := Forms} = State) ->
-  State#{forms => [Expr | Forms]}.
+push_form(Form, #{forms := Forms} = State) ->
+  State#{forms => [Form | Forms]}.

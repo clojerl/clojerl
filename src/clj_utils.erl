@@ -5,7 +5,8 @@
          char_type/2,
          parse_number/1,
          parse_symbol/1,
-         desugar_meta/1
+         desugar_meta/1,
+         binary_join/2
         ]).
 
 -define(INT_PATTERN,
@@ -127,6 +128,15 @@ desugar_meta(Meta) ->
           Meta
       end
   end.
+
+-spec binary_join([binary()], binary()) -> binary().
+binary_join([], _) ->
+  <<>>;
+binary_join([S], _) when is_binary(S) ->
+  S;
+binary_join([H | T], Sep) ->
+  B = << <<Sep/binary, X/binary>> || X <- T >>,
+  <<H/binary, B/binary>>.
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions
