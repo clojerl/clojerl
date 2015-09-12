@@ -93,11 +93,7 @@ keyword(Namespace, Name) ->
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
-  CollTypeMap = #{'clojerl.Vector' => true,
-                  'clojerl.Map'    => true,
-                  'clojerl.List'   => true,
-                  'clojerl.Set'    => true},
-  maps:get(type(X), CollTypeMap, false).
+  'extends?'('clojerl.IColl', type(X)).
 
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->

@@ -24,7 +24,7 @@ resolve(Protocol, Function, Args = [Head | _]) ->
                   FunctionBin/binary,
                   "' in protocol '",
                   ProtocolBin/binary, "'">>);
-        true -> throw(undef)
+        true -> throw({undef, erlang:get_stacktrace()})
       end
   end.
 

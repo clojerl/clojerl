@@ -6,7 +6,8 @@
          parse_number/1,
          parse_symbol/1,
          desugar_meta/1,
-         binary_join/2
+         binary_join/2,
+         ends_with/2
         ]).
 
 -define(INT_PATTERN,
@@ -137,6 +138,12 @@ binary_join([S], _) when is_binary(S) ->
 binary_join([H | T], Sep) ->
   B = << <<Sep/binary, X/binary>> || X <- T >>,
   <<H/binary, B/binary>>.
+
+-spec ends_with(binary(), binary()) -> ok.
+ends_with(Str, Ends) ->
+  StrSize = byte_size(Str),
+  EndsSize = byte_size(Ends),
+  Ends == binary:part(Str, {StrSize, - EndsSize}).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

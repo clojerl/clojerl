@@ -287,13 +287,13 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
-read_syntax_quote(#{src := <<$`, Src/binary>>} = State) ->
+read_syntax_quote(#{src := <<$`, Src/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(State#{src => Src})),
 
-  NewFormWithMeta = add_meta(Form, syntax_quote(Form)),
+  NewFormWithMeta = add_meta(Form, Env, syntax_quote(Form, Env)),
   push_form(NewFormWithMeta, NewState).
 
-syntax_quote(Form) ->
+syntax_quote(Form, Env) ->
   IsSpecial = clj_analyzer:is_special(Form),
   IsSymbol = clj_core:'symbol?'(Form),
   IsUnquote = is_unquote(Form),
@@ -306,14 +306,14 @@ syntax_quote(Form) ->
     {true, _, _, _, _, _} ->
       clj_core:list([QuoteSymbol, Form]);
     {_, true, _, _, _, _} ->
-      Form;
+      syntax_quote_symbol(Form, Env);
     {_, _, true, _, _, _} ->
       clj_core:second(Form);
     {_, _, _, true, _, _} ->
       throw(<<"unquote-splice not in list">>);
     {_, _, _, _, true, _} ->
       case clj_core:'list?'(Form) of
-        true -> syntax_quote_coll(Form);
+        true -> syntax_quote_coll(Form, Env);
         false -> throw(<<"Unsupported Collection type in syntax quote">>)
       end;
     {_, _, _, _, _, true} ->
@@ -322,28 +322,68 @@ syntax_quote(Form) ->
       clj_core:list([QuoteSymbol, Form])
   end.
 
-syntax_quote_coll(List) ->
-  ExpandedItems = lists:reverse(expand_list(List, [])),
+syntax_quote_symbol(Symbol, Env) ->
+  NamespaceStr = clj_core:namespace(Symbol),
+  NameStr = clj_core:name(Symbol),
+  IsGenSym = clj_utils:ends_with(NameStr, <<"#">>),
+  case {NamespaceStr, IsGenSym} of
+    {undefined, true} ->
+      register_gensym(Symbol, Env);
+    _ ->
+      resolve_symbol(Symbol, Env)
+  end.
+
+register_gensym(Symbol, _Env) ->
+  Symbol.
+
+resolve_symbol(Symbol, Env) ->
+  CurrentNsSym = clj_env:current_ns(Env),
+  case clj_core:namespace(Symbol) of
+    undefined ->
+      case clj_env:find_var(Env, Symbol) of
+        undefined ->
+          CurrentNsName = clj_core:name(CurrentNsSym),
+          NameStr = clj_core:name(Symbol),
+          clj_core:symbol(CurrentNsName, NameStr);
+        Var ->
+          VarNsSym = 'clojerl.Var':namespace(Var),
+          VarNameSym = 'clojerl.Var':name(Var),
+          clj_core:symbol(clj_core:name(VarNsSym), clj_core:name(VarNameSym))
+      end;
+    NamespaceStr ->
+      case clj_env:resolve_ns(Env, clj_core:symbol(NamespaceStr)) of
+        undefined ->
+          Symbol;
+        Ns ->
+          NsNameSym = clj_namespace:name(Ns),
+          NsNameStr = clj_core:name(NsNameSym),
+          NameStr = clj_core:name(Symbol),
+          clj_core:symbol(NsNameStr, NameStr)
+      end
+  end.
+
+syntax_quote_coll(List, Env) ->
+  ExpandedItems = lists:reverse(expand_list(List, Env, [])),
   ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
   clj_core:list([ConcatSymbol | ExpandedItems]).
 
-expand_list(undefined, Result) ->
+expand_list(undefined, _Env, Result) ->
   Result;
-expand_list(List, Result) ->
+expand_list(List, Env, Result) ->
   Item = clj_core:first(List),
   ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
   NewItem = case {is_unquote(Item), is_unquote_splicing(Item)} of
               {true, _} -> clj_core:list([ListSymbol, clj_core:second(Item)]);
               {_, true} -> clj_core:second(Item);
-              _ -> clj_core:list([ListSymbol, syntax_quote(Item)])
+              _ -> clj_core:list([ListSymbol, syntax_quote(Item, Env)])
             end,
-  expand_list(clj_core:next(List), [NewItem | Result]).
+  expand_list(clj_core:next(List), Env, [NewItem | Result]).
 
-add_meta(Form, Result) ->
+add_meta(Form, Env, Result) ->
   case clj_core:'meta?'(Form) of
     true ->
       WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
-      Meta = syntax_quote(clj_core:meta(Form)),
+      Meta = syntax_quote(clj_core:meta(Form), Env),
       clj_core:list([WithMetaSym, Result, Meta]);
     false ->
       Result
