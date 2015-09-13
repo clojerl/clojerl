@@ -304,23 +304,23 @@ syntax_quote(Form, Env) ->
   IsLiteral = is_literal(Form),
 
   QuoteSymbol = clj_core:symbol(<<"quote">>),
-  case {IsSpecial, IsSymbol, IsUnquote, IsUnquoteSpl, IsColl, IsLiteral} of
-    {true, _, _, _, _, _} ->
+  if
+    IsSpecial ->
       clj_core:list([QuoteSymbol, Form]);
-    {_, true, _, _, _, _} ->
+    IsSymbol ->
       syntax_quote_symbol(Form, Env);
-    {_, _, true, _, _, _} ->
+    IsUnquote ->
       clj_core:second(Form);
-    {_, _, _, true, _, _} ->
+    IsUnquoteSpl ->
       throw(<<"unquote-splice not in list">>);
-    {_, _, _, _, true, _} ->
+    IsColl ->
       case clj_core:'list?'(Form) of
         true -> syntax_quote_coll(Form, Env);
         false -> throw(<<"Unsupported Collection type in syntax quote">>)
       end;
-    {_, _, _, _, _, true} ->
+    IsLiteral ->
       Form;
-    _ ->
+    true ->
       clj_core:list([QuoteSymbol, Form])
   end.
 

@@ -18,9 +18,17 @@ start(_Type, _Args) ->
 -spec stop(any()) -> ok.
 stop(_State) -> ok.
 
+-spec load_modules() -> pid().
 load_modules() ->
-  LP = fun() ->
-           [code:ensure_loaded(list_to_atom(filename:rootname(filename:basename(F))))
-            || P <- code:get_path(), F <- filelib:wildcard(P ++ "/clojerl*.beam")]
+  Filter = "/clojerl*.beam",
+  LoadFun = fun() ->
+           [ensure_loaded(File)
+            || Path <- code:get_path(),
+               File <- filelib:wildcard(Path ++ Filter)]
        end,
-  spawn(LP).
+  spawn(LoadFun).
+
+-spec ensure_loaded(binary()) -> ok.
+ensure_loaded(File) ->
+  Module = list_to_atom(filename:rootname(filename:basename(File))),
+  code:ensure_loaded(Module).

@@ -114,8 +114,8 @@ update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
 find_ns(_Env = #{namespaces := Nss}, SymNs) ->
   maps:get(SymNs, Nss, undefined).
 
-%% @doc Tries to find a namespace by its name symbol or by its alias in the current
-%%      namespace if it is there.
+%% @doc Tries to find a namespace by its name symbol or by itsalias
+%%      in the current namespace if it is there.
 -spec resolve_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
 resolve_ns(Env, SymNs) ->
   case find_ns(Env, SymNs) of
