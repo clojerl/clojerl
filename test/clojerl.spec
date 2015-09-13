@@ -40,4 +40,4 @@
  ]
 }.
 %% Export coverage data for jenkins.
-{export, "logs/cover.data"}.
+{export, "../logs/cover.data"}.
