@@ -25,7 +25,8 @@
          get/2, get/3,
          boolean/1,
          str/1,
-         list/1
+         list/1,
+         next_id/0
         ]).
 
 -spec count(any()) -> integer().
@@ -188,3 +189,7 @@ str(X) ->
 -spec 'list'(list()) -> 'clojerl.List':type().
 list(Items) ->
   'clojerl.List':new(Items).
+
+-spec next_id() -> integer().
+next_id() ->
+  erlang:unique_integer([positive]).

@@ -289,8 +289,10 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 
 read_syntax_quote(#{src := <<$`, Src/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(State#{src => Src})),
-
+  %% TODO: using process dictionary here might be a code smell
+  erlang:put(gensym_env, #{}),
   NewFormWithMeta = add_meta(Form, Env, syntax_quote(Form, Env)),
+  erlang:erase(gensym_env),
   push_form(NewFormWithMeta, NewState).
 
 syntax_quote(Form, Env) ->
@@ -334,7 +336,22 @@ syntax_quote_symbol(Symbol, Env) ->
   end.
 
 register_gensym(Symbol, _Env) ->
-  Symbol.
+  GensymEnv = case erlang:get(gensym_env) of
+                undefined ->
+                  throw(<<"Gensym literal not in syntax-quote">>);
+                X -> X
+              end,
+  case maps:get(Symbol, GensymEnv, undefined) of
+    undefined ->
+      NameStr = clj_core:name(Symbol),
+      NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
+      Parts = [NameStr2, <<"__">>, clj_core:next_id(), <<"__auto__">>],
+      GenSym = clj_core:symbol(clj_core:str(Parts)),
+      erlang:put(gensym_env, GensymEnv#{Symbol => GenSym}),
+      GenSym;
+    GenSym ->
+      GenSym
+  end.
 
 resolve_symbol(Symbol, Env) ->
   CurrentNsSym = clj_env:current_ns(Env),
@@ -385,7 +402,7 @@ add_meta(Form, Env, Result) ->
       WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
       Meta = syntax_quote(clj_core:meta(Form), Env),
       clj_core:list([WithMetaSym, Result, Meta]);
-    false ->
+    _ ->
       Result
   end.
 

@@ -4,6 +4,7 @@
    {description, "Clojure for the Erlang VM"},
    {vsn, "0.2.5"},
    {applications, [kernel, stdlib]},
+   {mod, {clojerl, []}},
    {modules, []},
    {registered, []}
   ]

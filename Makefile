@@ -12,7 +12,7 @@ CT_OPTS = -cover test/clojerl.spec
 
 COMPILE_FIRST = lang/protocols/*
 
-SHELL_OPTS += -name ${PROJECT}@`hostname` -s sync
+SHELL_OPTS += -name ${PROJECT}@`hostname` -s ${PROJECT} -s sync
 
 # Generate a list of all modules for the cover.spec
 print-all-modules:

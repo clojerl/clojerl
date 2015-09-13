@@ -301,8 +301,58 @@ meta(_Config) ->
   {comments, ""}.
 
 syntax_quote(_Config) ->
-  ct:comment("Read syntax-quote"),
-  clj_reader:read(<<"`1">>),
+  WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
+  QuoteSym = clj_core:symbol(<<"quote">>),
+
+  WrapWithMetaFun = fun(Value, Meta) ->
+                         clj_core:list([WithMetaSym, Value, Meta])
+                    end,
+
+  ct:comment("Read special form in syntax-quote"),
+  DoSym = clj_core:symbol(<<"do">>),
+  WithMetaDoSym = WrapWithMetaFun(clj_core:list([QuoteSym, DoSym]), undefined),
+  WithMetaDoSym = clj_reader:read(<<"`do">>),
+
+  DefSym = clj_core:symbol(<<"def">>),
+  WithMetaDefSym = WrapWithMetaFun(clj_core:list([QuoteSym, DefSym]), undefined),
+  WithMetaDefSym = clj_reader:read(<<"`def">>),
+
+  ct:comment("Read literals with syntax-quote"),
+  1 = clj_reader:read(<<"`1">>),
+  42.0 = clj_reader:read(<<"`42.0">>),
+  <<"something!">> = clj_reader:read(<<"`\"something!\"">>),
+
+  ct:comment("Read values that can have metadata with syntax-quote"),
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+  ListWithMetaHelloKw = WrapWithMetaFun(HelloKeyword, undefined),
+  ListWithMetaHelloKw = clj_reader:read(<<"`:hello">>),
+
+  ct:comment("Read unqualified symbol in syntax-quote"),
+  UserHelloSym = clj_core:symbol(<<"user">>, <<"hello">>),
+  ListWithMetaHelloSym = WrapWithMetaFun(UserHelloSym, undefined),
+  ListWithMetaHelloSym = clj_reader:read(<<"`hello">>),
+
+  ct:comment("Read qualified symbol in syntax-quote"),
+  SomeNsHelloSym = clj_core:symbol(<<"some-ns">>, <<"hello">>),
+  ListWithMetaSomeNsHelloSym = WrapWithMetaFun(SomeNsHelloSym, undefined),
+  ListWithMetaSomeNsHelloSym = clj_reader:read(<<"`some-ns/hello">>),
+
+  ListWithMetaHelloSym = clj_reader:read(<<"`user/hello">>),
+
+  ct:comment("Read auto-gen symbol in syntax-quote"),
+  ListGenSym = clj_reader:read(<<"`hello#">>),
+  GenSym = clj_core:second(ListGenSym),
+  GenSymName = clj_core:name(GenSym),
+  {match, _} = re:run(GenSymName, "hello__\\d+__auto__"),
+
+  ct:comment("Read unquote in syntax-quote"),
+  HelloSym = clj_core:symbol(<<"hello">>),
+  HelloSym = clj_reader:read(<<"`~hello">>),
+
+  ct:comment("Use unquote splice not in list"),
+
+  ok = try clj_reader:read(<<"`~@(hello)">>)
+       catch _:_ -> ok end,
 
   {comments, ""}.
 
