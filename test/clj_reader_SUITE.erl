@@ -1,6 +1,6 @@
 -module(clj_reader_SUITE).
 
--export([all/0]).
+-export([all/0, init_per_suite/1]).
 
 -export(
    [
@@ -34,11 +34,18 @@
    ]
   ).
 
+-type config() :: list().
+
 -spec all() -> [atom()].
 all() ->
   ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
   Exports = ?MODULE:module_info(exports),
   [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+
+-spec init_per_suite(config()) -> config().
+init_per_suite(Config) ->
+  application:ensure_all_started(clojerl),
+  Config.
 
 eof(_Config) ->
   ct:comment("Read empty binary"),
@@ -308,7 +315,7 @@ syntax_quote(_Config) ->
                          clj_core:list([WithMetaSym, Value, Meta])
                     end,
 
-  ct:comment("Read special form in syntax-quote"),
+  ct:comment("Read special form"),
   DoSym = clj_core:symbol(<<"do">>),
   WithMetaDoSym = WrapWithMetaFun(clj_core:list([QuoteSym, DoSym]), undefined),
   WithMetaDoSym = clj_reader:read(<<"`do">>),
@@ -317,42 +324,78 @@ syntax_quote(_Config) ->
   WithMetaDefSym = WrapWithMetaFun(clj_core:list([QuoteSym, DefSym]), undefined),
   WithMetaDefSym = clj_reader:read(<<"`def">>),
 
-  ct:comment("Read literals with syntax-quote"),
+  ct:comment("Read literals"),
   1 = clj_reader:read(<<"`1">>),
   42.0 = clj_reader:read(<<"`42.0">>),
   <<"something!">> = clj_reader:read(<<"`\"something!\"">>),
 
-  ct:comment("Read values that can have metadata with syntax-quote"),
+  ct:comment("Read values that can have metadata"),
   HelloKeyword = clj_core:keyword(<<"hello">>),
   ListWithMetaHelloKw = WrapWithMetaFun(HelloKeyword, undefined),
   ListWithMetaHelloKw = clj_reader:read(<<"`:hello">>),
 
-  ct:comment("Read unqualified symbol in syntax-quote"),
+  ct:comment("Read unqualified symbol"),
   UserHelloSym = clj_core:symbol(<<"user">>, <<"hello">>),
-  ListWithMetaHelloSym = WrapWithMetaFun(UserHelloSym, undefined),
-  ListWithMetaHelloSym = clj_reader:read(<<"`hello">>),
+  ListWithMetaUserHelloSym = WrapWithMetaFun(UserHelloSym, undefined),
+  ListWithMetaUserHelloSym = clj_reader:read(<<"`hello">>),
 
-  ct:comment("Read qualified symbol in syntax-quote"),
+  ct:comment("Read qualified symbol"),
   SomeNsHelloSym = clj_core:symbol(<<"some-ns">>, <<"hello">>),
   ListWithMetaSomeNsHelloSym = WrapWithMetaFun(SomeNsHelloSym, undefined),
   ListWithMetaSomeNsHelloSym = clj_reader:read(<<"`some-ns/hello">>),
 
-  ListWithMetaHelloSym = clj_reader:read(<<"`user/hello">>),
+  ListWithMetaUserHelloSym = clj_reader:read(<<"`user/hello">>),
 
-  ct:comment("Read auto-gen symbol in syntax-quote"),
+  ct:comment("Read auto-gen symbol"),
   ListGenSym = clj_reader:read(<<"`hello#">>),
   GenSym = clj_core:second(ListGenSym),
   GenSymName = clj_core:name(GenSym),
   {match, _} = re:run(GenSymName, "hello__\\d+__auto__"),
 
-  ct:comment("Read unquote in syntax-quote"),
+  ct:comment("Read auto-gen symbol, "
+             "check generated symbols have the same name"),
+  ListGenSym2 = clj_reader:read(<<"`(hello# hello# world#)">>),
+  ListConcat = clj_core:second(ListGenSym2),
+  ListSecond = clj_core:second(ListConcat),
+  ListThird = clj_core:third(ListConcat),
+  true = clj_core:second(ListSecond) == clj_core:second(ListThird),
+
+  ct:comment("Read unquote"),
   HelloSym = clj_core:symbol(<<"hello">>),
-  HelloSym = clj_reader:read(<<"`~hello">>),
+  ListWithMetaHelloSym = WrapWithMetaFun(HelloSym, undefined),
+  ListWithMetaHelloSym = clj_reader:read(<<"`~hello">>),
 
   ct:comment("Use unquote splice not in list"),
-
   ok = try clj_reader:read(<<"`~@(hello)">>)
        catch _:_ -> ok end,
+
+  ct:comment("Read list and empty list"),
+  WithMetaListHello = clj_reader:read(<<"`(hello)">>),
+  WithMetaListHello = clj_reader:read(<<"(clojure.core/with-meta"
+                                        "  (clojure.core/concat"
+                                        "    (clojure.core/list user/hello))"
+                                        "  nil)">>),
+
+  WithMetaEmptyList = clj_reader:read(<<"`()">>),
+  WithMetaEmptyList = clj_reader:read(<<"(clojure.core/with-meta"
+                                        "  (clojure.core/list)"
+                                        "  nil)">>),
+
+  ct:comment("Read unquote-splice inside list"),
+  WithMetaHelloWorldSup = clj_reader:read(<<"`(~@(hello world) :sup?)">>),
+  WithMetaHelloWorldSup = clj_reader:read(<<"(clojure.core/with-meta"
+                                            "  (clojure.core/concat"
+                                            "    (hello world)"
+                                            "    (clojure.core/list :sup?))"
+                                            "  nil)">>),
+
+  ct:comment("Read unquote inside list "),
+  ListWithMetaHelloWorld = clj_reader:read(<<"`(~hello :world)">>),
+  ListWithMetaHelloWorld = clj_reader:read(<<"(clojure.core/with-meta"
+                                    "  (clojure.core/concat"
+                                    "    (clojure.core/list hello)"
+                                    "    (clojure.core/list :world))"
+                                    "  nil)">>),
 
   {comments, ""}.
 

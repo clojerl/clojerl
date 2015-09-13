@@ -380,9 +380,15 @@ resolve_symbol(Symbol, Env) ->
   end.
 
 syntax_quote_coll(List, Env) ->
-  ExpandedItems = lists:reverse(expand_list(List, Env, [])),
-  ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
-  clj_core:list([ConcatSymbol | ExpandedItems]).
+  case clj_core:'empty?'(List) of
+    true ->
+      ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
+      clj_core:list([ListSymbol]);
+    false ->
+      ExpandedItems = lists:reverse(expand_list(List, Env, [])),
+      ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
+      clj_core:list([ConcatSymbol | ExpandedItems])
+  end.
 
 expand_list(undefined, _Env, Result) ->
   Result;

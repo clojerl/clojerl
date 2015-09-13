@@ -3,6 +3,7 @@
 -export([
          type/1,
          count/1,
+         'empty?'/1,
          conj/2,
          first/1,
          next/1,
@@ -32,6 +33,10 @@
 -spec count(any()) -> integer().
 count(Seq) ->
   'clojerl.Counted':count(Seq).
+
+-spec 'empty?'(any()) -> integer().
+'empty?'(Seq) ->
+  'clojerl.Seqable':seq(Seq) == undefined.
 
 -spec conj(any(), any()) -> any().
 conj(undefined, Item) ->
@@ -134,7 +139,7 @@ keyword(Namespace, Name) ->
 'string?'(X) -> type(X) == 'clojerl.String'.
 
 -spec 'nil?'(any()) -> boolean().
-'nil?'(X) -> type(X) == nil.
+'nil?'(X) -> type(X) == 'clojerl.nil'.
 
 -spec 'boolean?'(any()) -> boolean().
 'boolean?'(X) -> type(X) == 'clojerl.Boolean'.
@@ -177,7 +182,7 @@ type(X) when is_binary(X) -> 'clojerl.String';
 type(X) when is_integer(X) -> 'clojerl.Integer';
 type(X) when is_float(X) -> 'clojerl.Float';
 type(X) when is_boolean(X) -> 'clojerl.Boolean';
-type(undefined) -> nil.
+type(undefined) -> 'clojerl.nil'.
 
 -spec str(any()) -> any().
 str(L) when is_list(L) ->
