@@ -370,16 +370,47 @@ syntax_quote(_Config) ->
        catch _:_ -> ok end,
 
   ct:comment("Read list and empty list"),
-  WithMetaListHello = clj_reader:read(<<"`(hello)">>),
+  WithMetaListHello = clj_reader:read(<<"`(hello :world)">>),
   WithMetaListHello = clj_reader:read(<<"(clojure.core/with-meta"
                                         "  (clojure.core/concat"
-                                        "    (clojure.core/list user/hello))"
+                                        "    (clojure.core/list user/hello)"
+                                        "    (clojure.core/list :world))"
                                         "  nil)">>),
 
   WithMetaEmptyList = clj_reader:read(<<"`()">>),
   WithMetaEmptyList = clj_reader:read(<<"(clojure.core/with-meta"
                                         "  (clojure.core/list)"
                                         "  nil)">>),
+
+  ct:comment("Read map"),
+  MapWithMeta = clj_reader:read(<<"`{hello :world}">>),
+  MapWithMeta = clj_reader:read(<<"(clojure.core/with-meta"
+                                  "  (clojure.core/apply"
+                                  "    clojure.core/hash-map"
+                                  "    (clojure.core/concat"
+                                  "      (clojure.core/list user/hello)"
+                                  "      (clojure.core/list :world)))"
+                                  "  nil)">>),
+
+  ct:comment("Read vector"),
+  VectorWithMeta = clj_reader:read(<<"`[hello :world]">>),
+  VectorWithMeta = clj_reader:read(<<"(clojure.core/with-meta"
+                                     "  (clojure.core/apply"
+                                     "    clojure.core/vector"
+                                     "    (clojure.core/concat"
+                                     "      (clojure.core/list user/hello)"
+                                     "      (clojure.core/list :world)))"
+                                     "  nil)">>),
+
+  ct:comment("Read set"),
+  SetWithMeta = clj_reader:read(<<"`#{hello :world}">>),
+  SetWithMeta = clj_reader:read(<<"(clojure.core/with-meta"
+                                  "  (clojure.core/apply"
+                                  "    clojure.core/hash-set"
+                                  "    (clojure.core/concat"
+                                  "      (clojure.core/list :world)"
+                                  "      (clojure.core/list user/hello)))"
+                                  "  nil)">>),
 
   ct:comment("Read unquote-splice inside list"),
   WithMetaHelloWorldSup = clj_reader:read(<<"`(~@(hello world) :sup?)">>),
@@ -389,7 +420,7 @@ syntax_quote(_Config) ->
                                             "    (clojure.core/list :sup?))"
                                             "  nil)">>),
 
-  ct:comment("Read unquote inside list "),
+  ct:comment("Read unquote inside list"),
   ListWithMetaHelloWorld = clj_reader:read(<<"`(~hello :world)">>),
   ListWithMetaHelloWorld = clj_reader:read(<<"(clojure.core/with-meta"
                                     "  (clojure.core/concat"

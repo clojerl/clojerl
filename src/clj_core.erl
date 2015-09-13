@@ -4,6 +4,7 @@
          type/1,
          count/1,
          'empty?'/1,
+         seq/1,
          conj/2,
          first/1,
          next/1,
@@ -26,7 +27,7 @@
          get/2, get/3,
          boolean/1,
          str/1,
-         list/1,
+         list/1, vector/1, hash_map/1, hash_set/1,
          next_id/0
         ]).
 
@@ -37,6 +38,10 @@ count(Seq) ->
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->
   'clojerl.Seqable':seq(Seq) == undefined.
+
+-spec seq(any()) -> 'clojerl.List':type().
+seq(Seq) ->
+  'clojerl.Seqable':seq(Seq).
 
 -spec conj(any(), any()) -> any().
 conj(undefined, Item) ->
@@ -194,6 +199,18 @@ str(X) ->
 -spec 'list'(list()) -> 'clojerl.List':type().
 list(Items) ->
   'clojerl.List':new(Items).
+
+-spec vector(list()) -> 'clojerl.Vector':type().
+vector(Items) ->
+  'clojerl.Vector':new(Items).
+
+-spec hash_map(list()) -> 'clojerl.Map':type().
+hash_map(Items) ->
+  'clojerl.Map':new(Items).
+
+-spec hash_set(list()) -> 'clojerl.Set':type().
+hash_set(Items) ->
+  'clojerl.Set':new(Items).
 
 -spec next_id() -> integer().
 next_id() ->

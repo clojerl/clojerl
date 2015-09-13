@@ -1,4 +1,5 @@
 -module('clojerl.List.clojerl.IMeta').
+
 -behavior('clojerl.IMeta').
 
 -export([meta/1, with_meta/2]).

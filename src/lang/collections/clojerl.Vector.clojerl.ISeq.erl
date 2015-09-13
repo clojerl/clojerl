@@ -20,6 +20,7 @@ next({_, Array}) ->
   case array:size(Array) of
     0 -> undefined;
     _ ->
+      %% Reset the first element and get all non-resset elements.
       RestArray = array:reset(0, Array),
       Items = array:sparse_to_list(RestArray),
       'clojerl.List':new(Items)
