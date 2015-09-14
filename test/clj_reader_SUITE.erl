@@ -585,8 +585,48 @@ char(_Config) ->
   {comments, ""}.
 
 fn(_Config) ->
-  ct:comment("Read anonymous fn"),
-  clj_reader:read(<<"#(do 1)">>),
+  FnSymbol = clj_core:symbol(<<"fn*">>),
+  EmptyVector = clj_core:vector([]),
+  EmptyList = clj_core:list([]),
+
+  ct:comment("Read empty anonymous fn"),
+  EmptyFn = clj_reader:read(<<"#()">>),
+  FnSymbol = clj_core:first(EmptyFn),
+  EmptyVector = clj_core:second(EmptyFn),
+  EmptyList = clj_core:third(EmptyFn),
+
+  ct:comment("Read anonymous fn with %"),
+  OneArgFn = clj_reader:read(<<"#(%)">>),
+  FnSymbol = clj_core:first(OneArgFn),
+  ArgVector1 = clj_core:second(OneArgFn),
+  1 = clj_core:count(ArgVector1),
+  BodyList1 = clj_core:third(OneArgFn),
+  1 = clj_core:count(BodyList1),
+  true = clj_core:first(ArgVector1) == clj_core:first(ArgVector1),
+
+  ct:comment("Read anonymous fn with %4 and %42"),
+  FortyTwoArgFn = clj_reader:read(<<"#(do %42 %4)">>),
+  FnSymbol = clj_core:first(FortyTwoArgFn),
+  ArgVector42 = clj_core:second(FortyTwoArgFn),
+  42 = clj_core:count(ArgVector42),
+  BodyList42 = clj_core:third(FortyTwoArgFn),
+  3 = clj_core:count(BodyList42),
+  Arg42Sym = clj_core:second(BodyList42),
+  {match, _} = re:run(clj_core:name(Arg42Sym), "p42__\\d+#"),
+
+  ct:comment("Read anonymous fn with %3 and %&"),
+  RestArgFn = clj_reader:read(<<"#(do %& %3)">>),
+  FnSymbol = clj_core:first(RestArgFn),
+  ArgVectorRest = clj_core:second(RestArgFn),
+  5 = clj_core:count(ArgVectorRest), %% 1-3, & and rest
+  BodyListRest = clj_core:third(RestArgFn),
+  3 = clj_core:count(BodyListRest),
+  ArgRestSym = clj_core:second(BodyListRest),
+  {match, _} = re:run(clj_core:name(ArgRestSym), "rest__\\d+#"),
+
+  ct:comment("Nested #()"),
+  ok = try clj_reader:read(<<"#(do #(%))">>)
+       catch _:<<"Nested #()s are not allowed">> -> ok end,
 
   {comments, ""}.
 
@@ -601,7 +641,7 @@ arg(_Config) ->
 
   erlang:put(arg_env, #{}),
 
-  ct:comment("Read %1 as an argument"),
+  ct:comment("Read % as an argument"),
   ArgGenSymbol = clj_reader:read(<<"%">>),
   ArgGenName = clj_core:name(ArgGenSymbol),
   {match, _} = re:run(ArgGenName, "p1__\\d+#"),
@@ -610,15 +650,18 @@ arg(_Config) ->
   ArgGenName2 = clj_core:name(ArgGenSymbol2),
   {match, _} = re:run(ArgGenName2, "p1__\\d+#"),
 
+  ct:comment("Read %1 as an argument"),
   ArgOneGenSymbol = clj_reader:read(<<"%1">>),
   ArgOneGenName = clj_core:name(ArgOneGenSymbol),
   {match, _} = re:run(ArgOneGenName, "p1__\\d+#"),
 
+  ct:comment("Read %42 as an argument"),
   ArgFortyTwoGenSymbol = clj_reader:read(<<"%42">>),
   ArgFortyTwoGenName = clj_core:name(ArgFortyTwoGenSymbol),
   {match, _} = re:run(ArgFortyTwoGenName, "p42__\\d+#"),
 
-  ArgRestGenSymbol = clj_reader:read(<<"%&">>),
+  ct:comment("Read %& as an argument"),
+  [ArgRestGenSymbol] = clj_reader:read_all(<<"%&">>),
   ArgRestGenName = clj_core:name(ArgRestGenSymbol),
   {match, _} = re:run(ArgRestGenName, "rest__\\d+#"),
 

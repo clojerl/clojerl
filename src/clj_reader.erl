@@ -587,7 +587,8 @@ read_arg(#{src := <<$%, Src/binary>>} = State) ->
           push_form(ArgSym, State#{src => Src});
         register_arg_multi ->
           ArgSym = register_arg(-1),
-          push_form(ArgSym, State#{src => Src});
+          <<_, RestSrc/binary>> = Src,
+          push_form(ArgSym, State#{src => RestSrc});
         register_arg_n ->
           {N, NewState} = pop_form(read_one(State#{src => Src})),
           case is_integer(N) of
@@ -664,7 +665,33 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
 %% #() fn
 %%------------------------------------------------------------------------------
 
-read_fn(_State) -> throw(unimplemented).
+read_fn(#{src := Src} = State) ->
+  case erlang:get(arg_env) of
+    undefined -> ok;
+    _ -> throw(<<"Nested #()s are not allowed">>)
+  end,
+  erlang:put(arg_env, #{}),
+  {Form, NewState} = pop_form(read_one(State#{src => <<$(, Src/binary>>})),
+  ArgEnv = erlang:erase(arg_env),
+
+
+  MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
+  MapFun = fun(N) ->
+               maps:get(N, ArgEnv, gen_arg_sym(N))
+           end,
+  ArgsSyms = lists:map(MapFun, lists:seq(1, MaxArg)),
+  ArgsSyms2 = case maps:get(-1, ArgEnv, undefined) of
+                undefined -> ArgsSyms;
+                RestArgSym  ->
+                  AmpSym = clj_core:symbol(<<"&">>),
+                  ArgsSyms ++ [AmpSym, RestArgSym]
+              end,
+  ArgsVector = clj_core:vector(ArgsSyms2),
+
+  FnSymbol = clj_core:symbol(<<"fn*">>),
+  FnForm = clj_core:list([FnSymbol, ArgsVector, Form]),
+
+  push_form(FnForm, NewState).
 
 %%------------------------------------------------------------------------------
 %% #= eval
