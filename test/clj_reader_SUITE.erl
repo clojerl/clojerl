@@ -674,8 +674,14 @@ arg(_Config) ->
   {comments, ""}.
 
 eval(_Config) ->
-  ct:comment("Read eval"),
-  clj_reader:read(<<"#=1">>),
+  ct:comment("Read eval 1"),
+  1 = clj_reader:read(<<"#=1">>),
+
+  ct:comment("Read eval (do 1)"),
+  1 = clj_reader:read(<<"#=(do 1)">>),
+
+  ct:comment("Read eval (str 1)"),
+  <<"1">> = clj_reader:read(<<"#=(str 1)">>),
 
   {comments, ""}.
 
@@ -702,7 +708,9 @@ regex(_Config) ->
 
 unreadable_form(_Config) ->
   ct:comment("Read unreadable"),
-  clj_reader:read(<<"#<1>">>),
+  ok = try clj_reader:read(<<"#<1>">>)
+       catch _:<<"Unreadable form">> -> ok
+       end,
 
   {comments, ""}.
 

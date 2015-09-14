@@ -3,7 +3,8 @@
 -export([
          compile_files/1,
          compile_file/1,
-         compile/1
+         compile/1,
+         eval/2
         ]).
 
 %%------------------------------------------------------------------------------
@@ -40,3 +41,6 @@ compile(Src, Env) when is_binary(Src) ->
             clj_emitter:emit(NewEnvAcc)
         end,
   clj_reader:read_fold(Fun, Src, Env).
+
+-spec eval(any(), clj_env:env()) -> any().
+eval(Form, _Env) -> Form.

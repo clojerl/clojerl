@@ -652,7 +652,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
     $( -> read_fn(NewState);
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
-    $< -> throw(unimplemented);
+    $< -> throw(<<"Unreadable form">>);
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
@@ -697,7 +697,10 @@ read_fn(#{src := Src} = State) ->
 %% #= eval
 %%------------------------------------------------------------------------------
 
-read_eval(_State) -> throw(unimplemented).
+read_eval(#{env := Env} = State) ->
+  {Form, NewState} = pop_form(read_one(State)),
+  EvaledForm = clj_compiler:eval(Form, Env),
+  push_form(EvaledForm, NewState).
 
 %%------------------------------------------------------------------------------
 %% #{} set
