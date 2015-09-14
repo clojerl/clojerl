@@ -576,7 +576,65 @@ read_octal_char(RestToken)  ->
 %% Argument
 %%------------------------------------------------------------------------------
 
-read_arg(_) -> throw(unimplemented).
+read_arg(#{src := <<$%, Src/binary>>} = State) ->
+  case erlang:get(arg_env) of
+    undefined ->
+      read_symbol(State);
+    _ ->
+      case arg_type(Src) of
+        register_arg_1 ->
+          ArgSym = register_arg(1),
+          push_form(ArgSym, State#{src => Src});
+        register_arg_multi ->
+          ArgSym = register_arg(-1),
+          push_form(ArgSym, State#{src => Src});
+        register_arg_n ->
+          {N, NewState} = pop_form(read_one(State#{src => Src})),
+          case is_integer(N) of
+            false -> throw(<<"Arg literal must be %, %& or %integer">>);
+            true -> ok
+          end,
+          ArgSym = register_arg(N),
+          push_form(ArgSym, NewState)
+      end
+  end.
+
+arg_type(<<>>) ->
+  register_arg_1;
+arg_type(Str) ->
+  Char = binary:first(Str),
+  IsWhitespace = clj_utils:char_type(Char) == whitespace,
+  IsMacroTerminating = is_macro_terminating(Char),
+  if
+    IsWhitespace orelse IsMacroTerminating -> register_arg_1;
+    Char == $& -> register_arg_multi;
+    true -> register_arg_n
+  end.
+
+register_arg(N) ->
+  case erlang:get(arg_env) of
+    undefined -> throw(<<"Arg literal not in #()">>);
+    ArgEnv ->
+      case maps:get(N, ArgEnv, undefined) of
+        undefined ->
+          ArgSymbol = gen_arg_sym(N),
+          NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
+          put(arg_env, NewArgEnv),
+          ArgSymbol;
+        ArgSymbol -> ArgSymbol
+      end
+  end.
+
+gen_arg_sym(N) ->
+  Param = case N of
+            -1 -> <<"rest">>;
+            N ->
+              NBin = integer_to_binary(N),
+              <<"p", NBin/binary>>
+          end,
+  NextId = clj_core:next_id(),
+  Name = clj_core:str([Param, <<"__">>, NextId, <<"#">>]),
+  clj_core:symbol(Name).
 
 %%------------------------------------------------------------------------------
 %% Reader dispatch

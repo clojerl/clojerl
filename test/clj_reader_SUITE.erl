@@ -584,15 +584,49 @@ char(_Config) ->
 
   {comments, ""}.
 
-arg(_Config) ->
-  ct:comment("Read argument"),
-  clj_reader:read(<<"%1">>),
-
-  {comments, ""}.
-
 fn(_Config) ->
   ct:comment("Read anonymous fn"),
   clj_reader:read(<<"#(do 1)">>),
+
+  {comments, ""}.
+
+arg(_Config) ->
+  ct:comment("Read % as a symbol"),
+  ArgSymbol = clj_core:symbol(<<"%">>),
+  ArgSymbol = clj_reader:read(<<"%">>),
+
+  ct:comment("Read %1 as a symbol"),
+  ArgOneSymbol = clj_core:symbol(<<"%1">>),
+  ArgOneSymbol = clj_reader:read(<<"%1">>),
+
+  erlang:put(arg_env, #{}),
+
+  ct:comment("Read %1 as an argument"),
+  ArgGenSymbol = clj_reader:read(<<"%">>),
+  ArgGenName = clj_core:name(ArgGenSymbol),
+  {match, _} = re:run(ArgGenName, "p1__\\d+#"),
+
+  ArgGenSymbol2 = clj_reader:read(<<"% ">>),
+  ArgGenName2 = clj_core:name(ArgGenSymbol2),
+  {match, _} = re:run(ArgGenName2, "p1__\\d+#"),
+
+  ArgOneGenSymbol = clj_reader:read(<<"%1">>),
+  ArgOneGenName = clj_core:name(ArgOneGenSymbol),
+  {match, _} = re:run(ArgOneGenName, "p1__\\d+#"),
+
+  ArgFortyTwoGenSymbol = clj_reader:read(<<"%42">>),
+  ArgFortyTwoGenName = clj_core:name(ArgFortyTwoGenSymbol),
+  {match, _} = re:run(ArgFortyTwoGenName, "p42__\\d+#"),
+
+  ArgRestGenSymbol = clj_reader:read(<<"%&">>),
+  ArgRestGenName = clj_core:name(ArgRestGenSymbol),
+  {match, _} = re:run(ArgRestGenName, "rest__\\d+#"),
+
+  ct:comment("Invalid char after %"),
+  ok = try clj_reader:read(<<"%a">>)
+       catch _:<<"Arg literal must be %, %& or %integer">> -> ok end,
+
+  erlang:erase(arg_env),
 
   {comments, ""}.
 
