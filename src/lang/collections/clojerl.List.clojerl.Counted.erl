@@ -4,4 +4,4 @@
 
 -export([count/1]).
 
-count({_, List}) -> length(List).
+count({_, List, _}) -> length(List).

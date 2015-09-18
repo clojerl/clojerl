@@ -5,8 +5,7 @@
          namespace/1,
          name/1,
          dynamic/1, dynamic/2,
-         is_macro/1,
-         is/1
+         is_macro/1
         ]).
 
 -type info() :: #{ns => binary() | undefined,
@@ -42,6 +41,3 @@ dynamic({?MODULE, Data}, IsDynamic) ->
 
 -spec is_macro(type()) -> boolean().
 is_macro({?MODULE, #{is_macro := IsMacro}}) -> IsMacro.
-
--spec is(any()) -> boolean().
-is(X) -> clj_core:type(X) == ?MODULE.

@@ -2,8 +2,7 @@
 
 -export([
          new/1,
-         new/2,
-         is/1
+         new/2
         ]).
 
 
@@ -17,6 +16,3 @@ new(Name) ->
 -spec new(binary(), binary()) -> 'clojerl.Keyword':type().
 new(Namespace, Name) ->
   {?MODULE, #{ns => Namespace, name => Name}}.
-
--spec is(any()) -> boolean().
-is(X) -> clj_core:type(X) == ?MODULE.

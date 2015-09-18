@@ -4,4 +4,4 @@
 
 -export([count/1]).
 
-count({_, Set}) -> gb_sets:size(Set).
+count({_, Set, _}) -> gb_sets:size(Set).

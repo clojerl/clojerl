@@ -6,19 +6,23 @@
          intern/2,
          update_var/2,
          def/2,
-         use/2
+         use/2,
+         alias/2
         ]).
 
--type namespace() :: #{name => 'clojerl.Symbol':type(),
-                       defs => #{'clojerl.Symbol':type() => function()},
-                       uses => #{'clojerl.Symbol':type() => function()},
-                       forms => []}.
+-type namespace() ::
+        #{name => 'clojerl.Symbol':type(),
+          defs => #{'clojerl.Symbol':type() => 'clojerl.Var':type()},
+          uses => #{'clojerl.Symbol':type() => 'clojerl.Var':type()},
+          aliases => #{'clojerl.Symbol':type() => 'clojerl.Symbol':type()},
+          forms => []}.
 
 -spec new('clojerl.Symbol':type()) -> namespace().
 new(Name) ->
   #{name => Name,
     defs => #{},
     uses => #{},
+    aliases => #{},
     forms => []}.
 
 -spec name(namespace()) -> 'clojerl.Symbol':type().
@@ -43,10 +47,17 @@ update_var(Namespace = #{defs := Defs}, Var) ->
   NewDefs = maps:put(VarNameSym, Var, Defs),
   Namespace#{defs => NewDefs}.
 
--spec def(namespace(), 'clojerl.Symbol':type()) -> namespace().
+-spec def(namespace(), 'clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | undefined.
 def(_Namespace = #{defs := Defs}, Symbol) ->
   maps:get(Symbol, Defs, undefined).
 
--spec use(namespace(), 'clojerl.Symbol':type()) -> namespace().
+-spec use(namespace(), 'clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | undefined.
 use(_Namespace = #{uses := Uses}, Symbol) ->
   maps:get(Symbol, Uses, undefined).
+
+-spec alias(namespace(), 'clojerl.Symbol':type()) ->
+  'clojerl.Symbol':type() | undefined.
+alias(_Namespace = #{aliases := Aliases}, Symbol) ->
+  maps:get(Symbol, Aliases, undefined).

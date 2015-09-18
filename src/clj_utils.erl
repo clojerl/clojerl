@@ -5,7 +5,9 @@
          char_type/2,
          parse_number/1,
          parse_symbol/1,
-         desugar_meta/1
+         desugar_meta/1,
+         binary_join/2,
+         ends_with/2
         ]).
 
 -define(INT_PATTERN,
@@ -115,18 +117,33 @@ char_type(_, _) -> symbol.
                    'clojerl.Symbol':type() |
                    string()) -> map().
 desugar_meta(Meta) ->
-  case 'clojerl.Keyword':is(Meta) of
-    true ->
-      maps:put(Meta, true, #{});
-    false ->
-      case 'clojerl.Symbol':is(Meta) orelse is_binary(Meta) of
-        true ->
-          Tag = 'clojerl.Keyword':new(<<"tag">>),
-          maps:put(Tag, Meta, #{});
-        false ->
-          Meta
-      end
+  case clj_core:type(Meta) of
+    'clojerl.Keyword' ->
+      clj_core:hash_map([Meta, true]);
+    'clojerl.Map' ->
+      Meta;
+    Type when Type == 'clojerl.Symbol'
+              orelse Type == 'clojerl.String' ->
+      Tag = clj_core:keyword(<<"tag">>),
+      clj_core:hash_map([Tag, Meta]);
+    _ ->
+      throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
+
+-spec binary_join([binary()], binary()) -> binary().
+binary_join([], _) ->
+  <<>>;
+binary_join([S], _) when is_binary(S) ->
+  S;
+binary_join([H | T], Sep) ->
+  B = << <<Sep/binary, X/binary>> || X <- T >>,
+  <<H/binary, B/binary>>.
+
+-spec ends_with(binary(), binary()) -> ok.
+ends_with(Str, Ends) ->
+  StrSize = byte_size(Str),
+  EndsSize = byte_size(Ends),
+  Ends == binary:part(Str, {StrSize, - EndsSize}).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

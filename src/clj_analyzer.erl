@@ -134,7 +134,7 @@ analyze_seq(Env, Op, List) ->
 -spec parse_ns(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_ns(Env, List) ->
   Second = clj_core:second(List),
-  case clj_core:'symbol?'(Second) of
+  case 'symbol?'(Second) of
     true ->
       {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
       NewEnv;

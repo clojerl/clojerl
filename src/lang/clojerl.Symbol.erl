@@ -3,8 +3,7 @@
 -export([
          new/1,
          new/2,
-         namespace/1,
-         is/1
+         namespace/1
         ]).
 
 -type type() :: {?MODULE, #{ns => binary() | undefined,
@@ -22,6 +21,3 @@ new(Namespace, Name) when is_binary(Namespace) orelse Namespace == undefined,
 -spec namespace(type()) -> binary() | undefined.
 namespace({?MODULE, #{ns := Ns}}) ->
   Ns.
-
--spec is(any()) -> boolean().
-is(X) -> clj_core:type(X) == ?MODULE.
