@@ -21,7 +21,7 @@ Clojure was built with concurrency in mind and simplify the development of concu
 
 Learn more about Erlang (and its VM), Clojure and language implementation.
 
-This project is an experiment that I hope others will find useful. Regardless of whether it becomes a fully functional implementation of Clojure or not, I think I will have learned a lot along the way :).
+This project is an experiment that I hope others will find useful. Regardless of whether it becomes a fully functional implementation of Clojure or not, I think I will have learned a lot along the way.
 
 ## Discussion
 
