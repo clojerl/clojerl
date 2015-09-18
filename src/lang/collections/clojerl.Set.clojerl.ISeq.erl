@@ -26,5 +26,7 @@ next({_, Set}) ->
 
 -spec more('clojerl.Set':type()) -> undefined | 'clojerl.List':type().
 more({_, GbSet} = Set) ->
-  Items = gb_sets:to_list(GbSet),
-  'clojerl.List':new(Items).
+  case gb_sets:size(GbSet) of
+    0 -> 'clojerl.List':new([]);
+    _ -> next(Set)
+  end.

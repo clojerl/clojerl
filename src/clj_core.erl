@@ -18,6 +18,7 @@
          keyword/1, keyword/2,
          'extends?'/2,
          'coll?'/1,
+         'sequential?'/1,
          'seq?'/1,
          'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
          'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
@@ -25,6 +26,7 @@
          deref/1,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
+         'contains?'/2,
          boolean/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
@@ -106,6 +108,10 @@ keyword(Namespace, Name) ->
 'coll?'(X) ->
   'extends?'('clojerl.IColl', type(X)).
 
+-spec 'sequential?'(any()) -> boolean().
+'sequential?'(X) ->
+  'extends?'('clojerl.ISequential', type(X)).
+
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
   'extends?'('clojerl.ISeq', type(X)).
@@ -175,6 +181,9 @@ get(X, Key) -> 'clojerl.ILookup':get(X, Key).
 -spec get(any(), any(), any()) -> any().
 get(undefined, _Key, _NotFound) -> undefined;
 get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
+
+-spec 'contains?'(any(), any()) -> any().
+'contains?'(X, Key) -> get(X, Key) =/= undefined.
 
 -spec boolean(any()) -> boolean().
 boolean(undefined) -> false;

@@ -134,19 +134,19 @@ keyword(_Config) ->
   {_Ns, Env} = clj_env:find_or_create_ns(clj_env:default(), SomeNsSymbol),
 
   Keyword1 = 'clojerl.Keyword':new(<<"hello-world">>),
-  Keyword1 = clj_reader:read(<<":hello-world">>, Env),
+  Keyword1 = clj_reader:read(<<":hello-world">>, #{}, Env),
 
   Keyword2 = 'clojerl.Keyword':new(<<"some-ns">>, <<"hello-world">>),
-  Keyword2 = clj_reader:read(<<"::hello-world">>, Env),
+  Keyword2 = clj_reader:read(<<"::hello-world">>, #{}, Env),
 
   Keyword3 = 'clojerl.Keyword':new(<<"another-ns">>, <<"hello-world">>),
-  Keyword3 = clj_reader:read(<<":another-ns/hello-world">>, Env),
+  Keyword3 = clj_reader:read(<<":another-ns/hello-world">>, #{}, Env),
 
   Keyword4 = 'clojerl.Keyword':new(<<"/">>),
-  Keyword4 = clj_reader:read(<<":/">>, Env),
+  Keyword4 = clj_reader:read(<<":/">>, #{}, Env),
 
   Keyword5 = 'clojerl.Keyword':new(<<"some-ns">>, <<"/">>),
-  Keyword5 = clj_reader:read(<<":some-ns//">>, Env),
+  Keyword5 = clj_reader:read(<<":some-ns//">>, #{}, Env),
 
   ct:comment("Error: triple colon :::"),
   ok = try clj_reader:read(<<":::hello-world">>)
@@ -722,8 +722,90 @@ discard(_Config) ->
   {comments, ""}.
 
 'cond'(_Config) ->
-  ct:comment("Read cond"),
-  clj_reader:read(<<"#? 1">>),
+  AllowOpts = #{read_cond => allow},
+  AllowCljFeatureOpts = #{read_cond => allow,
+                          features => clj_reader:read(<<"#{:clj}">>)},
+  AllowClrFeatureOpts = #{read_cond => allow,
+                          features => clj_reader:read(<<"#{:clr}">>)},
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+
+  ct:comment("Allow with no features"),
+  HelloKeyword = clj_reader:read(<<"#?(1 2) :hello">>, AllowOpts),
+
+  ct:comment("Allow with feature match"),
+  2 = clj_reader:read(<<"#?(:clj 2) :hello">>, AllowCljFeatureOpts),
+
+  ct:comment("Allow with no feature match"),
+  HelloKeyword = clj_reader:read(<<"#?(:clj 2 :cljs [3]) :hello">>,
+                                 AllowClrFeatureOpts),
+
+  ct:comment("Cond splice vector"),
+  OneTwoThreeVector = clj_reader:read(<<"[:one :two :three]">>),
+  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three :clr [:two]) :three]">>,
+                                      AllowClrFeatureOpts),
+
+  OneTwoThreeFourVector = clj_reader:read(<<"[:one :two :three :four]">>),
+  OneTwoThreeFourVector =
+    clj_reader:read(<<"[:one #?@(:clj :three :clr [:two :three] :cljs :five) :four]">>,
+                    AllowClrFeatureOpts),
+
+  ct:comment("Cond splice list"),
+  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three :clr (:two)) :three]">>,
+                                      AllowClrFeatureOpts),
+  OneTwoThreeFourVector =
+    clj_reader:read(<<"[:one #?@(:clj :three :clr (:two :three) :cljs :five) :four]">>,
+                    AllowClrFeatureOpts),
+
+  ct:comment("Preserve read"),
+  PreserveOpts = #{read_cond => preserve},
+  ReaderCond = {'clojerl.reader.ReaderConditional',
+                #{list => clj_reader:read(<<"(1 2)">>),
+                  splicing => false}},
+  [ReaderCond, HelloKeyword] =
+    clj_reader:read_all(<<"#?(1 2) :hello">>, PreserveOpts),
+
+  ReaderCondSplice = {'clojerl.reader.ReaderConditional',
+                      #{list => clj_reader:read(<<"(1 2)">>),
+                        splicing => true}},
+  ReaderCondSpliceVector = clj_core:vector([ReaderCondSplice, HelloKeyword]),
+  ReaderCondSpliceVector =
+    clj_reader:read(<<"[#?@(1 2) :hello]">>, PreserveOpts),
+
+  ct:comment("EOF while reading character"),
+  ok = try clj_reader:read(<<"#?">>, AllowOpts)
+       catch _:<<"EOF while reading character">> -> ok
+       end,
+
+  ct:comment("Reader conditional not allowed"),
+  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>)
+       catch _:<<"Conditional read not allowed">> -> ok
+       end,
+
+  ct:comment("No list"),
+  ok = try clj_reader:read(<<"#?:clj">>, AllowOpts)
+       catch _:<<"read-cond body must be a list">> -> ok
+       end,
+
+  ct:comment("EOF: no feature matched"),
+  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>, AllowOpts)
+       catch _:<<"EOF">> -> ok
+       end,
+
+  ct:comment("Uneven number of forms"),
+  ok = try clj_reader:read(<<"#?(:one :two :three)">>, AllowOpts)
+       catch _:<<"read-cond requires an even number of forms">> -> ok
+       end,
+
+  ct:comment("Splice not in list"),
+  ok = try clj_reader:read(<<"#?@(:one [:two])">>, AllowOpts)
+       catch _:<<"cond-splice not in list">> -> ok
+       end,
+
+  ct:comment("Splice in list but not sequential"),
+  ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>, AllowClrFeatureOpts)
+       catch _:<<"Spliced form list in read-cond-splicing must "
+                  "extend clojerl.ISequential">> -> ok
+       end,
 
   {comments, ""}.
 

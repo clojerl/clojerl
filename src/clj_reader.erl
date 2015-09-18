@@ -1,35 +1,41 @@
 -module(clj_reader).
 
 -export([
-         read_fold/2,
          read_fold/3,
-         read/1,
-         read/2,
-         read_all/1,
-         read_all/2
+         read_fold/4,
+         read/1, read/2, read/3,
+         read_all/1, read_all/2, read_all/3
         ]).
 
+-type opts() :: #{read_cond => allow | preserve,
+                  features => 'clojerl.Set':type()}.
+
 -type state() :: #{src => binary(),
+                   opts => opts(),
                    forms => [any()],
+                   pending_forms => [any()],
                    env => map()}.
 
--spec new_state(binary(), any(), boolean()) -> state().
-new_state(Src, Env, ReadAll) ->
+-spec new_state(binary(), any(), opts(), boolean()) -> state().
+new_state(Src, Env, Opts, ReadAll) ->
   #{src => Src,
+    opts => Opts,
     forms => [],
+    pending_forms => [],
     env => Env,
     all => ReadAll
    }.
 
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
 
--spec read_fold(read_fold_fun(), binary()) -> clj_env:env().
-read_fold(Fun, Src) ->
-  read_fold(Fun, Src, clj_env:default()).
+-spec read_fold(read_fold_fun(), binary(), opts()) -> clj_env:env().
+read_fold(Fun, Src, Opts) ->
+  read_fold(Fun, Src, Opts, clj_env:default()).
 
--spec read_fold(read_fold_fun(), binary(), clj_env:env()) -> clj_env:env().
-read_fold(Fun, Src, Env) ->
-  State = new_state(Src, Env, false),
+-spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
+  clj_env:env().
+read_fold(Fun, Src, Opts, Env) ->
+  State = new_state(Src, Env, Opts, false),
   read_fold_loop(Fun, State).
 
 -spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
@@ -45,13 +51,17 @@ read_fold_loop(Fun, State) ->
 
 -spec read(binary()) -> {any(), binary()} | eof.
 read(Src) ->
-  read(Src, clj_env:default()).
+  read(Src, #{}).
+
+-spec read(binary(), opts()) -> {any(), binary()} | eof.
+read(Src, Opts) ->
+  read(Src, Opts, clj_env:default()).
 
 %% @doc Reads the next form from the input. Returns a tuple with two elements:
 %%      the form and a binary with the unconsumed output.
--spec read(binary(), clj_env:env()) -> {any(), binary()} | eof.
-read(Src, Env) ->
-  State = new_state(Src, Env, false),
+-spec read(binary(), opts(), clj_env:env()) -> {any(), binary()} | eof.
+read(Src, Opts, Env) ->
+  State = new_state(Src, Env, Opts, false),
   #{forms := Forms} = dispatch(State),
   case Forms of
     [] -> throw(<<"EOF">>);
@@ -60,11 +70,15 @@ read(Src, Env) ->
 
 -spec read_all(state()) -> [any()].
 read_all(Src) ->
-  read_all(Src, clj_env:default()).
+  read_all(Src, #{}).
 
--spec read_all(state(), clj_env:env()) -> [any()].
-read_all(Src, Env) ->
-  State = new_state(Src, Env, true),
+-spec read_all(state(), opts()) -> [any()].
+read_all(Src, Opts) ->
+  read_all(Src, Opts, clj_env:default()).
+
+-spec read_all(state(), opts(), clj_env:env()) -> [any()].
+read_all(Src, Opts, Env) ->
+  State = new_state(Src, Env, Opts, true),
   #{forms := Forms} = dispatch(State),
   lists:reverse(Forms).
 
@@ -81,6 +95,8 @@ read_one(State) ->
   read_one(State, true).
 
 -spec read_one(state(), boolean()) -> state().
+read_one(#{pending_forms := [Form | PendingForms]} = State, _ThrowEof) ->
+  push_form(Form, State#{pending_forms => PendingForms});
 read_one(#{src := <<>>}, true = _ThrowEof) ->
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
@@ -749,7 +765,80 @@ read_discard(State) ->
 %% #? cond
 %%------------------------------------------------------------------------------
 
-read_cond(_State) -> throw(unimplemented).
+read_cond(#{src := <<>>}) ->
+  throw(<<"EOF while reading character">>);
+read_cond(#{src := Src, opts := Opts} = State) ->
+  ReadCondOpt = maps:get(read_cond, Opts, undefined),
+  case lists:member(ReadCondOpt, [allow, preserve]) of
+    false -> throw(<<"Conditional read not allowed">>);
+    true -> ok
+  end,
+
+  ReadDelim = clj_core:boolean(erlang:get(read_delim)),
+  IsSplicing = binary:first(Src) == $@,
+  RestSrc =
+    case IsSplicing of
+      true when not ReadDelim ->
+        throw(<<"cond-splice not in list">>);
+      true ->
+        <<_, RestSrcAux/binary>> = Src,
+        RestSrcAux;
+      false ->
+        Src
+    end,
+
+  {ListForm, NewState} = pop_form(read_one(State#{src => RestSrc})),
+
+  case clj_core:'list?'(ListForm) of
+    false -> throw(<<"read-cond body must be a list">>);
+    true ->
+      OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+      SupressRead = OldSupressRead orelse ReadCondOpt == preserve,
+      erlang:put(supress_read, SupressRead),
+      ReturnState =
+        case SupressRead of
+          true ->
+            ReaderCondForm = reader_conditional(ListForm, IsSplicing),
+            push_form(ReaderCondForm, NewState);
+          false ->
+            read_cond_delimited(ListForm, IsSplicing, NewState)
+        end,
+      erlang:put(supress_read, OldSupressRead),
+      ReturnState
+  end.
+
+reader_conditional(List, IsSplicing) ->
+  {'clojerl.reader.ReaderConditional', #{list => List, splicing => IsSplicing}}.
+
+read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
+  Features = maps:get(features, Opts, clj_core:hash_set([])),
+  Forms = 'clojerl.List':to_list(List),
+  case match_feature(Forms, Features) of
+    nomatch ->
+      read_one(State);
+    Form when IsSplicing ->
+      case clj_core:'sequential?'(Form) of
+        false ->
+          throw(<<"Spliced form list in read-cond-splicing must "
+                  "extend clojerl.ISequential">>);
+        true ->
+          Seq = clj_core:seq(Form),
+          Items = 'clojerl.List':to_list(Seq),
+          lists:foldl(fun push_pending_form/2, State, lists:reverse(Items))
+      end;
+    Form ->
+      push_form(Form, State)
+  end.
+
+match_feature([], _Features) ->
+  nomatch;
+match_feature([Feature, Form | Rest], Features) ->
+  case clj_core:'contains?'(Features, Feature) of
+    true -> Form;
+    false -> match_feature(Rest, Features)
+  end;
+match_feature(_, _) ->
+  throw(<<"read-cond requires an even number of forms">>).
 
 %%------------------------------------------------------------------------------
 %% #: erlang function
@@ -817,12 +906,14 @@ read_token(Src) ->
 
 -spec read_until(char(), state()) -> state().
 read_until(Delim, #{src := <<Delim, Src/binary>>} = State) ->
+  erlang:erase(read_delim),
   State#{src => Src};
 read_until(Delim, #{src := <<X, Src/binary>>} = State) ->
   case clj_utils:char_type(X) of
     whitespace ->
       read_until(Delim, State#{src => Src});
     _ ->
+      erlang:put(read_delim, true),
       read_until(Delim, read_one(State))
   end.
 
@@ -849,3 +940,7 @@ pop_form(#{forms := [Form | Forms]} = State) ->
 -spec push_form(any(), state()) -> state().
 push_form(Form, #{forms := Forms} = State) ->
   State#{forms => [Form | Forms]}.
+
+-spec push_pending_form(any(), state()) -> state().
+push_pending_form(Form, #{pending_forms := Forms} = State) ->
+  State#{pending_forms => [Form | Forms]}.
