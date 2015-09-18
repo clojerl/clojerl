@@ -2,4 +2,4 @@
 
 -export([count/1]).
 
-count({_, Array}) -> array:size(Array).
+count({_, Array, _}) -> array:size(Array).

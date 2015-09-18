@@ -272,23 +272,56 @@ deref(_Config) ->
   {comments, ""}.
 
 meta(_Config) ->
-  HelloKeyword = clj_core:keyword(<<"hello">>),
+  MetadataKw = clj_reader:read(<<"{:private true}">>),
+  MetadataSym = clj_reader:read(<<"{:tag private}">>),
 
-  PrivateKeyword = clj_core:keyword(<<"private">>),
-  TagKeyword = clj_core:keyword(<<"tag">>),
-  PrivateSym = clj_core:symbol(<<"private">>),
-
-  MetadataKw = #{PrivateKeyword => true},
-  MetadataSym = #{TagKeyword => PrivateSym},
-
-  HelloWithMetaKw = clj_core:with_meta(HelloKeyword, MetadataKw),
-  HelloWithMetaSym = clj_core:with_meta(HelloKeyword, MetadataSym),
-
-  ct:comment("Meta keyword"),
+  ct:comment("Keyword meta to keyword"),
   HelloWithMetaKw = clj_reader:read(<<"^:private :hello">>),
+  MetadataKw = clj_core:meta(HelloWithMetaKw),
 
-  ct:comment("Meta symbol"),
+  ct:comment("Symbol meta to keyword"),
   HelloWithMetaSym = clj_reader:read(<<"^private :hello">>),
+  MetadataSym = clj_core:meta(HelloWithMetaSym),
+
+  ct:comment("Keyword meta to symbol"),
+  SymbolWithMetaKw = clj_reader:read(<<"^:private hello">>),
+  MetadataKw = clj_core:meta(SymbolWithMetaKw),
+
+  ct:comment("Symbol meta to symbol"),
+  SymbolWithMetaSym = clj_reader:read(<<"^private hello">>),
+  MetadataSym = clj_core:meta(SymbolWithMetaSym),
+
+  ct:comment("Map meta to symbol"),
+  MapWithMetaKw = clj_reader:read(<<"^:private {}">>),
+  MetadataKw = clj_core:meta(MapWithMetaKw),
+
+  ct:comment("Map meta to symbol"),
+  MapWithMetaSym = clj_reader:read(<<"^private {}">>),
+  MetadataSym = clj_core:meta(MapWithMetaSym),
+
+  ct:comment("List meta to symbol"),
+  ListWithMetaKw = clj_reader:read(<<"^:private ()">>),
+  MetadataKw = clj_core:meta(ListWithMetaKw),
+
+  ct:comment("List meta to symbol"),
+  ListWithMetaSym = clj_reader:read(<<"^private ()">>),
+  MetadataSym = clj_core:meta(ListWithMetaSym),
+
+  ct:comment("Vector meta to symbol"),
+  VectorWithMetaKw = clj_reader:read(<<"^:private []">>),
+  MetadataKw = clj_core:meta(VectorWithMetaKw),
+
+  ct:comment("Vector meta to symbol"),
+  VectorWithMetaSym = clj_reader:read(<<"^private []">>),
+  MetadataSym = clj_core:meta(VectorWithMetaSym),
+
+  ct:comment("Set meta to symbol"),
+  SetWithMetaKw = clj_reader:read(<<"^:private #{}">>),
+  MetadataKw = clj_core:meta(SetWithMetaKw),
+
+  ct:comment("Set meta to symbol"),
+  SetWithMetaSym = clj_reader:read(<<"^private #{}">>),
+  MetadataSym = clj_core:meta(SetWithMetaSym),
 
   ct:comment("Meta number"),
   ok = try clj_reader:read(<<"^1 1">>)
@@ -300,7 +333,7 @@ meta(_Config) ->
        catch _:_ -> ok
        end,
 
-  ct:comment("Meta without"),
+  ct:comment("Meta without form"),
   ok = try clj_reader:read(<<"^:private">>)
        catch _:_ -> ok
        end,

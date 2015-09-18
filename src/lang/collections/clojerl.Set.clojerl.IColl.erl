@@ -5,10 +5,10 @@
 -export([count/1, cons/2, empty/1, equiv/2]).
 
 -spec count('clojerl.Set':type()) -> integer().
-count({_, Set}) -> gb_sets:size(Set).
+count({_, Set, _}) -> gb_sets:size(Set).
 
 -spec cons('clojerl.Set':type(), any()) -> 'clojerl.List':type().
-cons({_, Set}, X) ->
+cons({_, Set, _}, X) ->
   Items = gb_sets:to_list(Set),
   clj_core:list([X | Items]).
 

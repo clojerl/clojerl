@@ -9,14 +9,14 @@
         ]).
 
 -spec first('clojerl.Vector':type()) -> undefined | any().
-first({_, Array}) ->
+first({_, Array, _}) ->
   case array:size(Array) of
     0 -> undefined;
     _ -> array:get(0, Array)
   end.
 
 -spec next('clojerl.Vector':type()) -> undefined | 'clojerl.List':type().
-next({_, Array}) ->
+next({_, Array, _}) ->
   case array:size(Array) of
     0 -> undefined;
     _ ->
@@ -27,7 +27,7 @@ next({_, Array}) ->
   end.
 
 -spec more('clojerl.Vector':type()) -> undefined | 'clojerl.List':type().
-more({_, Array} = Vector) ->
+more({_, Array, _} = Vector) ->
   case array:size(Array) of
     0 -> 'clojerl.List':new([]);
     _ -> next(Vector)

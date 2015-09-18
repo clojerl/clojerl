@@ -117,17 +117,17 @@ char_type(_, _) -> symbol.
                    'clojerl.Symbol':type() |
                    string()) -> map().
 desugar_meta(Meta) ->
-  case 'clojerl.Keyword':is(Meta) of
-    true ->
-      maps:put(Meta, true, #{});
-    false ->
-      case 'clojerl.Symbol':is(Meta) orelse is_binary(Meta) of
-        true ->
-          Tag = 'clojerl.Keyword':new(<<"tag">>),
-          maps:put(Tag, Meta, #{});
-        false ->
-          Meta
-      end
+  case clj_core:type(Meta) of
+    'clojerl.Keyword' ->
+      clj_core:hash_map([Meta, true]);
+    'clojerl.Map' ->
+      Meta;
+    Type when Type == 'clojerl.Symbol'
+              orelse Type == 'clojerl.String' ->
+      Tag = clj_core:keyword(<<"tag">>),
+      clj_core:hash_map([Tag, Meta]);
+    _ ->
+      throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
 
 -spec binary_join([binary()], binary()) -> binary().

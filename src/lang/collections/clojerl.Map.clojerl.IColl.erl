@@ -5,10 +5,10 @@
 -export([count/1, cons/2, empty/1, equiv/2]).
 
 -spec count('clojerl.Map':type()) -> integer().
-count({_, Map}) -> maps:size(Map).
+count({_, Map, _}) -> maps:size(Map).
 
 -spec cons('clojerl.Map':type(), any()) -> 'clojerl.List':type().
-cons({_, Map}, X) ->
+cons({_, Map, _}, X) ->
   FoldFun = fun(K, V, List) ->
                 [clj_core:vector([K, V]) | List]
             end,

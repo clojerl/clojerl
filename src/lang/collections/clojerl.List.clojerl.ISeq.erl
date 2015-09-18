@@ -9,14 +9,14 @@
         ]).
 
 -spec first('clojerl.List':type()) -> undefined | any().
-first({_, []}) -> undefined;
-first({_, [First | _]}) -> First.
+first({_, [], _}) -> undefined;
+first({_, [First | _], _}) -> First.
 
 -spec next('clojerl.List':type()) -> undefined | 'clojerl.List':type().
-next({_, []}) -> undefined;
-next({_, [_ | []]}) -> undefined;
-next({T, [_ | Rest]}) -> {T, Rest}.
+next({_, [], _}) -> undefined;
+next({_, [_ | []], _}) -> undefined;
+next({T, [_ | Rest], Info}) -> {T, Rest, Info}.
 
 -spec more('clojerl.List':type()) -> undefined | 'clojerl.List':type().
-more({_, []}) -> undefined;
-more({T, [_ | Rest]}) -> {T, Rest}.
+more({_, [], _}) -> undefined;
+more({T, [_ | Rest], Info}) -> {T, Rest, Info}.

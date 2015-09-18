@@ -4,5 +4,5 @@
 
 -export([seq/1]).
 
-seq({_, []}) -> undefined;
+seq({_, [], _}) -> undefined;
 seq(List) -> List.

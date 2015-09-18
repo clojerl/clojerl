@@ -4,9 +4,9 @@
 
 -export([str/1]).
 
-str({'clojerl.List', []}) ->
+str({'clojerl.List', [], _}) ->
   <<"()">>;
-str({'clojerl.List', Items}) ->
+str({'clojerl.List', Items, _}) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.

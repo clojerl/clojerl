@@ -4,8 +4,8 @@
 
 -export([seq/1]).
 
-seq({_, []}) -> undefined;
-seq({_, Map}) ->
+seq({_, [], _}) -> undefined;
+seq({_, Map, _}) ->
   FoldFun = fun(K, V, List) ->
                 [clj_core:vector([K, V]) | List]
             end,

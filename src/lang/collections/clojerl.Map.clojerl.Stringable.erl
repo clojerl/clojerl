@@ -4,7 +4,7 @@
 
 -export([str/1]).
 
-str({'clojerl.Map', Map}) ->
+str({_, Map, _}) ->
   StrFun = fun(Key) ->
                KeyStr = clj_core:str(Key),
                ValStr = clj_core:str(maps:get(Key, Map)),

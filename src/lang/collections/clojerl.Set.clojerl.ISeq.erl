@@ -9,7 +9,7 @@
         ]).
 
 -spec first('clojerl.Set':type()) -> undefined | any().
-first({_, Set}) ->
+first({_, Set, _}) ->
   Iterator = gb_sets:iterator(Set),
   case gb_sets:next(Iterator) of
     none -> undefined;
@@ -17,7 +17,7 @@ first({_, Set}) ->
   end.
 
 -spec next('clojerl.Set':type()) -> undefined | 'clojerl.List':type().
-next({_, Set}) ->
+next({_, Set, _}) ->
   case gb_sets:to_list(Set) of
     [] -> undefined;
     [_ | []] -> undefined;
@@ -25,7 +25,7 @@ next({_, Set}) ->
   end.
 
 -spec more('clojerl.Set':type()) -> undefined | 'clojerl.List':type().
-more({_, GbSet} = Set) ->
+more({_, GbSet, _} = Set) ->
   case gb_sets:size(GbSet) of
     0 -> 'clojerl.List':new([]);
     _ -> next(Set)

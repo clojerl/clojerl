@@ -4,4 +4,4 @@
 
 -export([count/1]).
 
-count({_, Map}) -> maps:size(Map).
+count({_, Map, _}) -> maps:size(Map).

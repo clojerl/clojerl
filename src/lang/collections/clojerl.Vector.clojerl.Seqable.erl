@@ -4,5 +4,5 @@
 
 -export([seq/1]).
 
-seq({_, []}) -> undefined;
-seq({_, Array}) -> clj_core:list(array:to_list(Array)).
+seq({_, [], _}) -> undefined;
+seq({_, Array, _}) -> clj_core:list(array:to_list(Array)).
