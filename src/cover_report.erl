@@ -35,6 +35,8 @@ report() ->
   io:format("~n~s=======================~s~n~n",
             [color("white-bold"), color("reset")]).
 
+report_result({Module, {0, 0}}) ->
+  report_result({Module, {1, 0}});
 report_result({Module, {Cov, NotCov}}) ->
   Coverage = erlang:round(100 * Cov / (Cov + NotCov)),
   Color = get_color(Coverage),
