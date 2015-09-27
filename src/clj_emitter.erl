@@ -50,7 +50,7 @@ ast(#{op := constant, form := Form} = Expr) ->
     true -> [];
     false -> [erl_syntax:abstract(Form)]
   end;
-ast(#{op := quote, expr:= Expr} = _Form) ->
+ast(#{op := quote, expr := Expr} = _Form) ->
   ast(Expr);
 ast(#{op := var} = _Form) ->
   io:format("{{{ Resolve var's value and emit it. }}}~n").
