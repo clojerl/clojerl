@@ -31,7 +31,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
   %% value and add module attributes with the var's info.
   NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
   NameStr = clj_core:str('clojerl.Var':name(Var)),
-  ModuleStr = <<"clj.", NamespaceStr/binary, "/", NameStr/binary>>,
+  ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
   ModuleAst = module_attribute(binary_to_atom(ModuleStr, utf8)),
 
   ExportAst = export_attribute([{val, 0}]),
@@ -45,6 +45,9 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
   FunctionAst = function_form(val, [ClauseAst]),
 
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
+ast(#{op := fn} = Form) ->
+  io:format("======= FN* ======~n~p~n", [Form]),
+  [erl_syntax:function(var)];
 ast(#{op := constant, form := Form} = Expr) ->
   case maps:get(top_level, Expr, false) of
     true -> [];

@@ -6,6 +6,7 @@
          'empty?'/1,
          seq/1,
          conj/2,
+         cons/2,
          first/1,
          next/1,
          rest/1,
@@ -50,6 +51,16 @@ conj(undefined, Item) ->
   list([Item]);
 conj(Coll, Item) ->
   'clojerl.IColl':cons(Coll, Item).
+
+%% @doc Clojure's cons builds a cons cell, which is actually
+%%      the equivalent to a vanilla Erlang Head and Tail.
+%% TODO: it is possible that it should actually return a vanilla
+%%       Erlang list.
+-spec cons(any(), any()) -> any().
+cons(undefined, Item) ->
+  list([Item]);
+cons(Item, Seq) ->
+  'clojerl.IColl':cons(Seq, Item).
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
