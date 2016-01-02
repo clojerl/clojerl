@@ -32,7 +32,7 @@ name(_Ns = #{name := Name}) -> Name.
 intern(Namespace = #{name := NsName,
                      defs := Defs},
        Symbol) ->
-  case 'clojerl.Symbol':namespace(Symbol) of
+  case clj_core:namespace(Symbol) of
     undefined ->
       Var = 'clojerl.Var':new(NsName, Symbol),
       NewDefs = maps:put(Symbol, Var, Defs),

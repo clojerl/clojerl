@@ -2,8 +2,7 @@
 
 -export([
          new/1,
-         new/2,
-         namespace/1
+         new/2
         ]).
 
 -type type() :: {?MODULE, #{ns => binary() | undefined,
@@ -17,7 +16,3 @@ new(Name) when is_binary(Name) ->
 new(Namespace, Name) when is_binary(Namespace) orelse Namespace == undefined,
                           is_binary(Name) ->
   {?MODULE, #{ns => Namespace, name => Name}}.
-
--spec namespace(type()) -> binary() | undefined.
-namespace({?MODULE, #{ns := Ns}}) ->
-  Ns.
