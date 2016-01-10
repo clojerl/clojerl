@@ -1,5 +1,6 @@
 *.beam
 ebin/
 deps/
-.erlang.mk.*
+.erlang.mk*
 logs/
+clojerl.d
