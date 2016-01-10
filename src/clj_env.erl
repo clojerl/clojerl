@@ -14,6 +14,8 @@
          find_ns/2,
          resolve_ns/2,
          get_local/2,
+         put_local/3,
+         put_locals/2,
          update_var/2,
          find_var/2
         ]).
@@ -128,9 +130,21 @@ resolve_ns(Env, SymNs) ->
       Ns
   end.
 
--spec get_local(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
+-spec get_local(env(), 'clojerl.Symbol':type()) -> any().
 get_local(_Env = #{locals := Locals}, Sym) ->
   maps:get(Sym, Locals, undefined).
+
+-spec put_local(env(), 'clojerl.Symbol':type(), any()) -> env().
+put_local(Env = #{locals := Locals}, Sym, Local) ->
+  Env#{locals => maps:put(Sym, Local, Locals)}.
+
+-spec put_locals(env(), [map()]) -> env().
+put_locals(Env, Locals) ->
+  PutLocalFun = fun(Local, EnvAcc) ->
+                    Name = maps:get(name, Local),
+                    put_local(EnvAcc, Name, Local)
+                end,
+  lists:foldl(PutLocalFun, Env, Locals).
 
 -spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
 update_var(Env, Var) ->

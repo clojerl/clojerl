@@ -8,8 +8,7 @@ emit(Env0) ->
     {undefined, _} ->
       Env0;
     {Expr, Env} ->
-      HR = lists:duplicate(80, $=),
-      io:format("~p~n~s~n", [Expr, HR]),
+      io:format("~p~n~s~n", [clj_core:str(Expr), lists:duplicate(80, $=)]),
       Forms = lists:map(fun erl_syntax:revert/1, ast(Expr)),
       compile_forms(Forms),
       Env
@@ -31,29 +30,39 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
   %% value and add module attributes with the var's info.
   NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
   NameStr = clj_core:str('clojerl.Var':name(Var)),
-  ModuleStr = <<"clj.", NamespaceStr/binary, "/", NameStr/binary>>,
+  %% Erlang module's name will be clj.{{namespace}}.{{name}}__var
+  ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
   ModuleAst = module_attribute(binary_to_atom(ModuleStr, utf8)),
 
   ExportAst = export_attribute([{val, 0}]),
 
+  %% Add the var's information as a module attribute
   VarAtom = erl_syntax:atom(var),
   VarAst = erl_syntax:abstract(Var),
   VarAttributeAst = erl_syntax:attribute(VarAtom, [VarAst]),
 
   InitAst = ast(InitExpr),
-  ClauseAst =  erl_syntax:clause([], [], InitAst),
+  ClauseAst =  erl_syntax:clause([], InitAst),
   FunctionAst = function_form(val, [ClauseAst]),
 
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
+ast(#{op := fn} = Form) ->
+  io:format("======= FN* ======~n~p~n=================~n", [clj_core:str(Form)]),
+  Name = erl_syntax:variable('F'),
+  Clause = erl_syntax:clause([], [Name]),
+
+  [erl_syntax:named_fun_expr(Name, [Clause])];
 ast(#{op := constant, form := Form} = Expr) ->
+  %% A constant as a top level form doesn't produce code.
   case maps:get(top_level, Expr, false) of
     true -> [];
     false -> [erl_syntax:abstract(Form)]
   end;
-ast(#{op := quote, expr:= Expr} = _Form) ->
+ast(#{op := quote, expr := Expr} = _Form) ->
   ast(Expr);
 ast(#{op := var} = _Form) ->
-  io:format("{{{ Resolve var's value and emit it. }}}~n").
+  io:format("{{{ Resolve var's value and emit it. }}}~n"),
+  [].
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions

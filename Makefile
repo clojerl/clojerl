@@ -14,7 +14,7 @@ CT_OPTS = -cover ${COVER_SPEC} -erl_args -s ${PROJECT}
 
 COMPILE_FIRST = lang/protocols/*
 
-SHELL_OPTS += -name ${PROJECT}@`hostname` -s ${PROJECT} -s sync
+SHELL_OPTS += -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync
 
 # Generate a list of all modules for the cover.spec
 print-all-modules:
@@ -26,5 +26,5 @@ report-cover:
 coverage-results:
 	@find . -name "cover.html" | sort -r | head -1 | xargs open
 
-tests-shell:
-	@erl -pa ebin -pa test -pa deps/*/ebin ${SHELL_OPTS}
+tests-shell: build-ct-suites
+	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS} -s sync

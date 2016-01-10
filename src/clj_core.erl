@@ -6,6 +6,7 @@
          'empty?'/1,
          seq/1,
          conj/2,
+         cons/2,
          first/1,
          next/1,
          rest/1,
@@ -50,6 +51,16 @@ conj(undefined, Item) ->
   list([Item]);
 conj(Coll, Item) ->
   'clojerl.IColl':cons(Coll, Item).
+
+%% @doc Clojure's cons builds a cons cell, which is actually
+%%      the equivalent to a vanilla Erlang Head and Tail.
+%% TODO: it is possible that it should actually return a vanilla
+%%       Erlang list.
+-spec cons(any(), any()) -> any().
+cons(undefined, Item) ->
+  list([Item]);
+cons(Item, Seq) ->
+  'clojerl.IColl':cons(Seq, Item).
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
@@ -196,13 +207,13 @@ type(X) when is_binary(X) -> 'clojerl.String';
 type(X) when is_integer(X) -> 'clojerl.Integer';
 type(X) when is_float(X) -> 'clojerl.Float';
 type(X) when is_boolean(X) -> 'clojerl.Boolean';
+type(X) when is_list(X) -> 'clojerl.erlang.List';
+type(X) when is_map(X) -> 'clojerl.erlang.Map';
 type(undefined) -> 'clojerl.nil';
+type(X) when is_atom(X) -> 'clojerl.erlang.Atom';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec str(any()) -> any().
-str(L) when is_list(L) ->
-  Strs = lists:map(fun str/1, L),
-  clj_utils:binary_join(Strs, <<>>);
 str(X) ->
   'clojerl.Stringable':str(X).
 

@@ -7,7 +7,8 @@
          parse_symbol/1,
          desugar_meta/1,
          binary_join/2,
-         ends_with/2
+         ends_with/2,
+         throw_when/2
         ]).
 
 -define(INT_PATTERN,
@@ -144,6 +145,12 @@ ends_with(Str, Ends) ->
   StrSize = byte_size(Str),
   EndsSize = byte_size(Ends),
   Ends == binary:part(Str, {StrSize, - EndsSize}).
+
+-spec throw_when(boolean(), any()) -> ok | no_return().
+throw_when(true, Reason) ->
+  throw(Reason);
+throw_when(false, _) ->
+  ok.
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions
