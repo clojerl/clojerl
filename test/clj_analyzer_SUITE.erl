@@ -9,6 +9,7 @@
          quote/1,
          fn/1,
          do/1,
+         'if'/1,
          invoke/1,
          symbol/1,
          vector/1,
@@ -308,6 +309,56 @@ do(_Config) ->
   #{op := constant,
    form := RetKeyword
    } = RetExpr,
+
+  {comments, ""}.
+
+-spec 'if'(config()) -> result().
+'if'(_Config) ->
+  ct:comment("if with no args"),
+  ok = try analyze_one(<<"(if)">>), error
+       catch _:Reason ->
+           <<"Wrong number of args to if, had: 0">> = Reason,
+           ok
+       end,
+  ok = try analyze_one(<<"(if true)">>), error
+       catch _:Reason2 ->
+           <<"Wrong number of args to if, had: 1">> = Reason2,
+           ok
+       end,
+
+  ct:comment("if with then"),
+  #{op := 'if',
+    test := Test1,
+    then := Then1,
+    else := Else1
+   } = analyze_one(<<"(if true :then)">>),
+
+  #{op := constant,
+    form := true} = Test1,
+
+  ThenKeyword = clj_core:keyword(<<"then">>),
+  #{op := constant,
+    form := ThenKeyword} = Then1,
+
+  #{op := constant,
+    form := undefined} = Else1,
+
+  ct:comment("if with then & else"),
+  #{op := 'if',
+    test := Test2,
+    then := Then2,
+    else := Else2
+   } = analyze_one(<<"(if true :then :else)">>),
+
+  #{op := constant,
+    form := true} = Test2,
+
+  #{op := constant,
+    form := ThenKeyword} = Then2,
+
+  ElseKeyword = clj_core:keyword(<<"else">>),
+  #{op := constant,
+    form := ElseKeyword} = Else2,
 
   {comments, ""}.
 
