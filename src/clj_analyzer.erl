@@ -306,7 +306,7 @@ analyze_fn_method(Env, List) ->
                               form => List,
                               env => ?DEBUG(Env1),
                               'variadic?' => IsVariadic,
-                              params => ParamsExprs,
+                              params => lists:reverse(ParamsExprs),
                               fixed_arity => FixedArity,
                               body => BodyExpr},
                            case maps:get(local, Env, undefined) of
@@ -346,7 +346,6 @@ parse_do(Env, Form) ->
       _ -> {lists:droplast(AllStatementsExprs),
             lists:last(AllStatementsExprs)}
     end,
-
   DoExpr = #{op => do,
              env => ?DEBUG(Env),
              form => Statements,
