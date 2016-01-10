@@ -245,7 +245,7 @@ parse_fn(Env, List) ->
   clj_utils:throw_when(IsVariadic andalso
                        Variadic =/= undefined andalso
                        MaxFixedArity =/= undefined andalso
-                       MaxFixedArity =< MethodArityFun(Variadic),
+                       MaxFixedArity > MethodArityFun(Variadic),
                        <<"Can't have fixed arity overload "
                          "with more params than variadic overload">>),
 

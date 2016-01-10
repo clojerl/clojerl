@@ -151,10 +151,126 @@ quote(_Config) ->
 
 -spec fn(config()) -> result().
 fn(_Config) ->
+  ct:comment("unnamed fn with one param and one method"),
+  #{op := fn,
+    methods := [Fn1Method1]
+   } = analyze_one(<<"(fn* [x] x)">>),
+
+  #{op := fn_method,
+    params := [Fn1Param1]
+   } = Fn1Method1,
+
+  XSymbol = clj_core:symbol(<<"x">>),
+  #{op := binding,
+    name := XSymbol
+   } = Fn1Param1,
+
+  ct:comment("named fn with one param and one method"),
+  HelloSymbol = clj_core:symbol(<<"hello">>),
+  #{op := fn,
+    methods := [Fn2Method1],
+    local := #{op := binding, name := HelloSymbol}
+   } = analyze_one(<<"(fn* hello [x] x)">>),
+
+  #{op := fn_method,
+    params := [Fn2Param1]
+   } = Fn2Method1,
+
+  #{op := binding,
+    name := XSymbol
+   } = Fn2Param1,
+
+  ct:comment("fn with two params and two methods (non-variadic)"),
+  #{op := fn,
+    methods := [Fn3Method1, Fn3Method2]
+   } = analyze_one(<<"(fn* ([x] x) ([x y] x y))">>),
+
+  #{op := fn_method,
+    params := [Fn3Param1]
+   } = Fn3Method1,
+
+  #{op := fn_method,
+    params := [Fn3Param1, Fn3Param2]
+   } = Fn3Method2,
+
+  #{op := binding,
+    name := XSymbol
+   } = Fn3Param1,
+
+  YSymbol = clj_core:symbol(<<"y">>),
+  #{op := binding,
+    name := YSymbol
+   } = Fn3Param2,
+
+  ct:comment("fn with two params and two methods (variadic)"),
+  #{op := fn,
+    methods := [Fn4Method1, Fn4Method2]
+   } = analyze_one(<<"(fn* ([x] x) ([x & z] x z))">>),
+
+  #{op := fn_method,
+    params := [Fn4Param1]
+   } = Fn4Method1,
+
+  #{op := fn_method,
+    params := [Fn4Param1, Fn4Param2]
+   } = Fn4Method2,
+
+  #{op := binding,
+    name := XSymbol
+   } = Fn4Param1,
+
+  ZSymbol = clj_core:symbol(<<"z">>),
+  #{op := binding,
+    name := ZSymbol,
+    'variadic?' := true
+   } = Fn4Param2,
+
+  ct:comment("fn with two params and one method (variadic)"),
+  #{op := fn,
+    methods := [Fn5Method1]
+   } = analyze_one(<<"(fn* ([x & z] x z))">>),
+
+  #{op := fn_method,
+    params := [Fn5Param1, Fn5Param2]
+   } = Fn5Method1,
+
+  #{op := binding,
+    name := XSymbol
+   } = Fn5Param1,
+
+  ZSymbol = clj_core:symbol(<<"z">>),
+  #{op := binding,
+    name := ZSymbol,
+    'variadic?' := true
+   } = Fn5Param2,
+
+  ct:comment("fn with two variadic methods"),
+  ok = try analyze_one(<<"(fn* ([a b & _] b) ([x & z] x z))">>), error
+       catch _:Reason ->
+           <<"Can't have more than 1 variadic overload">> = Reason,
+           ok
+       end,
+
+  ct:comment("fn with fixed arity with more args than variadic"),
+  ok = try analyze_one(<<"(fn* ([a b c] a) ([x & z] x z))">>), error
+       catch _:Reason2 ->
+           <<"Can't have fixed arity overload "
+             "with more params than variadic overload">> = Reason2,
+           ok
+       end,
+  ok = try analyze_one(<<"(fn* ([a b] a) ([x & z] x z))">>), error
+       catch _:Reason3 ->
+           <<"Can't have fixed arity overload "
+             "with more params than variadic overload">> = Reason3,
+           ok
+       end,
+
   {comments, ""}.
 
 -spec do(config()) -> result().
 do(_Config) ->
+
+
   {comments, ""}.
 
 -spec invoke(config()) -> result().
