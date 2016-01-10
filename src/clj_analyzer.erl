@@ -501,7 +501,7 @@ analyze_symbol(Env, Symbol) ->
     _ ->
       case resolve(Env, Symbol) of
         undefined ->
-          Str = clj_core:str([Symbol]),
+          Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
         Var ->
           clj_env:push_expr(Env, Expr#{info => Var})

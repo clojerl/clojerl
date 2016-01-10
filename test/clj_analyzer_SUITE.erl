@@ -7,6 +7,8 @@
          ns/1,
          def/1,
          quote/1,
+         fn/1,
+         do/1,
          invoke/1,
          symbol/1,
          vector/1,
@@ -145,6 +147,14 @@ quote(_Config) ->
            ok
        end,
 
+  {comments, ""}.
+
+-spec fn(config()) -> result().
+fn(_Config) ->
+  {comments, ""}.
+
+-spec do(config()) -> result().
+do(_Config) ->
   {comments, ""}.
 
 -spec invoke(config()) -> result().

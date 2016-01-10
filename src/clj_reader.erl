@@ -386,7 +386,8 @@ register_gensym(Symbol, _Env) ->
       NameStr = clj_core:name(Symbol),
       NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
       Parts = [NameStr2, <<"__">>, clj_core:next_id(), <<"__auto__">>],
-      GenSym = clj_core:symbol(clj_core:str(Parts)),
+      PartsStr = lists:map(fun clj_core:str/1, Parts),
+      GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
       erlang:put(gensym_env, GensymEnv#{Symbol => GenSym}),
       GenSym;
     GenSym ->
@@ -650,7 +651,8 @@ gen_arg_sym(N) ->
               <<"p", NBin/binary>>
           end,
   NextId = clj_core:next_id(),
-  Name = clj_core:str([Param, <<"__">>, NextId, <<"#">>]),
+  Parts = lists:map(fun clj_core:str/1, [Param, <<"__">>, NextId, <<"#">>]),
+  Name = erlang:iolist_to_binary(Parts),
   clj_core:symbol(Name).
 
 %%------------------------------------------------------------------------------
