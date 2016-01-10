@@ -265,11 +265,49 @@ fn(_Config) ->
            ok
        end,
 
+  ct:comment("fn with two methods same arity"),
+  ok = try analyze_one(<<"(fn* ([a b] b) ([x y] x y))">>), error
+       catch _:Reason4 ->
+           <<"Can't have 2 or more overloads "
+             "with the same arity">> = Reason4,
+           ok
+       end,
+
   {comments, ""}.
 
 -spec do(config()) -> result().
 do(_Config) ->
+  ct:comment("do with no expressions"),
+  #{op := do,
+    statements := [],
+    ret := undefined
+   } = analyze_one(<<"(do)">>),
 
+  ct:comment("do with 1 expression"),
+  #{op := do,
+    statements := [],
+    ret := KeywordExpr
+   } = analyze_one(<<"(do :expr)">>),
+
+  ExprKeyword = clj_core:keyword(<<"expr">>),
+  #{op := constant,
+   form := ExprKeyword
+   } = KeywordExpr,
+
+  ct:comment("do with 3 expression"),
+  #{op := do,
+    statements := [KeywordExpr, OneExpr],
+    ret := RetExpr
+   } = analyze_one(<<"(do :expr 1 :ret)">>),
+
+  #{op := constant,
+   form := 1
+   } = OneExpr,
+
+  RetKeyword = clj_core:keyword(<<"ret">>),
+  #{op := constant,
+   form := RetKeyword
+   } = RetExpr,
 
   {comments, ""}.
 
