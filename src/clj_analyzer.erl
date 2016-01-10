@@ -69,10 +69,10 @@ special_forms() ->
      symbol(<<"quote">>) => fun parse_quote/2,
      symbol(<<"fn*">>) => fun parse_fn/2,
      symbol(<<"do">>) => fun parse_do/2,
+     symbol(<<"if">>) => fun parse_if/2,
 
      symbol(<<"loop*">>) => undefined,
      symbol(<<"recur">>) => undefined,
-     symbol(<<"if">>) => undefined,
      symbol(<<"case*">>) => undefined,
      symbol(<<"let*">>) => undefined,
      symbol(<<"letfn*">>) => undefined,
@@ -353,6 +353,43 @@ parse_do(Env, Form) ->
              ret => ReturnExpr},
 
   clj_env:push_expr(Env2, DoExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse if
+%%------------------------------------------------------------------------------
+
+-spec parse_if(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_if(Env, Form) ->
+  Count = clj_core:count(Form),
+  CountBin = integer_to_binary(Count - 1),
+  clj_utils:throw_when(Count =/= 3 andalso Count =/= 4,
+                       <<"Wrong number of args to if, had: ",
+                         CountBin/binary>>),
+
+  {Test, Then, Else} =
+    case Count of
+      3 ->
+        [_, Test1, Then1] = 'clojerl.List':to_list(Form),
+        {Test1, Then1, undefined};
+      4 ->
+        [_, Test1, Then1, Else1] = 'clojerl.List':to_list(Form),
+        {Test1, Then1, Else1}
+    end,
+
+  TestEnv = clj_env:context(Env, expr),
+  {TestExpr, Env1} = clj_env:pop_expr(analyze_form(TestEnv, Test)),
+  Env2 = analyze_forms(Env1, [Then, Else]),
+  {[ThenExpr, ElseExpr], Env3} = clj_env:last_exprs(Env2, 2),
+
+  IfExpr = #{ op   => 'if'
+            , form => Form
+            , env  => ?DEBUG(Env3)
+            , test => TestExpr
+            , then => ThenExpr
+            , else => ElseExpr
+            },
+
+  clj_env:push_expr(Env3, IfExpr).
 
 %%------------------------------------------------------------------------------
 %% Parse def
