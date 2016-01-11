@@ -19,7 +19,7 @@
          get/2,
          type/1]).
 
--define(DEBUG(X), undefined).
+-define(DEBUG(X), X).
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->
@@ -395,10 +395,10 @@ parse_if(Env, Form) ->
 
 -spec parse_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_let(Env, Form) ->
-  {LetExprExtra, Env} = analyze_let(Env, Form),
+  {LetExprExtra, Env2} = analyze_let(Env, Form),
   LetExpr = maps:merge(#{ op   => 'let'
                         , form => Form
-                        , env  => ?DEBUG(Env)
+                        , env  => ?DEBUG(Env2)
                         },
                        LetExprExtra),
 
@@ -407,12 +407,54 @@ parse_let(Env, Form) ->
 -spec analyze_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_let(Env, Form) ->
   validate_bindings(Form),
+  Op = clj_core:first(Form),
+  PairUp = fun
+             PairUp([], Pairs) ->
+               lists:reverse(Pairs);
+             PairUp([X, Y | Tail], Pairs) ->
+               PairUp(Tail, [{X, Y} | Pairs])
+           end,
+  BindingsVec = clj_core:second(Form),
+  BindingsList = 'clojerl.Vector':to_list(BindingsVec),
+  BindingPairs = PairUp(BindingsList, []),
 
-  LetExprExtra = #{ body => undefined
-                  , bindings => undefined
+  Env2 = lists:foldl(fun parse_binding/2, Env, BindingPairs),
+  BindingCount = length(BindingPairs),
+  {BindingsExprs, Env3} = clj_env:last_exprs(Env2, BindingCount),
+
+  IsLoop = clj_core:symbol(<<"loop*">>) == Op,
+  BodyEnv = case IsLoop of
+              true ->
+                EnvTemp = clj_env:context(Env3, return),
+                EnvTemp#{loop_locals => BindingCount};
+              false ->
+                Env3
+            end,
+  Body = clj_core:rest(clj_core:rest(Form)),
+  {BodyExpr, Env4} = clj_env:pop_expr(analyze_body(BodyEnv, Body)),
+
+  LetExprExtra = #{ body     => BodyExpr
+                  , bindings => BindingsExprs
                   },
 
-  {LetExprExtra, Env}.
+  {LetExprExtra, Env4}.
+
+-spec parse_binding({any(), any()}, clj_env:env()) -> clj_env:env().
+parse_binding({Name, Init}, Env) ->
+  clj_utils:throw_when(not is_valid_bind_symbol(Name),
+                       [<<"Bad binding form: ">>, Name]),
+
+  {InitExpr, _} = clj_env:pop_expr(analyze_form(Env, Init)),
+  BindExpr = #{ op    => binding
+              , env   => ?DEBUG(Env)
+              , name  => Name
+              , init  => InitExpr
+              , form  => Name
+              , local => 'let'
+              },
+
+  Env2 = clj_env:put_local(Env, Name, maps:remove(env, BindExpr)),
+  clj_env:push_expr(Env2, BindExpr).
 
 -spec validate_bindings('clojerl.List':type()) -> ok.
 validate_bindings(Form) ->
@@ -428,7 +470,6 @@ validate_bindings(Form) ->
                         <<" requires an even number of forms in binding "
                           "vector, had: ">>,
                         clj_core:count(Bindings)]),
-
   ok.
 
 %%------------------------------------------------------------------------------
