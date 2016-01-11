@@ -31,6 +31,7 @@
          boolean/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
+         'even?'/1,
          next_id/0
         ]).
 
@@ -232,6 +233,9 @@ hash_map(Items) ->
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
   'clojerl.Set':new(Items).
+
+'even?'(X) ->
+  (X band 1) == 0.
 
 -spec next_id() -> integer().
 next_id() ->

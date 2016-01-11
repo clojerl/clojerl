@@ -70,11 +70,11 @@ special_forms() ->
      symbol(<<"fn*">>) => fun parse_fn/2,
      symbol(<<"do">>) => fun parse_do/2,
      symbol(<<"if">>) => fun parse_if/2,
+     symbol(<<"let*">>) => fun parse_let/2,
 
      symbol(<<"loop*">>) => undefined,
      symbol(<<"recur">>) => undefined,
      symbol(<<"case*">>) => undefined,
-     symbol(<<"let*">>) => undefined,
      symbol(<<"letfn*">>) => undefined,
      symbol(<<"var">>) => undefined,
      symbol(<<"import*">>) => undefined,
@@ -271,8 +271,8 @@ analyze_fn_method(Env, List) ->
 
   ParamsList = 'clojerl.Vector':to_list(Params),
   clj_utils:throw_when(not lists:all(fun is_valid_bind_symbol/1, ParamsList),
-                       <<"Params must be valid binding symbols, had: ",
-                         (clj_core:str(Params))/binary>>),
+                       [<<"Params must be valid binding symbols, had: ">>,
+                        Params]),
 
   AmpersandSym = clj_core:symbol(<<"&">>),
   IsAmpersandFun = fun(X) -> X == AmpersandSym end,
@@ -361,10 +361,8 @@ parse_do(Env, Form) ->
 -spec parse_if(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_if(Env, Form) ->
   Count = clj_core:count(Form),
-  CountBin = integer_to_binary(Count - 1),
   clj_utils:throw_when(Count =/= 3 andalso Count =/= 4,
-                       <<"Wrong number of args to if, had: ",
-                         CountBin/binary>>),
+                       [<<"Wrong number of args to if, had: ">>, Count - 1]),
 
   {Test, Then, Else} =
     case Count of
@@ -390,6 +388,48 @@ parse_if(Env, Form) ->
             },
 
   clj_env:push_expr(Env3, IfExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse let
+%%------------------------------------------------------------------------------
+
+-spec parse_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_let(Env, Form) ->
+  {LetExprExtra, Env} = analyze_let(Env, Form),
+  LetExpr = maps:merge(#{ op   => 'let'
+                        , form => Form
+                        , env  => ?DEBUG(Env)
+                        },
+                       LetExprExtra),
+
+  clj_env:push_expr(Env, LetExpr).
+
+-spec analyze_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+analyze_let(Env, Form) ->
+  validate_bindings(Form),
+
+  LetExprExtra = #{ body => undefined
+                  , bindings => undefined
+                  },
+
+  {LetExprExtra, Env}.
+
+-spec validate_bindings('clojerl.List':type()) -> ok.
+validate_bindings(Form) ->
+  Op = clj_core:first(Form),
+  Bindings = clj_core:second(Form),
+  clj_utils:throw_when(not clj_core:'vector?'(Bindings),
+                       [Op,
+                        <<" requires a vector for its bindings, had: ">>,
+                        clj_core:type(Bindings)]),
+
+  clj_utils:throw_when(not clj_core:'even?'(clj_core:count(Bindings)),
+                       [Op,
+                        <<" requires an even number of forms in binding "
+                          "vector, had: ">>,
+                        clj_core:count(Bindings)]),
+
+  ok.
 
 %%------------------------------------------------------------------------------
 %% Parse def
