@@ -119,10 +119,11 @@ analyze_form(Env, Form) ->
 
 -spec analyze_const(clj_env:env(), any()) -> clj_env:env().
 analyze_const(Env, Constant) ->
-  Expr = #{op => constant,
-           env => ?DEBUG(Env),
-           tag => clj_core:type(Constant),
-           form => Constant},
+  Expr = #{ op   => constant
+          , env  => ?DEBUG(Env)
+          , tag  => clj_core:type(Constant)
+          , form => Constant
+          },
   clj_env:push_expr(Env, Expr).
 
 %%------------------------------------------------------------------------------
@@ -174,10 +175,11 @@ parse_quote(Env, List) ->
   end,
   Second = clj_core:second(List),
   {ConstExpr, NewEnv} = clj_env:pop_expr(analyze_const(Env, Second)),
-  Expr = #{op => quote,
-           env => ?DEBUG(Env),
-           expr => ConstExpr,
-           form => List},
+  Expr = #{ op   => quote
+          , env  => ?DEBUG(Env)
+          , expr => ConstExpr
+          , form => List
+          },
   clj_env:push_expr(NewEnv, Expr).
 
 %%------------------------------------------------------------------------------
@@ -196,11 +198,12 @@ parse_fn(Env, List) ->
                   true -> [Methods];
                   false -> 'clojerl.List':to_list(Methods)
                 end,
-  NameExpr = #{op => binding,
-               env => ?DEBUG(Env),
-               form => Name,
-               local => fn,
-               name => Name},
+  NameExpr = #{ op    => binding
+              , env   => ?DEBUG(Env)
+              , form  => Name
+              , local => fn
+              , name  => Name
+              },
 
   Env1 = case Name of
            undefined -> Env;
@@ -249,13 +252,14 @@ parse_fn(Env, List) ->
                        <<"Can't have fixed arity overload "
                          "with more params than variadic overload">>),
 
-  FnExpr = maps:merge(#{op => fn,
-                        env => ?DEBUG(Env),
-                        form => List,
-                        'variadic?' => IsVariadic,
-                        max_fixed_arity => MaxFixedArity,
-                        methods => MethodsExprs,
-                        once => IsOnce},
+  FnExpr = maps:merge(#{ op              => fn
+                       , env             => ?DEBUG(Env)
+                       , form            => List
+                       , 'variadic?'     => IsVariadic
+                       , max_fixed_arity => MaxFixedArity
+                       , methods         => MethodsExprs
+                       , once            => IsOnce
+                       },
                      case Name of
                        undefined -> #{};
                        _ -> #{local => NameExpr}
@@ -283,13 +287,14 @@ analyze_fn_method(Env, List) ->
 
   ParamExprFun =
     fun(Name, {Id, Exprs}) ->
-        ParamExpr = #{env => ?DEBUG(Env1),
-                      form => Name,
-                      name => Name,
-                      'variadic?' => IsVariadic andalso Id == Arity - 1,
-                      op => binding,
-                      arg_id => Id,
-                      local => arg},
+        ParamExpr = #{ env         => ?DEBUG(Env1)
+                     , form        => Name
+                     , name        => Name
+                     , 'variadic?' => IsVariadic andalso Id == Arity - 1
+                     , op          => binding
+                     , arg_id      => Id
+                     , local       => arg
+                     },
         {Id + 1, [ParamExpr | Exprs]}
     end,
   {_, ParamsExprs} = lists:foldl(ParamExprFun, {0, []}, ParamsNames),
@@ -346,11 +351,12 @@ parse_do(Env, Form) ->
       _ -> {lists:droplast(AllStatementsExprs),
             lists:last(AllStatementsExprs)}
     end,
-  DoExpr = #{op => do,
-             env => ?DEBUG(Env),
-             form => Statements,
-             statements => StatementsExprs,
-             ret => ReturnExpr},
+  DoExpr = #{ op         => do
+            , env        => ?DEBUG(Env)
+            , form       => Statements
+            , statements => StatementsExprs
+            , ret        => ReturnExpr
+            },
 
   clj_env:push_expr(Env2, DoExpr).
 
@@ -408,6 +414,8 @@ parse_let(Env, Form) ->
 analyze_let(Env, Form) ->
   validate_bindings(Form),
   Op = clj_core:first(Form),
+  IsLoop = clj_core:symbol(<<"loop*">>) == Op,
+
   PairUp = fun
              PairUp([], Pairs) ->
                lists:reverse(Pairs);
@@ -418,15 +426,17 @@ analyze_let(Env, Form) ->
   BindingsList = 'clojerl.Vector':to_list(BindingsVec),
   BindingPairs = PairUp(BindingsList, []),
 
-  Env2 = lists:foldl(fun parse_binding/2, Env, BindingPairs),
+  Env2 = lists:foldl( fun parse_binding/2
+                    , clj_env:put(Env, is_loop, IsLoop)
+                    , BindingPairs
+                    ),
   BindingCount = length(BindingPairs),
   {BindingsExprs, Env3} = clj_env:last_exprs(Env2, BindingCount),
 
-  IsLoop = clj_core:symbol(<<"loop*">>) == Op,
   BodyEnv = case IsLoop of
               true ->
                 EnvTemp = clj_env:context(Env3, return),
-                EnvTemp#{loop_locals => BindingCount};
+                clj_env:put(EnvTemp, loop_locals, BindingCount);
               false ->
                 Env3
             end,
@@ -443,14 +453,17 @@ analyze_let(Env, Form) ->
 parse_binding({Name, Init}, Env) ->
   clj_utils:throw_when(not is_valid_bind_symbol(Name),
                        [<<"Bad binding form: ">>, Name]),
-
+  OpAtom = case clj_env:get(Env, is_loop) of
+             true -> loop;
+             false -> 'let'
+           end,
   {InitExpr, _} = clj_env:pop_expr(analyze_form(Env, Init)),
   BindExpr = #{ op    => binding
               , env   => ?DEBUG(Env)
               , name  => Name
               , init  => InitExpr
               , form  => Name
-              , local => 'let'
+              , local => OpAtom
               },
 
   Env2 = clj_env:put_local(Env, Name, maps:remove(env, BindExpr)),
@@ -507,14 +520,15 @@ parse_def(Env, List) ->
 
       ExprEnv2 = clj_env:context(Env2, expr),
       {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
-      VarExpr = #{op => def,
-                  env => ?DEBUG(Env3),
-                  form => List,
-                  name => VarSymbol,
-                  var => Var1,
-                  doc => Docstring,
-                  init => InitExpr,
-                  dynamic => IsDynamic},
+      VarExpr = #{ op      => def
+                 , env     => ?DEBUG(Env3)
+                 , form    => List
+                 , name    => VarSymbol
+                 , var     => Var1
+                 , doc     => Docstring
+                 , init    => InitExpr
+                 , dynamic => IsDynamic
+                 },
 
       clj_env:push_expr(Env3, VarExpr)
   end.
@@ -597,10 +611,10 @@ analyze_invoke(Env, Form) ->
   {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
   {FExpr, Env4} = clj_env:pop_expr(Env3),
 
-  InvokeExpr = #{op => invoke,
-                 env => ?DEBUG(Env4),
+  InvokeExpr = #{op   => invoke,
+                 env  => ?DEBUG(Env4),
                  form => Form,
-                 f => FExpr,
+                 f    => FExpr,
                  args => ArgsExpr},
   clj_env:push_expr(Env4, InvokeExpr).
 
@@ -658,10 +672,12 @@ analyze_vector(Env, Vector) ->
   Env1 = analyze_forms(ExprEnv, Items),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
-  VectorExpr = #{op => vector,
-                 env => ?DEBUG(Env2),
-                 form => Vector,
-                 items => ItemsExpr},
+  VectorExpr = #{ op    => vector
+                , env   => ?DEBUG(Env2)
+                , form  => Vector
+                , items => ItemsExpr
+                },
+
   clj_env:push_expr(Env2, VectorExpr).
 
 %%------------------------------------------------------------------------------
@@ -681,11 +697,13 @@ analyze_map(Env, Map) ->
   Env3 = analyze_forms(Env2, Vals),
   {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
 
-  MapExpr = #{op => map,
-              env => ?DEBUG(Env4),
-              form => Map,
-              keys => KeysExpr,
-              vals => ValsExpr},
+  MapExpr = #{ op   => map
+             , env  => ?DEBUG(Env4)
+             , form => Map
+             , keys => KeysExpr
+             , vals => ValsExpr
+             },
+
   clj_env:push_expr(Env4, MapExpr).
 
 %%------------------------------------------------------------------------------
@@ -701,8 +719,10 @@ analyze_set(Env, Set) ->
   Count = clj_core:count(Set),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
-  VectorExpr = #{op => set,
-                 env => ?DEBUG(Env2),
-                 form => Set,
-                 items => ItemsExpr},
+  VectorExpr = #{ op    => set
+                , env   => ?DEBUG(Env2)
+                , form  => Set
+                , items => ItemsExpr
+                },
+
   clj_env:push_expr(Env2, VectorExpr).
