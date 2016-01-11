@@ -19,7 +19,7 @@
          get/2,
          type/1]).
 
--define(DEBUG(X), X).
+-define(DEBUG(X), undefined).
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->

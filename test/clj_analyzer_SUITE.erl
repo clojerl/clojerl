@@ -10,6 +10,7 @@
          fn/1,
          do/1,
          'if'/1,
+         'let'/1,
          invoke/1,
          symbol/1,
          vector/1,
@@ -359,6 +360,42 @@ do(_Config) ->
   ElseKeyword = clj_core:keyword(<<"else">>),
   #{op := constant,
     form := ElseKeyword} = Else2,
+
+  {comments, ""}.
+
+-spec 'let'(config()) -> result().
+'let'(_Config) ->
+  ct:comment("let with zero bindings or body"),
+  #{op := 'let'} = analyze_one(<<"(let* [])">>),
+
+  ct:comment("let with bindings and no body"),
+  #{op := 'let'} = analyze_one(<<"(let* [x 1, y :a])">>),
+
+  ct:comment("let with bindings and body should resolve locals"),
+  #{op := 'let'} = analyze_one(<<"(let* [x 1, y :a] x y)">>),
+
+  ct:comment("let with bindings shuold throw unresolved for z symbol"),
+  ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
+       catch _:Reason ->
+           <<"Unable to resolve var: z in this context">> = Reason,
+           ok
+       end,
+
+  ct:comment("let with odd number of forms in binding vector"),
+  ok = try analyze_one(<<"(let*)">>)
+       catch _:Reason2 ->
+           <<"let* requires a vector for its bindings, "
+             "had: :clojerl.nil">> = Reason2,
+           ok
+       end,
+
+  ct:comment("let with no binding vector"),
+  ok = try analyze_one(<<"(let* [x 2 y])">>)
+       catch _:Reason3 ->
+           <<"let* requires an even number of "
+             "forms in binding vector, had: 3">> = Reason3,
+           ok
+       end,
 
   {comments, ""}.
 
