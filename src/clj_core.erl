@@ -32,7 +32,8 @@
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
          'even?'/1,
-         next_id/0
+         next_id/0,
+         gensym/0, gensym/1
         ]).
 
 -spec count(any()) -> integer().
@@ -240,3 +241,12 @@ hash_set(Items) ->
 -spec next_id() -> integer().
 next_id() ->
   erlang:unique_integer([positive]).
+
+-spec gensym() -> 'clojer.Symbol':type().
+gensym() ->
+  gensym(<<"G__">>).
+
+-spec gensym(binary()) -> 'clojer.Symbol':type().
+gensym(Prefix) ->
+  PartsBin = lists:map(fun str/1, [Prefix, next_id()]),
+  iolist_to_binary(PartsBin).

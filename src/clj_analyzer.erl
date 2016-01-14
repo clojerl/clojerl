@@ -64,30 +64,30 @@ macroexpand(Env, Form) ->
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
   #{
-     symbol(<<"ns">>) => fun parse_ns/2,
-     symbol(<<"def">>) => fun parse_def/2,
-     symbol(<<"quote">>) => fun parse_quote/2,
-     symbol(<<"fn*">>) => fun parse_fn/2,
-     symbol(<<"do">>) => fun parse_do/2,
-     symbol(<<"if">>) => fun parse_if/2,
-     symbol(<<"let*">>) => fun parse_let/2,
+     symbol(<<"ns">>)       => fun parse_ns/2,
+     symbol(<<"def">>)      => fun parse_def/2,
+     symbol(<<"quote">>)    => fun parse_quote/2,
+     symbol(<<"fn*">>)      => fun parse_fn/2,
+     symbol(<<"do">>)       => fun parse_do/2,
+     symbol(<<"if">>)       => fun parse_if/2,
+     symbol(<<"let*">>)     => fun parse_let/2,
+     symbol(<<"loop*">>)    => fun parse_loop/2,
 
-     symbol(<<"loop*">>) => undefined,
-     symbol(<<"recur">>) => undefined,
-     symbol(<<"case*">>) => undefined,
-     symbol(<<"letfn*">>) => undefined,
-     symbol(<<"var">>) => undefined,
-     symbol(<<"import*">>) => undefined,
+     symbol(<<"recur">>)    => undefined,
+     symbol(<<"case*">>)    => undefined,
+     symbol(<<"letfn*">>)   => undefined,
+     symbol(<<"var">>)      => undefined,
+     symbol(<<"import*">>)  => undefined,
      symbol(<<"deftype*">>) => undefined,
-     symbol(<<"reify*">>) => undefined,
-     symbol(<<"try">>) => undefined,
+     symbol(<<"reify*">>)   => undefined,
+     symbol(<<"try">>)      => undefined,
      %% symbol(<<"monitor-enter">>),
      %% symbol(<<"monitor-exit">>),
      %% symbol(<<"new">>),
      %% symbol(<<"&">>),
-     symbol(<<"throw">>) => undefined,
-     symbol(<<"catch">>) => undefined,
-     symbol(<<"finally">>) => undefined
+     symbol(<<"throw">>)    => undefined,
+     symbol(<<"catch">>)    => undefined,
+     symbol(<<"finally">>)  => undefined
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
@@ -301,19 +301,26 @@ analyze_fn_method(Env, List) ->
 
   FixedArity = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
+  LoopId = clj_core:gensym(<<"loop_">>),
   BodyEnv = clj_env:put_locals(Env1, ParamsExprs),
+  BodyEnv1 = clj_env:context(BodyEnv, return),
+  BodyEnv2 = clj_env:put(BodyEnv1, loop_id, LoopId),
+  BodyEnv3 = clj_env:put(BodyEnv2, loop_locals, length(ParamsExprs)),
+
   Body = rest(List),
-  {BodyExpr, Env2} = clj_env:pop_expr(analyze_body(BodyEnv, Body)),
+  {BodyExpr, Env2} = clj_env:pop_expr(analyze_body(BodyEnv3, Body)),
 
   %% TODO: check for a single symbol after '&
 
-  FnMethodExpr = maps:merge(#{op => fn_method,
-                              form => List,
-                              env => ?DEBUG(Env1),
-                              'variadic?' => IsVariadic,
-                              params => lists:reverse(ParamsExprs),
-                              fixed_arity => FixedArity,
-                              body => BodyExpr},
+  FnMethodExpr = maps:merge(#{ op          => fn_method
+                             , form        => List
+                             , loop_id     => LoopId
+                             , env         => ?DEBUG(Env1)
+                             , 'variadic?' => IsVariadic
+                             , params      => lists:reverse(ParamsExprs)
+                             , fixed_arity => FixedArity
+                             , body        => BodyExpr
+                             },
                            case maps:get(local, Env, undefined) of
                              undefined -> #{};
                              Local -> #{local => Local}
@@ -396,7 +403,7 @@ parse_if(Env, Form) ->
   clj_env:push_expr(Env3, IfExpr).
 
 %%------------------------------------------------------------------------------
-%% Parse let
+%% Parse let & parse loop
 %%------------------------------------------------------------------------------
 
 -spec parse_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
@@ -409,6 +416,20 @@ parse_let(Env, Form) ->
                        LetExprExtra),
 
   clj_env:push_expr(Env, LetExpr).
+
+-spec parse_loop(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_loop(Env, Form) ->
+  LoopId = clj_core:gensym(<<"loop_">>),
+  Env1 = clj_env:put(Env, loop_id, LoopId),
+  {LoopExprExtra, Env2} = analyze_let(Env1, Form),
+  LoopExpr = maps:merge(#{ op      => loop
+                         , form    => Form
+                         , env     => ?DEBUG(Env2)
+                         , loop_id => LoopId
+                         },
+                        LoopExprExtra),
+
+  clj_env:push_expr(Env2, LoopExpr).
 
 -spec analyze_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_let(Env, Form) ->

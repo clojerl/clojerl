@@ -11,6 +11,7 @@
          do/1,
          'if'/1,
          'let'/1,
+         loop/1,
          invoke/1,
          symbol/1,
          vector/1,
@@ -396,6 +397,19 @@ do(_Config) ->
              "forms in binding vector, had: 3">> = Reason3,
            ok
        end,
+
+  {comments, ""}.
+
+-spec loop(config()) -> result().
+loop(_Config) ->
+  ct:comment("loop with zero bindings or body"),
+  #{op := loop} = analyze_one(<<"(loop* [])">>),
+
+  ct:comment("loop with one binding"),
+  #{op := loop} = analyze_one(<<"(loop* [x 1])">>),
+
+  ct:comment("loop with binding and body"),
+  #{op := loop} = analyze_one(<<"(loop* [x 1 y :a] y)">>),
 
   {comments, ""}.
 
