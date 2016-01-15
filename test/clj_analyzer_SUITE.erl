@@ -367,13 +367,35 @@ do(_Config) ->
 -spec 'let'(config()) -> result().
 'let'(_Config) ->
   ct:comment("let with zero bindings or body"),
-  #{op := 'let'} = analyze_one(<<"(let* [])">>),
+  #{ op       := 'let'
+   , bindings := Bindings0
+   , body     := Body0
+   } = analyze_one(<<"(let* [])">>),
+  0 = length(Bindings0),
+  #{ statements := []
+   , ret        := undefined
+   } = Body0,
 
   ct:comment("let with bindings and no body"),
-  #{op := 'let'} = analyze_one(<<"(let* [x 1, y :a])">>),
+  #{op := 'let'
+   , bindings := Bindings1
+   , body     := Body1
+   } = analyze_one(<<"(let* [x 1, y :a])">>),
+  2 = length(Bindings1),
+  #{ statements := []
+   , ret        := undefined
+   } = Body1,
 
   ct:comment("let with bindings and body should resolve locals"),
-  #{op := 'let'} = analyze_one(<<"(let* [x 1, y :a] x y)">>),
+  #{ op := 'let'
+   , bindings := Bindings2
+   , body     := Body2
+   } = analyze_one(<<"(let* [x 1, y :a] x y)">>),
+  2 = length(Bindings2),
+  #{ statements := [_]
+   , ret        := ReturnExpr
+   } = Body2,
+  false = ReturnExpr == undefined,
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
@@ -403,13 +425,29 @@ do(_Config) ->
 -spec loop(config()) -> result().
 loop(_Config) ->
   ct:comment("loop with zero bindings or body"),
-  #{op := loop} = analyze_one(<<"(loop* [])">>),
+  #{ op       := loop
+   , bindings := Bindings0
+   , loop_id  := LoopId0
+   } = analyze_one(<<"(loop* [])">>),
+  0 = length(Bindings0),
 
   ct:comment("loop with one binding"),
-  #{op := loop} = analyze_one(<<"(loop* [x 1])">>),
+  #{ op       := loop
+   , bindings := Bindings1
+   , loop_id  := LoopId1
+   } = analyze_one(<<"(loop* [x 1])">>),
+  1 = length(Bindings1),
 
-  ct:comment("loop with binding and body"),
-  #{op := loop} = analyze_one(<<"(loop* [x 1 y :a] y)">>),
+  ct:comment("loop with bindings and body"),
+  #{ op       := loop
+   , bindings := Bindings2
+   , loop_id  := LoopId2
+   } = analyze_one(<<"(loop* [x 1 y :a] y)">>),
+  2 = length(Bindings2),
+
+  true = LoopId0 =/= LoopId1,
+  true = LoopId1 =/= LoopId2,
+  true = LoopId0 =/= LoopId2,
 
   {comments, ""}.
 
