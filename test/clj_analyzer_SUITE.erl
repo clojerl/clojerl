@@ -393,9 +393,20 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, y :a] x y)">>),
   2 = length(Bindings2),
   #{ statements := [_]
-   , ret        := ReturnExpr
+   , ret        := ReturnExpr2
    } = Body2,
-  false = ReturnExpr == undefined,
+  false = ReturnExpr2 == undefined,
+
+  ct:comment("let with bindings and a single return expression body"),
+  #{ op := 'let'
+   , bindings := Bindings3
+   , body     := Body3
+   } = analyze_one(<<"(let* [x 1, _ :a] x)">>),
+  2 = length(Bindings3),
+  #{ statements := []
+   , ret        := ReturnExpr3
+   } = Body3,
+  false = ReturnExpr3 == undefined,
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
