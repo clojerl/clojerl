@@ -63,31 +63,33 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{
-     symbol(<<"ns">>)       => fun parse_ns/2,
-     symbol(<<"def">>)      => fun parse_def/2,
-     symbol(<<"quote">>)    => fun parse_quote/2,
-     symbol(<<"fn*">>)      => fun parse_fn/2,
-     symbol(<<"do">>)       => fun parse_do/2,
-     symbol(<<"if">>)       => fun parse_if/2,
-     symbol(<<"let*">>)     => fun parse_let/2,
-     symbol(<<"loop*">>)    => fun parse_loop/2,
+  #{ symbol(<<"ns">>)       => fun parse_ns/2
+   , symbol(<<"def">>)      => fun parse_def/2
+   , symbol(<<"quote">>)    => fun parse_quote/2
+   , symbol(<<"fn*">>)      => fun parse_fn/2
+   , symbol(<<"do">>)       => fun parse_do/2
+   , symbol(<<"if">>)       => fun parse_if/2
+   , symbol(<<"let*">>)     => fun parse_let/2
+   , symbol(<<"loop*">>)    => fun parse_loop/2
 
-     symbol(<<"recur">>)    => undefined,
-     symbol(<<"case*">>)    => undefined,
-     symbol(<<"letfn*">>)   => undefined,
-     symbol(<<"var">>)      => undefined,
-     symbol(<<"import*">>)  => undefined,
-     symbol(<<"deftype*">>) => undefined,
-     symbol(<<"reify*">>)   => undefined,
-     symbol(<<"try">>)      => undefined,
-     %% symbol(<<"monitor-enter">>),
-     %% symbol(<<"monitor-exit">>),
-     %% symbol(<<"new">>),
-     %% symbol(<<"&">>),
-     symbol(<<"throw">>)    => undefined,
-     symbol(<<"catch">>)    => undefined,
-     symbol(<<"finally">>)  => undefined
+   , symbol(<<"recur">>)    => undefined
+   , symbol(<<"case*">>)    => undefined
+   , symbol(<<"letfn*">>)   => undefined
+   , symbol(<<"var">>)      => undefined
+   , symbol(<<"import*">>)  => undefined
+
+   , symbol(<<"deftype*">>) => undefined
+   , symbol(<<"reify*">>)   => undefined
+
+   , symbol(<<"throw">>)    => undefined
+   , symbol(<<"try">>)      => undefined
+   , symbol(<<"catch">>)    => undefined
+   , symbol(<<"finally">>)  => undefined
+
+     %% , symbol(<<"monitor-enter">>)
+     %% , symbol(<<"monitor-exit">>)
+     %% , symbol(<<"new">>)
+     %% , symbol(<<"&">>)
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
