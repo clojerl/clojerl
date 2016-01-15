@@ -147,6 +147,9 @@ ends_with(Str, Ends) ->
   Ends == binary:part(Str, {StrSize, - EndsSize}).
 
 -spec throw_when(boolean(), any()) -> ok | no_return().
+throw_when(true, List) when is_list(List) ->
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  throw_when(true, Reason);
 throw_when(true, Reason) ->
   throw(Reason);
 throw_when(false, _) ->

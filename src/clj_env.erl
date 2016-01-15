@@ -16,6 +16,9 @@
          get_local/2,
          put_local/3,
          put_locals/2,
+         get/2,
+         put/3,
+         remove/2,
          update_var/2,
          find_var/2
         ]).
@@ -145,6 +148,18 @@ put_locals(Env, Locals) ->
                     put_local(EnvAcc, Name, Local)
                 end,
   lists:foldl(PutLocalFun, Env, Locals).
+
+-spec get(env(), atom()) -> any().
+get(Env, Name) ->
+  maps:get(Name, Env, undefined).
+
+-spec put(env(), atom(), any()) -> any().
+put(Env, Name, Value) ->
+  maps:put(Name, Value, Env).
+
+-spec remove(env(), atom()) -> ok.
+remove(Env, Name) ->
+  maps:remove(Name, Env).
 
 -spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
 update_var(Env, Var) ->
