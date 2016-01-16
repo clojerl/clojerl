@@ -276,6 +276,13 @@ fn(_Config) ->
            ok
        end,
 
+  ct:comment("binding in fn should not leak out of fn* scope"),
+  ok = try analyze_all(<<"(fn* ([x y] x y)) x">>), error
+       catch _:Reason5 ->
+           <<"Unable to resolve var: x in this context">> = Reason5,
+           ok
+       end,
+
   {comments, ""}.
 
 -spec do(config()) -> result().
@@ -481,11 +488,12 @@ invoke(_Config) ->
   ct:comment("Call defined symbol"),
   HelloSymbol = clj_core:symbol(<<"hello">>),
   ListHello = clj_core:list([HelloSymbol]),
-  [_,
-   #{op := invoke,
-     form := ListHello,
-     f := #{op := var,
-            form := HelloSymbol}}] = analyze_all(<<"(def hello :hello) (hello)">>),
+  [ _
+  , #{ op   := invoke
+     , form := ListHello
+     , f    := #{op := var, form := HelloSymbol}
+     }
+  ] = analyze_all(<<"(def hello :hello) (hello)">>),
 
   {comments, ""}.
 
