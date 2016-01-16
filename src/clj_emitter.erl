@@ -47,7 +47,8 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
 
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
 ast(#{op := fn} = Form) ->
-  io:format("======= FN* ======~n~p~n=================~n", [clj_core:str(Form)]),
+  #{} = Form,
+  io:format("======= FN* ======~n~p~n===============~n", [clj_core:str(Form)]),
   Name = erl_syntax:variable('F'),
   Clause = erl_syntax:clause([], [Name]),
 
