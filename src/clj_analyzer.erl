@@ -272,16 +272,17 @@ analyze_fn_method(Env, List) ->
   IsAmpersandFun = fun(X) -> X == AmpersandSym end,
   IsVariadic = lists:any(IsAmpersandFun, ParamsList),
   ParamsNames = ParamsList -- [AmpersandSym],
-  Env1 = maps:remove(local, Env),
+  Env0 = clj_env:add_locals_scope(Env),
+  Env1 = maps:remove(local, Env0),
   Arity = length(ParamsNames),
 
   ParamExprFun =
     fun(Name, {Id, Exprs}) ->
-        ParamExpr = #{ env         => ?DEBUG(Env1)
+        ParamExpr = #{ op          => binding
+                     , env         => ?DEBUG(Env1)
                      , form        => Name
                      , name        => Name
                      , 'variadic?' => IsVariadic andalso Id == Arity - 1
-                     , op          => binding
                      , arg_id      => Id
                      , local       => arg
                      },
@@ -316,7 +317,8 @@ analyze_fn_method(Env, List) ->
                              Local -> #{local => Local}
                            end),
 
-  clj_env:push_expr(Env2, FnMethodExpr).
+  Env3 = clj_env:remove_locals_scope(Env2),
+  clj_env:push_expr(Env3, FnMethodExpr).
 
 -spec analyze_body(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_body(Env, List) ->
@@ -438,8 +440,9 @@ analyze_let(Env, Form) ->
   BindingsList = 'clojerl.Vector':to_list(BindingsVec),
   BindingPairs = PairUp(BindingsList, []),
 
+  Env1 = clj_env:add_locals_scope(Env),
   Env2 = lists:foldl( fun parse_binding/2
-                    , clj_env:put(Env, is_loop, IsLoop)
+                    , clj_env:put(Env1, is_loop, IsLoop)
                     , BindingPairs
                     ),
   BindingCount = length(BindingPairs),
@@ -459,7 +462,8 @@ analyze_let(Env, Form) ->
                   , bindings => BindingsExprs
                   },
 
-  {LetExprExtra, Env4}.
+  Env5 = clj_env:remove_locals_scope(Env4),
+  {LetExprExtra, Env5}.
 
 -spec parse_binding({any(), any()}, clj_env:env()) -> clj_env:env().
 parse_binding({Name, Init}, Env) ->
