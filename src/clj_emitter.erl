@@ -25,7 +25,7 @@ compile_forms(Forms) ->
   code:load_binary(Name, "", Binary).
 
 -spec ast(map()) -> [erl_syntax:syntaxTree()].
-ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
+ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   %% Create a module that provides a single function with the var's
   %% value and add module attributes with the var's info.
   NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
@@ -46,24 +46,45 @@ ast(#{op := def, var := Var, init := InitExpr} = _Form) ->
   FunctionAst = function_form(val, [ClauseAst]),
 
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
-ast(#{op := fn} = Form) ->
-  #{} = Form,
-  io:format("======= FN* ======~n~p~n===============~n", [clj_core:str(Form)]),
-  Name = erl_syntax:variable('F'),
-  Clause = erl_syntax:clause([], [Name]),
+ast(#{op := fn} = Expr) ->
+  #{methods := Methods} = Expr,
+  Clauses = lists:map(fun method_to_clause/1, Methods),
 
-  [erl_syntax:named_fun_expr(Name, [Clause])];
+  case maps:get(local, Expr, undefined) of
+    undefined ->
+      [erl_syntax:fun_expr(Clauses)];
+    NameExpr ->
+      #{name := NameSym} = NameExpr,
+      NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+      Name = erl_syntax:variable(NameAtom),
+      [erl_syntax:named_fun_expr(Name, Clauses)]
+  end;
 ast(#{op := constant, form := Form} = Expr) ->
   %% A constant as a top level form doesn't produce code.
   case maps:get(top_level, Expr, false) of
     true -> [];
     false -> [erl_syntax:abstract(Form)]
   end;
-ast(#{op := quote, expr := Expr} = _Form) ->
+ast(#{op := quote, expr := Expr}) ->
   ast(Expr);
-ast(#{op := var} = _Form) ->
+ast(#{op := var} = _Expr) ->
   io:format("{{{ Resolve var's value and emit it. }}}~n"),
-  [].
+  [];
+ast(#{op := binding} = Expr) ->
+  NameSym = maps:get(name, Expr),
+  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  [erl_syntax:variable(NameAtom)];
+ast(#{op := local} = Expr) ->
+  NameSym = maps:get(name, Expr),
+  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  [erl_syntax:variable(NameAtom)];
+ast(#{op := do} = Expr) ->
+  #{ statements := StatementsExprs
+   , ret        := ReturnExpr
+   } = Expr,
+  Stms = lists:flatmap(fun ast/1, StatementsExprs),
+  Ret = ast(ReturnExpr),
+  Stms ++ Ret.
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
@@ -90,3 +111,15 @@ arity_qualifier(Function, Arity) when is_atom(Function),
   FunctionAtomAst = erl_syntax:atom(Function),
   ArityIntegerAst = erl_syntax:integer(Arity),
   erl_syntax:arity_qualifier(FunctionAtomAst, ArityIntegerAst).
+
+-spec method_to_clause(clj_analyzer:expr()) -> erl_syntax:form().
+method_to_clause(MethodExpr) ->
+  #{ params := ParamsExprs
+   , body   := BodyExpr
+   } = MethodExpr,
+
+  Args = lists:flatmap(fun ast/1, ParamsExprs),
+  Guards = [],
+  Body = ast(BodyExpr),
+
+  erl_syntax:clause(Args, Guards, Body).

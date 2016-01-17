@@ -640,19 +640,21 @@ analyze_invoke(Env, Form) ->
 
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
-  Expr = #{op => var,
-           env => ?DEBUG(Env),
-           form => Symbol},
   case {clj_core:namespace(Symbol), clj_env:get_local(Env, Symbol)} of
     {undefined, Local} when Local =/= undefined ->
-      clj_env:push_expr(Env, Expr#{info => Local});
+      clj_env:push_expr(Env, Local#{op => local});
     _ ->
       case resolve(Env, Symbol) of
         undefined ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
         Var ->
-          clj_env:push_expr(Env, Expr#{info => Var})
+          VarExpr = #{ op   => var
+                     , env  => ?DEBUG(Env)
+                     , form => Symbol
+                     , var  => Var
+                     },
+          clj_env:push_expr(Env, VarExpr)
       end
   end.
 
