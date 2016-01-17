@@ -3,10 +3,10 @@ PROJECT = clojerl
 COVER_SPEC = test/clojerl.spec
 
 DEPS = sync
-dep_sync = git https://github.com/inaka/sync.git 0.1.3
+dep_sync = git https://github.com/rustyio/sync.git 9c78e7b
 
 TEST_DEPS = xref_runner
-dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.2
+dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.5
 
 include erlang.mk
 
