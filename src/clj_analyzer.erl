@@ -613,7 +613,7 @@ lookup_var(VarSymbol, false, Env) ->
   end.
 
 %%------------------------------------------------------------------------------
-%% Analyze inokve
+%% Analyze invoke
 %%------------------------------------------------------------------------------
 
 -spec analyze_invoke(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().

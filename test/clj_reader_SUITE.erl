@@ -354,7 +354,8 @@ syntax_quote(_Config) ->
   WithMetaDoSym = clj_reader:read(<<"`do">>),
 
   DefSym = clj_core:symbol(<<"def">>),
-  WithMetaDefSym = WrapWithMetaFun(clj_core:list([QuoteSym, DefSym]), undefined),
+  WithMetaDefSym =
+    WrapWithMetaFun(clj_core:list([QuoteSym, DefSym]), undefined),
   WithMetaDefSym = clj_reader:read(<<"`def">>),
 
   ct:comment("Read literals"),
@@ -530,7 +531,8 @@ map(_Config) ->
   ct:comment("Map"),
   Map = 'clojerl.Map':new([HelloWorldKeyword, HelloWorldSymbol,
                            HelloWorldSymbol, HelloWorldKeyword]),
-  Map = clj_reader:read(<<"{:hello-world hello-world, hello-world :hello-world}">>),
+  Map = clj_reader:read(<<"{:hello-world hello-world,"
+                          " hello-world :hello-world}">>),
 
   ct:comment("Map without closing braces"),
   ok = try clj_reader:read(<<"{1 42.0">>)
@@ -774,19 +776,23 @@ discard(_Config) ->
 
   ct:comment("Cond splice vector"),
   OneTwoThreeVector = clj_reader:read(<<"[:one :two :three]">>),
-  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three :clr [:two]) :three]">>,
+  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
+                                        " :clr [:two]) :three]">>,
                                       AllowClrFeatureOpts),
 
   OneTwoThreeFourVector = clj_reader:read(<<"[:one :two :three :four]">>),
   OneTwoThreeFourVector =
-    clj_reader:read(<<"[:one #?@(:clj :three :clr [:two :three] :cljs :five) :four]">>,
+    clj_reader:read(<<"[:one #?@(:clj :three :clr"
+                      " [:two :three] :cljs :five) :four]">>,
                     AllowClrFeatureOpts),
 
   ct:comment("Cond splice list"),
-  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three :clr (:two)) :three]">>,
+  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
+                                        " :clr (:two)) :three]">>,
                                       AllowClrFeatureOpts),
   OneTwoThreeFourVector =
-    clj_reader:read(<<"[:one #?@(:clj :three :clr (:two :three) :cljs :five) :four]">>,
+    clj_reader:read(<<"[:one #?@(:clj :three :clr"
+                     " (:two :three) :cljs :five) :four]">>,
                     AllowClrFeatureOpts),
 
   ct:comment("Preserve read"),
@@ -820,7 +826,8 @@ discard(_Config) ->
        end,
 
   ct:comment("EOF: no feature matched"),
-  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>, AllowOpts)
+  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>,
+                           AllowOpts)
        catch _:<<"EOF">> -> ok
        end,
 
@@ -835,7 +842,8 @@ discard(_Config) ->
        end,
 
   ct:comment("Splice in list but not sequential"),
-  ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>, AllowClrFeatureOpts)
+  ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
+                           AllowClrFeatureOpts)
        catch _:<<"Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
        end,
