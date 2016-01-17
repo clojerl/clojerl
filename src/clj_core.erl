@@ -4,7 +4,7 @@
          type/1,
          count/1,
          'empty?'/1,
-         seq/1,
+         seq/1, seq2/1,
          conj/2,
          cons/2,
          first/1,
@@ -44,9 +44,16 @@ count(Seq) ->
 'empty?'(Seq) ->
   'clojerl.Seqable':seq(Seq) == undefined.
 
--spec seq(any()) -> 'clojerl.List':type().
-seq(Seq) ->
-  'clojerl.Seqable':seq(Seq).
+-spec seq(any()) -> list() | undefined.
+seq(Seqable) ->
+  'clojerl.Seqable':seq(Seqable).
+
+-spec seq2(any()) -> list().
+seq2(Seqable) ->
+  case seq(Seqable) of
+    undefined -> [];
+    Seq -> Seq
+  end.
 
 -spec conj(any(), any()) -> any().
 conj(undefined, Item) ->
@@ -59,7 +66,7 @@ conj(Coll, Item) ->
 %% TODO: it is possible that it should actually return a vanilla
 %%       Erlang list.
 -spec cons(any(), any()) -> any().
-cons(undefined, Item) ->
+cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
   'clojerl.IColl':cons(Seq, Item).
@@ -114,8 +121,7 @@ keyword(Namespace, Name) ->
 
 -spec 'extends?'(atom(), atom()) -> boolean().
 'extends?'(Protocol, Type) ->
-  ImplModule = 'clojerl.protocol':impl_module(Protocol, Type),
-  code:is_loaded(ImplModule) =/= false.
+  'clojerl.protocol':'extends?'(Protocol, Type).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->

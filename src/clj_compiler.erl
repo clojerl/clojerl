@@ -7,6 +7,8 @@
          eval/2
         ]).
 
+-export([ast_to_string/1]).
+
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
@@ -38,9 +40,32 @@ compile(Src) when is_binary(Src) ->
 compile(Src, Env) when is_binary(Src) ->
   Fun = fun(Form, EnvAcc) ->
             NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
-            clj_emitter:emit(NewEnvAcc)
+            {Forms, Exprs, Env1} = clj_emitter:emit(NewEnvAcc),
+            compile_forms(Forms),
+            eval_expressions(Exprs),
+            Env1
         end,
   clj_reader:read_fold(Fun, Src, Env).
+
+-spec compile_forms([erl_parse:abstract_form()]) -> ok.
+compile_forms([]) ->
+  ok;
+compile_forms(Forms) ->
+  %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
+  {ok, Name, Binary} = compile:forms(Forms),
+  code:load_binary(Name, "", Binary).
+
+-spec eval_expressions([erl_parse:abstract_expr()]) -> ok.
+eval_expressions([]) ->
+  ok;
+eval_expressions(Expressions) ->
+  %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
+  {_Values, _} = erl_eval:expr_list(Expressions, []),
+  ok.
+
+-spec ast_to_string([erl_syntax:syntaxTree()]) -> string().
+ast_to_string(Forms) ->
+  erl_prettypr:format(erl_syntax:form_list(Forms)).
 
 -spec eval(any(), clj_env:env()) -> any().
 eval(Form, _Env) -> Form.

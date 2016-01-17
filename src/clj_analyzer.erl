@@ -186,7 +186,7 @@ parse_fn(Env, List) ->
     end,
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
-                  false -> 'clojerl.List':to_list(Methods)
+                  false -> clj_core:seq2(Methods)
                 end,
   NameExpr = #{ op    => binding
               , env   => ?DEBUG(Env)
@@ -263,7 +263,7 @@ analyze_fn_method(Env, List) ->
   clj_utils:throw_when(not clj_core:'vector?'(Params),
                        <<"Parameter declaration should be a vector">>),
 
-  ParamsList = 'clojerl.Vector':to_list(Params),
+  ParamsList = clj_core:seq2(Params),
   clj_utils:throw_when(not lists:all(fun is_valid_bind_symbol/1, ParamsList),
                        [<<"Params must be valid binding symbols, had: ">>,
                         Params]),
@@ -340,7 +340,7 @@ is_valid_bind_symbol(X) ->
 parse_do(Env, Form) ->
   Statements = clj_core:rest(Form),
   StmtEnv = clj_env:context(Env, statement),
-  StatementsList = 'clojerl.List':to_list(Statements),
+  StatementsList = clj_core:seq2(Statements),
   Env1 = analyze_forms(StmtEnv, StatementsList),
   {AllStatementsExprs, Env2} =
     clj_env:last_exprs(Env1, clj_core:count(Statements)),
@@ -373,10 +373,10 @@ parse_if(Env, Form) ->
   {Test, Then, Else} =
     case Count of
       3 ->
-        [_, Test1, Then1] = 'clojerl.List':to_list(Form),
+        [_, Test1, Then1] = clj_core:seq2(Form),
         {Test1, Then1, undefined};
       4 ->
-        [_, Test1, Then1, Else1] = 'clojerl.List':to_list(Form),
+        [_, Test1, Then1, Else1] = clj_core:seq2(Form),
         {Test1, Then1, Else1}
     end,
 
@@ -437,7 +437,7 @@ analyze_let(Env, Form) ->
                PairUp(Tail, [{X, Y} | Pairs])
            end,
   BindingsVec = clj_core:second(Form),
-  BindingsList = 'clojerl.Vector':to_list(BindingsVec),
+  BindingsList = clj_core:seq2(BindingsVec),
   BindingPairs = PairUp(BindingsList, []),
 
   Env1 = clj_env:add_locals_scope(Env),
@@ -578,38 +578,47 @@ lookup_var(VarSymbol, Env) ->
 -spec lookup_var('clojerl.Symbol':type(), boolean(), clj_env:env()) ->
   {'clojerl.Var':type(), clj_env:env()}.
 lookup_var(VarSymbol, true = _CreateNew, Env) ->
-  NsSym = case clj_core:namespace(VarSymbol) of
-            undefined -> undefined;
-            NsStr -> clj_core:symbol(NsStr)
-          end,
-  case clj_env:current_ns(Env) of
-    CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
-      NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
-      Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-      NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
-      lookup_var(VarSymbol, false, NewEnv);
-    _ ->
-      lookup_var(VarSymbol, false, Env)
+  case clj_core:'symbol?'(VarSymbol) of
+    false -> {undefined, Env};
+    true ->
+      NsSym = case clj_core:namespace(VarSymbol) of
+                undefined -> undefined;
+                NsStr -> clj_core:symbol(NsStr)
+              end,
+      case clj_env:current_ns(Env) of
+        CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
+          NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
+          Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
+          NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
+          lookup_var(VarSymbol, false, NewEnv);
+        _ ->
+          lookup_var(VarSymbol, false, Env)
+      end
   end;
 lookup_var(VarSymbol, false, Env) ->
-  NsStr = clj_core:namespace(VarSymbol),
-  NameStr = clj_core:name(VarSymbol),
+  case clj_core:'symbol?'(VarSymbol) of
+    false -> {undefined, Env};
+    true ->
 
-  case {NsStr, NameStr} of
-    {undefined, Name} when Name == <<"ns">>;
-                           Name == <<"in-ns">> ->
-      ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, Name),
-      Var = clj_env:find_var(Env, ClojureCoreSym),
-      {Var, Env};
-    {undefined, _} ->
-      CurrentNsSym = clj_env:current_ns(Env),
-      Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
-      Var = clj_env:find_var(Env, Symbol),
-      {Var, Env};
-    {NsStr, NameStr} ->
-      Symbol = clj_core:symbol(NsStr, NameStr),
-      Var = clj_env:find_var(Env, Symbol),
-      {Var, Env}
+      NsStr = clj_core:namespace(VarSymbol),
+      NameStr = clj_core:name(VarSymbol),
+
+      case {NsStr, NameStr} of
+        {undefined, Name} when Name == <<"ns">>;
+                               Name == <<"in-ns">> ->
+          ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, Name),
+          Var = clj_env:find_var(Env, ClojureCoreSym),
+          {Var, Env};
+        {undefined, _} ->
+          CurrentNsSym = clj_env:current_ns(Env),
+          Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
+          Var = clj_env:find_var(Env, Symbol),
+          {Var, Env};
+        {NsStr, NameStr} ->
+          Symbol = clj_core:symbol(NsStr, NameStr),
+          Var = clj_env:find_var(Env, Symbol),
+          {Var, Env}
+      end
   end.
 
 %%------------------------------------------------------------------------------
@@ -621,7 +630,7 @@ analyze_invoke(Env, Form) ->
   Env1 = analyze_form(Env, clj_core:first(Form)),
 
   Args = clj_core:rest(Form),
-  Env2 = analyze_forms(Env1, 'clojerl.List':to_list(Args)),
+  Env2 = analyze_forms(Env1, clj_core:seq2(Args)),
 
   ArgCount = clj_core:count(Args),
   {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
@@ -640,34 +649,54 @@ analyze_invoke(Env, Form) ->
 
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
-  Expr = #{op => var,
-           env => ?DEBUG(Env),
-           form => Symbol},
   case {clj_core:namespace(Symbol), clj_env:get_local(Env, Symbol)} of
     {undefined, Local} when Local =/= undefined ->
-      clj_env:push_expr(Env, Expr#{info => Local});
+      clj_env:push_expr(Env, Local#{op => local});
     _ ->
       case resolve(Env, Symbol) of
         undefined ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
+        {erl_fun, Module, Function} ->
+          FunExpr = #{ op       => erl_fun
+                     , env      => ?DEBUG(Env)
+                     , module   => Module
+                     , function => Function
+                     },
+          clj_env:push_expr(Env, FunExpr);
         Var ->
-          clj_env:push_expr(Env, Expr#{info => Var})
+          VarExpr = #{ op   => var
+                     , env  => ?DEBUG(Env)
+                     , form => Symbol
+                     , var  => Var
+                     },
+          clj_env:push_expr(Env, VarExpr)
       end
   end.
 
--spec resolve(clj_env:env(), 'clojerl.Symbol':env()) -> any() | undefined.
+-spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
+  'clojerl.Var':type() | {erl_fun, module(), atom()} | undefined.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local = clj_env:get_local(Env, Symbol),
   NsStr = clj_core:namespace(Symbol),
   UsedVar = clj_namespace:use(CurrentNs, Symbol),
   CurNsVar = clj_namespace:def(CurrentNs, Symbol),
+
   case {Local, NsStr, UsedVar, CurNsVar} of
     {Local, _, _, _} when Local =/= undefined ->
       Local;
     {_, NsStr, _, _} when NsStr =/= undefined ->
-      clj_env:find_var(Env, Symbol);
+      case clj_env:find_var(Env, Symbol) of
+        undefined ->
+          %% If there is no var then assume it's a Module:Function pair.
+          %% Let's see how this works out.
+          NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
+          NameAtom = binary_to_atom(clj_core:name(Symbol), utf8),
+          {erl_fun, NsAtom, NameAtom};
+        Var ->
+          Var
+      end;
     {_, _, UsedVar, _} when UsedVar =/= undefined ->
       UsedVar;
     {_, _, _, CurNsVar} when CurNsVar =/= undefined ->
@@ -684,7 +713,7 @@ resolve(Env, Symbol) ->
 analyze_vector(Env, Vector) ->
   Count = clj_core:count(Vector),
   ExprEnv = clj_env:context(Env, expr),
-  Items = 'clojerl.Vector':to_list(Vector),
+  Items = clj_core:seq2(Vector),
   Env1 = analyze_forms(ExprEnv, Items),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
@@ -729,7 +758,7 @@ analyze_map(Env, Map) ->
 -spec analyze_set(clj_env:env(), 'clojerl.Set':type()) -> clj_env:env().
 analyze_set(Env, Set) ->
   ExprEnv = clj_env:context(Env, expr),
-  Items = 'clojerl.Set':to_list(Set),
+  Items = clj_core:seq2(Set),
   Env1 = analyze_forms(ExprEnv, Items),
 
   Count = clj_core:count(Set),

@@ -1,15 +1,20 @@
 -module('clojerl.Map').
 
+-behavior('clojerl.ILookup').
+
 -export([
          new/1,
          keys/1,
          vals/1
         ]).
 
--type type() :: {?MODULE, map()}.
+%% ILookup
+-export([get/2, get/3]).
+
+-type type() :: {?MODULE, map(), map()}.
 
 -spec new(list()) -> type().
-new(KeyValues) ->
+new(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
   {?MODULE, maps:from_list(KeyValuePairs), #{}}.
 
@@ -24,3 +29,15 @@ keys({_, Map, _}) -> maps:keys(Map).
 
 -spec vals(type()) -> list().
 vals({_, Map, _}) -> maps:values(Map).
+
+%%------------------------------------------------------------------------------
+%% ILookup
+%%------------------------------------------------------------------------------
+
+-spec get(any(), any()) -> any().
+get({?MODULE, _, _} = Map, Key) ->
+  get(Map, Key, undefined).
+
+-spec get(any(), any(), any()) -> any().
+get({?MODULE, Map, _}, Key, NotFound) ->
+  maps:get(Key, Map, NotFound).

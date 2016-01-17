@@ -2,7 +2,7 @@
 
 -export([
          resolve/3,
-         impl_module/2
+         'extends?'/2
         ]).
 
 -spec resolve(atom(), atom(), list()) -> any().
@@ -27,6 +27,11 @@ resolve(Protocol, Function, Args = [Head | _]) ->
         true -> throw({undef, erlang:get_stacktrace()})
       end
   end.
+
+-spec 'extends?'(atom(), atom()) -> boolean().
+'extends?'(Protocol, Type) ->
+  ImplModule = impl_module(Protocol, Type),
+  code:is_loaded(ImplModule) =/= false.
 
 -spec impl_module(atom(), atom()) -> atom().
 impl_module(Protocol, Type) when is_atom(Protocol),

@@ -2,10 +2,10 @@
 
 -export([seq/1]).
 
--type type() :: any().
+-type type() :: list().
 
--callback seq(Seqable :: type()) -> type().
+-callback seq(Seqable :: any()) -> type().
 
--spec seq(type()) -> type().
+-spec seq(any()) -> type().
 seq(Seqable) ->
   'clojerl.protocol':resolve(?MODULE, seq, [Seqable]).

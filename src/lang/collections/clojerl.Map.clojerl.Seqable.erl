@@ -9,5 +9,4 @@ seq({_, Map, _}) ->
   FoldFun = fun(K, V, List) ->
                 [clj_core:vector([K, V]) | List]
             end,
-  Items = maps:fold(FoldFun, [], Map),
-  clj_core:list(Items).
+  maps:fold(FoldFun, [], Map).
