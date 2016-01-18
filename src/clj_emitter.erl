@@ -25,6 +25,32 @@ compile_forms(Forms) ->
   code:load_binary(Name, "", Binary).
 
 -spec ast(map()) -> [erl_syntax:syntaxTree()].
+ast(#{op := constant, form := Form} = Expr) ->
+  %% A constant as a top level form doesn't produce code.
+  case is_top_level(Expr) of
+    true -> [];
+    false -> [erl_syntax:abstract(Form)]
+  end;
+ast(#{op := quote, expr := Expr}) ->
+  ast(Expr);
+ast(#{op := var} = _Expr) ->
+  io:format("{{{ Resolve var's value and emit it. }}}~n"),
+  [];
+ast(#{op := binding} = Expr) ->
+  NameSym = maps:get(name, Expr),
+  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  [erl_syntax:variable(NameAtom)];
+ast(#{op := local} = Expr) ->
+  NameSym = maps:get(name, Expr),
+  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  [erl_syntax:variable(NameAtom)];
+ast(#{op := do} = Expr) ->
+  #{ statements := StatementsExprs
+   , ret        := ReturnExpr
+   } = Expr,
+  Stms = lists:flatmap(fun ast/1, StatementsExprs),
+  Ret = ast(ReturnExpr),
+  Stms ++ Ret;
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   %% Create a module that provides a single function with the var's
   %% value and add module attributes with the var's info.
@@ -59,46 +85,36 @@ ast(#{op := fn} = Expr) ->
       Name = erl_syntax:variable(NameAtom),
       [erl_syntax:named_fun_expr(Name, Clauses)]
   end;
-ast(#{op := constant, form := Form} = Expr) ->
-  %% A constant as a top level form doesn't produce code.
-  case maps:get(top_level, Expr, false) of
-    true -> [];
-    false -> [erl_syntax:abstract(Form)]
-  end;
-ast(#{op := quote, expr := Expr}) ->
-  ast(Expr);
-ast(#{op := var} = _Expr) ->
-  io:format("{{{ Resolve var's value and emit it. }}}~n"),
-  [];
-ast(#{op := binding} = Expr) ->
-  NameSym = maps:get(name, Expr),
-  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
-  [erl_syntax:variable(NameAtom)];
-ast(#{op := local} = Expr) ->
-  NameSym = maps:get(name, Expr),
-  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
-  [erl_syntax:variable(NameAtom)];
-ast(#{op := do} = Expr) ->
-  #{ statements := StatementsExprs
-   , ret        := ReturnExpr
+ast(#{op := invoke} = Expr) ->
+  #{ args := ArgsExpr
+   , f    := FExpr
    } = Expr,
-  Stms = lists:flatmap(fun ast/1, StatementsExprs),
-  Ret = ast(ReturnExpr),
-  Stms ++ Ret.
+  Args = lists:flatmap(fun ast/1, ArgsExpr),
+  [Fun] = ast(FExpr),
+  [erl_syntax:application(Fun, Args)].
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
 
+-spec is_top_level(clj_analyzer:expr()) -> boolean().
+is_top_level(Expr) ->
+  maps:get(top_level, Expr, false).
+
+-spec module_attribute(atom()) -> erl_syntax:syntaxTree().
 module_attribute(Name) when is_atom(Name) ->
   ModuleAtom = erl_syntax:atom(module),
   NameAtom = erl_syntax:atom(Name),
   erl_syntax:attribute(ModuleAtom, [NameAtom]).
 
+-spec function_form(atom(), [erl_syntax:syntaxTree()]) ->
+  erl_syntax:syntaxTree().
 function_form(Name, Clauses) when is_atom(Name) ->
   NameAst = erl_syntax:atom(Name),
   erl_syntax:function(NameAst, Clauses).
 
+-spec export_attribute({atom(), integer()}) ->
+  erl_syntax:syntaxTree().
 export_attribute(FAs) when is_list(FAs) ->
   ExportAtom = erl_syntax:atom(export),
   Fun  = fun({Function, Arity}) -> arity_qualifier(Function, Arity) end,
@@ -106,13 +122,14 @@ export_attribute(FAs) when is_list(FAs) ->
   ListAst = erl_syntax:list(Asts),
   erl_syntax:attribute(ExportAtom, [ListAst]).
 
+-spec arity_qualifier(atom(), integer()) -> erl_syntax:syntaxTree().
 arity_qualifier(Function, Arity) when is_atom(Function),
                                       is_integer(Arity) ->
   FunctionAtomAst = erl_syntax:atom(Function),
   ArityIntegerAst = erl_syntax:integer(Arity),
   erl_syntax:arity_qualifier(FunctionAtomAst, ArityIntegerAst).
 
--spec method_to_clause(clj_analyzer:expr()) -> erl_syntax:form().
+-spec method_to_clause(clj_analyzer:expr()) -> erl_syntax:syntaxTree().
 method_to_clause(MethodExpr) ->
   #{ params := ParamsExprs
    , body   := BodyExpr

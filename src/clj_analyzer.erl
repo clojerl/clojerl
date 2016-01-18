@@ -665,6 +665,7 @@ resolve(Env, Symbol) ->
   NsStr = clj_core:namespace(Symbol),
   UsedVar = clj_namespace:use(CurrentNs, Symbol),
   CurNsVar = clj_namespace:def(CurrentNs, Symbol),
+
   case {Local, NsStr, UsedVar, CurNsVar} of
     {Local, _, _, _} when Local =/= undefined ->
       Local;
