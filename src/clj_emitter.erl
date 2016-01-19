@@ -2,27 +2,24 @@
 
 -export([emit/1]).
 
--spec emit(clj_env:env()) -> clj_env:env().
+-spec emit(clj_env:env()) ->
+  {erl_parse:abstract_form(), erl_parse:abstract_expr(), clj_env:env()}.
 emit(Env0) ->
   case clj_env:pop_expr(Env0) of
     {undefined, _} ->
-      Env0;
+      {[], [], Env0};
     {Expr, Env} ->
       io:format("~p~n~s~n", [clj_core:str(Expr), lists:duplicate(80, $=)]),
-      Forms = lists:map(fun erl_syntax:revert/1, ast(Expr)),
-      compile_forms(Forms),
-      Env
+      SyntaxTrees   = ast(Expr),
+      RevertedForms = erl_syntax:revert_forms(SyntaxTrees),
+      {Forms, Expressions} =
+        lists:partition(fun erl_syntax:is_form/1, RevertedForms),
+      {Forms, Expressions, Env}
   end.
 
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
-
-compile_forms([]) ->
-  ok;
-compile_forms(Forms) ->
-  {ok, Name, Binary} = compile:forms(Forms),
-  code:load_binary(Name, "", Binary).
 
 -spec ast(map()) -> [erl_syntax:syntaxTree()].
 ast(#{op := constant, form := Form} = Expr) ->
@@ -85,6 +82,13 @@ ast(#{op := fn} = Expr) ->
       Name = erl_syntax:variable(NameAtom),
       [erl_syntax:named_fun_expr(Name, Clauses)]
   end;
+ast(#{op := erl_fun} = Expr) ->
+  #{ module := Module
+   , function := Function
+   } = Expr,
+  ModuleTree = erl_syntax:atom(Module),
+  FunctionTree = erl_syntax:atom(Function),
+  [erl_syntax:module_qualifier(ModuleTree, FunctionTree)];
 ast(#{op := invoke} = Expr) ->
   #{ args := ArgsExpr
    , f    := FExpr

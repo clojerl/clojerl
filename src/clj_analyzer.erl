@@ -648,6 +648,13 @@ analyze_symbol(Env, Symbol) ->
         undefined ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
+        {Module, Function} ->
+          FunExpr = #{ op       => erl_fun
+                     , env      => ?DEBUG(Env)
+                     , module   => Module
+                     , function => Function
+                     },
+          clj_env:push_expr(Env, FunExpr);
         Var ->
           VarExpr = #{ op   => var
                      , env  => ?DEBUG(Env)
@@ -658,7 +665,8 @@ analyze_symbol(Env, Symbol) ->
       end
   end.
 
--spec resolve(clj_env:env(), 'clojerl.Symbol':env()) -> any() | undefined.
+-spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
+  'clojerl.Var':type() | {module(), atom()} | undefined.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local = clj_env:get_local(Env, Symbol),
@@ -670,7 +678,16 @@ resolve(Env, Symbol) ->
     {Local, _, _, _} when Local =/= undefined ->
       Local;
     {_, NsStr, _, _} when NsStr =/= undefined ->
-      clj_env:find_var(Env, Symbol);
+      case clj_env:find_var(Env, Symbol) of
+        undefined ->
+          %% If there is no var then assume it's a Module:Function pair.
+          %% Let's see how this works out.
+          NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
+          NameAtom = binary_to_atom(clj_core:name(Symbol), utf8),
+          {NsAtom, NameAtom};
+        Var ->
+          Var
+      end;
     {_, _, UsedVar, _} when UsedVar =/= undefined ->
       UsedVar;
     {_, _, _, CurNsVar} when CurNsVar =/= undefined ->
