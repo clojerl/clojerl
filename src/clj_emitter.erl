@@ -9,7 +9,7 @@ emit(Env0) ->
     {undefined, _} ->
       {[], [], Env0};
     {Expr, Env} ->
-      io:format("~p~n~s~n", [clj_core:str(Expr), lists:duplicate(80, $=)]),
+      %% io:format("~p~n~s~n", [clj_core:str(Expr), lists:duplicate(80, $=)]),
       SyntaxTrees   = ast(Expr),
       RevertedForms = erl_syntax:revert_forms(SyntaxTrees),
       {Forms, Expressions} =
@@ -32,24 +32,26 @@ ast(#{op := quote, expr := Expr}) ->
   ast(Expr);
 ast(#{op := var, var := Var} = _Expr) ->
   Module = var_module(Var),
-  ModuleTree = erl_syntax:atom(Module),
-  FunctionTree = erl_syntax:atom(val),
-  ValQualifier = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
-  [erl_syntax:application(ValQualifier, [])];
+
+  [application_mfa(Module, val, [])];
 ast(#{op := binding} = Expr) ->
   NameSym = maps:get(name, Expr),
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+
   [erl_syntax:variable(NameAtom)];
 ast(#{op := local} = Expr) ->
   NameSym = maps:get(name, Expr),
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+
   [erl_syntax:variable(NameAtom)];
 ast(#{op := do} = Expr) ->
   #{ statements := StatementsExprs
    , ret        := ReturnExpr
    } = Expr,
+
   Stms = lists:flatmap(fun ast/1, StatementsExprs),
   Ret = ast(ReturnExpr),
+
   Stms ++ Ret;
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   %% Create a module that provides a single function with the var's
@@ -70,6 +72,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
 ast(#{op := fn} = Expr) ->
   #{methods := Methods} = Expr,
+
   Clauses = lists:map(fun method_to_clause/1, Methods),
 
   case maps:get(local, Expr, undefined) of
@@ -77,24 +80,37 @@ ast(#{op := fn} = Expr) ->
       [erl_syntax:fun_expr(Clauses)];
     NameExpr ->
       #{name := NameSym} = NameExpr,
+
       NameAtom = 'clojerl.Symbol':to_atom(NameSym),
       Name = erl_syntax:variable(NameAtom),
+
       [erl_syntax:named_fun_expr(Name, Clauses)]
   end;
 ast(#{op := erl_fun} = Expr) ->
   #{ module := Module
    , function := Function
    } = Expr,
+
   ModuleTree = erl_syntax:atom(Module),
   FunctionTree = erl_syntax:atom(Function),
+
   [erl_syntax:module_qualifier(ModuleTree, FunctionTree)];
 ast(#{op := invoke} = Expr) ->
   #{ args := ArgsExpr
    , f    := FExpr
    } = Expr,
+
   Args = lists:flatmap(fun ast/1, ArgsExpr),
   [Fun] = ast(FExpr),
-  [erl_syntax:application(Fun, Args)].
+
+  [erl_syntax:application(Fun, Args)];
+ast(#{op := vector} = Expr) ->
+  #{items := ItemsExprs} = Expr,
+
+  Items = lists:flatmap(fun ast/1, ItemsExprs),
+  ListItems = erl_syntax:list(Items),
+
+  [application_mfa('clojerl.Vector', new, [ListItems])].
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
@@ -151,3 +167,12 @@ method_to_clause(MethodExpr) ->
   Body = ast(BodyExpr),
 
   erl_syntax:clause(Args, Guards, Body).
+
+-spec application_mfa(module(), atom(), list()) -> erl_syntax:syntaxTree().
+application_mfa(Module, Function, Args) ->
+  ModuleTree = erl_syntax:atom(Module),
+  FunctionTree = erl_syntax:atom(Function),
+
+  ValQualifier = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
+
+  erl_syntax:application(ValQualifier, Args).

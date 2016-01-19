@@ -495,6 +495,14 @@ invoke(_Config) ->
      }
   ] = analyze_all(<<"(def hello :hello) (hello)">>),
 
+  ct:comment("Call something different than a symbol, analyzer shouldn't fail"),
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+  OneHello = clj_core:list([1, HelloKeyword]),
+  #{ op   := invoke
+   , form := OneHello
+   , f    := #{op := constant, form := 1}
+   } = analyze_one(<<"(1 :hello)">>),
+
   {comments, ""}.
 
 -spec symbol(config()) -> result().

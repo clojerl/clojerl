@@ -49,18 +49,19 @@ compile(Src, Env) when is_binary(Src) ->
 compile_forms([]) ->
   ok;
 compile_forms(Forms) ->
-  io:format("~s~n", [ast_to_string(Forms)]),
+  %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
   {ok, Name, Binary} = compile:forms(Forms),
   code:load_binary(Name, "", Binary).
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> ok.
 eval_expressions(Expressions) ->
+  %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   {_Values, _} = erl_eval:expr_list(Expressions, []),
   ok.
 
 -spec ast_to_string([erl_syntax:syntaxTree()]) -> string().
 ast_to_string(Forms) ->
-   erl_prettypr:format(erl_syntax:form_list(Forms)).
+  erl_prettypr:format(erl_syntax:form_list(Forms)).
 
 -spec eval(any(), clj_env:env()) -> any().
 eval(Form, _Env) -> Form.

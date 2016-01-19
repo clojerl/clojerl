@@ -578,38 +578,47 @@ lookup_var(VarSymbol, Env) ->
 -spec lookup_var('clojerl.Symbol':type(), boolean(), clj_env:env()) ->
   {'clojerl.Var':type(), clj_env:env()}.
 lookup_var(VarSymbol, true = _CreateNew, Env) ->
-  NsSym = case clj_core:namespace(VarSymbol) of
-            undefined -> undefined;
-            NsStr -> clj_core:symbol(NsStr)
-          end,
-  case clj_env:current_ns(Env) of
-    CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
-      NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
-      Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-      NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
-      lookup_var(VarSymbol, false, NewEnv);
-    _ ->
-      lookup_var(VarSymbol, false, Env)
+  case clj_core:'symbol?'(VarSymbol) of
+    false -> {undefined, Env};
+    true ->
+      NsSym = case clj_core:namespace(VarSymbol) of
+                undefined -> undefined;
+                NsStr -> clj_core:symbol(NsStr)
+              end,
+      case clj_env:current_ns(Env) of
+        CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
+          NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
+          Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
+          NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
+          lookup_var(VarSymbol, false, NewEnv);
+        _ ->
+          lookup_var(VarSymbol, false, Env)
+      end
   end;
 lookup_var(VarSymbol, false, Env) ->
-  NsStr = clj_core:namespace(VarSymbol),
-  NameStr = clj_core:name(VarSymbol),
+  case clj_core:'symbol?'(VarSymbol) of
+    false -> {undefined, Env};
+    true ->
 
-  case {NsStr, NameStr} of
-    {undefined, Name} when Name == <<"ns">>;
-                           Name == <<"in-ns">> ->
-      ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, Name),
-      Var = clj_env:find_var(Env, ClojureCoreSym),
-      {Var, Env};
-    {undefined, _} ->
-      CurrentNsSym = clj_env:current_ns(Env),
-      Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
-      Var = clj_env:find_var(Env, Symbol),
-      {Var, Env};
-    {NsStr, NameStr} ->
-      Symbol = clj_core:symbol(NsStr, NameStr),
-      Var = clj_env:find_var(Env, Symbol),
-      {Var, Env}
+      NsStr = clj_core:namespace(VarSymbol),
+      NameStr = clj_core:name(VarSymbol),
+
+      case {NsStr, NameStr} of
+        {undefined, Name} when Name == <<"ns">>;
+                               Name == <<"in-ns">> ->
+          ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, Name),
+          Var = clj_env:find_var(Env, ClojureCoreSym),
+          {Var, Env};
+        {undefined, _} ->
+          CurrentNsSym = clj_env:current_ns(Env),
+          Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
+          Var = clj_env:find_var(Env, Symbol),
+          {Var, Env};
+        {NsStr, NameStr} ->
+          Symbol = clj_core:symbol(NsStr, NameStr),
+          Var = clj_env:find_var(Env, Symbol),
+          {Var, Env}
+      end
   end.
 
 %%------------------------------------------------------------------------------
