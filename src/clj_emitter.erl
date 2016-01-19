@@ -30,9 +30,12 @@ ast(#{op := constant, form := Form} = Expr) ->
   end;
 ast(#{op := quote, expr := Expr}) ->
   ast(Expr);
-ast(#{op := var} = _Expr) ->
-  io:format("{{{ Resolve var's value and emit it. }}}~n"),
-  [];
+ast(#{op := var, var := Var} = _Expr) ->
+  Module = var_module(Var),
+  ModuleTree = erl_syntax:atom(Module),
+  FunctionTree = erl_syntax:atom(val),
+  ValQualifier = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
+  [erl_syntax:application(ValQualifier, [])];
 ast(#{op := binding} = Expr) ->
   NameSym = maps:get(name, Expr),
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
@@ -51,11 +54,7 @@ ast(#{op := do} = Expr) ->
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   %% Create a module that provides a single function with the var's
   %% value and add module attributes with the var's info.
-  NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
-  NameStr = clj_core:str('clojerl.Var':name(Var)),
-  %% Erlang module's name will be clj.{{namespace}}.{{name}}__var
-  ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
-  ModuleAst = module_attribute(binary_to_atom(ModuleStr, utf8)),
+  ModuleAst = module_attribute(var_module(Var)),
 
   ExportAst = export_attribute([{val, 0}]),
 
@@ -100,6 +99,14 @@ ast(#{op := invoke} = Expr) ->
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
+
+%% @doc Erlang module's name will be clj.{{namespace}}.{{name}}__var
+-spec var_module('clojerl.Var':type()) -> module().
+var_module(Var) ->
+  NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
+  NameStr = clj_core:str('clojerl.Var':name(Var)),
+  ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
+  binary_to_atom(ModuleStr, utf8).
 
 -spec is_top_level(clj_analyzer:expr()) -> boolean().
 is_top_level(Expr) ->
