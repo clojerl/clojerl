@@ -648,7 +648,7 @@ analyze_symbol(Env, Symbol) ->
         undefined ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
-        {Module, Function} ->
+        {erl_fun, Module, Function} ->
           FunExpr = #{ op       => erl_fun
                      , env      => ?DEBUG(Env)
                      , module   => Module
@@ -666,7 +666,7 @@ analyze_symbol(Env, Symbol) ->
   end.
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
-  'clojerl.Var':type() | {module(), atom()} | undefined.
+  'clojerl.Var':type() | {erl_fun, module(), atom()} | undefined.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local = clj_env:get_local(Env, Symbol),
@@ -684,7 +684,7 @@ resolve(Env, Symbol) ->
           %% Let's see how this works out.
           NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
           NameAtom = binary_to_atom(clj_core:name(Symbol), utf8),
-          {NsAtom, NameAtom};
+          {erl_fun, NsAtom, NameAtom};
         Var ->
           Var
       end;
