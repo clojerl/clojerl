@@ -80,7 +80,7 @@ vals({_, Map, _}) -> maps:values(Map).
 
 'clojerl.ISeq.more'(Map) -> clj_core:rest(clj_core:seq(Map)).
 
-'clojerl.IMeta.meta'({?MODULE, Map, Info}) ->
+'clojerl.IMeta.meta'({?MODULE, _, Info}) ->
   maps:get(meta, Info, undefined).
 
 'clojerl.IMeta.with_meta'({?MODULE, Map, Info}, Metadata) ->
@@ -99,7 +99,6 @@ vals({_, Map, _}) -> maps:values(Map).
 
 'clojerl.IColl.equiv'(X, X) -> true;
 'clojerl.IColl.equiv'(_, _) -> false.
-
 
 'clojerl.ILookup.get'({?MODULE, _, _} = Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).

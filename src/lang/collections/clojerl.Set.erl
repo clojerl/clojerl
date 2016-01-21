@@ -1,8 +1,9 @@
 -module('clojerl.Set').
 
+-behavior('clojerl.Counted').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.Seqable').
--behavior('clojerl.Counted').
+-behavior('clojerl.ISeq').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IColl').
 -behavior('clojerl.ILookup').
@@ -10,13 +11,13 @@
 -define(T, ?MODULE).
 
 -export([new/1]).
+-export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
 -export([ 'clojerl.ISeq.first'/1
         , 'clojerl.ISeq.next'/1
         , 'clojerl.ISeq.more'/1
         ]).
--export(['clojerl.Counted.count'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -30,8 +31,8 @@
         ]).
 
 -record(?T, { set        :: gb_sets:set()
-                 , info = #{} :: map()
-                 }).
+            , info = #{} :: map()
+            }).
 
 -type type() :: #?T{}.
 
@@ -42,6 +43,8 @@ new(Values) when is_list(Values) ->
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
+
+'clojerl.Counted.count'(#?T{set = Set}) -> gb_sets:size(Set).
 
 'clojerl.Stringable.str'(#?T{set = Set}) ->
   Items = lists:map(fun clj_core:str/1, gb_sets:to_list(Set)),
@@ -74,8 +77,6 @@ new(Values) when is_list(Values) ->
     _ -> 'clojerl.ISeq.next'(Set)
   end.
 
-'clojerl.Counted.count'(#?T{set = Set}) -> gb_sets:size(Set).
-
 'clojerl.IMeta.meta'(#?T{info = Info}) ->
   maps:get(meta, Info, undefined).
 
@@ -93,10 +94,10 @@ new(Values) when is_list(Values) ->
 'clojerl.IColl.equiv'(X, X) -> true;
 'clojerl.IColl.equiv'(_, _) -> false.
 
-'clojerl.ILookup.get'({'clojerl.Set', _, _} = Set, Key) ->
+'clojerl.ILookup.get'(#?T{} = Set, Key) ->
   'clojerl.ILookup.get'(Set, Key, undefined).
 
-'clojerl.ILookup.get'({'clojerl.Set', Set, _}, Key, NotFound) ->
+'clojerl.ILookup.get'(#?T{set = Set}, Key, NotFound) ->
   case gb_sets:is_member(Key, Set) of
     true -> Key;
     false -> NotFound
