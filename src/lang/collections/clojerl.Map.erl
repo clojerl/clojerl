@@ -1,15 +1,13 @@
 -module('clojerl.Map').
 
--behavior('clojerl.ILookup').
-
--export([
-         new/1,
-         keys/1,
-         vals/1
+-export([ new/1
+        , keys/1
+        , vals/1
         ]).
 
-%% ILookup
--export([get/2, get/3]).
+-export([ 'clojerl.ILookup.get'/2
+        , 'clojerl.ILookup.get'/3
+        ]).
 
 -type type() :: {?MODULE, map(), map()}.
 
@@ -30,14 +28,10 @@ keys({_, Map, _}) -> maps:keys(Map).
 -spec vals(type()) -> list().
 vals({_, Map, _}) -> maps:values(Map).
 
-%%------------------------------------------------------------------------------
-%% ILookup
-%%------------------------------------------------------------------------------
+-spec 'clojerl.ILookup.get'(any(), any()) -> any().
+'clojerl.ILookup.get'({?MODULE, _, _} = Map, Key) ->
+  'clojerl.ILookup.get'(Map, Key, undefined).
 
--spec get(any(), any()) -> any().
-get({?MODULE, _, _} = Map, Key) ->
-  get(Map, Key, undefined).
-
--spec get(any(), any(), any()) -> any().
-get({?MODULE, Map, _}, Key, NotFound) ->
+-spec 'clojerl.ILookup.get'(any(), any(), any()) -> any().
+'clojerl.ILookup.get'({?MODULE, Map, _}, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
