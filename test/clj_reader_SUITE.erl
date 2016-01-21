@@ -442,8 +442,8 @@ syntax_quote(_Config) ->
                                   "  (clojure.core/apply"
                                   "    clojure.core/hash-set"
                                   "    (clojure.core/concat"
-                                  "      (clojure.core/list :world)"
-                                  "      (clojure.core/list user/hello)))"
+                                  "      (clojure.core/list user/hello)"
+                                  "      (clojure.core/list :world)))"
                                   "  nil)">>),
 
   ct:comment("Read unquote-splice inside list"),
