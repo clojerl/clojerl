@@ -35,8 +35,7 @@
     'clojerl.erlang.Map',
     'clojerl.nil',
     'clojerl.protocol',
-    'cover_report',
-
+    'cover_report'
   ]
 }.
 %% Export coverage data for jenkins.
