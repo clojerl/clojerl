@@ -4,8 +4,8 @@
 
 -type type() ::  any().
 
--callback meta(any()) -> any().
--callback with_meta(any(), 'clojerl.Map':type()) -> any().
+-callback 'clojerl.IMeta.meta'(any()) -> any().
+-callback 'clojerl.IMeta.with_meta'(any(), 'clojerl.Map':type()) -> any().
 
 -spec meta(type()) -> any().
 meta(X) ->

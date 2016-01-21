@@ -17,7 +17,7 @@ SHELL_OPTS += -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sy
 
 # Generate a list of all modules for the cover.spec
 print-all-modules:
-	find src -type f -name "*.erl" | xargs basename | sort | sed -e 's/\.erl//' | sed -e "s/\(.*\)/'\1',/"
+	@find src -type f -name "*.erl" | xargs basename -s .erl | sort | sed -e "s/\(.*\)/'\1',/"
 
 report-cover:
 	@erl -noshell -pa ebin -eval 'cover_report:report(), halt(0).' -env COVER_SPEC '${COVER_SPEC}'

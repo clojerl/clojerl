@@ -1,10 +1,10 @@
--module('clojerl.erlang.Map.clojerl.Stringable').
+-module('clojerl.erlang.Map').
 
 -behaviour('clojerl.Stringable').
 
--export([str/1]).
+-export(['clojerl.Stringable.str'/1]).
 
-str(Map) ->
+'clojerl.Stringable.str'(Map) when is_map(Map) ->
   StrFun = fun(Key) ->
                KeyStr = clj_core:str(Key),
                ValStr = clj_core:str(maps:get(Key, Map)),

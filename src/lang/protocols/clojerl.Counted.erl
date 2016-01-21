@@ -4,7 +4,7 @@
 
 -type type() :: any().
 
--callback count(Counted :: type()) -> integer().
+-callback 'clojerl.Counted.count'(Counted :: type()) -> integer().
 
 -spec count(type()) -> type().
 count(Seq) ->
