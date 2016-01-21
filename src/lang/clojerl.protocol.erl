@@ -37,8 +37,12 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
 
 -spec 'extends?'(atom(), atom()) -> boolean().
 'extends?'(Protocol, Type) ->
-  ImplModule = impl_module(Protocol, Type),
-  code:is_loaded(ImplModule) =/= false.
+  (erlang:function_exported(Type, module_info, 1)
+   andalso
+   lists:keymember([Protocol], 2, Type:module_info(attributes))
+  )
+    orelse
+    code:is_loaded(impl_module(Protocol, Type)) =/= false.
 
 -spec impl_module(atom(), atom()) -> atom().
 impl_module(Protocol, Type) when is_atom(Protocol),

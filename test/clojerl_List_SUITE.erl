@@ -5,6 +5,7 @@
 -export([ new/1
         , count/1
         , str/1
+        , is_sequential/1
         ]).
 
 -spec all() -> [atom()].
@@ -23,7 +24,10 @@ all() ->
 -spec new(config()) -> result().
 new(_Config) ->
   List = clj_core:list([1, 2, 3]),
-  [1, 2, 3] = clj_core:seq(List).
+  [1, 2, 3] = clj_core:seq(List),
+
+  List2 = clj_core:list([]),
+  undefined = clj_core:seq(List2).
 
 -spec count(config()) -> result().
 count(_Config) ->
@@ -40,3 +44,8 @@ str(_Config) ->
 
   List2 = clj_core:list([]),
   <<"()">> = clj_core:str(List2).
+
+-spec is_sequential(config()) -> result().
+is_sequential(_Config) ->
+  List = clj_core:list([1, 2, 3]),
+  true = clj_core:'sequential?'(List).
