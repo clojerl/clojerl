@@ -5,7 +5,8 @@
 -type type() :: {?MODULE, list()}.
 
 -spec new(list()) -> type().
-new(Items) -> {?MODULE, Items, #{}}.
+new(Items) when is_list(Items) ->
+  {?MODULE, Items, #{}}.
 
 -spec to_list(type()) -> list().
 to_list({_, List, _}) -> List.

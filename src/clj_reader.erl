@@ -814,7 +814,7 @@ reader_conditional(List, IsSplicing) ->
 
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
   Features = maps:get(features, Opts, clj_core:hash_set([])),
-  Forms = 'clojerl.List':to_list(List),
+  Forms = clj_core:seq(List),
   case match_feature(Forms, Features) of
     nomatch ->
       read_one(State);
@@ -824,8 +824,8 @@ read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
           throw(<<"Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">>);
         true ->
-          Seq = clj_core:seq(Form),
-          Items = 'clojerl.List':to_list(Seq),
+          Seq = clj_core:seq2(Form),
+          Items = clj_core:seq2(Seq),
           lists:foldl(fun push_pending_form/2, State, lists:reverse(Items))
       end;
     Form ->

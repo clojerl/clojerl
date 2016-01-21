@@ -186,7 +186,7 @@ parse_fn(Env, List) ->
     end,
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
-                  false -> 'clojerl.List':to_list(Methods)
+                  false -> clj_core:seq2(Methods)
                 end,
   NameExpr = #{ op    => binding
               , env   => ?DEBUG(Env)
@@ -263,7 +263,7 @@ analyze_fn_method(Env, List) ->
   clj_utils:throw_when(not clj_core:'vector?'(Params),
                        <<"Parameter declaration should be a vector">>),
 
-  ParamsList = 'clojerl.Vector':to_list(Params),
+  ParamsList = clj_core:seq2(Params),
   clj_utils:throw_when(not lists:all(fun is_valid_bind_symbol/1, ParamsList),
                        [<<"Params must be valid binding symbols, had: ">>,
                         Params]),
@@ -340,7 +340,7 @@ is_valid_bind_symbol(X) ->
 parse_do(Env, Form) ->
   Statements = clj_core:rest(Form),
   StmtEnv = clj_env:context(Env, statement),
-  StatementsList = 'clojerl.List':to_list(Statements),
+  StatementsList = clj_core:seq2(Statements),
   Env1 = analyze_forms(StmtEnv, StatementsList),
   {AllStatementsExprs, Env2} =
     clj_env:last_exprs(Env1, clj_core:count(Statements)),
@@ -373,10 +373,10 @@ parse_if(Env, Form) ->
   {Test, Then, Else} =
     case Count of
       3 ->
-        [_, Test1, Then1] = 'clojerl.List':to_list(Form),
+        [_, Test1, Then1] = clj_core:seq2(Form),
         {Test1, Then1, undefined};
       4 ->
-        [_, Test1, Then1, Else1] = 'clojerl.List':to_list(Form),
+        [_, Test1, Then1, Else1] = clj_core:seq2(Form),
         {Test1, Then1, Else1}
     end,
 
@@ -437,7 +437,7 @@ analyze_let(Env, Form) ->
                PairUp(Tail, [{X, Y} | Pairs])
            end,
   BindingsVec = clj_core:second(Form),
-  BindingsList = 'clojerl.Vector':to_list(BindingsVec),
+  BindingsList = clj_core:seq2(BindingsVec),
   BindingPairs = PairUp(BindingsList, []),
 
   Env1 = clj_env:add_locals_scope(Env),
@@ -630,7 +630,7 @@ analyze_invoke(Env, Form) ->
   Env1 = analyze_form(Env, clj_core:first(Form)),
 
   Args = clj_core:rest(Form),
-  Env2 = analyze_forms(Env1, 'clojerl.List':to_list(Args)),
+  Env2 = analyze_forms(Env1, clj_core:seq2(Args)),
 
   ArgCount = clj_core:count(Args),
   {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
@@ -713,7 +713,7 @@ resolve(Env, Symbol) ->
 analyze_vector(Env, Vector) ->
   Count = clj_core:count(Vector),
   ExprEnv = clj_env:context(Env, expr),
-  Items = 'clojerl.Vector':to_list(Vector),
+  Items = clj_core:seq2(Vector),
   Env1 = analyze_forms(ExprEnv, Items),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
@@ -758,7 +758,7 @@ analyze_map(Env, Map) ->
 -spec analyze_set(clj_env:env(), 'clojerl.Set':type()) -> clj_env:env().
 analyze_set(Env, Set) ->
   ExprEnv = clj_env:context(Env, expr),
-  Items = 'clojerl.Set':to_list(Set),
+  Items = clj_core:seq2(Set),
   Env1 = analyze_forms(ExprEnv, Items),
 
   Count = clj_core:count(Set),

@@ -5,4 +5,4 @@
 -export([seq/1]).
 
 seq({_, [], _}) -> undefined;
-seq({_, Set, _}) -> clj_core:list(gb_sets:to_list(Set)).
+seq({_, Set, _}) -> gb_sets:to_list(Set).

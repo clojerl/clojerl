@@ -8,7 +8,7 @@
 -type type() :: {?MODULE, gb_sets:set()}.
 
 -spec new(list()) -> type().
-new(Values) ->
+new(Values) when is_list(Values) ->
   {?MODULE, gb_sets:from_list(Values), #{}}.
 
 -spec to_list(type()) -> list().
