@@ -8,8 +8,9 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.ILookup').
 
--export([new/1, keys/1, vals/1]).
+-define(T, ?MODULE).
 
+-export([new/1, keys/1, vals/1]).
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
@@ -29,12 +30,16 @@
         , 'clojerl.ILookup.get'/3
         ]).
 
--type type() :: {?MODULE, map(), map()}.
+-record(?T, { map        :: map()
+            , info = #{} :: map()
+            }).
+
+-type type() :: #?T{}.
 
 -spec new(list()) -> type().
 new(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  {?MODULE, maps:from_list(KeyValuePairs), #{}}.
+  #?T{map = maps:from_list(KeyValuePairs)}.
 
 -spec build_key_values(list(), list()) -> [{any(), any()}].
 build_key_values(KeyValues, []) ->
@@ -43,18 +48,18 @@ build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
 -spec keys(type()) -> list().
-keys({_, Map, _}) -> maps:keys(Map).
+keys(#?T{map = Map}) -> maps:keys(Map).
 
 -spec vals(type()) -> list().
-vals({_, Map, _}) -> maps:values(Map).
+vals(#?T{map = Map}) -> maps:values(Map).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'({?MODULE, Map, _}) -> maps:size(Map).
+'clojerl.Counted.count'(#?T{map = Map}) -> maps:size(Map).
 
-'clojerl.Stringable.str'({?MODULE, Map, _}) ->
+'clojerl.Stringable.str'(#?T{map = Map}) ->
   StrFun = fun(Key) ->
                KeyStr = clj_core:str(Key),
                ValStr = clj_core:str(maps:get(Key, Map)),
@@ -65,7 +70,7 @@ vals({_, Map, _}) -> maps:values(Map).
   Strs = clj_utils:binary_join(KeyValueStrs, <<", ">>),
   <<"{", Strs/binary, "}">>.
 
-'clojerl.Seqable.seq'({?MODULE, Map, _}) ->
+'clojerl.Seqable.seq'(#?T{map = Map}) ->
   FoldFun = fun(K, V, List) ->
                 [clj_core:vector([K, V]) | List]
             end,
@@ -80,15 +85,15 @@ vals({_, Map, _}) -> maps:values(Map).
 
 'clojerl.ISeq.more'(Map) -> clj_core:rest(clj_core:seq(Map)).
 
-'clojerl.IMeta.meta'({?MODULE, _, Info}) ->
+'clojerl.IMeta.meta'(#?T{info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'({?MODULE, Map, Info}, Metadata) ->
-  {?MODULE, Map, Info#{meta => Metadata}}.
+'clojerl.IMeta.with_meta'(#?T{info = Info} = Map, Metadata) ->
+  Map#?T{info = Info#{meta => Metadata}}.
 
-'clojerl.IColl.count'({_, Map, _}) -> maps:size(Map).
+'clojerl.IColl.count'(#?T{map = Map}) -> maps:size(Map).
 
-'clojerl.IColl.cons'({_, Map, _}, X) ->
+'clojerl.IColl.cons'(#?T{map = Map}, X) ->
   FoldFun = fun(K, V, List) ->
                 [clj_core:vector([K, V]) | List]
             end,
@@ -100,8 +105,8 @@ vals({_, Map, _}) -> maps:values(Map).
 'clojerl.IColl.equiv'(X, X) -> true;
 'clojerl.IColl.equiv'(_, _) -> false.
 
-'clojerl.ILookup.get'({?MODULE, _, _} = Map, Key) ->
+'clojerl.ILookup.get'(#?T{} = Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).
 
-'clojerl.ILookup.get'({?MODULE, Map, _}, Key, NotFound) ->
+'clojerl.ILookup.get'(#?T{map = Map}, Key, NotFound) ->
   maps:get(Key, Map, NotFound).

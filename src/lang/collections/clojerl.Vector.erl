@@ -11,6 +11,7 @@
 -define(T, ?MODULE).
 
 -export([new/1]).
+
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).

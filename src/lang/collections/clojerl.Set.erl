@@ -68,20 +68,20 @@ new(Values) when is_list(Values) ->
   case gb_sets:to_list(Set) of
     [] -> undefined;
     [_ | []] -> undefined;
-    [_ | Items] -> 'clojerl.List':new(Items)
+    [_ | Items] -> clj_core:list(Items)
   end.
 
 'clojerl.ISeq.more'(#?T{set = GbSet} = Set) ->
   case gb_sets:size(GbSet) of
-    0 -> 'clojerl.List':new([]);
+    0 -> clj_core:list([]);
     _ -> 'clojerl.ISeq.next'(Set)
   end.
 
 'clojerl.IMeta.meta'(#?T{info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?T{set = Set, info = Info}, Metadata) ->
-  {'clojerl.Set', Set, Info#{meta => Metadata}}.
+'clojerl.IMeta.with_meta'(#?T{info = Info} = Set, Metadata) ->
+  Set#?T{info = Info#{meta => Metadata}}.
 
 'clojerl.IColl.count'(#?T{set = Set}) -> gb_sets:size(Set).
 
