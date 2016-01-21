@@ -4,9 +4,10 @@
 
 -type type() :: any().
 
--callback count(IColl :: type()) -> integer().
--callback cons(IColl :: type(), Item :: any()) -> type().
--callback equiv(IColl :: type(), any()) -> boolean().
+-callback 'clojerl.IColl.count'(IColl :: type()) -> integer().
+-callback 'clojerl.IColl.cons'(IColl :: type(), Item :: any()) -> type().
+-callback 'clojerl.IColl.empty'(IColl :: type()) -> any().
+-callback 'clojerl.IColl.equiv'(IColl :: type(), any()) -> boolean().
 
 -spec count(type()) -> integer().
 count(Coll) ->
@@ -16,7 +17,7 @@ count(Coll) ->
 cons(Coll, Item) ->
   'clojerl.protocol':resolve(?MODULE, cons, [Coll, Item]).
 
--spec empty(type()) -> boolean().
+-spec empty(type()) -> any().
 empty(Coll) ->
   'clojerl.protocol':resolve(?MODULE, empty, [Coll]).
 

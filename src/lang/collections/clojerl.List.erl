@@ -22,6 +22,7 @@
         ]).
 -export([ 'clojerl.IColl.count'/1
         , 'clojerl.IColl.cons'/2
+        , 'clojerl.IColl.empty'/1
         , 'clojerl.IColl.equiv'/2
         ]).
 
@@ -37,11 +38,11 @@ new(Items) when is_list(Items) ->
 
 'clojerl.Counted.count'({_, List, _}) -> length(List).
 
-'clojerl.Stringable.str'({'clojerl.List', [], _}) ->
+'clojerl.Stringable.str'({?MODULE, [], _}) ->
   <<"()">>;
-'clojerl.Stringable.str'({'clojerl.List', Items, _}) ->
+'clojerl.Stringable.str'({?MODULE, Items, _}) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
-  Strs = clj_utils:binary_join(ItemsStrs, <<", ">>),
+  Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
 'clojerl.Seqable.seq'({_, [], _}) -> undefined;
@@ -57,21 +58,18 @@ new(Items) when is_list(Items) ->
 'clojerl.ISeq.more'({_, [], _}) -> undefined;
 'clojerl.ISeq.more'({T, [_ | Rest], Info}) -> {T, Rest, Info}.
 
--spec 'clojerl.IMeta.meta'('clojerl.List':type()) -> any().
-'clojerl.IMeta.meta'({'clojerl.List', _, Info}) ->
+'clojerl.IMeta.meta'({?MODULE, _, Info}) ->
   maps:get(meta, Info, undefined).
 
--spec 'clojerl.IMeta.with_meta'(any(), 'clojerl.Map':type()) -> any().
-'clojerl.IMeta.with_meta'({'clojerl.List', Data, Info}, Metadata) ->
-  {'clojerl.List', Data, Info#{meta => Metadata}}.
+'clojerl.IMeta.with_meta'({?MODULE, Data, Info}, Metadata) ->
+  {?MODULE, Data, Info#{meta => Metadata}}.
 
--spec 'clojerl.IColl.count'('clojerl.List':type()) -> integer().
 'clojerl.IColl.count'({_, Items, _}) -> length(Items).
 
--spec 'clojerl.IColl.cons'('clojerl.List':type(), any()) -> 'clojerl.List':type().
 'clojerl.IColl.cons'({T, [], Info}, X) -> {T, [X], Info};
 'clojerl.IColl.cons'({T, Items, Info}, X) -> {T, [X | Items], Info}.
 
--spec 'clojerl.IColl.equiv'('clojerl.List':type(), any()) -> boolean().
+'clojerl.IColl.empty'(_) -> new([]).
+
 'clojerl.IColl.equiv'(X, X) -> true;
 'clojerl.IColl.equiv'(_, _) -> false.

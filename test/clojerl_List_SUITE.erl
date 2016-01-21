@@ -50,7 +50,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   List = clj_core:list([1, 2, 3]),
-  <<"(1, 2, 3)">> = clj_core:str(List),
+  <<"(1 2 3)">> = clj_core:str(List),
 
   List2 = clj_core:list([]),
   <<"()">> = clj_core:str(List2),
