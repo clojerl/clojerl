@@ -7,6 +7,8 @@
          eval/2
         ]).
 
+-export([ast_to_string/1]).
+
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
@@ -54,6 +56,8 @@ compile_forms(Forms) ->
   code:load_binary(Name, "", Binary).
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> ok.
+eval_expressions([]) ->
+  ok;
 eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   {_Values, _} = erl_eval:expr_list(Expressions, []),
