@@ -20,8 +20,6 @@
     'clojerl.ISeq',
     'clojerl.Integer',
     'clojerl.Keyword',
-    'clojerl.Keyword.clojerl.IMeta',
-    'clojerl.Keyword.clojerl.Named',
     'clojerl.List',
     'clojerl.Map',
     'clojerl.Named',
@@ -30,17 +28,15 @@
     'clojerl.String',
     'clojerl.Stringable',
     'clojerl.Symbol',
-    'clojerl.Symbol.clojerl.IMeta',
-    'clojerl.Symbol.clojerl.Named',
     'clojerl.Var',
-    'clojerl.Var.clojerl.IDeref',
     'clojerl.Vector',
     'clojerl.erlang.Atom',
     'clojerl.erlang.List',
     'clojerl.erlang.Map',
     'clojerl.nil',
     'clojerl.protocol',
-    'cover_report'
+    'cover_report',
+
   ]
 }.
 %% Export coverage data for jenkins.

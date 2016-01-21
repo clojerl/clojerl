@@ -7,13 +7,14 @@
 -define(T, ?MODULE).
 
 -export([new/1, new/2]).
+
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
--export(['clojerl.Stringable.str'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
+-export(['clojerl.Stringable.str'/1]).
 
 -record(?T, { ns         :: binary() | undefined
             , name       :: binary()
