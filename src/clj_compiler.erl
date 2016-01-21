@@ -4,6 +4,7 @@
          compile_files/1,
          compile_file/1,
          compile/1,
+         eval/1,
          eval/2
         ]).
 
@@ -47,25 +48,38 @@ compile(Src, Env) when is_binary(Src) ->
         end,
   clj_reader:read_fold(Fun, Src, Env).
 
--spec compile_forms([erl_parse:abstract_form()]) -> ok.
+-spec compile_forms([erl_parse:abstract_form()]) -> atom() | undefined.
 compile_forms([]) ->
-  ok;
+  undefined;
 compile_forms(Forms) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
   {ok, Name, Binary} = compile:forms(Forms),
-  code:load_binary(Name, "", Binary).
+  code:load_binary(Name, "", Binary),
+  Name.
 
--spec eval_expressions([erl_parse:abstract_expr()]) -> ok.
+-spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].
 eval_expressions([]) ->
-  ok;
+  [];
 eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
-  {_Values, _} = erl_eval:expr_list(Expressions, []),
-  ok.
+  {Values, _} = erl_eval:expr_list(Expressions, []),
+  Values.
 
 -spec ast_to_string([erl_syntax:syntaxTree()]) -> string().
 ast_to_string(Forms) ->
   erl_prettypr:format(erl_syntax:form_list(Forms)).
 
--spec eval(any(), clj_env:env()) -> any().
-eval(Form, _Env) -> Form.
+-spec eval(any()) -> {any(), clj_env:env()}.
+eval(Form) ->
+  eval(Form, clj_env:default()).
+
+-spec eval(any(), clj_env:env()) -> {any(), clj_env:env()}.
+eval(Form, Env) ->
+  NewEnv = clj_analyzer:analyze(Env, Form),
+  case clj_emitter:emit(NewEnv) of
+    {Forms, [], Env1} ->
+      {compile_forms(Forms), Env1};
+    {[], Exprs, Env1} ->
+      [Value] = eval_expressions(Exprs),
+      {Value, Env1}
+  end.

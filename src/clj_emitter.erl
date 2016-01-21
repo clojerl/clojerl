@@ -22,12 +22,8 @@ emit(Env0) ->
 %%------------------------------------------------------------------------------
 
 -spec ast(map()) -> [erl_syntax:syntaxTree()].
-ast(#{op := constant, form := Form} = Expr) ->
-  %% A constant as a top level form doesn't produce code.
-  case is_top_level(Expr) of
-    true -> [];
-    false -> [erl_syntax:abstract(Form)]
-  end;
+ast(#{op := constant, form := Form}) ->
+  [erl_syntax:abstract(Form)];
 ast(#{op := quote, expr := Expr}) ->
   ast(Expr);
 ast(#{op := var, var := Var} = _Expr) ->
@@ -123,10 +119,6 @@ var_module(Var) ->
   NameStr = clj_core:str('clojerl.Var':name(Var)),
   ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
   binary_to_atom(ModuleStr, utf8).
-
--spec is_top_level(clj_analyzer:expr()) -> boolean().
-is_top_level(Expr) ->
-  maps:get(top_level, Expr, false).
 
 -spec module_attribute(atom()) -> erl_syntax:syntaxTree().
 module_attribute(Name) when is_atom(Name) ->
