@@ -1,5 +1,7 @@
 -module('clojerl.Var').
 
+-behaviour('clojerl.Stringable').
+
 -export([
          new/2,
          namespace/1,
@@ -7,6 +9,7 @@
          dynamic/1, dynamic/2,
          is_macro/1
         ]).
+-export(['clojerl.Stringable.str'/1]).
 
 -type info() :: #{ns => binary() | undefined,
                   name => binary(),
@@ -41,3 +44,12 @@ dynamic({?MODULE, Data}, IsDynamic) ->
 
 -spec is_macro(type()) -> boolean().
 is_macro({?MODULE, #{is_macro := IsMacro}}) -> IsMacro.
+
+%%------------------------------------------------------------------------------
+%% Protocols
+%%------------------------------------------------------------------------------
+
+'clojerl.Stringable.str'({_, #{ns := NsSym, name := NameSym}}) ->
+  <<(clj_core:str(NsSym))/binary
+    , "/"
+    , (clj_core:str(NameSym))/binary>>.
