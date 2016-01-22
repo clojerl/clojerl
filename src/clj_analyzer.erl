@@ -345,9 +345,10 @@ parse_do(Env, Form) ->
   {AllStatementsExprs, Env2} =
     clj_env:last_exprs(Env1, clj_core:count(Statements)),
 
+  {NilExpr, _} = clj_env:pop_expr(analyze_form(Env, undefined)),
   {StatementsExprs, ReturnExpr} =
     case AllStatementsExprs of
-      [] -> {[], undefined};
+      [] -> {[], NilExpr};
       _ -> {lists:droplast(AllStatementsExprs),
             lists:last(AllStatementsExprs)}
     end,

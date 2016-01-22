@@ -290,7 +290,7 @@ do(_Config) ->
   ct:comment("do with no expressions"),
   #{op := do,
     statements := [],
-    ret := undefined
+    ret := #{op := constant, form := undefined}
    } = analyze_one(<<"(do)">>),
 
   ct:comment("do with 1 expression"),
@@ -380,7 +380,7 @@ do(_Config) ->
    } = analyze_one(<<"(let* [])">>),
   0 = length(Bindings0),
   #{ statements := []
-   , ret        := undefined
+   , ret        := #{op := constant, form := undefined}
    } = Body0,
 
   ct:comment("let with bindings and no body"),
@@ -390,7 +390,7 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, y :a])">>),
   2 = length(Bindings1),
   #{ statements := []
-   , ret        := undefined
+   , ret        := #{op := constant, form := undefined}
    } = Body1,
 
   ct:comment("let with bindings and body should resolve locals"),
@@ -400,9 +400,9 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, y :a] x y)">>),
   2 = length(Bindings2),
   #{ statements := [_]
-   , ret        := ReturnExpr2
+   , ret        := #{op := ReturnExprOp2}
    } = Body2,
-  false = ReturnExpr2 == undefined,
+  local = ReturnExprOp2,
 
   ct:comment("let with bindings and a single return expression body"),
   #{ op := 'let'
@@ -411,9 +411,9 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, _ :a] x)">>),
   2 = length(Bindings3),
   #{ statements := []
-   , ret        := ReturnExpr3
+   , ret        := #{op := ReturnExprOp3}
    } = Body3,
-  false = ReturnExpr3 == undefined,
+  local = ReturnExprOp3,
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
