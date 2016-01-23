@@ -10,20 +10,21 @@
 -type opts() :: #{read_cond => allow | preserve,
                   features => 'clojerl.Set':type()}.
 
--type state() :: #{src => binary(),
-                   opts => opts(),
-                   forms => [any()],
-                   pending_forms => [any()],
-                   env => map()}.
+-type state() :: #{ src           => binary()
+                  , opts          => opts()
+                  , forms         => [any()]
+                  , pending_forms => [any()]
+                  , env           => clj_env:env()
+                  }.
 
 -spec new_state(binary(), any(), opts(), boolean()) -> state().
 new_state(Src, Env, Opts, ReadAll) ->
-  #{src => Src,
-    opts => Opts,
-    forms => [],
-    pending_forms => [],
-    env => Env,
-    all => ReadAll
+  #{ src           => Src
+   , opts          => Opts
+   , forms         => []
+   , pending_forms => []
+   , env           => Env
+   , all           => ReadAll
    }.
 
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
@@ -40,10 +41,12 @@ read_fold(Fun, Src, Opts, Env) ->
 
 -spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
 read_fold_loop(Fun, State) ->
-  NewState = dispatch(State),
   case dispatch(State) of
-    #{forms := [], env := Env} ->
+    %% Only finish when there is no more source to consume
+    #{src := <<>>, forms := [], env := Env} ->
       Env;
+    NewState = #{forms := []} ->
+      read_fold_loop(Fun, NewState);
     NewState = #{forms := [Form], env := Env} ->
       NewEnv = Fun(Form, Env),
       read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
@@ -761,7 +764,8 @@ read_regex(#{src := <<Ch, Src/binary>>} = State) ->
 
 read_discard(State) ->
   {_, NewState} = pop_form(read_one(State)),
-  read_one(NewState).
+  %% There could be no next forms so don't throw if there isn't
+  read_one(NewState, false).
 
 %%------------------------------------------------------------------------------
 %% #? cond
