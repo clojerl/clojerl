@@ -4,4 +4,4 @@
 
 -export(['clojerl.Stringable.str'/1]).
 
-'clojerl.Stringable.str'(undefined) -> <<"nil">>.
+'clojerl.Stringable.str'(undefined) -> <<"">>.
