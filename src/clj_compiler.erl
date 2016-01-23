@@ -46,7 +46,7 @@ compile(Src, Env) when is_binary(Src) ->
             eval_expressions(Exprs),
             Env1
         end,
-  clj_reader:read_fold(Fun, Src, Env).
+  clj_reader:read_fold(Fun, Src, #{}, Env).
 
 -spec compile_forms([erl_parse:abstract_form()]) -> atom() | undefined.
 compile_forms([]) ->
