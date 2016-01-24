@@ -42,8 +42,11 @@ read_fold(Fun, Src, Opts, Env) ->
 read_fold_loop(Fun, State) ->
   NewState = dispatch(State),
   case dispatch(State) of
-    #{forms := [], env := Env} ->
+    %% Only finish when there is no more source to consume
+    #{src := <<>>, env := Env} ->
       Env;
+    NewState = #{forms := []} ->
+      read_fold_loop(Fun, NewState);
     NewState = #{forms := [Form], env := Env} ->
       NewEnv = Fun(Form, Env),
       read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
