@@ -106,7 +106,33 @@ ast(#{op := vector} = Expr) ->
   Items = lists:flatmap(fun ast/1, ItemsExprs),
   ListItems = erl_syntax:list(Items),
 
-  [application_mfa('clojerl.Vector', new, [ListItems])].
+  [application_mfa('clojerl.Vector', new, [ListItems])];
+ast(#{op := map} = Expr) ->
+  #{ keys := KeysExprs
+   , vals := ValsExprs
+   } = Expr,
+
+  Keys = lists:flatmap(fun ast/1, KeysExprs),
+  Vals = lists:flatmap(fun ast/1, ValsExprs),
+  PairUp = fun
+             PairUp([], [], Pairs) ->
+               Pairs;
+             PairUp([H1 | Tail1], [H2 | Tail2], Pairs) ->
+               PairUp(Tail1, Tail2, [H1, H2 | Pairs])
+           end,
+
+  Items = PairUp(Keys, Vals, []),
+  ListItems = erl_syntax:list(Items),
+
+  [application_mfa('clojerl.Map', new, [ListItems])];
+ast(#{op := set} = Expr) ->
+  #{items := ItemsExprs} = Expr,
+
+  Items = lists:flatmap(fun ast/1, ItemsExprs),
+  ListItems = erl_syntax:list(Items),
+
+  [application_mfa('clojerl.Set', new, [ListItems])].
+
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
