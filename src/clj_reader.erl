@@ -60,16 +60,20 @@ read(Src) ->
 read(Src, Opts) ->
   read(Src, Opts, clj_env:default()).
 
-%% @doc Reads the next form from the input. Returns a tuple with two elements:
-%%      the form and a binary with the unconsumed output.
--spec read(binary(), opts(), clj_env:env()) -> {any(), binary()} | eof.
+%% @doc Reads the next form from the input. Returns the form
+%%      or throws if there is no form to read.
+-spec read(binary(), opts(), clj_env:env()) -> any().
 read(Src, Opts, Env) ->
   State = new_state(Src, Env, Opts, false),
-  #{forms := Forms} = dispatch(State),
-  case Forms of
-    [] -> throw(<<"EOF">>);
-    [Form] -> Form
-  end.
+  ensure_read(dispatch(State)).
+
+-spec ensure_read(state()) -> any().
+ensure_read(#{src := <<>>, forms := []}) ->
+  throw(<<"EOF">>);
+ensure_read(#{forms := [Form]}) ->
+  Form;
+ensure_read(State) ->
+  ensure_read(dispatch(State)).
 
 -spec read_all(state()) -> [any()].
 read_all(Src) ->
@@ -108,24 +112,24 @@ read_one(#{src := <<>>} = State, false = _ThrowEof) ->
   State;
 read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
   case clj_utils:char_type(First, Rest) of
-    whitespace -> read_one(State#{src => Rest}, ThrowEof);
-    number -> read_number(State);
-    string -> read_string(State);
-    keyword -> read_keyword(State);
-    comment -> read_comment(State);
-    quote -> read_quote(State);
-    deref -> read_deref(State);
-    meta -> read_meta(State);
-    syntax_quote -> read_syntax_quote(State);
-    unquote -> read_unquote(State);
-    list -> read_list(State);
-    vector -> read_vector(State);
-    map -> read_map(State);
+    whitespace      -> read_one(State#{src => Rest}, ThrowEof);
+    number          -> read_number(State);
+    string          -> read_string(State);
+    keyword         -> read_keyword(State);
+    comment         -> read_comment(State);
+    quote           -> read_quote(State);
+    deref           -> read_deref(State);
+    meta            -> read_meta(State);
+    syntax_quote    -> read_syntax_quote(State);
+    unquote         -> read_unquote(State);
+    list            -> read_list(State);
+    vector          -> read_vector(State);
+    map             -> read_map(State);
     unmatched_delim -> read_unmatched_delim(State);
-    char -> read_char(State);
-    arg -> read_arg(State);
-    dispatch -> read_dispatch(State);
-    symbol -> read_symbol(State)
+    char            -> read_char(State);
+    arg             -> read_arg(State);
+    dispatch        -> read_dispatch(State);
+    symbol          -> read_symbol(State)
   end.
 
 %%------------------------------------------------------------------------------
@@ -501,14 +505,15 @@ read_unquote(#{src := <<$~, Src/binary>>} = State) ->
 %% List
 %%------------------------------------------------------------------------------
 
-read_list(#{src := <<$(, Src/binary>>,
-            forms := Forms} = State) ->
-  #{src := RestSrc,
-    forms := ReversedItems} = read_until($), State#{src => Src, forms => []}),
+read_list(#{src := <<$(, Src/binary>>} = State) ->
+  #{ src   := RestSrc
+   , forms := ReversedItems
+   } = read_until($), State#{src => Src, forms => []}),
 
   Items = lists:reverse(ReversedItems),
   List = clj_core:list(Items),
 
+  #{forms := Forms} = State,
   State#{src => RestSrc, forms => [List | Forms]}.
 
 %%------------------------------------------------------------------------------
@@ -765,7 +770,7 @@ read_regex(#{src := <<Ch, Src/binary>>} = State) ->
 read_discard(State) ->
   {_, NewState} = pop_form(read_one(State)),
   %% There could be no next forms so don't throw if there isn't
-  read_one(NewState, false).
+  NewState.
 
 %%------------------------------------------------------------------------------
 %% #? cond
