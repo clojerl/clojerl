@@ -426,7 +426,7 @@ do(_Config) ->
   ok = try analyze_one(<<"(let*)">>)
        catch _:Reason2 ->
            <<"let* requires a vector for its bindings, "
-             "had: :clojerl.nil">> = Reason2,
+             "had: :clojerl.Nil">> = Reason2,
            ok
        end,
 

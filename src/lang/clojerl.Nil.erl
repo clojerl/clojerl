@@ -1,4 +1,4 @@
--module('clojerl.nil').
+-module('clojerl.Nil').
 
 -behaviour('clojerl.Stringable').
 
