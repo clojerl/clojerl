@@ -23,6 +23,7 @@
     'clojerl.List',
     'clojerl.Map',
     'clojerl.Named',
+    'clojerl.Nil',
     'clojerl.Seqable',
     'clojerl.Set',
     'clojerl.String',
@@ -33,7 +34,6 @@
     'clojerl.erlang.Atom',
     'clojerl.erlang.List',
     'clojerl.erlang.Map',
-    'clojerl.nil',
     'clojerl.protocol',
     'cover_report'
   ]

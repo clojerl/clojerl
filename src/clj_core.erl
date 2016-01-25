@@ -169,7 +169,7 @@ keyword(Namespace, Name) ->
 'string?'(X) -> type(X) == 'clojerl.String'.
 
 -spec 'nil?'(any()) -> boolean().
-'nil?'(X) -> type(X) == 'clojerl.nil'.
+'nil?'(X) -> type(X) == 'clojerl.Nil'.
 
 -spec 'boolean?'(any()) -> boolean().
 'boolean?'(X) -> type(X) == 'clojerl.Boolean'.
@@ -217,7 +217,8 @@ type(X) when is_float(X) -> 'clojerl.Float';
 type(X) when is_boolean(X) -> 'clojerl.Boolean';
 type(X) when is_list(X) -> 'clojerl.erlang.List';
 type(X) when is_map(X) -> 'clojerl.erlang.Map';
-type(undefined) -> 'clojerl.nil';
+type(undefined) -> 'clojerl.Nil';
+type(X) when is_function(X) -> 'clojerl.erlang.Fn';
 type(X) when is_atom(X) -> 'clojerl.erlang.Atom';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
