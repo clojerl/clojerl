@@ -754,6 +754,8 @@ discard(_Config) ->
 
   1 = clj_reader:read(<<"#_ :hello 1">>),
 
+  1 = clj_reader:read(<<"1 #_ :hello">>),
+
   {comments, ""}.
 
 'cond'(_Config) ->
