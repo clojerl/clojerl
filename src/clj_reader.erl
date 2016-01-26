@@ -678,6 +678,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
     $( -> read_fn(NewState);
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
+    $[ -> read_tuple(NewState);
     $< -> throw(<<"Unreadable form">>);
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
@@ -742,6 +743,23 @@ read_set(#{src := Src,
   Set = clj_core:hash_set(Items),
   State#{src => RestSrc,
          forms => [Set | Forms]}.
+
+%%------------------------------------------------------------------------------
+%% #[] tuple
+%%------------------------------------------------------------------------------
+
+read_tuple(#{src := Src} = State) ->
+  #{src := RestSrc,
+    forms := ReversedItems} =
+    read_until($], State#{src => Src, forms => []}),
+
+  Forms = maps:get(forms, State),
+
+  Items = lists:reverse(ReversedItems),
+  Tuple = erlang:list_to_tuple(Items),
+  State#{ src   => RestSrc
+        , forms => [Tuple | Forms]
+        }.
 
 %%------------------------------------------------------------------------------
 %% #"" regex
