@@ -130,22 +130,22 @@ string(_Config) ->
   {comments, ""}.
 
 keyword(_Config) ->
-  SomeNsSymbol = 'clojerl.Symbol':new(<<"some-ns">>),
+  SomeNsSymbol = clj_core:symbol(<<"some-ns">>),
   {_Ns, Env} = clj_env:find_or_create_ns(clj_env:default(), SomeNsSymbol),
 
-  Keyword1 = 'clojerl.Keyword':new(<<"hello-world">>),
+  Keyword1 = clj_core:keyword(<<"hello-world">>),
   Keyword1 = clj_reader:read(<<":hello-world">>, #{}, Env),
 
-  Keyword2 = 'clojerl.Keyword':new(<<"some-ns">>, <<"hello-world">>),
+  Keyword2 = clj_core:keyword(<<"some-ns">>, <<"hello-world">>),
   Keyword2 = clj_reader:read(<<"::hello-world">>, #{}, Env),
 
-  Keyword3 = 'clojerl.Keyword':new(<<"another-ns">>, <<"hello-world">>),
+  Keyword3 = clj_core:keyword(<<"another-ns">>, <<"hello-world">>),
   Keyword3 = clj_reader:read(<<":another-ns/hello-world">>, #{}, Env),
 
-  Keyword4 = 'clojerl.Keyword':new(<<"/">>),
+  Keyword4 = clj_core:keyword(<<"/">>),
   Keyword4 = clj_reader:read(<<":/">>, #{}, Env),
 
-  Keyword5 = 'clojerl.Keyword':new(<<"some-ns">>, <<"/">>),
+  Keyword5 = clj_core:keyword(<<"some-ns">>, <<"/">>),
   Keyword5 = clj_reader:read(<<":some-ns//">>, #{}, Env),
 
   ct:comment("Error: triple colon :::"),
@@ -176,16 +176,16 @@ keyword(_Config) ->
   {comments, ""}.
 
 symbol(_Config) ->
-  Symbol1 = 'clojerl.Symbol':new(<<"hello-world">>),
+  Symbol1 = clj_core:symbol(<<"hello-world">>),
   Symbol1 = clj_reader:read(<<"hello-world">>),
 
-  Symbol2 = 'clojerl.Symbol':new(<<"some-ns">>, <<"hello-world">>),
+  Symbol2 = clj_core:symbol(<<"some-ns">>, <<"hello-world">>),
   Symbol2 = clj_reader:read(<<"some-ns/hello-world">>),
 
-  Symbol3 = 'clojerl.Symbol':new(<<"another-ns">>, <<"hello-world">>),
+  Symbol3 = clj_core:symbol(<<"another-ns">>, <<"hello-world">>),
   Symbol3 = clj_reader:read(<<"another-ns/hello-world">>),
 
-  Symbol4 = 'clojerl.Symbol':new(<<"some-ns">>, <<"/">>),
+  Symbol4 = clj_core:symbol(<<"some-ns">>, <<"/">>),
   Symbol4 = clj_reader:read(<<"some-ns//">>),
 
   ct:comment("nil, true & false"),
@@ -211,7 +211,7 @@ symbol(_Config) ->
   {comments, ""}.
 
 comment(_Config) ->
-  BlaKeyword = 'clojerl.Keyword':new(<<"bla">>),
+  BlaKeyword = clj_core:keyword(<<"bla">>),
 
   ct:comment("Single semi-colon"),
   [1, BlaKeyword] = clj_reader:read_all(<<"1 ; comment\n :bla ">>),
@@ -228,15 +228,15 @@ comment(_Config) ->
   {comments, ""}.
 
 quote(_Config) ->
-  QuoteSymbol = 'clojerl.Symbol':new(<<"quote">>),
-  ListSymbol = 'clojerl.Symbol':new(<<"list">>),
+  QuoteSymbol = clj_core:symbol(<<"quote">>),
+  ListSymbol = clj_core:symbol(<<"list">>),
 
   ct:comment("Quote number"),
-  ListQuote1 = 'clojerl.List':new([QuoteSymbol, 1]),
+  ListQuote1 = clj_core:list([QuoteSymbol, 1]),
   ListQuote1 = clj_reader:read(<<"'1">>),
 
   ct:comment("Quote symbol"),
-  ListQuote2 = 'clojerl.List':new([QuoteSymbol, ListSymbol]),
+  ListQuote2 = clj_core:list([QuoteSymbol, ListSymbol]),
   ListQuote2 = clj_reader:read(<<"'list">>),
 
   ct:comment("Quote space symbol"),
@@ -250,15 +250,15 @@ quote(_Config) ->
   {comments, ""}.
 
 deref(_Config) ->
-  DerefSymbol = 'clojerl.Symbol':new(<<"deref">>),
-  ListSymbol = 'clojerl.Symbol':new(<<"list">>),
+  DerefSymbol = clj_core:symbol(<<"deref">>),
+  ListSymbol = clj_core:symbol(<<"list">>),
 
   ct:comment("Deref number :P"),
-  ListDeref1 = 'clojerl.List':new([DerefSymbol, 1]),
+  ListDeref1 = clj_core:list([DerefSymbol, 1]),
   ListDeref1= clj_reader:read(<<"@1">>),
 
   ct:comment("Deref symbol :P"),
-  ListDeref2 = 'clojerl.List':new([DerefSymbol, ListSymbol]),
+  ListDeref2 = clj_core:list([DerefSymbol, ListSymbol]),
   ListDeref2 = clj_reader:read(<<"@list">>),
 
   ct:comment("Deref symbol :P and read other stuff"),
@@ -354,7 +354,8 @@ syntax_quote(_Config) ->
   WithMetaDoSym = clj_reader:read(<<"`do">>),
 
   DefSym = clj_core:symbol(<<"def">>),
-  WithMetaDefSym = WrapWithMetaFun(clj_core:list([QuoteSym, DefSym]), undefined),
+  WithMetaDefSym =
+    WrapWithMetaFun(clj_core:list([QuoteSym, DefSym]), undefined),
   WithMetaDefSym = clj_reader:read(<<"`def">>),
 
   ct:comment("Read literals"),
@@ -464,17 +465,17 @@ syntax_quote(_Config) ->
   {comments, ""}.
 
 unquote(_Config) ->
-  UnquoteSymbol = 'clojerl.Symbol':new(<<"clojure.core">>, <<"unquote">>),
-  UnquoteSplicingSymbol = 'clojerl.Symbol':new(<<"clojure.core">>,
+  UnquoteSymbol = clj_core:symbol(<<"clojure.core">>, <<"unquote">>),
+  UnquoteSplicingSymbol = clj_core:symbol(<<"clojure.core">>,
                                                <<"unquote-splicing">>),
-  HelloWorldSymbol = 'clojerl.Symbol':new(<<"hello-world">>),
+  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Unquote"),
-  ListUnquote = 'clojerl.List':new([UnquoteSymbol, HelloWorldSymbol]),
+  ListUnquote = clj_core:list([UnquoteSymbol, HelloWorldSymbol]),
   ListUnquote = clj_reader:read(<<"~hello-world">>),
 
   ct:comment("Unquote splicing"),
-  ListUnquoteSplicing = 'clojerl.List':new([UnquoteSplicingSymbol,
+  ListUnquoteSplicing = clj_core:list([UnquoteSplicingSymbol,
                                             HelloWorldSymbol]),
   ListUnquoteSplicing = clj_reader:read(<<"~@hello-world">>),
 
@@ -486,19 +487,19 @@ unquote(_Config) ->
   {comments, ""}.
 
 list(_Config) ->
-  HelloWorldKeyword = 'clojerl.Keyword':new(<<"hello-world">>),
-  HelloWorldSymbol = 'clojerl.Symbol':new(<<"hello-world">>),
+  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Empty List"),
-  EmptyList = 'clojerl.List':new([]),
+  EmptyList = clj_core:list([]),
   EmptyList = clj_reader:read(<<"()">>),
 
   ct:comment("List"),
-  List = 'clojerl.List':new([HelloWorldKeyword, HelloWorldSymbol]),
+  List = clj_core:list([HelloWorldKeyword, HelloWorldSymbol]),
   List = clj_reader:read(<<"(:hello-world hello-world)">>),
 
   ct:comment("List & space"),
-  List = 'clojerl.List':new([HelloWorldKeyword, HelloWorldSymbol]),
+  List = clj_core:list([HelloWorldKeyword, HelloWorldSymbol]),
   List = clj_reader:read(<<"(:hello-world hello-world )">>),
 
   ct:comment("List without closing paren"),
@@ -509,8 +510,8 @@ list(_Config) ->
   {comments, ""}.
 
 vector(_Config) ->
-  HelloWorldKeyword = 'clojerl.Keyword':new(<<"hello-world">>),
-  HelloWorldSymbol = 'clojerl.Symbol':new(<<"hello-world">>),
+  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Vector"),
   Vector = 'clojerl.Vector':new([HelloWorldKeyword, HelloWorldSymbol]),
@@ -524,13 +525,14 @@ vector(_Config) ->
   {comments, ""}.
 
 map(_Config) ->
-  HelloWorldKeyword = 'clojerl.Keyword':new(<<"hello-world">>),
-  HelloWorldSymbol = 'clojerl.Symbol':new(<<"hello-world">>),
+  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Map"),
   Map = 'clojerl.Map':new([HelloWorldKeyword, HelloWorldSymbol,
                            HelloWorldSymbol, HelloWorldKeyword]),
-  Map = clj_reader:read(<<"{:hello-world hello-world, hello-world :hello-world}">>),
+  Map = clj_reader:read(<<"{:hello-world hello-world,"
+                          " hello-world :hello-world}">>),
 
   ct:comment("Map without closing braces"),
   ok = try clj_reader:read(<<"{1 42.0">>)
@@ -545,8 +547,8 @@ map(_Config) ->
   {comments, ""}.
 
 set(_Config) ->
-  HelloWorldKeyword = 'clojerl.Keyword':new(<<"hello-world">>),
-  HelloWorldSymbol = 'clojerl.Symbol':new(<<"hello-world">>),
+  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Set"),
   Set = 'clojerl.Set':new([HelloWorldKeyword, HelloWorldSymbol]),
@@ -714,16 +716,16 @@ eval(_Config) ->
   1 = clj_reader:read(<<"#=(do 1)">>),
 
   ct:comment("Read eval (str 1)"),
-  <<"1">> = clj_reader:read(<<"#=(str 1)">>),
+  <<"1">> = clj_reader:read(<<"#=(clj_core/str 1)">>),
 
   {comments, ""}.
 
 var(_Config) ->
-  VarSymbol = 'clojerl.Symbol':new(<<"var">>),
-  ListSymbol = 'clojerl.Symbol':new(<<"list">>),
+  VarSymbol = clj_core:symbol(<<"var">>),
+  ListSymbol = clj_core:symbol(<<"list">>),
 
   ct:comment(""),
-  List = 'clojerl.List':new([VarSymbol, ListSymbol]),
+  List = clj_core:list([VarSymbol, ListSymbol]),
   List = clj_reader:read(<<"#'list">>),
 
   {comments, ""}.
@@ -752,6 +754,13 @@ discard(_Config) ->
 
   1 = clj_reader:read(<<"#_ :hello 1">>),
 
+  1 = clj_reader:read(<<"1 #_ :hello">>),
+
+  StrSym = clj_core:symbol(<<"str">>),
+  ByeKeyword = clj_core:keyword(<<"bye">>),
+  List = clj_core:list([StrSym, ByeKeyword]),
+  List = clj_reader:read(<<"(str  #_ :hello :bye)">>),
+
   {comments, ""}.
 
 'cond'(_Config) ->
@@ -774,19 +783,23 @@ discard(_Config) ->
 
   ct:comment("Cond splice vector"),
   OneTwoThreeVector = clj_reader:read(<<"[:one :two :three]">>),
-  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three :clr [:two]) :three]">>,
+  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
+                                        " :clr [:two]) :three]">>,
                                       AllowClrFeatureOpts),
 
   OneTwoThreeFourVector = clj_reader:read(<<"[:one :two :three :four]">>),
   OneTwoThreeFourVector =
-    clj_reader:read(<<"[:one #?@(:clj :three :clr [:two :three] :cljs :five) :four]">>,
+    clj_reader:read(<<"[:one #?@(:clj :three :clr"
+                      " [:two :three] :cljs :five) :four]">>,
                     AllowClrFeatureOpts),
 
   ct:comment("Cond splice list"),
-  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three :clr (:two)) :three]">>,
+  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
+                                        " :clr (:two)) :three]">>,
                                       AllowClrFeatureOpts),
   OneTwoThreeFourVector =
-    clj_reader:read(<<"[:one #?@(:clj :three :clr (:two :three) :cljs :five) :four]">>,
+    clj_reader:read(<<"[:one #?@(:clj :three :clr"
+                     " (:two :three) :cljs :five) :four]">>,
                     AllowClrFeatureOpts),
 
   ct:comment("Preserve read"),
@@ -820,7 +833,8 @@ discard(_Config) ->
        end,
 
   ct:comment("EOF: no feature matched"),
-  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>, AllowOpts)
+  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>,
+                           AllowOpts)
        catch _:<<"EOF">> -> ok
        end,
 
@@ -835,7 +849,8 @@ discard(_Config) ->
        end,
 
   ct:comment("Splice in list but not sequential"),
-  ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>, AllowClrFeatureOpts)
+  ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
+                           AllowClrFeatureOpts)
        catch _:<<"Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
        end,

@@ -276,6 +276,13 @@ fn(_Config) ->
            ok
        end,
 
+  ct:comment("binding in fn should not leak out of fn* scope"),
+  ok = try analyze_all(<<"(fn* ([x y] x y)) x">>), error
+       catch _:Reason5 ->
+           <<"Unable to resolve var: x in this context">> = Reason5,
+           ok
+       end,
+
   {comments, ""}.
 
 -spec do(config()) -> result().
@@ -283,7 +290,7 @@ do(_Config) ->
   ct:comment("do with no expressions"),
   #{op := do,
     statements := [],
-    ret := undefined
+    ret := #{op := constant, form := undefined}
    } = analyze_one(<<"(do)">>),
 
   ct:comment("do with 1 expression"),
@@ -373,7 +380,7 @@ do(_Config) ->
    } = analyze_one(<<"(let* [])">>),
   0 = length(Bindings0),
   #{ statements := []
-   , ret        := undefined
+   , ret        := #{op := constant, form := undefined}
    } = Body0,
 
   ct:comment("let with bindings and no body"),
@@ -383,7 +390,7 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, y :a])">>),
   2 = length(Bindings1),
   #{ statements := []
-   , ret        := undefined
+   , ret        := #{op := constant, form := undefined}
    } = Body1,
 
   ct:comment("let with bindings and body should resolve locals"),
@@ -393,9 +400,9 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, y :a] x y)">>),
   2 = length(Bindings2),
   #{ statements := [_]
-   , ret        := ReturnExpr2
+   , ret        := #{op := ReturnExprOp2}
    } = Body2,
-  false = ReturnExpr2 == undefined,
+  local = ReturnExprOp2,
 
   ct:comment("let with bindings and a single return expression body"),
   #{ op := 'let'
@@ -404,9 +411,9 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, _ :a] x)">>),
   2 = length(Bindings3),
   #{ statements := []
-   , ret        := ReturnExpr3
+   , ret        := #{op := ReturnExprOp3}
    } = Body3,
-  false = ReturnExpr3 == undefined,
+  local = ReturnExprOp3,
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
@@ -419,7 +426,7 @@ do(_Config) ->
   ok = try analyze_one(<<"(let*)">>)
        catch _:Reason2 ->
            <<"let* requires a vector for its bindings, "
-             "had: :clojerl.nil">> = Reason2,
+             "had: :clojerl.Nil">> = Reason2,
            ok
        end,
 
@@ -481,11 +488,20 @@ invoke(_Config) ->
   ct:comment("Call defined symbol"),
   HelloSymbol = clj_core:symbol(<<"hello">>),
   ListHello = clj_core:list([HelloSymbol]),
-  [_,
-   #{op := invoke,
-     form := ListHello,
-     f := #{op := var,
-            form := HelloSymbol}}] = analyze_all(<<"(def hello :hello) (hello)">>),
+  [ _
+  , #{ op   := invoke
+     , form := ListHello
+     , f    := #{op := var, form := HelloSymbol}
+     }
+  ] = analyze_all(<<"(def hello :hello) (hello)">>),
+
+  ct:comment("Call something different than a symbol, analyzer shouldn't fail"),
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+  OneHello = clj_core:list([1, HelloKeyword]),
+  #{ op   := invoke
+   , form := OneHello
+   , f    := #{op := constant, form := 1}
+   } = analyze_one(<<"(1 :hello)">>),
 
   {comments, ""}.
 
