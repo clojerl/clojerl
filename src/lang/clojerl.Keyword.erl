@@ -3,8 +3,6 @@
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
--define(T, ?MODULE).
-
 -export([new/1, new/2]).
 
 -export([ 'clojerl.Named.name'/1

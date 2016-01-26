@@ -1,5 +1,7 @@
 -module(clj_core).
 
+-include("clojerl.hrl").
+
 -export([
          type/1,
          count/1,
@@ -210,7 +212,7 @@ boolean(false) -> false;
 boolean(_) -> true.
 
 -spec type(any()) -> atom().
-type(X) when is_tuple(X), is_atom(element(1, X)) -> element(1, X);
+type(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
 type(X) when is_tuple(X)    -> 'clojerl.erlang.Tuple';
 type(X) when is_binary(X)   -> 'clojerl.String';
 type(X) when is_integer(X)  -> 'clojerl.Integer';

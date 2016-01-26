@@ -1,10 +1,10 @@
 -module('clojerl.Symbol').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
 -behaviour('clojerl.Stringable').
-
--define(T, ?MODULE).
 
 -export([new/1, new/2, to_atom/1]).
 
@@ -16,12 +16,7 @@
         ]).
 -export(['clojerl.Stringable.str'/1]).
 
--record(?T, { ns         :: binary() | undefined
-            , name       :: binary()
-            , info = #{} :: map()
-            }).
-
--type type() :: #?T{}.
+-type type() :: #?TYPE{}.
 
 -spec new(binary()) -> type().
 new(Name) when is_binary(Name) ->
@@ -30,29 +25,29 @@ new(Name) when is_binary(Name) ->
 -spec new(binary() | undefined, binary()) -> type().
 new(Namespace, Name) when is_binary(Namespace) orelse Namespace == undefined,
                           is_binary(Name) ->
-  #?T{ns = Namespace, name = Name}.
+  #?TYPE{data = {Namespace, Name}}.
 
 -spec to_atom(type()) -> atom().
-to_atom(#?T{ns = undefined, name = Name}) ->
+to_atom(#?TYPE{name = ?M, data = {undefined, Name}}) ->
   binary_to_atom(Name, utf8);
-to_atom(#?T{ns = Ns, name = Name}) ->
+to_atom(#?TYPE{name = ?M, data = {Ns, Name}}) ->
   binary_to_atom(<<Ns/binary, "/", Name/binary>>, utf8).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Stringable.str'(#?T{ns = undefined, name = Name}) ->
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = {undefined, Name}}) ->
   Name;
-'clojerl.Stringable.str'(#?T{ns = Namespace, name = Name}) ->
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = {Namespace, Name}}) ->
   <<Namespace/binary, "/", Name/binary>>.
 
-'clojerl.Named.name'(#?T{name = Name}) -> Name.
+'clojerl.Named.name'(#?TYPE{name = ?M, data = {_, Name}}) -> Name.
 
-'clojerl.Named.namespace'(#?T{ns = Namespace}) -> Namespace.
+'clojerl.Named.namespace'(#?TYPE{name = ?M, data = {Namespace, _}}) -> Namespace.
 
-'clojerl.IMeta.meta'(#?T{info = Info}) ->
+'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?T{info = Info} = Keyword, Metadata) ->
-  Keyword#?T{info = Info#{meta => Metadata}}.
+'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Keyword, Metadata) ->
+  Keyword#?TYPE{info = Info#{meta => Metadata}}.

@@ -1,5 +1,7 @@
 -module('clojerl.Set').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.Counted').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.Seqable').
@@ -7,8 +9,6 @@
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IColl').
 -behavior('clojerl.ILookup').
-
--define(T, ?MODULE).
 
 -export([new/1]).
 -export(['clojerl.Counted.count'/1]).
@@ -30,62 +30,58 @@
         , 'clojerl.ILookup.get'/3
         ]).
 
--record(?T, { set        :: gb_sets:set()
-            , info = #{} :: map()
-            }).
-
--type type() :: #?T{}.
+-type type() :: #?TYPE{}.
 
 -spec new(list()) -> type().
 new(Values) when is_list(Values) ->
-  #?T{set = gb_sets:from_list(Values)}.
+  #?TYPE{data = gb_sets:from_list(Values)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(#?T{set = Set}) -> gb_sets:size(Set).
+'clojerl.Counted.count'(#?TYPE{name = ?M, data = Set}) -> gb_sets:size(Set).
 
-'clojerl.Stringable.str'(#?T{set = Set}) ->
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Set}) ->
   Items = lists:map(fun clj_core:str/1, gb_sets:to_list(Set)),
   Strs = clj_utils:binary_join(Items, <<", ">>),
   <<"#{", Strs/binary, "}">>.
 
-'clojerl.Seqable.seq'(#?T{set = Set}) ->
+'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Set}) ->
   case gb_sets:size(Set) of
     0 -> undefined;
     _ -> gb_sets:to_list(Set)
   end.
 
-'clojerl.ISeq.first'(#?T{set = Set}) ->
+'clojerl.ISeq.first'(#?TYPE{name = ?M, data = Set}) ->
   Iterator = gb_sets:iterator(Set),
   case gb_sets:next(Iterator) of
     none -> undefined;
     {X, _} -> X
   end.
 
-'clojerl.ISeq.next'(#?T{set = Set}) ->
+'clojerl.ISeq.next'(#?TYPE{name = ?M, data = Set}) ->
   case gb_sets:to_list(Set) of
     [] -> undefined;
     [_ | []] -> undefined;
     [_ | Items] -> clj_core:list(Items)
   end.
 
-'clojerl.ISeq.more'(#?T{set = GbSet} = Set) ->
+'clojerl.ISeq.more'(#?TYPE{name = ?M, data = GbSet} = Set) ->
   case gb_sets:size(GbSet) of
     0 -> clj_core:list([]);
     _ -> 'clojerl.ISeq.next'(Set)
   end.
 
-'clojerl.IMeta.meta'(#?T{info = Info}) ->
+'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?T{info = Info} = Set, Metadata) ->
-  Set#?T{info = Info#{meta => Metadata}}.
+'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
+  Set#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IColl.count'(#?T{set = Set}) -> gb_sets:size(Set).
+'clojerl.IColl.count'(#?TYPE{name = ?M, data = Set}) -> gb_sets:size(Set).
 
-'clojerl.IColl.cons'(#?T{set = Set}, X) ->
+'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Set}, X) ->
   Items = gb_sets:to_list(Set),
   clj_core:list([X | Items]).
 
@@ -94,10 +90,10 @@ new(Values) when is_list(Values) ->
 'clojerl.IColl.equiv'(X, X) -> true;
 'clojerl.IColl.equiv'(_, _) -> false.
 
-'clojerl.ILookup.get'(#?T{} = Set, Key) ->
+'clojerl.ILookup.get'(#?TYPE{name = ?M} = Set, Key) ->
   'clojerl.ILookup.get'(Set, Key, undefined).
 
-'clojerl.ILookup.get'(#?T{set = Set}, Key, NotFound) ->
+'clojerl.ILookup.get'(#?TYPE{name = ?M, data = Set}, Key, NotFound) ->
   case gb_sets:is_member(Key, Set) of
     true -> Key;
     false -> NotFound
