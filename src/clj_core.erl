@@ -219,8 +219,8 @@ type(X) when is_boolean(X)  -> 'clojerl.Boolean';
 type(X) when is_list(X)     -> 'clojerl.erlang.List';
 type(X) when is_map(X)      -> 'clojerl.erlang.Map';
 type(undefined)             -> 'clojerl.Nil';
+type(X) when is_atom(X)     -> 'clojerl.Keyword';
 type(X) when is_function(X) -> 'clojerl.erlang.Fn';
-type(X) when is_atom(X)     -> 'clojerl.erlang.Atom';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec str(any()) -> any().

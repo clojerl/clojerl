@@ -31,9 +31,10 @@
     'clojerl.Symbol',
     'clojerl.Var',
     'clojerl.Vector',
-    'clojerl.erlang.Atom',
+    'clojerl.erlang.Fn',
     'clojerl.erlang.List',
     'clojerl.erlang.Map',
+    'clojerl.erlang.Tuple',
     'clojerl.protocol',
     'cover_report'
   ]

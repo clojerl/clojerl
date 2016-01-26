@@ -1,6 +1,5 @@
 -module('clojerl.Keyword').
 
--behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
@@ -11,41 +10,36 @@
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
-        ]).
 -export(['clojerl.Stringable.str'/1]).
 
--record(?T, { ns         :: binary() | undefined
-            , name       :: binary()
-            , info = #{} :: map()
-            }).
-
--type type() :: #?T{}.
+-type type() :: atom().
 
 -spec new(binary()) -> type().
 new(Name) ->
-  new(undefined, Name).
+  binary_to_atom(Name, utf8).
 
 -spec new(binary(), binary()) -> type().
 new(Namespace, Name) ->
-  #?T{ns = Namespace, name = Name}.
+  binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Stringable.str'(#?T{ns = undefined, name = Name}) ->
-  <<":", Name/binary>>;
-'clojerl.Stringable.str'(#?T{ns = Namespace, name = Name}) ->
-  <<":", Namespace/binary, "/", Name/binary>>.
+'clojerl.Stringable.str'(Keyword) ->
+  KeywordBin = atom_to_binary(Keyword, utf8),
+  <<":", KeywordBin/binary>>.
 
-'clojerl.Named.name'(#?T{name = Name}) -> Name.
+'clojerl.Named.name'(Keyword) ->
+  KeywordBin = atom_to_binary(Keyword, utf8),
+  case binary:split(KeywordBin, <<"/">>) of
+    [_] -> KeywordBin;
+    [_, Name] -> Name
+  end.
 
-'clojerl.Named.namespace'(#?T{ns = Namespace}) -> Namespace.
-
-'clojerl.IMeta.meta'(#?T{info = Info}) ->
-  maps:get(meta, Info, undefined).
-
-'clojerl.IMeta.with_meta'(#?T{info = Info} = Keyword, Metadata) ->
-  Keyword#?T{info = Info#{meta => Metadata}}.
+'clojerl.Named.namespace'(Keyword) ->
+  KeywordBin = atom_to_binary(Keyword, utf8),
+  case binary:split(KeywordBin, <<"/">>) of
+    [_] -> undefined;
+    [Namespace, _] -> Namespace
+  end.

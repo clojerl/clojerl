@@ -276,13 +276,10 @@ meta(_Config) ->
   MetadataKw = clj_reader:read(<<"{:private true}">>),
   MetadataSym = clj_reader:read(<<"{:tag private}">>),
 
-  ct:comment("Keyword meta to keyword"),
-  HelloWithMetaKw = clj_reader:read(<<"^:private :hello">>),
-  MetadataKw = clj_core:meta(HelloWithMetaKw),
-
-  ct:comment("Symbol meta to keyword"),
-  HelloWithMetaSym = clj_reader:read(<<"^private :hello">>),
-  MetadataSym = clj_core:meta(HelloWithMetaSym),
+  ct:comment("Keyword don't support metadata"),
+  ok = try clj_reader:read(<<"^:private :hello">>), error
+       catch _:_ -> ok
+       end,
 
   ct:comment("Keyword meta to symbol"),
   SymbolWithMetaKw = clj_reader:read(<<"^:private hello">>),
@@ -364,10 +361,11 @@ syntax_quote(_Config) ->
   42.0 = clj_reader:read(<<"`42.0">>),
   <<"something!">> = clj_reader:read(<<"`\"something!\"">>),
 
-  ct:comment("Read values that can have metadata"),
+  ct:comment("Keywords can't have metadata"),
   HelloKeyword = clj_core:keyword(<<"hello">>),
-  ListWithMetaHelloKw = WrapWithMetaFun(HelloKeyword, undefined),
-  ListWithMetaHelloKw = clj_reader:read(<<"`:hello">>),
+  HelloKeyword = clj_reader:read(<<"`:hello">>),
+
+  ct:comment("Read values that can have metadata"),
 
   ct:comment("Read unqualified symbol"),
   UserHelloSym = clj_core:symbol(<<"user">>, <<"hello">>),
