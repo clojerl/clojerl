@@ -2,9 +2,9 @@
 
 -export([str/1]).
 
--type type() ::  any().
+-type type() :: binary().
 
--callback str(any()) -> any().
+-callback 'clojerl.Stringable.str'(any()) -> type().
 
--spec str(type()) -> any().
+-spec str(any()) -> type().
 str(X) -> 'clojerl.protocol':resolve(?MODULE, str, [X]).

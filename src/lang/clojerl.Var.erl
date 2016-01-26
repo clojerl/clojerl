@@ -1,5 +1,10 @@
 -module('clojerl.Var').
 
+-behavior('clojerl.IDeref').
+-behavior('clojerl.Stringable').
+
+-define(T, ?MODULE).
+
 -export([
          new/2,
          namespace/1,
@@ -7,37 +12,65 @@
          dynamic/1, dynamic/2,
          is_macro/1
         ]).
+-export(['clojerl.Stringable.str'/1]).
+-export(['clojerl.IDeref.deref'/1]).
 
--type info() :: #{ns => binary() | undefined,
-                  name => binary(),
-                  root => any() | undefined,
-                  meta => map(),
-                  is_dynamic => boolean(),
-                  is_macro => boolean()}.
--type type() :: {?MODULE, info()}.
+-record(?T, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
+            , name                   :: 'clojerl.Symbol':type()
+            , root       = undefined :: any() | undefined
+            , meta       = #{}       :: map()
+            , is_dynamic = false     :: boolean()
+            , is_macro   = false     :: boolean()
+            }).
+
+-type type() :: #?T{}.
 
 -spec new('clojerl.Symbol':type(), 'clojerl.Symbol':type()) -> type().
 new(NsSym, NameSym) ->
-  {?MODULE,
-   #{ns => NsSym,
-     name => NameSym,
-     root => undefined,
-     meta => #{},
-     is_dynamic => false,
-     is_macro => false}}.
+  #?T{ ns         = NsSym
+     , name       = NameSym
+     , root       = undefined
+     , meta       = #{}
+     , is_dynamic = false
+     , is_macro   = false
+     }.
 
 -spec namespace(type()) -> 'clojerl.Symbol':type().
-namespace({?MODULE, #{ns := Namespace}}) -> Namespace.
+namespace(#?T{ns = Namespace}) -> Namespace.
 
 -spec name(type()) -> 'clojerl.Symbol':type().
-name({?MODULE, #{name := Name}}) -> Name.
+name(#?T{name = Name}) -> Name.
 
 -spec dynamic(type()) -> boolean().
-dynamic({?MODULE, #{is_dynamic := IsDynamic}}) -> IsDynamic.
+dynamic(#?T{is_dynamic = IsDynamic}) -> IsDynamic.
 
 -spec dynamic(type(), boolean()) -> type().
-dynamic({?MODULE, Data}, IsDynamic) ->
-  {?MODULE, Data#{is_dynamic => IsDynamic}}.
+dynamic(#?T{} = Var, IsDynamic) ->
+  Var#?T{is_dynamic = IsDynamic}.
 
 -spec is_macro(type()) -> boolean().
-is_macro({?MODULE, #{is_macro := IsMacro}}) -> IsMacro.
+is_macro(#?T{is_macro = IsMacro}) -> IsMacro.
+
+%%------------------------------------------------------------------------------
+%% Protocols
+%%------------------------------------------------------------------------------
+
+'clojerl.Stringable.str'(#?T{ns = NsSym, name = NameSym}) ->
+  <<(clj_core:str(NsSym))/binary
+    , "/"
+    , (clj_core:str(NameSym))/binary>>.
+
+'clojerl.IDeref.deref'(#?T{ns = Namespace, name = Name}) ->
+  Module = binary_to_atom(clj_core:name(Namespace), utf8),
+  Function = binary_to_atom(clj_core:name(Name), utf8),
+
+  case erlang:function_exported(Module, Function, 1) of
+    true -> Module:Function();
+    false ->
+      NsBin = clj_core:name(Namespace),
+      NameBin = clj_core:name(Name),
+      throw(<<"Could not derefence ",
+              NsBin/binary, "/", NameBin/binary, ". "
+              "There is no Erlang function "
+              "to back it up.">>)
+  end.

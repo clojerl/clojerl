@@ -4,7 +4,7 @@
          type/1,
          count/1,
          'empty?'/1,
-         seq/1,
+         seq/1, seq2/1,
          conj/2,
          cons/2,
          first/1,
@@ -44,9 +44,16 @@ count(Seq) ->
 'empty?'(Seq) ->
   'clojerl.Seqable':seq(Seq) == undefined.
 
--spec seq(any()) -> 'clojerl.List':type().
-seq(Seq) ->
-  'clojerl.Seqable':seq(Seq).
+-spec seq(any()) -> list() | undefined.
+seq(Seqable) ->
+  'clojerl.Seqable':seq(Seqable).
+
+-spec seq2(any()) -> list().
+seq2(Seqable) ->
+  case seq(Seqable) of
+    undefined -> [];
+    Seq -> Seq
+  end.
 
 -spec conj(any(), any()) -> any().
 conj(undefined, Item) ->
@@ -59,7 +66,7 @@ conj(Coll, Item) ->
 %% TODO: it is possible that it should actually return a vanilla
 %%       Erlang list.
 -spec cons(any(), any()) -> any().
-cons(undefined, Item) ->
+cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
   'clojerl.IColl':cons(Seq, Item).
@@ -114,8 +121,7 @@ keyword(Namespace, Name) ->
 
 -spec 'extends?'(atom(), atom()) -> boolean().
 'extends?'(Protocol, Type) ->
-  ImplModule = 'clojerl.protocol':impl_module(Protocol, Type),
-  code:is_loaded(ImplModule) =/= false.
+  'clojerl.protocol':'extends?'(Protocol, Type).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
@@ -163,7 +169,7 @@ keyword(Namespace, Name) ->
 'string?'(X) -> type(X) == 'clojerl.String'.
 
 -spec 'nil?'(any()) -> boolean().
-'nil?'(X) -> type(X) == 'clojerl.nil'.
+'nil?'(X) -> type(X) == 'clojerl.Nil'.
 
 -spec 'boolean?'(any()) -> boolean().
 'boolean?'(X) -> type(X) == 'clojerl.Boolean'.
@@ -211,7 +217,8 @@ type(X) when is_float(X) -> 'clojerl.Float';
 type(X) when is_boolean(X) -> 'clojerl.Boolean';
 type(X) when is_list(X) -> 'clojerl.erlang.List';
 type(X) when is_map(X) -> 'clojerl.erlang.Map';
-type(undefined) -> 'clojerl.nil';
+type(undefined) -> 'clojerl.Nil';
+type(X) when is_function(X) -> 'clojerl.erlang.Fn';
 type(X) when is_atom(X) -> 'clojerl.erlang.Atom';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 

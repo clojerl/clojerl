@@ -4,8 +4,8 @@
 
 -type type() :: any().
 
--callback name(any()) -> binary().
--callback namespace(any()) -> binary().
+-callback 'clojerl.Named.name'(any()) -> binary().
+-callback 'clojerl.Named.namespace'(any()) -> binary().
 
 -spec name(type()) -> binary().
 name(X) ->

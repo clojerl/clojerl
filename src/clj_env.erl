@@ -13,6 +13,8 @@
          update_ns/3,
          find_ns/2,
          resolve_ns/2,
+         add_locals_scope/1,
+         remove_locals_scope/1,
          get_local/2,
          put_local/3,
          put_locals/2,
@@ -133,9 +135,31 @@ resolve_ns(Env, SymNs) ->
       Ns
   end.
 
+-spec add_locals_scope(env()) -> env().
+add_locals_scope(Env = #{locals := ParentLocals}) ->
+  Env#{locals => #{parent => ParentLocals}}.
+
+-spec remove_locals_scope(env()) -> env().
+remove_locals_scope(Env = #{locals := Locals}) ->
+  ParentLocals = maps:get(parent, Locals, undefined),
+  Env#{locals => ParentLocals}.
+
 -spec get_local(env(), 'clojerl.Symbol':type()) -> any().
 get_local(_Env = #{locals := Locals}, Sym) ->
-  maps:get(Sym, Locals, undefined).
+  do_get_local(Locals, Sym).
+
+%% @private
+-spec do_get_local(map(), 'clojerl.Symbol':type()) -> any().
+do_get_local(undefined, _) ->
+  undefined;
+do_get_local(Locals, Sym) ->
+  case maps:get(Sym, Locals, undefined) of
+    undefined ->
+      ParentLocals = maps:get(parent, Locals, undefined),
+      do_get_local(ParentLocals, Sym);
+    Value ->
+      Value
+  end.
 
 -spec put_local(env(), 'clojerl.Symbol':type(), any()) -> env().
 put_local(Env = #{locals := Locals}, Sym, Local) ->
