@@ -1,5 +1,7 @@
 -module('clojerl.List').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.Counted').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.Seqable').
@@ -7,8 +9,6 @@
 -behavior('clojerl.ISeq').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IColl').
-
--define(T, ?MODULE).
 
 -export([new/1]).
 
@@ -28,52 +28,52 @@
         , 'clojerl.IColl.equiv'/2
         ]).
 
--record(?T, { list       :: list()
-            , info = #{} :: map()
-            }).
-
--type type() :: #?T{}.
+-type type() :: #?TYPE{}.
 
 -spec new(list()) -> type().
 new(Items) when is_list(Items) ->
-  #?T{list = Items}.
+  #?TYPE{data = Items}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(#?T{list = List}) -> length(List).
+'clojerl.Counted.count'(#?TYPE{name = ?M, data = Items}) -> length(Items).
 
-'clojerl.Stringable.str'(#?T{list = []}) ->
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = []}) ->
   <<"()">>;
-'clojerl.Stringable.str'(#?T{list = Items}) ->
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Items}) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
-'clojerl.Seqable.seq'(#?T{list = []}) -> undefined;
-'clojerl.Seqable.seq'(#?T{list = Seq}) -> Seq.
+'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = []}) -> undefined;
+'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Seq}) -> Seq.
 
-'clojerl.ISeq.first'(#?T{list = []}) -> undefined;
-'clojerl.ISeq.first'(#?T{list = [First | _]}) -> First.
+'clojerl.ISeq.first'(#?TYPE{name = ?M, data = []}) -> undefined;
+'clojerl.ISeq.first'(#?TYPE{name = ?M, data = [First | _]}) -> First.
 
-'clojerl.ISeq.next'(#?T{list = []}) -> undefined;
-'clojerl.ISeq.next'(#?T{list = [_ | []]}) -> undefined;
-'clojerl.ISeq.next'(#?T{list = [_ | Rest]} = List) -> List#?T{list = Rest}.
+'clojerl.ISeq.next'(#?TYPE{name = ?M, data = []}) -> undefined;
+'clojerl.ISeq.next'(#?TYPE{name = ?M, data = [_ | []]}) -> undefined;
+'clojerl.ISeq.next'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
+  List#?TYPE{name = ?M, data = Rest}.
 
-'clojerl.ISeq.more'(#?T{list = []}) -> undefined;
-'clojerl.ISeq.more'(#?T{list = [_ | Rest]} = List) -> List#?T{list = Rest}.
+'clojerl.ISeq.more'(#?TYPE{name = ?M, data = []}) -> undefined;
+'clojerl.ISeq.more'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
+  List#?TYPE{data = Rest}.
 
-'clojerl.IMeta.meta'(#?T{info = Info}) ->
+'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?T{info = Info} = List, Metadata) ->
-  List#?T{info = Info#{meta => Metadata}}.
+'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
+  List#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IColl.count'(#?T{list = Items}) -> length(Items).
+'clojerl.IColl.count'(#?TYPE{name = ?M, data = Items}) -> length(Items).
 
-'clojerl.IColl.cons'(#?T{list = []} = List, X) -> List#?T{list = [X]};
-'clojerl.IColl.cons'(#?T{list = Items} = List, X) -> List#?T{list = [X | Items]}.
+'clojerl.IColl.cons'(#?TYPE{name = ?M, data = []} = List, X) ->
+  List#?TYPE{data = [X]};
+'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Items} = List, X) ->
+  List#?TYPE{data = [X | Items]}.
 
 'clojerl.IColl.empty'(_) -> new([]).
 

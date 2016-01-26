@@ -20,7 +20,7 @@
 ;; (clojure.core/prn {:a 2, #{1 2 2} 1})
 (clojure.core/prn clojure.core/prn)
 
-(clojure.core/prn (fixed-arity :fixed :arity))
+(clojure.core/prn (fixed-arity ::fixed ::arity))
 
 (clojure.core/prn (multiple-fixed-arities :mult-fixed))
 (clojure.core/prn (multiple-fixed-arities :a :b))
