@@ -210,16 +210,17 @@ boolean(false) -> false;
 boolean(_) -> true.
 
 -spec type(any()) -> atom().
-type(X) when is_tuple(X) -> element(1, X);
-type(X) when is_binary(X) -> 'clojerl.String';
-type(X) when is_integer(X) -> 'clojerl.Integer';
-type(X) when is_float(X) -> 'clojerl.Float';
-type(X) when is_boolean(X) -> 'clojerl.Boolean';
-type(X) when is_list(X) -> 'clojerl.erlang.List';
-type(X) when is_map(X) -> 'clojerl.erlang.Map';
-type(undefined) -> 'clojerl.Nil';
+type(X) when is_tuple(X), is_atom(element(1, X)) -> element(1, X);
+type(X) when is_tuple(X)    -> 'clojerl.erlang.Tuple';
+type(X) when is_binary(X)   -> 'clojerl.String';
+type(X) when is_integer(X)  -> 'clojerl.Integer';
+type(X) when is_float(X)    -> 'clojerl.Float';
+type(X) when is_boolean(X)  -> 'clojerl.Boolean';
+type(X) when is_list(X)     -> 'clojerl.erlang.List';
+type(X) when is_map(X)      -> 'clojerl.erlang.Map';
+type(undefined)             -> 'clojerl.Nil';
 type(X) when is_function(X) -> 'clojerl.erlang.Fn';
-type(X) when is_atom(X) -> 'clojerl.erlang.Atom';
+type(X) when is_atom(X)     -> 'clojerl.erlang.Atom';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec str(any()) -> any().

@@ -30,7 +30,8 @@
     discard/1,
     'cond'/1,
     erl_fun/1,
-    unsupported_reader/1
+    unsupported_reader/1,
+    tuple/1
    ]
   ).
 
@@ -892,5 +893,27 @@ unsupported_reader(_Config) ->
   ok = try clj_reader:read(<<"#-:something">>)
        catch _:_ -> ok
        end,
+
+  {comments, ""}.
+
+tuple(_Config) ->
+  ct:comment("Read an empty tuple"),
+  {} = clj_reader:read(<<"#[]">>),
+
+  ct:comment("Read a tuple with a single element"),
+  {42} = clj_reader:read(<<"#[42]">>),
+
+  ct:comment("Read a tuple with many elements"),
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+  WorldSymbol = clj_core:symbol(<<"world">>),
+  { 42
+  , HelloKeyword
+  , 2.5
+  , WorldSymbol
+  } = clj_reader:read(<<"#[42, :hello, 2.5, world]">>),
+
+  ct:comment("Read a tuple whose first element is an keyword"),
+  T = clj_reader:read(<<"#[:random, :hello, 2.5, 'world]">>),
+  'clojerl.erlang.Tuple' = clj_core:type(T),
 
   {comments, ""}.
