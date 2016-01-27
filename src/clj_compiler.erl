@@ -53,9 +53,17 @@ compile_forms([]) ->
   undefined;
 compile_forms(Forms) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
-  {ok, Name, Binary} = compile:forms(Forms),
-  code:load_binary(Name, "", Binary),
-  Name.
+  Opts = [debug_info, verbose,report_errors,report_warnings],
+  case compile:forms(Forms, Opts) of
+    {ok, Name, Binary} ->
+      BeamFilename = <<(atom_to_binary(Name, utf8))/binary, ".beam">>,
+      BeamPath = filename:join(["ebin", BeamFilename]),
+      file:write_file(BeamPath, Binary),
+      code:load_binary(Name, binary_to_list(BeamPath), Binary),
+      Name;
+    Error ->
+      throw(Error)
+  end.
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].
 eval_expressions([]) ->

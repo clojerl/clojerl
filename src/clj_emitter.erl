@@ -31,8 +31,9 @@ ast(#{op := quote, expr := Expr}) ->
 %%------------------------------------------------------------------------------
 ast(#{op := var, var := Var} = _Expr) ->
   Module = var_module(Var),
+  Name   = var_name(Var),
 
-  [application_mfa(Module, val, [])];
+  [application_mfa(Module, Name, [])];
 ast(#{op := binding} = Expr) ->
   NameSym = maps:get(name, Expr),
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
@@ -59,11 +60,24 @@ ast(#{op := do} = Expr) ->
 %% def
 %%------------------------------------------------------------------------------
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
-  %% Create a module that provides a single function with the var's
-  %% value and add module attributes with the var's info.
-  ModuleAst = module_attribute(var_module(Var)),
+  Module = var_module(Var),
+  Name   = var_name(Var),
 
-  ExportAst = export_attribute([{val, 0}]),
+  ModuleDef = case code:ensure_loaded(Module) of
+                {module, Module} ->
+                  {ok, Forms} = module_forms(Module),
+                  module_def(Forms);
+                {error, _} ->
+                  module_def([attribute_module(Module)])
+              end,
+
+  #{ attrs := Attrs
+   , funs  := Funs
+   } = ModuleDef,
+
+  %% io:format("~p~n", [ModuleDef]),
+
+  ExportAst = export_attribute([{Name, 0}]),
 
   %% Add the var's information as a module attribute
   VarAtom = erl_syntax:atom(var),
@@ -72,9 +86,14 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
 
   InitAst = ast(InitExpr),
   ClauseAst =  erl_syntax:clause([], InitAst),
-  FunctionAst = function_form(val, [ClauseAst]),
+  FunctionAst = function_form(Name, [ClauseAst]),
 
-  [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
+  ModuleDef1 =
+    ModuleDef#{ attrs => erl_syntax:revert_forms([ExportAst, VarAttributeAst | Attrs])
+              , funs  => erl_syntax:revert_forms([FunctionAst | Funs])
+              },
+
+  module_def_to_forms(ModuleDef1);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -170,6 +189,8 @@ ast(#{op := 'if'} = Expr) ->
   FalseClause = erl_syntax:clause([Whatever], [], ast(ElseExpr)),
 
   [erl_syntax:case_expr(Test, [TrueClause, FalseClause])].
+
+
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
@@ -178,12 +199,60 @@ ast(#{op := 'if'} = Expr) ->
 -spec var_module('clojerl.Var':type()) -> module().
 var_module(Var) ->
   NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
-  NameStr = clj_core:str('clojerl.Var':name(Var)),
-  ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
-  binary_to_atom(ModuleStr, utf8).
+  %% NameStr = clj_core:str('clojerl.Var':name(Var)),
+  %% ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
+  %% binary_to_atom(ModuleStr, utf8).
+  binary_to_atom(NamespaceStr, utf8).
 
--spec module_attribute(atom()) -> erl_syntax:syntaxTree().
-module_attribute(Name) when is_atom(Name) ->
+-spec var_name('clojerl.Var':type()) -> module().
+var_name(Var) ->
+  NameStr = clj_core:str('clojerl.Var':name(Var)),
+  binary_to_atom(NameStr, utf8).
+
+-spec module_forms(atom()) -> erl_syntax:syntaxTree().
+module_forms(Module) when is_atom(Module) ->
+  {Module, Binary, _} = code:get_object_code(Module),
+  case beam_lib:chunks(Binary, [abstract_code]) of
+    {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
+      {ok, Forms};
+    Error ->
+      Error
+  end.
+
+-type module_definition() :: #{ module => erl_syntax:syntaxTree()
+                              , attrs  => [erl_syntax:syntaxTree()]
+                              , funs   => [erl_syntax:syntaxTree()]
+                              }.
+
+-spec module_def([erl_syntax:syntaxTree()]) -> module_definition().
+module_def(Forms) ->
+  {[Module], AttrsFuns} = lists:partition(fun is_module_attribute/1, Forms),
+  {Attrs, Funs} = lists:partition(fun is_attribute/1, AttrsFuns),
+
+  #{ module => Module
+   , attrs  => Attrs
+   , funs   => Funs
+   }.
+
+-spec module_def_to_forms(module_definition()) -> [erl_syntax:syntaxTree()].
+module_def_to_forms(#{module := Module} = Def) ->
+  Attrs = maps:get(attrs, Def, []),
+  Funs  = maps:get(funs, Def, []),
+  io:format("~s~n", [clj_compiler:ast_to_string(Funs)]),
+  [Module | lists:usort(Attrs) ++ lists:usort(Funs)].
+
+-spec is_module_attribute(erl_syntax:syntaxTree()) -> boolean.
+is_module_attribute(Form) ->
+  erl_syntax:type(Form) =:= attribute
+    andalso
+    erl_syntax:concrete(erl_syntax:attribute_name(Form)) =:= module.
+
+-spec is_attribute(erl_syntax:syntaxTree()) -> boolean.
+is_attribute(Form) ->
+  erl_syntax:type(Form) =:= attribute.
+
+-spec attribute_module(atom()) -> erl_syntax:syntaxTree().
+attribute_module(Name) when is_atom(Name) ->
   ModuleAtom = erl_syntax:atom(module),
   NameAtom = erl_syntax:atom(Name),
   erl_syntax:attribute(ModuleAtom, [NameAtom]).
