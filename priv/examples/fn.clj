@@ -21,7 +21,13 @@
 ;; Resolve var in another ns
 (clojure.core/prn {:a 2, #{1 2 2} 1})
 (clojure.core/prn clojure.core/prn)
-(clojure.core/assert (= (clojure.core/str one) "1"))
+(clojure.core/assert (clojure.core/= (clojure.core/str one) "1"))
+
+(clojure.core/prn (if :test
+                    (do
+                      (clojure.core/prn ::then)
+                      :then)
+                    :else))
 
 (clojure.core/prn (fixed-arity ::fixed ::arity))
 

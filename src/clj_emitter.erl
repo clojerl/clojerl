@@ -26,6 +26,9 @@ ast(#{op := constant, form := Form}) ->
   [erl_syntax:abstract(Form)];
 ast(#{op := quote, expr := Expr}) ->
   ast(Expr);
+%%------------------------------------------------------------------------------
+%% var, binding & local
+%%------------------------------------------------------------------------------
 ast(#{op := var, var := Var} = _Expr) ->
   Module = var_module(Var),
 
@@ -40,6 +43,9 @@ ast(#{op := local} = Expr) ->
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
 
   [erl_syntax:variable(NameAtom)];
+%%------------------------------------------------------------------------------
+%% do
+%%------------------------------------------------------------------------------
 ast(#{op := do} = Expr) ->
   #{ statements := StatementsExprs
    , ret        := ReturnExpr
@@ -49,6 +55,9 @@ ast(#{op := do} = Expr) ->
   Ret = ast(ReturnExpr),
 
   Stms ++ Ret;
+%%------------------------------------------------------------------------------
+%% def
+%%------------------------------------------------------------------------------
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   %% Create a module that provides a single function with the var's
   %% value and add module attributes with the var's info.
@@ -66,6 +75,9 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   FunctionAst = function_form(val, [ClauseAst]),
 
   [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
+%%------------------------------------------------------------------------------
+%% fn, invoke, erl_fun
+%%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr) ->
   #{methods := Methods} = Expr,
 
@@ -100,6 +112,9 @@ ast(#{op := invoke} = Expr) ->
   [Fun] = ast(FExpr),
 
   [erl_syntax:application(Fun, Args)];
+%%------------------------------------------------------------------------------
+%% Literal data structures
+%%------------------------------------------------------------------------------
 ast(#{op := vector} = Expr) ->
   #{items := ItemsExprs} = Expr,
 
@@ -131,9 +146,30 @@ ast(#{op := set} = Expr) ->
   Items = lists:flatmap(fun ast/1, ItemsExprs),
   ListItems = erl_syntax:list(Items),
 
-  [application_mfa('clojerl.Set', new, [ListItems])].
+  [application_mfa('clojerl.Set', new, [ListItems])];
+%%------------------------------------------------------------------------------
+%% Literal data structures
+%%------------------------------------------------------------------------------
+ast(#{op := 'if'} = Expr) ->
+  #{ test := TestExpr
+   , then := ThenExpr
+   , else := ElseExpr
+   } = Expr,
 
+  [Test] = ast(TestExpr),
 
+  True          = erl_syntax:variable('True'),
+  FalseAtom     = erl_syntax:atom(false),
+  UndefinedAtom = erl_syntax:atom(undefined),
+  TrueGuards    = [ application_mfa(erlang, '=/=', [True, FalseAtom])
+                  , application_mfa(erlang, '=/=', [True, UndefinedAtom])
+                  ],
+  TrueClause    = erl_syntax:clause([True], TrueGuards, ast(ThenExpr)),
+
+  Whatever = erl_syntax:variable('_'),
+  FalseClause = erl_syntax:clause([Whatever], [], ast(ElseExpr)),
+
+  [erl_syntax:case_expr(Test, [TrueClause, FalseClause])].
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
