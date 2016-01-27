@@ -158,7 +158,7 @@ ast(#{op := set} = Expr) ->
 
   [application_mfa('clojerl.Set', new, [ListItems])];
 %%------------------------------------------------------------------------------
-%% Literal data structures
+%% if
 %%------------------------------------------------------------------------------
 ast(#{op := 'if'} = Expr) ->
   #{ test := TestExpr
@@ -179,8 +179,16 @@ ast(#{op := 'if'} = Expr) ->
   Whatever = erl_syntax:variable('_'),
   FalseClause = erl_syntax:clause([Whatever], [], ast(ElseExpr)),
 
-  [erl_syntax:case_expr(Test, [TrueClause, FalseClause])].
+  [erl_syntax:case_expr(Test, [TrueClause, FalseClause])];
+%%------------------------------------------------------------------------------
+%% throw
+%%------------------------------------------------------------------------------
+ast(#{op := throw} = Expr) ->
+  #{exception := ExceptionExpr} = Expr,
 
+  [Exception] = ast(ExceptionExpr),
+
+  [application_mfa(erlang, throw, [Exception])].
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions

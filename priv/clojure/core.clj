@@ -34,4 +34,4 @@
   (fn* [a b] (erlang/=:= a b)))
 
 (def assert ^:macro
-  (fn* [v] (if (not v) (prn :assertion))))
+  (fn* [v] (if (not v) (throw :assert))))

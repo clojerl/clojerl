@@ -16,7 +16,8 @@
          symbol/1,
          vector/1,
          map/1,
-         set/1
+         set/1,
+         throw/1
         ]).
 
 -spec all() -> [atom()].
@@ -539,6 +540,30 @@ set(_Config) ->
   #{op := set} = analyze_one(<<"#{:name :lastname}">>),
 
   {comments, ""}.
+
+-spec throw(config()) -> result().
+throw(_Config) ->
+  ct:comment("Throw with a single argument"),
+  #{op := throw} = analyze_one(<<"(throw 1)">>),
+
+  ct:comment("Throw with any other amount of arguments fails"),
+  ok = try analyze_one(<<"(throw)">>)
+       catch _:<<"Wrong number of args to throw, had: 0">> ->
+           ok
+       end,
+
+  ok = try analyze_one(<<"(throw :a :b)">>)
+       catch _:<<"Wrong number of args to throw, had: 2">> ->
+           ok
+       end,
+
+  ok = try analyze_one(<<"(throw :a :b :c :d)">>)
+       catch _:<<"Wrong number of args to throw, had: 4">> ->
+           ok
+       end,
+
+  {comments, ""}.
+
 
 %%------------------------------------------------------------------------------
 %% Helper functions

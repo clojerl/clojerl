@@ -69,7 +69,7 @@ special_forms() ->
    , clj_core:symbol(<<"deftype*">>) => undefined
    , clj_core:symbol(<<"reify*">>)   => undefined
 
-   , clj_core:symbol(<<"throw">>)    => undefined
+   , clj_core:symbol(<<"throw">>)    => fun parse_throw/2
    , clj_core:symbol(<<"try">>)      => undefined
    , clj_core:symbol(<<"catch">>)    => undefined
    , clj_core:symbol(<<"finally">>)  => undefined
@@ -621,6 +621,31 @@ lookup_var(VarSymbol, false, Env) ->
           {Var, Env}
       end
   end.
+
+%%------------------------------------------------------------------------------
+%% Parse throw
+%%------------------------------------------------------------------------------
+
+-spec parse_throw(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_throw(Env, List) ->
+  Count = clj_core:count(List),
+  clj_utils:throw_when( Count =/= 2
+                      , [ <<"Wrong number of args to throw, had: ">>
+                        , Count - 1
+                        ]
+                      ),
+
+  Second = clj_core:second(List),
+  ExceptionEnv = clj_env:context(Env, expr),
+  {ExceptionExpr, _} = clj_env:pop_expr(analyze_form(ExceptionEnv, Second)),
+
+  ThrowExpr = #{ op        => throw
+               , env       => ?DEBUG(Env3)
+               , form      => List
+               , exception => ExceptionExpr
+               },
+
+  clj_env:push_expr(Env, ThrowExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze invoke
