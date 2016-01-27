@@ -31,7 +31,7 @@ ast(#{op := quote, expr := Expr}) ->
 %%------------------------------------------------------------------------------
 ast(#{op := var, var := Var} = _Expr) ->
   Module = var_module(Var),
-  Name   = var_name(Var),
+  Name   = var_val_name(Var),
 
   [application_mfa(Module, Name, [])];
 ast(#{op := binding} = Expr) ->
@@ -60,8 +60,9 @@ ast(#{op := do} = Expr) ->
 %% def
 %%------------------------------------------------------------------------------
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
-  Module = var_module(Var),
-  Name   = var_name(Var),
+  Module  = var_module(Var),
+  Name    = var_name(Var),
+  ValName = var_val_name(Var),
 
   {ok, ModuleDef} = case code:ensure_loaded(Module) of
                       {module, Module} ->
@@ -70,19 +71,42 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
                         {ok, clj_module:new([attribute_module(Module)])}
                     end,
 
-  ExportAst = export_attribute([{Name, 0}]),
-
   %% Add the var's information as a module attribute
   VarAtom = erl_syntax:atom(var),
   VarAst = erl_syntax:abstract(Var),
   VarAttrAst = erl_syntax:attribute(VarAtom, [VarAst]),
 
-  InitAst = ast(InitExpr),
-  ClauseAst =  erl_syntax:clause([], InitAst),
-  FunctionAst = function_form(Name, [ClauseAst]),
+  {FunctionsAst, ExportsAst, ValClause} =
+    case InitExpr of
+      #{op := fn, methods := Methods} ->
+        ParamCountFun = fun(#{params := Params}) -> length(Params) end,
+        GroupedMethods = clj_utils:group_by(ParamCountFun, Methods),
 
-  ModuleDef1 = clj_module:add_attributes(ModuleDef, [ExportAst, VarAttrAst]),
-  ModuleDef2 = clj_module:add_functions(ModuleDef1, [FunctionAst]),
+        FunctionFun = fun(MethodsList) ->
+                          ClausesAst = lists:map(fun method_to_clause/1, MethodsList),
+                          function_form(Name, ClausesAst)
+                      end,
+        ExportFun = fun(Arity) -> export_attribute([{Name, Arity}]) end,
+
+        { lists:map(FunctionFun, maps:values(GroupedMethods))
+        , lists:map(ExportFun, maps:keys(GroupedMethods))
+        , erl_syntax:clause([], [erl_syntax:abstract(Var)])
+        };
+      _ ->
+        InitAst = ast(InitExpr),
+
+        { []
+        , []
+        , erl_syntax:clause([], InitAst)
+        }
+    end,
+
+  ValFunAst = function_form(ValName, [ValClause]),
+  ValFunExportAst = export_attribute([{ValName, 0}]),
+
+  AttrsAsts = [ValFunExportAst | ExportsAst] ++ [VarAttrAst],
+  ModuleDef1 = clj_module:add_attributes(ModuleDef, AttrsAsts),
+  ModuleDef2 = clj_module:add_functions(ModuleDef1, [ValFunAst | FunctionsAst]),
 
   clj_module:to_forms(ModuleDef2);
 %%------------------------------------------------------------------------------
@@ -119,9 +143,16 @@ ast(#{op := invoke} = Expr) ->
    } = Expr,
 
   Args = lists:flatmap(fun ast/1, ArgsExpr),
-  [Fun] = ast(FExpr),
 
-  [erl_syntax:application(Fun, Args)];
+  case FExpr of
+    #{op := var, var := Var} ->
+      Module = var_module(Var),
+      Function = var_name(Var),
+      [application_mfa(Module, Function, Args)];
+    _ ->
+      [FunAst] = ast(FExpr),
+      [erl_syntax:application(FunAst, Args)]
+  end;
 %%------------------------------------------------------------------------------
 %% Literal data structures
 %%------------------------------------------------------------------------------
@@ -198,15 +229,17 @@ ast(#{op := throw} = Expr) ->
 -spec var_module('clojerl.Var':type()) -> module().
 var_module(Var) ->
   NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
-  %% NameStr = clj_core:str('clojerl.Var':name(Var)),
-  %% ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
-  %% binary_to_atom(ModuleStr, utf8).
   binary_to_atom(NamespaceStr, utf8).
 
 -spec var_name('clojerl.Var':type()) -> module().
 var_name(Var) ->
   NameStr = clj_core:str('clojerl.Var':name(Var)),
   binary_to_atom(NameStr, utf8).
+
+-spec var_val_name('clojerl.Var':type()) -> module().
+var_val_name(Var) ->
+  NameStr = clj_core:str('clojerl.Var':name(Var)),
+  binary_to_atom(<<NameStr/binary, "__val">>, utf8).
 
 -spec attribute_module(atom()) -> erl_syntax:syntaxTree().
 attribute_module(Name) when is_atom(Name) ->
