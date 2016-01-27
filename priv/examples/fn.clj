@@ -1,6 +1,6 @@
 (ns examples.fn)
 
-(def val 1.0M)
+(def one 1)
 
 (def fixed-arity (fn* [x y] (clj_core/str [x y])))
 
@@ -21,7 +21,7 @@
 ;; Resolve var in another ns
 (clojure.core/prn {:a 2, #{1 2 2} 1})
 (clojure.core/prn clojure.core/prn)
-(clojure.core/prn val)
+(clojure.core/assert (= (clojure.core/str one) "1"))
 
 (clojure.core/prn (fixed-arity ::fixed ::arity))
 

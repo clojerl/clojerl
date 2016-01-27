@@ -24,14 +24,14 @@
   (fn* [& xs]
     (io/format "~s~n" (seq [(str xs)]))))
 
-(def x
-  (fn*
-   ([])
-   ([_x _y & _z])
-   ([_x _y])
-   ))
+(def =
+  (fn* [a b] (erlang/== a b)))
 
-(prn [(list [1 2 3]) (cons 1 '(:a :b :c))])
-(prn (x))
+(def not
+  (fn* [a] (erlang/not a)))
 
-;;(def y io/format)
+(def <-
+  (fn* [a b] (erlang/=:= a b)))
+
+(def assert ^:macro
+  (fn* [v] (if (not v) (prn :assertion))))
