@@ -7,7 +7,7 @@
 (def multiple-fixed-arities
   (fn*
    ([x] (clj_core/str x))
-   ([x y] (clj_core/str [x y]))
+   ([x y] (clj_core/str [:multiple-fixed-arities x y]))
    ([x y z] (clj_core/str [x y z]))))
 
 (def variadic-arity
