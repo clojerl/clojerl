@@ -15,8 +15,10 @@
 
 (def multiple-variadic
   (fn*
-   ([x] (clj_core/str [1 x]))
-   ([x & y] (clj_core/str [x y]))))
+   ([x] (clj_core/str [:multiple-variadic-1 x]))
+   ([x y] (clj_core/str [:multiple-variadic-2 x y]))
+   ([x y z] (clj_core/str [:multiple-variadic-3 x y z]))
+   ([x y z & w] (clj_core/str [:multiple-variadic-n x y z w]))))
 
 (def apply
   (fn* [f x] (f x)))
@@ -54,9 +56,13 @@
 (clojure.core/prn (multiple-fixed-arities :a :b))
 (clojure.core/prn (multiple-fixed-arities 1 2 3))
 
-;; (clojure.core/prn (variadic-arity 1 2 4))
-;; (clojure.core/prn (variadic-arity 1 2 3))
-;; (clojure.core/prn (variadic-arity 1 2 3 4))
+(clojure.core/prn (variadic-arity 1 2 4))
+(clojure.core/prn (variadic-arity 1 2 3))
+(clojure.core/prn (variadic-arity 1 2 3 4))
+(clojure.core/prn (variadic-arity))
 
-;; (clojure.core/prn (multiple-variadic 1))
-;; (clojure.core/prn (multiple-variadic 1 2 3 4 5))
+(clojure.core/prn (multiple-variadic 1))
+(clojure.core/prn (multiple-variadic 1 2))
+(clojure.core/prn (multiple-variadic 1 2 3))
+(clojure.core/prn (multiple-variadic 1 2 3 4))
+(clojure.core/prn (multiple-variadic 1 2 3 4 5 6 7 8 9 :a :b :c))

@@ -89,12 +89,13 @@ vals(#?TYPE{name = ?M, data = Map}) -> maps:values(Map).
 
 'clojerl.IColl.count'(#?TYPE{name = ?M, data = Map}) -> maps:size(Map).
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Map}, X) ->
-  FoldFun = fun(K, V, List) ->
-                [clj_core:vector([K, V]) | List]
-            end,
-  Items = maps:fold(FoldFun, [], Map),
-  clj_core:list([X | Items]).
+'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Map} = HashMap, X) ->
+  case clj_core:seq(X) of
+    [K, V] ->
+      HashMap#?TYPE{data = Map#{K => V}};
+    _ ->
+      throw(<<"Can't conj something that is not a key/value pair.">>)
+  end.
 
 'clojerl.IColl.empty'(_) -> new([]).
 

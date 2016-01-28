@@ -148,7 +148,8 @@ ast(#{op := invoke} = Expr) ->
     #{op := var, var := Var} ->
       Module = var_module(Var),
       Function = var_name(Var),
-      [application_mfa(Module, Function, Args)];
+      Args1 = var_process_args(Var, Args),
+      [application_mfa(Module, Function, Args1)];
     _ ->
       [FunAst] = ast(FExpr),
       [erl_syntax:application(FunAst, Args)]
@@ -240,6 +241,26 @@ var_name(Var) ->
 var_val_name(Var) ->
   NameStr = clj_core:str('clojerl.Var':name(Var)),
   binary_to_atom(<<NameStr/binary, "__val">>, utf8).
+
+-spec var_process_args(map(), [any()]) -> [any()].
+var_process_args(Var, Args) ->
+  Meta = clj_core:meta(Var),
+  #{ 'variadic?'     := IsVariadic
+   , max_fixed_arity := MaxFixedArity
+   , variadic_arity  := VariadicArity
+   } = Meta,
+
+  ArgCount = length(Args),
+  case IsVariadic of
+    _ when MaxFixedArity == undefined ->
+      [erl_syntax:list(Args)];
+    true when ArgCount =< MaxFixedArity ->
+      Args;
+    true when ArgCount >= VariadicArity ->
+      {Args1, Rest} = lists:split(VariadicArity, Args),
+      Args1 ++ [erl_syntax:list(Rest)];
+    _ -> Args
+  end.
 
 -spec attribute_module(atom()) -> erl_syntax:syntaxTree().
 attribute_module(Name) when is_atom(Name) ->

@@ -210,17 +210,18 @@ parse_fn(Env, List) ->
   Env2 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
   {MethodsExprs, Env3} = clj_env:last_exprs(Env2, length(MethodsList)),
 
-  IsVariadicFun = fun (#{'variadic?' := true}) -> true;
-                      (_) -> false
-                  end,
+  MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
+  IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
+                       (_) -> false
+                   end,
 
   AllVariadics = lists:filter(IsVariadicFun, MethodsExprs),
-  {IsVariadic, Variadic} = case AllVariadics of
-                             [] -> {false, undefined};
-                             [Variadic1 | _] -> {true, Variadic1}
-                           end,
+  {IsVariadic, VariadicArity} =
+    case AllVariadics of
+      [] -> {false, undefined};
+      [Variadic | _] -> {true, MethodArityFun(Variadic)}
+    end,
 
-  MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   FixedArities = lists:map(MethodArityFun, MethodsExprs -- AllVariadics),
   MaxFixedArity = case FixedArities of
                     [] -> undefined;
@@ -236,9 +237,9 @@ parse_fn(Env, List) ->
                          "with the same arity">>),
 
   clj_utils:throw_when(IsVariadic andalso
-                       Variadic =/= undefined andalso
+                       VariadicArity =/= undefined andalso
                        MaxFixedArity =/= undefined andalso
-                       MaxFixedArity > MethodArityFun(Variadic),
+                       MaxFixedArity > VariadicArity,
                        <<"Can't have fixed arity overload "
                          "with more params than variadic overload">>),
 
@@ -247,6 +248,7 @@ parse_fn(Env, List) ->
                        , form            => List
                        , 'variadic?'     => IsVariadic
                        , max_fixed_arity => MaxFixedArity
+                       , variadic_arity  => VariadicArity
                        , methods         => MethodsExprs
                        , once            => IsOnce
                        },
@@ -537,17 +539,28 @@ parse_def(Env, List) ->
 
       ExprEnv2 = clj_env:context(Env2, expr),
       {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
-      VarExpr = #{ op      => def
-                 , env     => ?DEBUG(Env3)
+
+      Var2 = case InitExpr of
+               #{op := fn} ->
+                 ExprInfo = maps:without([op, env, methods, form], InitExpr),
+                 VarMeta = clj_core:meta(Var1),
+                 VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
+                 clj_core:with_meta(Var1, VarMeta1);
+               _ -> Var1
+             end,
+      Env4 = clj_env:update_var(Env3, Var2),
+
+      DefExpr = #{ op      => def
+                 , env     => ?DEBUG(Env4)
                  , form    => List
                  , name    => VarSymbol
-                 , var     => Var1
+                 , var     => Var2
                  , doc     => Docstring
                  , init    => InitExpr
                  , dynamic => IsDynamic
                  },
 
-      clj_env:push_expr(Env3, VarExpr)
+      clj_env:push_expr(Env4, DefExpr)
   end.
 
 -spec validate_def_args('clojerl.List':type()) -> undefined | binary().

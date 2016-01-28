@@ -4,6 +4,7 @@
 
 -behavior('clojerl.IDeref').
 -behavior('clojerl.Stringable').
+-behavior('clojerl.IMeta').
 
 -export([
          new/2,
@@ -14,6 +15,9 @@
         ]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.IDeref.deref'/1]).
+-export([ 'clojerl.IMeta.meta'/1
+        , 'clojerl.IMeta.with_meta'/2
+        ]).
 
 -record(?M, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
             , name                   :: 'clojerl.Symbol':type()
@@ -29,10 +33,6 @@
 new(NsSym, NameSym) ->
   Data = #?M{ ns         = NsSym
             , name       = NameSym
-            , root       = undefined
-            , meta       = #{}
-            , is_dynamic = false
-            , is_macro   = false
             },
   #?TYPE{data = Data}.
 
@@ -75,3 +75,11 @@ is_macro(#?TYPE{data = #?M{is_macro = IsMacro}}) -> IsMacro.
               "There is no Erlang function "
               "to back it up.">>)
   end.
+
+'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
+  maps:get(meta, Info, undefined).
+
+'clojerl.IMeta.with_meta'( #?TYPE{name = ?M, info = Info} = Keyword
+                         , Metadata
+                         ) ->
+  Keyword#?TYPE{info = Info#{meta => Metadata}}.

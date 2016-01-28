@@ -21,8 +21,8 @@
   (fn* [x] (clj_core/str x)))
 
 (def prn
-  (fn* [& xs]
-    (io/format "~s~n" (seq [(str xs)]))))
+  (fn* [x]
+       (io/format "~s~n" (seq [(str x)]))))
 
 (def =
   (fn* [a b] (erlang/== a b)))

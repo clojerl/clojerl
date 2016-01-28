@@ -29,6 +29,7 @@
          deref/1,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
+         merge/1,
          'contains?'/2,
          boolean/1,
          str/1,
@@ -202,6 +203,20 @@ get(X, Key) -> 'clojerl.ILookup':get(X, Key).
 -spec get(any(), any(), any()) -> any().
 get(undefined, _Key, _NotFound) -> undefined;
 get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
+
+-spec merge([any()]) -> any().
+merge([]) ->
+  undefined;
+merge([Map]) ->
+  Map;
+merge([undefined | Maps]) ->
+  merge(Maps);
+merge([First, undefined | Rest]) ->
+  merge([First | Rest]);
+merge([First, Second | Rest]) ->
+  ConjFun = fun(Item, Acc) -> conj(Acc, Item) end,
+  Result = lists:foldl(ConjFun, First, seq2(Second)),
+  merge([Result | Rest]).
 
 -spec 'contains?'(any(), any()) -> any().
 'contains?'(X, Key) -> get(X, Key) =/= undefined.
