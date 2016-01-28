@@ -30,10 +30,6 @@
 
 (clojure.core/prn clojure.core/prn)
 
-;; Provide a fn var as an argument to be used as a function
-
-;; (apply clojure.core/prn :apply!!!)
-
 ;; Use if
 
 (clojure.core/prn (if :test
@@ -56,13 +52,29 @@
 (clojure.core/prn (multiple-fixed-arities :a :b))
 (clojure.core/prn (multiple-fixed-arities 1 2 3))
 
+;; Call a fn with a single variadic argument
+
 (clojure.core/prn (variadic-arity 1 2 4))
 (clojure.core/prn (variadic-arity 1 2 3))
 (clojure.core/prn (variadic-arity 1 2 3 4))
 (clojure.core/prn (variadic-arity))
+
+;; Call a  variadic fn that also has fixed arities
 
 (clojure.core/prn (multiple-variadic 1))
 (clojure.core/prn (multiple-variadic 1 2))
 (clojure.core/prn (multiple-variadic 1 2 3))
 (clojure.core/prn (multiple-variadic 1 2 3 4))
 (clojure.core/prn (multiple-variadic 1 2 3 4 5 6 7 8 9 :a :b :c))
+
+;; Call an anonymous fn with a single fixed arity
+
+(clojure.core/prn ((fn* [x] x) :anon-fn-fixed))
+
+;; Call an anonymous fn with multiple fixed arities
+
+(clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
+
+;; Provide a fn var as an argument to be used as a function
+
+;; (apply clojure.core/prn :apply!!!)

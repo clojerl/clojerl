@@ -542,7 +542,10 @@ parse_def(Env, List) ->
 
       Var2 = case InitExpr of
                #{op := fn} ->
-                 ExprInfo = maps:without([op, env, methods, form], InitExpr),
+                 %% Add information about the associated function
+                 %% to the var's metadata.
+                 RemoveKeys = [op, env, methods, form, once],
+                 ExprInfo = maps:without(RemoveKeys, InitExpr),
                  VarMeta = clj_core:meta(Var1),
                  VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
                  clj_core:with_meta(Var1, VarMeta1);
