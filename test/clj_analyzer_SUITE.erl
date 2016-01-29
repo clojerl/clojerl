@@ -118,7 +118,7 @@ def(_Config) ->
        end,
 
   ct:comment("Create def outside current namespace"),
-  ok = try analyze_all(<<"(ns bla) (def x 1) (ns user) (def bla/x 2)">>)
+  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user) (def bla/x 2)">>)
        catch _:Reason5 ->
            <<"Can't create defs outside of current ns">> = Reason5,
            ok
@@ -127,16 +127,16 @@ def(_Config) ->
   #{op := def,
     doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
 
-  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y user/x)">>),
+  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y $user/x)">>),
 
-  #{op := def} = analyze_one(<<"(def user/x 1)">>),
+  #{op := def} = analyze_one(<<"(def $user/x 1)">>),
 
   [#{op := def}] = analyze_all(<<"(ns bla) (def x 1)">>),
 
   ct:comment("Function vars should have fn information in their metadata"),
   #{ op  := def
    , var := Var
-   } = analyze_one(<<"(def user/x (fn* [x] x))">>),
+   } = analyze_one(<<"(def $user/x (fn* [x] x))">>),
 
   VarMeta = clj_core:meta(Var),
 
@@ -151,11 +151,11 @@ def(_Config) ->
 quote(_Config) ->
   ct:comment("Quote with reader macro"),
   #{op := quote,
-    expr := #{op := constant}} = analyze_one(<<"'(user/x 1)">>),
+    expr := #{op := constant}} = analyze_one(<<"'($user/x 1)">>),
 
   ct:comment("Quote with quote symbol"),
   #{op := quote,
-    expr := #{op := constant}} = analyze_one(<<"(quote (user/x 1))">>),
+    expr := #{op := constant}} = analyze_one(<<"(quote ($user/x 1))">>),
 
   ct:comment("More than one arg to quote"),
   ok = try analyze_all(<<"(quote 1 2 3)">>)

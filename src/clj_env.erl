@@ -37,7 +37,7 @@
 
 -spec default() -> env().
 default() ->
-  UserSym = clj_core:symbol(<<"user">>),
+  UserSym = clj_core:symbol(<<"$user">>),
   UserNs = clj_namespace:new(UserSym),
   #{namespaces => #{UserSym => UserNs},
     context    => expr,

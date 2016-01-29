@@ -7,13 +7,19 @@
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IFn').
 
--export([
-         new/2,
-         namespace/1,
-         name/1,
-         dynamic/1, dynamic/2,
-         is_macro/1
+-export([ new/2
+        , namespace/1
+        , name/1
+        , dynamic/1
+        , dynamic/2
+        , is_macro/1
         ]).
+
+-export([ function/1
+        , module/1
+        , val_function/1
+        ]).
+
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.IDeref.deref'/1]).
 -export([ 'clojerl.IMeta.meta'/1
@@ -54,6 +60,22 @@ dynamic(#?TYPE{name = ?M, data = Data} = Var, IsDynamic) ->
 -spec is_macro(type()) -> boolean().
 is_macro(#?TYPE{data = #?M{is_macro = IsMacro}}) -> IsMacro.
 
+-spec module(type()) -> atom().
+module(#?TYPE{name = ?M} = Var) ->
+  Ns = namespace(Var),
+  'clojerl.Symbol':to_atom(Ns).
+
+-spec function(type()) -> atom().
+function(#?TYPE{name = ?M} = Var) ->
+  Name = name(Var),
+  'clojerl.Symbol':to_atom(Name).
+
+-spec val_function(type()) -> atom().
+val_function(#?TYPE{name = ?M} = Var) ->
+  NameSym = name(Var),
+  Name = clj_core:name(NameSym),
+  binary_to_atom(<<Name/binary, "__val">>, utf8).
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
@@ -63,15 +85,15 @@ is_macro(#?TYPE{data = #?M{is_macro = IsMacro}}) -> IsMacro.
     , "/"
     , (clj_core:str(NameSym))/binary>>.
 
-'clojerl.IDeref.deref'(#?TYPE{data = #?M{ns = Namespace, name = Name}}) ->
-  Module = binary_to_atom(clj_core:name(Namespace), utf8),
-  Function = binary_to_atom(clj_core:name(Name), utf8),
+'clojerl.IDeref.deref'(#?TYPE{data = #?M{ns = NsSym, name = NameSym}} = Var) ->
+  Module = module(Var),
+  FunctionVal = val_function(Var),
 
-  case erlang:function_exported(Module, Function, 1) of
-    true -> Module:Function();
+  case erlang:function_exported(Module, FunctionVal, 0) of
+    true -> Module:FunctionVal();
     false ->
-      NsBin = clj_core:name(Namespace),
-      NameBin = clj_core:name(Name),
+      NsBin = clj_core:name(NsSym),
+      NameBin = clj_core:name(NameSym),
       throw(<<"Could not derefence ",
               NsBin/binary, "/", NameBin/binary, ". "
               "There is no Erlang function "

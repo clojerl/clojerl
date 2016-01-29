@@ -30,8 +30,8 @@ ast(#{op := quote, expr := Expr}) ->
 %% var, binding & local
 %%------------------------------------------------------------------------------
 ast(#{op := var, var := Var} = _Expr) ->
-  Module = var_module(Var),
-  Name   = var_val_name(Var),
+  Module = 'clojerl.Var':module(Var),
+  Name   = 'clojerl.Var':val_function(Var),
 
   [application_mfa(Module, Name, [])];
 ast(#{op := binding} = Expr) ->
@@ -60,9 +60,9 @@ ast(#{op := do} = Expr) ->
 %% def
 %%------------------------------------------------------------------------------
 ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
-  Module  = var_module(Var),
-  Name    = var_name(Var),
-  ValName = var_val_name(Var),
+  Module  = 'clojerl.Var':module(Var),
+  Name    = 'clojerl.Var':function(Var),
+  ValName = 'clojerl.Var':val_function(Var),
 
   {ok, ModuleDef} = case code:ensure_loaded(Module) of
                       {module, Module} ->
@@ -166,8 +166,8 @@ ast(#{op := invoke} = Expr) ->
 
   case FExpr of
     #{op := var, var := Var} ->
-      Module = var_module(Var),
-      Function = var_name(Var),
+      Module   = 'clojerl.Var':module(Var),
+      Function = 'clojerl.Var':function(Var),
       Args1 = var_process_args(Var, Args),
       [application_mfa(Module, Function, Args1)];
     #{op := erl_fun} ->
@@ -251,22 +251,6 @@ ast(#{op := throw} = Expr) ->
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
-
-%% @doc Erlang module's name will be clj.{{namespace}}.{{name}}__var
--spec var_module('clojerl.Var':type()) -> module().
-var_module(Var) ->
-  NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
-  binary_to_atom(NamespaceStr, utf8).
-
--spec var_name('clojerl.Var':type()) -> module().
-var_name(Var) ->
-  NameStr = clj_core:str('clojerl.Var':name(Var)),
-  binary_to_atom(NameStr, utf8).
-
--spec var_val_name('clojerl.Var':type()) -> module().
-var_val_name(Var) ->
-  NameStr = clj_core:str('clojerl.Var':name(Var)),
-  binary_to_atom(<<NameStr/binary, "__val">>, utf8).
 
 -spec var_process_args(map(), [any()]) -> [any()].
 var_process_args(Var, Args) ->
