@@ -6,12 +6,15 @@
 
 (def multiple-fixed-arities
   (fn*
-   ([x] (clj_core/str x))
-   ([x y] (clj_core/str [:multiple-fixed-arities x y]))
-   ([x y z] (clj_core/str [x y z]))))
+   ([x] (clj_core/str [:multiple-fixed-arities 1 x]))
+   ([x y] (clj_core/str [:multiple-fixed-arities 2 x y]))
+   ([x y z] (clj_core/str [:multiple-fixed-arities 3 x y z]))))
 
 (def variadic-arity
-  (fn* [& xs] (clj_core/str xs)))
+  (fn* [& xs] (clj_core/str [:variadic-arity xs])))
+
+(def variadic-arity-2
+  (fn* [x & xs] (clj_core/str [:variadic-arity-2 x xs])))
 
 (def multiple-variadic
   (fn*
@@ -20,8 +23,10 @@
    ([x y z] (clj_core/str [:multiple-variadic-3 x y z]))
    ([x y z & w] (clj_core/str [:multiple-variadic-n x y z w]))))
 
-(def apply
-  (fn* [f x] (f x)))
+(def apply-f
+  (fn*
+   ([f x] (f x))))
+
 
 ;; Resolve var in another ns
 (clojure.core/prn {:a 2, #{1 2 2} one})
@@ -59,6 +64,9 @@
 (clojure.core/prn (variadic-arity 1 2 3 4))
 (clojure.core/prn (variadic-arity))
 
+(clojure.core/prn (variadic-arity-2 1))
+(clojure.core/prn (variadic-arity-2 1 2 3))
+
 ;; Call a  variadic fn that also has fixed arities
 
 (clojure.core/prn (multiple-variadic 1))
@@ -73,8 +81,17 @@
 
 ;; Call an anonymous fn with multiple fixed arities
 
-(clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
+;; (clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
 
 ;; Provide a fn var as an argument to be used as a function
 
-;; (apply clojure.core/prn :apply!!!)
+(apply-f clojure.core/prn :apply!!!)
+
+;; Keywords as a function for maps
+
+(clojure.core/prn (:a {:a 1}))
+(clojure.core/prn (:a {:b 2} :not-found-a))
+(clojure.core/prn (clojure.core/apply :b [{:b 2}]))
+(clojure.core/prn (clojure.core/apply :b {:c 3} [:not-found-b]))
+
+;; (clojure.core/prn (:a)) ;; this throws

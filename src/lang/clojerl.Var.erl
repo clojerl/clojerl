@@ -5,6 +5,7 @@
 -behavior('clojerl.IDeref').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.IFn').
 
 -export([
          new/2,
@@ -18,6 +19,7 @@
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
+-export(['clojerl.IFn.invoke'/2]).
 
 -record(?M, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
             , name                   :: 'clojerl.Symbol':type()
@@ -83,3 +85,10 @@ is_macro(#?TYPE{data = #?M{is_macro = IsMacro}}) -> IsMacro.
                          , Metadata
                          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
+
+'clojerl.IFn.invoke'(#?TYPE{name =?M, data = Data}, Args) ->
+  #?M{ns = Namespace, name = Name} = Data,
+  Module = binary_to_atom(clj_core:name(Namespace), utf8),
+  Function = binary_to_atom(clj_core:name(Name), utf8),
+
+  erlang:apply(Module, Function, clj_core:seq(Args)).

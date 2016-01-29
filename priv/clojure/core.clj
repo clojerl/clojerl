@@ -35,3 +35,11 @@
 
 (def assert ^:macro
   (fn* [v] (if (not v) (throw :assert))))
+
+(def apply
+  (fn*
+   ([f args] (clj_core/invoke f (seq args)))
+   ([f x args] (clj_core/invoke f (cons x (seq args))))
+   ([f x y args] (clj_core/invoke f (cons x (cons y (seq args)))))
+   ([f x y z args] (clj_core/invoke f (cons x (cons y (cons z (seq args))))))
+   ([f a b c d args] (clj_core/invoke f (cons a (cons b (cons c (cons d (seq args)))))))))

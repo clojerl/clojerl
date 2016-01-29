@@ -150,9 +150,12 @@ ast(#{op := invoke} = Expr) ->
       Function = var_name(Var),
       Args1 = var_process_args(Var, Args),
       [application_mfa(Module, Function, Args1)];
+    #{op := Op} when Op == erl_fun; Op == fn ->
+      [FunAst] = ast(FExpr),
+      [erl_syntax:application(FunAst, Args)];
     _ ->
       [FunAst] = ast(FExpr),
-      [erl_syntax:application(FunAst, Args)]
+      [application_mfa(clj_core, invoke, [FunAst, erl_syntax:list(Args)])]
   end;
 %%------------------------------------------------------------------------------
 %% Literal data structures
@@ -252,11 +255,9 @@ var_process_args(Var, Args) ->
 
   ArgCount = length(Args),
   case IsVariadic of
-    _ when MaxFixedArity == undefined ->
-      [erl_syntax:list(Args)];
-    true when ArgCount =< MaxFixedArity ->
+    true when ArgCount =< MaxFixedArity, MaxFixedArity =/= undefined ->
       Args;
-    true when ArgCount >= VariadicArity ->
+    true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
       {Args1, Rest} = lists:split(VariadicArity, Args),
       Args1 ++ [erl_syntax:list(Rest)];
     _ -> Args

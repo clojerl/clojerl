@@ -35,6 +35,7 @@
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
          'even?'/1,
+         invoke/2,
          next_id/0,
          gensym/0, gensym/1
         ]).
@@ -260,8 +261,13 @@ hash_map(Items) ->
 hash_set(Items) ->
   'clojerl.Set':new(Items).
 
+-spec 'even?'(integer()) -> boolean().
 'even?'(X) ->
   (X band 1) == 0.
+
+-spec invoke('clojerl.IFn':type(), 'clojerl.ISequential':type()) -> any().
+invoke(Fn, Args) ->
+  'clojerl.IFn':invoke(Fn, Args).
 
 -spec next_id() -> integer().
 next_id() ->
