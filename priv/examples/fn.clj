@@ -80,7 +80,7 @@
 
 ;; TODO: Call an anonymous fn with multiple fixed arities
 
-;; (clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
+(clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
 
 ;; Provide an erlang function as an argument to be used as a function
 

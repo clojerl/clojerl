@@ -76,29 +76,15 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
   VarAst = erl_syntax:abstract(Var),
   VarAttrAst = erl_syntax:attribute(VarAtom, [VarAst]),
 
-  {FunctionsAst, ExportsAst, ValClause} =
+  {{FunctionsAst, ExportsAst}, ValClause} =
     case InitExpr of
-      #{op := fn, methods := Methods} ->
-        ParamCountFun = fun(#{params := Params}) -> length(Params) end,
-        GroupedMethods = clj_utils:group_by(ParamCountFun, Methods),
-
-        FunctionFun = fun(MethodsList) ->
-                          ClausesAst = lists:map(fun method_to_clause/1, MethodsList),
-                          function_form(Name, ClausesAst)
-                      end,
-        ExportFun = fun(Arity) -> export_attribute([{Name, Arity}]) end,
-
-        { lists:map(FunctionFun, maps:values(GroupedMethods))
-        , lists:map(ExportFun, maps:keys(GroupedMethods))
+      #{op := fn} ->
+        { ast_for_fn(Name, InitExpr)
         , erl_syntax:clause([], [erl_syntax:abstract(Var)])
         };
       _ ->
         InitAst = ast(InitExpr),
-
-        { []
-        , []
-        , erl_syntax:clause([], InitAst)
-        }
+        {{[], []}, erl_syntax:clause([], InitAst)}
     end,
 
   ValFunAst = function_form(ValName, [ValClause]),
@@ -318,3 +304,18 @@ application_mfa(Module, Function, Args) ->
   ValQualifier = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
 
   erl_syntax:application(ValQualifier, Args).
+
+-spec ast_for_fn(atom(), map()) -> {[erl_syntax:syntaxTree()], [erl_syntax:syntaxTree()]}.
+ast_for_fn(Name, #{op := fn, methods := Methods}) ->
+  ParamCountFun = fun(#{params := Params}) -> length(Params) end,
+  GroupedMethods = clj_utils:group_by(ParamCountFun, Methods),
+
+  FunctionFun = fun(MethodsList) ->
+                    ClausesAst = lists:map(fun method_to_clause/1, MethodsList),
+                    function_form(Name, ClausesAst)
+                end,
+  ExportFun = fun(Arity) -> export_attribute([{Name, Arity}]) end,
+
+  { lists:map(FunctionFun, maps:values(GroupedMethods))
+  , lists:map(ExportFun, maps:keys(GroupedMethods))
+  }.

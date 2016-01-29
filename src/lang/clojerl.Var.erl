@@ -81,9 +81,8 @@ val_function(#?TYPE{name = ?M} = Var) ->
 %%------------------------------------------------------------------------------
 
 'clojerl.Stringable.str'(#?TYPE{data = #?M{ns = NsSym, name = NameSym}}) ->
-  <<(clj_core:str(NsSym))/binary
-    , "/"
-    , (clj_core:str(NameSym))/binary>>.
+  <<"#'", (clj_core:str(NsSym))/binary
+    , "/", (clj_core:str(NameSym))/binary>>.
 
 'clojerl.IDeref.deref'(#?TYPE{data = #?M{ns = NsSym, name = NameSym}} = Var) ->
   Module = module(Var),
