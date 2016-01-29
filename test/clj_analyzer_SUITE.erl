@@ -133,6 +133,18 @@ def(_Config) ->
 
   [#{op := def}] = analyze_all(<<"(ns bla) (def x 1)">>),
 
+  ct:comment("Function vars should have fn information in their metadata"),
+  #{ op  := def
+   , var := Var
+   } = analyze_one(<<"(def user/x (fn* [x] x))">>),
+
+  VarMeta = clj_core:meta(Var),
+
+  #{ 'variadic?'     := false
+   , max_fixed_arity := 1
+   , variadic_arity  := undefined
+   } = VarMeta,
+
   {comments, ""}.
 
 -spec quote(config()) -> result().

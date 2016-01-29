@@ -48,7 +48,7 @@ default() ->
 -spec context(env(), context()) -> env().
 context(Env, Ctx) -> Env#{context => Ctx}.
 
--spec push_expr(env(), erl_syntax:syntaxTree()) -> env().
+-spec push_expr(env(), map()) -> env().
 push_expr(Env = #{exprs := Exprs}, Expr) ->
   Env#{exprs => [Expr | Exprs]};
 push_expr(Env, Expr) ->

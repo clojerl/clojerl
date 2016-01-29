@@ -518,8 +518,8 @@ parse_def(Env, List) ->
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
       case {clj_env:current_ns(Env1), clj_core:namespace(VarSymbol)} of
-        {VarNsSym, _} -> ok;
         {_ , undefined} -> ok;
+        {VarNsSym, _} -> ok;
         _ -> throw(<<"Can't create defs outside of current ns">>)
       end,
 
