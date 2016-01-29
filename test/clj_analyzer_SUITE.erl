@@ -17,7 +17,8 @@
          vector/1,
          map/1,
          set/1,
-         throw/1
+         throw/1,
+         erl_fun/1
         ]).
 
 -spec all() -> [atom()].
@@ -561,6 +562,41 @@ throw(_Config) ->
        catch _:<<"Wrong number of args to throw, had: 4">> ->
            ok
        end,
+
+  {comments, ""}.
+
+-spec erl_fun(config()) -> result().
+erl_fun(_Config) ->
+  ct:comment("Erlang fun without arity"),
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := is_atom
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom">>),
+
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := is_atom
+   , arity    := 1
+   } = analyze_one(<<"erlang/is_atom.1">>),
+
+  #{ op       := erl_fun
+   , module   := io
+   , function := 'format.1'
+   , arity    := 2
+   } = analyze_one(<<"io/format.1.2">>),
+
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := 'is_atom.'
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom.">>),
+
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := 'is_atom.hello'
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom.hello">>),
 
   {comments, ""}.
 

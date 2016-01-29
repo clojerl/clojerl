@@ -128,8 +128,8 @@ ast(#{op := fn} = Expr) ->
 
       [erl_syntax:named_fun_expr(Name, Clauses)]
   end;
-ast(#{op := erl_fun} = Expr) ->
-  #{ module := Module
+ast(#{op := erl_fun, invoke := true} = Expr) ->
+  #{ module   := Module
    , function := Function
    } = Expr,
 
@@ -137,6 +137,26 @@ ast(#{op := erl_fun} = Expr) ->
   FunctionTree = erl_syntax:atom(Function),
 
   [erl_syntax:module_qualifier(ModuleTree, FunctionTree)];
+ast(#{op := erl_fun} = Expr) ->
+  #{ module   := Module
+   , function := Function
+   , arity    := Arity
+   } = Expr,
+
+  clj_utils:throw_when( Arity == undefined
+                      , [ <<"Can't use erlang function as value without ">>
+                        , <<"specifying its arity">>
+                        ]
+                      ),
+
+  ModuleTree   = erl_syntax:atom(Module),
+  FunctionTree = erl_syntax:atom(Function),
+  ArityTree    = erl_syntax:abstract(Arity),
+
+  ArityQualifier  = erl_syntax:arity_qualifier(FunctionTree, ArityTree),
+  ModuleQualifier = erl_syntax:module_qualifier(ModuleTree, ArityQualifier),
+
+  [erl_syntax:implicit_fun(ModuleQualifier)];
 ast(#{op := invoke} = Expr) ->
   #{ args := ArgsExpr
    , f    := FExpr
@@ -150,7 +170,10 @@ ast(#{op := invoke} = Expr) ->
       Function = var_name(Var),
       Args1 = var_process_args(Var, Args),
       [application_mfa(Module, Function, Args1)];
-    #{op := Op} when Op == erl_fun; Op == fn ->
+    #{op := erl_fun} ->
+      [FunAst] = ast(FExpr#{invoke => true}),
+      [erl_syntax:application(FunAst, Args)];
+    #{op := fn} ->
       [FunAst] = ast(FExpr),
       [erl_syntax:application(FunAst, Args)];
     _ ->

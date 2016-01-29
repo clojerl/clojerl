@@ -79,9 +79,15 @@
 
 (clojure.core/prn ((fn* [x] x) :anon-fn-fixed))
 
-;; Call an anonymous fn with multiple fixed arities
+;; TODO: Call an anonymous fn with multiple fixed arities
 
 ;; (clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
+
+;; Provide an erlang function as an argument to be used as a function
+
+(apply-f io/format.1 "io:format/1 FTW!!!~n")
+(clojure.core/apply io/format.2 "io:format/2 FTW!!!: ~s~n" [(clojure.core/seq ["lala"])])
+;; (apply-f io/format.2 "io:format/1 FTW!!!~n") ;; This correctly fails
 
 ;; Provide a fn var as an argument to be used as a function
 
@@ -93,5 +99,4 @@
 (clojure.core/prn (:a {:b 2} :not-found-a))
 (clojure.core/prn (clojure.core/apply :b [{:b 2}]))
 (clojure.core/prn (clojure.core/apply :b {:c 3} [:not-found-b]))
-
 ;; (clojure.core/prn (:a)) ;; this throws

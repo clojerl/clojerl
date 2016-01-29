@@ -699,11 +699,12 @@ analyze_symbol(Env, Symbol) ->
         undefined ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
-        {erl_fun, Module, Function} ->
+        {erl_fun, Module, Function, Arity} ->
           FunExpr = #{ op       => erl_fun
                      , env      => ?DEBUG(Env)
                      , module   => Module
                      , function => Function
+                     , arity    => Arity
                      },
           clj_env:push_expr(Env, FunExpr);
         Var ->
@@ -717,7 +718,7 @@ analyze_symbol(Env, Symbol) ->
   end.
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
-  'clojerl.Var':type() | {erl_fun, module(), atom()} | undefined.
+  'clojerl.Var':type() | {erl_fun, module(), atom(), integer()} | undefined.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local = clj_env:get_local(Env, Symbol),
@@ -734,8 +735,9 @@ resolve(Env, Symbol) ->
           %% If there is no var then assume it's a Module:Function pair.
           %% Let's see how this works out.
           NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
-          NameAtom = binary_to_atom(clj_core:name(Symbol), utf8),
-          {erl_fun, NsAtom, NameAtom};
+          {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
+          NameAtom = binary_to_atom(Name, utf8),
+          {erl_fun, NsAtom, NameAtom, Arity};
         Var ->
           Var
       end;
@@ -745,6 +747,21 @@ resolve(Env, Symbol) ->
       CurNsVar;
     _ ->
       undefined
+  end.
+
+-spec erl_fun_arity(binary()) -> {binary(), undefined | integer()}.
+erl_fun_arity(Name) ->
+  case binary:split(Name, <<".">>, [global]) of
+    [_] -> {Name, undefined};
+    Parts ->
+      Last = lists:last(Parts),
+      case re:run(Last, <<"\\d+">>) of
+        nomatch -> {Name, undefined};
+        _ ->
+          NameParts = clj_utils:binary_join(lists:droplast(Parts), <<".">>),
+          Arity = binary_to_integer(Last),
+          {iolist_to_binary(NameParts), Arity}
+      end
   end.
 
 %%------------------------------------------------------------------------------
