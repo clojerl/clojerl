@@ -179,34 +179,34 @@ parse_quote(Env, List) ->
 -spec parse_fn(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_fn(Env, List) ->
   Op = clj_core:first(List),
-  {Name, Methods} =
+
+  {NameSym, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
-      true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {clj_core:gensym(<<"fn__">>), clj_core:rest(List)}
+      true  ->
+        %% TODO:
+        %% We need to change the name of the fn* so that there is no name
+        %% clash, with another anonymous function with the same name,
+        %% or even an existing var with the same name. If the name is
+        %% changed then all the symbols that should resolve to the fn*
+        %% var would need to be tracked down.
+        {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
+      false ->
+        {clj_core:gensym(<<"fn__">>), clj_core:rest(List)}
     end,
+
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
                   false -> clj_core:seq2(Methods)
                 end,
-  NameExpr = #{ op        => binding
-              , env       => ?DEBUG(Env)
-              , form      => Name
-              , local     => fn
-              , name      => Name
-              , namespace => clj_env:current_ns(Env)
-              },
 
-  Env1Temp = clj_env:put_local(Env, Name, maps:remove(env, NameExpr)),
-  Env1 = clj_env:put(Env1Temp, local, NameExpr),
+  {Var, Env1Temp} = lookup_var(NameSym, Env),
+  Env1 = clj_env:put(Env1Temp, local, Var),
 
   OpMeta = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
   IsOnce = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
 
-  MethodEnv = maps:put(once, IsOnce, maps:remove(in_try, Env1)),
-  AnalyzeFnMethodFun = fun(M, EnvAcc) -> analyze_fn_method(EnvAcc, M) end,
-  Env2 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
-  {MethodsExprs, Env3} = clj_env:last_exprs(Env2, length(MethodsList)),
+  {MethodsExprs, Env2} = analyze_fn_methods(Env1, MethodsList, IsOnce),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
@@ -241,21 +241,37 @@ parse_fn(Env, List) ->
                        <<"Can't have fixed arity overload "
                          "with more params than variadic overload">>),
 
-  FnExpr = maps:merge(#{ op              => fn
-                       , env             => ?DEBUG(Env)
-                       , form            => List
-                       , 'variadic?'     => IsVariadic
-                       , max_fixed_arity => MaxFixedArity
-                       , variadic_arity  => VariadicArity
-                       , methods         => MethodsExprs
-                       , once            => IsOnce
-                       },
-                     case Name of
-                       undefined -> #{};
-                       _ -> #{local => NameExpr}
-                     end),
+  %% Now that we have all the fn info we re-analyze the methods
+  %% with the associated var updated. This is so that a recursive
+  %% call can be correctly resolved.
+  VarMeta = #{ 'variadic?'     => IsVariadic
+             , max_fixed_arity => MaxFixedArity
+             , variadic_arity  => VariadicArity
+             },
+  Var1 = clj_core:with_meta(Var, VarMeta),
+  Env3 = clj_env:update_var(Env2, Var1),
+  {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce),
 
-  clj_env:push_expr(Env3, FnExpr).
+  FnExpr = #{ op              => fn
+            , env             => ?DEBUG(Env)
+            , form            => List
+            , 'variadic?'     => IsVariadic
+            , max_fixed_arity => MaxFixedArity
+            , variadic_arity  => VariadicArity
+            , methods         => MethodsExprs1
+            , once            => IsOnce
+            , local           => Var1
+            },
+
+  clj_env:push_expr(Env4, FnExpr).
+
+-spec analyze_fn_methods(clj_env:env(), ['clojerl.List':type()], boolean()) ->
+ {[map()], clj_env:env()}.
+analyze_fn_methods(Env, MethodsList, IsOnce) ->
+  MethodEnv = maps:put(once, IsOnce, maps:remove(in_try, Env)),
+  AnalyzeFnMethodFun = fun(M, EnvAcc) -> analyze_fn_method(EnvAcc, M) end,
+  Env1 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
+  clj_env:last_exprs(Env1, length(MethodsList)).
 
 -spec analyze_fn_method(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_fn_method(Env, List) ->
@@ -538,17 +554,7 @@ parse_def(Env, List) ->
       ExprEnv2 = clj_env:context(Env2, expr),
       {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
 
-      Var2 = case InitExpr of
-               #{op := fn} ->
-                 %% Add information about the associated function
-                 %% to the var's metadata.
-                 RemoveKeys = [op, env, methods, form, once],
-                 ExprInfo = maps:without(RemoveKeys, InitExpr),
-                 VarMeta = clj_core:meta(Var1),
-                 VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
-                 clj_core:with_meta(Var1, VarMeta1);
-               _ -> Var1
-             end,
+      Var2 = var_fn_info(Var1, InitExpr),
       Env4 = clj_env:update_var(Env3, Var2),
 
       DefExpr = #{ op      => def
@@ -563,6 +569,18 @@ parse_def(Env, List) ->
 
       clj_env:push_expr(Env4, DefExpr)
   end.
+
+-spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
+var_fn_info(Var, #{op := fn} = Expr) ->
+  %% Add information about the associated function
+  %% to the var's metadata.
+  RemoveKeys = [op, env, methods, form, once],
+  ExprInfo = maps:without(RemoveKeys, Expr),
+  VarMeta = clj_core:meta(Var),
+  VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
+  clj_core:with_meta(Var, VarMeta1);
+var_fn_info(Var, _) ->
+  Var.
 
 -spec validate_def_args('clojerl.List':type()) -> undefined | binary().
 validate_def_args(List) ->

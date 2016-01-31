@@ -122,15 +122,15 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
-  LocalExpr = maps:get(local, Expr, undefined),
-  ModuleSym = maps:get(namespace, LocalExpr),
-  NameSym   = maps:get(name, LocalExpr),
+  Var = maps:get(local, Expr, undefined),
 
   RemoveKeys = [op, env, methods, form, once],
   Meta       = maps:without(RemoveKeys, Expr),
-  VarNew     = 'clojerl.Var':new(ModuleSym, NameSym),
-  Var        = clj_core:with_meta(VarNew, Meta),
-  VarAst     = erl_syntax:abstract(Var),
+  Var1       = clj_core:with_meta(Var, Meta),
+  VarAst     = erl_syntax:abstract(Var1),
+
+  NameSym   = 'clojerl.Var':name(Var1),
+  ModuleSym = 'clojerl.Var':namespace(Var1),
 
   Name   = 'clojerl.Symbol':to_atom(NameSym),
   Module = 'clojerl.Symbol':to_atom(ModuleSym),

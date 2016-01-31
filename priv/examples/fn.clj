@@ -129,17 +129,16 @@
 
 ;; Recursively call anonymous fn
 
-#_(clojure.core/prn
- (fn* count-10
-      ([] (count-10 1))
-      ([x]
-       (if (erlang/< x 10)
-         (do
-           (clojure.core/prn [:anon-recur x])
-           (count-10 (erlang/+ x 1)))
-         (clojure.core/prn [:anon-recur :done])
-
-         ))))
+(clojure.core/prn
+ ((fn* count-10
+        ([x]
+         (if (erlang/> x 0)
+           (do
+             (clojure.core/prn [:anon-recur x])
+             (count-10 (erlang/- x 1)))
+           (clojure.core/prn [:anon-recur :done]))))
+  10
+  ))
 
 ;; Provide an erlang function as an argument to be used as a function
 
