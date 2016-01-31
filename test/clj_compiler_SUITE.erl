@@ -69,9 +69,9 @@ eval(_Config) ->
   {1, _} = clj_compiler:eval(1),
 
   DefList = clj_reader:read(<<"(def hello :world)">>),
-  {'$user', Env} = clj_compiler:eval(DefList),
+  {Var, Env} = clj_compiler:eval(DefList),
+  Var = find_var(Env, <<"$user">>, <<"hello">>),
   check_var_value(Env, <<"$user">>, <<"hello">>, world),
-
   {comments, ""}.
 
 %%------------------------------------------------------------------------------
@@ -83,10 +83,13 @@ relative_path(Path) -> <<"../../", Path/binary>>.
 
 -spec check_var_value(clj_env:env(), binary(), binary(), any()) -> any().
 check_var_value(Env, Namespace, Name, Value) ->
-  Symbol = clj_core:symbol(Namespace, Name),
-  Var = case clj_env:find_var(Env, Symbol) of
-         undefined -> error;
-         V -> V
-       end,
-
+  Var   = find_var(Env, Namespace, Name),
   Value = clj_core:deref(Var).
+
+-spec find_var(clj_env:env(), binary(), binary()) -> 'clojerl.Var':type().
+find_var(Env, Namespace, Name) ->
+  Symbol = clj_core:symbol(Namespace, Name),
+  case clj_env:find_var(Env, Symbol) of
+    undefined -> error;
+    V -> V
+  end.

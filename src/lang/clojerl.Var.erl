@@ -18,6 +18,7 @@
 -export([ function/1
         , module/1
         , val_function/1
+        , process_args/3
         ]).
 
 -export(['clojerl.Stringable.str'/1]).
@@ -107,9 +108,34 @@ val_function(#?TYPE{name = ?M} = Var) ->
                          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IFn.invoke'(#?TYPE{name =?M, data = Data}, Args) ->
+'clojerl.IFn.invoke'(#?TYPE{name =?M, data = Data} = Var, Args) ->
   #?M{ns = Namespace, name = Name} = Data,
   Module = binary_to_atom(clj_core:name(Namespace), utf8),
   Function = binary_to_atom(clj_core:name(Name), utf8),
 
-  erlang:apply(Module, Function, clj_core:seq(Args)).
+  Args1 = case clj_core:seq(Args) of
+            undefined -> [];
+            Seq       -> Seq
+          end,
+
+  Args2 = process_args(Var, Args1, fun(X) -> X end),
+
+  erlang:apply(Module, Function, Args2).
+
+-spec process_args(type(), [any()], function()) -> [any()].
+process_args(#?TYPE{name =?M} = Var, Args, RestFun) ->
+  Meta = 'clojerl.IMeta.meta'(Var),
+
+  IsVariadic    = maps:get('variadic?', Meta, false),
+  MaxFixedArity = maps:get(max_fixed_arity, Meta, undefined),
+  VariadicArity = maps:get(variadic_arity, Meta, undefined),
+
+  ArgCount = length(Args),
+  case IsVariadic of
+    true when ArgCount =< MaxFixedArity, MaxFixedArity =/= undefined ->
+      Args;
+    true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
+      {Args1, Rest} = lists:split(VariadicArity, Args),
+      Args1 ++ [RestFun(Rest)];
+    _ -> Args
+  end.

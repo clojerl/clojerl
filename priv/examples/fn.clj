@@ -86,15 +86,52 @@
                         ([_x] :anon-fn-mult-1))
                    :arg))
 
+;; Call an anonymous fn with a single variadic arity
+
+;; (clojure.core/prn ((fn* ([& xs] xs) 1 2 3)))
+
 ;; Provide an erlang function as an argument to be used as a function
 
 (apply-f io/format.1 "io:format/1 FTW!!!~n")
-(clojure.core/apply io/format.2 "io:format/2 FTW!!!: ~s~n" [(clojure.core/seq ["lala"])])
+(clojure.core/apply io/format.2
+                    "io:format/2 FTW!!!: ~s~n"
+                    [(clojure.core/seq ["lala"])])
 ;; (apply-f io/format.2 "io:format/1 FTW!!!~n") ;; This should fail
 
 ;; Provide a fn var as an argument to be used as a function
 
 (apply-f clojure.core/prn :apply!!!)
+
+;; Provide a fn variadic var as an argument to be used as a function
+
+(clojure.core/prn (apply-f variadic-arity :apply-f-variadic))
+
+(clojure.core/prn (clojure.core/apply variadic-arity []))
+
+(clojure.core/prn
+ (clojure.core/apply variadic-arity
+                     [:apply-variadic 1 2 3]))
+
+(clojure.core/prn
+ (clojure.core/apply variadic-arity-2
+                     [:apply-variadic-2 1 2 3]))
+
+(clojure.core/prn
+ (clojure.core/apply variadic-arity-2
+                     [:apply-variadic-2]))
+
+(clojure.core/prn
+ (clojure.core/apply multiple-variadic
+                     [:apply-multi-variadic 1]))
+(clojure.core/prn
+ (clojure.core/apply multiple-variadic
+                     [:apply-multi-variadic 1 2]))
+(clojure.core/prn
+ (clojure.core/apply multiple-variadic
+                     [:apply-multi-variadic 1 2 3]))
+(clojure.core/prn
+ (clojure.core/apply multiple-variadic
+                     [:apply-multi-variadic 1 2 3 4 5 6]))
 
 ;; Keywords as a function for maps
 

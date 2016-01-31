@@ -9,7 +9,10 @@
                   }.
 
 -spec emit(clj_env:env()) ->
-  {erl_parse:abstract_form(), erl_parse:abstract_expr(), clj_env:env()}.
+  { [[erl_parse:abstract_form()]]
+  , [erl_parse:abstract_expr()]
+  , clj_env:env()
+  }.
 emit(Env0) ->
   case clj_env:pop_expr(Env0) of
     {undefined, _} ->
@@ -90,11 +93,11 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
 
   State1 = ensure_module(Module, State),
-
+  VarAst = erl_syntax:abstract(Var),
   {ValAst, State2} =
     case InitExpr of
       #{op := fn} = FnExpr ->
-        { erl_syntax:abstract(Var)
+        { VarAst
         , add_functions(Module, Name, FnExpr, State1)
         };
       _ ->
@@ -102,8 +105,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
     end,
 
   %% Add the var's information as a module attribute
-  VarAtom = erl_syntax:atom(var),
-  VarAst = erl_syntax:abstract(Var),
+  VarAtom    = erl_syntax:atom(var),
   VarAttrAst = erl_syntax:attribute(VarAtom, [VarAst]),
 
   ValFunExportAst = export_attribute([{ValName, 0}]),
@@ -115,7 +117,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 
   State3 = add_functions_attributes(Module, [ValFunAst], AttrsAsts, State2),
 
-  push_ast(ValAst, State3);
+  push_ast(VarAst, State3);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -183,12 +185,14 @@ ast(#{op := invoke} = Expr, State) ->
     #{op := var, var := Var} ->
       Module   = 'clojerl.Var':module(Var),
       Function = 'clojerl.Var':function(Var),
-      Args1 = var_process_args(Var, Args),
-      Ast = application_mfa(Module, Function, Args1),
+      Args1    = 'clojerl.Var':process_args(Var, Args, fun erl_syntax:list/1),
+      Ast      = application_mfa(Module, Function, Args1),
+
       push_ast(Ast, State1);
     #{op := erl_fun} ->
       {FunAst, State2} = pop_ast(ast(FExpr#{invoke => true}, State1)),
       Ast = erl_syntax:application(FunAst, Args),
+
       push_ast(Ast, State2);
     #{op := fn} ->
       {VarAst, State2} = pop_ast(ast(FExpr, State1)),
@@ -196,11 +200,13 @@ ast(#{op := invoke} = Expr, State) ->
       Module   = 'clojerl.Var':module(Var),
       Function = 'clojerl.Var':function(Var),
       Ast      = application_mfa(Module, Function, Args),
+
       push_ast(Ast, State2);
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = erl_syntax:list(Args),
-      Ast = application_mfa(clj_core, invoke, [FunAst, ArgsAst]),
+      Ast     = application_mfa(clj_core, invoke, [FunAst, ArgsAst]),
+
       push_ast(Ast, State2)
   end;
 %%------------------------------------------------------------------------------
@@ -289,24 +295,6 @@ ast(#{op := throw} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
-
--spec var_process_args(map(), [any()]) -> [any()].
-var_process_args(Var, Args) ->
-  Meta = clj_core:meta(Var),
-  #{ 'variadic?'     := IsVariadic
-   , max_fixed_arity := MaxFixedArity
-   , variadic_arity  := VariadicArity
-   } = Meta,
-
-  ArgCount = length(Args),
-  case IsVariadic of
-    true when ArgCount =< MaxFixedArity, MaxFixedArity =/= undefined ->
-      Args;
-    true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
-      {Args1, Rest} = lists:split(VariadicArity, Args),
-      Args1 ++ [erl_syntax:list(Rest)];
-    _ -> Args
-  end.
 
 -spec function_form(atom(), [ast()]) ->
   ast().
@@ -401,9 +389,7 @@ push_ast(Ast, State = #{asts := Asts}) ->
 
 -spec pop_ast(state()) -> {ast(), state()}.
 pop_ast(State = #{asts := [Ast | Asts]}) ->
-  {Ast, State#{asts => Asts}};
-pop_ast(State) ->
-  {erl_syntax:asbtract(undefined), State}.
+  {Ast, State#{asts => Asts}}.
 
 -spec pop_ast(state(), non_neg_integer()) -> {[ast()], state()}.
 pop_ast(State = #{asts := Asts}, N) ->
