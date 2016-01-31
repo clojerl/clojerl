@@ -130,9 +130,12 @@ ast(#{op := fn} = Expr, State) ->
                 maps:get(name, NameExpr)
             end,
 
-  ModuleSym = clj_core:symbol(<<"clojerl.anonymous.fns">>),
-  Var       = 'clojerl.Var':new(ModuleSym, NameSym),
-  VarAst    = erl_syntax:abstract(Var),
+  RemoveKeys = [op, env, methods, form, once],
+  Meta       = maps:without(RemoveKeys, Expr),
+  ModuleSym  = clj_core:symbol(<<"clojerl.anonymous.fns">>),
+  VarNew     = 'clojerl.Var':new(ModuleSym, NameSym),
+  Var        = clj_core:with_meta(VarNew, Meta),
+  VarAst     = erl_syntax:abstract(Var),
 
   Name   = 'clojerl.Symbol':to_atom(NameSym),
   Module = 'clojerl.Symbol':to_atom(ModuleSym),
@@ -199,7 +202,8 @@ ast(#{op := invoke} = Expr, State) ->
       Var      = erl_syntax:concrete(VarAst),
       Module   = 'clojerl.Var':module(Var),
       Function = 'clojerl.Var':function(Var),
-      Ast      = application_mfa(Module, Function, Args),
+      Args1    = 'clojerl.Var':process_args(Var, Args, fun erl_syntax:list/1),
+      Ast      = application_mfa(Module, Function, Args1),
 
       push_ast(Ast, State2);
     _ ->

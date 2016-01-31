@@ -88,7 +88,43 @@
 
 ;; Call an anonymous fn with a single variadic arity
 
-;; (clojure.core/prn ((fn* ([& xs] xs) 1 2 3)))
+(clojure.core/prn ((fn* [& xs] [:anon-variadic xs]) 1 2 3))
+
+(clojure.core/prn ((fn*
+                    ([] :anon-variadic-arity-0)
+                    ([& xs] xs))))
+
+(clojure.core/prn ((fn*
+                    ([] :anon-variadic-arity-0)
+                    ([& xs] [:anon-variadic-arity xs])) 1))
+
+;; Provide an anonymous fn as an argument to be used as a function
+
+(apply-f (fn* [x]
+              (clojure.core/prn [:apply-f-anon-fixed x]))
+         :apply!!!)
+
+(clojure.core/apply (fn* [x]
+                         (clojure.core/prn [:apply-anon-fixed x]))
+                    [:apply!!!])
+
+(clojure.core/apply (fn*
+                     ([x] (clojure.core/prn [:apply-anon-variadic-1 x]))
+                     ([x y] (clojure.core/prn [:apply-anon-variadic-2 x y]))
+                     ([x y & z] (clojure.core/prn [:apply-anon-variadic-n x y z])))
+                    [1])
+
+(clojure.core/apply (fn*
+                     ([x] (clojure.core/prn [:apply-anon-variadic-1 x]))
+                     ([x y] (clojure.core/prn [:apply-anon-variadic-2 x y]))
+                     ([x y & z] (clojure.core/prn [:apply-anon-variadic-n x y z])))
+                    [1 2])
+
+(clojure.core/apply (fn*
+                     ([x] (clojure.core/prn [:apply-anon-variadic-1 x]))
+                     ([x y] (clojure.core/prn [:apply-anon-variadic-2 x y]))
+                     ([x y & z] (clojure.core/prn [:apply-anon-variadic-n x y z])))
+                    [1 2 3 4 5])
 
 ;; Provide an erlang function as an argument to be used as a function
 
