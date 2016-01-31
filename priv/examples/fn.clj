@@ -78,9 +78,13 @@
 
 (clojure.core/prn ((fn* [x] x) :anon-fn-fixed))
 
-;; TODO: Call an anonymous fn with multiple fixed arities
+;; Call an anonymous fn with multiple fixed arities
 
-(clojure.core/prn ((fn* ([] :none) ([x] x)) :anon-fn-mult))
+(clojure.core/prn ((fn* ([] :anon-fn-mult-0)
+                        ([_x] :anon-fn-mult-1))))
+(clojure.core/prn ((fn* ([] :anon-fn-mult-0)
+                        ([_x] :anon-fn-mult-1))
+                   :arg))
 
 ;; Provide an erlang function as an argument to be used as a function
 

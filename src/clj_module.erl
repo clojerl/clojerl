@@ -1,7 +1,6 @@
 -module(clj_module).
 
--export([ new/1
-        , from_binary/1
+-export([ load/1
         , to_forms/1
 
         , add_attributes/2
@@ -16,6 +15,22 @@
 %%------------------------------------------------------------------------------
 %% Exported Functions
 %%------------------------------------------------------------------------------
+
+-spec load(atom()) -> {ok, clj_module()} | {error, term()}.
+load(Module) ->
+  case code:ensure_loaded(Module) of
+    {module, Module} ->
+      from_binary(Module);
+    {error, _} ->
+      {ok, new([attribute_module(Module)])}
+  end.
+
+-spec attribute_module(atom()) -> erl_syntax:syntaxTree().
+attribute_module(Name) when is_atom(Name) ->
+  ModuleAtom = erl_syntax:atom(module),
+  NameAtom = erl_syntax:atom(Name),
+  erl_syntax:attribute(ModuleAtom, [NameAtom]).
+
 
 -spec new([erl_syntax:syntaxTree()]) -> clj_module().
 new(Forms) ->

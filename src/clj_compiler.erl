@@ -41,8 +41,8 @@ compile(Src) when is_binary(Src) ->
 compile(Src, Env) when is_binary(Src) ->
   Fun = fun(Form, EnvAcc) ->
             NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
-            {Forms, Exprs, Env1} = clj_emitter:emit(NewEnvAcc),
-            compile_forms(Forms),
+            {ModulesForms, Exprs, Env1} = clj_emitter:emit(NewEnvAcc),
+            lists:foreach(fun compile_forms/1, ModulesForms),
             eval_expressions(Exprs),
             Env1
         end,
@@ -84,10 +84,7 @@ eval(Form) ->
 -spec eval(any(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Env) ->
   NewEnv = clj_analyzer:analyze(Env, Form),
-  case clj_emitter:emit(NewEnv) of
-    {Forms, [], Env1} ->
-      {compile_forms(Forms), Env1};
-    {[], Exprs, Env1} ->
-      [Value] = eval_expressions(Exprs),
-      {Value, Env1}
-  end.
+  {ModulesForms, Exprs, Env1} = clj_emitter:emit(NewEnv),
+  lists:foreach(fun compile_forms/1, ModulesForms),
+  [Value] = eval_expressions(Exprs),
+  {Value, Env1}.
