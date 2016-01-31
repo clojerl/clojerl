@@ -122,17 +122,12 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
-  NameSym = case maps:get(local, Expr, undefined) of
-              undefined ->
-                GenName = clj_core:gensym(<<"fn">>),
-                clj_core:symbol(GenName);
-              NameExpr ->
-                maps:get(name, NameExpr)
-            end,
+  LocalExpr = maps:get(local, Expr, undefined),
+  ModuleSym = maps:get(namespace, LocalExpr),
+  NameSym   = maps:get(name, LocalExpr),
 
   RemoveKeys = [op, env, methods, form, once],
   Meta       = maps:without(RemoveKeys, Expr),
-  ModuleSym  = clj_core:symbol(<<"clojerl.anonymous.fns">>),
   VarNew     = 'clojerl.Var':new(ModuleSym, NameSym),
   Var        = clj_core:with_meta(VarNew, Meta),
   VarAst     = erl_syntax:abstract(Var),
@@ -193,7 +188,7 @@ ast(#{op := invoke} = Expr, State) ->
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
-      {FunAst, State2} = pop_ast(ast(FExpr#{invoke => true}, State1)),
+      {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       Ast = erl_syntax:application(FunAst, Args),
 
       push_ast(Ast, State2);

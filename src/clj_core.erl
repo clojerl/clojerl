@@ -280,4 +280,4 @@ gensym() ->
 -spec gensym(binary()) -> 'clojer.Symbol':type().
 gensym(Prefix) ->
   PartsBin = lists:map(fun str/1, [Prefix, next_id()]),
-  iolist_to_binary(PartsBin).
+  symbol(iolist_to_binary(PartsBin)).

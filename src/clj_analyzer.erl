@@ -181,26 +181,24 @@ parse_fn(Env, List) ->
   Op = clj_core:first(List),
   {Name, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
-      true -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {undefined, clj_core:rest(List)}
+      true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
+      false -> {clj_core:gensym(<<"fn__">>), clj_core:rest(List)}
     end,
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
                   false -> clj_core:seq2(Methods)
                 end,
-  NameExpr = #{ op    => binding
-              , env   => ?DEBUG(Env)
-              , form  => Name
-              , local => fn
-              , name  => Name
+  NameExpr = #{ op        => binding
+              , env       => ?DEBUG(Env)
+              , form      => Name
+              , local     => fn
+              , name      => Name
+              , namespace => clj_env:current_ns(Env)
               },
 
-  Env1 = case Name of
-           undefined -> Env;
-           _ ->
-             Env1b = clj_env:put_local(Env, Name, maps:remove(env, NameExpr)),
-             Env1b#{local => NameExpr}
-         end,
+  Env1Temp = clj_env:put_local(Env, Name, maps:remove(env, NameExpr)),
+  Env1 = clj_env:put(Env1Temp, local, NameExpr),
+
   OpMeta = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
   IsOnce = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
@@ -681,7 +679,7 @@ analyze_invoke(Env, Form) ->
   InvokeExpr = #{op   => invoke,
                  env  => ?DEBUG(Env4),
                  form => Form,
-                 f    => FExpr,
+                 f    => FExpr#{invoke => true},
                  args => ArgsExpr},
   clj_env:push_expr(Env4, InvokeExpr).
 
