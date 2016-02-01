@@ -190,3 +190,15 @@
 (clojure.core/prn (clojure.core/apply :b [{:b 2}]))
 (clojure.core/prn (clojure.core/apply :b {:c 3} [:not-found-b]))
 ;; (clojure.core/prn (:a)) ;; This should fail
+
+;; Define and call a recursive fn var
+
+(def recursive
+  (fn* [x]
+       (if (erlang/> x 0)
+         (do
+           (clojure.core/prn [:recursive-fn x])
+           (recursive (erlang/- x 1)))
+         (clojure.core/prn [:recursive-fn :done]))))
+
+(recursive 15)

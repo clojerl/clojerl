@@ -266,7 +266,7 @@ parse_fn(Env, List) ->
             , local           => Var1
             },
 
-  Env5 = clj_env:add_locals_scope(Env4),
+  Env5 = clj_env:remove_locals_scope(Env4),
 
   clj_env:push_expr(Env5, FnExpr).
 
@@ -536,11 +536,10 @@ parse_def(Env, List) ->
       throw(<<"Can't refer to qualified var that doesn't exist">>);
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
-      case {clj_env:current_ns(Env1), clj_core:namespace(VarSymbol)} of
-        {_ , undefined} -> ok;
-        {VarNsSym, _} -> ok;
-        _ -> throw(<<"Can't create defs outside of current ns">>)
-      end,
+      clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
+                            andalso clj_env:current_ns(Env1) =/= VarNsSym
+                          , <<"Can't create defs outside of current ns">>
+                          ),
 
       Meta = clj_core:meta(VarSymbol),
       DynamicKeyword = clj_core:keyword(<<"dynamic">>),
@@ -561,18 +560,28 @@ parse_def(Env, List) ->
 
       Var2 = var_fn_info(Var1, InitExpr),
       Env4 = clj_env:update_var(Env3, Var2),
+      {InitExpr1, Env5} = case InitExpr of
+                            #{op := fn} ->
+                              %% If init is an fn we need to analyze it
+                              %% again to get the associated var resolved
+                              %% with the function's info, to get proper
+                              %% function calls emitted.
+                              clj_env:pop_expr(analyze_form(Env4, Init));
+                            _ ->
+                              {InitExpr, Env4}
+                          end,
 
       DefExpr = #{ op      => def
-                 , env     => ?DEBUG(Env4)
+                 , env     => ?DEBUG(Env)
                  , form    => List
                  , name    => VarSymbol
                  , var     => Var2
                  , doc     => Docstring
-                 , init    => InitExpr
+                 , init    => InitExpr1
                  , dynamic => IsDynamic
                  },
 
-      clj_env:push_expr(Env4, DefExpr)
+      clj_env:push_expr(Env5, DefExpr)
   end.
 
 -spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
