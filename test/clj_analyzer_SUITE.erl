@@ -148,6 +148,20 @@ def(_Config) ->
    , variadic_arity  := undefined
    } = VarMeta,
 
+  ct:comment("Vars keep meta from symbol"),
+  #{ op := def
+   , var := VarWithDynamic
+   } = analyze_one(<<"(def ^:dynamic *x* 1)">>),
+  #{dynamic := true} = clj_core:meta(VarWithDynamic),
+
+  ct:comment("Vars keep meta from symbol"),
+  #{ op  := def
+   , var := VarWithDynamicMacro
+   } = analyze_one(<<"(def ^{:dynamic true, :macro true} *x* 1)">>),
+  #{ dynamic := true
+   , macro   := true
+   } = clj_core:meta(VarWithDynamicMacro),
+
   {comments, ""}.
 
 -spec quote(config()) -> result().
