@@ -124,6 +124,9 @@ def(_Config) ->
            ok
        end,
 
+  ct:comment("Not a dynamic var but its name suggest otherwise"),
+  _ = analyze_one(<<"(def *x* 1)">>),
+
   #{op := def,
     doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
 

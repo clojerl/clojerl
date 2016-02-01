@@ -541,12 +541,20 @@ parse_def(Env, List) ->
                           , <<"Can't create defs outside of current ns">>
                           ),
 
-      Meta = clj_core:meta(VarSymbol),
+      Meta           = clj_core:meta(VarSymbol),
       DynamicKeyword = clj_core:keyword(<<"dynamic">>),
-      IsDynamic = clj_core:boolean(clj_core:get(Meta, DynamicKeyword)),
-      Var1 = 'clojerl.Var':dynamic(Var, IsDynamic),
+      IsDynamic      = clj_core:boolean(clj_core:get(Meta, DynamicKeyword)),
+      Var1           = 'clojerl.Var':dynamic(Var, IsDynamic),
+      NameBin        = clj_core:name(VarSymbol),
 
-      %% TODO: show warning when not dynamic but name suggests otherwise.
+      clj_utils:warn_when( not IsDynamic andalso
+                           nomatch =/= re:run(NameBin, "\\*.+\\*")
+                         , [ <<"Var ">>
+                           , NameBin
+                           , <<" is not dynamic but its name"
+                               " suggests otherwise.~n">>
+                           ]
+                         ),
       %% TODO: Read metadata from symbol and add it to Var.
 
       Env2 = clj_env:update_var(Env1, Var1),
