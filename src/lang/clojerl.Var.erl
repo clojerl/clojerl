@@ -11,8 +11,7 @@
 -export([ new/2
         , namespace/1
         , name/1
-        , dynamic/1
-        , dynamic/2
+        , is_dynamic/1
         , is_macro/1
         ]).
 
@@ -35,9 +34,6 @@
 -record(?M, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
             , name                   :: 'clojerl.Symbol':type()
             , root       = undefined :: any() | undefined
-            , meta       = #{}       :: map()
-            , is_dynamic = false     :: boolean()
-            , is_macro   = false     :: boolean()
             }).
 
 -type type() :: #?TYPE{}.
@@ -55,15 +51,15 @@ namespace(#?TYPE{data = #?M{ns = Namespace}}) -> Namespace.
 -spec name(type()) -> 'clojerl.Symbol':type().
 name(#?TYPE{data = #?M{name = Name}}) -> Name.
 
--spec dynamic(type()) -> boolean().
-dynamic(#?TYPE{data = #?M{is_dynamic = IsDynamic}}) -> IsDynamic.
-
--spec dynamic(type(), boolean()) -> type().
-dynamic(#?TYPE{name = ?M, data = Data} = Var, IsDynamic) ->
-  Var#?TYPE{data = Data#?M{is_dynamic = IsDynamic}}.
+-spec is_dynamic(type()) -> boolean().
+is_dynamic(#?TYPE{name = ?M, info = Info}) ->
+  Meta = maps:get(meta, Info, #{}),
+  maps:get(dynamic, Meta, false).
 
 -spec is_macro(type()) -> boolean().
-is_macro(#?TYPE{data = #?M{is_macro = IsMacro}}) -> IsMacro.
+is_macro(#?TYPE{name = ?M, info = Info}) ->
+  Meta = maps:get(meta, Info, #{}),
+  maps:get(macro, Meta, false).
 
 -spec module(type()) -> atom().
 module(#?TYPE{name = ?M} = Var) ->

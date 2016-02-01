@@ -9,6 +9,7 @@
          binary_join/2,
          ends_with/2,
          throw_when/2,
+         warn_when/2,
          group_by/2
         ]).
 
@@ -154,6 +155,15 @@ throw_when(true, List) when is_list(List) ->
 throw_when(true, Reason) ->
   throw(Reason);
 throw_when(false, _) ->
+  ok.
+
+-spec warn_when(boolean(), any()) -> ok | no_return().
+warn_when(true, List) when is_list(List) ->
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  warn_when(true, Reason);
+warn_when(true, Reason) ->
+  error_logger:warning_msg(Reason);
+warn_when(false, _) ->
   ok.
 
 -spec group_by(fun((any()) -> any()), list()) -> map().

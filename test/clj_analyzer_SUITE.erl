@@ -124,6 +124,9 @@ def(_Config) ->
            ok
        end,
 
+  ct:comment("Not a dynamic var but its name suggest otherwise"),
+  _ = analyze_one(<<"(def *x* 1)">>),
+
   #{op := def,
     doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
 
@@ -144,6 +147,20 @@ def(_Config) ->
    , max_fixed_arity := 1
    , variadic_arity  := undefined
    } = VarMeta,
+
+  ct:comment("Vars keep meta from symbol"),
+  #{ op := def
+   , var := VarWithDynamic
+   } = analyze_one(<<"(def ^:dynamic *x* 1)">>),
+  #{dynamic := true} = clj_core:meta(VarWithDynamic),
+
+  ct:comment("Vars keep meta from symbol"),
+  #{ op  := def
+   , var := VarWithDynamicMacro
+   } = analyze_one(<<"(def ^{:dynamic true, :macro true} *x* 1)">>),
+  #{ dynamic := true
+   , macro   := true
+   } = clj_core:meta(VarWithDynamicMacro),
 
   {comments, ""}.
 
