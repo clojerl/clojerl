@@ -41,8 +41,8 @@ compile(Src) when is_binary(Src) ->
 compile(Src, Env) when is_binary(Src) ->
   Fun = fun(Form, EnvAcc) ->
             NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
-            {Forms, Exprs, Env1} = clj_emitter:emit(NewEnvAcc),
-            compile_forms(Forms),
+            {ModulesForms, Exprs, Env1} = clj_emitter:emit(NewEnvAcc),
+            lists:foreach(fun compile_forms/1, ModulesForms),
             eval_expressions(Exprs),
             Env1
         end,
@@ -53,9 +53,17 @@ compile_forms([]) ->
   undefined;
 compile_forms(Forms) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
-  {ok, Name, Binary} = compile:forms(Forms),
-  code:load_binary(Name, "", Binary),
-  Name.
+  Opts = [debug_info, verbose,report_errors,report_warnings],
+  case compile:forms(Forms, Opts) of
+    {ok, Name, Binary} ->
+      BeamFilename = <<(atom_to_binary(Name, utf8))/binary, ".beam">>,
+      BeamPath = filename:join(["ebin", BeamFilename]),
+      file:write_file(BeamPath, Binary),
+      code:load_binary(Name, binary_to_list(BeamPath), Binary),
+      Name;
+    Error ->
+      throw(Error)
+  end.
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].
 eval_expressions([]) ->
@@ -76,10 +84,7 @@ eval(Form) ->
 -spec eval(any(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Env) ->
   NewEnv = clj_analyzer:analyze(Env, Form),
-  case clj_emitter:emit(NewEnv) of
-    {Forms, [], Env1} ->
-      {compile_forms(Forms), Env1};
-    {[], Exprs, Env1} ->
-      [Value] = eval_expressions(Exprs),
-      {Value, Env1}
-  end.
+  {ModulesForms, Exprs, Env1} = clj_emitter:emit(NewEnv),
+  lists:foreach(fun compile_forms/1, ModulesForms),
+  [Value] = eval_expressions(Exprs),
+  {Value, Env1}.

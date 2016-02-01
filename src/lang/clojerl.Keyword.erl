@@ -1,10 +1,12 @@
 -module('clojerl.Keyword').
 
+-behavior('clojerl.IFn').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
 -export([new/1, new/2]).
 
+-export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
@@ -24,9 +26,13 @@ new(Namespace, Name) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Stringable.str'(Keyword) ->
-  KeywordBin = atom_to_binary(Keyword, utf8),
-  <<":", KeywordBin/binary>>.
+'clojerl.IFn.invoke'(Keyword, [Map]) ->
+  clj_core:get(Map, Keyword);
+'clojerl.IFn.invoke'(Keyword, [Map, NotFound]) ->
+  clj_core:get(Map, Keyword, NotFound);
+'clojerl.IFn.invoke'(_, Args) ->
+  CountBin = integer_to_binary(length(Args)),
+  throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>).
 
 'clojerl.Named.name'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
@@ -41,3 +47,7 @@ new(Namespace, Name) ->
     [_] -> undefined;
     [Namespace, _] -> Namespace
   end.
+
+'clojerl.Stringable.str'(Keyword) ->
+  KeywordBin = atom_to_binary(Keyword, utf8),
+  <<":", KeywordBin/binary>>.

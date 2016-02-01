@@ -69,7 +69,7 @@ special_forms() ->
    , clj_core:symbol(<<"deftype*">>) => undefined
    , clj_core:symbol(<<"reify*">>)   => undefined
 
-   , clj_core:symbol(<<"throw">>)    => undefined
+   , clj_core:symbol(<<"throw">>)    => fun parse_throw/2
    , clj_core:symbol(<<"try">>)      => undefined
    , clj_core:symbol(<<"catch">>)    => undefined
    , clj_core:symbol(<<"finally">>)  => undefined
@@ -179,53 +179,54 @@ parse_quote(Env, List) ->
 -spec parse_fn(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_fn(Env, List) ->
   Op = clj_core:first(List),
-  {Name, Methods} =
+
+  {NameSym, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
-      true -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {undefined, clj_core:rest(List)}
+      true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
+      false -> {clj_core:symbol(<<"anon">>), clj_core:rest(List)}
     end,
+
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
                   false -> clj_core:seq2(Methods)
                 end,
-  NameExpr = #{ op    => binding
-              , env   => ?DEBUG(Env)
-              , form  => Name
-              , local => fn
-              , name  => Name
-              },
 
-  Env1 = case Name of
-           undefined -> Env;
-           _ ->
-             Env1b = clj_env:put_local(Env, Name, maps:remove(env, NameExpr)),
-             Env1b#{local => NameExpr}
-         end,
+  %% Create a var with a modified name and add it as a local binding
+  %% with the original name.
+  VarNsSym   = clj_env:current_ns(Env),
+  NameBin    = clj_core:name(NameSym),
+  VarNameSym = clj_core:gensym(<<NameBin/binary, "__fn__">>),
+  Var        = 'clojerl.Var':new(VarNsSym, VarNameSym),
+  VarExpr    = var_expr(Var, VarNameSym, Env),
+  Env1       = clj_env:put_local( clj_env:add_locals_scope(Env)
+                                , NameSym
+                                , VarExpr
+                                ),
+
   OpMeta = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
   IsOnce = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
 
-  MethodEnv = maps:put(once, IsOnce, maps:remove(in_try, Env1)),
-  AnalyzeFnMethodFun = fun(M, EnvAcc) -> analyze_fn_method(EnvAcc, M) end,
-  Env2 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
-  {MethodsExprs, Env3} = clj_env:last_exprs(Env2, length(MethodsList)),
-
-  IsVariadicFun = fun (#{'variadic?' := true}) -> true;
-                      (_) -> false
-                  end,
-
-  AllVariadics = lists:filter(IsVariadicFun, MethodsExprs),
-  {IsVariadic, Variadic} = case AllVariadics of
-                             [] -> {false, undefined};
-                             [Variadic1 | _] -> {true, Variadic1}
-                           end,
+  {MethodsExprs, Env2} = analyze_fn_methods(Env1, MethodsList, IsOnce),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
+  IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
+                       (_) -> false
+                   end,
+
+  AllVariadics = lists:filter(IsVariadicFun, MethodsExprs),
+  {IsVariadic, VariadicArity} =
+    case AllVariadics of
+      [] -> {false, undefined};
+      [Variadic | _] -> {true, MethodArityFun(Variadic)}
+    end,
+
   FixedArities = lists:map(MethodArityFun, MethodsExprs -- AllVariadics),
   MaxFixedArity = case FixedArities of
                     [] -> undefined;
                     _ -> lists:max(FixedArities)
                   end,
+
   %% Validations
   clj_utils:throw_when(length(AllVariadics) >= 2,
                        <<"Can't have more than 1 variadic overload">>),
@@ -236,26 +237,46 @@ parse_fn(Env, List) ->
                          "with the same arity">>),
 
   clj_utils:throw_when(IsVariadic andalso
-                       Variadic =/= undefined andalso
+                       VariadicArity =/= undefined andalso
                        MaxFixedArity =/= undefined andalso
-                       MaxFixedArity > MethodArityFun(Variadic),
+                       MaxFixedArity > VariadicArity,
                        <<"Can't have fixed arity overload "
                          "with more params than variadic overload">>),
 
-  FnExpr = maps:merge(#{ op              => fn
-                       , env             => ?DEBUG(Env)
-                       , form            => List
-                       , 'variadic?'     => IsVariadic
-                       , max_fixed_arity => MaxFixedArity
-                       , methods         => MethodsExprs
-                       , once            => IsOnce
-                       },
-                     case Name of
-                       undefined -> #{};
-                       _ -> #{local => NameExpr}
-                     end),
+  %% Now that we have all the fn info we re-analyze the methods
+  %% with the associated var, so that a recursive
+  %% call can be correctly resolved.
+  VarMeta = #{ 'variadic?'     => IsVariadic
+             , max_fixed_arity => MaxFixedArity
+             , variadic_arity  => VariadicArity
+             },
+  Var1     = clj_core:with_meta(Var, VarMeta),
+  VarExpr1 = var_expr(Var1, VarNameSym, Env2),
+  Env3     = clj_env:put_local(Env2, NameSym, VarExpr1),
+  {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce),
 
-  clj_env:push_expr(Env3, FnExpr).
+  FnExpr = #{ op              => fn
+            , env             => ?DEBUG(Env)
+            , form            => List
+            , 'variadic?'     => IsVariadic
+            , max_fixed_arity => MaxFixedArity
+            , variadic_arity  => VariadicArity
+            , methods         => MethodsExprs1
+            , once            => IsOnce
+            , local           => Var1
+            },
+
+  Env5 = clj_env:remove_locals_scope(Env4),
+
+  clj_env:push_expr(Env5, FnExpr).
+
+-spec analyze_fn_methods(clj_env:env(), ['clojerl.List':type()], boolean()) ->
+ {[map()], clj_env:env()}.
+analyze_fn_methods(Env, MethodsList, IsOnce) ->
+  MethodEnv = maps:put(once, IsOnce, maps:remove(in_try, Env)),
+  AnalyzeFnMethodFun = fun(M, EnvAcc) -> analyze_fn_method(EnvAcc, M) end,
+  Env1 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
+  clj_env:last_exprs(Env1, length(MethodsList)).
 
 -spec analyze_fn_method(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_fn_method(Env, List) ->
@@ -515,11 +536,10 @@ parse_def(Env, List) ->
       throw(<<"Can't refer to qualified var that doesn't exist">>);
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
-      case {clj_env:current_ns(Env1), clj_core:namespace(VarSymbol)} of
-        {VarNsSym, _} -> ok;
-        {_ , undefined} -> ok;
-        _ -> throw(<<"Can't create defs outside of current ns">>)
-      end,
+      clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
+                            andalso clj_env:current_ns(Env1) =/= VarNsSym
+                          , <<"Can't create defs outside of current ns">>
+                          ),
 
       Meta = clj_core:meta(VarSymbol),
       DynamicKeyword = clj_core:keyword(<<"dynamic">>),
@@ -537,18 +557,44 @@ parse_def(Env, List) ->
 
       ExprEnv2 = clj_env:context(Env2, expr),
       {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
-      VarExpr = #{ op      => def
-                 , env     => ?DEBUG(Env3)
+
+      Var2 = var_fn_info(Var1, InitExpr),
+      Env4 = clj_env:update_var(Env3, Var2),
+      {InitExpr1, Env5} = case InitExpr of
+                            #{op := fn} ->
+                              %% If init is an fn we need to analyze it
+                              %% again to get the associated var resolved
+                              %% with the function's info, to get proper
+                              %% function calls emitted.
+                              clj_env:pop_expr(analyze_form(Env4, Init));
+                            _ ->
+                              {InitExpr, Env4}
+                          end,
+
+      DefExpr = #{ op      => def
+                 , env     => ?DEBUG(Env)
                  , form    => List
                  , name    => VarSymbol
-                 , var     => Var1
+                 , var     => Var2
                  , doc     => Docstring
-                 , init    => InitExpr
+                 , init    => InitExpr1
                  , dynamic => IsDynamic
                  },
 
-      clj_env:push_expr(Env3, VarExpr)
+      clj_env:push_expr(Env5, DefExpr)
   end.
+
+-spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
+var_fn_info(Var, #{op := fn} = Expr) ->
+  %% Add information about the associated function
+  %% to the var's metadata.
+  RemoveKeys = [op, env, methods, form, once, local],
+  ExprInfo = maps:without(RemoveKeys, Expr),
+  VarMeta = clj_core:meta(Var),
+  VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
+  clj_core:with_meta(Var, VarMeta1);
+var_fn_info(Var, _) ->
+  Var.
 
 -spec validate_def_args('clojerl.List':type()) -> undefined | binary().
 validate_def_args(List) ->
@@ -623,6 +669,31 @@ lookup_var(VarSymbol, false, Env) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% Parse throw
+%%------------------------------------------------------------------------------
+
+-spec parse_throw(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_throw(Env, List) ->
+  Count = clj_core:count(List),
+  clj_utils:throw_when( Count =/= 2
+                      , [ <<"Wrong number of args to throw, had: ">>
+                        , Count - 1
+                        ]
+                      ),
+
+  Second = clj_core:second(List),
+  ExceptionEnv = clj_env:context(Env, expr),
+  {ExceptionExpr, _} = clj_env:pop_expr(analyze_form(ExceptionEnv, Second)),
+
+  ThrowExpr = #{ op        => throw
+               , env       => ?DEBUG(Env3)
+               , form      => List
+               , exception => ExceptionExpr
+               },
+
+  clj_env:push_expr(Env, ThrowExpr).
+
+%%------------------------------------------------------------------------------
 %% Analyze invoke
 %%------------------------------------------------------------------------------
 
@@ -640,7 +711,7 @@ analyze_invoke(Env, Form) ->
   InvokeExpr = #{op   => invoke,
                  env  => ?DEBUG(Env4),
                  form => Form,
-                 f    => FExpr,
+                 f    => FExpr#{invoke => true},
                  args => ArgsExpr},
   clj_env:push_expr(Env4, InvokeExpr).
 
@@ -651,6 +722,10 @@ analyze_invoke(Env, Form) ->
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
   case {clj_core:namespace(Symbol), clj_env:get_local(Env, Symbol)} of
+    %% If the local is actually a var, then just return it
+    %% without modifying the op.
+    {undefined, #{op := var} = Local} ->
+      clj_env:push_expr(Env, Local);
     {undefined, Local} when Local =/= undefined ->
       clj_env:push_expr(Env, Local#{op => local});
     _ ->
@@ -658,25 +733,31 @@ analyze_symbol(Env, Symbol) ->
         undefined ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
-        {erl_fun, Module, Function} ->
+        {erl_fun, Module, Function, Arity} ->
           FunExpr = #{ op       => erl_fun
                      , env      => ?DEBUG(Env)
                      , module   => Module
                      , function => Function
+                     , arity    => Arity
                      },
           clj_env:push_expr(Env, FunExpr);
         Var ->
-          VarExpr = #{ op   => var
-                     , env  => ?DEBUG(Env)
-                     , form => Symbol
-                     , var  => Var
-                     },
+          VarExpr = var_expr(Var, Symbol, Env),
           clj_env:push_expr(Env, VarExpr)
       end
   end.
 
+-spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
+  map().
+var_expr(Var, Symbol, _Env) ->
+ #{ op   => var
+  , env  => ?DEBUG(Env)
+  , form => Symbol
+  , var  => Var
+  }.
+
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
-  'clojerl.Var':type() | {erl_fun, module(), atom()} | undefined.
+  'clojerl.Var':type() | {erl_fun, module(), atom(), integer()} | undefined.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local = clj_env:get_local(Env, Symbol),
@@ -693,8 +774,9 @@ resolve(Env, Symbol) ->
           %% If there is no var then assume it's a Module:Function pair.
           %% Let's see how this works out.
           NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
-          NameAtom = binary_to_atom(clj_core:name(Symbol), utf8),
-          {erl_fun, NsAtom, NameAtom};
+          {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
+          NameAtom = binary_to_atom(Name, utf8),
+          {erl_fun, NsAtom, NameAtom, Arity};
         Var ->
           Var
       end;
@@ -704,6 +786,21 @@ resolve(Env, Symbol) ->
       CurNsVar;
     _ ->
       undefined
+  end.
+
+-spec erl_fun_arity(binary()) -> {binary(), undefined | integer()}.
+erl_fun_arity(Name) ->
+  case binary:split(Name, <<".">>, [global]) of
+    [_] -> {Name, undefined};
+    Parts ->
+      Last = lists:last(Parts),
+      case re:run(Last, <<"\\d+">>) of
+        nomatch -> {Name, undefined};
+        _ ->
+          NameParts = clj_utils:binary_join(lists:droplast(Parts), <<".">>),
+          Arity = binary_to_integer(Last),
+          {iolist_to_binary(NameParts), Arity}
+      end
   end.
 
 %%------------------------------------------------------------------------------

@@ -8,7 +8,8 @@
          desugar_meta/1,
          binary_join/2,
          ends_with/2,
-         throw_when/2
+         throw_when/2,
+         group_by/2
         ]).
 
 -define(INT_PATTERN,
@@ -154,6 +155,17 @@ throw_when(true, Reason) ->
   throw(Reason);
 throw_when(false, _) ->
   ok.
+
+-spec group_by(fun((any()) -> any()), list()) -> map().
+group_by(GroupBy, List) ->
+  Group = fun(Item, Acc) ->
+              Key = GroupBy(Item),
+              Items = maps:get(Key, Acc, []),
+              Acc#{Key => [Item | Items]}
+          end,
+  Map = lists:foldl(Group, #{}, List),
+  ReverseValue = fun(_, V) -> lists:reverse(V) end,
+  maps:map(ReverseValue, Map).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

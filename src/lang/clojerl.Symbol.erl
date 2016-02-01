@@ -44,10 +44,13 @@ to_atom(#?TYPE{name = ?M, data = {Ns, Name}}) ->
 
 'clojerl.Named.name'(#?TYPE{name = ?M, data = {_, Name}}) -> Name.
 
-'clojerl.Named.namespace'(#?TYPE{name = ?M, data = {Namespace, _}}) -> Namespace.
+'clojerl.Named.namespace'(#?TYPE{name = ?M, data = {Namespace, _}}) ->
+  Namespace.
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Keyword, Metadata) ->
+'clojerl.IMeta.with_meta'( #?TYPE{name = ?M, info = Info} = Keyword
+                         , Metadata
+                         ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.

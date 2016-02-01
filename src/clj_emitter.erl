@@ -2,118 +2,236 @@
 
 -export([emit/1]).
 
+-type ast() :: erl_syntax:syntaxTree().
+
+-type state() :: #{ modules => #{atom() => clj_module:module()}
+                  , asts    => [ast()]
+                  }.
+
 -spec emit(clj_env:env()) ->
-  {erl_parse:abstract_form(), erl_parse:abstract_expr(), clj_env:env()}.
+  { [[erl_parse:abstract_form()]]
+  , [erl_parse:abstract_expr()]
+  , clj_env:env()
+  }.
 emit(Env0) ->
   case clj_env:pop_expr(Env0) of
     {undefined, _} ->
       {[], [], Env0};
     {Expr, Env} ->
-      %% io:format("~p~n~s~n", [clj_core:str(Expr), lists:duplicate(80, $=)]),
-      SyntaxTrees   = ast(Expr),
-      RevertedForms = erl_syntax:revert_forms(SyntaxTrees),
-      {Forms, Expressions} =
-        lists:partition(fun erl_syntax:is_form/1, RevertedForms),
-      {Forms, Expressions, Env}
+      InitState = #{modules => #{}, asts => []},
+      #{ modules := Modules
+       , asts    := ReversedExpressions
+       } = ast(Expr, InitState),
+
+      ModulesForms  = lists:map( fun clj_module:to_forms/1
+                               , maps:values(Modules)
+                               ),
+      ModulesForms1 = lists:map( fun erl_syntax:revert_forms/1
+                               , ModulesForms
+                               ),
+
+      Expressions   = lists:map( fun erl_syntax:revert/1
+                               , lists:reverse(ReversedExpressions)
+                               ),
+
+      {ModulesForms1, Expressions, Env}
   end.
 
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec ast(map()) -> [erl_syntax:syntaxTree()].
-ast(#{op := constant, form := Form}) ->
-  [erl_syntax:abstract(Form)];
-ast(#{op := quote, expr := Expr}) ->
-  ast(Expr);
-ast(#{op := var, var := Var} = _Expr) ->
-  Module = var_module(Var),
+-spec ast(map(), state()) -> {[ast()], state()}.
+ast(#{op := constant, form := Form}, State) ->
+  Ast = erl_syntax:abstract(Form),
+  push_ast(Ast, State);
+ast(#{op := quote, expr := Expr}, State) ->
+  ast(Expr, State);
+%%------------------------------------------------------------------------------
+%% var, binding & local
+%%------------------------------------------------------------------------------
+ast(#{op := var, var := Var} = _Expr, State) ->
+  Module = 'clojerl.Var':module(Var),
+  Name   = 'clojerl.Var':val_function(Var),
+  Ast    = application_mfa(Module, Name, []),
 
-  [application_mfa(Module, val, [])];
-ast(#{op := binding} = Expr) ->
-  NameSym = maps:get(name, Expr),
+  push_ast(Ast, State);
+ast(#{op := binding} = Expr, State) ->
+  NameSym  = maps:get(name, Expr),
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  Ast      = erl_syntax:variable(NameAtom),
 
-  [erl_syntax:variable(NameAtom)];
-ast(#{op := local} = Expr) ->
-  NameSym = maps:get(name, Expr),
+  push_ast(Ast, State);
+ast(#{op := local} = Expr, State) ->
+  NameSym  = maps:get(name, Expr),
   NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  Ast      = erl_syntax:variable(NameAtom),
 
-  [erl_syntax:variable(NameAtom)];
-ast(#{op := do} = Expr) ->
+  push_ast(Ast, State);
+%%------------------------------------------------------------------------------
+%% do
+%%------------------------------------------------------------------------------
+ast(#{op := do} = Expr, State) ->
   #{ statements := StatementsExprs
    , ret        := ReturnExpr
    } = Expr,
 
-  Stms = lists:flatmap(fun ast/1, StatementsExprs),
-  Ret = ast(ReturnExpr),
+  StmsCount = length(StatementsExprs),
+  {Stms, State1} = pop_ast( lists:foldl(fun ast/2, State, StatementsExprs)
+                          , StmsCount
+                          ),
+  {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
+  Ast = erl_syntax:block_expr(Stms ++ [Ret]),
 
-  Stms ++ Ret;
-ast(#{op := def, var := Var, init := InitExpr} = _Expr) ->
-  %% Create a module that provides a single function with the var's
-  %% value and add module attributes with the var's info.
-  ModuleAst = module_attribute(var_module(Var)),
+  push_ast(Ast, State2);
+%%------------------------------------------------------------------------------
+%% def
+%%------------------------------------------------------------------------------
+ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
+  Module  = 'clojerl.Var':module(Var),
+  Name    = 'clojerl.Var':function(Var),
+  ValName = 'clojerl.Var':val_function(Var),
 
-  ExportAst = export_attribute([{val, 0}]),
+  State1 = ensure_module(Module, State),
+  VarAst = erl_syntax:abstract(Var),
+  {ValAst, State2} =
+    case InitExpr of
+      #{op := fn} = FnExpr ->
+        { VarAst
+        , add_functions(Module, Name, FnExpr, State1)
+        };
+      _ ->
+        pop_ast(ast(InitExpr, State1))
+    end,
 
   %% Add the var's information as a module attribute
-  VarAtom = erl_syntax:atom(var),
-  VarAst = erl_syntax:abstract(Var),
-  VarAttributeAst = erl_syntax:attribute(VarAtom, [VarAst]),
+  VarAtom    = erl_syntax:atom(var),
+  VarAttrAst = erl_syntax:attribute(VarAtom, [VarAst]),
 
-  InitAst = ast(InitExpr),
-  ClauseAst =  erl_syntax:clause([], InitAst),
-  FunctionAst = function_form(val, [ClauseAst]),
+  ValFunExportAst = export_attribute([{ValName, 0}]),
 
-  [ModuleAst, ExportAst, VarAttributeAst, FunctionAst];
-ast(#{op := fn} = Expr) ->
-  #{methods := Methods} = Expr,
+  ValClause = erl_syntax:clause([], [ValAst]),
+  ValFunAst = function_form(ValName, [ValClause]),
 
-  Clauses = lists:map(fun method_to_clause/1, Methods),
+  AttrsAsts = [ValFunExportAst, VarAttrAst],
 
-  case maps:get(local, Expr, undefined) of
-    undefined ->
-      [erl_syntax:fun_expr(Clauses)];
-    NameExpr ->
-      #{name := NameSym} = NameExpr,
+  State3 = add_functions_attributes(Module, [ValFunAst], AttrsAsts, State2),
 
-      NameAtom = 'clojerl.Symbol':to_atom(NameSym),
-      Name = erl_syntax:variable(NameAtom),
+  push_ast(VarAst, State3);
+%%------------------------------------------------------------------------------
+%% fn, invoke, erl_fun
+%%------------------------------------------------------------------------------
+ast(#{op := fn} = Expr, State) ->
+  Var = maps:get(local, Expr, undefined),
 
-      [erl_syntax:named_fun_expr(Name, Clauses)]
-  end;
-ast(#{op := erl_fun} = Expr) ->
-  #{ module := Module
+  RemoveKeys = [op, env, methods, form, once],
+  Meta       = maps:without(RemoveKeys, Expr),
+  Var1       = clj_core:with_meta(Var, Meta),
+  VarAst     = erl_syntax:abstract(Var1),
+
+  NameSym   = 'clojerl.Var':name(Var1),
+  ModuleSym = 'clojerl.Var':namespace(Var1),
+
+  Name   = 'clojerl.Symbol':to_atom(NameSym),
+  Module = 'clojerl.Symbol':to_atom(ModuleSym),
+
+  State1 = ensure_module(Module, State),
+  State2 = add_functions(Module, Name, Expr, State1),
+
+  push_ast(VarAst, State2);
+ast(#{op := erl_fun, invoke := true} = Expr, State) ->
+  #{ module   := Module
    , function := Function
    } = Expr,
 
   ModuleTree = erl_syntax:atom(Module),
   FunctionTree = erl_syntax:atom(Function),
+  Ast = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
 
-  [erl_syntax:module_qualifier(ModuleTree, FunctionTree)];
-ast(#{op := invoke} = Expr) ->
+  push_ast(Ast, State);
+ast(#{op := erl_fun} = Expr, State) ->
+  #{ module   := Module
+   , function := Function
+   , arity    := Arity
+   } = Expr,
+
+  clj_utils:throw_when( Arity == undefined
+                      , [ <<"Can't use erlang function as value without ">>
+                        , <<"specifying its arity">>
+                        ]
+                      ),
+
+  ModuleTree   = erl_syntax:atom(Module),
+  FunctionTree = erl_syntax:atom(Function),
+  ArityTree    = erl_syntax:abstract(Arity),
+
+  ArityQualifier  = erl_syntax:arity_qualifier(FunctionTree, ArityTree),
+  ModuleQualifier = erl_syntax:module_qualifier(ModuleTree, ArityQualifier),
+  Ast = erl_syntax:implicit_fun(ModuleQualifier),
+
+  push_ast(Ast, State);
+ast(#{op := invoke} = Expr, State) ->
   #{ args := ArgsExpr
    , f    := FExpr
    } = Expr,
 
-  Args = lists:flatmap(fun ast/1, ArgsExpr),
-  [Fun] = ast(FExpr),
+  {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExpr)
+                          , length(ArgsExpr)
+                          ),
 
-  [erl_syntax:application(Fun, Args)];
-ast(#{op := vector} = Expr) ->
+  case FExpr of
+    #{op := var, var := Var} ->
+      Module   = 'clojerl.Var':module(Var),
+      Function = 'clojerl.Var':function(Var),
+      Args1    = 'clojerl.Var':process_args(Var, Args, fun erl_syntax:list/1),
+      Ast      = application_mfa(Module, Function, Args1),
+
+      push_ast(Ast, State1);
+    #{op := erl_fun} ->
+      {FunAst, State2} = pop_ast(ast(FExpr, State1)),
+      Ast = erl_syntax:application(FunAst, Args),
+
+      push_ast(Ast, State2);
+    #{op := fn} ->
+      {VarAst, State2} = pop_ast(ast(FExpr, State1)),
+      Var      = erl_syntax:concrete(VarAst),
+      Module   = 'clojerl.Var':module(Var),
+      Function = 'clojerl.Var':function(Var),
+      Args1    = 'clojerl.Var':process_args(Var, Args, fun erl_syntax:list/1),
+      Ast      = application_mfa(Module, Function, Args1),
+
+      push_ast(Ast, State2);
+    _ ->
+      {FunAst, State2} = pop_ast(ast(FExpr, State1)),
+      ArgsAst = erl_syntax:list(Args),
+      Ast     = application_mfa(clj_core, invoke, [FunAst, ArgsAst]),
+
+      push_ast(Ast, State2)
+  end;
+%%------------------------------------------------------------------------------
+%% Literal data structures
+%%------------------------------------------------------------------------------
+ast(#{op := vector} = Expr, State) ->
   #{items := ItemsExprs} = Expr,
 
-  Items = lists:flatmap(fun ast/1, ItemsExprs),
+  {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
+                           , length(ItemsExprs)
+                           ),
   ListItems = erl_syntax:list(Items),
 
-  [application_mfa('clojerl.Vector', new, [ListItems])];
-ast(#{op := map} = Expr) ->
+  Ast = application_mfa('clojerl.Vector', new, [ListItems]),
+  push_ast(Ast, State1);
+ast(#{op := map} = Expr, State) ->
   #{ keys := KeysExprs
    , vals := ValsExprs
    } = Expr,
 
-  Keys = lists:flatmap(fun ast/1, KeysExprs),
-  Vals = lists:flatmap(fun ast/1, ValsExprs),
+  {Keys, State1} = pop_ast( lists:foldl(fun ast/2, State, KeysExprs)
+                          , length(KeysExprs)
+                          ),
+  {Vals, State2} = pop_ast( lists:foldl(fun ast/2, State1, ValsExprs)
+                          , length(ValsExprs)
+                          ),
   PairUp = fun
              PairUp([], [], Pairs) ->
                Pairs;
@@ -124,42 +242,67 @@ ast(#{op := map} = Expr) ->
   Items = PairUp(Keys, Vals, []),
   ListItems = erl_syntax:list(Items),
 
-  [application_mfa('clojerl.Map', new, [ListItems])];
-ast(#{op := set} = Expr) ->
+  Ast = application_mfa('clojerl.Map', new, [ListItems]),
+  push_ast(Ast, State2);
+ast(#{op := set} = Expr, State) ->
   #{items := ItemsExprs} = Expr,
 
-  Items = lists:flatmap(fun ast/1, ItemsExprs),
+  {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
+                           , length(ItemsExprs)
+                           ),
   ListItems = erl_syntax:list(Items),
 
-  [application_mfa('clojerl.Set', new, [ListItems])].
+  Ast = application_mfa('clojerl.Set', new, [ListItems]),
+  push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
+%% if
+%%------------------------------------------------------------------------------
+ast(#{op := 'if'} = Expr, State) ->
+  #{ test := TestExpr
+   , then := ThenExpr
+   , else := ElseExpr
+   } = Expr,
 
+  {Test, State1} = pop_ast(ast(TestExpr, State)),
+
+  True          = erl_syntax:variable('True'),
+  FalseAtom     = erl_syntax:atom(false),
+  UndefinedAtom = erl_syntax:atom(undefined),
+  TrueGuards    = [ application_mfa(erlang, '=/=', [True, FalseAtom])
+                  , application_mfa(erlang, '=/=', [True, UndefinedAtom])
+                  ],
+  {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
+  TrueClause    = erl_syntax:clause([True], TrueGuards, [ThenAst]),
+
+  Whatever = erl_syntax:variable('_'),
+  {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
+  FalseClause = erl_syntax:clause([Whatever], [], [ElseAst]),
+
+  Ast = erl_syntax:case_expr(Test, [TrueClause, FalseClause]),
+  push_ast(Ast, State3);
+%%------------------------------------------------------------------------------
+%% throw
+%%------------------------------------------------------------------------------
+ast(#{op := throw} = Expr, State) ->
+  #{exception := ExceptionExpr} = Expr,
+
+  {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
+
+  Ast = application_mfa(erlang, throw, [Exception]),
+  push_ast(Ast, State1).
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
 
-%% @doc Erlang module's name will be clj.{{namespace}}.{{name}}__var
--spec var_module('clojerl.Var':type()) -> module().
-var_module(Var) ->
-  NamespaceStr = clj_core:str('clojerl.Var':namespace(Var)),
-  NameStr = clj_core:str('clojerl.Var':name(Var)),
-  ModuleStr = <<"clj.", NamespaceStr/binary, ".", NameStr/binary, "__var">>,
-  binary_to_atom(ModuleStr, utf8).
-
--spec module_attribute(atom()) -> erl_syntax:syntaxTree().
-module_attribute(Name) when is_atom(Name) ->
-  ModuleAtom = erl_syntax:atom(module),
-  NameAtom = erl_syntax:atom(Name),
-  erl_syntax:attribute(ModuleAtom, [NameAtom]).
-
--spec function_form(atom(), [erl_syntax:syntaxTree()]) ->
-  erl_syntax:syntaxTree().
+-spec function_form(atom(), [ast()]) ->
+  ast().
 function_form(Name, Clauses) when is_atom(Name) ->
   NameAst = erl_syntax:atom(Name),
   erl_syntax:function(NameAst, Clauses).
 
 -spec export_attribute({atom(), integer()}) ->
-  erl_syntax:syntaxTree().
+  ast().
 export_attribute(FAs) when is_list(FAs) ->
   ExportAtom = erl_syntax:atom(export),
   Fun  = fun({Function, Arity}) -> arity_qualifier(Function, Arity) end,
@@ -167,26 +310,29 @@ export_attribute(FAs) when is_list(FAs) ->
   ListAst = erl_syntax:list(Asts),
   erl_syntax:attribute(ExportAtom, [ListAst]).
 
--spec arity_qualifier(atom(), integer()) -> erl_syntax:syntaxTree().
+-spec arity_qualifier(atom(), integer()) -> ast().
 arity_qualifier(Function, Arity) when is_atom(Function),
                                       is_integer(Arity) ->
   FunctionAtomAst = erl_syntax:atom(Function),
   ArityIntegerAst = erl_syntax:integer(Arity),
   erl_syntax:arity_qualifier(FunctionAtomAst, ArityIntegerAst).
 
--spec method_to_clause(clj_analyzer:expr()) -> erl_syntax:syntaxTree().
-method_to_clause(MethodExpr) ->
+-spec method_to_clause(clj_analyzer:expr(), state()) -> ast().
+method_to_clause(MethodExpr, State) ->
   #{ params := ParamsExprs
    , body   := BodyExpr
    } = MethodExpr,
 
-  Args = lists:flatmap(fun ast/1, ParamsExprs),
-  Guards = [],
-  Body = ast(BodyExpr),
+  {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ParamsExprs)
+                          , length(ParamsExprs)
+                          ),
+  Guards         = [],
+  {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
-  erl_syntax:clause(Args, Guards, Body).
+  Clause = erl_syntax:clause(Args, Guards, [Body]),
+  push_ast(Clause, State2).
 
--spec application_mfa(module(), atom(), list()) -> erl_syntax:syntaxTree().
+-spec application_mfa(module(), atom(), list()) -> ast().
 application_mfa(Module, Function, Args) ->
   ModuleTree = erl_syntax:atom(Module),
   FunctionTree = erl_syntax:atom(Function),
@@ -194,3 +340,57 @@ application_mfa(Module, Function, Args) ->
   ValQualifier = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
 
   erl_syntax:application(ValQualifier, Args).
+
+-spec add_functions(module(), atom(), map(), state()) -> state().
+add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
+  ParamCountFun = fun(#{params := Params}) -> length(Params) end,
+  GroupedMethods = clj_utils:group_by(ParamCountFun, Methods),
+
+  FunctionFun =
+    fun(MethodsList, StateAcc) ->
+        StateAcc1 = lists:foldl(fun method_to_clause/2, StateAcc, MethodsList),
+        {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
+        Fun = function_form(Name, ClausesAst),
+        add_functions_attributes(Module, [Fun], [], StateAcc2)
+    end,
+
+  State1 = lists:foldl(FunctionFun, State, maps:values(GroupedMethods)),
+
+  ExportFun = fun(Arity, StateAcc) ->
+                  Attr = export_attribute([{Name, Arity}]),
+                  add_functions_attributes(Module, [], [Attr], StateAcc)
+              end,
+
+  lists:foldl(ExportFun, State1, maps:keys(GroupedMethods)).
+
+-spec ensure_module(atom(), state()) -> state().
+ensure_module(Name, State = #{modules := Modules}) ->
+  case maps:is_key(Name, Modules) of
+    true  -> State;
+    false ->
+      {ok, ModuleDef} = clj_module:load(Name),
+      State#{modules => Modules#{Name => ModuleDef}}
+  end.
+
+-spec add_functions_attributes(atom(), [ast()], [ast()], state()) ->
+   state().
+add_functions_attributes(Name, Funs, Attrs, State = #{modules := Modules}) ->
+  Module = maps:get(Name, Modules),
+
+  Module1 = clj_module:add_functions(Module, Funs),
+  Module2 = clj_module:add_attributes(Module1, Attrs),
+
+  State#{modules => Modules#{Name => Module2}}.
+
+-spec push_ast(ast(), state()) -> state().
+push_ast(Ast, State = #{asts := Asts}) ->
+  State#{asts => [Ast | Asts]}.
+
+-spec pop_ast(state()) -> {ast(), state()}.
+pop_ast(State = #{asts := [Ast | Asts]}) ->
+  {Ast, State#{asts => Asts}}.
+
+-spec pop_ast(state(), non_neg_integer()) -> {[ast()], state()}.
+pop_ast(State = #{asts := Asts}, N) ->
+  {ReturnAsts, RestAsts} = lists:split(N, Asts),
+  {lists:reverse(ReturnAsts), State#{asts => RestAsts}}.

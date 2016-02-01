@@ -9,19 +9,18 @@
 resolve(Protocol, FunctionName, Args = [Head | _]) ->
   TypeModule = clj_core:type(Head),
   ImplFunction = impl_function(Protocol, FunctionName),
-  ImplModule = impl_module(Protocol, TypeModule),
 
   IsExported = erlang:function_exported(TypeModule, ImplFunction, length(Args)),
 
-  try
-    {Module, Function} = case IsExported of
-                           true -> {TypeModule, ImplFunction};
-                           false -> {ImplModule, FunctionName}
-                         end,
-    apply(Module, Function, Args)
-  catch
-    _:undef ->
-      case erlang:function_exported(ImplModule, FunctionName, length(Args)) of
+  case IsExported of
+    true ->
+      apply(TypeModule, ImplFunction, Args);
+    false ->
+      ImplModule = impl_module(Protocol, TypeModule),
+      IsExported2 = erlang:function_exported(ImplModule, FunctionName, length(Args)),
+      case IsExported2 of
+        true ->
+          apply(TypeModule, ImplFunction, Args);
         false ->
           TypeBin = atom_to_binary(TypeModule, utf8),
           FunctionBin = atom_to_binary(FunctionName, utf8),
@@ -30,9 +29,8 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
                   " has no implementation for function '",
                   FunctionBin/binary,
                   "' in protocol '",
-                  ProtocolBin/binary, "'">>);
-        true -> throw({undef, erlang:get_stacktrace()})
-      end
+                  ProtocolBin/binary, "'">>)
+        end
   end.
 
 -spec 'extends?'(atom(), atom()) -> boolean().

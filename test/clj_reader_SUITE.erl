@@ -368,7 +368,7 @@ syntax_quote(_Config) ->
   ct:comment("Read values that can have metadata"),
 
   ct:comment("Read unqualified symbol"),
-  UserHelloSym = clj_core:symbol(<<"user">>, <<"hello">>),
+  UserHelloSym = clj_core:symbol(<<"$user">>, <<"hello">>),
   ListWithMetaUserHelloSym = WrapWithMetaFun(UserHelloSym, undefined),
   ListWithMetaUserHelloSym = clj_reader:read(<<"`hello">>),
 
@@ -377,7 +377,7 @@ syntax_quote(_Config) ->
   ListWithMetaSomeNsHelloSym = WrapWithMetaFun(SomeNsHelloSym, undefined),
   ListWithMetaSomeNsHelloSym = clj_reader:read(<<"`some-ns/hello">>),
 
-  ListWithMetaUserHelloSym = clj_reader:read(<<"`user/hello">>),
+  ListWithMetaUserHelloSym = clj_reader:read(<<"`$user/hello">>),
 
   ct:comment("Read auto-gen symbol"),
   ListGenSym = clj_reader:read(<<"`hello#">>),
@@ -406,7 +406,7 @@ syntax_quote(_Config) ->
   WithMetaListHello = clj_reader:read(<<"`(hello :world)">>),
   WithMetaListHello = clj_reader:read(<<"(clojure.core/with-meta"
                                         "  (clojure.core/concat"
-                                        "    (clojure.core/list user/hello)"
+                                        "    (clojure.core/list $user/hello)"
                                         "    (clojure.core/list :world))"
                                         "  nil)">>),
 
@@ -421,7 +421,7 @@ syntax_quote(_Config) ->
                                   "  (clojure.core/apply"
                                   "    clojure.core/hash-map"
                                   "    (clojure.core/concat"
-                                  "      (clojure.core/list user/hello)"
+                                  "      (clojure.core/list $user/hello)"
                                   "      (clojure.core/list :world)))"
                                   "  nil)">>),
 
@@ -431,7 +431,7 @@ syntax_quote(_Config) ->
                                      "  (clojure.core/apply"
                                      "    clojure.core/vector"
                                      "    (clojure.core/concat"
-                                     "      (clojure.core/list user/hello)"
+                                     "      (clojure.core/list $user/hello)"
                                      "      (clojure.core/list :world)))"
                                      "  nil)">>),
 
@@ -442,7 +442,7 @@ syntax_quote(_Config) ->
                                   "    clojure.core/hash-set"
                                   "    (clojure.core/concat"
                                   "      (clojure.core/list :world)"
-                                  "      (clojure.core/list user/hello)))"
+                                  "      (clojure.core/list $user/hello)))"
                                   "  nil)">>),
 
   ct:comment("Read unquote-splice inside list"),

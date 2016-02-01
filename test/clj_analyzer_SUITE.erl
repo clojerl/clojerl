@@ -16,7 +16,9 @@
          symbol/1,
          vector/1,
          map/1,
-         set/1
+         set/1,
+         throw/1,
+         erl_fun/1
         ]).
 
 -spec all() -> [atom()].
@@ -116,7 +118,7 @@ def(_Config) ->
        end,
 
   ct:comment("Create def outside current namespace"),
-  ok = try analyze_all(<<"(ns bla) (def x 1) (ns user) (def bla/x 2)">>)
+  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user) (def bla/x 2)">>)
        catch _:Reason5 ->
            <<"Can't create defs outside of current ns">> = Reason5,
            ok
@@ -125,11 +127,23 @@ def(_Config) ->
   #{op := def,
     doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
 
-  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y user/x)">>),
+  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y $user/x)">>),
 
-  #{op := def} = analyze_one(<<"(def user/x 1)">>),
+  #{op := def} = analyze_one(<<"(def $user/x 1)">>),
 
   [#{op := def}] = analyze_all(<<"(ns bla) (def x 1)">>),
+
+  ct:comment("Function vars should have fn information in their metadata"),
+  #{ op  := def
+   , var := Var
+   } = analyze_one(<<"(def $user/x (fn* [x] x))">>),
+
+  VarMeta = clj_core:meta(Var),
+
+  #{ 'variadic?'     := false
+   , max_fixed_arity := 1
+   , variadic_arity  := undefined
+   } = VarMeta,
 
   {comments, ""}.
 
@@ -137,11 +151,11 @@ def(_Config) ->
 quote(_Config) ->
   ct:comment("Quote with reader macro"),
   #{op := quote,
-    expr := #{op := constant}} = analyze_one(<<"'(user/x 1)">>),
+    expr := #{op := constant}} = analyze_one(<<"'($user/x 1)">>),
 
   ct:comment("Quote with quote symbol"),
   #{op := quote,
-    expr := #{op := constant}} = analyze_one(<<"(quote (user/x 1))">>),
+    expr := #{op := constant}} = analyze_one(<<"(quote ($user/x 1))">>),
 
   ct:comment("More than one arg to quote"),
   ok = try analyze_all(<<"(quote 1 2 3)">>)
@@ -169,11 +183,13 @@ fn(_Config) ->
    } = Fn1Param1,
 
   ct:comment("named fn with one param and one method"),
-  HelloSymbol = clj_core:symbol(<<"hello">>),
   #{op := fn,
     methods := [Fn2Method1],
-    local := #{op := binding, name := HelloSymbol}
+    local := VarHello
    } = analyze_one(<<"(fn* hello [x] x)">>),
+
+  <<"$user">> = clj_core:namespace(VarHello),
+  <<"hello", _/binary>> = clj_core:name(VarHello),
 
   #{op := fn_method,
     params := [Fn2Param1]
@@ -539,6 +555,65 @@ set(_Config) ->
   #{op := set} = analyze_one(<<"#{:name :lastname}">>),
 
   {comments, ""}.
+
+-spec throw(config()) -> result().
+throw(_Config) ->
+  ct:comment("Throw with a single argument"),
+  #{op := throw} = analyze_one(<<"(throw 1)">>),
+
+  ct:comment("Throw with any other amount of arguments fails"),
+  ok = try analyze_one(<<"(throw)">>)
+       catch _:<<"Wrong number of args to throw, had: 0">> ->
+           ok
+       end,
+
+  ok = try analyze_one(<<"(throw :a :b)">>)
+       catch _:<<"Wrong number of args to throw, had: 2">> ->
+           ok
+       end,
+
+  ok = try analyze_one(<<"(throw :a :b :c :d)">>)
+       catch _:<<"Wrong number of args to throw, had: 4">> ->
+           ok
+       end,
+
+  {comments, ""}.
+
+-spec erl_fun(config()) -> result().
+erl_fun(_Config) ->
+  ct:comment("Erlang fun without arity"),
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := is_atom
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom">>),
+
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := is_atom
+   , arity    := 1
+   } = analyze_one(<<"erlang/is_atom.1">>),
+
+  #{ op       := erl_fun
+   , module   := io
+   , function := 'format.1'
+   , arity    := 2
+   } = analyze_one(<<"io/format.1.2">>),
+
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := 'is_atom.'
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom.">>),
+
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := 'is_atom.hello'
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom.hello">>),
+
+  {comments, ""}.
+
 
 %%------------------------------------------------------------------------------
 %% Helper functions

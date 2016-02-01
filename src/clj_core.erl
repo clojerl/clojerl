@@ -29,11 +29,13 @@
          deref/1,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
+         merge/1,
          'contains?'/2,
          boolean/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
          'even?'/1,
+         invoke/2,
          next_id/0,
          gensym/0, gensym/1
         ]).
@@ -203,6 +205,20 @@ get(X, Key) -> 'clojerl.ILookup':get(X, Key).
 get(undefined, _Key, _NotFound) -> undefined;
 get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
 
+-spec merge([any()]) -> any().
+merge([]) ->
+  undefined;
+merge([Map]) ->
+  Map;
+merge([undefined | Maps]) ->
+  merge(Maps);
+merge([First, undefined | Rest]) ->
+  merge([First | Rest]);
+merge([First, Second | Rest]) ->
+  ConjFun = fun(Item, Acc) -> conj(Acc, Item) end,
+  Result = lists:foldl(ConjFun, First, seq2(Second)),
+  merge([Result | Rest]).
+
 -spec 'contains?'(any(), any()) -> any().
 'contains?'(X, Key) -> get(X, Key) =/= undefined.
 
@@ -245,8 +261,13 @@ hash_map(Items) ->
 hash_set(Items) ->
   'clojerl.Set':new(Items).
 
+-spec 'even?'(integer()) -> boolean().
 'even?'(X) ->
   (X band 1) == 0.
+
+-spec invoke('clojerl.IFn':type(), 'clojerl.ISequential':type()) -> any().
+invoke(Fn, Args) ->
+  'clojerl.IFn':invoke(Fn, Args).
 
 -spec next_id() -> integer().
 next_id() ->
@@ -259,4 +280,4 @@ gensym() ->
 -spec gensym(binary()) -> 'clojer.Symbol':type().
 gensym(Prefix) ->
   PartsBin = lists:map(fun str/1, [Prefix, next_id()]),
-  iolist_to_binary(PartsBin).
+  symbol(iolist_to_binary(PartsBin)).
