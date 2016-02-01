@@ -5,7 +5,6 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IMeta').
--behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
@@ -15,10 +14,6 @@
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
--export([ 'clojerl.ISeq.first'/1
-        , 'clojerl.ISeq.next'/1
-        , 'clojerl.ISeq.more'/1
-        ]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -56,28 +51,6 @@ new(Items) when is_list(Items) ->
 
 'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
-
-'clojerl.ISeq.first'(#?TYPE{name = ?M, data = Array}) ->
-  case array:size(Array) of
-    0 -> undefined;
-    _ -> array:get(0, Array)
-  end.
-
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = Array}) ->
-  case array:size(Array) of
-    0 -> undefined;
-    _ ->
-      %% Reset the first element and get all non-resset elements.
-      RestArray = array:reset(0, Array),
-      Items = array:sparse_to_list(RestArray),
-      clj_core:list(Items)
-  end.
-
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = Array} = Vector) ->
-  case array:size(Array) of
-    0 -> clj_core:list([]);
-    _ -> 'clojerl.ISeq.next'(Vector)
-  end.
 
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of

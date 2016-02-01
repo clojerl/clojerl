@@ -24,6 +24,7 @@ is_special(S) ->
 macroexpand_1(Env, Form) ->
   Op = clj_core:first(Form),
   {MacroVar, Env} = lookup_var(Op, false, Env),
+
   case
     is_special(Op)
     orelse (not clj_core:'symbol?'(Op))
@@ -33,9 +34,9 @@ macroexpand_1(Env, Form) ->
     true -> Form;
     false ->
       {MacroVar, Env} = lookup_var(Op, false, Env),
-      Fun = clj_core:deref(MacroVar),
-      Args = [Form, Env, clj_core:rest(Form)],
-      erlang:apply(Fun, Args)
+      Var = clj_core:deref(MacroVar),
+      Args = [Form, Env] ++ clj_core:seq(clj_core:rest(Form)),
+      clj_core:invoke(Var, Args)
   end.
 
 -spec macroexpand(clj_env:env(), 'clojerl.List':type()) -> any().
@@ -87,17 +88,17 @@ analyze_forms(Env, Forms) ->
 
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
 analyze_form(Env, Form) ->
-  case clj_core:type(Form) of
-    'clojerl.Symbol' ->
-      analyze_symbol(Env, Form);
-    'clojerl.List' ->
+  case {clj_core:type(Form), clj_core:'seq?'(Form)} of
+    {_, true} ->
       Op = clj_core:first(Form),
       analyze_seq(Env, Op, Form);
-    'clojerl.Vector' ->
+    {'clojerl.Symbol', _} ->
+      analyze_symbol(Env, Form);
+    {'clojerl.Vector', _} ->
       analyze_vector(Env, Form);
-    'clojerl.Map' ->
+    {'clojerl.Map', _} ->
       analyze_map(Env, Form);
-    'clojerl.Set' ->
+    {'clojerl.Set', _} ->
       analyze_set(Env, Form);
     _ ->
       analyze_const(Env, Form)
@@ -612,6 +613,7 @@ validate_def_args(List) ->
       {4, Str} when is_binary(Str) -> Str;
       _ -> undefined
     end,
+
   case clj_core:count(List) of
     C when C == 2;
            C == 3, Docstring == undefined;

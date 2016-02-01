@@ -43,3 +43,35 @@
    ([f x y args] (clj_core/invoke f (cons x (cons y (seq args)))))
    ([f x y z args] (clj_core/invoke f (cons x (cons y (cons z (seq args))))))
    ([f a b c d args] (clj_core/invoke f (cons a (cons b (cons c (cons d (seq args)))))))))
+
+(def first
+  (fn* [xs] (clj_core/first xs)))
+
+(def rest
+  (fn* [xs] (clj_core/rest xs)))
+
+(def next
+  (fn* [xs] (clj_core/next xs)))
+
+(def concat
+  (fn*
+   ([] (list))
+   ([x] (apply list x))
+   ([x y]
+    (if (seq x)
+      (cons (first (seq x)) (concat (rest (seq x)) y))
+      y))
+   ([x y & zs]
+    (if (seq zs)
+      (apply concat (concat x y) (first zs) (next zs))
+      (concat x y)))))
+
+(def with-meta
+  (fn* [x meta] (clj_core/with_meta x meta)))
+
+(def meta
+  (fn* [x] (clj_core/meta x)))
+
+(def ^:macro defn
+  (fn* [_form _env name args & body]
+       `(def ~name (fn* ~args ~@body))))

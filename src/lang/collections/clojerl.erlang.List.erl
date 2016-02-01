@@ -1,11 +1,13 @@
 -module('clojerl.erlang.List').
 
+-behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
+-export(['clojerl.Counted.count'/1]).
 -export([ 'clojerl.IColl.count'/1
         , 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
@@ -17,6 +19,12 @@
         ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
+
+%%------------------------------------------------------------------------------
+%% Protocols
+%%------------------------------------------------------------------------------
+
+'clojerl.Counted.count'(Items) -> length(Items).
 
 'clojerl.Stringable.str'([]) ->
   <<"()">>;

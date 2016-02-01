@@ -5,7 +5,6 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.Seqable').
--behavior('clojerl.ISeq').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IColl').
 -behavior('clojerl.ILookup').
@@ -14,10 +13,6 @@
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
--export([ 'clojerl.ISeq.first'/1
-        , 'clojerl.ISeq.next'/1
-        , 'clojerl.ISeq.more'/1
-        ]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -51,26 +46,6 @@ new(Values) when is_list(Values) ->
   case gb_sets:size(Set) of
     0 -> undefined;
     _ -> gb_sets:to_list(Set)
-  end.
-
-'clojerl.ISeq.first'(#?TYPE{name = ?M, data = Set}) ->
-  Iterator = gb_sets:iterator(Set),
-  case gb_sets:next(Iterator) of
-    none -> undefined;
-    {X, _} -> X
-  end.
-
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = Set}) ->
-  case gb_sets:to_list(Set) of
-    [] -> undefined;
-    [_ | []] -> undefined;
-    [_ | Items] -> clj_core:list(Items)
-  end.
-
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = GbSet} = Set) ->
-  case gb_sets:size(GbSet) of
-    0 -> clj_core:list([]);
-    _ -> 'clojerl.ISeq.next'(Set)
   end.
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
