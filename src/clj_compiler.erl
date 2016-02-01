@@ -58,8 +58,8 @@ compile_forms(Forms) ->
     {ok, Name, Binary} ->
       BeamFilename = <<(atom_to_binary(Name, utf8))/binary, ".beam">>,
       BeamPath = filename:join(["ebin", BeamFilename]),
-      file:write_file(BeamPath, Binary),
-      code:load_binary(Name, binary_to_list(BeamPath), Binary),
+      ok = file:write_file(BeamPath, Binary),
+      {module, Name} = code:load_binary(Name, binary_to_list(BeamPath), Binary),
       Name;
     Error ->
       throw(Error)
