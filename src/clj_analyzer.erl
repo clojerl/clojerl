@@ -182,16 +182,8 @@ parse_fn(Env, List) ->
 
   {NameSym, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
-      true  ->
-        %% TODO:
-        %% We need to change the name of the fn* so that there is no name
-        %% clash, with another anonymous function with the same name,
-        %% or even an existing var with the same name. If the name is
-        %% changed then all the symbols that should resolve to the fn*
-        %% var would need to be tracked down.
-        {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false ->
-        {clj_core:gensym(<<"fn__">>), clj_core:rest(List)}
+      true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
+      false -> {clj_core:symbol(<<"anon">>), clj_core:rest(List)}
     end,
 
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
@@ -199,8 +191,17 @@ parse_fn(Env, List) ->
                   false -> clj_core:seq2(Methods)
                 end,
 
-  {Var, Env1Temp} = lookup_var(NameSym, Env),
-  Env1 = clj_env:put(Env1Temp, local, Var),
+  %% Create a var with a modified name and add it as a local binding
+  %% with the original name.
+  VarNsSym   = clj_env:current_ns(Env),
+  NameBin    = clj_core:name(NameSym),
+  VarNameSym = clj_core:gensym(<<NameBin/binary, "__fn__">>),
+  Var        = 'clojerl.Var':new(VarNsSym, VarNameSym),
+  VarExpr    = var_expr(Var, VarNameSym, Env),
+  Env1       = clj_env:put_local( clj_env:add_locals_scope(Env)
+                                , NameSym
+                                , VarExpr
+                                ),
 
   OpMeta = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
@@ -225,6 +226,7 @@ parse_fn(Env, List) ->
                     [] -> undefined;
                     _ -> lists:max(FixedArities)
                   end,
+
   %% Validations
   clj_utils:throw_when(length(AllVariadics) >= 2,
                        <<"Can't have more than 1 variadic overload">>),
@@ -242,14 +244,15 @@ parse_fn(Env, List) ->
                          "with more params than variadic overload">>),
 
   %% Now that we have all the fn info we re-analyze the methods
-  %% with the associated var updated. This is so that a recursive
+  %% with the associated var, so that a recursive
   %% call can be correctly resolved.
   VarMeta = #{ 'variadic?'     => IsVariadic
              , max_fixed_arity => MaxFixedArity
              , variadic_arity  => VariadicArity
              },
-  Var1 = clj_core:with_meta(Var, VarMeta),
-  Env3 = clj_env:update_var(Env2, Var1),
+  Var1     = clj_core:with_meta(Var, VarMeta),
+  VarExpr1 = var_expr(Var1, VarNameSym, Env2),
+  Env3     = clj_env:put_local(Env2, NameSym, VarExpr1),
   {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce),
 
   FnExpr = #{ op              => fn
@@ -263,7 +266,9 @@ parse_fn(Env, List) ->
             , local           => Var1
             },
 
-  clj_env:push_expr(Env4, FnExpr).
+  Env5 = clj_env:add_locals_scope(Env4),
+
+  clj_env:push_expr(Env5, FnExpr).
 
 -spec analyze_fn_methods(clj_env:env(), ['clojerl.List':type()], boolean()) ->
  {[map()], clj_env:env()}.
@@ -574,7 +579,7 @@ parse_def(Env, List) ->
 var_fn_info(Var, #{op := fn} = Expr) ->
   %% Add information about the associated function
   %% to the var's metadata.
-  RemoveKeys = [op, env, methods, form, once],
+  RemoveKeys = [op, env, methods, form, once, local],
   ExprInfo = maps:without(RemoveKeys, Expr),
   VarMeta = clj_core:meta(Var),
   VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
@@ -708,6 +713,10 @@ analyze_invoke(Env, Form) ->
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
   case {clj_core:namespace(Symbol), clj_env:get_local(Env, Symbol)} of
+    %% If the local is actually a var, then just return it
+    %% without modifying the op.
+    {undefined, #{op := var} = Local} ->
+      clj_env:push_expr(Env, Local);
     {undefined, Local} when Local =/= undefined ->
       clj_env:push_expr(Env, Local#{op => local});
     _ ->
@@ -724,14 +733,19 @@ analyze_symbol(Env, Symbol) ->
                      },
           clj_env:push_expr(Env, FunExpr);
         Var ->
-          VarExpr = #{ op   => var
-                     , env  => ?DEBUG(Env)
-                     , form => Symbol
-                     , var  => Var
-                     },
+          VarExpr = var_expr(Var, Symbol, Env),
           clj_env:push_expr(Env, VarExpr)
       end
   end.
+
+-spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
+  map().
+var_expr(Var, Symbol, _Env) ->
+ #{ op   => var
+  , env  => ?DEBUG(Env)
+  , form => Symbol
+  , var  => Var
+  }.
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
   'clojerl.Var':type() | {erl_fun, module(), atom(), integer()} | undefined.

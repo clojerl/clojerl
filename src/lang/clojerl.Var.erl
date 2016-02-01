@@ -3,9 +3,10 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IDeref').
--behavior('clojerl.Stringable').
--behavior('clojerl.IMeta').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IMeta').
+-behavior('clojerl.Named').
+-behavior('clojerl.Stringable').
 
 -export([ new/2
         , namespace/1
@@ -27,6 +28,9 @@
         , 'clojerl.IMeta.with_meta'/2
         ]).
 -export(['clojerl.IFn.invoke'/2]).
+-export([ 'clojerl.Named.name'/1
+        , 'clojerl.Named.namespace'/1
+        ]).
 
 -record(?M, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
             , name                   :: 'clojerl.Symbol':type()
@@ -80,6 +84,12 @@ val_function(#?TYPE{name = ?M} = Var) ->
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
+
+'clojerl.Named.name'(#?TYPE{name = ?M, data = #?M{name = NameSym}}) ->
+  clj_core:name(NameSym).
+
+'clojerl.Named.namespace'(#?TYPE{name = ?M, data = #?M{ns = NamespaceSym}}) ->
+  clj_core:name(NamespaceSym).
 
 'clojerl.Stringable.str'(#?TYPE{data = #?M{ns = NsSym, name = NameSym}}) ->
   <<"#'", (clj_core:str(NsSym))/binary
