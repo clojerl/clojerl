@@ -19,6 +19,7 @@
         , 'clojerl.ISeq.next'/1
         , 'clojerl.ISeq.more'/1
         ]).
+-export(['clojerl.ISequential.noop'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -61,6 +62,8 @@ new(Items) when is_list(Items) ->
 'clojerl.ISeq.more'(#?TYPE{name = ?M, data = []}) -> undefined;
 'clojerl.ISeq.more'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
+
+'clojerl.ISequential.noop'(_) -> ok.
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
