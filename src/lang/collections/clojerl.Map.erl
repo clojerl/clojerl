@@ -5,7 +5,6 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.Seqable').
--behavior('clojerl.ISeq').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IColl').
 -behavior('clojerl.ILookup').
@@ -14,10 +13,6 @@
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
--export([ 'clojerl.ISeq.first'/1
-        , 'clojerl.ISeq.next'/1
-        , 'clojerl.ISeq.more'/1
-        ]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -74,12 +69,6 @@ vals(#?TYPE{name = ?M, data = Map}) -> maps:values(Map).
     [] -> undefined;
     X -> X
   end.
-
-'clojerl.ISeq.first'(Map) -> clj_core:first(clj_core:seq(Map)).
-
-'clojerl.ISeq.next'(Map) -> clj_core:next(clj_core:seq(Map)).
-
-'clojerl.ISeq.more'(Map) -> clj_core:rest(clj_core:seq(Map)).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

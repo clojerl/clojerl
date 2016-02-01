@@ -77,15 +77,27 @@ cons(Item, Seq) ->
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
-first(Seq) -> 'clojerl.ISeq':first(Seq).
+first(Seq) ->
+  case 'seq?'(Seq) of
+    true  -> 'clojerl.ISeq':first(Seq);
+    false -> 'clojerl.ISeq':first(seq(Seq))
+  end.
 
 -spec next(any()) -> any().
 next(undefined) -> undefined;
-next(Seq) -> 'clojerl.ISeq':next(Seq).
+next(Seq) ->
+  case 'seq?'(Seq) of
+    true  -> 'clojerl.ISeq':next(Seq);
+    false -> 'clojerl.ISeq':next(seq(Seq))
+  end.
 
 -spec rest(any()) -> any().
 rest(undefined) -> undefined;
-rest(Seq) -> 'clojerl.ISeq':more(Seq).
+rest(Seq) ->
+  case 'seq?'(Seq) of
+    true  -> 'clojerl.ISeq':more(Seq);
+    false -> 'clojerl.ISeq':more(seq(Seq))
+  end.
 
 -spec second(any()) -> any().
 second(Seq) ->
