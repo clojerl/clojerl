@@ -17,6 +17,7 @@
         , 'clojerl.ISeq.more'/1
         , 'clojerl.ISeq.next'/1
         ]).
+-export(['clojerl.ISequential.noop'/1]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -45,6 +46,8 @@
 'clojerl.ISeq.next'([]) -> undefined;
 'clojerl.ISeq.next'([_ | []]) -> undefined;
 'clojerl.ISeq.next'([_ | Rest]) -> Rest.
+
+'clojerl.ISequential.noop'(_) -> ok.
 
 'clojerl.IColl.count'(Items) -> length(Items).
 

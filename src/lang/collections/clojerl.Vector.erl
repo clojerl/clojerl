@@ -12,16 +12,17 @@
 -export([new/1]).
 
 -export(['clojerl.Counted.count'/1]).
--export(['clojerl.Stringable.str'/1]).
--export(['clojerl.Seqable.seq'/1]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
-        ]).
 -export([ 'clojerl.IColl.count'/1
         , 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
         , 'clojerl.IColl.equiv'/2
         ]).
+-export([ 'clojerl.IMeta.meta'/1
+        , 'clojerl.IMeta.with_meta'/2
+        ]).
+-export(['clojerl.ISequential.noop'/1]).
+-export(['clojerl.Seqable.seq'/1]).
+-export(['clojerl.Stringable.str'/1]).
 
 -type type() :: #?TYPE{}.
 
@@ -51,6 +52,8 @@ new(Items) when is_list(Items) ->
 
 'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
+
+'clojerl.ISequential.noop'(_) -> ok.
 
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
