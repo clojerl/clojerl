@@ -290,8 +290,8 @@ read_quote(#{src := <<$', Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 read_deref(#{src := <<$@, Src/binary>>} = State) ->
-  Quote = clj_core:symbol(<<"deref">>),
-  wrapped_read(Quote, State#{src => Src}).
+  Deref = clj_core:symbol(<<"deref">>),
+  wrapped_read(Deref, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
 %% Meta
@@ -672,9 +672,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
   NewState = State#{src => RestSrc},
   case Ch of
     $^ -> read_meta(State#{src => Src}); %% deprecated
-    $' ->
-      VarSymbol = clj_core:symbol(<<"var">>),
-      wrapped_read(VarSymbol, NewState);
+    $' -> read_var(State#{src => Src});
     $( -> read_fn(NewState);
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
@@ -687,6 +685,14 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
     $: -> read_erl_fun(NewState);
     X -> throw({unsupported_reader, <<"#", X>>})
   end.
+
+%%------------------------------------------------------------------------------
+%% #' var
+%%------------------------------------------------------------------------------
+
+read_var(#{src := <<$', Src/binary>>} = State) ->
+  VarSymbol = clj_core:symbol(<<"var">>),
+  wrapped_read(VarSymbol, State#{src => Src}).
 
 %%------------------------------------------------------------------------------
 %% #() fn
