@@ -726,7 +726,7 @@ read_fn(#{src := Src} = State) ->
 
 read_eval(#{env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(State)),
-  {Value, Env1} = clj_compiler:eval(Form, Env),
+  {Value, Env1} = clj_compiler:eval(Form, #{}, Env),
   push_form(Value, NewState#{env => Env1}).
 
 %%------------------------------------------------------------------------------
