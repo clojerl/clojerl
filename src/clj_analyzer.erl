@@ -88,7 +88,8 @@ analyze_forms(Env, Forms) ->
 
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
 analyze_form(Env, Form) ->
-  case {clj_core:type(Form), clj_core:'seq?'(Form)} of
+  IsSeq = clj_core:'seq?'(Form),
+  case {clj_core:type(Form), IsSeq} of
     {_, true} ->
       Op = clj_core:first(Form),
       analyze_seq(Env, Op, Form);
@@ -490,19 +491,21 @@ analyze_let(Env, Form) ->
 
 -spec parse_binding({any(), any()}, clj_env:env()) -> clj_env:env().
 parse_binding({Name, Init}, Env) ->
-  clj_utils:throw_when(not is_valid_bind_symbol(Name),
-                       [<<"Bad binding form: ">>, Name]),
+  clj_utils:throw_when( not is_valid_bind_symbol(Name)
+                      , [<<"Bad binding form: ">>, Name]
+                      ),
   OpAtom = case clj_env:get(Env, is_loop) of
              true -> loop;
              false -> 'let'
            end,
   {InitExpr, _} = clj_env:pop_expr(analyze_form(Env, Init)),
-  BindExpr = #{ op    => binding
-              , env   => ?DEBUG(Env)
-              , name  => Name
-              , init  => InitExpr
-              , form  => Name
-              , local => OpAtom
+  BindExpr = #{ op     => binding
+              , env    => ?DEBUG(Env)
+              , name   => Name
+              , shadow => clj_env:get_local(Env, Name)
+              , init   => InitExpr
+              , form   => Name
+              , local  => OpAtom
               },
 
   Env2 = clj_env:put_local(Env, Name, maps:remove(env, BindExpr)),

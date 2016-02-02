@@ -75,7 +75,9 @@ eval(_Config) ->
   DefList = clj_reader:read(<<"(def hello :world)">>),
   {Var, Env} = clj_compiler:eval(DefList),
   Var = find_var(Env, <<"$user">>, <<"hello">>),
+
   check_var_value(Env, <<"$user">>, <<"hello">>, world),
+
   {comments, ""}.
 
 %%------------------------------------------------------------------------------
