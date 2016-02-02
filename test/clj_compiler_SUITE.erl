@@ -28,8 +28,12 @@ compile(_Config) ->
   check_var_value(Env, <<"src">>, <<"y">>, 'hello-world'),
 
   ct:comment("Try to compile invalid code"),
-  ok = try clj_compiler:compile(<<"(ns hello) (def 42 :forty-two)">>), error
-       catch _:_ -> ok end,
+  ok = try
+         clj_compiler:compile(<<"(ns hello) (def 42 :forty-two)">>),
+         error
+       catch _:_ ->
+           ok
+       end,
 
   {comments, ""}.
 
