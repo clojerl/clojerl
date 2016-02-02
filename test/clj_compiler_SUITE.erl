@@ -23,15 +23,13 @@ all() ->
 
 -spec compile(config()) -> result().
 compile(_Config) ->
-  Opts = options(),
-
   ct:comment("Compile code and check a var's value by deref'ing it"),
-  Env = clj_compiler:compile(<<"(ns src) (def y :hello-world) 1">>, Opts),
+  Env = clj_compiler:compile(<<"(ns src) (def y :hello-world) 1">>),
   check_var_value(Env, <<"src">>, <<"y">>, 'hello-world'),
 
   ct:comment("Try to compile invalid code"),
   ok = try
-         clj_compiler:compile(<<"(ns hello) (def 42 :forty-two)">>, Opts),
+         clj_compiler:compile(<<"(ns hello) (def 42 :forty-two)">>),
          error
        catch _:_ ->
            ok
@@ -41,33 +39,29 @@ compile(_Config) ->
 
 -spec compile_file(config()) -> result().
 compile_file(_Config) ->
-  Opts = options(),
-
   ct:comment("Compile a file and check a var's value by deref'ing it"),
   SimplePath = relative_path(<<"priv/examples/simple.clj">>),
-  Env = clj_compiler:compile_file(SimplePath, Opts),
+  Env = clj_compiler:compile_file(SimplePath),
   check_var_value(Env, <<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile an invalid file"),
   ErrorPath = relative_path(<<"priv/examples/error.clj">>),
-  ok = try clj_compiler:compile_file(ErrorPath, Opts), error
+  ok = try clj_compiler:compile_file(ErrorPath), error
        catch _:_ -> ok end,
 
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath = relative_path(<<"priv/examples/abcdef_42.clj">>),
-  ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
+  ok = try clj_compiler:compile_file(NotExistsPath), error
        catch _:_ -> ok end,
 
   {comments, ""}.
 
 -spec compile_files(config()) -> result().
 compile_files(_Config) ->
-  Opts = options(),
-
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath = relative_path(<<"priv/examples/simple.clj">>),
   Simple2Path = relative_path(<<"priv/examples/simple-2.clj">>),
-  Env = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
+  Env = clj_compiler:compile_files([SimplePath, Simple2Path]),
 
   check_var_value(Env, <<"examples.simple-2">>, <<"x">>, 1),
 
@@ -75,13 +69,11 @@ compile_files(_Config) ->
 
 -spec eval(config()) -> result().
 eval(_Config) ->
-  Opts = options(),
-
   ct:comment("Eval form"),
-  {1, _} = clj_compiler:eval(1, Opts),
+  {1, _} = clj_compiler:eval(1),
 
   DefList = clj_reader:read(<<"(def hello :world)">>),
-  {Var, Env} = clj_compiler:eval(DefList, Opts),
+  {Var, Env} = clj_compiler:eval(DefList),
   Var = find_var(Env, <<"$user">>, <<"hello">>),
   check_var_value(Env, <<"$user">>, <<"hello">>, world),
   {comments, ""}.
@@ -105,7 +97,3 @@ find_var(Env, Namespace, Name) ->
     undefined -> error;
     V -> V
   end.
-
--spec options() -> binary().
-options()->
-  #{output_dir => relative_path(<<"ebin">>)}.
