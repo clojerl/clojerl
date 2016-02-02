@@ -4,8 +4,9 @@
 
 -type ast() :: erl_syntax:syntaxTree().
 
--type state() :: #{ modules => #{atom() => clj_module:module()}
-                  , asts    => [ast()]
+-type state() :: #{ modules         => #{atom() => clj_module:module()}
+                  , asts            => [ast()]
+                  , lexical_renames => #{}
                   }.
 
 -spec emit(clj_env:env()) ->
@@ -18,7 +19,7 @@ emit(Env0) ->
     {undefined, _} ->
       {[], [], Env0};
     {Expr, Env} ->
-      InitState = #{modules => #{}, asts => []},
+      InitState = initial_state(),
       #{ modules := Modules
        , asts    := ReversedExpressions
        } = ast(Expr, InitState),
@@ -36,6 +37,13 @@ emit(Env0) ->
 
       {ModulesForms1, Expressions, Env}
   end.
+
+-spec initial_state() -> state().
+initial_state() ->
+  #{ modules         => #{}
+   , asts            => []
+   , lexical_renames => #{}
+   }.
 
 %%------------------------------------------------------------------------------
 %% Internal functions
@@ -58,13 +66,23 @@ ast(#{op := var, var := Var} = _Expr, State) ->
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
   NameSym  = maps:get(name, Expr),
-  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  NameAtom = case get_lexical_rename(Expr, State) of
+               undefined ->
+                 'clojerl.Symbol':to_atom(NameSym);
+               LexicalNameSym ->
+                 'clojerl.Symbol':to_atom(LexicalNameSym)
+               end,
   Ast      = erl_syntax:variable(NameAtom),
 
   push_ast(Ast, State);
 ast(#{op := local} = Expr, State) ->
   NameSym  = maps:get(name, Expr),
-  NameAtom = 'clojerl.Symbol':to_atom(NameSym),
+  NameAtom = case get_lexical_rename(Expr, State) of
+               undefined ->
+                 'clojerl.Symbol':to_atom(NameSym);
+               LexicalNameSym ->
+                 'clojerl.Symbol':to_atom(LexicalNameSym)
+               end,
   Ast      = erl_syntax:variable(NameAtom),
 
   push_ast(Ast, State);
@@ -281,6 +299,33 @@ ast(#{op := 'if'} = Expr, State) ->
   Ast = erl_syntax:case_expr(Test, [TrueClause, FalseClause]),
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
+%% if
+%%------------------------------------------------------------------------------
+ast(#{op := 'let'} = Expr, State0) ->
+  #{ body     := BodyExpr
+   , bindings := BindingsExprs
+   } = Expr,
+
+  State = lists:foldl(fun add_lexical_rename/2, State0, BindingsExprs),
+
+  MatchAstFun = fun(BindingExpr = #{init := InitExpr}, StateAcc) ->
+                    {Binding, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
+                    {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
+                    MatchAst = erl_syntax:match_expr(Binding, Init),
+                    push_ast(MatchAst, StateAcc2)
+                end,
+
+  State1            = lists:foldl(MatchAstFun, State, BindingsExprs),
+  {Matches, State2} = pop_ast(State1, length(BindingsExprs)),
+
+  {Body, State3}    = pop_ast(ast(BodyExpr, State2)),
+
+  Clause = erl_syntax:clause([], [], Matches ++ [Body]),
+  FunAst = erl_syntax:fun_expr([Clause]),
+  Ast    = erl_syntax:application(FunAst, []),
+
+  push_ast(Ast, State3);
+%%------------------------------------------------------------------------------
 %% throw
 %%------------------------------------------------------------------------------
 ast(#{op := throw} = Expr, State) ->
@@ -382,6 +427,8 @@ add_functions_attributes(Name, Funs, Attrs, State = #{modules := Modules}) ->
 
   State#{modules => Modules#{Name => Module2}}.
 
+%% Push & pop asts
+
 -spec push_ast(ast(), state()) -> state().
 push_ast(Ast, State = #{asts := Asts}) ->
   State#{asts => [Ast | Asts]}.
@@ -394,3 +441,37 @@ pop_ast(State = #{asts := [Ast | Asts]}) ->
 pop_ast(State = #{asts := Asts}, N) ->
   {ReturnAsts, RestAsts} = lists:split(N, Asts),
   {lists:reverse(ReturnAsts), State#{asts => RestAsts}}.
+
+%% Lexical renames
+
+-spec get_lexical_rename(map(), state()) -> 'clojerl.Symbol':type() | undefined.
+get_lexical_rename(BindingExpr, State) ->
+  #{lexical_renames := Renames} = State,
+  Code = hash_scope(BindingExpr),
+  maps:get(Code, Renames, undefined).
+
+-spec add_lexical_rename(map(), state()) -> state().
+add_lexical_rename(BindingExpr, State) ->
+  #{lexical_renames := Renames} = State,
+  #{name := Name} = BindingExpr,
+  Code = hash_scope(BindingExpr),
+  NameBin = clj_core:name(Name),
+  ShadowName = <<NameBin/binary, "__shadow__">>,
+  State#{lexical_renames => Renames#{Code => clj_core:gensym(ShadowName)}}.
+
+-spec hash_scope(map()) -> binary().
+hash_scope(BindingExpr) ->
+  Depth = shadow_depth(BindingExpr),
+  #{name := Name} = BindingExpr,
+  NameBin = clj_core:name(Name),
+  term_to_binary({NameBin, Depth}).
+
+-spec shadow_depth(map()) -> non_neg_integer().
+shadow_depth(BindingExpr) ->
+  do_shadow_depth(BindingExpr, 0).
+
+-spec do_shadow_depth(map(), non_neg_integer()) -> non_neg_integer().
+do_shadow_depth(#{shadow := undefined}, Depth) ->
+  Depth;
+do_shadow_depth(#{shadow := Shadowed}, Depth) ->
+  do_shadow_depth(Shadowed, Depth + 1).

@@ -27,11 +27,12 @@
 
 -type context() :: expr | return | statement.
 
--type env() :: #{namespaces => [],
-                 context => context(),
-                 exprs => [],
-                 current_ns => 'clojerl.Symbol':type(),
-                 locals => #{'clojerl.Symbol':type() => any()}}.
+-type env() :: #{ namespaces => []
+                , context    => context()
+                , exprs      => []
+                , current_ns => 'clojerl.Symbol':type()
+                , locals     => scope()
+                }.
 
 -export_type([env/0]).
 
@@ -43,7 +44,7 @@ default() ->
     context    => expr,
     exprs      => [],
     current_ns => UserSym,
-    locals     => #{}}.
+    locals     => clj_scope:new()}.
 
 -spec context(env(), context()) -> env().
 context(Env, Ctx) -> Env#{context => Ctx}.
@@ -137,33 +138,19 @@ resolve_ns(Env, SymNs) ->
 
 -spec add_locals_scope(env()) -> env().
 add_locals_scope(Env = #{locals := ParentLocals}) ->
-  Env#{locals => #{parent => ParentLocals}}.
+  Env#{locals => clj_scope:new(ParentLocals)}.
 
 -spec remove_locals_scope(env()) -> env().
 remove_locals_scope(Env = #{locals := Locals}) ->
-  ParentLocals = maps:get(parent, Locals, undefined),
-  Env#{locals => ParentLocals}.
+  Env#{locals => clj_scope:parent(Locals)}.
 
 -spec get_local(env(), 'clojerl.Symbol':type()) -> any().
 get_local(_Env = #{locals := Locals}, Sym) ->
-  do_get_local(Locals, Sym).
-
-%% @private
--spec do_get_local(map(), 'clojerl.Symbol':type()) -> any().
-do_get_local(undefined, _) ->
-  undefined;
-do_get_local(Locals, Sym) ->
-  case maps:get(Sym, Locals, undefined) of
-    undefined ->
-      ParentLocals = maps:get(parent, Locals, undefined),
-      do_get_local(ParentLocals, Sym);
-    Value ->
-      Value
-  end.
+  clj_scope:get(Locals, Sym).
 
 -spec put_local(env(), 'clojerl.Symbol':type(), any()) -> env().
 put_local(Env = #{locals := Locals}, Sym, Local) ->
-  Env#{locals => maps:put(Sym, Local, Locals)}.
+  Env#{locals => clj_scope:put(Locals, Sym, Local)}.
 
 -spec put_locals(env(), [map()]) -> env().
 put_locals(Env, Locals) ->
