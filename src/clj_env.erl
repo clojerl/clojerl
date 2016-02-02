@@ -31,7 +31,7 @@
                 , context    => context()
                 , exprs      => []
                 , current_ns => 'clojerl.Symbol':type()
-                , locals     => scope()
+                , locals     => clj_scope:scope()
                 }.
 
 -export_type([env/0]).

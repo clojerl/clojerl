@@ -6,7 +6,7 @@
 
 -type state() :: #{ modules         => #{atom() => clj_module:module()}
                   , asts            => [ast()]
-                  , lexical_renames => #{}
+                  , lexical_renames => clj_scope:scope()
                   }.
 
 -spec emit(clj_env:env()) ->
@@ -42,7 +42,7 @@ emit(Env0) ->
 initial_state() ->
   #{ modules         => #{}
    , asts            => []
-   , lexical_renames => #{}
+   , lexical_renames => clj_scope:new()
    }.
 
 %%------------------------------------------------------------------------------
@@ -306,7 +306,8 @@ ast(#{op := 'let'} = Expr, State0) ->
    , bindings := BindingsExprs
    } = Expr,
 
-  State = lists:foldl(fun add_lexical_rename/2, State0, BindingsExprs),
+  State00 = add_lexical_renames_scope(State0),
+  State = lists:foldl(fun put_lexical_rename/2, State00, BindingsExprs),
 
   MatchAstFun = fun(BindingExpr = #{init := InitExpr}, StateAcc) ->
                     {Binding, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
@@ -324,7 +325,9 @@ ast(#{op := 'let'} = Expr, State0) ->
   FunAst = erl_syntax:fun_expr([Clause]),
   Ast    = erl_syntax:application(FunAst, []),
 
-  push_ast(Ast, State3);
+  State4 = remove_lexical_renames_scope(State3),
+
+  push_ast(Ast, State4);
 %%------------------------------------------------------------------------------
 %% throw
 %%------------------------------------------------------------------------------
@@ -444,20 +447,32 @@ pop_ast(State = #{asts := Asts}, N) ->
 
 %% Lexical renames
 
+-spec add_lexical_renames_scope(state()) -> state().
+add_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
+  State#{lexical_renames => clj_scope:new(Renames)}.
+
+-spec remove_lexical_renames_scope(state()) -> state().
+remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
+  State#{lexical_renames => clj_scope:parent(Renames)}.
+
 -spec get_lexical_rename(map(), state()) -> 'clojerl.Symbol':type() | undefined.
 get_lexical_rename(BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
   Code = hash_scope(BindingExpr),
-  maps:get(Code, Renames, undefined).
+  clj_scope:get(Renames, Code).
 
--spec add_lexical_rename(map(), state()) -> state().
-add_lexical_rename(BindingExpr, State) ->
+-spec put_lexical_rename(map(), state()) -> state().
+put_lexical_rename(BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
   #{name := Name} = BindingExpr,
+
   Code = hash_scope(BindingExpr),
   NameBin = clj_core:name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
-  State#{lexical_renames => Renames#{Code => clj_core:gensym(ShadowName)}}.
+
+  NewRenames = clj_scope:put(Renames, Code, clj_core:gensym(ShadowName)),
+
+  State#{lexical_renames => NewRenames}.
 
 -spec hash_scope(map()) -> binary().
 hash_scope(BindingExpr) ->
@@ -467,8 +482,10 @@ hash_scope(BindingExpr) ->
   term_to_binary({NameBin, Depth}).
 
 -spec shadow_depth(map()) -> non_neg_integer().
-shadow_depth(BindingExpr) ->
-  do_shadow_depth(BindingExpr, 0).
+shadow_depth(BindingExpr = #{shadow := _}) ->
+  do_shadow_depth(BindingExpr, 0);
+shadow_depth(_) ->
+  0.
 
 -spec do_shadow_depth(map(), non_neg_integer()) -> non_neg_integer().
 do_shadow_depth(#{shadow := undefined}, Depth) ->
