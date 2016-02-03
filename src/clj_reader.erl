@@ -15,6 +15,7 @@
                   , forms         => [any()]
                   , pending_forms => [any()]
                   , env           => clj_env:env()
+                  , location      => {non_neg_integer(), non_neg_integer()}
                   }.
 
 -spec new_state(binary(), any(), opts(), boolean()) -> state().
@@ -25,6 +26,7 @@ new_state(Src, Env, Opts, ReadAll) ->
    , pending_forms => []
    , env           => Env
    , all           => ReadAll
+   , loc           => {1, 1}
    }.
 
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
@@ -67,6 +69,9 @@ read(Src, Opts, Env) ->
   State = new_state(Src, Env, Opts, false),
   ensure_read(dispatch(State)).
 
+%% @doc Makes sure a single form is read unless we reach
+%%      the enf of file.
+%% @private
 -spec ensure_read(state()) -> any().
 ensure_read(#{src := <<>>, forms := []}) ->
   throw(<<"EOF">>);
@@ -75,6 +80,7 @@ ensure_read(#{forms := [Form]}) ->
 ensure_read(State) ->
   ensure_read(dispatch(State)).
 
+%% @doc Read all forms.
 -spec read_all(state()) -> [any()].
 read_all(Src) ->
   read_all(Src, #{}).
@@ -110,9 +116,9 @@ read_one(#{src := <<>>}, true = _ThrowEof) ->
   throw(<<"EOF">>);
 read_one(#{src := <<>>} = State, false = _ThrowEof) ->
   State;
-read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
+read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
   case clj_utils:char_type(First, Rest) of
-    whitespace      -> read_one(State#{src => Rest}, ThrowEof);
+    whitespace      -> read_one(consume_char(State), ThrowEof);
     number          -> read_number(State);
     string          -> read_string(State);
     keyword         -> read_keyword(State);
@@ -139,8 +145,9 @@ read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
 -spec read_number(state()) -> state().
 read_number(#{forms := Forms, src := Src} = State) ->
   {Current, SrcRest} = consume(Src, [number, symbol]),
+  State1 = consume_chars(unicode_length(Current), State),
   Number = clj_utils:parse_number(Current),
-  State#{forms => [Number | Forms],
+  State1#{forms => [Number | Forms],
          src   => SrcRest}.
 
 %%------------------------------------------------------------------------------
@@ -161,9 +168,9 @@ read_string(#{src := <<"\\", SrcRest/binary>>,
                                EscapedChar/binary>>,
                   src => Rest},
   read_string(State);
-read_string(#{src := <<Char, SrcRest/binary>>,
+read_string(#{src := <<Char/utf8, SrcRest/binary>>,
               current := String} = State0) ->
-  State = State0#{current => <<String/binary, Char>>,
+  State = State0#{current => <<String/binary, Char/utf8>>,
                   src => SrcRest},
   read_string(State);
 read_string(#{src := <<"\"", Rest/binary>>} = State) ->
@@ -172,7 +179,7 @@ read_string(#{src := <<>>}) ->
   throw(<<"EOF while reading string">>).
 
 -spec escape_char(binary()) -> {binary(), binary()}.
-escape_char(<<Char, Rest/binary>> = Src) ->
+escape_char(<<Char/utf8, Rest/binary>> = Src) ->
   CharType = clj_utils:char_type(Char, Rest),
   case Char of
     $t -> {<<"\t">>, Rest};
@@ -229,11 +236,11 @@ unicode_char(Src, Base, Length, IsExact) ->
 %%------------------------------------------------------------------------------
 
 read_keyword(#{forms := Forms,
-               src := <<$:, Src/binary>>,
+               src := <<":", Src/binary>>,
                env := Env} = State) ->
   {Token, RestSrc} = read_token(Src),
   Keyword = case clj_utils:parse_symbol(Token) of
-              {undefined, <<$:, Name/binary>>} ->
+              {undefined, <<":", Name/binary>>} ->
                 NsSym = clj_env:current_ns(Env),
                 Namespace = clj_core:name(NsSym),
                 clj_core:keyword(Namespace, Name);
@@ -281,7 +288,7 @@ read_comment(#{src := Src} = State) ->
 %% Quote
 %%------------------------------------------------------------------------------
 
-read_quote(#{src := <<$', Src/binary>>} = State) ->
+read_quote(#{src := <<"'", Src/binary>>} = State) ->
   Quote = clj_core:symbol(<<"quote">>),
   wrapped_read(Quote, State#{src => Src}).
 
@@ -289,7 +296,7 @@ read_quote(#{src := <<$', Src/binary>>} = State) ->
 %% Deref
 %%------------------------------------------------------------------------------
 
-read_deref(#{src := <<$@, Src/binary>>} = State) ->
+read_deref(#{src := <<"@", Src/binary>>} = State) ->
   Deref = clj_core:symbol(<<"deref">>),
   wrapped_read(Deref, State#{src => Src}).
 
@@ -297,7 +304,7 @@ read_deref(#{src := <<$@, Src/binary>>} = State) ->
 %% Meta
 %%------------------------------------------------------------------------------
 
-read_meta(#{src := <<$^, Src/binary>>} = State) ->
+read_meta(#{src := <<"^", Src/binary>>} = State) ->
   {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
   Meta = clj_utils:desugar_meta(SugaredMeta),
 
@@ -310,7 +317,7 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
-read_syntax_quote(#{src := <<$`, Src/binary>>, env := Env} = State) ->
+read_syntax_quote(#{src := <<"`", Src/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(State#{src => Src})),
   %% TODO: using process dictionary here might be a code smell
   erlang:put(gensym_env, #{}),
@@ -489,9 +496,9 @@ is_literal(Form) ->
 %% Unquote
 %%------------------------------------------------------------------------------
 
-read_unquote(#{src := <<$~, Src/binary>>} = State) ->
+read_unquote(#{src := <<"~", Src/binary>>} = State) ->
   case Src of
-    <<$@, RestSrc/binary>> ->
+    <<"@", RestSrc/binary>> ->
       UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
                                         <<"unquote-splicing">>),
       wrapped_read(UnquoteSplicing, State#{src => RestSrc});
@@ -505,7 +512,7 @@ read_unquote(#{src := <<$~, Src/binary>>} = State) ->
 %% List
 %%------------------------------------------------------------------------------
 
-read_list(#{src := <<$(, Src/binary>>} = State) ->
+read_list(#{src := <<"(", Src/binary>>} = State) ->
   #{ src   := RestSrc
    , forms := ReversedItems
    } = read_until($), State#{src => Src, forms => []}),
@@ -520,7 +527,7 @@ read_list(#{src := <<$(, Src/binary>>} = State) ->
 %% Vector
 %%------------------------------------------------------------------------------
 
-read_vector(#{src := <<$[, Src/binary>>,
+read_vector(#{src := <<"[", Src/binary>>,
               forms := Forms} = State) ->
   #{src := RestSrc,
     forms := ReversedItems} =
@@ -535,7 +542,7 @@ read_vector(#{src := <<$[, Src/binary>>,
 %% Map
 %%------------------------------------------------------------------------------
 
-read_map(#{src := <<${, Src/binary>>,
+read_map(#{src := <<"{", Src/binary>>,
            forms := Forms} = State) ->
   #{src := RestSrc,
     forms := ReversedItems} =
@@ -560,7 +567,7 @@ read_unmatched_delim(_) -> throw(unmatched_delim).
 %% Character
 %%------------------------------------------------------------------------------
 
-read_char(#{src := <<$\\, Src/binary>>,
+read_char(#{src := <<"\\", Src/binary>>,
             forms := Forms} = State) ->
   {Token, RestSrc} = read_token(Src),
   Char =
@@ -573,10 +580,10 @@ read_char(#{src := <<$\\, Src/binary>>,
       <<"backspace">> -> $\b;
       <<"formfeed">> -> $\f;
       <<"return">> -> $\r;
-      <<$u, RestToken/binary>> ->
+      <<"u", RestToken/binary>> ->
         {Ch, _} = unicode_char(RestToken, 16, 4, true),
         Ch;
-      <<$o, RestToken/binary>> ->
+      <<"o", RestToken/binary>> ->
         read_octal_char(RestToken);
       Ch -> throw(<<"Unsupported character: \\", Ch/binary>>)
     end,
@@ -601,7 +608,7 @@ read_octal_char(RestToken)  ->
 %% Argument
 %%------------------------------------------------------------------------------
 
-read_arg(#{src := <<$%, Src/binary>>} = State) ->
+read_arg(#{src := <<"%", Src/binary>>} = State) ->
   case erlang:get(arg_env) of
     undefined ->
       read_symbol(State);
@@ -612,7 +619,7 @@ read_arg(#{src := <<$%, Src/binary>>} = State) ->
           push_form(ArgSym, State#{src => Src});
         register_arg_multi ->
           ArgSym = register_arg(-1),
-          <<_, RestSrc/binary>> = Src,
+          <<_/utf8, RestSrc/binary>> = Src,
           push_form(ArgSym, State#{src => RestSrc});
         register_arg_n ->
           {N, NewState} = pop_form(read_one(State#{src => Src})),
@@ -667,8 +674,8 @@ gen_arg_sym(N) ->
 %% Reader dispatch
 %%------------------------------------------------------------------------------
 
-read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
-  <<Ch, RestSrc/binary>> = Src,
+read_dispatch(#{src := <<"#", Src/binary>>} = State) ->
+  <<Ch/utf8, RestSrc/binary>> = Src,
   NewState = State#{src => RestSrc},
   case Ch of
     $^ -> read_meta(State#{src => Src}); %% deprecated
@@ -690,7 +697,7 @@ read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
 %% #' var
 %%------------------------------------------------------------------------------
 
-read_var(#{src := <<$', Src/binary>>} = State) ->
+read_var(#{src := <<"'", Src/binary>>} = State) ->
   VarSymbol = clj_core:symbol(<<"var">>),
   wrapped_read(VarSymbol, State#{src => Src}).
 
@@ -704,7 +711,7 @@ read_fn(#{src := Src} = State) ->
     _ -> throw(<<"Nested #()s are not allowed">>)
   end,
   erlang:put(arg_env, #{}),
-  {Form, NewState} = pop_form(read_one(State#{src => <<$(, Src/binary>>})),
+  {Form, NewState} = pop_form(read_one(State#{src => <<"(", Src/binary>>})),
   ArgEnv = erlang:erase(arg_env),
 
 
@@ -773,18 +780,18 @@ read_tuple(#{src := Src} = State) ->
 
 read_regex(#{src := <<>>}) ->
   throw(<<"EOF">>);
-read_regex(#{src := <<$\\, Ch, Src/binary>>} = State) ->
+read_regex(#{src := <<"\\", Ch/utf8, Src/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  NewState = State#{src => Src, current => <<Current/binary, $\\, Ch>>},
+  NewState = State#{src => Src, current => <<Current/binary, "\\", Ch/utf8>>},
   read_regex(NewState);
-read_regex(#{src := <<$", Src/binary>>,
+read_regex(#{src := <<"\"", Src/binary>>,
              forms := Forms} = State) ->
   Current = maps:get(current, State, <<>>),
   {ok, Regex} = re:compile(Current),
   State#{src => Src, forms => [Regex | Forms]};
-read_regex(#{src := <<Ch, Src/binary>>} = State) ->
+read_regex(#{src := <<Ch/utf8, Src/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  NewState = State#{src => Src, current => <<Current/binary, Ch>>},
+  NewState = State#{src => Src, current => <<Current/binary, Ch/utf8>>},
   read_regex(NewState).
 
 %%------------------------------------------------------------------------------
@@ -816,7 +823,7 @@ read_cond(#{src := Src, opts := Opts} = State) ->
       true when not ReadDelim ->
         throw(<<"cond-splice not in list">>);
       true ->
-        <<_, RestSrcAux/binary>> = Src,
+        <<_/utf8, RestSrcAux/binary>> = Src,
         RestSrcAux;
       false ->
         Src
@@ -912,22 +919,34 @@ valid_erl_fun(First, Second) ->
 %% Utility functions
 %%------------------------------------------------------------------------------
 
+-spec consume_char(state()) -> state().
+consume_char(#{src := <<"\n", Src/binary>>, loc := {Line, _}} = State) ->
+  State#{src => Src, loc => {Line + 1, 1}};
+consume_char(#{src := <<_/utf8, Src/binary>>, loc := {Line, Col}} = State) ->
+  State#{src => Src, loc => {Line, Col + 1}}.
+
+-spec consume_chars(non_neg_integer(), state()) -> state().
+consume_chars(0, State) ->
+  State;
+consume_chars(N, State) when N > 0 ->
+  consume_chars(N - 1, consume_char(State)).
+
 -spec consume(binary(), [clj_utils:char_type()] | fun()) ->
-                 {binary(), binary()}.
+  {binary(), binary()}.
 consume(Src, TypesOrPred) ->
   do_consume(Src, <<>>, TypesOrPred).
 
 do_consume(<<>>, Acc, _) ->
   {Acc, <<>>};
-do_consume(<<X, Rest/binary>> = Src, Acc, Pred) when is_function(Pred) ->
+do_consume(<<X/utf8, Rest/binary>> = Src, Acc, Pred) when is_function(Pred) ->
   case Pred(X) of
-    true -> do_consume(Rest, <<Acc/binary, X>>, Pred);
+    true -> do_consume(Rest, <<Acc/binary, X/utf8>>, Pred);
     false -> {Acc, Src}
   end;
-do_consume(<<X, Rest/binary>> = Src, Acc, Types) ->
+do_consume(<<X/utf8, Rest/binary>> = Src, Acc, Types) ->
   Type = clj_utils:char_type(X, Rest),
   case lists:member(Type, Types) of
-    true -> do_consume(Rest, <<Acc/binary, X>>, Types);
+    true -> do_consume(Rest, <<Acc/binary, X/utf8>>, Types);
     false -> {Acc, Src}
   end.
 
@@ -940,10 +959,10 @@ read_token(Src) ->
   consume(Src, Fun).
 
 -spec read_until(char(), state()) -> state().
-read_until(Delim, #{src := <<Delim, Src/binary>>} = State) ->
+read_until(Delim, #{src := <<Delim/utf8, Src/binary>>} = State) ->
   erlang:erase(read_delim),
   State#{src => Src};
-read_until(Delim, #{src := <<X, Src/binary>>} = State) ->
+read_until(Delim, #{src := <<X/utf8, Src/binary>>} = State) ->
   case clj_utils:char_type(X) of
     whitespace ->
       read_until(Delim, State#{src => Src});
@@ -979,3 +998,7 @@ push_form(Form, #{forms := Forms} = State) ->
 -spec push_pending_form(any(), state()) -> state().
 push_pending_form(Form, #{pending_forms := Forms} = State) ->
   State#{pending_forms => [Form | Forms]}.
+
+-spec unicode_length(binary()) -> non_neg_integer().
+unicode_length(Binary) ->
+  length(unicode:characters_to_list(Binary)).
