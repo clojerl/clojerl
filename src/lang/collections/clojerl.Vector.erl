@@ -3,6 +3,7 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.Counted').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISequential').
@@ -12,10 +13,9 @@
 -export([new/1]).
 
 -export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IColl.count'/1
-        , 'clojerl.IColl.cons'/2
+-export([ 'clojerl.IEquiv.equiv'/2]).
+-export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
-        , 'clojerl.IColl.equiv'/2
         ]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
@@ -36,16 +36,23 @@ new(Items) when is_list(Items) ->
 
 'clojerl.Counted.count'(#?TYPE{name = ?M, data = Array}) -> array:size(Array).
 
-'clojerl.IColl.count'(#?TYPE{name = ?M, data = Array}) -> array:size(Array).
-
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Array} = Vector, X) ->
   NewArray = array:set(array:size(Array), X, Array),
   Vector#?TYPE{data = NewArray}.
 
 'clojerl.IColl.empty'(_) -> new([]).
 
-'clojerl.IColl.equiv'(X, X) -> true;
-'clojerl.IColl.equiv'(_, _) -> false.
+'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+                      , #?TYPE{name = ?M, data = Y}
+                      ) ->
+  case array:size(X) == array:size(Y) of
+    true ->
+      X1 = array:to_list(X),
+      Y1 = array:to_list(Y),
+      clj_core:equiv(X1, Y1);
+    false -> false
+  end;
+'clojerl.IEquiv.equiv'(_, _) -> false.
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

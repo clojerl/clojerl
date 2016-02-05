@@ -2,15 +2,17 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
--behaviour('clojerl.Stringable').
+-behavior('clojerl.Stringable').
 
 -export([new/1, new/2, to_atom/1]).
 
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
+-export(['clojerl.IEquiv.equiv'/2]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -54,3 +56,10 @@ to_atom(#?TYPE{name = ?M, data = {Ns, Name}}) ->
                          , Metadata
                          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
+
+'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+                      , #?TYPE{name = ?M, data = X}
+                      ) ->
+  true;
+'clojerl.IEquiv.equiv'(#?TYPE{name = ?M}, #?TYPE{name = ?M}) ->
+  false.

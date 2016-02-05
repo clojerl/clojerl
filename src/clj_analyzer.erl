@@ -16,9 +16,10 @@ analyze(Env0, Form) ->
     {Expr, Env} -> clj_env:push_expr(Env, Expr#{top_level => true})
   end.
 
--spec is_special(any()) -> boolean().
+-spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
-  maps:is_key(S, special_forms()).
+  clj_core:'symbol?'(S) andalso
+    maps:is_key(clj_core:str(S), special_forms()).
 
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand_1(Env, Form) ->
@@ -52,33 +53,33 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{ clj_core:symbol(<<"ns">>)       => fun parse_ns/2
-   , clj_core:symbol(<<"def">>)      => fun parse_def/2
-   , clj_core:symbol(<<"quote">>)    => fun parse_quote/2
-   , clj_core:symbol(<<"fn*">>)      => fun parse_fn/2
-   , clj_core:symbol(<<"do">>)       => fun parse_do/2
-   , clj_core:symbol(<<"if">>)       => fun parse_if/2
-   , clj_core:symbol(<<"let*">>)     => fun parse_let/2
-   , clj_core:symbol(<<"loop*">>)    => fun parse_loop/2
+  #{ <<"ns">>       => fun parse_ns/2
+   , <<"def">>      => fun parse_def/2
+   , <<"quote">>    => fun parse_quote/2
+   , <<"fn*">>      => fun parse_fn/2
+   , <<"do">>       => fun parse_do/2
+   , <<"if">>       => fun parse_if/2
+   , <<"let*">>     => fun parse_let/2
+   , <<"loop*">>    => fun parse_loop/2
 
-   , clj_core:symbol(<<"recur">>)    => undefined
-   , clj_core:symbol(<<"case*">>)    => undefined
-   , clj_core:symbol(<<"letfn*">>)   => undefined
-   , clj_core:symbol(<<"var">>)      => undefined
-   , clj_core:symbol(<<"import*">>)  => undefined
+   , <<"recur">>    => undefined
+   , <<"case*">>    => undefined
+   , <<"letfn*">>   => undefined
+   , <<"var">>      => undefined
+   , <<"import*">>  => undefined
 
-   , clj_core:symbol(<<"deftype*">>) => undefined
-   , clj_core:symbol(<<"reify*">>)   => undefined
+   , <<"deftype*">> => undefined
+   , <<"reify*">>   => undefined
 
-   , clj_core:symbol(<<"throw">>)    => fun parse_throw/2
-   , clj_core:symbol(<<"try">>)      => undefined
-   , clj_core:symbol(<<"catch">>)    => undefined
-   , clj_core:symbol(<<"finally">>)  => undefined
+   , <<"throw">>    => fun parse_throw/2
+   , <<"try">>      => undefined
+   , <<"catch">>    => undefined
+   , <<"finally">>  => undefined
 
-     %% , clj_core:symbol(<<"monitor-enter">>)
-     %% , clj_core:symbol(<<"monitor-exit">>)
-     %% , clj_core:symbol(<<"new">>)
-     %% , clj_core:symbol(<<"&">>)
+     %% , <<"monitor-enter">>
+     %% , <<"monitor-exit">>
+     %% , <<"new">>
+     %% , <<"&">>
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
@@ -126,12 +127,17 @@ analyze_const(Env, Constant) ->
 analyze_seq(_Env, undefined, _List) ->
   throw(<<"Can't call nil">>);
 analyze_seq(Env, Op, List) ->
+  IsSymbol = clj_core:'symbol?'(Op),
   case macroexpand_1(Env, List) of
     List ->
-      case maps:get(Op, special_forms(), undefined) of
+      OpKey = case clj_core:'symbol?'(Op) of
+                true  -> clj_core:name(Op);
+                false -> Op
+              end,
+      case maps:get(OpKey, special_forms(), undefined) of
         undefined ->
           analyze_invoke(Env, List);
-        ParseFun ->
+        ParseFun when IsSymbol ->
           ParseFun(Env, List)
       end;
     ExpandedList ->
@@ -291,10 +297,9 @@ analyze_fn_method(Env, List) ->
                        [<<"Params must be valid binding symbols, had: ">>,
                         Params]),
 
-  AmpersandSym = clj_core:symbol(<<"&">>),
-  IsAmpersandFun = fun(X) -> X == AmpersandSym end,
-  IsVariadic = lists:any(IsAmpersandFun, ParamsList),
-  ParamsNames = ParamsList -- [AmpersandSym],
+  IsNotAmpersandFun = fun(X) -> clj_core:str(X) =/= <<"&">> end,
+  ParamsNames = lists:filter(IsNotAmpersandFun, ParamsList),
+  IsVariadic = length(ParamsNames) =/= length(ParamsList),
   Env0 = clj_env:add_locals_scope(Env),
   Env1 = maps:remove(local, Env0),
   Arity = length(ParamsNames),

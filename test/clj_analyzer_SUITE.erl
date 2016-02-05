@@ -186,39 +186,41 @@ quote(_Config) ->
 -spec fn(config()) -> result().
 fn(_Config) ->
   ct:comment("unnamed fn with one param and one method"),
-  #{op := fn,
-    methods := [Fn1Method1]
+  #{ op      := fn
+   , methods := [Fn1Method1]
    } = analyze_one(<<"(fn* [x] x)">>),
 
-  #{op := fn_method,
-    params := [Fn1Param1]
+  #{ op     := fn_method
+   , params := [Fn1Param1]
    } = Fn1Method1,
 
   XSymbol = clj_core:symbol(<<"x">>),
-  #{op := binding,
-    name := XSymbol
+  #{ op   := binding
+   , name := XSymbolCheck
    } = Fn1Param1,
+  true = clj_core:equiv(XSymbol, XSymbolCheck),
 
   ct:comment("named fn with one param and one method"),
-  #{op := fn,
+  #{op      := fn,
     methods := [Fn2Method1],
-    local := VarHello
+    local   := VarHello
    } = analyze_one(<<"(fn* hello [x] x)">>),
 
   <<"$user">> = clj_core:namespace(VarHello),
   <<"hello", _/binary>> = clj_core:name(VarHello),
 
-  #{op := fn_method,
-    params := [Fn2Param1]
+  #{ op     := fn_method
+   , params := [Fn2Param1]
    } = Fn2Method1,
 
-  #{op := binding,
-    name := XSymbol
+  #{ op   := binding
+   , name := XSymbolCheck2
    } = Fn2Param1,
+  true = clj_core:equiv(XSymbol, XSymbolCheck2),
 
   ct:comment("fn with two params and two methods (non-variadic)"),
-  #{op := fn,
-    methods := [Fn3Method1, Fn3Method2]
+  #{ op      := fn
+   , methods := [Fn3Method1, Fn3Method2]
    } = analyze_one(<<"(fn* ([x] x) ([x y] x y))">>),
 
   #{op := fn_method,
@@ -229,56 +231,62 @@ fn(_Config) ->
     params := [Fn3Param1, Fn3Param2]
    } = Fn3Method2,
 
-  #{op := binding,
-    name := XSymbol
+  #{ op   := binding
+   , name := XSymbolCheck3
    } = Fn3Param1,
+  true = clj_core:equiv(XSymbol, XSymbolCheck3),
 
   YSymbol = clj_core:symbol(<<"y">>),
-  #{op := binding,
-    name := YSymbol
+  #{ op   := binding
+   , name := YSymbolCheck
    } = Fn3Param2,
+  true = clj_core:equiv(YSymbol, YSymbolCheck),
 
   ct:comment("fn with two params and two methods (variadic)"),
-  #{op := fn,
-    methods := [Fn4Method1, Fn4Method2]
+  #{ op      := fn
+   , methods := [Fn4Method1, Fn4Method2]
    } = analyze_one(<<"(fn* ([x] x) ([x & z] x z))">>),
 
-  #{op := fn_method,
-    params := [Fn4Param1]
+  #{ op     := fn_method
+   , params := [Fn4Param1]
    } = Fn4Method1,
 
-  #{op := fn_method,
-    params := [Fn4Param1, Fn4Param2]
+  #{ op     := fn_method
+   , params := [Fn4Param1, Fn4Param2]
    } = Fn4Method2,
 
-  #{op := binding,
-    name := XSymbol
+  #{ op   := binding
+   , name := XSymbolCheck4
    } = Fn4Param1,
+  true = clj_core:equiv(XSymbol, XSymbolCheck4),
 
   ZSymbol = clj_core:symbol(<<"z">>),
-  #{op := binding,
-    name := ZSymbol,
-    'variadic?' := true
+  #{ op          := binding
+   , name        := ZSymbolCheck
+   , 'variadic?' := true
    } = Fn4Param2,
+  true = clj_core:equiv(ZSymbol, ZSymbolCheck),
 
   ct:comment("fn with two params and one method (variadic)"),
-  #{op := fn,
+  #{op      := fn,
     methods := [Fn5Method1]
    } = analyze_one(<<"(fn* ([x & z] x z))">>),
 
-  #{op := fn_method,
+  #{op     := fn_method,
     params := [Fn5Param1, Fn5Param2]
    } = Fn5Method1,
 
-  #{op := binding,
-    name := XSymbol
+  #{ op   := binding
+   , name := XSymbolCheck5
    } = Fn5Param1,
+  true = clj_core:equiv(XSymbol, XSymbolCheck5),
 
   ZSymbol = clj_core:symbol(<<"z">>),
-  #{op := binding,
-    name := ZSymbol,
-    'variadic?' := true
+  #{ op          := binding
+   , name        := ZSymbolCheck2
+   , 'variadic?' := true
    } = Fn5Param2,
+  true = clj_core:equiv(ZSymbol, ZSymbolCheck2),
 
   ct:comment("fn with two variadic methods"),
   ok = try analyze_one(<<"(fn* ([a b & _] b) ([x & z] x z))">>), error
@@ -523,18 +531,21 @@ invoke(_Config) ->
   ListHello = clj_core:list([HelloSymbol]),
   [ _
   , #{ op   := invoke
-     , form := ListHello
-     , f    := #{op := var, form := HelloSymbol}
+     , form := ListHelloCheck
+     , f    := #{op := var, form := HelloSymbolCheck}
      }
   ] = analyze_all(<<"(def hello :hello) (hello)">>),
+  true = clj_core:equiv(ListHello, ListHelloCheck),
+  true = clj_core:equiv(HelloSymbol, HelloSymbolCheck),
 
   ct:comment("Call something different than a symbol, analyzer shouldn't fail"),
   HelloKeyword = clj_core:keyword(<<"hello">>),
   OneHello = clj_core:list([1, HelloKeyword]),
   #{ op   := invoke
-   , form := OneHello
+   , form := OneHelloCheck
    , f    := #{op := constant, form := 1}
    } = analyze_one(<<"(1 :hello)">>),
+  true = clj_core:equiv(OneHello, OneHelloCheck),
 
   {comments, ""}.
 
@@ -549,9 +560,12 @@ symbol(_Config) ->
 
   ct:comment("Unresolved symbol"),
   HelloSymbol = clj_core:symbol(<<"hello">>),
-  [_,
-   #{op := var,
-     form := HelloSymbol}] = analyze_all(<<"(def hello 1) hello">>),
+  [ _
+  , #{ op   := var
+     , form := HelloSymbolCheck
+     }
+  ] = analyze_all(<<"(def hello 1) hello">>),
+  true = clj_core:equiv(HelloSymbol, HelloSymbolCheck),
 
   {comments, ""}.
 

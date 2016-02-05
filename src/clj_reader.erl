@@ -156,25 +156,25 @@ read_number(#{forms := Forms, src := Src} = State) ->
 
 -spec read_string(state()) -> state().
 read_string(#{forms := Forms,
-              src := <<"\"", SrcRest/binary>>,
+              src := <<"\"", _/binary>>,
               current := String} = State0) ->
-  State = maps:remove(current, State0),
-  State#{forms => [String | Forms],
-         src => SrcRest};
-read_string(#{src := <<"\\", SrcRest/binary>>,
+  State = consume_char(maps:remove(current, State0)),
+  State#{forms => [String | Forms]};
+read_string(#{src := <<"\\", SrcRest/binary>> = Src,
               current := String} = State0) ->
   {EscapedChar, Rest} = escape_char(SrcRest),
   State = State0#{current => <<String/binary,
-                               EscapedChar/binary>>,
-                  src => Rest},
-  read_string(State);
-read_string(#{src := <<Char/utf8, SrcRest/binary>>,
+                               EscapedChar/binary>>},
+
+  Diff = diff_length(Src, Rest),
+  read_string(consume_chars(Diff, State));
+read_string(#{src := <<Char/utf8, _/binary>>,
               current := String} = State0) ->
-  State = State0#{current => <<String/binary, Char/utf8>>,
-                  src => SrcRest},
-  read_string(State);
-read_string(#{src := <<"\"", Rest/binary>>} = State) ->
-  read_string(State#{src => Rest, current => <<>>});
+  State = State0#{current => <<String/binary, Char/utf8>>},
+  read_string(consume_char(State));
+read_string(#{src := <<"\"", _/binary>>} = State) ->
+  State1 = consume_char(State),
+  read_string(State1#{current => <<>>});
 read_string(#{src := <<>>}) ->
   throw(<<"EOF while reading string">>).
 
@@ -236,7 +236,7 @@ unicode_char(Src, Base, Length, IsExact) ->
 %%------------------------------------------------------------------------------
 
 read_keyword(#{forms := Forms,
-               src := <<":", Src/binary>>,
+               src := <<":", Src/binary>> = SrcAll,
                env := Env} = State) ->
   {Token, RestSrc} = read_token(Src),
   Keyword = case clj_utils:parse_symbol(Token) of
@@ -251,15 +251,21 @@ read_keyword(#{forms := Forms,
               undefined ->
                 throw(<<"Invalid token: :", Token/binary>>)
             end,
-  State#{forms => [Keyword | Forms],
-         src => RestSrc}.
+  Diff = diff_length(SrcAll, RestSrc),
+  consume_chars(Diff, State#{forms => [Keyword | Forms]}).
 
 %%------------------------------------------------------------------------------
 %% Symbol
 %%------------------------------------------------------------------------------
 
-read_symbol(#{forms := Forms,
-              src := Src} = State) ->
+read_symbol(State) ->
+  #{ forms := Forms
+   , src   := Src
+   , loc   := Loc
+   } = State,
+
+  Meta = #{loc => Loc},
+
   {Token, RestSrc} = read_token(Src),
   Symbol = case clj_utils:parse_symbol(Token) of
              {undefined, Name} ->
@@ -267,15 +273,18 @@ read_symbol(#{forms := Forms,
                  <<"nil">> -> undefined;
                  <<"true">> -> true;
                  <<"false">> -> false;
-                 _ -> clj_core:symbol(Name)
+                 _ ->
+                   clj_core:with_meta(clj_core:symbol(Name), Meta)
                end;
-             {Namespace, Name} ->
-               clj_core:symbol(Namespace, Name);
+             {Ns, Name} ->
+               clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
              undefined ->
                throw(<<"Invalid symbol ", Token/binary>>)
            end,
-  State#{forms => [Symbol | Forms],
-         src => RestSrc}.
+
+  Diff   = diff_length(Src, RestSrc),
+  State1 = consume_chars(Diff, State),
+  State1#{forms => [Symbol | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Comment
@@ -326,23 +335,19 @@ read_syntax_quote(#{src := <<"`", Src/binary>>, env := Env} = State) ->
   push_form(NewFormWithMeta, NewState).
 
 syntax_quote(Form, Env) ->
-  IsSpecial = clj_analyzer:is_special(Form),
-  IsSymbol = clj_core:'symbol?'(Form),
-  IsUnquote = is_unquote(Form),
+  IsSpecial    = clj_analyzer:is_special(Form),
+  IsSymbol     = clj_core:'symbol?'(Form),
+  IsUnquote    = is_unquote(Form),
   IsUnquoteSpl = is_unquote_splicing(Form),
-  IsColl = clj_core:'coll?'(Form),
-  IsLiteral = is_literal(Form),
+  IsColl       = clj_core:'coll?'(Form),
+  IsLiteral    = is_literal(Form),
 
   QuoteSymbol = clj_core:symbol(<<"quote">>),
   if
-    IsSpecial ->
-      clj_core:list([QuoteSymbol, Form]);
-    IsSymbol ->
-      syntax_quote_symbol(Form, Env);
-    IsUnquote ->
-      clj_core:second(Form);
-    IsUnquoteSpl ->
-      throw(<<"unquote-splice not in list">>);
+    IsSpecial    -> clj_core:list([QuoteSymbol, Form]);
+    IsSymbol     -> syntax_quote_symbol(Form, Env);
+    IsUnquote    -> clj_core:second(Form);
+    IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
       IsMap = clj_core:'map?'(Form),
       IsVector = clj_core:'vector?'(Form),
@@ -360,10 +365,8 @@ syntax_quote(Form, Env) ->
         true ->
           syntax_quote_coll(Form, undefined, Env)
       end;
-    IsLiteral ->
-      Form;
-    true ->
-      clj_core:list([QuoteSymbol, Form])
+    IsLiteral -> Form;
+    true      -> clj_core:list([QuoteSymbol, Form])
   end.
 
 flatten_map(Map) ->
@@ -395,14 +398,15 @@ register_gensym(Symbol, _Env) ->
                   throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
-  case maps:get(Symbol, GensymEnv, undefined) of
+  case maps:get(clj_core:name(Symbol), GensymEnv, undefined) of
     undefined ->
       NameStr = clj_core:name(Symbol),
       NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
       Parts = [NameStr2, <<"__">>, clj_core:next_id(), <<"__auto__">>],
       PartsStr = lists:map(fun clj_core:str/1, Parts),
       GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
-      erlang:put(gensym_env, GensymEnv#{Symbol => GenSym}),
+      SymbolName = clj_core:name(Symbol),
+      erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
       GenSym;
     GenSym ->
       GenSym
@@ -1002,3 +1006,7 @@ push_pending_form(Form, #{pending_forms := Forms} = State) ->
 -spec unicode_length(binary()) -> non_neg_integer().
 unicode_length(Binary) ->
   length(unicode:characters_to_list(Binary)).
+
+-spec diff_length(binary(), binary()) -> integer().
+diff_length(Str1, Str2) ->
+  unicode_length(Str1) - unicode_length(Str2).

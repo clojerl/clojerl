@@ -5,6 +5,7 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.Stringable').
 -behavior('clojerl.Seqable').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.IMeta').
@@ -15,6 +16,7 @@
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
+-export(['clojerl.IEquiv.equiv'/2]).
 -export([ 'clojerl.ISeq.first'/1
         , 'clojerl.ISeq.next'/1
         , 'clojerl.ISeq.more'/1
@@ -23,10 +25,8 @@
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
--export([ 'clojerl.IColl.count'/1
-        , 'clojerl.IColl.cons'/2
+-export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
-        , 'clojerl.IColl.equiv'/2
         ]).
 
 -type type() :: #?TYPE{}.
@@ -71,8 +71,6 @@ new(Items) when is_list(Items) ->
 'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IColl.count'(#?TYPE{name = ?M, data = Items}) -> length(Items).
-
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = []} = List, X) ->
   List#?TYPE{data = [X]};
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Items} = List, X) ->
@@ -80,5 +78,9 @@ new(Items) when is_list(Items) ->
 
 'clojerl.IColl.empty'(_) -> new([]).
 
-'clojerl.IColl.equiv'(X, X) -> true;
-'clojerl.IColl.equiv'(_, _) -> false.
+'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+                      , #?TYPE{name = ?M, data = Y}
+                      ) ->
+  clj_core:equiv(X, Y);
+'clojerl.IEquiv.equiv'(_, _) ->
+  false.

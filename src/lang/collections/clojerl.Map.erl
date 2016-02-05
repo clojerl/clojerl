@@ -3,27 +3,27 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.Counted').
--behavior('clojerl.Stringable').
--behavior('clojerl.Seqable').
--behavior('clojerl.IMeta').
 -behavior('clojerl.IColl').
+-behavior('clojerl.IEquiv').
+-behavior('clojerl.IMeta').
 -behavior('clojerl.ILookup').
+-behavior('clojerl.Seqable').
+-behavior('clojerl.Stringable').
 
 -export([new/1, keys/1, vals/1]).
 -export(['clojerl.Counted.count'/1]).
--export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.Seqable.seq'/1]).
+-export([ 'clojerl.IColl.cons'/2
+        , 'clojerl.IColl.empty'/1
+        ]).
+-export(['clojerl.IEquiv.equiv'/2]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
-        ]).
--export([ 'clojerl.IColl.count'/1
-        , 'clojerl.IColl.cons'/2
-        , 'clojerl.IColl.empty'/1
-        , 'clojerl.IColl.equiv'/2
         ]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
         ]).
+-export(['clojerl.Stringable.str'/1]).
 
 -type type() :: #?TYPE{}.
 
@@ -76,8 +76,6 @@ vals(#?TYPE{name = ?M, data = Map}) -> maps:values(Map).
 'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
   Map#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IColl.count'(#?TYPE{name = ?M, data = Map}) -> maps:size(Map).
-
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Map} = HashMap, X) ->
   case clj_core:seq(X) of
     [K, V] ->
@@ -88,11 +86,15 @@ vals(#?TYPE{name = ?M, data = Map}) -> maps:values(Map).
 
 'clojerl.IColl.empty'(_) -> new([]).
 
-'clojerl.IColl.equiv'(X, X) -> true;
-'clojerl.IColl.equiv'(_, _) -> false.
-
 'clojerl.ILookup.get'(#?TYPE{name = ?M} = Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).
 
 'clojerl.ILookup.get'(#?TYPE{name = ?M, data = Map}, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
+
+'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+                      , #?TYPE{name = ?M, data = Y}
+                      ) ->
+  clj_core:equiv(X, Y);
+'clojerl.IEquiv.equiv'(_, _) ->
+  false.
