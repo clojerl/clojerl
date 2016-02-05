@@ -253,7 +253,7 @@ quote(_Config) ->
   {comments, ""}.
 
 deref(_Config) ->
-  DerefSymbol = clj_core:symbol(<<"deref">>),
+  DerefSymbol = clj_core:symbol(<<"clojure.core">>, <<"deref">>),
   ListSymbol = clj_core:symbol(<<"list">>),
 
   ct:comment("Deref number :P"),

@@ -223,18 +223,27 @@ fn(_Config) ->
    , methods := [Fn3Method1, Fn3Method2]
    } = analyze_one(<<"(fn* ([x] x) ([x y] x y))">>),
 
-  #{op := fn_method,
-    params := [Fn3Param1]
+  #{ op     := fn_method
+   , params := [Fn3Param1]
    } = Fn3Method1,
 
-  #{op := fn_method,
-    params := [Fn3Param1, Fn3Param2]
+  #{ op     := fn_method
+   , params := [Fn3Param1b, Fn3Param2]
    } = Fn3Method2,
+
+  %% Check that the params are the same, even though the 
+  %% locactions are different
+  true = clj_core:equiv(Fn3Param1b, Fn3Param1b),
 
   #{ op   := binding
    , name := XSymbolCheck3
    } = Fn3Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck3),
+
+  #{ op   := binding
+   , name := XSymbolCheck3b
+   } = Fn3Param1b,
+  true = clj_core:equiv(XSymbol, XSymbolCheck3b),
 
   YSymbol = clj_core:symbol(<<"y">>),
   #{ op   := binding
@@ -252,13 +261,20 @@ fn(_Config) ->
    } = Fn4Method1,
 
   #{ op     := fn_method
-   , params := [Fn4Param1, Fn4Param2]
+   , params := [Fn4Param1b, Fn4Param2]
    } = Fn4Method2,
+
+  true = clj_core:equiv(Fn4Param1, Fn4Param1b),
 
   #{ op   := binding
    , name := XSymbolCheck4
    } = Fn4Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck4),
+
+  #{ op   := binding
+   , name := XSymbolCheck4b
+   } = Fn4Param1b,
+  true = clj_core:equiv(XSymbol, XSymbolCheck4b),
 
   ZSymbol = clj_core:symbol(<<"z">>),
   #{ op          := binding
