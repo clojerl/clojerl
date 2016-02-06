@@ -1,6 +1,7 @@
 -module('clojerl.erlang.List').
 
 -behavior('clojerl.Counted').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
@@ -8,10 +9,9 @@
 -behavior('clojerl.Stringable').
 
 -export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IColl.count'/1
-        , 'clojerl.IColl.cons'/2
+-export(['clojerl.IEquiv.equiv'/2]).
+-export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
-        , 'clojerl.IColl.equiv'/2
         ]).
 -export([ 'clojerl.ISeq.first'/1
         , 'clojerl.ISeq.more'/1
@@ -49,8 +49,6 @@
 
 'clojerl.ISequential.noop'(_) -> ok.
 
-'clojerl.IColl.count'(Items) -> length(Items).
-
 'clojerl.IColl.cons'([], X) ->
   [X];
 'clojerl.IColl.cons'(Items, X) ->
@@ -58,5 +56,22 @@
 
 'clojerl.IColl.empty'(_) -> [].
 
-'clojerl.IColl.equiv'(X, X) -> true;
-'clojerl.IColl.equiv'(_, _) -> false.
+'clojerl.IEquiv.equiv'(X, Y) when is_list(X), is_list(Y) ->
+  case length(X) == length(Y) of
+    true  -> do_equiv(X, Y);
+    false -> false
+  end;
+'clojerl.IEquiv.equiv'(_, _) ->
+  false.
+
+do_equiv([], []) ->
+  true;
+do_equiv([], [_ | _]) ->
+  false;
+do_equiv([_ | _], []) ->
+  false;
+do_equiv([X | TailX], [Y | TailY]) ->
+  case clj_core:equiv(X, Y) of
+    true  -> do_equiv(TailX, TailY);
+    false -> false
+  end.

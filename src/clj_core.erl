@@ -7,6 +7,7 @@
          count/1,
          'empty?'/1,
          seq/1, seq2/1,
+         equiv/2,
          conj/2,
          cons/2,
          first/1,
@@ -40,6 +41,20 @@
          gensym/0, gensym/1
         ]).
 
+-spec type(any()) -> atom().
+type(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
+type(X) when is_binary(X)   -> 'clojerl.String';
+type(X) when is_integer(X)  -> 'clojerl.Integer';
+type(X) when is_float(X)    -> 'clojerl.Float';
+type(X) when is_boolean(X)  -> 'clojerl.Boolean';
+type(X) when is_list(X)     -> 'clojerl.erlang.List';
+type(X) when is_map(X)      -> 'clojerl.erlang.Map';
+type(X) when is_tuple(X)    -> 'clojerl.erlang.Tuple';
+type(X) when is_function(X) -> 'clojerl.erlang.Fn';
+type(undefined)             -> 'clojerl.Nil';
+type(X) when is_atom(X)     -> 'clojerl.Keyword';
+type(Value) -> throw({Value, <<" has an unsupported type">>}).
+
 -spec count(any()) -> integer().
 count(Seq) ->
   'clojerl.Counted':count(Seq).
@@ -57,6 +72,16 @@ seq2(Seqable) ->
   case seq(Seqable) of
     undefined -> [];
     Seq -> Seq
+  end.
+
+-spec equiv(any(), any()) -> boolean().
+equiv(X, Y) ->
+  case
+    'extends?'('clojerl.IEquiv', type(X))
+    andalso 'extends?'('clojerl.IEquiv', type(Y))
+  of
+    true  -> 'clojerl.IEquiv':equiv(X, Y);
+    false -> X == Y
   end.
 
 -spec conj(any(), any()) -> any().
@@ -238,20 +263,6 @@ merge([First, Second | Rest]) ->
 boolean(undefined) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
-
--spec type(any()) -> atom().
-type(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
-type(X) when is_tuple(X)    -> 'clojerl.erlang.Tuple';
-type(X) when is_binary(X)   -> 'clojerl.String';
-type(X) when is_integer(X)  -> 'clojerl.Integer';
-type(X) when is_float(X)    -> 'clojerl.Float';
-type(X) when is_boolean(X)  -> 'clojerl.Boolean';
-type(X) when is_list(X)     -> 'clojerl.erlang.List';
-type(X) when is_map(X)      -> 'clojerl.erlang.Map';
-type(undefined)             -> 'clojerl.Nil';
-type(X) when is_atom(X)     -> 'clojerl.Keyword';
-type(X) when is_function(X) -> 'clojerl.erlang.Fn';
-type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec str(any()) -> any().
 str(X) ->

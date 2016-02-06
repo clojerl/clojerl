@@ -15,6 +15,7 @@
                   , forms         => [any()]
                   , pending_forms => [any()]
                   , env           => clj_env:env()
+                  , location      => {non_neg_integer(), non_neg_integer()}
                   }.
 
 -spec new_state(binary(), any(), opts(), boolean()) -> state().
@@ -25,6 +26,7 @@ new_state(Src, Env, Opts, ReadAll) ->
    , pending_forms => []
    , env           => Env
    , all           => ReadAll
+   , loc           => {1, 1}
    }.
 
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
@@ -67,6 +69,9 @@ read(Src, Opts, Env) ->
   State = new_state(Src, Env, Opts, false),
   ensure_read(dispatch(State)).
 
+%% @doc Makes sure a single form is read unless we reach
+%%      the enf of file.
+%% @private
 -spec ensure_read(state()) -> any().
 ensure_read(#{src := <<>>, forms := []}) ->
   throw(<<"EOF">>);
@@ -75,6 +80,7 @@ ensure_read(#{forms := [Form]}) ->
 ensure_read(State) ->
   ensure_read(dispatch(State)).
 
+%% @doc Read all forms.
 -spec read_all(state()) -> [any()].
 read_all(Src) ->
   read_all(Src, #{}).
@@ -110,9 +116,9 @@ read_one(#{src := <<>>}, true = _ThrowEof) ->
   throw(<<"EOF">>);
 read_one(#{src := <<>>} = State, false = _ThrowEof) ->
   State;
-read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
+read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
   case clj_utils:char_type(First, Rest) of
-    whitespace      -> read_one(State#{src => Rest}, ThrowEof);
+    whitespace      -> read_one(consume_char(State), ThrowEof);
     number          -> read_number(State);
     string          -> read_string(State);
     keyword         -> read_keyword(State);
@@ -137,71 +143,71 @@ read_one(#{src := <<First, Rest/binary>>} = State, ThrowEof) ->
 %%------------------------------------------------------------------------------
 
 -spec read_number(state()) -> state().
-read_number(#{forms := Forms, src := Src} = State) ->
-  {Current, SrcRest} = consume(Src, [number, symbol]),
+read_number(State) ->
+  {Current, State1} = consume(State, [number, symbol]),
   Number = clj_utils:parse_number(Current),
-  State#{forms => [Number | Forms],
-         src   => SrcRest}.
+  push_form(Number, State1).
 
 %%------------------------------------------------------------------------------
 %% String
 %%------------------------------------------------------------------------------
 
 -spec read_string(state()) -> state().
-read_string(#{forms := Forms,
-              src := <<"\"", SrcRest/binary>>,
-              current := String} = State0) ->
-  State = maps:remove(current, State0),
-  State#{forms => [String | Forms],
-         src => SrcRest};
-read_string(#{src := <<"\\", SrcRest/binary>>,
-              current := String} = State0) ->
-  {EscapedChar, Rest} = escape_char(SrcRest),
-  State = State0#{current => <<String/binary,
-                               EscapedChar/binary>>,
-                  src => Rest},
+read_string(#{ src     := <<"\"", _/binary>>
+             , current := String
+             } = State0
+           ) ->
+  State = consume_char(maps:remove(current, State0)),
+  push_form(String, State);
+read_string(#{ src := <<"\\", _/binary>>
+             , current := String
+             } = State0
+           ) ->
+  {EscapedChar, State00} = escape_char(consume_char(State0)),
+  State = State00#{current => <<String/binary, EscapedChar/binary>>},
+
   read_string(State);
-read_string(#{src := <<Char, SrcRest/binary>>,
+read_string(#{src := <<Char/utf8, _/binary>>,
               current := String} = State0) ->
-  State = State0#{current => <<String/binary, Char>>,
-                  src => SrcRest},
-  read_string(State);
-read_string(#{src := <<"\"", Rest/binary>>} = State) ->
-  read_string(State#{src => Rest, current => <<>>});
+  State = State0#{current => <<String/binary, Char/utf8>>},
+  read_string(consume_char(State));
+read_string(#{src := <<"\"", _/binary>>} = State) ->
+  State1 = consume_char(State),
+  read_string(State1#{current => <<>>});
 read_string(#{src := <<>>}) ->
   throw(<<"EOF while reading string">>).
 
--spec escape_char(binary()) -> {binary(), binary()}.
-escape_char(<<Char, Rest/binary>> = Src) ->
+-spec escape_char(state()) -> {binary(), state()}.
+escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
   CharType = clj_utils:char_type(Char, Rest),
   case Char of
-    $t -> {<<"\t">>, Rest};
-    $r -> {<<"\r">>, Rest};
-    $n -> {<<"\n">>, Rest};
-    $\\ -> {<<"\\">>, Rest};
-    $" -> {<<"\"">>, Rest};
-    $b -> {<<"\b">>, Rest};
-    $f -> {<<"\f">>, Rest};
-    $u ->
+    $t  -> {<<"\t">>, consume_char(State)};
+    $r  -> {<<"\r">>, consume_char(State)};
+    $n  -> {<<"\n">>, consume_char(State)};
+    $\\ -> {<<"\\">>, consume_char(State)};
+    $"  -> {<<"\"">>, consume_char(State)};
+    $b  -> {<<"\b">>, consume_char(State)};
+    $f  -> {<<"\f">>, consume_char(State)};
+    $u  ->
       %% Hexa unicode
-      {CodePoint, NewRest} = unicode_char(Rest, 16, 4, true),
-      {unicode:characters_to_binary([CodePoint]), NewRest};
+      {CodePoint, State1} = unicode_char(consume_char(State), 16, 4, true),
+      {unicode:characters_to_binary([CodePoint]), State1};
     _ when CharType == number ->
       %% Octal unicode
-      case unicode_char(Src, 8, 3, false) of
+      case unicode_char(State, 8, 3, false) of
         {CodePoint, _} when CodePoint > 8#337 ->
           throw(<<"Octal escape sequence must be in range [0, 377]">>);
-        {CodePoint, NewRest} ->
-          {unicode:characters_to_binary([CodePoint]), NewRest}
+        {CodePoint, State1} ->
+          {unicode:characters_to_binary([CodePoint]), State1}
       end;
     _ ->
       throw(<<"Unsupported escape character: \\", Char>>)
   end.
 
--spec unicode_char(binary(), integer(), integer(), Exact :: boolean()) ->
-                      {binary(), binary()}.
-unicode_char(Src, Base, Length, IsExact) ->
-  {Number, Rest} = consume(Src, [number, symbol]),
+-spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
+                      {binary(), state()}.
+unicode_char(State, Base, Length, IsExact) ->
+  {Number, State1} = consume(State, [number, symbol]),
   Size = case IsExact of
            true -> size(Number);
            false -> Length
@@ -210,7 +216,7 @@ unicode_char(Src, Base, Length, IsExact) ->
     Length ->
       try
         EscapedChar = binary_to_integer(Number, Base),
-        {EscapedChar, Rest}
+        {EscapedChar, State1}
       catch
         _:badarg ->
           BaseBin = integer_to_binary(Base),
@@ -228,12 +234,12 @@ unicode_char(Src, Base, Length, IsExact) ->
 %% Keyword
 %%------------------------------------------------------------------------------
 
-read_keyword(#{forms := Forms,
-               src := <<$:, Src/binary>>,
-               env := Env} = State) ->
-  {Token, RestSrc} = read_token(Src),
+read_keyword(#{ src := <<":", _/binary>>
+              , env := Env
+              } = State0) ->
+  {Token, State} = read_token(consume_char(State0)),
   Keyword = case clj_utils:parse_symbol(Token) of
-              {undefined, <<$:, Name/binary>>} ->
+              {undefined, <<":", Name/binary>>} ->
                 NsSym = clj_env:current_ns(Env),
                 Namespace = clj_core:name(NsSym),
                 clj_core:keyword(Namespace, Name);
@@ -244,60 +250,58 @@ read_keyword(#{forms := Forms,
               undefined ->
                 throw(<<"Invalid token: :", Token/binary>>)
             end,
-  State#{forms => [Keyword | Forms],
-         src => RestSrc}.
+  push_form(Keyword, State).
 
 %%------------------------------------------------------------------------------
 %% Symbol
 %%------------------------------------------------------------------------------
 
-read_symbol(#{forms := Forms,
-              src := Src} = State) ->
-  {Token, RestSrc} = read_token(Src),
+read_symbol(State) ->
+  Loc  = maps:get(loc, State),
+  Meta = #{loc => Loc},
+
+  {Token, State1} = read_token(State),
   Symbol = case clj_utils:parse_symbol(Token) of
+             {undefined, <<"nil">>}   -> undefined;
+             {undefined, <<"true">>}  -> true;
+             {undefined, <<"false">>} -> false;
              {undefined, Name} ->
-               case Name of
-                 <<"nil">> -> undefined;
-                 <<"true">> -> true;
-                 <<"false">> -> false;
-                 _ -> clj_core:symbol(Name)
-               end;
-             {Namespace, Name} ->
-               clj_core:symbol(Namespace, Name);
+               clj_core:with_meta(clj_core:symbol(Name), Meta);
+             {Ns, Name} ->
+               clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
              undefined ->
                throw(<<"Invalid symbol ", Token/binary>>)
            end,
-  State#{forms => [Symbol | Forms],
-         src => RestSrc}.
+
+  push_form(Symbol, State1).
 
 %%------------------------------------------------------------------------------
 %% Comment
 %%------------------------------------------------------------------------------
 
-read_comment(#{src := Src} = State) ->
-  State#{src => skip_line(Src)}.
+read_comment(State) -> skip_line(State).
 
 %%------------------------------------------------------------------------------
 %% Quote
 %%------------------------------------------------------------------------------
 
-read_quote(#{src := <<$', Src/binary>>} = State) ->
+read_quote(#{src := <<"'"/utf8, _/binary>>} = State) ->
   Quote = clj_core:symbol(<<"quote">>),
-  wrapped_read(Quote, State#{src => Src}).
+  wrapped_read(Quote, consume_char(State)).
 
 %%------------------------------------------------------------------------------
 %% Deref
 %%------------------------------------------------------------------------------
 
-read_deref(#{src := <<$@, Src/binary>>} = State) ->
-  Quote = clj_core:symbol(<<"deref">>),
-  wrapped_read(Quote, State#{src => Src}).
+read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
+  Deref = clj_core:symbol(<<"clojure.core">>, <<"deref">>),
+  wrapped_read(Deref, consume_char(State)).
 
 %%------------------------------------------------------------------------------
 %% Meta
 %%------------------------------------------------------------------------------
 
-read_meta(#{src := <<$^, Src/binary>>} = State) ->
+read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
   {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
   Meta = clj_utils:desugar_meta(SugaredMeta),
 
@@ -310,8 +314,8 @@ read_meta(#{src := <<$^, Src/binary>>} = State) ->
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
-read_syntax_quote(#{src := <<$`, Src/binary>>, env := Env} = State) ->
-  {Form, NewState} = pop_form(read_one(State#{src => Src})),
+read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
+  {Form, NewState} = pop_form(read_one(consume_char(State))),
   %% TODO: using process dictionary here might be a code smell
   erlang:put(gensym_env, #{}),
   NewFormWithMeta = add_meta(Form, Env, syntax_quote(Form, Env)),
@@ -319,23 +323,19 @@ read_syntax_quote(#{src := <<$`, Src/binary>>, env := Env} = State) ->
   push_form(NewFormWithMeta, NewState).
 
 syntax_quote(Form, Env) ->
-  IsSpecial = clj_analyzer:is_special(Form),
-  IsSymbol = clj_core:'symbol?'(Form),
-  IsUnquote = is_unquote(Form),
+  IsSpecial    = clj_analyzer:is_special(Form),
+  IsSymbol     = clj_core:'symbol?'(Form),
+  IsUnquote    = is_unquote(Form),
   IsUnquoteSpl = is_unquote_splicing(Form),
-  IsColl = clj_core:'coll?'(Form),
-  IsLiteral = is_literal(Form),
+  IsColl       = clj_core:'coll?'(Form),
+  IsLiteral    = is_literal(Form),
 
   QuoteSymbol = clj_core:symbol(<<"quote">>),
   if
-    IsSpecial ->
-      clj_core:list([QuoteSymbol, Form]);
-    IsSymbol ->
-      syntax_quote_symbol(Form, Env);
-    IsUnquote ->
-      clj_core:second(Form);
-    IsUnquoteSpl ->
-      throw(<<"unquote-splice not in list">>);
+    IsSpecial    -> clj_core:list([QuoteSymbol, Form]);
+    IsSymbol     -> syntax_quote_symbol(Form, Env);
+    IsUnquote    -> clj_core:second(Form);
+    IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
       IsMap = clj_core:'map?'(Form),
       IsVector = clj_core:'vector?'(Form),
@@ -353,10 +353,8 @@ syntax_quote(Form, Env) ->
         true ->
           syntax_quote_coll(Form, undefined, Env)
       end;
-    IsLiteral ->
-      Form;
-    true ->
-      clj_core:list([QuoteSymbol, Form])
+    IsLiteral -> Form;
+    true      -> clj_core:list([QuoteSymbol, Form])
   end.
 
 flatten_map(Map) ->
@@ -388,14 +386,15 @@ register_gensym(Symbol, _Env) ->
                   throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
-  case maps:get(Symbol, GensymEnv, undefined) of
+  case maps:get(clj_core:name(Symbol), GensymEnv, undefined) of
     undefined ->
       NameStr = clj_core:name(Symbol),
       NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
       Parts = [NameStr2, <<"__">>, clj_core:next_id(), <<"__auto__">>],
       PartsStr = lists:map(fun clj_core:str/1, Parts),
       GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
-      erlang:put(gensym_env, GensymEnv#{Symbol => GenSym}),
+      SymbolName = clj_core:name(Symbol),
+      erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
       GenSym;
     GenSym ->
       GenSym
@@ -489,63 +488,72 @@ is_literal(Form) ->
 %% Unquote
 %%------------------------------------------------------------------------------
 
-read_unquote(#{src := <<$~, Src/binary>>} = State) ->
+read_unquote(#{src := <<"~"/utf8, Src/binary>>} = State) ->
   case Src of
-    <<$@, RestSrc/binary>> ->
+    <<"@", _/binary>> ->
       UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
                                         <<"unquote-splicing">>),
-      wrapped_read(UnquoteSplicing, State#{src => RestSrc});
+      wrapped_read(UnquoteSplicing, consume_chars(2, State));
     _ ->
       UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
                                         <<"unquote">>),
-      wrapped_read(UnquoteSplicing, State#{src => Src})
+      wrapped_read(UnquoteSplicing, consume_char(State))
   end.
 
 %%------------------------------------------------------------------------------
 %% List
 %%------------------------------------------------------------------------------
 
-read_list(#{src := <<$(, Src/binary>>} = State) ->
-  #{ src   := RestSrc
-   , forms := ReversedItems
-   } = read_until($), State#{src => Src, forms => []}),
+read_list(#{ src   := <<"("/utf8, _/binary>>
+           , forms := Forms
+           , loc   := Loc
+           } = State0
+         ) ->
+  State  = consume_char(State0),
+  State1 = read_until($), State#{forms => []}),
+  #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
-  List = clj_core:list(Items),
+  List = clj_core:with_meta(clj_core:list(Items), #{loc => Loc}),
 
-  #{forms := Forms} = State,
-  State#{src => RestSrc, forms => [List | Forms]}.
+  State1#{forms => [List | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Vector
 %%------------------------------------------------------------------------------
 
-read_vector(#{src := <<$[, Src/binary>>,
-              forms := Forms} = State) ->
-  #{src := RestSrc,
-    forms := ReversedItems} =
-    read_until($], State#{src => Src, forms => []}),
+read_vector(#{ src   := <<"["/utf8, _/binary>>
+             , forms := Forms
+             , loc   := Loc
+             } = State0
+           ) ->
+  State  = consume_char(State0),
+  State1 = read_until($], State#{forms => []}),
+  #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
-  Vector = clj_core:vector(Items),
-  State#{src => RestSrc,
-         forms => [Vector | Forms]}.
+  Vector = clj_core:with_meta(clj_core:vector(Items), #{loc => Loc}),
+
+  State1#{forms => [Vector | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Map
 %%------------------------------------------------------------------------------
 
-read_map(#{src := <<${, Src/binary>>,
-           forms := Forms} = State) ->
-  #{src := RestSrc,
-    forms := ReversedItems} =
-    read_until($}, State#{src => Src, forms => []}),
+read_map(#{ src   := <<"{"/utf8, _/binary>>
+          , forms := Forms
+          , loc   := Loc
+          } = State0
+        ) ->
+  State  = consume_char(State0),
+  State1 = read_until($}, State#{forms => []}),
+  #{forms := ReversedItems} = State1,
 
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = clj_core:hash_map(Items),
-      State#{src => RestSrc, forms => [Map | Forms]};
+      Map = clj_core:with_meta(clj_core:hash_map(Items), #{loc => Loc}),
+      State1#{forms => [Map | Forms]};
     _ ->
       throw(<<"Map literal must contain an even number of forms">>)
   end.
@@ -560,38 +568,37 @@ read_unmatched_delim(_) -> throw(unmatched_delim).
 %% Character
 %%------------------------------------------------------------------------------
 
-read_char(#{src := <<$\\, Src/binary>>,
-            forms := Forms} = State) ->
-  {Token, RestSrc} = read_token(Src),
+read_char(#{src := <<"\\"/utf8, _/binary>>} = State) ->
+  {Token, State1} = read_token(consume_char(State)),
   Char =
     case Token of
       <<>> -> throw(<<"EOF">>);
-      Ch when size(Ch) == 1-> Ch;
+      Ch when size(Ch) == 1 -> Ch;
       <<"newline">> -> $\n;
       <<"space">> -> $ ;
       <<"tab">> -> $\t;
       <<"backspace">> -> $\b;
       <<"formfeed">> -> $\f;
       <<"return">> -> $\r;
-      <<$u, RestToken/binary>> ->
-        {Ch, _} = unicode_char(RestToken, 16, 4, true),
+      <<"u", RestToken/binary>> ->
+        {Ch, _} = unicode_char(State1#{src => RestToken}, 16, 4, true),
         Ch;
-      <<$o, RestToken/binary>> ->
-        read_octal_char(RestToken);
+      <<"o", RestToken/binary>> ->
+        read_octal_char(State1#{src => RestToken});
       Ch -> throw(<<"Unsupported character: \\", Ch/binary>>)
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
-  State#{src => RestSrc, forms => [CharBin | Forms]}.
+  push_form(CharBin, State1).
 
--spec read_octal_char(binary()) -> char().
-read_octal_char(RestToken) when size(RestToken) > 3 ->
-  Size = size(RestToken),
+-spec read_octal_char(state()) -> char().
+read_octal_char(#{src := RestToken}) when size(RestToken) > 3 ->
+  Size    = size(RestToken),
   SizeBin = integer_to_binary(Size),
   throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
-read_octal_char(RestToken)  ->
+read_octal_char(#{src := RestToken} = State) ->
   Size = size(RestToken),
-  case unicode_char(RestToken, 8, Size, true) of
+  case unicode_char(State, 8, Size, true) of
     {Ch, _} when Ch > 8#377 ->
       throw(<<"Octal escape sequence must be in range [0, 377]">>);
     {Ch, _} -> Ch
@@ -601,7 +608,7 @@ read_octal_char(RestToken)  ->
 %% Argument
 %%------------------------------------------------------------------------------
 
-read_arg(#{src := <<$%, Src/binary>>} = State) ->
+read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
   case erlang:get(arg_env) of
     undefined ->
       read_symbol(State);
@@ -609,13 +616,12 @@ read_arg(#{src := <<$%, Src/binary>>} = State) ->
       case arg_type(Src) of
         register_arg_1 ->
           ArgSym = register_arg(1),
-          push_form(ArgSym, State#{src => Src});
+          push_form(ArgSym, consume_char(State));
         register_arg_multi ->
           ArgSym = register_arg(-1),
-          <<_, RestSrc/binary>> = Src,
-          push_form(ArgSym, State#{src => RestSrc});
+          push_form(ArgSym, consume_chars(2, State));
         register_arg_n ->
-          {N, NewState} = pop_form(read_one(State#{src => Src})),
+          {N, NewState} = pop_form(read_one(consume_char(State))),
           case is_integer(N) of
             false -> throw(<<"Arg literal must be %, %& or %integer">>);
             true -> ok
@@ -667,40 +673,45 @@ gen_arg_sym(N) ->
 %% Reader dispatch
 %%------------------------------------------------------------------------------
 
-read_dispatch(#{src := <<$#, Src/binary>>} = State) ->
-  <<Ch, RestSrc/binary>> = Src,
-  NewState = State#{src => RestSrc},
+read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
+  <<Ch/utf8, _/binary>> = Src,
+  NewState = consume_chars(2, State),
   case Ch of
-    $^ -> read_meta(State#{src => Src}); %% deprecated
-    $' ->
-      VarSymbol = clj_core:symbol(<<"var">>),
-      wrapped_read(VarSymbol, NewState);
-    $( -> read_fn(NewState);
+    $^ -> read_meta(consume_char(State)); %% deprecated
+    $' -> read_var(consume_char(State));
+    $( -> read_fn(consume_char(State));
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
     $[ -> read_tuple(NewState);
-    $< -> throw(<<"Unreadable form">>);
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
     $: -> read_erl_fun(NewState);
-    X -> throw({unsupported_reader, <<"#", X>>})
+    $< -> throw(<<"Unreadable form">>);
+    X  -> throw({unsupported_reader, <<"#", X>>})
   end.
+
+%%------------------------------------------------------------------------------
+%% #' var
+%%------------------------------------------------------------------------------
+
+read_var(#{src := <<"'", _/binary>>} = State) ->
+  VarSymbol = clj_core:symbol(<<"var">>),
+  wrapped_read(VarSymbol, consume_char(State)).
 
 %%------------------------------------------------------------------------------
 %% #() fn
 %%------------------------------------------------------------------------------
 
-read_fn(#{src := Src} = State) ->
+read_fn(#{loc := Loc} = State) ->
   case erlang:get(arg_env) of
     undefined -> ok;
-    _ -> throw(<<"Nested #()s are not allowed">>)
+    _         -> throw(<<"Nested #()s are not allowed">>)
   end,
   erlang:put(arg_env, #{}),
-  {Form, NewState} = pop_form(read_one(State#{src => <<$(, Src/binary>>})),
+  {Form, NewState} = pop_form(read_one(State)),
   ArgEnv = erlang:erase(arg_env),
-
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
   MapFun = fun(N) ->
@@ -717,8 +728,9 @@ read_fn(#{src := Src} = State) ->
 
   FnSymbol = clj_core:symbol(<<"fn*">>),
   FnForm = clj_core:list([FnSymbol, ArgsVector, Form]),
+  FnFormWithMeta = clj_core:with_meta(FnForm, #{loc => Loc}),
 
-  push_form(FnForm, NewState).
+  push_form(FnFormWithMeta, NewState).
 
 %%------------------------------------------------------------------------------
 %% #= eval
@@ -733,33 +745,28 @@ read_eval(#{env := Env} = State) ->
 %% #{} set
 %%------------------------------------------------------------------------------
 
-read_set(#{src := Src,
-           forms := Forms} = State) ->
-  #{src := RestSrc,
-    forms := ReversedItems} =
-    read_until($}, State#{src => Src, forms => []}),
+read_set(#{forms := Forms, loc := Loc} = State) ->
+  State1 = read_until($}, State#{forms => []}),
+  #{forms := ReversedItems} = State1,
 
-  Items = lists:reverse(ReversedItems),
-  Set = clj_core:hash_set(Items),
-  State#{src => RestSrc,
-         forms => [Set | Forms]}.
+  Items       = lists:reverse(ReversedItems),
+  Set         = clj_core:hash_set(Items),
+  SetWithMeta = clj_core:with_meta(Set, #{loc => Loc}),
+
+  State1#{forms => [SetWithMeta | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #[] tuple
 %%------------------------------------------------------------------------------
 
-read_tuple(#{src := Src} = State) ->
-  #{src := RestSrc,
-    forms := ReversedItems} =
-    read_until($], State#{src => Src, forms => []}),
-
-  Forms = maps:get(forms, State),
+read_tuple(#{forms := Forms} = State) ->
+  State1 = read_until($], State#{forms => []}),
+  #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
   Tuple = erlang:list_to_tuple(Items),
-  State#{ src   => RestSrc
-        , forms => [Tuple | Forms]
-        }.
+
+  State1#{forms => [Tuple | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #"" regex
@@ -767,19 +774,18 @@ read_tuple(#{src := Src} = State) ->
 
 read_regex(#{src := <<>>}) ->
   throw(<<"EOF">>);
-read_regex(#{src := <<$\\, Ch, Src/binary>>} = State) ->
+read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  NewState = State#{src => Src, current => <<Current/binary, $\\, Ch>>},
-  read_regex(NewState);
-read_regex(#{src := <<$", Src/binary>>,
-             forms := Forms} = State) ->
+  NewState = State#{current => <<Current/binary, "\\", Ch/utf8>>},
+  read_regex(consume_chars(2, NewState));
+read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   {ok, Regex} = re:compile(Current),
-  State#{src => Src, forms => [Regex | Forms]};
-read_regex(#{src := <<Ch, Src/binary>>} = State) ->
+  push_form(Regex, consume_char(State));
+read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  NewState = State#{src => Src, current => <<Current/binary, Ch>>},
-  read_regex(NewState).
+  NewState = State#{current => <<Current/binary, Ch/utf8>>},
+  read_regex(consume_char(NewState)).
 
 %%------------------------------------------------------------------------------
 %% #_ discard
@@ -805,18 +811,17 @@ read_cond(#{src := Src, opts := Opts} = State) ->
 
   ReadDelim = clj_core:boolean(erlang:get(read_delim)),
   IsSplicing = binary:first(Src) == $@,
-  RestSrc =
+  State1 =
     case IsSplicing of
       true when not ReadDelim ->
         throw(<<"cond-splice not in list">>);
       true ->
-        <<_, RestSrcAux/binary>> = Src,
-        RestSrcAux;
+        consume_char(State);
       false ->
-        Src
+        State
     end,
 
-  {ListForm, NewState} = pop_form(read_one(State#{src => RestSrc})),
+  {ListForm, NewState} = pop_form(read_one(State1)),
 
   case clj_core:'list?'(ListForm) of
     false -> throw(<<"read-cond body must be a list">>);
@@ -837,7 +842,7 @@ read_cond(#{src := Src, opts := Opts} = State) ->
   end.
 
 reader_conditional(List, IsSplicing) ->
-  {'clojerl.reader.ReaderConditional', #{list => List, splicing => IsSplicing}}.
+  'clojerl.reader.ReaderConditional':new(List, IsSplicing).
 
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
   Features = maps:get(features, Opts, clj_core:hash_set([])),
@@ -886,7 +891,7 @@ read_erl_fun(State) ->
 
       Arity = clj_core:first(Second),
       Fun = fun ModuleAtom:FunctionAtom/Arity,
-      State2#{forms => [Fun | Forms]};
+      push_form(Fun, State2);
     false ->
       throw(<<"Reader literal '#:' expects a fully-qualified symbol"
               " followed by a vector with one element.">>)
@@ -896,7 +901,7 @@ valid_erl_fun(First, Second) ->
   case {clj_core:'symbol?'(First), clj_core:'vector?'(Second)} of
     {true, true} ->
       Module = clj_core:namespace(First),
-      Count = clj_core:count(Second),
+      Count  = clj_core:count(Second),
       Module =/= undefined andalso Count == 1;
     _ ->
       false
@@ -906,41 +911,64 @@ valid_erl_fun(First, Second) ->
 %% Utility functions
 %%------------------------------------------------------------------------------
 
--spec consume(binary(), [clj_utils:char_type()] | fun()) ->
-                 {binary(), binary()}.
-consume(Src, TypesOrPred) ->
-  do_consume(Src, <<>>, TypesOrPred).
+-spec consume_char(state()) -> state().
+consume_char(#{src := <<"\n"/utf8, Src/binary>>, loc := {Line, _}} = State) ->
+  State#{src => Src, loc => {Line + 1, 1}};
+consume_char(#{src := <<_/utf8, Src/binary>>, loc := {Line, Col}} = State) ->
+  State#{src => Src, loc => {Line, Col + 1}}.
 
-do_consume(<<>>, Acc, _) ->
-  {Acc, <<>>};
-do_consume(<<X, Rest/binary>> = Src, Acc, Pred) when is_function(Pred) ->
+-spec consume_chars(non_neg_integer(), state()) -> state().
+consume_chars(0, State) ->
+  State;
+consume_chars(N, State) when N > 0 ->
+  consume_chars(N - 1, consume_char(State)).
+
+-spec consume(state(), [clj_utils:char_type()] | fun()) ->
+  {binary(), state()}.
+consume(State, TypesOrPred) ->
+  do_consume(State, <<>>, TypesOrPred).
+ 
+do_consume(State = #{src := <<>>}, Acc, _) ->
+  {Acc, State};
+do_consume( State = #{src := <<X/utf8, _/binary>>}
+          , Acc
+          , Pred
+          ) when is_function(Pred) ->
   case Pred(X) of
-    true -> do_consume(Rest, <<Acc/binary, X>>, Pred);
-    false -> {Acc, Src}
+    true  ->
+      State1 = consume_char(State),
+      do_consume(State1, <<Acc/binary, X/utf8>>, Pred);
+    false -> {Acc, State}
   end;
-do_consume(<<X, Rest/binary>> = Src, Acc, Types) ->
+do_consume( State = #{src := <<X/utf8, Rest/binary>>}
+          , Acc
+          , Types
+          ) ->
   Type = clj_utils:char_type(X, Rest),
   case lists:member(Type, Types) of
-    true -> do_consume(Rest, <<Acc/binary, X>>, Types);
-    false -> {Acc, Src}
+    true -> 
+      State1 = consume_char(State),  
+      do_consume(State1, <<Acc/binary, X/utf8>>, Types);
+    false -> 
+      {Acc, State}
   end.
 
--spec read_token(binary()) -> {binary(), binary()}.
-read_token(Src) ->
+-spec read_token(state()) -> {binary(), state()}.
+read_token(State) ->
   Fun = fun(Char) ->
             (clj_utils:char_type(Char, <<>>) =/= whitespace)
               andalso (not is_macro_terminating(Char))
         end,
-  consume(Src, Fun).
+  consume(State, Fun).
 
 -spec read_until(char(), state()) -> state().
-read_until(Delim, #{src := <<Delim, Src/binary>>} = State) ->
+read_until(Delim, #{src := <<Delim/utf8, _/binary>>} = State) ->
   erlang:erase(read_delim),
-  State#{src => Src};
-read_until(Delim, #{src := <<X, Src/binary>>} = State) ->
+  consume_char(State);
+read_until(Delim, #{src := <<X/utf8, _/binary>>} = State) ->
   case clj_utils:char_type(X) of
     whitespace ->
-      read_until(Delim, State#{src => Src});
+      read_until(Delim, consume_char(State));
     _ ->
       erlang:put(read_delim, true),
       read_until(Delim, read_one(State))
@@ -952,10 +980,11 @@ is_macro_terminating(Char) ->
                [$", $;, $@, $^, $`, $~, $(,
                 $), $[, $], ${, $}, $\\ ]).
 
-skip_line(Src) ->
+-spec skip_line(state()) -> state().
+skip_line(State) ->
   NotNewline = fun(C) -> C =/= $\n andalso C =/= $\r end,
-  {_, RestSrc} = consume(Src, NotNewline),
-  RestSrc.
+  {_, State1} = consume(State, NotNewline),
+  State1.
 
 wrapped_read(Symbol, State) ->
   {Form, NewState} = pop_form(read_one(State)),
