@@ -257,8 +257,7 @@ read_keyword(#{ src := <<":", _/binary>>
 %%------------------------------------------------------------------------------
 
 read_symbol(State) ->
-  #{loc := Loc} = State,
-
+  Loc  = maps:get(loc, State),
   Meta = #{loc => Loc},
 
   {Token, State1} = read_token(State),
@@ -507,6 +506,7 @@ read_unquote(#{src := <<"~"/utf8, Src/binary>>} = State) ->
 
 read_list(#{ src   := <<"("/utf8, _/binary>>
            , forms := Forms
+           , loc   := Loc
            } = State0
          ) ->
   State  = consume_char(State0),
@@ -514,7 +514,7 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
   #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
-  List = clj_core:list(Items),
+  List = clj_core:with_meta(clj_core:list(Items), #{loc => Loc}),
 
   State1#{forms => [List | Forms]}.
 
@@ -838,7 +838,7 @@ read_cond(#{src := Src, opts := Opts} = State) ->
   end.
 
 reader_conditional(List, IsSplicing) ->
-  {'clojerl.reader.ReaderConditional', #{list => List, splicing => IsSplicing}}.
+  'clojerl.reader.ReaderConditional':new(List, IsSplicing).
 
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
   Features = maps:get(features, Opts, clj_core:hash_set([])),

@@ -380,7 +380,9 @@ syntax_quote(_Config) ->
   SomeNsHelloSym = clj_core:symbol(<<"some-ns">>, <<"hello">>),
   SomeNsHelloSyntaxQuote = clj_reader:read(<<"`some-ns/hello">>),
   true = clj_core:equiv(clj_core:first(SomeNsHelloSyntaxQuote), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(SomeNsHelloSyntaxQuote), SomeNsHelloSym),
+  true = clj_core:equiv( clj_core:second(SomeNsHelloSyntaxQuote)
+                       , SomeNsHelloSym
+                       ),
 
   ct:comment("Read auto-gen symbol"),
   ListGenSym = clj_reader:read(<<"`hello#">>),
@@ -394,7 +396,9 @@ syntax_quote(_Config) ->
   ListConcat = clj_core:second(ListGenSym2),
   ListSecond = clj_core:second(ListConcat),
   ListThird = clj_core:third(ListConcat),
-  true = clj_core:equiv(clj_core:second(ListSecond), clj_core:second(ListThird)),
+  true = clj_core:equiv( clj_core:second(ListSecond)
+                       , clj_core:second(ListThird)
+                       ),
 
   ct:comment("Read unquote"),
   HelloSym = clj_core:symbol(<<"hello">>),
@@ -408,19 +412,16 @@ syntax_quote(_Config) ->
 
   ct:comment("Read list and empty list"),
   WithMetaListHello = clj_reader:read(<<"`(hello :world)">>),
-  WithMetaListHelloCheck =
-    clj_reader:read(<<"(clojure.core/with-meta"
-                      "  (clojure.core/concat"
-                      "    (clojure.core/list $user/hello)"
-                      "    (clojure.core/list :world))"
-                      "  nil)">>),
-  true = clj_core:equiv(WithMetaListHello, WithMetaListHelloCheck),
+  ListHelloCheck = clj_reader:read(<<"(clojure.core/concat"
+                                     "  (clojure.core/list $user/hello)"
+                                     "  (clojure.core/list :world))">>),
+  true = clj_core:equiv(clj_core:second(WithMetaListHello), ListHelloCheck),
 
   WithMetaEmptyList = clj_reader:read(<<"`()">>),
-  WithMetaEmptyListCheck = clj_reader:read(<<"(clojure.core/with-meta"
-                                             "  (clojure.core/list)"
-                                             "  nil)">>),
-  true = clj_core:equiv(WithMetaEmptyList, WithMetaEmptyListCheck),
+  EmptyListCheck = clj_reader:read(<<"(clojure.core/list)">>),
+  true = clj_core:equiv( clj_core:second(WithMetaEmptyList)
+                       , EmptyListCheck
+                       ),
 
   ct:comment("Read map"),
   MapWithMeta = clj_reader:read(<<"`{hello :world}">>),
@@ -458,23 +459,22 @@ syntax_quote(_Config) ->
 
   ct:comment("Read unquote-splice inside list"),
   WithMetaHelloWorldSup = clj_reader:read(<<"`(~@(hello world) :sup?)">>),
-  WithMetaHelloWorldSupCheck =
-    clj_reader:read(<<"(clojure.core/with-meta"
-                      "  (clojure.core/concat"
-                      "    (hello world)"
-                      "    (clojure.core/list :sup?))"
-                      "  nil)">>),
-  true = clj_core:equiv(WithMetaHelloWorldSup, WithMetaHelloWorldSupCheck),
+  HelloWorldSupCheck = clj_reader:read(<<"(clojure.core/concat"
+                                         "  (hello world)"
+                                         "  (clojure.core/list :sup?))">>),
+  true = clj_core:equiv( clj_core:second(WithMetaHelloWorldSup)
+                       , HelloWorldSupCheck
+                       ),
 
   ct:comment("Read unquote inside list"),
   ListWithMetaHelloWorld = clj_reader:read(<<"`(~hello :world)">>),
-  ListWithMetaHelloWorldCheck =
-    clj_reader:read(<<"(clojure.core/with-meta"
-                      "  (clojure.core/concat"
-                      "    (clojure.core/list hello)"
-                      "    (clojure.core/list :world))"
-                      "  nil)">>),
-  true = clj_core:equiv(ListWithMetaHelloWorld, ListWithMetaHelloWorldCheck),
+  ListHelloWorldCheck =
+    clj_reader:read(<<"(clojure.core/concat"
+                      "  (clojure.core/list hello)"
+                      "  (clojure.core/list :world))">>),
+  true = clj_core:equiv( clj_core:second(ListWithMetaHelloWorld)
+                       , ListHelloWorldCheck
+                       ),
 
   {comments, ""}.
 
@@ -506,7 +506,7 @@ list(_Config) ->
 
   ct:comment("Empty List"),
   EmptyList = clj_core:list([]),
-  EmptyList = clj_reader:read(<<"()">>),
+  true = clj_core:equiv(clj_reader:read(<<"()">>), EmptyList),
 
   ct:comment("List"),
   List = clj_core:list([HelloWorldKeyword, HelloWorldSymbol]),
@@ -649,7 +649,7 @@ fn(_Config) ->
   EmptyFn = clj_reader:read(<<"#()">>),
   FnSymbol = clj_core:first(EmptyFn),
   EmptyVector = clj_core:second(EmptyFn),
-  EmptyList = clj_core:third(EmptyFn),
+  true = clj_core:equiv(clj_core:third(EmptyFn), EmptyList),
 
   ct:comment("Read anonymous fn with %"),
   OneArgFn = clj_reader:read(<<"#(%)">>),
@@ -825,18 +825,22 @@ discard(_Config) ->
 
   ct:comment("Preserve read"),
   PreserveOpts = #{read_cond => preserve},
-  ReaderCond = {'clojerl.reader.ReaderConditional',
-                #{list => clj_reader:read(<<"(1 2)">>),
-                  splicing => false}},
-  [ReaderCond, HelloKeyword] =
+  ReaderCond   = 
+    'clojerl.reader.ReaderConditional':new( clj_reader:read(<<"(1 2)">>)
+                                          , false
+                                          ),
+  [ReaderCondCheck, HelloKeyword] =
     clj_reader:read_all(<<"#?(1 2) :hello">>, PreserveOpts),
+  true = clj_core:equiv(ReaderCond, ReaderCondCheck),
 
-  ReaderCondSplice = {'clojerl.reader.ReaderConditional',
-                      #{list => clj_reader:read(<<"(1 2)">>),
-                        splicing => true}},
+  ReaderCondSplice = 
+    'clojerl.reader.ReaderConditional':new( clj_reader:read(<<"(1 2)">>)
+                                          , true
+                                          ),
   ReaderCondSpliceVector = clj_core:vector([ReaderCondSplice, HelloKeyword]),
-  ReaderCondSpliceVector =
+  ReaderCondSpliceVectorCheck =
     clj_reader:read(<<"[#?@(1 2) :hello]">>, PreserveOpts),
+  true = clj_core:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
 
   ct:comment("EOF while reading character"),
   ok = try clj_reader:read(<<"#?">>, AllowOpts)

@@ -61,5 +61,5 @@ to_atom(#?TYPE{name = ?M, data = {Ns, Name}}) ->
                       , #?TYPE{name = ?M, data = X}
                       ) ->
   true;
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M}, #?TYPE{name = ?M}) ->
+'clojerl.IEquiv.equiv'(_, _) ->
   false.
