@@ -61,15 +61,14 @@
     true  -> do_equiv(X, Y);
     false -> false
   end;
-'clojerl.IEquiv.equiv'(_, _) ->
-  false.
+'clojerl.IEquiv.equiv'(X, Y) ->
+  case clj_core:'sequential?'(Y) of
+    true  -> clj_core:equiv(Y, X);
+    false -> false
+  end.
 
 do_equiv([], []) ->
   true;
-do_equiv([], [_ | _]) ->
-  false;
-do_equiv([_ | _], []) ->
-  false;
 do_equiv([X | TailX], [Y | TailY]) ->
   case clj_core:equiv(X, Y) of
     true  -> do_equiv(TailX, TailY);
