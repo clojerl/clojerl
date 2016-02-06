@@ -745,14 +745,15 @@ read_eval(#{env := Env} = State) ->
 %% #{} set
 %%------------------------------------------------------------------------------
 
-read_set(#{forms := Forms} = State) ->
+read_set(#{forms := Forms, loc := Loc} = State) ->
   State1 = read_until($}, State#{forms => []}),
   #{forms := ReversedItems} = State1,
 
-  Items = lists:reverse(ReversedItems),
-  Set   = clj_core:hash_set(Items),
+  Items       = lists:reverse(ReversedItems),
+  Set         = clj_core:hash_set(Items),
+  SetWithMeta = clj_core:with_meta(Set, #{loc => Loc}),
 
-  State1#{forms => [Set | Forms]}.
+  State1#{forms => [SetWithMeta | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #[] tuple
