@@ -6,6 +6,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.ILookup').
+-behavior('clojerl.IMap').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
@@ -16,6 +17,9 @@
 -export(['clojerl.IEquiv.equiv'/2]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
+        ]).
+-export([ 'clojerl.IMap.keys'/1
+        , 'clojerl.IMap.vals'/1
         ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
@@ -82,3 +86,9 @@ remove_meta(K, V, Acc) ->
 
 'clojerl.ILookup.get'(Map, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
+
+'clojerl.IMap.keys'(Map) ->
+  maps:keys(Map).
+
+'clojerl.IMap.vals'(Map) -> 
+  maps:values(Map).

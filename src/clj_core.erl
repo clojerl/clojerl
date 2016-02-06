@@ -35,6 +35,7 @@
          boolean/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
+         keys/1, vals/1,
          'even?'/1,
          invoke/2,
          next_id/0,
@@ -190,7 +191,7 @@ keyword(Namespace, Name) ->
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
-  type(X) == 'clojerl.Map'.
+  'extends?'('clojerl.IMap', type(X)).
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
@@ -287,6 +288,14 @@ hash_map(Items) ->
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
   'clojerl.Set':new(Items).
+
+-spec keys('clojerl.IMap':type()) -> list(). 
+keys(Map) ->
+  'clojerl.IMap':keys(Map).
+
+-spec vals('clojerl.IMap':type()) -> list().
+vals(Map) ->
+  'clojerl.IMap':vals(Map).
 
 -spec 'even?'(integer()) -> boolean().
 'even?'(X) ->

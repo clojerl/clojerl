@@ -848,8 +848,8 @@ analyze_vector(Env, Vector) ->
 
 -spec analyze_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
 analyze_map(Env, Map) ->
-  Keys = 'clojerl.Map':keys(Map),
-  Vals = 'clojerl.Map':vals(Map),
+  Keys = clj_core:keys(Map),
+  Vals = clj_core:vals(Map),
 
   Count = clj_core:count(Map),
   ExprEnv = clj_env:context(Env, expr),
