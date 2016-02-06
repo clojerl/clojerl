@@ -19,10 +19,10 @@ SHELL_OPTS += -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sy
 print-all-modules:
 	@find src -type f -name "*.erl" | xargs basename -s .erl | sort | sed -e "s/\(.*\)/'\1',/"
 
-report-cover:
+coverage-results:
 	@erl -noshell -pa ebin -eval 'cover_report:report(), halt(0).' -env COVER_SPEC '${COVER_SPEC}'
 
-coverage-results:
+coverage-html:
 	@find . -name "cover.html" | sort -r | head -1 | xargs open
 
 tests-shell: build-ct-suites

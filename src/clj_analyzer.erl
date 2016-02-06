@@ -91,7 +91,7 @@ analyze_forms(Env, Forms) ->
 analyze_form(Env, Form) ->
   IsSeq = clj_core:'seq?'(Form),
   case {clj_core:type(Form), IsSeq} of
-    {_, true} ->
+    {_, true} when Form =/= undefined ->
       Op = clj_core:first(Form),
       analyze_seq(Env, Op, Form);
     {'clojerl.Symbol', _} ->
