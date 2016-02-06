@@ -72,6 +72,9 @@
 (def meta
   (fn* [x] (clj_core/meta x)))
 
+(def vector
+  (fn* [& xs] (clj_core/vector (seq xs))))
+
 (def ^:macro defn
   (fn* [_form _env name args & body]
        `(def ~name (fn* ~args ~@body))))

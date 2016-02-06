@@ -779,10 +779,10 @@ var_expr(Var, Symbol, _Env) ->
   'clojerl.Var':type() | {erl_fun, module(), atom(), integer()} | undefined.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
-  Local = clj_env:get_local(Env, Symbol),
-  NsStr = clj_core:namespace(Symbol),
-  UsedVar = clj_namespace:use(CurrentNs, Symbol),
-  CurNsVar = clj_namespace:def(CurrentNs, Symbol),
+  Local     = clj_env:get_local(Env, Symbol),
+  NsStr     = clj_core:namespace(Symbol),
+  UsedVar   = clj_namespace:use(CurrentNs, Symbol),
+  CurNsVar  = clj_namespace:def(CurrentNs, Symbol),
 
   case {Local, NsStr, UsedVar, CurNsVar} of
     {Local, _, _, _} when Local =/= undefined ->
