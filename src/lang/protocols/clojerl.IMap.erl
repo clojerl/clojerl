@@ -7,7 +7,7 @@
 -callback 'clojerl.IMap.keys'(IMap :: type()) -> list().
 -callback 'clojerl.IMap.vals'(IMap :: type()) -> list().
 
--spec keys(type()) -> list(). 
+-spec keys(type()) -> list().
 keys(Map) ->
   'clojerl.protocol':resolve(?MODULE, keys, [Map]).
 

@@ -77,7 +77,7 @@ build_key_values(KeyValues, [K, V | Items]) ->
 'clojerl.IMap.keys'(#?TYPE{name = ?M, data = Map}) ->
   maps:keys(Map).
 
-'clojerl.IMap.vals'(#?TYPE{name = ?M, data = Map}) -> 
+'clojerl.IMap.vals'(#?TYPE{name = ?M, data = Map}) ->
   maps:values(Map).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->

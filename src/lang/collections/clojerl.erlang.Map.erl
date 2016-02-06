@@ -93,5 +93,5 @@ remove_meta(K, V, Acc) ->
 'clojerl.IMap.keys'(Map) ->
   maps:keys(Map).
 
-'clojerl.IMap.vals'(Map) -> 
+'clojerl.IMap.vals'(Map) ->
   maps:values(Map).

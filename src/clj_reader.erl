@@ -927,7 +927,7 @@ consume_chars(N, State) when N > 0 ->
   {binary(), state()}.
 consume(State, TypesOrPred) ->
   do_consume(State, <<>>, TypesOrPred).
- 
+
 do_consume(State = #{src := <<>>}, Acc, _) ->
   {Acc, State};
 do_consume( State = #{src := <<X/utf8, _/binary>>}
@@ -946,10 +946,10 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
           ) ->
   Type = clj_utils:char_type(X, Rest),
   case lists:member(Type, Types) of
-    true -> 
-      State1 = consume_char(State),  
+    true ->
+      State1 = consume_char(State),
       do_consume(State1, <<Acc/binary, X/utf8>>, Types);
-    false -> 
+    false ->
       {Acc, State}
   end.
 

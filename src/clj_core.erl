@@ -289,7 +289,7 @@ hash_map(Items) ->
 hash_set(Items) ->
   'clojerl.Set':new(Items).
 
--spec keys('clojerl.IMap':type()) -> list(). 
+-spec keys('clojerl.IMap':type()) -> list().
 keys(Map) ->
   'clojerl.IMap':keys(Map).
 

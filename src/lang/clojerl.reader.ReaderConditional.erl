@@ -9,7 +9,7 @@
 
 -type type() :: #?TYPE{}.
 
--spec new('clojerl.List':type(), boolean()) -> type(). 
+-spec new('clojerl.List':type(), boolean()) -> type().
 new(List, IsSplicing) ->
   #?TYPE{data = {List, IsSplicing}}.
 

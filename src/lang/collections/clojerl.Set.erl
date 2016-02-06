@@ -79,7 +79,7 @@ new(Values) when is_list(Values) ->
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(_, _) -> 
+'clojerl.IEquiv.equiv'(_, _) ->
   false.
 
 %% clojerl.ILookup

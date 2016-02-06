@@ -15,7 +15,7 @@
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
-'clojerl.IColl.cons'(undefined, X) -> [X]. 
+'clojerl.IColl.cons'(undefined, X) -> [X].
 
 'clojerl.IColl.empty'(undefined) -> undefined.
 

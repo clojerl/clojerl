@@ -37,7 +37,7 @@ new(_Config) ->
 
   [1, 3] = lists:sort(clj_core:keys(Map)),
   [2, 4] = lists:sort(clj_core:vals(Map)),
-  
+
   Map2 = clj_core:hash_map([]),
   undefined = clj_core:seq(Map2),
 
