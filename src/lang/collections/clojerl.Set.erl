@@ -29,7 +29,8 @@
 
 -spec new(list()) -> type().
 new(Values) when is_list(Values) ->
-  #?TYPE{data = gb_sets:from_list(Values)}.
+  KVs = lists:map(fun(X) -> {X, true} end, Values),
+  #?TYPE{data = maps:from_list(KVs)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -37,21 +38,21 @@ new(Values) when is_list(Values) ->
 
 %% clojerl.Counted
 
-'clojerl.Counted.count'(#?TYPE{name = ?M, data = Set}) -> gb_sets:size(Set).
+'clojerl.Counted.count'(#?TYPE{name = ?M, data = MapSet}) -> maps:size(MapSet).
 
 %% clojerl.Stringable
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Set}) ->
-  Items = lists:map(fun clj_core:str/1, gb_sets:to_list(Set)),
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = MapSet}) ->
+  Items = lists:map(fun clj_core:str/1, maps:keys(MapSet)),
   Strs = clj_utils:binary_join(Items, <<", ">>),
   <<"#{", Strs/binary, "}">>.
 
 %% clojerl.Seqable
 
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Set}) ->
-  case gb_sets:size(Set) of
+'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = MapSet}) ->
+  case maps:size(MapSet) of
     0 -> undefined;
-    _ -> gb_sets:to_list(Set)
+    _ -> maps:keys(MapSet)
   end.
 
 %% clojerl.IMeta
@@ -64,9 +65,11 @@ new(Values) when is_list(Values) ->
 
 %% clojerl.IColl
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Set}, X) ->
-  Items = gb_sets:to_list(Set),
-  clj_core:list([X | Items]).
+'clojerl.IColl.cons'(#?TYPE{name = ?M, data = MapSet} = Set, X) ->
+  case maps:is_key(X, MapSet) of
+    true  -> Set;
+    false -> Set#?TYPE{data = MapSet#{X => true}}
+  end.
 
 'clojerl.IColl.empty'(_) -> new([]).
 
@@ -75,22 +78,17 @@ new(Values) when is_list(Values) ->
 'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
-  case gb_sets:size(X) == gb_sets:size(Y) of
-    true ->
-      X1 = gb_sets:to_list(X),
-      Y1 = gb_sets:to_list(Y),
-      clj_core:equiv(X1, Y1);
-    false -> false
-  end;
-'clojerl.IEquiv.equiv'(_, _) -> false.
+  clj_core:equiv(X, Y);
+'clojerl.IEquiv.equiv'(_, _) -> 
+  false.
 
 %% clojerl.ILookup
 
 'clojerl.ILookup.get'(#?TYPE{name = ?M} = Set, Key) ->
   'clojerl.ILookup.get'(Set, Key, undefined).
 
-'clojerl.ILookup.get'(#?TYPE{name = ?M, data = Set}, Key, NotFound) ->
-  case gb_sets:is_member(Key, Set) of
+'clojerl.ILookup.get'(#?TYPE{name = ?M, data = MapSet}, Key, NotFound) ->
+  case maps:is_key(Key, MapSet) of
     true -> Key;
     false -> NotFound
   end.
