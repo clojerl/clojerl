@@ -7,6 +7,9 @@
         , str/1
         , is_sequential/1
         , seq/1
+        , equiv/1
+        , cons/1
+        , complete_coverage/1
         ]).
 
 -type config() :: list().
@@ -80,5 +83,58 @@ seq(_Config) ->
   undefined = clj_core:first(List3),
   undefined = clj_core:next(List3),
   undefined = clj_core:rest(List3),
+
+  {comments, ""}.
+
+-spec equiv(config()) -> result().
+equiv(_Config) ->
+  ct:comment("Check that lists with the same elements are equivalent"),
+  List1 = clj_core:with_meta(clj_core:list([1, 2, 3]), #{a => 1}),
+  List2 = clj_core:with_meta(clj_core:list([1, 2, 3]), #{b => 2}),
+
+  true  = clj_core:equiv(List1, List2),
+
+  ct:comment("Check that lists with the same elements are not equivalent"),
+  List3 = clj_core:with_meta(clj_core:list([1, 2, 3, 4]), #{c => 3}),
+  false = clj_core:equiv(List1, List3),
+
+  ct:comment("A clojerl.List and an clojerl.erlang.List"),
+  true = clj_core:equiv(List1, [1, 2, 3]),
+  false = clj_core:equiv(List1, [1, 2, 3, a]),
+
+  ct:comment("A clojerl.List and something else"),
+  false = clj_core:equiv(List1, whatever),
+  false = clj_core:equiv(List1, #{}),
+
+  {comments, ""}.
+
+-spec cons(config()) -> result().
+cons(_Config) ->
+  EmptyList = clj_core:list([]),
+
+  ct:comment("Conj an element to an empty list"),
+  OneList = clj_core:conj(EmptyList, 1),
+
+  1    = clj_core:count(OneList),
+  true = clj_core:equiv(OneList, [1]),
+
+  ct:comment("Conj an element to a list with one element"),
+  TwoList = clj_core:conj(OneList, 2),
+
+  2    = clj_core:count(TwoList),
+  true = clj_core:equiv(TwoList, [2, 1]),
+
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  ok = 'clojerl.List':'clojerl.ISequential.noop'(ok),
+
+  NotEmptyList = clj_core:list([a, b, 2, 3]),
+  EmptyList    = clj_core:empty(NotEmptyList),
+  EmptyList    = clj_core:list([]),
+
+  ListMeta  = clj_core:with_meta(clj_core:list([1, 2, 3]), #{a => 1}),
+  #{a := 1} = clj_core:meta(ListMeta),
 
   {comments, ""}.

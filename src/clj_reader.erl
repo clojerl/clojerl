@@ -1,14 +1,14 @@
 -module(clj_reader).
 
--export([
-         read_fold/3,
-         read_fold/4,
-         read/1, read/2, read/3,
-         read_all/1, read_all/2, read_all/3
+-export([ read_fold/3
+        , read_fold/4
+        , read/1, read/2, read/3
+        , read_all/1, read_all/2, read_all/3
         ]).
 
--type opts() :: #{read_cond => allow | preserve,
-                  features => 'clojerl.Set':type()}.
+-type opts() :: #{ read_cond => allow | preserve
+                 , features  => 'clojerl.Set':type()
+                 }.
 
 -type state() :: #{ src           => binary()
                   , opts          => opts()

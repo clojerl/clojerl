@@ -5,7 +5,7 @@
 -export([
          type/1,
          count/1,
-         'empty?'/1,
+         'empty?'/1, empty/1,
          seq/1, seq2/1,
          equiv/2,
          conj/2,
@@ -63,6 +63,10 @@ count(Seq) ->
 'empty?'(Seq) ->
   'clojerl.Seqable':seq(Seq) == undefined.
 
+-spec empty(any()) -> integer().
+empty(Coll) ->
+  'clojerl.IColl':empty(Coll).
+
 -spec seq(any()) -> list() | undefined.
 seq(Seqable) ->
   'clojerl.Seqable':seq(Seqable).
@@ -94,11 +98,11 @@ conj(Coll, Item) ->
 %%      the equivalent to a vanilla Erlang Head and Tail.
 %% TODO: it is possible that it should actually return a vanilla
 %%       Erlang list.
--spec cons(any(), any()) -> any().
+-spec cons(any(), any()) -> list().
 cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
-  'clojerl.IColl':cons(Seq, Item).
+  'clojerl.IColl':cons(seq(Seq), Item).
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
