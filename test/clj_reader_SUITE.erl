@@ -286,7 +286,7 @@ meta(_Config) ->
 
   ct:comment("Keyword meta to symbol"),
   SymbolWithMetaKw = clj_reader:read(<<"^:private hello">>),
-  MetadataKw = clj_core:meta(SymbolWithMetaKw),
+  true = clj_core:equiv(MetadataKw, clj_core:meta(SymbolWithMetaKw)),
 
   ct:comment("Symbol meta to symbol"),
   SymbolWithMetaSym = clj_reader:read(<<"^private hello">>),
@@ -425,26 +425,24 @@ syntax_quote(_Config) ->
 
   ct:comment("Read map"),
   MapWithMeta = clj_reader:read(<<"`{hello :world}">>),
-  MapWithMetaCheck = clj_reader:read(<<"(clojure.core/with-meta"
-                                       "  (clojure.core/apply"
-                                       "    clojure.core/hash-map"
-                                       "    (clojure.core/concat"
-                                       "      (clojure.core/list $user/hello)"
-                                       "      (clojure.core/list :world)))"
-                                       "  nil)">>),
-  true = clj_core:equiv(MapWithMeta, MapWithMetaCheck),
+  MapWithMetaCheck = clj_reader:read(<<"(clojure.core/apply"
+                                       "  clojure.core/hash-map"
+                                       "  (clojure.core/concat"
+                                       "    (clojure.core/list $user/hello)"
+                                       "    (clojure.core/list :world)))">>),
+  true = clj_core:equiv(clj_core:first(MapWithMeta), WithMetaSym),
+  true = clj_core:equiv(clj_core:second(MapWithMeta), MapWithMetaCheck),
 
   ct:comment("Read vector"),
   VectorWithMeta = clj_reader:read(<<"`[hello :world]">>),
   VectorWithMetaCheck =
-    clj_reader:read(<<"(clojure.core/with-meta"
-                      "  (clojure.core/apply"
-                      "    clojure.core/vector"
-                      "    (clojure.core/concat"
-                      "      (clojure.core/list $user/hello)"
-                      "      (clojure.core/list :world)))"
-                      "  nil)">>),
-  true = clj_core:equiv(VectorWithMeta, VectorWithMetaCheck),
+    clj_reader:read(<<"(clojure.core/apply"
+                      "  clojure.core/vector"
+                      "  (clojure.core/concat"
+                      "    (clojure.core/list $user/hello)"
+                      "    (clojure.core/list :world)))">>),
+  true = clj_core:equiv(clj_core:first(VectorWithMeta), WithMetaSym),
+  true = clj_core:equiv(clj_core:second(VectorWithMeta), VectorWithMetaCheck),
 
   ct:comment("Read set"),
   SetWithMeta = clj_reader:read(<<"`#{hello :world}">>),

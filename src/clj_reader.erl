@@ -522,8 +522,9 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
 %% Vector
 %%------------------------------------------------------------------------------
 
-read_vector(#{ src := <<"["/utf8, _/binary>>
+read_vector(#{ src   := <<"["/utf8, _/binary>>
              , forms := Forms
+             , loc   := Loc
              } = State0
            ) ->
   State  = consume_char(State0),
@@ -531,7 +532,7 @@ read_vector(#{ src := <<"["/utf8, _/binary>>
   #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
-  Vector = clj_core:vector(Items),
+  Vector = clj_core:with_meta(clj_core:vector(Items), #{loc => Loc}),
 
   State1#{forms => [Vector | Forms]}.
 
@@ -539,8 +540,9 @@ read_vector(#{ src := <<"["/utf8, _/binary>>
 %% Map
 %%------------------------------------------------------------------------------
 
-read_map(#{ src := <<"{"/utf8, _/binary>>
+read_map(#{ src   := <<"{"/utf8, _/binary>>
           , forms := Forms
+          , loc   := Loc
           } = State0
         ) ->
   State  = consume_char(State0),
@@ -550,7 +552,7 @@ read_map(#{ src := <<"{"/utf8, _/binary>>
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = clj_core:hash_map(Items),
+      Map = clj_core:with_meta(clj_core:hash_map(Items), #{loc => Loc}),
       State1#{forms => [Map | Forms]};
     _ ->
       throw(<<"Map literal must contain an even number of forms">>)
