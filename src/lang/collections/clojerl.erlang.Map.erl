@@ -72,8 +72,11 @@
 
       lists:all(FunEquiv, maps:keys(X1))
   end;
-'clojerl.IEquiv.equiv'(_, _) ->
-  false.
+'clojerl.IEquiv.equiv'(X, Y) ->
+  case clj_core:'map?'(Y) of
+    true  -> clj_core:equiv(Y, X);
+    false -> false
+  end.
 
 remove_meta(#?TYPE{} = K, V, Acc) ->
   K1 = K#?TYPE{info = undefined},
