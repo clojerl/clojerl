@@ -52,7 +52,11 @@ new(Items) when is_list(Items) ->
       clj_core:equiv(X1, Y1);
     false -> false
   end;
-'clojerl.IEquiv.equiv'(_, _) -> false.
+'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+  case clj_core:'sequential?'(Y) of
+    true  -> clj_core:equiv(array:to_list(X), clj_core:seq(Y));
+    false -> false
+  end.
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
