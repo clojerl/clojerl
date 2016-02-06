@@ -75,6 +75,12 @@
 (def vector
   (fn* [& xs] (clj_core/vector (seq xs))))
 
+(def hash-map
+  (fn* [& xs] (clj_core/hash_map (seq xs))))
+
+(def hash-set
+  (fn* [& xs] (clj_core/hash_set (seq xs))))
+
 (def ^:macro defn
   (fn* [_form _env name args & body]
        `(def ~name (fn* ~args ~@body))))
