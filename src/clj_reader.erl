@@ -683,13 +683,13 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
     $[ -> read_tuple(NewState);
-    $< -> throw(<<"Unreadable form">>);
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
     $: -> read_erl_fun(NewState);
-    X -> throw({unsupported_reader, <<"#", X>>})
+    $< -> throw(<<"Unreadable form">>);
+    X  -> throw({unsupported_reader, <<"#", X>>})
   end.
 
 %%------------------------------------------------------------------------------
@@ -704,7 +704,7 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 %% #() fn
 %%------------------------------------------------------------------------------
 
-read_fn(State) ->
+read_fn(#{loc := Loc} = State) ->
   case erlang:get(arg_env) of
     undefined -> ok;
     _         -> throw(<<"Nested #()s are not allowed">>)
@@ -728,8 +728,9 @@ read_fn(State) ->
 
   FnSymbol = clj_core:symbol(<<"fn*">>),
   FnForm = clj_core:list([FnSymbol, ArgsVector, Form]),
+  FnFormWithMeta = clj_core:with_meta(FnForm, #{loc => Loc}),
 
-  push_form(FnForm, NewState).
+  push_form(FnFormWithMeta, NewState).
 
 %%------------------------------------------------------------------------------
 %% #= eval
