@@ -103,14 +103,14 @@ conj(Coll, Item) ->
 cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
-  'clojerl.IColl':cons(seq(Seq), Item).
+  'clojerl.IColl':cons(seq2(Seq), Item).
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
 first(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':first(Seq);
-    false -> 'clojerl.ISeq':first(seq(Seq))
+    false -> first(seq(Seq))
   end.
 
 -spec next(any()) -> any().
@@ -118,7 +118,7 @@ next(undefined) -> undefined;
 next(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':next(Seq);
-    false -> 'clojerl.ISeq':next(seq(Seq))
+    false -> next(seq(Seq))
   end.
 
 -spec rest(any()) -> any().
@@ -126,7 +126,7 @@ rest(undefined) -> undefined;
 rest(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':more(Seq);
-    false -> 'clojerl.ISeq':more(seq(Seq))
+    false -> rest(seq(Seq))
   end.
 
 -spec second(any()) -> any().
