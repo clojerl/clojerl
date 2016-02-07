@@ -48,7 +48,7 @@ invoke(_Config) ->
 str(_Config) ->
   Regex = <<"#<.+?/.+?>">>,
 
-  ct:comment("Check the str representation of a fun"),  
+  ct:comment("Check the str representation of a fun"),
   Fun0 = fun () -> ok end,
   {match, _} = re:run(clj_core:str(Fun0), Regex),
 

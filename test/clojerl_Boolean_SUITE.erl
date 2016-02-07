@@ -24,7 +24,7 @@ init_per_suite(Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  ct:comment("Check the string representation of true and false"),  
+  ct:comment("Check the string representation of true and false"),
   <<"true">> = clj_core:str(true),
   <<"false">> = clj_core:str(false),
 

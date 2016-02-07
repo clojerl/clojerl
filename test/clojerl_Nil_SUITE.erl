@@ -40,7 +40,7 @@ cons(_Config) ->
 -spec seq(config()) -> result().
 seq(_Config) ->
   Nil = undefined,
-  
+
   undefined = clj_core:seq(Nil),
 
   undefined = clj_core:first(Nil),
@@ -52,7 +52,7 @@ seq(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  ct:comment("Check the string representation of true and false"),  
+  ct:comment("Check the string representation of true and false"),
   <<"">> = clj_core:str(undefined),
 
   {comments, ""}.
