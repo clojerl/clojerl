@@ -844,6 +844,7 @@ discard(_Config) ->
   ReaderCondSpliceVectorCheck =
     clj_reader:read(<<"[#?@(1 2) :hello]">>, PreserveOpts),
   true = clj_core:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
+  false = clj_core:equiv(ReaderCond, ReaderCondSpliceVector),
 
   ct:comment("EOF while reading character"),
   ok = try clj_reader:read(<<"#?">>, AllowOpts)
