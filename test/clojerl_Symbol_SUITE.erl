@@ -29,13 +29,13 @@ init_per_suite(Config) ->
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  ct:comment("Check that symbols with the same elements are equivalent"),
+  ct:comment("Check that symbols with the same names"),
   Symbol1 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{a => 1}),
   Symbol2 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{b => 2}),
 
   true  = clj_core:equiv(Symbol1, Symbol2),
 
-  ct:comment("Check that symbols with the same elements are not equivalent"),
+  ct:comment("Check that symbols with the differente names are not equivalent"),
   Symbol3 = clj_core:with_meta(clj_core:symbol(<<"hello-world">>), #{c => 3}),
   false = clj_core:equiv(Symbol1, Symbol3),
 
