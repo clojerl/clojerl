@@ -48,6 +48,10 @@ init_per_suite(Config) ->
   application:ensure_all_started(clojerl),
   Config.
 
+%%------------------------------------------------------------------------------
+%% Test Cases
+%%------------------------------------------------------------------------------
+
 eof(_Config) ->
   ct:comment("Read empty binary"),
   ok = try clj_reader:read(<<"">>)
