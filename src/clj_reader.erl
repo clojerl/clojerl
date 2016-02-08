@@ -320,9 +320,10 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
   erlang:put(gensym_env, #{}),
   %% TODO: change syntax_quote/2 so that if it changes the env
   %%       (because of find var) we keep the changes.
-  NewFormWithMeta = add_meta(Form, Env, syntax_quote(Form, Env)),
+  {QuotedForm, Env1}      = syntax_quote(Form, Env),
+  {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
   erlang:erase(gensym_env),
-  push_form(NewFormWithMeta, NewState).
+  push_form(NewFormWithMeta, NewState#{env => Env2}).
 
 syntax_quote(Form, Env) ->
   IsSpecial    = clj_analyzer:is_special(Form),
@@ -334,9 +335,9 @@ syntax_quote(Form, Env) ->
 
   QuoteSymbol = clj_core:symbol(<<"quote">>),
   if
-    IsSpecial    -> clj_core:list([QuoteSymbol, Form]);
+    IsSpecial    -> {clj_core:list([QuoteSymbol, Form]), Env};
     IsSymbol     -> syntax_quote_symbol(Form, Env);
-    IsUnquote    -> clj_core:second(Form);
+    IsUnquote    -> {clj_core:second(Form), Env};
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
       IsMap = clj_core:'map?'(Form),
@@ -359,8 +360,8 @@ syntax_quote(Form, Env) ->
         true ->
           syntax_quote_coll(Form, undefined, Env)
       end;
-    IsLiteral -> Form;
-    true      -> clj_core:list([QuoteSymbol, Form])
+    IsLiteral -> {Form, Env};
+    true      -> {clj_core:list([QuoteSymbol, Form]), Env}
   end.
 
 flatten_map(Map) ->
@@ -386,7 +387,7 @@ syntax_quote_symbol(Symbol, Env) ->
       resolve_symbol(Symbol, Env)
   end.
 
-register_gensym(Symbol, _Env) ->
+register_gensym(Symbol, Env) ->
   GensymEnv = case erlang:get(gensym_env) of
                 undefined ->
                   throw(<<"Gensym literal not in syntax-quote">>);
@@ -401,9 +402,9 @@ register_gensym(Symbol, _Env) ->
       GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
       SymbolName = clj_core:name(Symbol),
       erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
-      GenSym;
+      {GenSym, Env};
     GenSym ->
-      GenSym
+      {GenSym, Env}
   end.
 
 resolve_symbol(Symbol, Env) ->
@@ -411,65 +412,76 @@ resolve_symbol(Symbol, Env) ->
   case clj_core:namespace(Symbol) of
     undefined ->
       case clj_env:find_var(Env, Symbol) of
-        {undefined, _Env1} ->
+        {undefined, Env1} ->
           CurrentNsName = clj_core:name(CurrentNsSym),
           NameStr = clj_core:name(Symbol),
-          clj_core:symbol(CurrentNsName, NameStr);
-        {Var, _Env1} ->
-          VarNsSym = 'clojerl.Var':namespace(Var),
-          VarNameSym = 'clojerl.Var':name(Var),
-          clj_core:symbol(clj_core:name(VarNsSym), clj_core:name(VarNameSym))
+          Sym = clj_core:symbol(CurrentNsName, NameStr),
+          {Sym, Env1};
+        {Var, Env1} ->
+          Sym = clj_core:symbol(clj_core:namespace(Var), clj_core:name(Var)),
+          {Sym, Env1}
       end;
     NamespaceStr ->
       case clj_env:resolve_ns(Env, clj_core:symbol(NamespaceStr)) of
         undefined ->
-          Symbol;
+          {Symbol, Env};
         Ns ->
           NsNameSym = clj_namespace:name(Ns),
           NsNameStr = clj_core:name(NsNameSym),
           NameStr = clj_core:name(Symbol),
-          clj_core:symbol(NsNameStr, NameStr)
+          {clj_core:symbol(NsNameStr, NameStr), Env}
       end
   end.
 
+-spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 syntax_quote_coll(List, undefined, Env) ->
   syntax_quote_coll(List, Env);
 syntax_quote_coll(List, FunSymbol, Env) ->
-  ExpandedList = syntax_quote_coll(List, Env),
+  {ExpandedList, Env1} = syntax_quote_coll(List, Env),
   ApplySymbol = clj_core:symbol(<<"clojure.core">>, <<"apply">>),
-  clj_core:list([ApplySymbol, FunSymbol, ExpandedList]).
+  {clj_core:list([ApplySymbol, FunSymbol, ExpandedList]), Env1}.
 
+-spec syntax_quote_coll(any(), clj_env:env()) -> {any(), clj_env:env()}.
 syntax_quote_coll(List, Env) ->
   case clj_core:'empty?'(List) of
     true ->
       ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-      clj_core:list([ListSymbol]);
+      {clj_core:list([ListSymbol]), Env};
     false ->
-      ExpandedItems = lists:reverse(expand_list(List, Env, [])),
+      {ReversedExpandedItems, Env1} = expand_list(List, Env, []),
+      ExpandedItems = lists:reverse(ReversedExpandedItems),
       ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
-      clj_core:list([ConcatSymbol | ExpandedItems])
+      {clj_core:list([ConcatSymbol | ExpandedItems]), Env1}
   end.
 
-expand_list(undefined, _Env, Result) ->
-  Result;
+-spec expand_list(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
+expand_list(undefined, Env, Result) ->
+  {Result, Env};
 expand_list(List, Env, Result) ->
   Item = clj_core:first(List),
   ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-  NewItem = case {is_unquote(Item), is_unquote_splicing(Item)} of
-              {true, _} -> clj_core:list([ListSymbol, clj_core:second(Item)]);
-              {_, true} -> clj_core:second(Item);
-              _ -> clj_core:list([ListSymbol, syntax_quote(Item, Env)])
-            end,
-  expand_list(clj_core:next(List), Env, [NewItem | Result]).
+  {NewItem, Env2} =
+    case {is_unquote(Item), is_unquote_splicing(Item)} of
+      {true, _} ->
+        {clj_core:list([ListSymbol, clj_core:second(Item)]), Env};
+      {_, true} ->
+        {clj_core:second(Item), Env};
+      _ ->
+        {QuotedForm, Env1} = syntax_quote(Item, Env),
+        {clj_core:list([ListSymbol, QuotedForm]), Env1}
+      end,
+  expand_list(clj_core:next(List), Env2, [NewItem | Result]).
 
+-spec add_meta(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
 add_meta(Form, Env, Result) ->
   case clj_core:'meta?'(Form) of
     true ->
       WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
-      Meta = syntax_quote(clj_core:meta(Form), Env),
-      clj_core:list([WithMetaSym, Result, Meta]);
+      {Meta, Env1} = syntax_quote(clj_core:meta(Form), Env),
+      {clj_core:list([WithMetaSym, Result, Meta]), Env1};
     _ ->
-      Result
+      {Result, Env}
   end.
 
 is_unquote(Form) ->
