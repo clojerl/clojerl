@@ -48,11 +48,9 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
 -spec impl_module(atom(), atom()) -> atom().
 impl_module(Protocol, Type) when is_atom(Protocol),
                                  is_atom(Type) ->
-  list_to_atom(
-    atom_to_list(Type)
-    ++ "."
-    ++ atom_to_list(Protocol)
-   ).
+  TypeBin = atom_to_binary(Type, utf8),
+  ProtocolBin = atom_to_binary(Protocol, utf8),
+  binary_to_atom(<<TypeBin/binary, ".", ProtocolBin/binary>>, utf8).
 
 -spec impl_function(atom(), atom()) -> atom().
 impl_function(Protocol, Function) when is_atom(Protocol),

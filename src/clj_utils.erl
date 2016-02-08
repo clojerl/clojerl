@@ -10,7 +10,8 @@
          ends_with/2,
          throw_when/2,
          warn_when/2,
-         group_by/2
+         group_by/2,
+         trace_while/2
         ]).
 
 -define(INT_PATTERN,
@@ -176,6 +177,29 @@ group_by(GroupBy, List) ->
   Map = lists:foldl(Group, #{}, List),
   ReverseValue = fun(_, V) -> lists:reverse(V) end,
   maps:map(ReverseValue, Map).
+
+-spec trace_while(string(), function()) -> ok.
+trace_while(Filename, Fun) ->
+  Self = self(),
+  F = fun() ->
+          Self ! start,
+          Fun(),
+          Self ! stop
+      end,
+  spawn(F),
+
+  receive start -> ok
+  after 1000 -> throw(<<"Fun never started">>)
+  end,
+
+  eep:start_file_tracing(Filename),
+
+  receive stop -> ok
+  after 5000 -> ok
+  end,
+
+  eep:stop_tracing(),
+  eep:convert_tracing(Filename).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions
