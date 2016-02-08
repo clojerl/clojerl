@@ -90,17 +90,17 @@ analyze_forms(Env, Forms) ->
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
 analyze_form(Env, Form) ->
   IsSeq = clj_core:'seq?'(Form),
-  case {clj_core:type(Form), IsSeq} of
-    {_, true} when Form =/= undefined ->
+  case clj_core:type(Form) of
+    _ when IsSeq ->
       Op = clj_core:first(Form),
       analyze_seq(Env, Op, Form);
-    {'clojerl.Symbol', _} ->
+    'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
-    {'clojerl.Vector', _} ->
+    'clojerl.Vector' ->
       analyze_vector(Env, Form);
-    {'clojerl.Map', _} ->
+    'clojerl.Map' ->
       analyze_map(Env, Form);
-    {'clojerl.Set', _} ->
+    'clojerl.Set' ->
       analyze_set(Env, Form);
     _ ->
       analyze_const(Env, Form)
@@ -457,7 +457,7 @@ parse_loop(Env, Form) ->
 analyze_let(Env, Form) ->
   validate_bindings(Form),
   Op = clj_core:first(Form),
-  IsLoop = clj_core:symbol(<<"loop*">>) == Op,
+  IsLoop = clj_core:equiv(clj_core:symbol(<<"loop*">>), Op),
 
   PairUp = fun
              PairUp([], Pairs) ->
@@ -545,8 +545,9 @@ parse_def(Env, List) ->
       throw(<<"Can't refer to qualified var that doesn't exist">>);
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
+      CurrentNs = clj_env:current_ns(Env1),
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
-                            andalso clj_env:current_ns(Env1) =/= VarNsSym
+                            andalso not clj_core:equiv(CurrentNs, VarNsSym)
                           , <<"Can't create defs outside of current ns">>
                           ),
 
@@ -649,15 +650,18 @@ lookup_var(VarSymbol, true = _CreateNew, Env) ->
     true ->
       NsSym = case clj_core:namespace(VarSymbol) of
                 undefined -> undefined;
-                NsStr -> clj_core:symbol(NsStr)
+                NsStr     -> clj_core:symbol(NsStr)
               end,
-      NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
+
+      NameSym   = clj_core:symbol(clj_core:name(VarSymbol)),
       InternFun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-      case clj_env:current_ns(Env) of
-        CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
+
+      CurrentNs = clj_env:current_ns(Env),
+      case clj_core:equiv(CurrentNs, NsSym) of
+        Equal when Equal; NsSym == undefined ->
           NewEnv = clj_env:update_ns(Env, CurrentNs, InternFun),
           lookup_var(VarSymbol, false, NewEnv);
-        _ ->
+        false ->
           lookup_var(VarSymbol, false, Env)
       end
   end;
