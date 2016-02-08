@@ -501,8 +501,8 @@ parse_binding({Name, Init}, Env) ->
   clj_utils:throw_when( not is_valid_bind_symbol(Name)
                       , [<<"Bad binding form: ">>, Name]
                       ),
-  OpAtom = case clj_env:get(Env, is_loop) of
-             true -> loop;
+  OpAtom = case clj_env:get(is_loop, Env) of
+             true  -> loop;
              false -> 'let'
            end,
   {InitExpr, _} = clj_env:pop_expr(analyze_form(Env, Init)),
