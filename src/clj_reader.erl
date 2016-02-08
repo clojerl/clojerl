@@ -622,10 +622,9 @@ read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
           push_form(ArgSym, consume_chars(2, State));
         register_arg_n ->
           {N, NewState} = pop_form(read_one(consume_char(State))),
-          case is_integer(N) of
-            false -> throw(<<"Arg literal must be %, %& or %integer">>);
-            true -> ok
-          end,
+          clj_utils:throw_when( not is_integer(N)
+                              , <<"Arg literal must be %, %& or %integer">>
+                              ),
           ArgSym = register_arg(N),
           push_form(ArgSym, NewState)
       end

@@ -651,11 +651,11 @@ lookup_var(VarSymbol, true = _CreateNew, Env) ->
                 undefined -> undefined;
                 NsStr -> clj_core:symbol(NsStr)
               end,
+      NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
+      InternFun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
       case clj_env:current_ns(Env) of
         CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
-          NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
-          Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-          NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
+          NewEnv = clj_env:update_ns(Env, CurrentNs, InternFun),
           lookup_var(VarSymbol, false, NewEnv);
         _ ->
           lookup_var(VarSymbol, false, Env)

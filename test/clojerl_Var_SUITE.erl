@@ -59,13 +59,13 @@ deref(_Config) ->
   Name = clj_core:symbol(<<"forty-two">>),
 
   Var  = 'clojerl.Var':new(Ns, Name),
-  42 = clj_core:deref(Var),  
+  42 = clj_core:deref(Var),
 
   ct:comment("Try to deref an unexisting var"),
   Name2 = clj_core:symbol(<<"forty-three">>),
   Var1  = 'clojerl.Var':new(Ns, Name2),
   ok = try clj_core:deref(Var1), error
-       catch _:_ -> ok 
+       catch _:_ -> ok
        end,
 
   {comments, ""}.
