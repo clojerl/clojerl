@@ -231,7 +231,7 @@ fn(_Config) ->
    , params := [Fn3Param1b, Fn3Param2]
    } = Fn3Method2,
 
-  %% Check that the params are the same, even though the 
+  %% Check that the params are the same, even though the
   %% locactions are different
   true = clj_core:equiv(Fn3Param1b, Fn3Param1b),
 

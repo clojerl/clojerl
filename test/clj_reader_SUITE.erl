@@ -48,6 +48,10 @@ init_per_suite(Config) ->
   application:ensure_all_started(clojerl),
   Config.
 
+%%------------------------------------------------------------------------------
+%% Test Cases
+%%------------------------------------------------------------------------------
+
 eof(_Config) ->
   ct:comment("Read empty binary"),
   ok = try clj_reader:read(<<"">>)
@@ -446,7 +450,7 @@ syntax_quote(_Config) ->
 
   ct:comment("Read set"),
   SetWithMeta = clj_reader:read(<<"`#{hello :world}">>),
-  SetWithMetaCheck = 
+  SetWithMetaCheck =
     clj_reader:read(<<"(clojure.core/apply"
                       "  clojure.core/hash-set"
                       "  (clojure.core/concat"
@@ -489,7 +493,8 @@ unquote(_Config) ->
   ct:comment("Unquote splicing"),
   ListUnquoteSplicing = clj_core:list([UnquoteSplicingSymbol,
                                             HelloWorldSymbol]),
-  true = clj_core:equiv(clj_reader:read(<<"~@hello-world">>), ListUnquoteSplicing),
+  true =
+    clj_core:equiv(clj_reader:read(<<"~@hello-world">>), ListUnquoteSplicing),
 
   ct:comment("Unquote nothing"),
   ok = try clj_reader:read(<<"~">>)
@@ -551,7 +556,7 @@ map(_Config) ->
   MapResult = clj_reader:read(<<"{:hello-world hello-world,"
                                 " hello-world :hello-world}">>),
   true = clj_core:equiv(Map, MapResult),
-  
+
   ct:comment("Map without closing braces"),
   ok = try clj_reader:read(<<"{1 42.0">>)
        catch _:_ -> ok
@@ -823,7 +828,7 @@ discard(_Config) ->
 
   ct:comment("Preserve read"),
   PreserveOpts = #{read_cond => preserve},
-  ReaderCond   = 
+  ReaderCond   =
     'clojerl.reader.ReaderConditional':new( clj_reader:read(<<"(1 2)">>)
                                           , false
                                           ),
@@ -831,7 +836,7 @@ discard(_Config) ->
     clj_reader:read_all(<<"#?(1 2) :hello">>, PreserveOpts),
   true = clj_core:equiv(ReaderCond, ReaderCondCheck),
 
-  ReaderCondSplice = 
+  ReaderCondSplice =
     'clojerl.reader.ReaderConditional':new( clj_reader:read(<<"(1 2)">>)
                                           , true
                                           ),
@@ -839,6 +844,7 @@ discard(_Config) ->
   ReaderCondSpliceVectorCheck =
     clj_reader:read(<<"[#?@(1 2) :hello]">>, PreserveOpts),
   true = clj_core:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
+  false = clj_core:equiv(ReaderCond, ReaderCondSpliceVector),
 
   ct:comment("EOF while reading character"),
   ok = try clj_reader:read(<<"#?">>, AllowOpts)

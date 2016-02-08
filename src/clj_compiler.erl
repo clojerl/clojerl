@@ -25,7 +25,7 @@
 -spec default_options() -> map().
 default_options() ->
   #{ output_dir => "ebin"
-   , flags      => [debug_info, verbose,report_errors,report_warnings]
+   , flags      => [debug_info, verbose, report_errors, report_warnings]
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().

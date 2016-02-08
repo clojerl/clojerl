@@ -25,10 +25,10 @@ report() ->
             [color("white-bold"), color("reset")]),
   [report_result(Result) || Result <- lists:sort(Ok)],
 
-  io:format("~nCoverage analysis failed in the following modules: "),
   case Fail of
-    [] -> io:format("-");
+    [] -> ok;
     _ ->
+      io:format("~nCoverage analysis failed in the following modules: "),
       [io:format("~p, ", [Module]) || {_, Module} <- lists:sort(Fail)]
   end,
 

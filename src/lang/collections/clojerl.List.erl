@@ -82,5 +82,8 @@ new(Items) when is_list(Items) ->
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(_, _) ->
-  false.
+'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+  case clj_core:'sequential?'(Y) of
+    true  -> clj_core:equiv(X, clj_core:seq(Y));
+    false -> false
+  end.

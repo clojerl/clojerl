@@ -91,7 +91,7 @@ analyze_forms(Env, Forms) ->
 analyze_form(Env, Form) ->
   IsSeq = clj_core:'seq?'(Form),
   case {clj_core:type(Form), IsSeq} of
-    {_, true} ->
+    {_, true} when Form =/= undefined ->
       Op = clj_core:first(Form),
       analyze_seq(Env, Op, Form);
     {'clojerl.Symbol', _} ->
@@ -651,11 +651,11 @@ lookup_var(VarSymbol, true = _CreateNew, Env) ->
                 undefined -> undefined;
                 NsStr -> clj_core:symbol(NsStr)
               end,
+      NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
+      InternFun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
       case clj_env:current_ns(Env) of
         CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
-          NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
-          Fun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-          NewEnv = clj_env:update_ns(Env, CurrentNs, Fun),
+          NewEnv = clj_env:update_ns(Env, CurrentNs, InternFun),
           lookup_var(VarSymbol, false, NewEnv);
         _ ->
           lookup_var(VarSymbol, false, Env)
@@ -848,8 +848,8 @@ analyze_vector(Env, Vector) ->
 
 -spec analyze_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
 analyze_map(Env, Map) ->
-  Keys = 'clojerl.Map':keys(Map),
-  Vals = 'clojerl.Map':vals(Map),
+  Keys = clj_core:keys(Map),
+  Vals = clj_core:vals(Map),
 
   Count = clj_core:count(Map),
   ExprEnv = clj_env:context(Env, expr),

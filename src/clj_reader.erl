@@ -1,14 +1,14 @@
 -module(clj_reader).
 
--export([
-         read_fold/3,
-         read_fold/4,
-         read/1, read/2, read/3,
-         read_all/1, read_all/2, read_all/3
+-export([ read_fold/3
+        , read_fold/4
+        , read/1, read/2, read/3
+        , read_all/1, read_all/2, read_all/3
         ]).
 
--type opts() :: #{read_cond => allow | preserve,
-                  features => 'clojerl.Set':type()}.
+-type opts() :: #{ read_cond => allow | preserve
+                 , features  => 'clojerl.Set':type()
+                 }.
 
 -type state() :: #{ src           => binary()
                   , opts          => opts()
@@ -622,10 +622,9 @@ read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
           push_form(ArgSym, consume_chars(2, State));
         register_arg_n ->
           {N, NewState} = pop_form(read_one(consume_char(State))),
-          case is_integer(N) of
-            false -> throw(<<"Arg literal must be %, %& or %integer">>);
-            true -> ok
-          end,
+          clj_utils:throw_when( not is_integer(N)
+                              , <<"Arg literal must be %, %& or %integer">>
+                              ),
           ArgSym = register_arg(N),
           push_form(ArgSym, NewState)
       end
@@ -927,7 +926,7 @@ consume_chars(N, State) when N > 0 ->
   {binary(), state()}.
 consume(State, TypesOrPred) ->
   do_consume(State, <<>>, TypesOrPred).
- 
+
 do_consume(State = #{src := <<>>}, Acc, _) ->
   {Acc, State};
 do_consume( State = #{src := <<X/utf8, _/binary>>}
@@ -946,10 +945,10 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
           ) ->
   Type = clj_utils:char_type(X, Rest),
   case lists:member(Type, Types) of
-    true -> 
-      State1 = consume_char(State),  
+    true ->
+      State1 = consume_char(State),
       do_consume(State1, <<Acc/binary, X/utf8>>, Types);
-    false -> 
+    false ->
       {Acc, State}
   end.
 

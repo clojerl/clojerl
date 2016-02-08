@@ -3,6 +3,7 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IDeref').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
@@ -21,15 +22,16 @@
         , process_args/3
         ]).
 
--export(['clojerl.Stringable.str'/1]).
 -export(['clojerl.IDeref.deref'/1]).
+-export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
--export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
+-export(['clojerl.Stringable.str'/1]).
 
 -record(?M, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
             , name                   :: 'clojerl.Symbol':type()
@@ -52,14 +54,17 @@ namespace(#?TYPE{data = #?M{ns = Namespace}}) -> Namespace.
 name(#?TYPE{data = #?M{name = Name}}) -> Name.
 
 -spec is_dynamic(type()) -> boolean().
-is_dynamic(#?TYPE{name = ?M, info = Info}) ->
-  Meta = maps:get(meta, Info, #{}),
-  maps:get(dynamic, Meta, false).
+is_dynamic(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+  maps:get(dynamic, Meta, false);
+is_dynamic(#?TYPE{name = ?M}) ->
+  false.
 
 -spec is_macro(type()) -> boolean().
-is_macro(#?TYPE{name = ?M, info = Info}) ->
-  Meta = maps:get(meta, Info, #{}),
-  maps:get(macro, Meta, false).
+
+is_macro(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+  maps:get(macro, Meta, false);
+is_macro(#?TYPE{name = ?M}) ->
+  false.
 
 -spec module(type()) -> atom().
 module(#?TYPE{name = ?M} = Var) ->
@@ -106,6 +111,15 @@ val_function(#?TYPE{name = ?M} = Var) ->
               "to back it up.">>)
   end.
 
+'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+                      , #?TYPE{name = ?M, data = Y}
+                      ) ->
+  #?M{ns = NsX, name = NameX} = X,
+  #?M{ns = NsY, name = NameY} = Y,
+  clj_core:equiv(NsX, NsY) andalso clj_core:equiv(NameX, NameY);
+'clojerl.IEquiv.equiv'(_, _) ->
+  false.
+
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
@@ -130,7 +144,10 @@ val_function(#?TYPE{name = ?M} = Var) ->
 
 -spec process_args(type(), [any()], function()) -> [any()].
 process_args(#?TYPE{name =?M} = Var, Args, RestFun) ->
-  Meta = 'clojerl.IMeta.meta'(Var),
+  Meta = case 'clojerl.IMeta.meta'(Var) of
+           undefined -> #{};
+           M -> M
+         end,
 
   IsVariadic    = maps:get('variadic?', Meta, false),
   MaxFixedArity = maps:get(max_fixed_arity, Meta, undefined),

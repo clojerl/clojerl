@@ -5,7 +5,7 @@
 -export([
          type/1,
          count/1,
-         'empty?'/1,
+         'empty?'/1, empty/1,
          seq/1, seq2/1,
          equiv/2,
          conj/2,
@@ -35,6 +35,7 @@
          boolean/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
+         keys/1, vals/1,
          'even?'/1,
          invoke/2,
          next_id/0,
@@ -62,6 +63,10 @@ count(Seq) ->
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->
   'clojerl.Seqable':seq(Seq) == undefined.
+
+-spec empty(any()) -> integer().
+empty(Coll) ->
+  'clojerl.IColl':empty(Coll).
 
 -spec seq(any()) -> list() | undefined.
 seq(Seqable) ->
@@ -94,18 +99,18 @@ conj(Coll, Item) ->
 %%      the equivalent to a vanilla Erlang Head and Tail.
 %% TODO: it is possible that it should actually return a vanilla
 %%       Erlang list.
--spec cons(any(), any()) -> any().
+-spec cons(any(), any()) -> list().
 cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
-  'clojerl.IColl':cons(Seq, Item).
+  'clojerl.IColl':cons(seq2(Seq), Item).
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
 first(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':first(Seq);
-    false -> 'clojerl.ISeq':first(seq(Seq))
+    false -> first(seq(Seq))
   end.
 
 -spec next(any()) -> any().
@@ -113,7 +118,7 @@ next(undefined) -> undefined;
 next(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':next(Seq);
-    false -> 'clojerl.ISeq':next(seq(Seq))
+    false -> next(seq(Seq))
   end.
 
 -spec rest(any()) -> any().
@@ -121,7 +126,7 @@ rest(undefined) -> undefined;
 rest(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':more(Seq);
-    false -> 'clojerl.ISeq':more(seq(Seq))
+    false -> rest(seq(Seq))
   end.
 
 -spec second(any()) -> any().
@@ -186,7 +191,7 @@ keyword(Namespace, Name) ->
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
-  type(X) == 'clojerl.Map'.
+  'extends?'('clojerl.IMap', type(X)).
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
@@ -283,6 +288,14 @@ hash_map(Items) ->
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
   'clojerl.Set':new(Items).
+
+-spec keys('clojerl.IMap':type()) -> list().
+keys(Map) ->
+  'clojerl.IMap':keys(Map).
+
+-spec vals('clojerl.IMap':type()) -> list().
+vals(Map) ->
+  'clojerl.IMap':vals(Map).
 
 -spec 'even?'(integer()) -> boolean().
 'even?'(X) ->

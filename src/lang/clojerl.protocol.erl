@@ -17,7 +17,8 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
       apply(TypeModule, ImplFunction, Args);
     false ->
       ImplModule = impl_module(Protocol, TypeModule),
-      IsExported2 = erlang:function_exported(ImplModule, FunctionName, length(Args)),
+      IsExported2 =
+        erlang:function_exported(ImplModule, FunctionName, length(Args)),
       case IsExported2 of
         true ->
           apply(TypeModule, ImplFunction, Args);
