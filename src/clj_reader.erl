@@ -318,6 +318,8 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(consume_char(State))),
   %% TODO: using process dictionary here might be a code smell
   erlang:put(gensym_env, #{}),
+  %% TODO: change syntax_quote/2 so that if it changes the env
+  %%       (because of find var) we keep the changes.
   NewFormWithMeta = add_meta(Form, Env, syntax_quote(Form, Env)),
   erlang:erase(gensym_env),
   push_form(NewFormWithMeta, NewState).
@@ -340,6 +342,7 @@ syntax_quote(Form, Env) ->
       IsMap = clj_core:'map?'(Form),
       IsVector = clj_core:'vector?'(Form),
       IsSet = clj_core:'set?'(Form),
+      IsList = clj_core:'list?'(Form),
       if
         IsMap ->
           HashMapSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-map">>),
@@ -350,6 +353,9 @@ syntax_quote(Form, Env) ->
         IsSet ->
           HashSetSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-set">>),
           syntax_quote_coll(Form, HashSetSymbol, Env);
+        IsList ->
+          ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
+          syntax_quote_coll(Form, ListSymbol, Env);
         true ->
           syntax_quote_coll(Form, undefined, Env)
       end;
@@ -405,11 +411,11 @@ resolve_symbol(Symbol, Env) ->
   case clj_core:namespace(Symbol) of
     undefined ->
       case clj_env:find_var(Env, Symbol) of
-        undefined ->
+        {undefined, _Env1} ->
           CurrentNsName = clj_core:name(CurrentNsSym),
           NameStr = clj_core:name(Symbol),
           clj_core:symbol(CurrentNsName, NameStr);
-        Var ->
+        {Var, _Env1} ->
           VarNsSym = 'clojerl.Var':namespace(Var),
           VarNameSym = 'clojerl.Var':name(Var),
           clj_core:symbol(clj_core:name(VarNsSym), clj_core:name(VarNameSym))

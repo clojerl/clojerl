@@ -88,6 +88,7 @@ find_or_create_ns(Env, NsSym) ->
       {Ns, current_ns(Env, NsSym)}
   end.
 
+%% @private
 -spec add_ns(env(), clj_namespace:namespace()) -> env().
 add_ns(Env = #{namespaces := Namespaces}, Ns) ->
   NsSym = clj_namespace:name(Ns),
@@ -186,7 +187,8 @@ update_var(Env, Var) ->
   Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,
   update_ns(Env, VarNsSym, Fun).
 
--spec find_var(env(), 'clojerl.Symbol':type()) -> 'clojerl.Var':type().
+-spec find_var(env(), 'clojerl.Symbol':type()) ->
+  {'clojerl.Var':type() | undefined, env()}.
 find_var(Env, Symbol) ->
   NsSym = case clj_core:namespace(Symbol) of
             undefined -> current_ns(Env);
@@ -194,8 +196,34 @@ find_var(Env, Symbol) ->
           end,
   case find_ns(Env, NsSym) of
     undefined ->
-      undefined;
+      case try_load_var(Symbol) of
+        undefined ->
+          {undefined, Env};
+        Var ->
+          NewNs = clj_namespace:new(NsSym),
+          NewNs1 = clj_namespace:update_var(NewNs, Var),
+          Env1 = add_ns(Env, NewNs1),
+          {Var, Env1}
+      end;
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
-      clj_namespace:def(Ns, NameSym)
+      {clj_namespace:def(Ns, NameSym), Env}
+  end.
+
+%% @private
+-spec try_load_var('clojerl.Symbol':type()) -> 'clojerl.Var':type().
+try_load_var(VarSymbol) ->
+  NsStr   = clj_core:namespace(VarSymbol),
+  NameStr = clj_core:name(VarSymbol),
+  Module  = binary_to_atom(NsStr, utf8),
+
+  case erlang:function_exported(Module, module_info, 1) of
+    true ->
+      Attrs = Module:module_info(attributes),
+      case lists:keyfind(vars, 1, Attrs) of
+        {vars, [Vars]} -> maps:get(NameStr, Vars, undefined);
+        false          -> undefined
+      end;
+    false ->
+      undefined
   end.

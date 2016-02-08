@@ -9,6 +9,8 @@
                   , lexical_renames => clj_scope:scope()
                   }.
 
+-type var() :: 'clojerl.Var':type().
+
 -spec emit(clj_env:env()) ->
   { [[erl_parse:abstract_form()]]
   , [erl_parse:abstract_expr()]
@@ -122,18 +124,16 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         pop_ast(ast(InitExpr, State1))
     end,
 
-  %% Add the var's information as a module attribute
-  VarAtom    = erl_syntax:atom(var),
-  VarAttrAst = erl_syntax:attribute(VarAtom, [VarAst]),
-
   ValFunExportAst = export_attribute([{ValName, 0}]),
 
   ValClause = erl_syntax:clause([], [ValAst]),
   ValFunAst = function_form(ValName, [ValClause]),
 
-  AttrsAsts = [ValFunExportAst, VarAttrAst],
+  Vars      = [Var],
+  FunAsts   = [ValFunAst],
+  AttrsAsts = [ValFunExportAst],
 
-  State3 = add_functions_attributes(Module, [ValFunAst], AttrsAsts, State2),
+  State3 = add_functions_attributes(Module, FunAsts, AttrsAsts, Vars, State2),
 
   push_ast(VarAst, State3);
 %%------------------------------------------------------------------------------
@@ -402,14 +402,14 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
         StateAcc1 = lists:foldl(fun method_to_clause/2, StateAcc, MethodsList),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
         Fun = function_form(Name, ClausesAst),
-        add_functions_attributes(Module, [Fun], [], StateAcc2)
+        add_functions_attributes(Module, [Fun], [], [], StateAcc2)
     end,
 
   State1 = lists:foldl(FunctionFun, State, maps:values(GroupedMethods)),
 
   ExportFun = fun(Arity, StateAcc) ->
                   Attr = export_attribute([{Name, Arity}]),
-                  add_functions_attributes(Module, [], [Attr], StateAcc)
+                  add_functions_attributes(Module, [], [Attr], [], StateAcc)
               end,
 
   lists:foldl(ExportFun, State1, maps:keys(GroupedMethods)).
@@ -423,12 +423,14 @@ ensure_module(Name, State = #{modules := Modules}) ->
       State#{modules => Modules#{Name => ModuleDef}}
   end.
 
--spec add_functions_attributes(atom(), [ast()], [ast()], state()) ->
+-spec add_functions_attributes(atom(), [ast()], [ast()], [var()], state()) ->
    state().
-add_functions_attributes(Name, Funs, Attrs, State = #{modules := Modules}) ->
+add_functions_attributes(Name, Funs, Attrs, Vars, State) ->
+  #{modules := Modules} = State,
   Module = maps:get(Name, Modules),
 
-  Module1 = clj_module:add_functions(Module, Funs),
+  Module0 = clj_module:add_vars(Module, Vars),
+  Module1 = clj_module:add_functions(Module0, Funs),
   Module2 = clj_module:add_attributes(Module1, Attrs),
 
   State#{modules => Modules#{Name => Module2}}.

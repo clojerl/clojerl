@@ -3,6 +3,7 @@
 -export([ load/1
         , to_forms/1
 
+        , add_vars/2
         , add_attributes/2
         , add_functions/2
         ]).
@@ -34,14 +35,31 @@ attribute_module(Name) when is_atom(Name) ->
 
 -spec new([erl_syntax:syntaxTree()]) -> clj_module().
 new(Forms) ->
-  {[Module], Rest} = lists:partition(fun is_module_attribute/1, Forms),
+  {[ModuleAttr], Rest} = lists:partition(fun is_module_attribute/1, Forms),
   {Attrs, Rest1} = lists:partition(fun is_attribute/1, Rest),
   {Funs, Rest2} = lists:partition(fun is_function/1, Rest1),
 
+  [ModuleAst] = erl_syntax:attribute_arguments(ModuleAttr),
+  Module = erl_syntax:concrete(ModuleAst),
+  {VarsAttrs, RestAttrs} = lists:partition(fun is_vars_attribute/1, Attrs),
+  clj_utils:throw_when( length(VarsAttrs) > 1
+                      , [ <<"The module ">>
+                        , atom_to_binary(Module, utf8)
+                        , <<" contains more than one 'vars' attributes.">>
+                        ]
+                      ),
+  Vars = case VarsAttrs of
+           [] -> #{};
+           [VarsAttr] ->
+             [V] = erl_syntax:attribute_arguments(VarsAttr),
+             erl_syntax:concrete(V)
+         end,
+
   IndexedFuns = index_functions(Funs),
 
-  #{ module => Module
-   , attrs  => Attrs
+  #{ module => ModuleAttr
+   , vars   => Vars
+   , attrs  => RestAttrs
    , funs   => IndexedFuns
    , rest   => Rest2
    }.
@@ -59,18 +77,30 @@ from_binary(ModuleName) when is_atom(ModuleName) ->
 -spec to_forms(clj_module()) -> [erl_syntax:syntaxTree()].
 to_forms(#{module := Module} = Def) ->
   #{ attrs := Attrs
+   , vars := Vars
    , funs  := Funs
    , rest  := Rest
    } = Def,
 
   %% TODO: This won't work if the new function or attribute differs
   %%       from the previous one. We need to be able to keep more
-  %%       detailed informationa about functions and attributes, to
+  %%       detailed information about functions and attributes, to
   %%       avoid duplicates.
   UniqueAttrs = lists:usort(erl_syntax:revert_forms(Attrs)),
   UniqueFuns  = lists:usort(maps:values(Funs)),
+  VarsAtom = erl_syntax:atom(vars),
+  VarsAttr = erl_syntax:attribute(VarsAtom, [erl_syntax:abstract(Vars)]),
 
-  [Module | UniqueAttrs ++ Rest ++ UniqueFuns].
+  [Module, VarsAttr | UniqueAttrs ++ Rest ++ UniqueFuns].
+
+-spec add_vars(clj_module(), ['clojerl.Var':type()]) -> clj_module().
+add_vars(#{vars := Vars} = Module, AddVars) ->
+  AddByKeyFun = fun(V, Acc) ->
+                    K = clj_core:name(V),
+                    Acc#{K => V}
+                end,
+  Vars1 = lists:foldl(AddByKeyFun, Vars, AddVars),
+  Module#{vars => Vars1}.
 
 -spec add_attributes(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
 add_attributes(#{attrs := Attrs} = Module, AddAttrs) ->
@@ -98,6 +128,12 @@ is_module_attribute(Form) ->
 -spec is_attribute(erl_syntax:syntaxTree()) -> boolean.
 is_attribute(Form) ->
   erl_syntax:type(Form) =:= attribute.
+
+-spec is_vars_attribute(erl_syntax:syntaxTree()) -> boolean.
+is_vars_attribute(Form) ->
+  erl_syntax:type(Form) =:= attribute
+    andalso
+    erl_syntax:concrete(erl_syntax:attribute_name(Form)) =:= vars.
 
 -spec is_function(erl_syntax:syntaxTree()) -> boolean.
 is_function(Form) ->
