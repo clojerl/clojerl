@@ -867,7 +867,7 @@ discard(_Config) ->
   ct:comment("EOF: no feature matched"),
   ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>,
                            AllowOpts)
-       catch _:<<"EOF">> -> ok
+       catch _:<<"EOF at (1:37)">> -> ok
        end,
 
   ct:comment("Uneven number of forms"),

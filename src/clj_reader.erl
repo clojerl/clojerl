@@ -73,8 +73,8 @@ read(Src, Opts, Env) ->
 %%      the enf of file.
 %% @private
 -spec ensure_read(state()) -> any().
-ensure_read(#{src := <<>>, forms := []}) ->
-  throw(<<"EOF">>);
+ensure_read(#{src := <<>>, forms := []} = State) ->
+  clj_utils:throw(<<"EOF">>, location(State));
 ensure_read(#{forms := [Form]}) ->
   Form;
 ensure_read(State) ->
@@ -110,10 +110,10 @@ read_one(State) ->
 -spec read_one(state(), boolean()) -> state().
 read_one(#{pending_forms := [Form | PendingForms]} = State, _ThrowEof) ->
   push_form(Form, State#{pending_forms => PendingForms});
-read_one(#{src := <<>>}, true = _ThrowEof) ->
+read_one(#{src := <<>>} = State, true = _ThrowEof) ->
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
-  throw(<<"EOF">>);
+  clj_utils:throw(<<"EOF">>, location(State));
 read_one(#{src := <<>>} = State, false = _ThrowEof) ->
   State;
 read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
@@ -174,8 +174,8 @@ read_string(#{src := <<Char/utf8, _/binary>>,
 read_string(#{src := <<"\"", _/binary>>} = State) ->
   State1 = consume_char(State),
   read_string(State1#{current => <<>>});
-read_string(#{src := <<>>}) ->
-  throw(<<"EOF while reading string">>).
+read_string(#{src := <<>>} = State) ->
+  clj_utils:throw(<<"EOF while reading string">>, location(State)).
 
 -spec escape_char(state()) -> {binary(), state()}.
 escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
@@ -195,13 +195,17 @@ escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
     _ when CharType == number ->
       %% Octal unicode
       case unicode_char(State, 8, 3, false) of
-        {CodePoint, _} when CodePoint > 8#337 ->
-          throw(<<"Octal escape sequence must be in range [0, 377]">>);
+        {CodePoint, State1} when CodePoint > 8#337 ->
+          clj_utils:throw( <<"Octal escape sequence must be in range [0, 377]">>
+                         , location(State1)
+                         );
         {CodePoint, State1} ->
           {unicode:characters_to_binary([CodePoint]), State1}
       end;
     _ ->
-      throw(<<"Unsupported escape character: \\", Char>>)
+      clj_utils:throw( <<"Unsupported escape character: \\", Char>>
+                     , location(State)
+                     )
   end.
 
 -spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
@@ -220,8 +224,10 @@ unicode_char(State, Base, Length, IsExact) ->
       catch
         _:badarg ->
           BaseBin = integer_to_binary(Base),
-          throw(<<"Number '", Number/binary,
-                  "' is not in base ", BaseBin/binary >>)
+          clj_utils:throw( <<"Number '", Number/binary,
+                             "' is not in base ", BaseBin/binary>>
+                          , location(State)
+                          )
       end;
     NumLength ->
       LengthBin = integer_to_binary(Length),
@@ -959,6 +965,10 @@ valid_erl_fun(First, Second) ->
 %%------------------------------------------------------------------------------
 %% Utility functions
 %%------------------------------------------------------------------------------
+
+-spec location(state()) -> state().
+location(State) ->
+  maps:get(loc, State, undefined).
 
 -spec consume_char(state()) -> state().
 consume_char(#{src := <<"\n"/utf8, Src/binary>>, loc := {Line, _}} = State) ->
