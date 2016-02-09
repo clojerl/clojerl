@@ -18,6 +18,7 @@
                   , pending_forms => [any()]
                   , env           => clj_env:env()
                   , loc           => location()
+                  , bindings      => clj_scope:scope()
                   }.
 
 -spec new_state(binary(), any(), opts(), boolean()) -> state().
@@ -29,6 +30,7 @@ new_state(Src, Env, Opts, ReadAll) ->
    , env           => Env
    , all           => ReadAll
    , loc           => {1, 1}
+   , bindings      => clj_scope:new()
    }.
 
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
@@ -538,7 +540,7 @@ is_literal(Form) ->
 %%------------------------------------------------------------------------------
 
 -spec read_unquote(state()) -> state().
-read_unquote(#{src := <<"~"/utf8, Src/binary>>} = State) ->
+read_unquote(#{src := <<"\~"/utf8, Src/binary>>} = State) ->
   case Src of
     <<"@", _/binary>> ->
       UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
@@ -560,14 +562,15 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
            , loc   := Loc
            } = State0
          ) ->
-  State  = consume_char(State0),
+  State  = add_scope(consume_char(State0)),
   State1 = read_until($), location_started(State#{forms => []}, Loc)),
-  #{forms := ReversedItems} = State1,
+  State2 = remove_scope(State1),
+  #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
   List = clj_core:with_meta(clj_core:list(Items), #{loc => Loc}),
 
-  State1#{forms => [List | Forms]}.
+  State2#{forms => [List | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Vector
@@ -579,14 +582,15 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
              , loc   := Loc
              } = State0
            ) ->
-  State  = consume_char(State0),
+  State  = add_scope(consume_char(State0)),
   State1 = read_until($], location_started(State#{forms => []}, Loc)),
-  #{forms := ReversedItems} = State1,
+  State2 = remove_scope(State1),
+  #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
   Vector = clj_core:with_meta(clj_core:vector(Items), #{loc => Loc}),
 
-  State1#{forms => [Vector | Forms]}.
+  State2#{forms => [Vector | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% Map
@@ -598,18 +602,19 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
           , loc   := Loc
           } = State0
         ) ->
-  State  = consume_char(State0),
+  State  = add_scope(consume_char(State0)),
   State1 = read_until($}, location_started(State#{forms => []}, Loc)),
-  #{forms := ReversedItems} = State1,
+  State2 = remove_scope(State1),
+  #{forms := ReversedItems} = State2,
 
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
       Map = clj_core:with_meta(clj_core:hash_map(Items), #{loc => Loc}),
-      State1#{forms => [Map | Forms]};
+      State2#{forms => [Map | Forms]};
     _ ->
       clj_utils:throw( <<"Map literal must contain an even number of forms">>
-                     , location(State1)
+                     , location(State2)
                      )
   end.
 
@@ -820,29 +825,33 @@ read_eval(#{env := Env} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_set(state()) -> state().
-read_set(#{forms := Forms, loc := Loc} = State) ->
+read_set(#{forms := Forms, loc := Loc} = State0) ->
+  State  = add_scope(State0), 
   State1 = read_until($}, location_started(State#{forms => []}, Loc)),
-  #{forms := ReversedItems} = State1,
+  State2 = remove_scope(State1),
+  #{forms := ReversedItems} = State2,
 
   Items       = lists:reverse(ReversedItems),
   Set         = clj_core:hash_set(Items),
   SetWithMeta = clj_core:with_meta(Set, #{loc => Loc}),
 
-  State1#{forms => [SetWithMeta | Forms]}.
+  State2#{forms => [SetWithMeta | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #[] tuple
 %%------------------------------------------------------------------------------
 
 -spec read_tuple(state()) -> state().
-read_tuple(#{forms := Forms, loc := Loc} = State) ->
+read_tuple(#{forms := Forms, loc := Loc} = State0) ->
+  State  = add_scope(State0), 
   State1 = read_until($], location_started(State#{forms => []}, Loc)),
-  #{forms := ReversedItems} = State1,
+  State2 = remove_scope(State1),
+  #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
   Tuple = erlang:list_to_tuple(Items),
 
-  State1#{forms => [Tuple | Forms]}.
+  State2#{forms => [Tuple | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #"" regex
@@ -1007,10 +1016,7 @@ location(State) ->
 
 -spec location_started(state(), location()) -> state().
 location_started(State, Loc) ->
-  case maps:get(loc_started, State, undefined) of
-    undefined -> State#{loc_started => Loc};
-    _ -> State
-  end.
+  scope_put(loc_started, Loc, State).
 
 -spec consume_char(state()) -> state().
 consume_char(#{src := <<"\n"/utf8, Src/binary>>, loc := {Line, _}} = State) ->
@@ -1064,7 +1070,7 @@ read_token(State) ->
 
 -spec read_until(char(), state()) -> state().
 read_until(Delim, #{src := <<>>} = State) ->
-  {Line, Col} = maps:get(loc_started, State, {-1, -1}),
+  {Line, Col} = scope_get(loc_started, State),
   LineBin = integer_to_binary(Line),
   ColBin = integer_to_binary(Col),
   clj_utils:throw( [ <<"Started reading at (">>
@@ -1074,15 +1080,14 @@ read_until(Delim, #{src := <<>>} = State) ->
                  , location(State)
                  );
 read_until(Delim, #{src := <<Delim/utf8, _/binary>>} = State) ->
-  erlang:erase(read_delim),
-  consume_char(State);
+  consume_char(scope_put(read_delim, false, State));
 read_until(Delim, #{src := <<X/utf8, _/binary>>} = State) ->
   case clj_utils:char_type(X) of
     whitespace ->
       read_until(Delim, consume_char(State));
     _ ->
-      erlang:put(read_delim, true),
-      read_until(Delim, read_one(State))
+      State1 = scope_put(read_delim, true, State),
+      read_until(Delim, read_one(State1))
   end.
 
 -spec is_macro_terminating(char()) -> boolean().
@@ -1114,3 +1119,19 @@ push_form(Form, #{forms := Forms} = State) ->
 -spec push_pending_form(any(), state()) -> state().
 push_pending_form(Form, #{pending_forms := Forms} = State) ->
   State#{pending_forms => [Form | Forms]}.
+
+-spec scope_get(atom(), state()) -> state().
+scope_get(Name, #{bindings := Bindings} = _State) ->
+  clj_scope:get(Bindings, Name).
+
+-spec scope_put(atom(), any(), state()) -> state().
+scope_put(Name, Value, #{bindings := Bindings} = State) ->
+  State#{bindings => clj_scope:put(Bindings, Name, Value)}.
+
+-spec add_scope(state()) -> state().
+add_scope(#{bindings := Bindings} = State) ->
+  State#{bindings => clj_scope:new(Bindings)}.
+  
+-spec remove_scope(state()) -> state().
+remove_scope(#{bindings := Bindings} = State) ->
+  State#{bindings => clj_scope:parent(Bindings)}.
