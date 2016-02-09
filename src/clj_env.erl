@@ -218,8 +218,8 @@ find_var(Env, Symbol, LoadModule) ->
 
 %% @private
 %% @doc Tries to get the vars from the module associated to the
-%%      namespace. If the module is not found or the if it doesn't
-%%      have a 'vars' attribute,  then a dummy module is added with
+%%      namespace. If the module is not found or if it doesn't
+%%      have a 'vars' attribute, then a dummy module is added with
 %%      no vars.
 -spec load_module_vars(env(), 'clojerl.Symbol':type()) -> env().
 load_module_vars(Env, NsSym) ->
