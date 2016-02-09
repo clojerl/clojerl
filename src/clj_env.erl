@@ -172,7 +172,7 @@ put_locals(Env, Locals) ->
 
 -spec get(env(), atom()) -> any().
 get(Env, Name) ->
-  get(Name, Env, undefined).
+  get(Env, Name, undefined).
 
 -spec get(env(), atom(), any()) -> any().
 get(Env, Name, Default) ->
