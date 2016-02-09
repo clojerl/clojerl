@@ -24,7 +24,7 @@ is_special(S) ->
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand_1(Env, Form) ->
   Op = clj_core:first(Form),
-  {MacroVar, Env} = lookup_var(Op, false, Env),
+  {MacroVar, Env1} = lookup_var(Op, false, Env),
 
   case
     is_special(Op)
@@ -34,17 +34,18 @@ macroexpand_1(Env, Form) ->
   of
     true -> Form;
     false ->
-      {MacroVar, Env} = lookup_var(Op, false, Env),
+      {MacroVar, Env2} = lookup_var(Op, false, Env1),
       Var = clj_core:deref(MacroVar),
-      Args = [Form, Env] ++ clj_core:seq(clj_core:rest(Form)),
+      Args = [Form, Env2] ++ clj_core:seq(clj_core:rest(Form)),
       clj_core:invoke(Var, Args)
   end.
 
 -spec macroexpand(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand(Env, Form) ->
-  case macroexpand_1(Env, Form) of
-    Form -> {Form, Env};
-    ExpandedForm -> macroexpand_1(Env, ExpandedForm)
+  ExpandedForm = macroexpand_1(Env, Form),
+  case clj_core:equiv(ExpandedForm, Form) of
+    true -> {Form, Env};
+    false -> macroexpand_1(Env, ExpandedForm)
   end.
 
 %%------------------------------------------------------------------------------
@@ -90,17 +91,17 @@ analyze_forms(Env, Forms) ->
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
 analyze_form(Env, Form) ->
   IsSeq = clj_core:'seq?'(Form),
-  case {clj_core:type(Form), IsSeq} of
-    {_, true} when Form =/= undefined ->
+  case clj_core:type(Form) of
+    _ when IsSeq ->
       Op = clj_core:first(Form),
       analyze_seq(Env, Op, Form);
-    {'clojerl.Symbol', _} ->
+    'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
-    {'clojerl.Vector', _} ->
+    'clojerl.Vector' ->
       analyze_vector(Env, Form);
-    {'clojerl.Map', _} ->
+    'clojerl.Map' ->
       analyze_map(Env, Form);
-    {'clojerl.Set', _} ->
+    'clojerl.Set' ->
       analyze_set(Env, Form);
     _ ->
       analyze_const(Env, Form)
@@ -128,8 +129,9 @@ analyze_seq(_Env, undefined, _List) ->
   throw(<<"Can't call nil">>);
 analyze_seq(Env, Op, List) ->
   IsSymbol = clj_core:'symbol?'(Op),
-  case macroexpand_1(Env, List) of
-    List ->
+  ExpandedList = macroexpand_1(Env, List),
+  case clj_core:equiv(List, ExpandedList) of
+    true ->
       OpKey = case clj_core:'symbol?'(Op) of
                 true  -> clj_core:name(Op);
                 false -> Op
@@ -140,7 +142,7 @@ analyze_seq(Env, Op, List) ->
         ParseFun when IsSymbol ->
           ParseFun(Env, List)
       end;
-    ExpandedList ->
+    false ->
       analyze_form(Env, ExpandedList)
   end.
 
@@ -457,7 +459,7 @@ parse_loop(Env, Form) ->
 analyze_let(Env, Form) ->
   validate_bindings(Form),
   Op = clj_core:first(Form),
-  IsLoop = clj_core:symbol(<<"loop*">>) == Op,
+  IsLoop = clj_core:equiv(clj_core:symbol(<<"loop*">>), Op),
 
   PairUp = fun
              PairUp([], Pairs) ->
@@ -500,7 +502,7 @@ parse_binding({Name, Init}, Env) ->
                       , [<<"Bad binding form: ">>, Name]
                       ),
   OpAtom = case clj_env:get(Env, is_loop) of
-             true -> loop;
+             true  -> loop;
              false -> 'let'
            end,
   {InitExpr, _} = clj_env:pop_expr(analyze_form(Env, Init)),
@@ -545,8 +547,9 @@ parse_def(Env, List) ->
       throw(<<"Can't refer to qualified var that doesn't exist">>);
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
+      CurrentNs = clj_env:current_ns(Env1),
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
-                            andalso clj_env:current_ns(Env1) =/= VarNsSym
+                            andalso not clj_core:equiv(CurrentNs, VarNsSym)
                           , <<"Can't create defs outside of current ns">>
                           ),
 
@@ -649,15 +652,18 @@ lookup_var(VarSymbol, true = _CreateNew, Env) ->
     true ->
       NsSym = case clj_core:namespace(VarSymbol) of
                 undefined -> undefined;
-                NsStr -> clj_core:symbol(NsStr)
+                NsStr     -> clj_core:symbol(NsStr)
               end,
-      NameSym = clj_core:symbol(clj_core:name(VarSymbol)),
+
+      NameSym   = clj_core:symbol(clj_core:name(VarSymbol)),
       InternFun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
-      case clj_env:current_ns(Env) of
-        CurrentNs when CurrentNs == NsSym; NsSym == undefined ->
+
+      CurrentNs = clj_env:current_ns(Env),
+      case clj_core:equiv(CurrentNs, NsSym) of
+        Equal when Equal; NsSym == undefined ->
           NewEnv = clj_env:update_ns(Env, CurrentNs, InternFun),
           lookup_var(VarSymbol, false, NewEnv);
-        _ ->
+        false ->
           lookup_var(VarSymbol, false, Env)
       end
   end;
@@ -665,25 +671,21 @@ lookup_var(VarSymbol, false, Env) ->
   case clj_core:'symbol?'(VarSymbol) of
     false -> {undefined, Env};
     true ->
-
       NsStr = clj_core:namespace(VarSymbol),
       NameStr = clj_core:name(VarSymbol),
 
       case {NsStr, NameStr} of
-        {undefined, Name} when Name == <<"ns">>;
-                               Name == <<"in-ns">> ->
-          ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, Name),
-          Var = clj_env:find_var(Env, ClojureCoreSym),
-          {Var, Env};
+        {undefined, NameStr} when NameStr == <<"ns">>;
+                                  NameStr == <<"in-ns">> ->
+          ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, NameStr),
+          clj_env:find_var(Env, ClojureCoreSym);
         {undefined, _} ->
           CurrentNsSym = clj_env:current_ns(Env),
           Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
-          Var = clj_env:find_var(Env, Symbol),
-          {Var, Env};
+          clj_env:find_var(Env, Symbol);
         {NsStr, NameStr} ->
           Symbol = clj_core:symbol(NsStr, NameStr),
-          Var = clj_env:find_var(Env, Symbol),
-          {Var, Env}
+          clj_env:find_var(Env, Symbol)
       end
   end.
 
@@ -749,20 +751,20 @@ analyze_symbol(Env, Symbol) ->
       clj_env:push_expr(Env, Local#{op => local});
     _ ->
       case resolve(Env, Symbol) of
-        undefined ->
+        {undefined, _} ->
           Str = clj_core:str(Symbol),
           throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
-        {erl_fun, Module, Function, Arity} ->
+        {{erl_fun, Module, Function, Arity}, Env1} ->
           FunExpr = #{ op       => erl_fun
-                     , env      => ?DEBUG(Env)
+                     , env      => ?DEBUG(Env1)
                      , module   => Module
                      , function => Function
                      , arity    => Arity
                      },
-          clj_env:push_expr(Env, FunExpr);
-        Var ->
-          VarExpr = var_expr(Var, Symbol, Env),
-          clj_env:push_expr(Env, VarExpr)
+          clj_env:push_expr(Env1, FunExpr);
+        {Var, Env1} ->
+          VarExpr = var_expr(Var, Symbol, Env1),
+          clj_env:push_expr(Env1, VarExpr)
       end
   end.
 
@@ -775,8 +777,10 @@ var_expr(Var, Symbol, _Env) ->
   , var  => Var
   }.
 
+-type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
+
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
-  'clojerl.Var':type() | {erl_fun, module(), atom(), integer()} | undefined.
+  {'clojerl.Var':type() | erl_fun() | undefined, clj_env:env()}.
 resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local     = clj_env:get_local(Env, Symbol),
@@ -789,22 +793,23 @@ resolve(Env, Symbol) ->
       Local;
     {_, NsStr, _, _} when NsStr =/= undefined ->
       case clj_env:find_var(Env, Symbol) of
-        undefined ->
+        {undefined, Env1} ->
           %% If there is no var then assume it's a Module:Function pair.
           %% Let's see how this works out.
           NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
           {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
           NameAtom = binary_to_atom(Name, utf8),
-          {erl_fun, NsAtom, NameAtom, Arity};
-        Var ->
-          Var
+          ErlFun = {erl_fun, NsAtom, NameAtom, Arity},
+          {ErlFun, Env1};
+        {Var, Env1} ->
+          {Var, Env1}
       end;
     {_, _, UsedVar, _} when UsedVar =/= undefined ->
-      UsedVar;
+      {UsedVar, Env};
     {_, _, _, CurNsVar} when CurNsVar =/= undefined ->
-      CurNsVar;
+      {CurNsVar, Env};
     _ ->
-      undefined
+      {undefined, Env}
   end.
 
 -spec erl_fun_arity(binary()) -> {binary(), undefined | integer()}.

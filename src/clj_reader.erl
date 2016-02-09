@@ -234,6 +234,7 @@ unicode_char(State, Base, Length, IsExact) ->
 %% Keyword
 %%------------------------------------------------------------------------------
 
+-spec read_keyword(state()) -> state().
 read_keyword(#{ src := <<":", _/binary>>
               , env := Env
               } = State0) ->
@@ -256,6 +257,7 @@ read_keyword(#{ src := <<":", _/binary>>
 %% Symbol
 %%------------------------------------------------------------------------------
 
+-spec read_symbol(state()) -> state().
 read_symbol(State) ->
   Loc  = maps:get(loc, State),
   Meta = #{loc => Loc},
@@ -279,12 +281,14 @@ read_symbol(State) ->
 %% Comment
 %%------------------------------------------------------------------------------
 
+-spec read_comment(state()) -> state().
 read_comment(State) -> skip_line(State).
 
 %%------------------------------------------------------------------------------
 %% Quote
 %%------------------------------------------------------------------------------
 
+-spec read_quote(state()) -> state().
 read_quote(#{src := <<"'"/utf8, _/binary>>} = State) ->
   Quote = clj_core:symbol(<<"quote">>),
   wrapped_read(Quote, consume_char(State)).
@@ -293,6 +297,7 @@ read_quote(#{src := <<"'"/utf8, _/binary>>} = State) ->
 %% Deref
 %%------------------------------------------------------------------------------
 
+-spec read_deref(state()) -> state().
 read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
   Deref = clj_core:symbol(<<"clojure.core">>, <<"deref">>),
   wrapped_read(Deref, consume_char(State)).
@@ -301,6 +306,7 @@ read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
 %% Meta
 %%------------------------------------------------------------------------------
 
+-spec read_meta(state()) -> state().
 read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
   {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
   Meta = clj_utils:desugar_meta(SugaredMeta),
@@ -314,14 +320,21 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
 %% Syntax quote
 %%------------------------------------------------------------------------------
 
+-spec read_syntax_quote(state()) -> state().
 read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(consume_char(State))),
+
   %% TODO: using process dictionary here might be a code smell
   erlang:put(gensym_env, #{}),
-  NewFormWithMeta = add_meta(Form, Env, syntax_quote(Form, Env)),
-  erlang:erase(gensym_env),
-  push_form(NewFormWithMeta, NewState).
 
+  {QuotedForm, Env1}      = syntax_quote(Form, Env),
+  {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
+
+  erlang:erase(gensym_env),
+
+  push_form(NewFormWithMeta, NewState#{env => Env2}).
+
+-spec syntax_quote(any(), clj_env:env()) -> {any(), clj_env:env()}.
 syntax_quote(Form, Env) ->
   IsSpecial    = clj_analyzer:is_special(Form),
   IsSymbol     = clj_core:'symbol?'(Form),
@@ -332,14 +345,15 @@ syntax_quote(Form, Env) ->
 
   QuoteSymbol = clj_core:symbol(<<"quote">>),
   if
-    IsSpecial    -> clj_core:list([QuoteSymbol, Form]);
+    IsSpecial    -> {clj_core:list([QuoteSymbol, Form]), Env};
     IsSymbol     -> syntax_quote_symbol(Form, Env);
-    IsUnquote    -> clj_core:second(Form);
+    IsUnquote    -> {clj_core:second(Form), Env};
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
       IsMap = clj_core:'map?'(Form),
       IsVector = clj_core:'vector?'(Form),
       IsSet = clj_core:'set?'(Form),
+      IsList = clj_core:'list?'(Form),
       if
         IsMap ->
           HashMapSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-map">>),
@@ -350,17 +364,22 @@ syntax_quote(Form, Env) ->
         IsSet ->
           HashSetSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-set">>),
           syntax_quote_coll(Form, HashSetSymbol, Env);
+        IsList ->
+          ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
+          syntax_quote_coll(Form, ListSymbol, Env);
         true ->
           syntax_quote_coll(Form, undefined, Env)
       end;
-    IsLiteral -> Form;
-    true      -> clj_core:list([QuoteSymbol, Form])
+    IsLiteral -> {Form, Env};
+    true      -> {clj_core:list([QuoteSymbol, Form]), Env}
   end.
 
+-spec flatten_map(any()) -> any().
 flatten_map(Map) ->
   MapSeq = clj_core:seq(Map),
   flatten_map(MapSeq, clj_core:vector([])).
 
+-spec flatten_map(any() | undefined, 'clojerl.Vector':type()) -> any().
 flatten_map(undefined, Vector) ->
   clj_core:seq(Vector);
 flatten_map(MapSeq, Vector) ->
@@ -369,6 +388,7 @@ flatten_map(MapSeq, Vector) ->
   Vector2 = clj_core:conj(Vector1, clj_core:second(First)),
   flatten_map(clj_core:next(MapSeq), Vector2).
 
+-spec syntax_quote_symbol(any(), clj_env:env()) -> {any(), clj_env:env()}.
 syntax_quote_symbol(Symbol, Env) ->
   NamespaceStr = clj_core:namespace(Symbol),
   NameStr = clj_core:name(Symbol),
@@ -380,7 +400,8 @@ syntax_quote_symbol(Symbol, Env) ->
       resolve_symbol(Symbol, Env)
   end.
 
-register_gensym(Symbol, _Env) ->
+-spec register_gensym(any(), clj_env:env()) -> {any(), clj_env:env()}.
+register_gensym(Symbol, Env) ->
   GensymEnv = case erlang:get(gensym_env) of
                 undefined ->
                   throw(<<"Gensym literal not in syntax-quote">>);
@@ -395,75 +416,87 @@ register_gensym(Symbol, _Env) ->
       GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
       SymbolName = clj_core:name(Symbol),
       erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
-      GenSym;
+      {GenSym, Env};
     GenSym ->
-      GenSym
+      {GenSym, Env}
   end.
 
+-spec resolve_symbol(any(), clj_env:env()) -> {any(), clj_env:env()}.
 resolve_symbol(Symbol, Env) ->
   CurrentNsSym = clj_env:current_ns(Env),
   case clj_core:namespace(Symbol) of
     undefined ->
       case clj_env:find_var(Env, Symbol) of
-        undefined ->
+        {undefined, Env1} ->
           CurrentNsName = clj_core:name(CurrentNsSym),
           NameStr = clj_core:name(Symbol),
-          clj_core:symbol(CurrentNsName, NameStr);
-        Var ->
-          VarNsSym = 'clojerl.Var':namespace(Var),
-          VarNameSym = 'clojerl.Var':name(Var),
-          clj_core:symbol(clj_core:name(VarNsSym), clj_core:name(VarNameSym))
+          Sym = clj_core:symbol(CurrentNsName, NameStr),
+          {Sym, Env1};
+        {Var, Env1} ->
+          Sym = clj_core:symbol(clj_core:namespace(Var), clj_core:name(Var)),
+          {Sym, Env1}
       end;
     NamespaceStr ->
       case clj_env:resolve_ns(Env, clj_core:symbol(NamespaceStr)) of
         undefined ->
-          Symbol;
+          {Symbol, Env};
         Ns ->
           NsNameSym = clj_namespace:name(Ns),
           NsNameStr = clj_core:name(NsNameSym),
           NameStr = clj_core:name(Symbol),
-          clj_core:symbol(NsNameStr, NameStr)
+          {clj_core:symbol(NsNameStr, NameStr), Env}
       end
   end.
 
+-spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 syntax_quote_coll(List, undefined, Env) ->
   syntax_quote_coll(List, Env);
 syntax_quote_coll(List, FunSymbol, Env) ->
-  ExpandedList = syntax_quote_coll(List, Env),
+  {ExpandedList, Env1} = syntax_quote_coll(List, Env),
   ApplySymbol = clj_core:symbol(<<"clojure.core">>, <<"apply">>),
-  clj_core:list([ApplySymbol, FunSymbol, ExpandedList]).
+  {clj_core:list([ApplySymbol, FunSymbol, ExpandedList]), Env1}.
 
+-spec syntax_quote_coll(any(), clj_env:env()) -> {any(), clj_env:env()}.
 syntax_quote_coll(List, Env) ->
   case clj_core:'empty?'(List) of
     true ->
       ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-      clj_core:list([ListSymbol]);
+      {clj_core:list([ListSymbol]), Env};
     false ->
-      ExpandedItems = lists:reverse(expand_list(List, Env, [])),
+      {ReversedExpandedItems, Env1} = expand_list(List, Env, []),
+      ExpandedItems = lists:reverse(ReversedExpandedItems),
       ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
-      clj_core:list([ConcatSymbol | ExpandedItems])
+      {clj_core:list([ConcatSymbol | ExpandedItems]), Env1}
   end.
 
-expand_list(undefined, _Env, Result) ->
-  Result;
+-spec expand_list(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
+expand_list(undefined, Env, Result) ->
+  {Result, Env};
 expand_list(List, Env, Result) ->
   Item = clj_core:first(List),
   ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-  NewItem = case {is_unquote(Item), is_unquote_splicing(Item)} of
-              {true, _} -> clj_core:list([ListSymbol, clj_core:second(Item)]);
-              {_, true} -> clj_core:second(Item);
-              _ -> clj_core:list([ListSymbol, syntax_quote(Item, Env)])
-            end,
-  expand_list(clj_core:next(List), Env, [NewItem | Result]).
+  {NewItem, Env2} =
+    case {is_unquote(Item), is_unquote_splicing(Item)} of
+      {true, _} ->
+        {clj_core:list([ListSymbol, clj_core:second(Item)]), Env};
+      {_, true} ->
+        {clj_core:second(Item), Env};
+      _ ->
+        {QuotedForm, Env1} = syntax_quote(Item, Env),
+        {clj_core:list([ListSymbol, QuotedForm]), Env1}
+      end,
+  expand_list(clj_core:next(List), Env2, [NewItem | Result]).
 
+-spec add_meta(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
 add_meta(Form, Env, Result) ->
   case clj_core:'meta?'(Form) of
     true ->
       WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
-      Meta = syntax_quote(clj_core:meta(Form), Env),
-      clj_core:list([WithMetaSym, Result, Meta]);
+      {Meta, Env1} = syntax_quote(clj_core:meta(Form), Env),
+      {clj_core:list([WithMetaSym, Result, Meta]), Env1};
     _ ->
-      Result
+      {Result, Env}
   end.
 
 is_unquote(Form) ->
@@ -488,6 +521,7 @@ is_literal(Form) ->
 %% Unquote
 %%------------------------------------------------------------------------------
 
+-spec read_unquote(state()) -> state().
 read_unquote(#{src := <<"~"/utf8, Src/binary>>} = State) ->
   case Src of
     <<"@", _/binary>> ->
@@ -504,6 +538,7 @@ read_unquote(#{src := <<"~"/utf8, Src/binary>>} = State) ->
 %% List
 %%------------------------------------------------------------------------------
 
+-spec read_list(state()) -> state().
 read_list(#{ src   := <<"("/utf8, _/binary>>
            , forms := Forms
            , loc   := Loc
@@ -522,6 +557,7 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
 %% Vector
 %%------------------------------------------------------------------------------
 
+-spec read_vector(state()) -> state().
 read_vector(#{ src   := <<"["/utf8, _/binary>>
              , forms := Forms
              , loc   := Loc
@@ -540,6 +576,7 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
 %% Map
 %%------------------------------------------------------------------------------
 
+-spec read_map(state()) -> state().
 read_map(#{ src   := <<"{"/utf8, _/binary>>
           , forms := Forms
           , loc   := Loc
@@ -562,12 +599,14 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 %% Unmatched delimiter
 %%------------------------------------------------------------------------------
 
+-spec read_unmatched_delim(state()) -> no_return().
 read_unmatched_delim(_) -> throw(unmatched_delim).
 
 %%------------------------------------------------------------------------------
 %% Character
 %%------------------------------------------------------------------------------
 
+-spec read_char(state()) -> state().
 read_char(#{src := <<"\\"/utf8, _/binary>>} = State) ->
   {Token, State1} = read_token(consume_char(State)),
   Char =
@@ -608,6 +647,7 @@ read_octal_char(#{src := RestToken} = State) ->
 %% Argument
 %%------------------------------------------------------------------------------
 
+-spec read_arg(state()) -> state().
 read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
   case erlang:get(arg_env) of
     undefined ->
@@ -672,6 +712,7 @@ gen_arg_sym(N) ->
 %% Reader dispatch
 %%------------------------------------------------------------------------------
 
+-spec read_dispatch(state()) -> state().
 read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
   <<Ch/utf8, _/binary>> = Src,
   NewState = consume_chars(2, State),
@@ -695,6 +736,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
 %% #' var
 %%------------------------------------------------------------------------------
 
+-spec read_var(state()) -> state().
 read_var(#{src := <<"'", _/binary>>} = State) ->
   VarSymbol = clj_core:symbol(<<"var">>),
   wrapped_read(VarSymbol, consume_char(State)).
@@ -703,6 +745,7 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 %% #() fn
 %%------------------------------------------------------------------------------
 
+-spec read_fn(state()) -> state().
 read_fn(#{loc := Loc} = State) ->
   case erlang:get(arg_env) of
     undefined -> ok;
@@ -735,6 +778,7 @@ read_fn(#{loc := Loc} = State) ->
 %% #= eval
 %%------------------------------------------------------------------------------
 
+-spec read_eval(state()) -> state().
 read_eval(#{env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(State)),
   {Value, Env1} = clj_compiler:eval(Form, #{}, Env),
@@ -744,6 +788,7 @@ read_eval(#{env := Env} = State) ->
 %% #{} set
 %%------------------------------------------------------------------------------
 
+-spec read_set(state()) -> state().
 read_set(#{forms := Forms, loc := Loc} = State) ->
   State1 = read_until($}, State#{forms => []}),
   #{forms := ReversedItems} = State1,
@@ -758,6 +803,7 @@ read_set(#{forms := Forms, loc := Loc} = State) ->
 %% #[] tuple
 %%------------------------------------------------------------------------------
 
+-spec read_tuple(state()) -> state().
 read_tuple(#{forms := Forms} = State) ->
   State1 = read_until($], State#{forms => []}),
   #{forms := ReversedItems} = State1,
@@ -771,6 +817,7 @@ read_tuple(#{forms := Forms} = State) ->
 %% #"" regex
 %%------------------------------------------------------------------------------
 
+-spec read_regex(state()) -> state().
 read_regex(#{src := <<>>}) ->
   throw(<<"EOF">>);
 read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
@@ -790,6 +837,7 @@ read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
 %% #_ discard
 %%------------------------------------------------------------------------------
 
+-spec read_discard(state()) -> state().
 read_discard(State) ->
   {_, NewState} = pop_form(read_one(State)),
   %% There could be no next forms so don't throw if there isn't
@@ -799,6 +847,7 @@ read_discard(State) ->
 %% #? cond
 %%------------------------------------------------------------------------------
 
+-spec read_cond(state()) -> state().
 read_cond(#{src := <<>>}) ->
   throw(<<"EOF while reading character">>);
 read_cond(#{src := Src, opts := Opts} = State) ->
@@ -877,6 +926,7 @@ match_feature(_, _) ->
 %% #: erlang function
 %%------------------------------------------------------------------------------
 
+-spec read_erl_fun(state()) -> state().
 read_erl_fun(State) ->
   {First, State1} = pop_form(read_one(State)),
   {Second, State2 = #{forms := Forms}} = pop_form(read_one(State1)),
@@ -985,6 +1035,7 @@ skip_line(State) ->
   {_, State1} = consume(State, NotNewline),
   State1.
 
+-spec wrapped_read('clojerl.Symbol':type(), state()) -> state().
 wrapped_read(Symbol, State) ->
   {Form, NewState} = pop_form(read_one(State)),
   List = clj_core:list([Symbol, Form]),

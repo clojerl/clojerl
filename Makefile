@@ -1,10 +1,11 @@
 PROJECT = clojerl
 
-SHELL_DEPS = sync
+SHELL_DEPS = sync eep
 TEST_DEPS = xref_runner
 COVER_SPEC = test/clojerl.spec
 
-dep_sync = git https://github.com/rustyio/sync.git 9c78e7b
+dep_sync        = git https://github.com/rustyio/sync.git 9c78e7b
+dep_eep         = git https://github.com/virtan/eep v1.1
 dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.5
 
 include erlang.mk

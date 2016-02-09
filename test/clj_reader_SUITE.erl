@@ -397,9 +397,10 @@ syntax_quote(_Config) ->
   ct:comment("Read auto-gen symbol, "
              "check generated symbols have the same name"),
   ListGenSym2 = clj_reader:read(<<"`(hello# hello# world#)">>),
-  ListConcat = clj_core:second(ListGenSym2),
+  ListApply  = clj_core:second(ListGenSym2),
+  ListConcat = clj_core:third(ListApply),
   ListSecond = clj_core:second(ListConcat),
-  ListThird = clj_core:third(ListConcat),
+  ListThird  = clj_core:third(ListConcat),
   true = clj_core:equiv( clj_core:second(ListSecond)
                        , clj_core:second(ListThird)
                        ),
@@ -419,11 +420,13 @@ syntax_quote(_Config) ->
   ListHelloCheck = clj_reader:read(<<"(clojure.core/concat"
                                      "  (clojure.core/list $user/hello)"
                                      "  (clojure.core/list :world))">>),
-  true = clj_core:equiv(clj_core:second(WithMetaListHello), ListHelloCheck),
+  true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaListHello))
+                       , ListHelloCheck
+                       ),
 
   WithMetaEmptyList = clj_reader:read(<<"`()">>),
   EmptyListCheck = clj_reader:read(<<"(clojure.core/list)">>),
-  true = clj_core:equiv( clj_core:second(WithMetaEmptyList)
+  true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaEmptyList))
                        , EmptyListCheck
                        ),
 
@@ -464,7 +467,7 @@ syntax_quote(_Config) ->
   HelloWorldSupCheck = clj_reader:read(<<"(clojure.core/concat"
                                          "  (hello world)"
                                          "  (clojure.core/list :sup?))">>),
-  true = clj_core:equiv( clj_core:second(WithMetaHelloWorldSup)
+  true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaHelloWorldSup))
                        , HelloWorldSupCheck
                        ),
 
@@ -474,7 +477,7 @@ syntax_quote(_Config) ->
     clj_reader:read(<<"(clojure.core/concat"
                       "  (clojure.core/list hello)"
                       "  (clojure.core/list :world))">>),
-  true = clj_core:equiv( clj_core:second(ListWithMetaHelloWorld)
+  true = clj_core:equiv( clj_core:third(clj_core:second(ListWithMetaHelloWorld))
                        , ListHelloWorldCheck
                        ),
 

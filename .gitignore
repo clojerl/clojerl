@@ -4,3 +4,5 @@ deps/
 .erlang.mk*
 logs/
 clojerl.d
+*.trace
+callgrind.*

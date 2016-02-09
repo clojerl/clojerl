@@ -1,6 +1,9 @@
 -module(clj_emitter).
 
--export([emit/1]).
+-export([ emit/1
+        , remove_state/1
+        , without_state/3
+        ]).
 
 -type ast() :: erl_syntax:syntaxTree().
 
@@ -9,34 +12,54 @@
                   , lexical_renames => clj_scope:scope()
                   }.
 
--spec emit(clj_env:env()) ->
+-type var() :: 'clojerl.Var':type().
+
+-spec emit(clj_env:env()) -> clj_env:env().
+emit(Env0) ->
+  case clj_env:pop_expr(Env0) of
+    {undefined, _} -> Env0;
+    {Expr, Env} ->
+      State = clj_env:get(Env, emitter, initial_state()),
+      clj_env:put(Env, emitter, ast(Expr, State))
+  end.
+
+-spec without_state( clj_env:env()
+                    , fun((clj_env:env()) -> clj_env:env())
+                    , [any()]
+                    ) ->
+  clj_env:env().
+without_state(Env, Fun, Args) ->
+  State = clj_env:get(Env, emitter, initial_state()),
+  Env1 = apply(Fun, [clj_env:remove(Env, emitter) | Args]),
+  clj_env:put(Env1, emitter, State).
+
+-spec remove_state(clj_env:env()) ->
   { [[erl_parse:abstract_form()]]
   , [erl_parse:abstract_expr()]
   , clj_env:env()
   }.
-emit(Env0) ->
-  case clj_env:pop_expr(Env0) of
-    {undefined, _} ->
-      {[], [], Env0};
-    {Expr, Env} ->
-      InitState = initial_state(),
-      #{ modules := Modules
-       , asts    := ReversedExpressions
-       } = ast(Expr, InitState),
+remove_state(Env) ->
+  State = clj_env:get(Env, emitter, initial_state()),
 
-      ModulesForms  = lists:map( fun clj_module:to_forms/1
-                               , maps:values(Modules)
-                               ),
-      ModulesForms1 = lists:map( fun erl_syntax:revert_forms/1
-                               , ModulesForms
-                               ),
+  #{ modules := Modules
+   , asts    := ReversedExpressions
+   } = State,
 
-      Expressions   = lists:map( fun erl_syntax:revert/1
-                               , lists:reverse(ReversedExpressions)
-                               ),
+  ModulesForms  = lists:map( fun clj_module:to_forms/1
+                           , maps:values(Modules)
+                           ),
+  ModulesForms1 = lists:map( fun erl_syntax:revert_forms/1
+                           , ModulesForms
+                           ),
 
-      {ModulesForms1, Expressions, Env}
-  end.
+  Expressions   = lists:map( fun erl_syntax:revert/1
+                           , lists:reverse(ReversedExpressions)
+                           ),
+
+  { ModulesForms1
+  , Expressions
+  , clj_env:remove(Env, emitter)
+  }.
 
 -spec initial_state() -> state().
 initial_state() ->
@@ -122,18 +145,16 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         pop_ast(ast(InitExpr, State1))
     end,
 
-  %% Add the var's information as a module attribute
-  VarAtom    = erl_syntax:atom(var),
-  VarAttrAst = erl_syntax:attribute(VarAtom, [VarAst]),
-
   ValFunExportAst = export_attribute([{ValName, 0}]),
 
   ValClause = erl_syntax:clause([], [ValAst]),
   ValFunAst = function_form(ValName, [ValClause]),
 
-  AttrsAsts = [ValFunExportAst, VarAttrAst],
+  Vars      = [Var],
+  FunAsts   = [ValFunAst],
+  AttrsAsts = [ValFunExportAst],
 
-  State3 = add_functions_attributes(Module, [ValFunAst], AttrsAsts, State2),
+  State3 = add_functions_attributes(Module, FunAsts, AttrsAsts, Vars, State2),
 
   push_ast(VarAst, State3);
 %%------------------------------------------------------------------------------
@@ -402,14 +423,14 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
         StateAcc1 = lists:foldl(fun method_to_clause/2, StateAcc, MethodsList),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
         Fun = function_form(Name, ClausesAst),
-        add_functions_attributes(Module, [Fun], [], StateAcc2)
+        add_functions_attributes(Module, [Fun], [], [], StateAcc2)
     end,
 
   State1 = lists:foldl(FunctionFun, State, maps:values(GroupedMethods)),
 
   ExportFun = fun(Arity, StateAcc) ->
                   Attr = export_attribute([{Name, Arity}]),
-                  add_functions_attributes(Module, [], [Attr], StateAcc)
+                  add_functions_attributes(Module, [], [Attr], [], StateAcc)
               end,
 
   lists:foldl(ExportFun, State1, maps:keys(GroupedMethods)).
@@ -423,12 +444,14 @@ ensure_module(Name, State = #{modules := Modules}) ->
       State#{modules => Modules#{Name => ModuleDef}}
   end.
 
--spec add_functions_attributes(atom(), [ast()], [ast()], state()) ->
+-spec add_functions_attributes(atom(), [ast()], [ast()], [var()], state()) ->
    state().
-add_functions_attributes(Name, Funs, Attrs, State = #{modules := Modules}) ->
+add_functions_attributes(Name, Funs, Attrs, Vars, State) ->
+  #{modules := Modules} = State,
   Module = maps:get(Name, Modules),
 
-  Module1 = clj_module:add_functions(Module, Funs),
+  Module0 = clj_module:add_vars(Module, Vars),
+  Module1 = clj_module:add_functions(Module0, Funs),
   Module2 = clj_module:add_attributes(Module1, Attrs),
 
   State#{modules => Modules#{Name => Module2}}.

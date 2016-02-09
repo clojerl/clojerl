@@ -96,6 +96,6 @@ check_var_value(Env, Namespace, Name, Value) ->
 find_var(Env, Namespace, Name) ->
   Symbol = clj_core:symbol(Namespace, Name),
   case clj_env:find_var(Env, Symbol) of
-    undefined -> error;
-    V -> V
+    {undefined, _} -> error;
+    {V, _} -> V
   end.

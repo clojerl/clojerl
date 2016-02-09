@@ -68,19 +68,17 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts0, Env) when is_binary(Src) ->
+  Env5 = clj_reader:read_fold(fun compile_single_form/2, Src, #{}, Env),
+  {ModulesForms, Expressions, Env6} = clj_emitter:remove_state(Env5),
+
   Opts = maps:merge(default_options(), Opts0),
   CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
-
   ensure_output_dir(Opts),
 
-  Fun = fun(Form, EnvAcc) ->
-            NewEnvAcc = clj_analyzer:analyze(EnvAcc, Form),
-            {ModulesForms, Exprs, Env1} = clj_emitter:emit(NewEnvAcc),
-            lists:foreach(CompileFormsFun, ModulesForms),
-            eval_expressions(Exprs),
-            Env1
-        end,
-  clj_reader:read_fold(Fun, Src, #{}, Env).
+  lists:foreach(CompileFormsFun, ModulesForms),
+  eval_expressions(Expressions),
+
+  Env6.
 
 -spec eval(any()) -> {any(), clj_env:env()}.
 eval(Form) ->
@@ -95,13 +93,14 @@ eval(Form, Opts0, Env) ->
   Opts = maps:merge(default_options(), Opts0),
 
   NewEnv = clj_analyzer:analyze(Env, Form),
-  {ModulesForms, Exprs, Env1} = clj_emitter:emit(NewEnv),
+  Env1 = clj_emitter:emit(NewEnv),
+  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
 
   CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
   lists:foreach(CompileFormsFun, ModulesForms),
 
   [Value] = eval_expressions(Exprs),
-  {Value, Env1}.
+  {Value, Env2}.
 
 %%------------------------------------------------------------------------------
 %% Helper functions
@@ -114,6 +113,11 @@ ensure_output_dir(Opts) ->
   true = filelib:is_dir(OutputDir) orelse file:make_dir(OutputDir) =:= ok,
   true = code:add_path(OutputDir),
   ok.
+
+-spec compile_single_form(any(), clj_env:env()) -> clj_env:env().
+compile_single_form(Form, Env) ->
+  Env1 = clj_emitter:without_state(Env, fun clj_analyzer:analyze/2, [Form]),
+  clj_emitter:emit(Env1).
 
 -spec compile_forms([erl_parse:abstract_form()], options()) ->
   atom() | undefined.
