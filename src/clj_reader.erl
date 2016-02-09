@@ -323,13 +323,15 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
 -spec read_syntax_quote(state()) -> state().
 read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(consume_char(State))),
+
   %% TODO: using process dictionary here might be a code smell
   erlang:put(gensym_env, #{}),
-  %% TODO: change syntax_quote/2 so that if it changes the env
-  %%       (because of find var) we keep the changes.
+
   {QuotedForm, Env1}      = syntax_quote(Form, Env),
   {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
+
   erlang:erase(gensym_env),
+
   push_form(NewFormWithMeta, NewState#{env => Env2}).
 
 -spec syntax_quote(any(), clj_env:env()) -> {any(), clj_env:env()}.
