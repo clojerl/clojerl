@@ -688,7 +688,7 @@ fn(_Config) ->
 
   ct:comment("Nested #()"),
   ok = try clj_reader:read(<<"#(do #(%))">>)
-       catch _:<<"Nested #()s are not allowed">> -> ok end,
+       catch _:<<"Nested #()s are not allowed at (1:7)">> -> ok end,
 
   {comments, ""}.
 
@@ -729,7 +729,8 @@ arg(_Config) ->
 
   ct:comment("Invalid char after %"),
   ok = try clj_reader:read(<<"%a">>)
-       catch _:<<"Arg literal must be %, %& or %integer">> -> ok end,
+       catch _:<<"Arg literal must be %, %& or %integer at (1:1)">> -> ok
+       end,
 
   erlang:erase(arg_env),
 
@@ -771,7 +772,7 @@ regex(_Config) ->
 unreadable_form(_Config) ->
   ct:comment("Read unreadable"),
   ok = try clj_reader:read(<<"#<1>">>)
-       catch _:<<"Unreadable form">> -> ok
+       catch _:<<"Unreadable form at (1:1)">> -> ok
        end,
 
   {comments, ""}.
@@ -851,17 +852,17 @@ discard(_Config) ->
 
   ct:comment("EOF while reading character"),
   ok = try clj_reader:read(<<"#?">>, AllowOpts)
-       catch _:<<"EOF while reading character">> -> ok
+       catch _:<<"EOF while reading character at (1:3)">> -> ok
        end,
 
   ct:comment("Reader conditional not allowed"),
   ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>)
-       catch _:<<"Conditional read not allowed">> -> ok
+       catch _:<<"Conditional read not allowed at (1:3)">> -> ok
        end,
 
   ct:comment("No list"),
   ok = try clj_reader:read(<<"#?:clj">>, AllowOpts)
-       catch _:<<"read-cond body must be a list">> -> ok
+       catch _:<<"read-cond body must be a list at (1:3)">> -> ok
        end,
 
   ct:comment("EOF: no feature matched"),
@@ -872,19 +873,19 @@ discard(_Config) ->
 
   ct:comment("Uneven number of forms"),
   ok = try clj_reader:read(<<"#?(:one :two :three)">>, AllowOpts)
-       catch _:<<"read-cond requires an even number of forms">> -> ok
+       catch _:<<"read-cond requires an even number of forms at (1:21)">> -> ok
        end,
 
   ct:comment("Splice not in list"),
   ok = try clj_reader:read(<<"#?@(:one [:two])">>, AllowOpts)
-       catch _:<<"cond-splice not in list">> -> ok
+       catch _:<<"cond-splice not in list at (1:3)">> -> ok
        end,
 
   ct:comment("Splice in list but not sequential"),
   ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
                            AllowClrFeatureOpts)
        catch _:<<"Spliced form list in read-cond-splicing must "
-                  "extend clojerl.ISequential">> -> ok
+                  "extend clojerl.ISequential at (1:23)">> -> ok
        end,
 
   {comments, ""}.

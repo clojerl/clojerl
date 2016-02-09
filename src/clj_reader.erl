@@ -10,12 +10,14 @@
                  , features  => 'clojerl.Set':type()
                  }.
 
+-type location() :: {non_neg_integer(), non_neg_integer()}.
+
 -type state() :: #{ src           => binary()
                   , opts          => opts()
                   , forms         => [any()]
                   , pending_forms => [any()]
                   , env           => clj_env:env()
-                  , location      => {non_neg_integer(), non_neg_integer()}
+                  , loc           => location()
                   }.
 
 -spec new_state(binary(), any(), opts(), boolean()) -> state().
@@ -232,8 +234,10 @@ unicode_char(State, Base, Length, IsExact) ->
     NumLength ->
       LengthBin = integer_to_binary(Length),
       NumLengthBin = integer_to_binary(NumLength),
-      throw(<<"Invalid character length: ", NumLengthBin/binary,
-              ", should be ", LengthBin/binary>>)
+      clj_utils:throw(<<"Invalid character length: ", NumLengthBin/binary,
+                        ", should be ", LengthBin/binary>>
+                     , location(State)
+                     )
   end.
 
 %%------------------------------------------------------------------------------
@@ -255,7 +259,9 @@ read_keyword(#{ src := <<":", _/binary>>
               {Namespace, Name} ->
                 clj_core:keyword(Namespace, Name);
               undefined ->
-                throw(<<"Invalid token: :", Token/binary>>)
+                clj_utils:throw( <<"Invalid token: :", Token/binary>>
+                               , location(State)
+                               )
             end,
   push_form(Keyword, State).
 
@@ -278,7 +284,9 @@ read_symbol(State) ->
              {Ns, Name} ->
                clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
              undefined ->
-               throw(<<"Invalid symbol ", Token/binary>>)
+               clj_utils:throw(<<"Invalid symbol ", Token/binary>>
+                              , location(State1)
+                              )
            end,
 
   push_form(Symbol, State1).
@@ -330,15 +338,18 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
 read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
   {Form, NewState} = pop_form(read_one(consume_char(State))),
 
-  %% TODO: using process dictionary here might be a code smell
-  erlang:put(gensym_env, #{}),
+  try
+    %% TODO: using process dictionary here might be a code smell
+    erlang:put(gensym_env, #{}),
+    {QuotedForm, Env1}      = syntax_quote(Form, Env),
+    {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
 
-  {QuotedForm, Env1}      = syntax_quote(Form, Env),
-  {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
-
-  erlang:erase(gensym_env),
-
-  push_form(NewFormWithMeta, NewState#{env => Env2}).
+    push_form(NewFormWithMeta, NewState#{env => Env2})
+  catch _:Reason ->
+      clj_utils:throw(Reason, location(NewState))
+  after
+    erlang:erase(gensym_env)
+  end.
 
 -spec syntax_quote(any(), clj_env:env()) -> {any(), clj_env:env()}.
 syntax_quote(Form, Env) ->
@@ -409,8 +420,7 @@ syntax_quote_symbol(Symbol, Env) ->
 -spec register_gensym(any(), clj_env:env()) -> {any(), clj_env:env()}.
 register_gensym(Symbol, Env) ->
   GensymEnv = case erlang:get(gensym_env) of
-                undefined ->
-                  throw(<<"Gensym literal not in syntax-quote">>);
+                undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
   case maps:get(clj_core:name(Symbol), GensymEnv, undefined) of
@@ -551,7 +561,7 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
            } = State0
          ) ->
   State  = consume_char(State0),
-  State1 = read_until($), State#{forms => []}),
+  State1 = read_until($), location_started(State#{forms => []}, Loc)),
   #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
@@ -570,7 +580,7 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
              } = State0
            ) ->
   State  = consume_char(State0),
-  State1 = read_until($], State#{forms => []}),
+  State1 = read_until($], location_started(State#{forms => []}, Loc)),
   #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
@@ -589,7 +599,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
           } = State0
         ) ->
   State  = consume_char(State0),
-  State1 = read_until($}, State#{forms => []}),
+  State1 = read_until($}, location_started(State#{forms => []}, Loc)),
   #{forms := ReversedItems} = State1,
 
   case length(ReversedItems) of
@@ -598,7 +608,9 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
       Map = clj_core:with_meta(clj_core:hash_map(Items), #{loc => Loc}),
       State1#{forms => [Map | Forms]};
     _ ->
-      throw(<<"Map literal must contain an even number of forms">>)
+      clj_utils:throw( <<"Map literal must contain an even number of forms">>
+                     , location(State1)
+                     )
   end.
 
 %%------------------------------------------------------------------------------
@@ -606,7 +618,8 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_unmatched_delim(state()) -> no_return().
-read_unmatched_delim(_) -> throw(unmatched_delim).
+read_unmatched_delim(State) -> 
+  clj_utils:throw(unmatched_delim, location(State)).
 
 %%------------------------------------------------------------------------------
 %% Character
@@ -617,7 +630,7 @@ read_char(#{src := <<"\\"/utf8, _/binary>>} = State) ->
   {Token, State1} = read_token(consume_char(State)),
   Char =
     case Token of
-      <<>> -> throw(<<"EOF">>);
+      <<>> -> clj_utils:throw(<<"EOF">>, location(State));
       Ch when size(Ch) == 1 -> Ch;
       <<"newline">> -> $\n;
       <<"space">> -> $ ;
@@ -630,22 +643,28 @@ read_char(#{src := <<"\\"/utf8, _/binary>>} = State) ->
         Ch;
       <<"o", RestToken/binary>> ->
         read_octal_char(State1#{src => RestToken});
-      Ch -> throw(<<"Unsupported character: \\", Ch/binary>>)
+      Ch -> clj_utils:throw( <<"Unsupported character: \\", Ch/binary>>
+                           , location(State)
+                           )
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
   push_form(CharBin, State1).
 
 -spec read_octal_char(state()) -> char().
-read_octal_char(#{src := RestToken}) when size(RestToken) > 3 ->
+read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
   Size    = size(RestToken),
   SizeBin = integer_to_binary(Size),
-  throw(<<"Invalid octal escape sequence length: ", SizeBin/binary>>);
+  clj_utils:throw( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
+                 , location(State)
+                 );
 read_octal_char(#{src := RestToken} = State) ->
   Size = size(RestToken),
   case unicode_char(State, 8, Size, true) of
     {Ch, _} when Ch > 8#377 ->
-      throw(<<"Octal escape sequence must be in range [0, 377]">>);
+      clj_utils:throw(<<"Octal escape sequence must be in range [0, 377]">>
+                     , location(State)
+                     );
     {Ch, _} -> Ch
   end.
 
@@ -661,21 +680,23 @@ read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
     _ ->
       case arg_type(Src) of
         register_arg_1 ->
-          ArgSym = register_arg(1),
+          ArgSym = register_arg(1, State),
           push_form(ArgSym, consume_char(State));
         register_arg_multi ->
-          ArgSym = register_arg(-1),
+          ArgSym = register_arg(-1, State),
           push_form(ArgSym, consume_chars(2, State));
         register_arg_n ->
           {N, NewState} = pop_form(read_one(consume_char(State))),
           clj_utils:throw_when( not is_integer(N)
                               , <<"Arg literal must be %, %& or %integer">>
+                              , location(State)
                               ),
-          ArgSym = register_arg(N),
+          ArgSym = register_arg(N, State),
           push_form(ArgSym, NewState)
       end
   end.
 
+-spec arg_type(binary()) -> atom().
 arg_type(<<>>) ->
   register_arg_1;
 arg_type(Str) ->
@@ -688,9 +709,10 @@ arg_type(Str) ->
     true -> register_arg_n
   end.
 
-register_arg(N) ->
+-spec register_arg(integer(), state()) -> 'clojerl.Symbol':type().
+register_arg(N, State) ->
   case erlang:get(arg_env) of
-    undefined -> throw(<<"Arg literal not in #()">>);
+    undefined -> clj_utils:throw(<<"Arg literal not in #()">>, location(State));
     ArgEnv ->
       case maps:get(N, ArgEnv, undefined) of
         undefined ->
@@ -702,6 +724,7 @@ register_arg(N) ->
       end
   end.
 
+-spec gen_arg_sym(integer()) -> 'clojerl.Symbol':type().
 gen_arg_sym(N) ->
   Param = case N of
             -1 -> <<"rest">>;
@@ -734,8 +757,8 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
     $: -> read_erl_fun(NewState);
-    $< -> throw(<<"Unreadable form">>);
-    X  -> throw({unsupported_reader, <<"#", X>>})
+    $< -> clj_utils:throw(<<"Unreadable form">>, location(State));
+    X  -> clj_utils:throw({unsupported_reader, <<"#", X>>}, location(State))
   end.
 
 %%------------------------------------------------------------------------------
@@ -755,7 +778,9 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 read_fn(#{loc := Loc} = State) ->
   case erlang:get(arg_env) of
     undefined -> ok;
-    _         -> throw(<<"Nested #()s are not allowed">>)
+    _         -> clj_utils:throw( <<"Nested #()s are not allowed">>
+                                , location(State)
+                                )
   end,
   erlang:put(arg_env, #{}),
   {Form, NewState} = pop_form(read_one(State)),
@@ -796,7 +821,7 @@ read_eval(#{env := Env} = State) ->
 
 -spec read_set(state()) -> state().
 read_set(#{forms := Forms, loc := Loc} = State) ->
-  State1 = read_until($}, State#{forms => []}),
+  State1 = read_until($}, location_started(State#{forms => []}, Loc)),
   #{forms := ReversedItems} = State1,
 
   Items       = lists:reverse(ReversedItems),
@@ -810,8 +835,8 @@ read_set(#{forms := Forms, loc := Loc} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_tuple(state()) -> state().
-read_tuple(#{forms := Forms} = State) ->
-  State1 = read_until($], State#{forms => []}),
+read_tuple(#{forms := Forms, loc := Loc} = State) ->
+  State1 = read_until($], location_started(State#{forms => []}, Loc)),
   #{forms := ReversedItems} = State1,
 
   Items = lists:reverse(ReversedItems),
@@ -824,8 +849,8 @@ read_tuple(#{forms := Forms} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_regex(state()) -> state().
-read_regex(#{src := <<>>}) ->
-  throw(<<"EOF">>);
+read_regex(#{src := <<>>} = State) ->
+  clj_utils:throw(<<"EOF">>, location(State));
 read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   NewState = State#{current => <<Current/binary, "\\", Ch/utf8>>},
@@ -854,12 +879,14 @@ read_discard(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_cond(state()) -> state().
-read_cond(#{src := <<>>}) ->
-  throw(<<"EOF while reading character">>);
+read_cond(#{src := <<>>} = State) ->
+  clj_utils:throw(<<"EOF while reading character">>, location(State));
 read_cond(#{src := Src, opts := Opts} = State) ->
   ReadCondOpt = maps:get(read_cond, Opts, undefined),
   case lists:member(ReadCondOpt, [allow, preserve]) of
-    false -> throw(<<"Conditional read not allowed">>);
+    false -> clj_utils:throw( <<"Conditional read not allowed">>
+                             , location(State)
+                             );
     true -> ok
   end,
 
@@ -868,7 +895,7 @@ read_cond(#{src := Src, opts := Opts} = State) ->
   State1 =
     case IsSplicing of
       true when not ReadDelim ->
-        throw(<<"cond-splice not in list">>);
+        clj_utils:throw(<<"cond-splice not in list">>, location(State));
       true ->
         consume_char(State);
       false ->
@@ -878,7 +905,9 @@ read_cond(#{src := Src, opts := Opts} = State) ->
   {ListForm, NewState} = pop_form(read_one(State1)),
 
   case clj_core:'list?'(ListForm) of
-    false -> throw(<<"read-cond body must be a list">>);
+    false -> clj_utils:throw( <<"read-cond body must be a list">>
+                            , location(State1)
+                            );
     true ->
       OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
       SupressRead = OldSupressRead orelse ReadCondOpt == preserve,
@@ -901,14 +930,16 @@ reader_conditional(List, IsSplicing) ->
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
   Features = maps:get(features, Opts, clj_core:hash_set([])),
   Forms = clj_core:seq(List),
-  case match_feature(Forms, Features) of
+  case match_feature(Forms, Features, State) of
     nomatch ->
       read_one(State);
     Form when IsSplicing ->
       case clj_core:'sequential?'(Form) of
         false ->
-          throw(<<"Spliced form list in read-cond-splicing must "
-                  "extend clojerl.ISequential">>);
+          clj_utils:throw( <<"Spliced form list in read-cond-splicing must "
+                             "extend clojerl.ISequential">>
+                         , location(State)
+                         );
         true ->
           Seq = clj_core:seq2(Form),
           Items = clj_core:seq2(Seq),
@@ -918,15 +949,17 @@ read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
       push_form(Form, State)
   end.
 
-match_feature([], _Features) ->
+match_feature([], _Features, _State) ->
   nomatch;
-match_feature([Feature, Form | Rest], Features) ->
+match_feature([Feature, Form | Rest], Features, State) ->
   case clj_core:'contains?'(Features, Feature) of
     true -> Form;
-    false -> match_feature(Rest, Features)
+    false -> match_feature(Rest, Features, State)
   end;
-match_feature(_, _) ->
-  throw(<<"read-cond requires an even number of forms">>).
+match_feature(_, _, State) ->
+  clj_utils:throw( <<"read-cond requires an even number of forms">>
+                 , location(State)
+                 ).
 
 %%------------------------------------------------------------------------------
 %% #: erlang function
@@ -948,8 +981,10 @@ read_erl_fun(State) ->
       Fun = fun ModuleAtom:FunctionAtom/Arity,
       push_form(Fun, State2);
     false ->
-      throw(<<"Reader literal '#:' expects a fully-qualified symbol"
-              " followed by a vector with one element.">>)
+      clj_utils:throw( <<"Reader literal '#:' expects a fully-qualified symbol"
+                         " followed by a vector with one element.">>
+                     , location(State)
+                     )
   end.
 
 valid_erl_fun(First, Second) ->
@@ -969,6 +1004,13 @@ valid_erl_fun(First, Second) ->
 -spec location(state()) -> state().
 location(State) ->
   maps:get(loc, State, undefined).
+
+-spec location_started(state(), location()) -> state().
+location_started(State, Loc) ->
+  case maps:get(loc_started, State, undefined) of
+    undefined -> State#{loc_started => Loc};
+    _ -> State
+  end.
 
 -spec consume_char(state()) -> state().
 consume_char(#{src := <<"\n"/utf8, Src/binary>>, loc := {Line, _}} = State) ->
@@ -1021,6 +1063,16 @@ read_token(State) ->
   consume(State, Fun).
 
 -spec read_until(char(), state()) -> state().
+read_until(Delim, #{src := <<>>} = State) ->
+  {Line, Col} = maps:get(loc_started, State, {-1, -1}),
+  LineBin = integer_to_binary(Line),
+  ColBin = integer_to_binary(Col),
+  clj_utils:throw( [ <<"Started reading at (">>
+                   , LineBin, <<":">>, ColBin
+                   , <<") but found EOF while expecting '", Delim/utf8, "'">>
+                   ]
+                 , location(State)
+                 );
 read_until(Delim, #{src := <<Delim/utf8, _/binary>>} = State) ->
   erlang:erase(read_delim),
   consume_char(State);
