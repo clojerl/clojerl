@@ -1,6 +1,9 @@
 -module(clj_emitter).
 
--export([emit/1]).
+-export([ emit/1
+        , remove_state/1
+        , without_state/3
+        ]).
 
 -type ast() :: erl_syntax:syntaxTree().
 
@@ -11,34 +14,52 @@
 
 -type var() :: 'clojerl.Var':type().
 
--spec emit(clj_env:env()) ->
+-spec emit(clj_env:env()) -> clj_env:env().
+emit(Env0) ->
+  case clj_env:pop_expr(Env0) of
+    {undefined, _} -> Env0;
+    {Expr, Env} ->
+      State = clj_env:get(Env, emitter, initial_state()),
+      clj_env:put(Env, emitter, ast(Expr, State))
+  end.
+
+-spec without_state( clj_env:env()
+                    , fun((clj_env:env()) -> clj_env:env())
+                    , [any()]
+                    ) ->
+  clj_env:env().
+without_state(Env, Fun, Args) ->
+  State = clj_env:get(Env, emitter, initial_state()),
+  Env1 = apply(Fun, [clj_env:remove(Env, emitter) | Args]),
+  clj_env:put(Env1, emitter, State).
+
+-spec remove_state(clj_env:env()) ->
   { [[erl_parse:abstract_form()]]
   , [erl_parse:abstract_expr()]
   , clj_env:env()
   }.
-emit(Env0) ->
-  case clj_env:pop_expr(Env0) of
-    {undefined, _} ->
-      {[], [], Env0};
-    {Expr, Env} ->
-      InitState = initial_state(),
-      #{ modules := Modules
-       , asts    := ReversedExpressions
-       } = ast(Expr, InitState),
+remove_state(Env) ->
+  State = clj_env:get(Env, emitter, initial_state()),
 
-      ModulesForms  = lists:map( fun clj_module:to_forms/1
-                               , maps:values(Modules)
-                               ),
-      ModulesForms1 = lists:map( fun erl_syntax:revert_forms/1
-                               , ModulesForms
-                               ),
+  #{ modules := Modules
+   , asts    := ReversedExpressions
+   } = State,
 
-      Expressions   = lists:map( fun erl_syntax:revert/1
-                               , lists:reverse(ReversedExpressions)
-                               ),
+  ModulesForms  = lists:map( fun clj_module:to_forms/1
+                           , maps:values(Modules)
+                           ),
+  ModulesForms1 = lists:map( fun erl_syntax:revert_forms/1
+                           , ModulesForms
+                           ),
 
-      {ModulesForms1, Expressions, Env}
-  end.
+  Expressions   = lists:map( fun erl_syntax:revert/1
+                           , lists:reverse(ReversedExpressions)
+                           ),
+
+  { ModulesForms1
+  , Expressions
+  , clj_env:remove(Env, emitter)
+  }.
 
 -spec initial_state() -> state().
 initial_state() ->
