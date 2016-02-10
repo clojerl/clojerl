@@ -682,13 +682,13 @@ read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
   case erlang:get(arg_env) of
     undefined ->
       read_symbol(State);
-    _ ->
+    ArgEnv ->
       case arg_type(Src) of
         register_arg_1 ->
-          ArgSym = register_arg(1, State),
+          ArgSym = register_arg(1, ArgEnv),
           push_form(ArgSym, consume_char(State));
         register_arg_multi ->
-          ArgSym = register_arg(-1, State),
+          ArgSym = register_arg(-1, ArgEnv),
           push_form(ArgSym, consume_chars(2, State));
         register_arg_n ->
           {N, NewState} = pop_form(read_one(consume_char(State))),
@@ -696,7 +696,7 @@ read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
                               , <<"Arg literal must be %, %& or %integer">>
                               , location(State)
                               ),
-          ArgSym = register_arg(N, State),
+          ArgSym = register_arg(N, ArgEnv),
           push_form(ArgSym, NewState)
       end
   end.
@@ -714,19 +714,15 @@ arg_type(Str) ->
     true -> register_arg_n
   end.
 
--spec register_arg(integer(), state()) -> 'clojerl.Symbol':type().
-register_arg(N, State) ->
-  case erlang:get(arg_env) of
-    undefined -> clj_utils:throw(<<"Arg literal not in #()">>, location(State));
-    ArgEnv ->
-      case maps:get(N, ArgEnv, undefined) of
-        undefined ->
-          ArgSymbol = gen_arg_sym(N),
-          NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
-          put(arg_env, NewArgEnv),
-          ArgSymbol;
-        ArgSymbol -> ArgSymbol
-      end
+-spec register_arg(integer(), map()) -> 'clojerl.Symbol':type().
+register_arg(N, ArgEnv) ->
+  case maps:get(N, ArgEnv, undefined) of
+    undefined ->
+      ArgSymbol = gen_arg_sym(N),
+      NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
+      put(arg_env, NewArgEnv),
+      ArgSymbol;
+    ArgSymbol -> ArgSymbol
   end.
 
 -spec gen_arg_sym(integer()) -> 'clojerl.Symbol':type().
