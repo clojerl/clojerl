@@ -202,3 +202,13 @@
          (clojure.core/prn [:recursive-fn :done]))))
 
 (recursive 15)
+
+(def variadic-recursive
+  (fn* y [x & xs]
+       (if (erlang/>.e x 0)
+         (do
+           (clojure.core/prn [:variadic-recursive-fn x xs])
+           (variadic-recursive (erlang/-.e x 1) x xs))
+         (clojure.core/prn [:variadic-recursive-fn :done xs]))))
+
+(variadic-recursive 15)

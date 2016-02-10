@@ -198,8 +198,10 @@ parse_fn(Env, List) ->
   {NameSym, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
       true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {clj_core:symbol(<<"anon">>), clj_core:rest(List)}
+      false -> {clj_core:gensym(<<"anon">>), clj_core:rest(List)}
     end,
+
+  DefNameSym = get_def_name(Env),
 
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
@@ -212,11 +214,15 @@ parse_fn(Env, List) ->
   NameBin    = clj_core:name(NameSym),
   VarNameSym = clj_core:gensym(<<NameBin/binary, "__fn__">>),
   Var        = 'clojerl.Var':new(VarNsSym, VarNameSym),
-  VarExpr    = var_expr(Var, VarNameSym, Env),
-  Env1       = clj_env:put_local( clj_env:add_locals_scope(Env)
-                                , NameSym
-                                , VarExpr
-                                ),
+  VarExpr    = var_expr(Var, NameSym, Env),
+
+  %% If there is a def var we also add it to the local scope
+  DefVar     = 'clojerl.Var':new(VarNsSym, DefNameSym),
+  DefVarExpr = var_expr(DefVar, DefNameSym, Env),
+
+  Env1       = clj_env:put_locals( clj_env:add_locals_scope(Env)
+                                 , [VarExpr, DefVarExpr]
+                                 ),
 
   OpMeta = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
@@ -274,7 +280,11 @@ parse_fn(Env, List) ->
              },
   Var1     = clj_core:with_meta(Var, VarMeta),
   VarExpr1 = var_expr(Var1, VarNameSym, Env2),
-  Env3     = clj_env:put_local(Env2, NameSym, VarExpr1),
+
+  DefVar1  = clj_core:with_meta(DefVar, VarMeta),
+  DefVarExpr1 = var_expr(DefVar1, DefNameSym, Env2),
+
+  Env3     = clj_env:put_locals(Env2, [VarExpr1, DefVarExpr1]),
   {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce, true),
 
   FnExpr = #{ op              => fn
@@ -621,7 +631,7 @@ parse_def(Env, List) ->
                _ -> clj_core:fourth(List)
              end,
 
-      ExprEnv2 = clj_env:context(Env2, expr),
+      ExprEnv2 = add_def_name(clj_env:context(Env2, expr), VarSymbol),
       {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
 
       Var2 = var_fn_info(Var1, InitExpr),
@@ -637,7 +647,25 @@ parse_def(Env, List) ->
                  , dynamic => IsDynamic
                  },
 
-      clj_env:push_expr(Env4, DefExpr)
+      Env5 = restore_def_name(Env4, Env2),
+      clj_env:push_expr(Env5, DefExpr)
+  end.
+
+-spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
+add_def_name(Env, NameSym) ->
+  clj_env:put(Env, def_name, NameSym).
+
+-spec get_def_name(clj_env:env()) -> 'clojerl.Symbol':type() | undefined.
+get_def_name(Env) ->
+  clj_env:get(Env, def_name).
+
+-spec restore_def_name(clj_env:env(), clj_env:env()) -> clj_env:env().
+restore_def_name(Env, PreviousEnv) ->
+  case clj_env:get(PreviousEnv, def_name) of
+    undefined ->
+      clj_env:remove(Env, def_name);
+    NameSym ->
+      clj_env:put(Env, def_name, NameSym)
   end.
 
 -spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
@@ -822,6 +850,7 @@ var_expr(Var, Symbol, _Env) ->
  #{ op   => var
   , env  => ?DEBUG(Env)
   , form => Symbol
+  , name => Symbol
   , var  => Var
   }.
 
