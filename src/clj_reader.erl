@@ -633,7 +633,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_unmatched_delim(state()) -> no_return().
-read_unmatched_delim(State) -> 
+read_unmatched_delim(State) ->
   clj_utils:throw(unmatched_delim, location(State)).
 
 %%------------------------------------------------------------------------------
@@ -832,7 +832,7 @@ read_eval(#{env := Env} = State) ->
 
 -spec read_set(state()) -> state().
 read_set(#{forms := Forms, loc := Loc} = State0) ->
-  State  = add_scope(State0), 
+  State  = add_scope(State0),
   State1 = read_until($}, location_started(State#{forms => []}, Loc)),
   State2 = remove_scope(State1),
   #{forms := ReversedItems} = State2,
@@ -849,7 +849,7 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
 
 -spec read_tuple(state()) -> state().
 read_tuple(#{forms := Forms, loc := Loc} = State0) ->
-  State  = add_scope(State0), 
+  State  = add_scope(State0),
   State1 = read_until($], location_started(State#{forms => []}, Loc)),
   State2 = remove_scope(State1),
   #{forms := ReversedItems} = State2,
@@ -1137,7 +1137,7 @@ scope_put(Name, Value, #{bindings := Bindings} = State) ->
 -spec add_scope(state()) -> state().
 add_scope(#{bindings := Bindings} = State) ->
   State#{bindings => clj_scope:new(Bindings)}.
-  
+
 -spec remove_scope(state()) -> state().
 remove_scope(#{bindings := Bindings} = State) ->
   State#{bindings => clj_scope:parent(Bindings)}.

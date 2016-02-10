@@ -1,6 +1,6 @@
 -module(clj_utils).
 
--compile({no_auto_import,[throw/1]}).
+-compile({no_auto_import, [throw/1]}).
 
 -export([ char_type/1
         , char_type/2
@@ -164,10 +164,9 @@ throw(List, Location) when is_list(List) ->
   throw(Reason, Location);
 throw(Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
-  erlang:throw(<<Reason/binary, LocationBin/binary>>);
+  erlang:throw(<<LocationBin/binary, Reason/binary>>);
 throw(Reason, Location) ->
-  LocationBin = location_to_binary(Location),
-  erlang:throw({Reason, LocationBin}).
+  erlang:throw({Location, Reason}).
 
 -spec throw_when(boolean(), any()) -> ok | no_return().
 throw_when(Throw, Reason) ->
@@ -192,10 +191,9 @@ warn_when(true, List, Location) when is_list(List) ->
   warn_when(true, Reason, Location);
 warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
-  error_logger:warning_msg(<<Reason/binary, LocationBin/binary>>);
+  error_logger:warning_msg(<<LocationBin/binary, Reason/binary>>);
 warn_when(true, Reason, Location) ->
-  LocationBin = location_to_binary(Location),
-  error_logger:warning_msg({Reason, LocationBin});
+  error_logger:warning_msg({Location, Reason});
 warn_when(false, _, _) ->
   ok.
 
@@ -331,8 +329,8 @@ nth(Index, List, Default) ->
 
 -spec location_to_binary(undefined | clj_reader:location()) -> binary().
 location_to_binary(undefined) ->
-  <<>>;
+  <<"?:?: ">>;
 location_to_binary({Line, Col}) ->
   LineBin = integer_to_binary(Line),
   ColBin = integer_to_binary(Col),
-  <<" at (", LineBin/binary, ":", ColBin/binary, ")">>.
+  <<LineBin/binary, ":", ColBin/binary, ": ">>.
