@@ -844,24 +844,7 @@ resolve(Env, Symbol) ->
         {undefined, Env1} ->
           %% If there is no var then assume it's a Module:Function pair.
           %% Let's see how this works out.
-          NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
-          {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
-          NameAtom = binary_to_atom(Name, utf8),
-
-          NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
-          clj_utils:warn_when( not NoWarnErlFun
-                               andalso not is_integer(Arity)
-                               andalso Arity =/= <<"e">>
-                             , [ <<"Symbol ">>, Symbol
-                               , <<" resolved to an Erlang function.">>
-                               , <<" To avoid this warning you can add a">>
-                               , <<" '.e' suffix to the symbol's name.">>
-                               ]
-                             , clj_reader:location_meta(Symbol)
-                             ),
-
-          ErlFun = {erl_fun, NsAtom, NameAtom, Arity},
-          {ErlFun, Env1};
+          {erl_fun(Env1, Symbol), Env1};
         {Var, Env1} ->
           {Var, Env1}
       end;
@@ -873,15 +856,42 @@ resolve(Env, Symbol) ->
       {undefined, Env}
   end.
 
+-spec erl_fun(clj_env:env(), 'clojerl.Symbol':type()) -> erl_fun().
+erl_fun(Env, Symbol) ->
+  NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
+  {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
+  NameAtom = binary_to_atom(Name, utf8),
+
+  NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
+  clj_utils:warn_when( not NoWarnErlFun
+                       andalso not is_integer(Arity)
+                       andalso Arity =/= <<"e">>
+                     , [ <<"'">>, Symbol, <<"'">>
+                       , <<" resolved to an Erlang function.">>
+                       , <<" Add the suffix '.e' to the symbol's name">>
+                       , <<" to remove this warning.">>
+                       ]
+                     , clj_reader:location_meta(Symbol)
+                     ),
+
+  Arity1 = case Arity of
+             _ when is_integer(Arity) -> Arity;
+             _ -> undefined
+           end,
+
+  {erl_fun, NsAtom, NameAtom, Arity1}.
+
 -spec erl_fun_arity(binary()) -> {binary(), undefined | integer()}.
 erl_fun_arity(Name) ->
   case binary:split(Name, <<".">>, [global]) of
     [_] -> {Name, undefined};
     Parts ->
       Last = lists:last(Parts),
-      case re:run(Last, <<"\\d+">>) of
-        nomatch ->
-          {iolist_to_binary(lists:droplast(Parts)), Last};
+      case {re:run(Last, <<"\\d+">>), Last} of
+        {nomatch, <<"e">>} when length(Parts) > 1 ->
+          {iolist_to_binary(lists:droplast(Parts)), <<"e">>};
+        {nomatch, _} ->
+          {Name, undefined};
         _ ->
           NameParts = clj_utils:binary_join(lists:droplast(Parts), <<".">>),
           Arity = binary_to_integer(Last),

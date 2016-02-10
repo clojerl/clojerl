@@ -99,18 +99,18 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts0, Env) ->
+eval(Form, Opts0, Env0) ->
   Opts = maps:merge(default_options(), Opts0),
-
-  NewEnv = clj_analyzer:analyze(Env, Form),
-  Env1 = clj_emitter:emit(NewEnv),
-  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
+  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
+  Env1 = clj_analyzer:analyze(Env, Form),
+  Env2 = clj_emitter:emit(Env1),
+  {ModulesForms, Exprs, Env3} = clj_emitter:remove_state(Env2),
 
   CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
   lists:foreach(CompileFormsFun, ModulesForms),
 
   [Value] = eval_expressions(Exprs),
-  {Value, Env2}.
+  {Value, clj_env:remove(Env3, clj_flags)}.
 
 %% Flags
 
