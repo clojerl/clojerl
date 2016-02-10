@@ -34,8 +34,6 @@
                    | unmatched_delim | char
                    | arg | dispatch | symbol.
 
--type location() :: {non_neg_integer(), non_neg_integer()}.
-
 %%------------------------------------------------------------------------------
 %% Exported functions
 %%------------------------------------------------------------------------------
@@ -160,7 +158,7 @@ ends_with(Str, Ends) ->
 throw(Reason) ->
   throw(Reason, undefined).
 
--spec throw(boolean(), undefined | location()) -> no_return().
+-spec throw(boolean(), undefined | clj_reader:location()) -> no_return().
 throw(List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   throw(Reason, Location);
@@ -175,7 +173,7 @@ throw(Reason, Location) ->
 throw_when(Throw, Reason) ->
   throw_when(Throw, Reason, undefined).
 
--spec throw_when(boolean(), any(), location()) -> ok | no_return().
+-spec throw_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
 throw_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   throw_when(true, Reason, Location);
@@ -188,7 +186,7 @@ throw_when(false, _, _) ->
 warn_when(Warn, Reason) ->
   warn_when(Warn, Reason, undefined).
 
--spec warn_when(boolean(), any(), location()) -> ok | no_return().
+-spec warn_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
 warn_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   warn_when(true, Reason, Location);
@@ -331,7 +329,7 @@ nth(Index, List, Default) ->
     false -> Default
   end.
 
--spec location_to_binary(undefined | location()) -> binary().
+-spec location_to_binary(undefined | clj_reader:location()) -> binary().
 location_to_binary(undefined) ->
   <<>>;
 location_to_binary({Line, Col}) ->

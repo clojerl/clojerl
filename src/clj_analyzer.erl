@@ -125,8 +125,8 @@ analyze_const(Env, Constant) ->
 %%------------------------------------------------------------------------------
 
 -spec analyze_seq(clj_env:env(), any(), 'clojerl.List':type()) -> clj_env:env().
-analyze_seq(_Env, undefined, _List) ->
-  throw(<<"Can't call nil">>);
+analyze_seq(_Env, undefined, List) ->
+  clj_utils:throw(<<"Can't call nil">>, location(List));
 analyze_seq(Env, Op, List) ->
   IsSymbol = clj_core:'symbol?'(Op),
   ExpandedList = macroexpand_1(Env, List),
@@ -158,7 +158,9 @@ parse_ns(Env, List) ->
       {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
       NewEnv;
     false ->
-      throw(<<"First argument to ns must a symbol">>)
+      clj_utils:throw( <<"First argument to ns must a symbol">>
+                     , location(List)
+                     )
   end.
 
 %%------------------------------------------------------------------------------
@@ -171,7 +173,10 @@ parse_quote(Env, List) ->
     2 -> ok;
     Count ->
       CountBin = integer_to_binary(Count - 1),
-      throw(<<"Wrong number of args to quote, had: ", CountBin/binary>>)
+      clj_utils:throw( <<"Wrong number of args to quote, had: "
+                         , CountBin/binary>>
+                     , location(List)
+                     )
   end,
   Second = clj_core:second(List),
   {ConstExpr, NewEnv} = clj_env:pop_expr(analyze_const(Env, Second)),
@@ -544,13 +549,16 @@ parse_def(Env, List) ->
   VarSymbol = clj_core:second(List),
   case lookup_var(VarSymbol, Env) of
     {undefined, _} ->
-      throw(<<"Can't refer to qualified var that doesn't exist">>);
+      clj_utils:throw( <<"Can't refer to qualified var that doesn't exist">>
+                     , location(VarSymbol)
+                     );
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
       CurrentNs = clj_env:current_ns(Env1),
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
                             andalso not clj_core:equiv(CurrentNs, VarNsSym)
                           , <<"Can't create defs outside of current ns">>
+                          , location(List)
                           ),
 
       Var1Meta   = clj_core:meta(Var),
@@ -631,13 +639,19 @@ validate_def_args(List) ->
            C == 4, Docstring =/= undefined  ->
       case clj_core:type(clj_core:second(List)) of
         'clojerl.Symbol' -> ok;
-        _ -> throw(<<"First argument to def must be a symbol">>)
+        _ -> clj_utils:throw( <<"First argument to def must be a symbol">>
+                            , location(clj_core:second(List))
+                            )
       end,
       Docstring;
     1 ->
-      throw(<<"Too few arguments to def">>);
+      clj_utils:throw( <<"Too few arguments to def">>
+                     , location(List)
+                     );
     _ ->
-      throw(<<"Too many arguments to def">>)
+      clj_utils:throw( <<"Too many arguments to def">>
+                     , location(List)
+                     )
   end.
 
 -spec lookup_var('clojerl.Symbol':type(), clj_env:env()) -> ok.
@@ -700,6 +714,7 @@ parse_throw(Env, List) ->
                       , [ <<"Wrong number of args to throw, had: ">>
                         , Count - 1
                         ]
+                      , location(List)
                       ),
 
   Second = clj_core:second(List),
@@ -753,7 +768,12 @@ analyze_symbol(Env, Symbol) ->
       case resolve(Env, Symbol) of
         {undefined, _} ->
           Str = clj_core:str(Symbol),
-          throw(<<"Unable to resolve var: ", Str/binary, " in this context">>);
+          clj_utils:throw([ <<"Unable to resolve symbol '">>
+                          , Str
+                          , <<"' in this context">>
+                          ]
+                         , location(Symbol)
+                         );
         {{erl_fun, Module, Function, Arity}, Env1} ->
           FunExpr = #{ op       => erl_fun
                      , env      => ?DEBUG(Env1)
@@ -893,3 +913,10 @@ analyze_set(Env, Set) ->
                 },
 
   clj_env:push_expr(Env2, VectorExpr).
+
+-spec location(any()) -> clj_reader:location().
+location(X) ->
+  case clj_core:'meta?'(X) of
+    true  -> clj_core:get(clj_core:meta(X), loc);
+    false -> undefined
+  end.

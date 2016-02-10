@@ -91,36 +91,32 @@ ns(_Config) ->
 def(_Config) ->
   ct:comment("Few arguments"),
   ok = try analyze_one(<<"(def)">>)
-       catch _:Reason ->
-           <<"Too few arguments to def">> = Reason,
+       catch _:<<"Too few arguments to def at (1:1)">> ->
            ok
        end,
 
   ct:comment("Many arguments"),
   ok = try analyze_one(<<"(def x \"doc\" 1 2)">>)
-       catch _:Reason2 ->
-           <<"Too many arguments to def">> = Reason2,
+       catch _:<<"Too many arguments to def at (1:1)">> ->
            ok
        end,
 
   ct:comment("Not a symbol"),
   ok = try analyze_one(<<"(def :x \"doc\" 1)">>)
-       catch _:Reason3 ->
-           <<"First argument to def must be a symbol">> = Reason3,
+       catch _:<<"First argument to def must be a symbol">> ->
            ok
        end,
 
   ct:comment("Qualified var that doesn't exist"),
   ok = try analyze_one(<<"(def x/y)">>)
-       catch _:Reason4 ->
-           <<"Can't refer to qualified var that doesn't exist">> = Reason4,
+       catch _:<<"Can't refer to qualified var that doesn't exist at (1:6)">> ->
            ok
        end,
 
   ct:comment("Create def outside current namespace"),
-  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user) (def bla/x 2)">>)
+  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user)\n(def bla/x 2)">>)
        catch _:Reason5 ->
-           <<"Can't create defs outside of current ns">> = Reason5,
+           <<"Can't create defs outside of current ns at (2:1)">> = Reason5,
            ok
        end,
 
@@ -177,7 +173,7 @@ quote(_Config) ->
   ct:comment("More than one arg to quote"),
   ok = try analyze_all(<<"(quote 1 2 3)">>)
        catch _:Reason ->
-           <<"Wrong number of args to quote, had: 3">> = Reason,
+           <<"Wrong number of args to quote, had: 3 at (1:1)">> = Reason,
            ok
        end,
 
@@ -335,8 +331,7 @@ fn(_Config) ->
 
   ct:comment("binding in fn should not leak out of fn* scope"),
   ok = try analyze_all(<<"(fn* ([x y] x y)) x">>), error
-       catch _:Reason5 ->
-           <<"Unable to resolve var: x in this context">> = Reason5,
+       catch _:<<"Unable to resolve symbol 'x' in this context at (1:19)">> ->
            ok
        end,
 
@@ -474,8 +469,7 @@ do(_Config) ->
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
-       catch _:Reason ->
-           <<"Unable to resolve var: z in this context">> = Reason,
+       catch _:<<"Unable to resolve symbol 'z' in this context at (1:17)">> ->
            ok
        end,
 
@@ -531,14 +525,13 @@ invoke(_Config) ->
   ct:comment("Can't call nil"),
   ok = try analyze_one(<<"(nil)">>)
        catch _:Reason ->
-           <<"Can't call nil">> = Reason,
+           <<"Can't call nil at (1:1)">> = Reason,
            ok
        end,
 
   ct:comment("Call undefined symbol"),
   ok = try analyze_one(<<"(bla)">>)
-       catch _:Reason2 ->
-           <<"Unable to resolve var: bla in this context">> = Reason2,
+       catch _:<<"Unable to resolve symbol 'bla' in this context at (1:2)">> ->
            ok
        end,
 
@@ -569,12 +562,11 @@ invoke(_Config) ->
 symbol(_Config) ->
   ct:comment("Unresolved symbol"),
   ok = try analyze_one(<<"hello">>)
-       catch _:Reason ->
-           <<"Unable to resolve var: hello in this context">> = Reason,
+       catch _:<<"Unable to resolve symbol 'hello' in this context at (1:1)">> ->
            ok
        end,
 
-  ct:comment("Unresolved symbol"),
+  ct:comment("Resolved symbol"),
   HelloSymbol = clj_core:symbol(<<"hello">>),
   [ _
   , #{ op   := var
@@ -610,17 +602,17 @@ throw(_Config) ->
 
   ct:comment("Throw with any other amount of arguments fails"),
   ok = try analyze_one(<<"(throw)">>)
-       catch _:<<"Wrong number of args to throw, had: 0">> ->
+       catch _:<<"Wrong number of args to throw, had: 0 at (1:1)">> ->
            ok
        end,
 
   ok = try analyze_one(<<"(throw :a :b)">>)
-       catch _:<<"Wrong number of args to throw, had: 2">> ->
+       catch _:<<"Wrong number of args to throw, had: 2 at (1:1)">> ->
            ok
        end,
 
   ok = try analyze_one(<<"(throw :a :b :c :d)">>)
-       catch _:<<"Wrong number of args to throw, had: 4">> ->
+       catch _:<<"Wrong number of args to throw, had: 4 at (1:1)">> ->
            ok
        end,
 
