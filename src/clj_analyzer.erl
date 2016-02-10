@@ -126,7 +126,7 @@ analyze_const(Env, Constant) ->
 
 -spec analyze_seq(clj_env:env(), any(), 'clojerl.List':type()) -> clj_env:env().
 analyze_seq(_Env, undefined, List) ->
-  clj_utils:throw(<<"Can't call nil">>, location(List));
+  clj_utils:throw(<<"Can't call nil">>, clj_reader:location_meta(List));
 analyze_seq(Env, Op, List) ->
   IsSymbol = clj_core:'symbol?'(Op),
   ExpandedList = macroexpand_1(Env, List),
@@ -159,7 +159,7 @@ parse_ns(Env, List) ->
       NewEnv;
     false ->
       clj_utils:throw( <<"First argument to ns must a symbol">>
-                     , location(List)
+                     , clj_reader:location_meta(List)
                      )
   end.
 
@@ -175,7 +175,7 @@ parse_quote(Env, List) ->
       CountBin = integer_to_binary(Count - 1),
       clj_utils:throw( <<"Wrong number of args to quote, had: "
                          , CountBin/binary>>
-                     , location(List)
+                     , clj_reader:location_meta(List)
                      )
   end,
   Second = clj_core:second(List),
@@ -550,7 +550,7 @@ parse_def(Env, List) ->
   case lookup_var(VarSymbol, Env) of
     {undefined, _} ->
       clj_utils:throw( <<"Can't refer to qualified var that doesn't exist">>
-                     , location(VarSymbol)
+                     , clj_reader:location_meta(VarSymbol)
                      );
     {Var, Env1} ->
       VarNsSym = 'clojerl.Var':namespace(Var),
@@ -558,7 +558,7 @@ parse_def(Env, List) ->
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
                             andalso not clj_core:equiv(CurrentNs, VarNsSym)
                           , <<"Can't create defs outside of current ns">>
-                          , location(List)
+                          , clj_reader:location_meta(List)
                           ),
 
       Var1Meta   = clj_core:meta(Var),
@@ -640,17 +640,17 @@ validate_def_args(List) ->
       case clj_core:type(clj_core:second(List)) of
         'clojerl.Symbol' -> ok;
         _ -> clj_utils:throw( <<"First argument to def must be a symbol">>
-                            , location(clj_core:second(List))
+                            , clj_reader:location_meta(clj_core:second(List))
                             )
       end,
       Docstring;
     1 ->
       clj_utils:throw( <<"Too few arguments to def">>
-                     , location(List)
+                     , clj_reader:location_meta(List)
                      );
     _ ->
       clj_utils:throw( <<"Too many arguments to def">>
-                     , location(List)
+                     , clj_reader:location_meta(List)
                      )
   end.
 
@@ -714,7 +714,7 @@ parse_throw(Env, List) ->
                       , [ <<"Wrong number of args to throw, had: ">>
                         , Count - 1
                         ]
-                      , location(List)
+                      , clj_reader:location_meta(List)
                       ),
 
   Second = clj_core:second(List),
@@ -772,11 +772,12 @@ analyze_symbol(Env, Symbol) ->
                           , Str
                           , <<"' in this context">>
                           ]
-                         , location(Symbol)
+                         , clj_reader:location_meta(Symbol)
                          );
         {{erl_fun, Module, Function, Arity}, Env1} ->
           FunExpr = #{ op       => erl_fun
                      , env      => ?DEBUG(Env1)
+                     , form     => Symbol
                      , module   => Module
                      , function => Function
                      , arity    => Arity
@@ -913,10 +914,3 @@ analyze_set(Env, Set) ->
                 },
 
   clj_env:push_expr(Env2, VectorExpr).
-
--spec location(any()) -> clj_reader:location().
-location(X) ->
-  case clj_core:'meta?'(X) of
-    true  -> clj_core:get(clj_core:meta(X), loc);
-    false -> undefined
-  end.

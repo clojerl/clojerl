@@ -4,13 +4,16 @@
         , read_fold/4
         , read/1, read/2, read/3
         , read_all/1, read_all/2, read_all/3
+        , location_meta/1
         ]).
+
+-type location() :: {non_neg_integer(), non_neg_integer()}.
 
 -type opts() :: #{ read_cond => allow | preserve
                  , features  => 'clojerl.Set':type()
                  }.
 
--type location() :: {non_neg_integer(), non_neg_integer()}.
+-export_type([location/0, opts/0]).
 
 -type state() :: #{ src           => binary()
                   , opts          => opts()
@@ -56,6 +59,13 @@ read_fold_loop(Fun, State) ->
     NewState = #{forms := [Form], env := Env} ->
       NewEnv = Fun(Form, Env),
       read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
+  end.
+
+-spec location_meta(any()) -> location().
+location_meta(X) ->
+  case clj_core:'meta?'(X) of
+    true  -> clj_core:get(clj_core:meta(X), loc);
+    false -> undefined
   end.
 
 -spec read(binary()) -> {any(), binary()} | eof.
