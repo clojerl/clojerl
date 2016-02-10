@@ -603,8 +603,10 @@ parse_def(Env, List) ->
       IsDynamic = 'clojerl.Var':is_dynamic(Var1),
       NameBin   = clj_core:name(VarSymbol),
 
-      clj_utils:warn_when( not IsDynamic andalso
-                           nomatch =/= re:run(NameBin, "\\*.+\\*")
+      NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
+      clj_utils:warn_when( not NoWarnDynamic
+                           andalso not IsDynamic
+                           andalso nomatch =/= re:run(NameBin, "\\*.+\\*")
                          , [ <<"Var ">>
                            , NameBin
                            , <<" is not dynamic but its name"
@@ -846,7 +848,9 @@ resolve(Env, Symbol) ->
           {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
           NameAtom = binary_to_atom(Name, utf8),
 
-          clj_utils:warn_when( not is_integer(Arity)
+          NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
+          clj_utils:warn_when( not NoWarnErlFun
+                               andalso not is_integer(Arity)
                                andalso Arity =/= <<"e">>
                              , [ <<"Symbol ">>, Symbol
                                , <<" resolved to an Erlang function.">>
