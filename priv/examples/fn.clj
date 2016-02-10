@@ -22,7 +22,7 @@
 (clojure.core/assert (clojure.core/= (clojure.core/str one) "1"))
 
 (def fixed-arity
-  (fn* [x y] (clj_core/str [x y])))
+  (fn* [x y] (clj_core/str.e [x y])))
 
 ;; Call a fn with single fixed arity
 
@@ -30,9 +30,9 @@
 
 (def multiple-fixed-arities
   (fn*
-   ([x] (clj_core/str [:multiple-fixed-arities 1 x]))
-   ([x y] (clj_core/str [:multiple-fixed-arities 2 x y]))
-   ([x y z] (clj_core/str [:multiple-fixed-arities 3 x y z]))))
+   ([x] (clj_core/str.e [:multiple-fixed-arities 1 x]))
+   ([x y] (clj_core/str.e [:multiple-fixed-arities 2 x y]))
+   ([x y z] (clj_core/str.e [:multiple-fixed-arities 3 x y z]))))
 
 ;; Call a fn with multiple fixed arities
 
@@ -41,10 +41,10 @@
 (clojure.core/prn (multiple-fixed-arities 1 2 3))
 
 (def variadic-arity
-  (fn* [& xs] (clj_core/str [:variadic-arity xs])))
+  (fn* [& xs] (clj_core/str.e [:variadic-arity xs])))
 
 (def variadic-arity-2
-  (fn* [x & xs] (clj_core/str [:variadic-arity-2 x xs])))
+  (fn* [x & xs] (clj_core/str.e [:variadic-arity-2 x xs])))
 
 ;; Call a fn with a single variadic argument
 
@@ -58,10 +58,10 @@
 
 (def multiple-variadic
   (fn*
-   ([x] (clj_core/str [:multiple-variadic-1 x]))
-   ([x y] (clj_core/str [:multiple-variadic-2 x y]))
-   ([x y z] (clj_core/str [:multiple-variadic-3 x y z]))
-   ([x y z & w] (clj_core/str [:multiple-variadic-n x y z w]))))
+   ([x] (clj_core/str.e [:multiple-variadic-1 x]))
+   ([x y] (clj_core/str.e [:multiple-variadic-2 x y]))
+   ([x y z] (clj_core/str.e [:multiple-variadic-3 x y z]))
+   ([x y z & w] (clj_core/str.e [:multiple-variadic-n x y z w]))))
 
 ;; Call a  variadic fn that also has fixed arities
 
@@ -132,10 +132,10 @@
 (clojure.core/prn
  ((fn* count-10
         ([x]
-         (if (erlang/> x 0)
+         (if (erlang/>.e x 0)
            (do
              (clojure.core/prn [:anon-recur x])
-             (count-10 (erlang/- x 1)))
+             (count-10 (erlang/-.e x 1)))
            (clojure.core/prn [:anon-recur :done]))))
   10
   ))
@@ -195,10 +195,10 @@
 
 (def recursive
   (fn* [x]
-       (if (erlang/> x 0)
+       (if (erlang/>.e x 0)
          (do
            (clojure.core/prn [:recursive-fn x])
-           (recursive (erlang/- x 1)))
+           (recursive (erlang/-.e x 1)))
          (clojure.core/prn [:recursive-fn :done]))))
 
 (recursive 15)

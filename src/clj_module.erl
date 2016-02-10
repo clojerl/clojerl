@@ -66,12 +66,19 @@ new(Forms) ->
 
 -spec from_binary(atom()) -> clj_module().
 from_binary(ModuleName) when is_atom(ModuleName) ->
-  {ModuleName, Binary, _} = code:get_object_code(ModuleName),
-  case beam_lib:chunks(Binary, [abstract_code]) of
-    {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
-      {ok, new(Forms)};
-    Error ->
-      Error
+  case code:get_object_code(ModuleName) of
+    {ModuleName, Binary, _} ->
+      case beam_lib:chunks(Binary, [abstract_code]) of
+        {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
+          {ok, new(Forms)};
+        Error ->
+          Error
+      end;
+    _ ->
+      clj_utils:throw([ <<"Could not load object code for namespace: ">>
+                      , atom_to_binary(ModuleName, utf8)
+                      ]
+                     )
   end.
 
 -spec to_forms(clj_module()) -> [erl_syntax:syntaxTree()].

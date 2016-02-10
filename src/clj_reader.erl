@@ -297,7 +297,7 @@ read_symbol(State) ->
                clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
              undefined ->
                clj_utils:throw(<<"Invalid symbol ", Token/binary>>
-                              , location(State1)
+                              , location(State)
                               )
            end,
 

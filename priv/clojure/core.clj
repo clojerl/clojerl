@@ -1,13 +1,13 @@
 (ns clojure.core)
 
 (def
-  seq (fn* [items] (clj_core/seq items)))
+  seq (fn* [items] (clj_core/seq.e items)))
 
 (def
   ^{:arglists '([& items])
     :doc "Creates a new list containing the items."
     :added "1.0"}
-  list (fn* [& items] (clojerl.List/new (seq items))))
+  list (fn* [& items] (clojerl.List/new.e (seq items))))
 
 (def
   ^{:arglists '([x seq])
@@ -15,43 +15,43 @@
     the rest."
     :added "1.0"
     :static true}
-  cons (fn* [x s] (clj_core/cons x s)))
+  cons (fn* [x s] (clj_core/cons.e x s)))
 
 (def str
-  (fn* [x] (clj_core/str x)))
+  (fn* [x] (clj_core/str.e x)))
 
 (def prn
   (fn* [x]
-       (io/format "~s~n" (seq [(str x)]))))
+       (io/format.e "~s~n" (seq [(str x)]))))
 
 (def =
-  (fn* [a b] (erlang/== a b)))
+  (fn* [a b] (erlang/==.2 a b)))
 
 (def not
-  (fn* [a] (erlang/not a)))
+  (fn* [a] (erlang/not.1 a)))
 
 (def <-
-  (fn* [a b] (erlang/=:= a b)))
+  (fn* [a b] (erlang/=:=.e a b)))
 
 (def assert ^:macro
   (fn* [v] (if (not v) (throw :assert))))
 
 (def apply
   (fn*
-   ([f args] (clj_core/invoke f (seq args)))
-   ([f x args] (clj_core/invoke f (cons x (seq args))))
-   ([f x y args] (clj_core/invoke f (cons x (cons y (seq args)))))
-   ([f x y z args] (clj_core/invoke f (cons x (cons y (cons z (seq args))))))
-   ([f a b c d args] (clj_core/invoke f (cons a (cons b (cons c (cons d (seq args)))))))))
+   ([f args] (clj_core/invoke.e f (seq args)))
+   ([f x args] (clj_core/invoke.e f (cons x (seq args))))
+   ([f x y args] (clj_core/invoke.e f (cons x (cons y (seq args)))))
+   ([f x y z args] (clj_core/invoke.e f (cons x (cons y (cons z (seq args))))))
+   ([f a b c d args] (clj_core/invoke.e f (cons a (cons b (cons c (cons d (seq args)))))))))
 
 (def first
-  (fn* [xs] (clj_core/first xs)))
+  (fn* [xs] (clj_core/first.e xs)))
 
 (def rest
-  (fn* [xs] (clj_core/rest xs)))
+  (fn* [xs] (clj_core/rest.e xs)))
 
 (def next
-  (fn* [xs] (clj_core/next xs)))
+  (fn* [xs] (clj_core/next.e xs)))
 
 (def concat
   (fn*
@@ -67,19 +67,19 @@
       (concat x y)))))
 
 (def with-meta
-  (fn* [x meta] (clj_core/with_meta x meta)))
+  (fn* [x meta] (clj_core/with_meta.e x meta)))
 
 (def meta
-  (fn* [x] (clj_core/meta x)))
+  (fn* [x] (clj_core/meta.e x)))
 
 (def vector
-  (fn* [& xs] (clj_core/vector (seq xs))))
+  (fn* [& xs] (clj_core/vector.e (seq xs))))
 
 (def hash-map
-  (fn* [& xs] (clj_core/hash_map (seq xs))))
+  (fn* [& xs] (clj_core/hash_map.e (seq xs))))
 
 (def hash-set
-  (fn* [& xs] (clj_core/hash_set (seq xs))))
+  (fn* [& xs] (clj_core/hash_set.e (seq xs))))
 
 (def ^:macro defn
   (fn* [_form _env name args & body]

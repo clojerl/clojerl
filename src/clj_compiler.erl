@@ -12,10 +12,18 @@
          eval/3
         ]).
 
+-export([ no_warn_dynamic_var_name/1
+        , no_warn_symbol_as_erl_fun/1
+        ]).
+
 -export([ast_to_string/1]).
 
+-type clj_flag() :: 'no-warn-symbol-as-erl-fun'
+                  | 'no-warn-dynamic-var-name'.
+
 -type options() :: #{ output_dir => string()
-                    , flags      => [atom()]
+                    , erl_flags  => [atom()]
+                    , clj_flags  => [clj_flag()]
                     }.
 
 %%------------------------------------------------------------------------------
@@ -25,7 +33,8 @@
 -spec default_options() -> map().
 default_options() ->
   #{ output_dir => "ebin"
-   , flags      => [debug_info, verbose, report_errors, report_warnings]
+   , erl_flags  => [debug_info, verbose, report_errors, report_warnings]
+   , clj_flags  => []
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().
@@ -67,18 +76,19 @@ compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
-compile(Src, Opts0, Env) when is_binary(Src) ->
-  Env5 = clj_reader:read_fold(fun compile_single_form/2, Src, #{}, Env),
-  {ModulesForms, Expressions, Env6} = clj_emitter:remove_state(Env5),
-
+compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts = maps:merge(default_options(), Opts0),
+  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
+  Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, #{}, Env),
+  {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
+
   CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
   ensure_output_dir(Opts),
 
   lists:foreach(CompileFormsFun, ModulesForms),
   eval_expressions(Expressions),
 
-  Env6.
+  clj_env:remove(Env2, clj_flags).
 
 -spec eval(any()) -> {any(), clj_env:env()}.
 eval(Form) ->
@@ -89,22 +99,41 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts0, Env) ->
+eval(Form, Opts0, Env0) ->
   Opts = maps:merge(default_options(), Opts0),
-
-  NewEnv = clj_analyzer:analyze(Env, Form),
-  Env1 = clj_emitter:emit(NewEnv),
-  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
+  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
+  Env1 = clj_analyzer:analyze(Env, Form),
+  Env2 = clj_emitter:emit(Env1),
+  {ModulesForms, Exprs, Env3} = clj_emitter:remove_state(Env2),
 
   CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
   lists:foreach(CompileFormsFun, ModulesForms),
 
   [Value] = eval_expressions(Exprs),
-  {Value, Env2}.
+  {Value, clj_env:remove(Env3, clj_flags)}.
+
+%% Flags
+
+-spec no_warn_symbol_as_erl_fun(clj_env:env()) -> boolean().
+no_warn_symbol_as_erl_fun(Env) ->
+  check_flag('no-warn-symbol-as-erl-fun', Env).
+
+-spec no_warn_dynamic_var_name(clj_env:env()) -> boolean().
+no_warn_dynamic_var_name(Env) ->
+  check_flag('no-warn-dynamic-var-name', Env).
 
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec check_flag(clj_flag(), clj_env:env()) -> boolean().
+check_flag(Flag, Env) ->
+  case clj_env:get(Env, clj_flags) of
+    CljFlags when is_list(CljFlags) ->
+      lists:member(Flag, CljFlags);
+    undefined ->
+      false
+  end.
 
 -spec ensure_output_dir(options()) -> ok.
 ensure_output_dir(Opts) ->
@@ -125,8 +154,8 @@ compile_forms([], _) ->
   undefined;
 compile_forms(Forms, Opts) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
-  Flags = maps:get(flags, Opts),
-  case compile:forms(Forms, Flags) of
+  ErlFlags = maps:get(erl_flags, Opts),
+  case compile:forms(Forms, ErlFlags) of
     {ok, Name, Binary} ->
       OutputDir = maps:get(output_dir, Opts),
       BeamFilename = <<(atom_to_binary(Name, utf8))/binary, ".beam">>,
