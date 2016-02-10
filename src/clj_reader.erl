@@ -899,7 +899,7 @@ read_cond(#{src := Src, opts := Opts} = State) ->
     true -> ok
   end,
 
-  ReadDelim = clj_core:boolean(erlang:get(read_delim)),
+  ReadDelim = clj_core:boolean(scope_get(read_delim, State)),
   IsSplicing = binary:first(Src) == $@,
   State1 =
     case IsSplicing of
