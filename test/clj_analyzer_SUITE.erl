@@ -91,36 +91,32 @@ ns(_Config) ->
 def(_Config) ->
   ct:comment("Few arguments"),
   ok = try analyze_one(<<"(def)">>)
-       catch _:Reason ->
-           <<"Too few arguments to def">> = Reason,
+       catch _:<<"1:1: Too few arguments to def">> ->
            ok
        end,
 
   ct:comment("Many arguments"),
   ok = try analyze_one(<<"(def x \"doc\" 1 2)">>)
-       catch _:Reason2 ->
-           <<"Too many arguments to def">> = Reason2,
+       catch _:<<"1:1: Too many arguments to def">> ->
            ok
        end,
 
   ct:comment("Not a symbol"),
   ok = try analyze_one(<<"(def :x \"doc\" 1)">>)
-       catch _:Reason3 ->
-           <<"First argument to def must be a symbol">> = Reason3,
+       catch _:<<"1:1: First argument to def must be a symbol">> ->
            ok
        end,
 
   ct:comment("Qualified var that doesn't exist"),
   ok = try analyze_one(<<"(def x/y)">>)
-       catch _:Reason4 ->
-           <<"Can't refer to qualified var that doesn't exist">> = Reason4,
+       catch _:<<"1:6: Can't refer to qualified var that doesn't exist">> ->
            ok
        end,
 
   ct:comment("Create def outside current namespace"),
-  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user) (def bla/x 2)">>)
+  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user)\n(def bla/x 2)">>)
        catch _:Reason5 ->
-           <<"Can't create defs outside of current ns">> = Reason5,
+           <<"2:1: Can't create defs outside of current ns">> = Reason5,
            ok
        end,
 
@@ -177,7 +173,7 @@ quote(_Config) ->
   ct:comment("More than one arg to quote"),
   ok = try analyze_all(<<"(quote 1 2 3)">>)
        catch _:Reason ->
-           <<"Wrong number of args to quote, had: 3">> = Reason,
+           <<"1:1: Wrong number of args to quote, had: 3">> = Reason,
            ok
        end,
 
@@ -307,20 +303,20 @@ fn(_Config) ->
   ct:comment("fn with two variadic methods"),
   ok = try analyze_one(<<"(fn* ([a b & _] b) ([x & z] x z))">>), error
        catch _:Reason ->
-           <<"Can't have more than 1 variadic overload">> = Reason,
+           <<"1:1: Can't have more than 1 variadic overload">> = Reason,
            ok
        end,
 
   ct:comment("fn with fixed arity with more args than variadic"),
   ok = try analyze_one(<<"(fn* ([a b c] a) ([x & z] x z))">>), error
        catch _:Reason2 ->
-           <<"Can't have fixed arity overload "
+           <<"1:1: Can't have fixed arity overload "
              "with more params than variadic overload">> = Reason2,
            ok
        end,
   ok = try analyze_one(<<"(fn* ([a b] a) ([x & z] x z))">>), error
        catch _:Reason3 ->
-           <<"Can't have fixed arity overload "
+           <<"1:1: Can't have fixed arity overload "
              "with more params than variadic overload">> = Reason3,
            ok
        end,
@@ -328,15 +324,14 @@ fn(_Config) ->
   ct:comment("fn with two methods same arity"),
   ok = try analyze_one(<<"(fn* ([a b] b) ([x y] x y))">>), error
        catch _:Reason4 ->
-           <<"Can't have 2 or more overloads "
+           <<"1:1: Can't have 2 or more overloads "
              "with the same arity">> = Reason4,
            ok
        end,
 
   ct:comment("binding in fn should not leak out of fn* scope"),
   ok = try analyze_all(<<"(fn* ([x y] x y)) x">>), error
-       catch _:Reason5 ->
-           <<"Unable to resolve var: x in this context">> = Reason5,
+       catch _:<<"1:19: Unable to resolve symbol 'x' in this context">> ->
            ok
        end,
 
@@ -383,12 +378,12 @@ do(_Config) ->
   ct:comment("if with no args"),
   ok = try analyze_one(<<"(if)">>), error
        catch _:Reason ->
-           <<"Wrong number of args to if, had: 0">> = Reason,
+           <<"1:1: Wrong number of args to if, had: 0">> = Reason,
            ok
        end,
   ok = try analyze_one(<<"(if true)">>), error
        catch _:Reason2 ->
-           <<"Wrong number of args to if, had: 1">> = Reason2,
+           <<"1:1: Wrong number of args to if, had: 1">> = Reason2,
            ok
        end,
 
@@ -474,23 +469,22 @@ do(_Config) ->
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
-       catch _:Reason ->
-           <<"Unable to resolve var: z in this context">> = Reason,
-           ok
-       end,
-
-  ct:comment("let with odd number of forms in binding vector"),
-  ok = try analyze_one(<<"(let*)">>)
-       catch _:Reason2 ->
-           <<"let* requires a vector for its bindings, "
-             "had: :clojerl.Nil">> = Reason2,
+       catch _:<<"1:17: Unable to resolve symbol 'z' in this context">> ->
            ok
        end,
 
   ct:comment("let with no binding vector"),
+  ok = try analyze_one(<<"(let*)">>)
+       catch _:Reason2 ->
+           <<"1:1: let* requires a vector for its bindings, "
+             "had: :clojerl.Nil">> = Reason2,
+           ok
+       end,
+
+  ct:comment("let with odd number of forms in binding vector"),
   ok = try analyze_one(<<"(let* [x 2 y])">>)
        catch _:Reason3 ->
-           <<"let* requires an even number of "
+           <<"1:1: let* requires an even number of "
              "forms in binding vector, had: 3">> = Reason3,
            ok
        end,
@@ -531,14 +525,13 @@ invoke(_Config) ->
   ct:comment("Can't call nil"),
   ok = try analyze_one(<<"(nil)">>)
        catch _:Reason ->
-           <<"Can't call nil">> = Reason,
+           <<"1:1: Can't call nil">> = Reason,
            ok
        end,
 
   ct:comment("Call undefined symbol"),
   ok = try analyze_one(<<"(bla)">>)
-       catch _:Reason2 ->
-           <<"Unable to resolve var: bla in this context">> = Reason2,
+       catch _:<<"1:2: Unable to resolve symbol 'bla' in this context">> ->
            ok
        end,
 
@@ -569,12 +562,11 @@ invoke(_Config) ->
 symbol(_Config) ->
   ct:comment("Unresolved symbol"),
   ok = try analyze_one(<<"hello">>)
-       catch _:Reason ->
-           <<"Unable to resolve var: hello in this context">> = Reason,
+       catch _:<<"1:1: Unable to resolve symbol 'hello' in this context">> ->
            ok
        end,
 
-  ct:comment("Unresolved symbol"),
+  ct:comment("Resolved symbol"),
   HelloSymbol = clj_core:symbol(<<"hello">>),
   [ _
   , #{ op   := var
@@ -610,17 +602,17 @@ throw(_Config) ->
 
   ct:comment("Throw with any other amount of arguments fails"),
   ok = try analyze_one(<<"(throw)">>)
-       catch _:<<"Wrong number of args to throw, had: 0">> ->
+       catch _:<<"1:1: Wrong number of args to throw, had: 0">> ->
            ok
        end,
 
   ok = try analyze_one(<<"(throw :a :b)">>)
-       catch _:<<"Wrong number of args to throw, had: 2">> ->
+       catch _:<<"1:1: Wrong number of args to throw, had: 2">> ->
            ok
        end,
 
   ok = try analyze_one(<<"(throw :a :b :c :d)">>)
-       catch _:<<"Wrong number of args to throw, had: 4">> ->
+       catch _:<<"1:1: Wrong number of args to throw, had: 4">> ->
            ok
        end,
 

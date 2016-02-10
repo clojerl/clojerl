@@ -192,15 +192,17 @@ ast(#{op := erl_fun} = Expr, State) ->
   #{ module   := Module
    , function := Function
    , arity    := Arity
+   , form     := Symbol
    } = Expr,
 
   clj_utils:throw_when( Arity == undefined
-                      , [ <<"Can't use erlang function as value without ">>
+                      , [ <<"Can't use an erlang function as a value without ">>
                         , <<"specifying its arity: ">>
                         , atom_to_binary(Module, utf8)
                         , <<"/">>
                         , atom_to_binary(Function, utf8)
                         ]
+                      , clj_reader:location_meta(Symbol)
                       ),
 
   ModuleTree   = erl_syntax:atom(Module),

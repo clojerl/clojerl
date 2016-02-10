@@ -1,17 +1,22 @@
 -module(clj_utils).
 
--export([
-         char_type/1,
-         char_type/2,
-         parse_number/1,
-         parse_symbol/1,
-         desugar_meta/1,
-         binary_join/2,
-         ends_with/2,
-         throw_when/2,
-         warn_when/2,
-         group_by/2,
-         trace_while/2
+-compile({no_auto_import, [throw/1]}).
+
+-export([ char_type/1
+        , char_type/2
+        , parse_number/1
+        , parse_symbol/1
+        , desugar_meta/1
+        , binary_join/2
+        , ends_with/2
+        , throw/1
+        , throw/2
+        , throw_when/2
+        , throw_when/3
+        , warn_when/2
+        , warn_when/3
+        , group_by/2
+        , trace_while/2
         ]).
 
 -define(INT_PATTERN,
@@ -149,22 +154,47 @@ ends_with(Str, Ends) ->
   EndsSize = byte_size(Ends),
   Ends == binary:part(Str, {StrSize, - EndsSize}).
 
--spec throw_when(boolean(), any()) -> ok | no_return().
-throw_when(true, List) when is_list(List) ->
+-spec throw(boolean()) -> no_return().
+throw(Reason) ->
+  throw(Reason, undefined).
+
+-spec throw(boolean(), undefined | clj_reader:location()) -> no_return().
+throw(List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
-  throw_when(true, Reason);
-throw_when(true, Reason) ->
-  throw(Reason);
-throw_when(false, _) ->
+  throw(Reason, Location);
+throw(Reason, Location) when is_binary(Reason) ->
+  LocationBin = location_to_binary(Location),
+  erlang:throw(<<LocationBin/binary, Reason/binary>>);
+throw(Reason, Location) ->
+  erlang:throw({Location, Reason}).
+
+-spec throw_when(boolean(), any()) -> ok | no_return().
+throw_when(Throw, Reason) ->
+  throw_when(Throw, Reason, undefined).
+
+-spec throw_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
+throw_when(true, List, Location) when is_list(List) ->
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  throw_when(true, Reason, Location);
+throw_when(true, Reason, Location) ->
+  throw(Reason, Location);
+throw_when(false, _, _) ->
   ok.
 
 -spec warn_when(boolean(), any()) -> ok | no_return().
-warn_when(true, List) when is_list(List) ->
+warn_when(Warn, Reason) ->
+  warn_when(Warn, Reason, undefined).
+
+-spec warn_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
+warn_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
-  warn_when(true, Reason);
-warn_when(true, Reason) ->
-  error_logger:warning_msg(Reason);
-warn_when(false, _) ->
+  warn_when(true, Reason, Location);
+warn_when(true, Reason, Location) when is_binary(Reason) ->
+  LocationBin = location_to_binary(Location),
+  error_logger:warning_msg(<<LocationBin/binary, Reason/binary>>);
+warn_when(true, Reason, Location) ->
+  error_logger:warning_msg({Location, Reason});
+warn_when(false, _, _) ->
   ok.
 
 -spec group_by(fun((any()) -> any()), list()) -> map().
@@ -296,3 +326,11 @@ nth(Index, List, Default) ->
     true -> lists:nth(Index, List);
     false -> Default
   end.
+
+-spec location_to_binary(undefined | clj_reader:location()) -> binary().
+location_to_binary(undefined) ->
+  <<"?:?: ">>;
+location_to_binary({Line, Col}) ->
+  LineBin = integer_to_binary(Line),
+  ColBin = integer_to_binary(Col),
+  <<LineBin/binary, ":", ColBin/binary, ": ">>.
