@@ -222,7 +222,8 @@ parse_fn(Env, List) ->
   OnceKeyword = clj_core:keyword(<<"once">>),
   IsOnce = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
 
-  {MethodsExprs, Env2} = analyze_fn_methods(Env1, MethodsList, IsOnce),
+  %% Analyze methods' args but not the body, we just want arity information
+  {MethodsExprs, Env2} = analyze_fn_methods(Env1, MethodsList, IsOnce, false),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
@@ -274,7 +275,7 @@ parse_fn(Env, List) ->
   Var1     = clj_core:with_meta(Var, VarMeta),
   VarExpr1 = var_expr(Var1, VarNameSym, Env2),
   Env3     = clj_env:put_local(Env2, NameSym, VarExpr1),
-  {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce),
+  {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce, true),
 
   FnExpr = #{ op              => fn
             , env             => ?DEBUG(Env)
@@ -291,16 +292,23 @@ parse_fn(Env, List) ->
 
   clj_env:push_expr(Env5, FnExpr).
 
--spec analyze_fn_methods(clj_env:env(), ['clojerl.List':type()], boolean()) ->
+-spec analyze_fn_methods( clj_env:env()
+                        , ['clojerl.List':type()]
+                        , boolean()
+                        , boolean()
+                        ) ->
  {[map()], clj_env:env()}.
-analyze_fn_methods(Env, MethodsList, IsOnce) ->
+analyze_fn_methods(Env, MethodsList, IsOnce, AnalyzeBody) ->
   MethodEnv = maps:put(once, IsOnce, maps:remove(in_try, Env)),
-  AnalyzeFnMethodFun = fun(M, EnvAcc) -> analyze_fn_method(EnvAcc, M) end,
+  AnalyzeFnMethodFun = fun(M, EnvAcc) ->
+                           analyze_fn_method(EnvAcc, M, AnalyzeBody)
+                       end,
   Env1 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
   clj_env:last_exprs(Env1, length(MethodsList)).
 
--spec analyze_fn_method(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
-analyze_fn_method(Env, List) ->
+-spec analyze_fn_method(clj_env:env(), 'clojerl.List':type(), boolean()) ->
+  clj_env:env().
+analyze_fn_method(Env, List, AnalyzeBody) ->
   Params = clj_core:first(List),
   clj_utils:throw_when( not clj_core:'vector?'(Params)
                       , <<"Parameter declaration should be a vector">>
@@ -339,13 +347,19 @@ analyze_fn_method(Env, List) ->
   FixedArity = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
   LoopId = clj_core:gensym(<<"loop_">>),
-  BodyEnv = clj_env:put_locals(Env1, ParamsExprs),
-  BodyEnv1 = clj_env:context(BodyEnv, return),
-  BodyEnv2 = clj_env:put(BodyEnv1, loop_id, LoopId),
-  BodyEnv3 = clj_env:put(BodyEnv2, loop_locals, length(ParamsExprs)),
 
-  Body = clj_core:rest(List),
-  {BodyExpr, Env2} = clj_env:pop_expr(analyze_body(BodyEnv3, Body)),
+  {BodyExpr, Env2} =
+    case AnalyzeBody of
+      true ->
+        BodyEnv = clj_env:put_locals(Env1, ParamsExprs),
+        BodyEnv1 = clj_env:context(BodyEnv, return),
+        BodyEnv2 = clj_env:put(BodyEnv1, loop_id, LoopId),
+        BodyEnv3 = clj_env:put(BodyEnv2, loop_locals, length(ParamsExprs)),
+        Body = clj_core:rest(List),
+        clj_env:pop_expr(analyze_body(BodyEnv3, Body));
+      false ->
+        {undefined, Env1}
+    end,
 
   %% TODO: check for a single symbol after '&
 
@@ -610,16 +624,6 @@ parse_def(Env, List) ->
 
       Var2 = var_fn_info(Var1, InitExpr),
       Env4 = clj_env:update_var(Env3, Var2),
-      {InitExpr1, Env5} = case InitExpr of
-                            #{op := fn} ->
-                              %% If init is an fn we need to analyze it
-                              %% again to get the associated var resolved
-                              %% with the function's info, to get proper
-                              %% function calls emitted.
-                              clj_env:pop_expr(analyze_form(Env4, Init));
-                            _ ->
-                              {InitExpr, Env4}
-                          end,
 
       DefExpr = #{ op      => def
                  , env     => ?DEBUG(Env)
@@ -627,11 +631,11 @@ parse_def(Env, List) ->
                  , name    => VarSymbol
                  , var     => Var2
                  , doc     => Docstring
-                 , init    => InitExpr1
+                 , init    => InitExpr
                  , dynamic => IsDynamic
                  },
 
-      clj_env:push_expr(Env5, DefExpr)
+      clj_env:push_expr(Env4, DefExpr)
   end.
 
 -spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
@@ -841,6 +845,17 @@ resolve(Env, Symbol) ->
           NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
           {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
           NameAtom = binary_to_atom(Name, utf8),
+
+          clj_utils:warn_when( not is_integer(Arity)
+                               andalso Arity =/= <<"e">>
+                             , [ <<"Symbol ">>, Symbol
+                               , <<" resolved to an Erlang function.">>
+                               , <<" To avoid this warning you can add a">>
+                               , <<" '.e' suffix to the symbol's name.">>
+                               ]
+                             , clj_reader:location_meta(Symbol)
+                             ),
+
           ErlFun = {erl_fun, NsAtom, NameAtom, Arity},
           {ErlFun, Env1};
         {Var, Env1} ->
@@ -861,7 +876,8 @@ erl_fun_arity(Name) ->
     Parts ->
       Last = lists:last(Parts),
       case re:run(Last, <<"\\d+">>) of
-        nomatch -> {Name, undefined};
+        nomatch ->
+          {iolist_to_binary(lists:droplast(Parts)), Last};
         _ ->
           NameParts = clj_utils:binary_join(lists:droplast(Parts), <<".">>),
           Arity = binary_to_integer(Last),
