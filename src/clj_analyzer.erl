@@ -640,7 +640,7 @@ validate_def_args(List) ->
       case clj_core:type(clj_core:second(List)) of
         'clojerl.Symbol' -> ok;
         _ -> clj_utils:throw( <<"First argument to def must be a symbol">>
-                            , clj_reader:location_meta(clj_core:second(List))
+                            , clj_reader:location_meta(List)
                             )
       end,
       Docstring;
