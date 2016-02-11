@@ -516,7 +516,7 @@ shadow_depth(_) ->
   0.
 
 -spec do_shadow_depth(map(), non_neg_integer()) -> non_neg_integer().
-do_shadow_depth(#{shadow := undefined}, Depth) ->
-  Depth;
-do_shadow_depth(#{shadow := Shadowed}, Depth) ->
-  do_shadow_depth(Shadowed, Depth + 1).
+do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= undefined ->
+  do_shadow_depth(Shadowed, Depth + 1);
+do_shadow_depth(_, Depth) ->
+  Depth.
