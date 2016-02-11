@@ -6,6 +6,8 @@
         , add_vars/2
         , add_attributes/2
         , add_functions/2
+
+        , is_clojure/1
         ]).
 
 -type clj_module() :: #{ module => erl_syntax:syntaxTree()
@@ -89,14 +91,14 @@ to_forms(#{module := Module} = Def) ->
    , rest  := Rest
    } = Def,
 
-  %% TODO: This won't work if the new function or attribute differs
-  %%       from the previous one. We need to be able to keep more
-  %%       detailed information about functions and attributes, to
-  %%       avoid duplicates.
-  UniqueAttrs = lists:usort(erl_syntax:revert_forms(Attrs)),
+  ClojureAtom = erl_syntax:atom(clojure),
+  ClojureAttr = erl_syntax:attribute(ClojureAtom, [erl_syntax:atom(true)]),
+
+  UniqueAttrs = lists:usort(erl_syntax:revert_forms([ClojureAttr | Attrs])),
   UniqueFuns  = lists:usort(maps:values(Funs)),
-  VarsAtom = erl_syntax:atom(vars),
-  VarsAttr = erl_syntax:attribute(VarsAtom, [erl_syntax:abstract(Vars)]),
+
+  VarsAtom    = erl_syntax:atom(vars),
+  VarsAttr    = erl_syntax:attribute(VarsAtom, [erl_syntax:abstract(Vars)]),
 
   [Module, VarsAttr | UniqueAttrs ++ Rest ++ UniqueFuns].
 
@@ -121,6 +123,11 @@ add_functions(#{funs := Funs} = Module, AddFuns) ->
                 end,
   Funs1 = lists:foldl(AddByKeyFun, Funs, AddFuns),
   Module#{funs => Funs1}.
+
+-spec is_clojure(module()) -> boolean().
+is_clojure(Module) ->
+  Attrs = Module:module_info(attributes),
+  lists:keymember(clojure, 1, Attrs).
 
 %%------------------------------------------------------------------------------
 %% Helper Functions

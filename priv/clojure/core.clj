@@ -103,7 +103,16 @@
   ([x y & more]
    (reduce + (+ x y) more)))
 
+(defn -
+  ([] 0)
+  ([x] x)
+  ([x y] (erlang/-.e x y))
+  ([x y & more]
+   (reduce - (- x y) more)))
+
 (defn comp [& fs]
   (let* [fs (reverse fs)]
     (fn* [& xs]
-         (reduce #(%2 %1) (apply (first fs) xs) (rest fs)))))
+      (reduce #(%2 %1)
+              (apply (first fs) xs)
+              (rest fs)))))

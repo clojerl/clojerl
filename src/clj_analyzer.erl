@@ -198,30 +198,26 @@ parse_fn(Env, List) ->
   {NameSym, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
       true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {clj_core:gensym(<<"anon">>), clj_core:rest(List)}
+      false -> {clj_core:gensym(<<"_anon__">>), clj_core:rest(List)}
     end,
 
-  DefNameSym = get_def_name(Env),
-
+  %% Check if there is more than one method
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true -> [Methods];
                   false -> clj_core:seq2(Methods)
                 end,
 
-  %% Create a var with a modified name and add it as a local binding
-  %% with the original name.
-  VarNsSym   = clj_env:current_ns(Env),
-  NameBin    = clj_core:name(NameSym),
-  VarNameSym = clj_core:gensym(<<NameBin/binary, "__fn__">>),
-  Var        = 'clojerl.Var':new(VarNsSym, VarNameSym),
-  VarExpr    = var_expr(Var, NameSym, Env),
+  %% Add the name of the fn as a local
+  LocalExpr  = #{op => local, name => NameSym},
 
-  %% If there is a def var we also add it to the local scope
-  DefVar     = 'clojerl.Var':new(VarNsSym, DefNameSym),
-  DefVarExpr = var_expr(DefVar, DefNameSym, Env),
+  %% If there is a def var we add it to the local scope
+  DefVarNsSym = clj_env:current_ns(Env),
+  DefNameSym  = get_def_name(Env),
+  DefVar      = 'clojerl.Var':new(DefVarNsSym, DefNameSym),
+  DefVarExpr  = var_expr(DefVar, DefNameSym, Env),
 
   Env1       = clj_env:put_locals( clj_env:add_locals_scope(Env)
-                                 , [VarExpr, DefVarExpr]
+                                 , [LocalExpr, DefVarExpr]
                                  ),
 
   OpMeta = clj_core:meta(Op),
@@ -278,13 +274,10 @@ parse_fn(Env, List) ->
              , max_fixed_arity => MaxFixedArity
              , variadic_arity  => VariadicArity
              },
-  Var1     = clj_core:with_meta(Var, VarMeta),
-  VarExpr1 = var_expr(Var1, VarNameSym, Env2),
-
   DefVar1  = clj_core:with_meta(DefVar, VarMeta),
   DefVarExpr1 = var_expr(DefVar1, DefNameSym, Env2),
 
-  Env3     = clj_env:put_locals(Env2, [VarExpr1, DefVarExpr1]),
+  Env3     = clj_env:put_locals(Env2, [DefVarExpr1]),
   {MethodsExprs1, Env4} = analyze_fn_methods(Env3, MethodsList, IsOnce, true),
 
   FnExpr = #{ op              => fn
@@ -295,7 +288,7 @@ parse_fn(Env, List) ->
             , variadic_arity  => VariadicArity
             , methods         => MethodsExprs1
             , once            => IsOnce
-            , local           => Var1
+            , local           => LocalExpr
             },
 
   Env5 = clj_env:remove_locals_scope(Env4),

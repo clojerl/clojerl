@@ -161,23 +161,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
-  Var = maps:get(local, Expr, undefined),
-
-  RemoveKeys = [op, env, methods, form, once],
-  Meta       = maps:without(RemoveKeys, Expr),
-  Var1       = clj_core:with_meta(Var, Meta),
-  VarAst     = erl_syntax:abstract(Var1),
-
-  NameSym   = 'clojerl.Var':name(Var1),
-  ModuleSym = 'clojerl.Var':namespace(Var1),
-
-  Name   = 'clojerl.Symbol':to_atom(NameSym),
-  Module = 'clojerl.Symbol':to_atom(ModuleSym),
-
-  State1 = ensure_module(Module, State),
-  State2 = add_functions(Module, Name, Expr, State1),
-
-  push_ast(VarAst, State2);
+  anonymous_function(Expr, State);
 ast(#{op := erl_fun, invoke := true} = Expr, State) ->
   #{ module   := Module
    , function := Function
@@ -234,15 +218,6 @@ ast(#{op := invoke} = Expr, State) ->
     #{op := erl_fun} ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       Ast = erl_syntax:application(FunAst, Args),
-
-      push_ast(Ast, State2);
-    #{op := fn} ->
-      {VarAst, State2} = pop_ast(ast(FExpr, State1)),
-      Var      = erl_syntax:concrete(VarAst),
-      Module   = 'clojerl.Var':module(Var),
-      Function = 'clojerl.Var':function(Var),
-      Args1    = 'clojerl.Var':process_args(Var, Args, fun erl_syntax:list/1),
-      Ast      = application_mfa(Module, Function, Args1),
 
       push_ast(Ast, State2);
     _ ->
@@ -391,10 +366,20 @@ arity_qualifier(Function, Arity) when is_atom(Function),
   ArityIntegerAst = erl_syntax:integer(Arity),
   erl_syntax:arity_qualifier(FunctionAtomAst, ArityIntegerAst).
 
--spec method_to_clause(clj_analyzer:expr(), state()) -> ast().
-method_to_clause(MethodExpr, State) ->
-  #{ params := ParamsExprs
-   , body   := BodyExpr
+-spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
+method_to_function_clause(MethodExpr, State) ->
+  method_to_clause(MethodExpr, State, function).
+
+-spec method_to_case_clause(clj_analyzer:expr(), state()) -> ast().
+method_to_case_clause(MethodExpr, State) ->
+  method_to_clause(MethodExpr, State, 'case').
+
+-spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
+  ast().
+method_to_clause(MethodExpr, State, ClauseFor) ->
+  #{ params      := ParamsExprs
+   , body        := BodyExpr
+   , 'variadic?' := IsVariadic
    } = MethodExpr,
 
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ParamsExprs)
@@ -403,7 +388,19 @@ method_to_clause(MethodExpr, State) ->
   Guards         = [],
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
-  Clause = erl_syntax:clause(Args, Guards, [Body]),
+  ParamCount = length(ParamsExprs),
+  Args1 = case ClauseFor of
+            function ->
+              Args;
+            'case' when IsVariadic, ParamCount == 1 ->
+              Args;
+            'case' when IsVariadic ->
+              [erl_syntax:list(lists:droplast(Args), lists:last(Args))];
+            'case' ->
+              [erl_syntax:list(Args)]
+          end,
+
+  Clause = erl_syntax:clause(Args1, Guards, [Body]),
   push_ast(Clause, State2).
 
 -spec application_mfa(module(), atom(), list()) -> ast().
@@ -415,17 +412,42 @@ application_mfa(Module, Function, Args) ->
 
   erl_syntax:application(ValQualifier, Args).
 
+-spec group_methods([map()]) -> #{integer() => [map()]}.
+group_methods(Methods) ->
+  ParamCountFun = fun(#{params := Params}) -> length(Params) end,
+  clj_utils:group_by(ParamCountFun, Methods).
+
+-spec anonymous_function(map(), state()) -> state().
+anonymous_function(#{op := fn, methods := Methods} = Expr, State) ->
+  State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
+  {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
+
+  ListArgSym  = clj_core:gensym(<<"list_arg">>),
+  ListArgName = clj_core:name(ListArgSym),
+  ListArgAst  = erl_syntax:variable(binary_to_list(ListArgName)),
+  CaseAst     = erl_syntax:case_expr(ListArgAst, ClausesAsts),
+
+  #{name := NameSym} = maps:get(local, Expr, undefined),
+  Name         = clj_core:name(NameSym),
+  NameAst      = erl_syntax:variable(binary_to_list(Name)),
+  FunClauseAst = erl_syntax:clause([ListArgAst], none, [CaseAst]),
+  FunAst       = erl_syntax:named_fun_expr(NameAst, [FunClauseAst]),
+
+  push_ast(FunAst, State2).
+
 -spec add_functions(module(), atom(), map(), state()) -> state().
 add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
-  ParamCountFun = fun(#{params := Params}) -> length(Params) end,
-  GroupedMethods = clj_utils:group_by(ParamCountFun, Methods),
+  GroupedMethods = group_methods(Methods),
 
   FunctionFun =
     fun(MethodsList, StateAcc) ->
-        StateAcc1 = lists:foldl(fun method_to_clause/2, StateAcc, MethodsList),
+        StateAcc1 = lists:foldl( fun method_to_function_clause/2
+                               , StateAcc
+                               , MethodsList
+                               ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
-        Fun = function_form(Name, ClausesAst),
-        add_functions_attributes(Module, [Fun], [], [], StateAcc2)
+        FunAst = function_form(Name, ClausesAst),
+        add_functions_attributes(Module, [FunAst], [], [], StateAcc2)
     end,
 
   State1 = lists:foldl(FunctionFun, State, maps:values(GroupedMethods)),
