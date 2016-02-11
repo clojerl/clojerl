@@ -42,6 +42,22 @@ invoke(_Config) ->
   FunFunction = fun clojerl_erlang_Fn_SUITE:all/0,
   [_ | _] = clj_core:invoke(FunFunction, []),
 
+  ct:comment("Invoke a non Clojure fun generated through erl_eval"),
+  {ok, Tokens, _} = erl_scan:string("fun() -> ok end."),
+  {ok, Forms}     = erl_parse:parse_exprs(Tokens), 
+  {value, EvalFun, _} = erl_eval:exprs(Forms, []),
+  ok = clj_core:invoke(EvalFun, []),
+
+  ct:comment("Invoke a non Clojure named fun generated through erl_eval"),
+  {ok, NamedTokens, _} = erl_scan:string("fun Ok() -> ok end."),
+  {ok, NamedForms}     = erl_parse:parse_exprs(NamedTokens), 
+  {value, EvalNamedFun, _} = erl_eval:exprs(NamedForms, []),
+  ok = clj_core:invoke(EvalNamedFun, []),
+
+  ct:comment("Invoke a Clojure fun"),
+  {CljFun, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
+  ok = clj_core:invoke(CljFun, []),
+
   {comments, ""}.
 
 -spec str(config()) -> result().
