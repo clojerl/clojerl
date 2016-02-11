@@ -202,7 +202,7 @@ fn(_Config) ->
     local   := #{op := local, name := HelloSymbol}
    } = analyze_one(<<"(fn* hello [x] x)">>),
 
-  true = clj_core:equiv(HelloSymbol, clj_core:symbol(<<"hello">>)),
+  true = clj_core:equiv(HelloSymbol, clj_core:symbol(<<"__clj__hello">>)),
 
   #{ op     := fn_method
    , params := [Fn2Param1]

@@ -198,7 +198,7 @@ parse_fn(Env, List) ->
   {NameSym, Methods} =
     case clj_core:'symbol?'(clj_core:second(List)) of
       true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {clj_core:gensym(<<"_anon__">>), clj_core:rest(List)}
+      false -> {clj_core:gensym(<<"anon__">>), clj_core:rest(List)}
     end,
 
   %% Check if there is more than one method
@@ -207,18 +207,22 @@ parse_fn(Env, List) ->
                   false -> clj_core:seq2(Methods)
                 end,
 
-  %% Add the name of the fn as a local
-  LocalExpr  = #{op => local, name => NameSym},
+  %% Add the name of the fn as a local with a modified name so that we can
+  %% identify the fun as a clojure function when evaluated with erl_eval
+  %% (see clojerl.erlang.Fn)
+  PrefixNameSym = 'clojerl.erlang.Fn':prefix(NameSym),
+  LocalExpr     = #{op => local, name => PrefixNameSym},
+  Env0          = clj_env:put_local( clj_env:add_locals_scope(Env)
+                                   , NameSym
+                                   , LocalExpr
+                                   ),
 
   %% If there is a def var we add it to the local scope
   DefVarNsSym = clj_env:current_ns(Env),
   DefNameSym  = get_def_name(Env),
   DefVar      = 'clojerl.Var':new(DefVarNsSym, DefNameSym),
   DefVarExpr  = var_expr(DefVar, DefNameSym, Env),
-
-  Env1       = clj_env:put_locals( clj_env:add_locals_scope(Env)
-                                 , [LocalExpr, DefVarExpr]
-                                 ),
+  Env1        = clj_env:put_local(Env0, DefNameSym, DefVarExpr),
 
   OpMeta = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),

@@ -161,7 +161,23 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
-  anonymous_function(Expr, State);
+  #{methods := Methods} = Expr,
+
+  State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
+  {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
+
+  ListArgSym  = clj_core:gensym(<<"list_arg">>),
+  ListArgName = clj_core:name(ListArgSym),
+  ListArgAst  = erl_syntax:variable(binary_to_list(ListArgName)),
+  CaseAst     = erl_syntax:case_expr(ListArgAst, ClausesAsts),
+
+  #{name := NameSym} = maps:get(local, Expr, undefined),
+  Name         = clj_core:name(NameSym),
+  NameAst      = erl_syntax:variable(binary_to_list(Name)),
+  FunClauseAst = erl_syntax:clause([ListArgAst], none, [CaseAst]),
+  FunAst       = erl_syntax:named_fun_expr(NameAst, [FunClauseAst]),
+
+  push_ast(FunAst, State2);
 ast(#{op := erl_fun, invoke := true} = Expr, State) ->
   #{ module   := Module
    , function := Function
@@ -416,24 +432,6 @@ application_mfa(Module, Function, Args) ->
 group_methods(Methods) ->
   ParamCountFun = fun(#{params := Params}) -> length(Params) end,
   clj_utils:group_by(ParamCountFun, Methods).
-
--spec anonymous_function(map(), state()) -> state().
-anonymous_function(#{op := fn, methods := Methods} = Expr, State) ->
-  State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
-  {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
-
-  ListArgSym  = clj_core:gensym(<<"list_arg">>),
-  ListArgName = clj_core:name(ListArgSym),
-  ListArgAst  = erl_syntax:variable(binary_to_list(ListArgName)),
-  CaseAst     = erl_syntax:case_expr(ListArgAst, ClausesAsts),
-
-  #{name := NameSym} = maps:get(local, Expr, undefined),
-  Name         = clj_core:name(NameSym),
-  NameAst      = erl_syntax:variable(binary_to_list(Name)),
-  FunClauseAst = erl_syntax:clause([ListArgAst], none, [CaseAst]),
-  FunAst       = erl_syntax:named_fun_expr(NameAst, [FunClauseAst]),
-
-  push_ast(FunAst, State2).
 
 -spec add_functions(module(), atom(), map(), state()) -> state().
 add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
