@@ -55,14 +55,14 @@ init_per_suite(Config) ->
 
 -spec deref(config()) -> result().
 deref(_Config) ->
-  Ns   = clj_core:symbol(<<"clojerl_Var_SUITE">>),
-  Name = clj_core:symbol(<<"forty-two">>),
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
 
   Var  = 'clojerl.Var':new(Ns, Name),
   42 = clj_core:deref(Var),
 
   ct:comment("Try to deref an unexisting var"),
-  Name2 = clj_core:symbol(<<"forty-three">>),
+  Name2 = <<"forty-three">>,
   Var1  = 'clojerl.Var':new(Ns, Name2),
   ok = try clj_core:deref(Var1), error
        catch _:_ -> ok
@@ -72,8 +72,8 @@ deref(_Config) ->
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  Ns   = clj_core:symbol(<<"clojerl_Var_SUITE">>),
-  Name = clj_core:symbol(<<"forty-two">>),
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
 
   ct:comment("Check that vars with the same name are equivalent"),
   Var1 = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
@@ -81,7 +81,7 @@ equiv(_Config) ->
   true  = clj_core:equiv(Var1, Var2),
 
   ct:comment("Check that vars with the same elements are not equivalent"),
-  Name2 = clj_core:symbol(<<"whatever">>),
+  Name2 = <<"whatever">>,
   Var3 = clj_core:with_meta('clojerl.Var':new(Ns, Name2), #{c => 3}),
   false = clj_core:equiv(Var1, Var3),
 
@@ -94,8 +94,8 @@ equiv(_Config) ->
 
 -spec invoke(config()) -> result().
 invoke(_Config) ->
-  Ns   = clj_core:symbol(<<"clojerl_Var_SUITE">>),
-  Name = clj_core:symbol(<<"forty-two">>),
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
 
   Var  = 'clojerl.Var':new(Ns, Name),
   42 = clj_core:invoke(Var, []),
@@ -122,8 +122,8 @@ invoke(_Config) ->
 
 -spec meta(config()) -> result().
 meta(_Config) ->
-  Ns   = clj_core:symbol(<<"clojerl_Var_SUITE">>),
-  Name = clj_core:symbol(<<"forty-two">>),
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
 
   Var = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
   #{a := 1} = clj_core:meta(Var),
@@ -132,8 +132,8 @@ meta(_Config) ->
 
 -spec name(config()) -> result().
 name(_Config) ->
-  Ns   = clj_core:symbol(<<"clojerl_Var_SUITE">>),
-  Name = clj_core:symbol(<<"forty-two">>),
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
   Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
 
   <<"clojerl_Var_SUITE">> = clj_core:namespace(Var),
@@ -143,8 +143,8 @@ name(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Ns   = clj_core:symbol(<<"clojerl_Var_SUITE">>),
-  Name = clj_core:symbol(<<"forty-two">>),
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
   Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
 
   <<"#'clojerl_Var_SUITE/forty-two">> = clj_core:str(Var),
