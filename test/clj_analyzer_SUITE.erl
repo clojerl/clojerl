@@ -199,11 +199,10 @@ fn(_Config) ->
   ct:comment("named fn with one param and one method"),
   #{op      := fn,
     methods := [Fn2Method1],
-    local   := VarHello
+    local   := #{op := local, name := HelloSymbol}
    } = analyze_one(<<"(fn* hello [x] x)">>),
 
-  <<"$user">> = clj_core:namespace(VarHello),
-  <<"hello", _/binary>> = clj_core:name(VarHello),
+  true = clj_core:equiv(HelloSymbol, clj_core:symbol(<<"__clj__hello">>)),
 
   #{ op     := fn_method
    , params := [Fn2Param1]

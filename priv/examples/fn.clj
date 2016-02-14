@@ -140,6 +140,19 @@
   10
   ))
 
+;; Recursively call variadic anonymous fn
+
+(clojure.core/prn
+ ((fn* count-10-variadic
+        ([x & xs]
+         (if (erlang/>.e x 0)
+           (do
+             (clojure.core/prn [:variadic-anon-recur x xs])
+             (count-10-variadic (erlang/-.e x 1) x xs))
+           (clojure.core/prn [:variadic-anon-recur :done]))))
+  10
+  ))
+
 ;; Provide an erlang function as an argument to be used as a function
 
 (apply-f io/format.1 "io:format/1 FTW!!!~n")
@@ -202,3 +215,20 @@
          (clojure.core/prn [:recursive-fn :done]))))
 
 (recursive 15)
+
+(def variadic-recursive
+  (fn* y [x & xs]
+       (if (erlang/>.e x 0)
+         (do
+           (clojure.core/prn [:variadic-recursive-fn x xs])
+           (variadic-recursive (erlang/-.e x 1) x xs))
+         (clojure.core/prn [:variadic-recursive-fn :done xs]))))
+
+(variadic-recursive 15)
+
+;; Define a HOF that returns a function
+
+(def dec-fn
+  (fn* [] (fn* [x] (clojure.core/- x 1))))
+
+(clojure.core/prn ((dec-fn) 10))

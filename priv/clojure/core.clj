@@ -53,6 +53,9 @@
 (def next
   (fn* [xs] (clj_core/next.e xs)))
 
+(def reverse
+  (fn* [s] (lists/reverse.e (seq s))))
+
 (def concat
   (fn*
    ([] (list))
@@ -84,3 +87,32 @@
 (def ^:macro defn
   (fn* [_form _env name args & body]
        `(def ~name (fn* ~args ~@body))))
+
+(defn reduce
+  ([f coll]
+   (reduce f (first coll) (rest coll)))
+  ([f val coll]
+   (if (seq coll)
+     (reduce f (f val (first coll)) (rest coll))
+     val)))
+
+(defn +
+  ([] 0)
+  ([x] x)
+  ([x y] (erlang/+.e x y))
+  ([x y & more]
+   (reduce + (+ x y) more)))
+
+(defn -
+  ([] 0)
+  ([x] x)
+  ([x y] (erlang/-.e x y))
+  ([x y & more]
+   (reduce - (- x y) more)))
+
+(defn comp [& fs]
+  (let* [fs (reverse fs)]
+    (fn* [& xs]
+      (reduce #(%2 %1)
+              (apply (first fs) xs)
+              (rest fs)))))
