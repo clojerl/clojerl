@@ -37,7 +37,7 @@ intern( Namespace = #{ name := NsName
       ) ->
   case clj_core:namespace(Symbol) of
     undefined ->
-      Var = 'clojerl.Var':new(NsName, Symbol),
+      Var = 'clojerl.Var':new(clj_core:name(NsName), clj_core:name(Symbol)),
       SymbolBin = clj_core:str(Symbol),
       NewDefs = maps:put(SymbolBin, Var, Defs),
       Namespace#{defs => NewDefs};
@@ -47,9 +47,8 @@ intern( Namespace = #{ name := NsName
 
 -spec update_var(namespace(), 'clojerl.Var':type()) -> namespace().
 update_var(Namespace = #{defs := Defs}, Var) ->
-  VarNameSym = 'clojerl.Var':name(Var),
-  VarNameBin = clj_core:str(VarNameSym),
-  NewDefs = maps:put(VarNameBin, Var, Defs),
+  VarName = clj_core:name(Var),
+  NewDefs = maps:put(VarName, Var, Defs),
   Namespace#{defs => NewDefs}.
 
 -spec def(namespace(), 'clojerl.Symbol':type()) ->

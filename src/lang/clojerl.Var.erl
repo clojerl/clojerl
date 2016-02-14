@@ -10,8 +10,6 @@
 -behavior('clojerl.Stringable').
 
 -export([ new/2
-        , namespace/1
-        , name/1
         , is_dynamic/1
         , is_macro/1
         ]).
@@ -33,25 +31,11 @@
         ]).
 -export(['clojerl.Stringable.str'/1]).
 
--record(?M, { ns         = undefined :: 'clojerl.Symbol':type() | undefined
-            , name                   :: 'clojerl.Symbol':type()
-            , root       = undefined :: any() | undefined
-            }).
-
 -type type() :: #?TYPE{}.
 
--spec new('clojerl.Symbol':type(), 'clojerl.Symbol':type()) -> type().
-new(NsSym, NameSym) ->
-  Data = #?M{ ns         = NsSym
-            , name       = NameSym
-            },
-  #?TYPE{data = Data}.
-
--spec namespace(type()) -> 'clojerl.Symbol':type().
-namespace(#?TYPE{data = #?M{ns = Namespace}}) -> Namespace.
-
--spec name(type()) -> 'clojerl.Symbol':type().
-name(#?TYPE{data = #?M{name = Name}}) -> Name.
+-spec new(binary(), binary()) -> type().
+new(Ns, Name) ->
+  #?TYPE{data = {Ns, Name}}.
 
 -spec is_dynamic(type()) -> boolean().
 is_dynamic(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
@@ -67,56 +51,47 @@ is_macro(#?TYPE{name = ?M}) ->
   false.
 
 -spec module(type()) -> atom().
-module(#?TYPE{name = ?M} = Var) ->
-  Ns = namespace(Var),
-  'clojerl.Symbol':to_atom(Ns).
+module(#?TYPE{name = ?M, data = {Ns, _}}) ->
+  binary_to_atom(Ns, utf8).
 
 -spec function(type()) -> atom().
-function(#?TYPE{name = ?M} = Var) ->
-  Name = name(Var),
-  'clojerl.Symbol':to_atom(Name).
+function(#?TYPE{name = ?M, data = {_, Name}}) ->
+  binary_to_atom(Name, utf8).
 
 -spec val_function(type()) -> atom().
-val_function(#?TYPE{name = ?M} = Var) ->
-  NameSym = name(Var),
-  Name = clj_core:name(NameSym),
+val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
   binary_to_atom(<<Name/binary, "__val">>, utf8).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Named.name'(#?TYPE{name = ?M, data = #?M{name = NameSym}}) ->
-  clj_core:name(NameSym).
+'clojerl.Named.name'(#?TYPE{name = ?M, data = {_, Name}}) ->
+  Name.
 
-'clojerl.Named.namespace'(#?TYPE{name = ?M, data = #?M{ns = NamespaceSym}}) ->
-  clj_core:name(NamespaceSym).
+'clojerl.Named.namespace'(#?TYPE{name = ?M, data = {Namespace, _}}) ->
+  Namespace.
 
-'clojerl.Stringable.str'(#?TYPE{data = #?M{ns = NsSym, name = NameSym}}) ->
-  <<"#'", (clj_core:str(NsSym))/binary
-    , "/", (clj_core:str(NameSym))/binary>>.
+'clojerl.Stringable.str'(#?TYPE{data = {Ns, Name}}) ->
+  <<"#'", Ns/binary, "/", Name/binary>>.
 
-'clojerl.IDeref.deref'(#?TYPE{data = #?M{ns = NsSym, name = NameSym}} = Var) ->
+'clojerl.IDeref.deref'(#?TYPE{data = {Ns, Name}} = Var) ->
   Module = module(Var),
   FunctionVal = val_function(Var),
 
   case erlang:function_exported(Module, FunctionVal, 0) of
     true -> Module:FunctionVal();
     false ->
-      NsBin = clj_core:name(NsSym),
-      NameBin = clj_core:name(NameSym),
       throw(<<"Could not derefence ",
-              NsBin/binary, "/", NameBin/binary, ". "
+              Ns/binary, "/", Name/binary, ". "
               "There is no Erlang function "
               "to back it up.">>)
   end.
 
 'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
+                      , #?TYPE{name = ?M, data = X}
                       ) ->
-  #?M{ns = NsX, name = NameX} = X,
-  #?M{ns = NsY, name = NameY} = Y,
-  clj_core:equiv(NsX, NsY) andalso clj_core:equiv(NameX, NameY);
+  true;
 'clojerl.IEquiv.equiv'(_, _) ->
   false.
 
@@ -128,10 +103,9 @@ val_function(#?TYPE{name = ?M} = Var) ->
                          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IFn.invoke'(#?TYPE{name =?M, data = Data} = Var, Args) ->
-  #?M{ns = Namespace, name = Name} = Data,
-  Module = binary_to_atom(clj_core:name(Namespace), utf8),
-  Function = binary_to_atom(clj_core:name(Name), utf8),
+'clojerl.IFn.invoke'(#?TYPE{name =?M} = Var, Args) ->
+  Module = module(Var),
+  Function = function(Var),
 
   Args1 = case clj_core:seq(Args) of
             undefined -> [];
@@ -143,7 +117,7 @@ val_function(#?TYPE{name = ?M} = Var) ->
   erlang:apply(Module, Function, Args2).
 
 -spec process_args(type(), [any()], function()) -> [any()].
-process_args(#?TYPE{name =?M} = Var, Args, RestFun) ->
+process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
   Meta = case 'clojerl.IMeta.meta'(Var) of
            undefined -> #{};
            M -> M

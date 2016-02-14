@@ -188,7 +188,7 @@ remove(Env, Name) ->
 
 -spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
 update_var(Env, Var) ->
-  VarNsSym = 'clojerl.Var':namespace(Var),
+  VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
   Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,
   update_ns(Env, VarNsSym, Fun).
 

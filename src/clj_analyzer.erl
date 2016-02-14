@@ -219,14 +219,19 @@ parse_fn(Env, List) ->
 
   %% If there is a def var we add it to the local scope
   DefVarNsSym = clj_env:current_ns(Env),
-  DefNameSym  = get_def_name(Env),
-  DefVar      = 'clojerl.Var':new(DefVarNsSym, DefNameSym),
+  DefNameSym  = case get_def_name(Env) of
+                  undefined -> clj_core:symbol(<<>>);
+                  DNS -> DNS
+                end,
+  DefVar      = 'clojerl.Var':new( clj_core:name(DefVarNsSym)
+                                 , clj_core:name(DefNameSym)
+                                 ),
   DefVarExpr  = var_expr(DefVar, DefNameSym, Env),
   Env1        = clj_env:put_local(Env0, DefNameSym, DefVarExpr),
 
-  OpMeta = clj_core:meta(Op),
+  OpMeta      = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
-  IsOnce = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
+  IsOnce      = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
 
   %% Analyze methods' args but not the body, we just want arity information
   {MethodsExprs, Env2} = analyze_fn_methods(Env1, MethodsList, IsOnce, false),
@@ -594,7 +599,7 @@ parse_def(Env, List) ->
                      , clj_reader:location_meta(VarSymbol)
                      );
     {Var, Env1} ->
-      VarNsSym = 'clojerl.Var':namespace(Var),
+      VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
       CurrentNs = clj_env:current_ns(Env1),
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
                             andalso not clj_core:equiv(CurrentNs, VarNsSym)
