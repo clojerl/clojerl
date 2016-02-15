@@ -3,6 +3,7 @@
 -export([ emit/1
         , remove_state/1
         , without_state/3
+        , is_macro/1
         ]).
 
 -type ast() :: erl_syntax:syntaxTree().
@@ -20,13 +21,12 @@ emit(Env0) ->
     {undefined, _} -> Env0;
     {Expr, Env} ->
       State = clj_env:get(Env, emitter, initial_state()),
-      clj_env:put(Env, emitter, ast(Expr, State))
+      clj_env:put(Env, emitter, ast(Expr, State#{is_macro => false}))
   end.
 
--spec without_state( clj_env:env()
-                    , fun((clj_env:env()) -> clj_env:env())
-                    , [any()]
-                    ) ->
+%% @doc Applies Fun to the Env and Args but it first removes the emitter
+%%      state that could be present in the Env.
+-spec without_state(clj_env:env(), function(), [any()]) ->
   clj_env:env().
 without_state(Env, Fun, Args) ->
   State = clj_env:get(Env, emitter, initial_state()),
@@ -61,11 +61,17 @@ remove_state(Env) ->
   , clj_env:remove(Env, emitter)
   }.
 
+-spec is_macro(clj_env:env()) -> clj_env:env().
+is_macro(Env) ->
+  #{is_macro := IsMacro} = clj_env:get(Env, emitter, initial_state()),
+  IsMacro.
+
 -spec initial_state() -> state().
 initial_state() ->
   #{ modules         => #{}
    , asts            => []
    , lexical_renames => clj_scope:new()
+   , is_macro        => false
    }.
 
 %%------------------------------------------------------------------------------
@@ -132,6 +138,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Module  = 'clojerl.Var':module(Var),
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
+  IsMacro = 'clojerl.Var':is_macro(Var),
 
   State1 = ensure_module(Module, State),
   VarAst = erl_syntax:abstract(Var),
@@ -156,7 +163,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 
   State3 = add_functions_attributes(Module, FunAsts, AttrsAsts, Vars, State2),
 
-  push_ast(VarAst, State3);
+  push_ast(VarAst, State3#{is_macro => IsMacro});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------

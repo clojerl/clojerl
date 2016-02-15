@@ -77,9 +77,15 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts0, Env0) when is_binary(Src) ->
-  Opts = maps:merge(default_options(), Opts0),
-  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
-  Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, #{}, Env),
+  Opts     = maps:merge(default_options(), Opts0),
+  CljFlags = maps:get(clj_flags, Opts),
+  RdrOpts  = maps:get(reader_opts, Opts, #{}),
+
+  Env  = clj_env:put(Env0, clj_flags, CljFlags),
+  CompileSingleForm = fun(Form, EnvAcc) ->
+                          compile_single_form(Form, EnvAcc, Opts)
+                      end,
+  Env1 = clj_reader:read_fold(CompileSingleForm, Src, RdrOpts, Env),
   {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
 
   CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
@@ -106,8 +112,7 @@ eval(Form, Opts0, Env0) ->
   Env2 = clj_emitter:emit(Env1),
   {ModulesForms, Exprs, Env3} = clj_emitter:remove_state(Env2),
 
-  CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
-  lists:foreach(CompileFormsFun, ModulesForms),
+  lists:foreach(compile_forms_fun(Opts), ModulesForms),
 
   [Value] = eval_expressions(Exprs),
   {Value, clj_env:remove(Env3, clj_flags)}.
@@ -143,10 +148,23 @@ ensure_output_dir(Opts) ->
   true = code:add_path(OutputDir),
   ok.
 
--spec compile_single_form(any(), clj_env:env()) -> clj_env:env().
-compile_single_form(Form, Env) ->
+-spec compile_single_form(any(), clj_env:env(), options()) -> clj_env:env().
+compile_single_form(Form, Env, Opts) ->
   Env1 = clj_emitter:without_state(Env, fun clj_analyzer:analyze/2, [Form]),
-  clj_emitter:emit(Env1).
+  Env2 = clj_emitter:emit(Env1),
+  case clj_emitter:is_macro(Env2) of
+    false -> Env2;
+    true ->
+      %% If the last emitted expression was the def of a macro
+      %% compile the resulting modules so far.
+      {ModulesForms, _, _} = clj_emitter:remove_state(Env2),
+      lists:foreach(compile_forms_fun(Opts), ModulesForms),
+      Env2
+  end.
+
+-spec compile_forms_fun(options()) -> function().
+compile_forms_fun(Opts) ->
+  fun(Forms) -> compile_forms(Forms, Opts) end.
 
 -spec compile_forms([erl_parse:abstract_form()], options()) ->
   atom() | undefined.

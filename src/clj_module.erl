@@ -10,10 +10,18 @@
         , is_clojure/1
         ]).
 
--type clj_module() :: #{ module => erl_syntax:syntaxTree()
-                       , attrs  => [erl_syntax:syntaxTree()]
-                       , funs   => [erl_syntax:syntaxTree()]
-                       }.
+-type var_id() :: binary().
+
+-type function_id() :: {atom(), integer()}.
+
+-type clj_module() ::
+        #{ module => erl_syntax:syntaxTree()
+         , vars   => #{var_id() => 'clojerl.Var':type()}
+         , attrs  => [erl_syntax:syntaxTree()]
+         , funs   => #{function_id() => erl_syntax:syntaxTree()}
+         }.
+
+-export_type([clj_module/0]).
 
 %%------------------------------------------------------------------------------
 %% Exported Functions
@@ -86,7 +94,7 @@ from_binary(ModuleName) when is_atom(ModuleName) ->
 -spec to_forms(clj_module()) -> [erl_syntax:syntaxTree()].
 to_forms(#{module := Module} = Def) ->
   #{ attrs := Attrs
-   , vars := Vars
+   , vars  := Vars
    , funs  := Funs
    , rest  := Rest
    } = Def,
@@ -118,7 +126,7 @@ add_attributes(#{attrs := Attrs} = Module, AddAttrs) ->
 -spec add_functions(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
 add_functions(#{funs := Funs} = Module, AddFuns) ->
   AddByKeyFun = fun(F, Acc) ->
-                    K = function_key(F),
+                    K = function_id(F),
                     Acc#{K => F}
                 end,
   Funs1 = lists:foldl(AddByKeyFun, Funs, AddFuns),
@@ -161,15 +169,15 @@ function_name(Function) ->
 function_arity(Function) ->
   erl_syntax:function_arity(Function).
 
--spec function_key(erl_syntax:syntaxTree()) -> {atom(), integer()}.
-function_key(Function) ->
+-spec function_id(erl_syntax:syntaxTree()) -> function_id().
+function_id(Function) ->
   {function_name(Function), function_arity(Function)}.
 
 -spec index_functions([erl_syntax:syntaxTree()]) ->
   #{atom() => erl_syntax:syntaxTree()}.
 index_functions(Funs) ->
   IndexFun = fun(F, M) ->
-                 Key = function_key(F),
+                 Key = function_id(F),
                  M#{Key => F}
              end,
   lists:foldl(IndexFun, #{}, Funs).
