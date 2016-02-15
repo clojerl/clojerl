@@ -44,13 +44,13 @@ invoke(_Config) ->
 
   ct:comment("Invoke a non Clojure fun generated through erl_eval"),
   {ok, Tokens, _} = erl_scan:string("fun() -> ok end."),
-  {ok, Forms}     = erl_parse:parse_exprs(Tokens), 
+  {ok, Forms}     = erl_parse:parse_exprs(Tokens),
   {value, EvalFun, _} = erl_eval:exprs(Forms, []),
   ok = clj_core:invoke(EvalFun, []),
 
   ct:comment("Invoke a non Clojure named fun generated through erl_eval"),
   {ok, NamedTokens, _} = erl_scan:string("fun Ok() -> ok end."),
-  {ok, NamedForms}     = erl_parse:parse_exprs(NamedTokens), 
+  {ok, NamedForms}     = erl_parse:parse_exprs(NamedTokens),
   {value, EvalNamedFun, _} = erl_eval:exprs(NamedForms, []),
   ok = clj_core:invoke(EvalNamedFun, []),
 

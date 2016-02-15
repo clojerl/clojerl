@@ -59,11 +59,24 @@ compile_file(_Config) ->
 -spec compile_files(config()) -> result().
 compile_files(_Config) ->
   ct:comment("Compile two files and use vars from one and the other"),
-  SimplePath = relative_path(<<"priv/examples/simple.clj">>),
+  SimplePath  = relative_path(<<"priv/examples/simple.clj">>),
   Simple2Path = relative_path(<<"priv/examples/simple-2.clj">>),
   Env = clj_compiler:compile_files([SimplePath, Simple2Path]),
 
   check_var_value(Env, <<"examples.simple-2">>, <<"x">>, 1),
+
+  ct:comment("Compile all priv/clojure/*.clj files succesfully"),
+  Wildcard1 = relative_path(<<"priv/clojure/*.clj">>),
+  Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
+  FilesBin1 = lists:map(fun list_to_binary/1, Files1),
+  _Env1 = clj_compiler:compile_files(FilesBin1),
+
+  ct:comment("Compile all priv/examples/*.clj files succesfully"),
+  Wildcard2 = relative_path(<<"priv/examples/*.clj">>),
+  Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
+  ErrorPath = relative_path(<<"priv/examples/error.clj">>),
+  FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],
+  _Env2 = clj_compiler:compile_files(FilesBin2),
 
   {comments, ""}.
 
