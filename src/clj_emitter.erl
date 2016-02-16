@@ -323,9 +323,9 @@ ast(#{op := 'if'} = Expr, State) ->
   Ast = erl_syntax:case_expr(Test, [TrueClause, FalseClause]),
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
-%% if
+%% let
 %%------------------------------------------------------------------------------
-ast(#{op := 'let'} = Expr, State0) ->
+ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   #{ body     := BodyExpr
    , bindings := BindingsExprs
    } = Expr,
@@ -342,16 +342,63 @@ ast(#{op := 'let'} = Expr, State0) ->
 
   State1            = lists:foldl(MatchAstFun, State, BindingsExprs),
   {Matches, State2} = pop_ast(State1, length(BindingsExprs)),
+  {Body,    State3} = pop_ast(ast(BodyExpr, State2)),
 
-  {Body, State3}    = pop_ast(ast(BodyExpr, State2)),
+  Ast = case Op of
+          'let' ->
+            Clause = erl_syntax:clause([], [], Matches ++ [Body]),
+            FunAst = erl_syntax:fun_expr([Clause]),
+            erl_syntax:application(FunAst, []);
+          loop  ->
+            %% Emit to nested functions for 'loop' expressions.
+            %% An outer unnamed fun that initializes the bindings
+            %% and an inner named fun that receives the initialized
+            %% values as arguments and on every recur.
+            StateTmp = lists:foldl(fun ast/2, State3, BindingsExprs),
+            {ArgsAsts, _} = pop_ast(StateTmp, length(BindingsExprs)),
 
-  Clause = erl_syntax:clause([], [], Matches ++ [Body]),
-  FunAst = erl_syntax:fun_expr([Clause]),
-  Ast    = erl_syntax:application(FunAst, []),
+            LoopClause = erl_syntax:clause(ArgsAsts, [], [Body]),
+
+            LoopId     = maps:get(loop_id, Expr),
+            LoopIdAtom = 'clojerl.Symbol':to_atom(LoopId),
+            NameAst    = erl_syntax:variable(LoopIdAtom),
+            LoopFunAst = erl_syntax:named_fun_expr(NameAst, [LoopClause]),
+            LoopAppAst = erl_syntax:application(LoopFunAst, ArgsAsts),
+
+            Clause = erl_syntax:clause([], [], Matches ++ [LoopAppAst]),
+            FunAst = erl_syntax:fun_expr([Clause]),
+            erl_syntax:application(FunAst, [])
+        end,
 
   State4 = remove_lexical_renames_scope(State3),
 
   push_ast(Ast, State4);
+%%------------------------------------------------------------------------------
+%% recur
+%%------------------------------------------------------------------------------
+ast(#{op := recur} = Expr, State) ->
+  #{ loop_id   := LoopId
+   , loop_type := LoopType
+   , exprs     := ArgsExprs
+   } = Expr,
+
+  {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
+                          , length(ArgsExprs)
+                          ),
+
+  LoopIdAtom = 'clojerl.Symbol':to_atom(LoopId),
+
+  %% We need to use invoke so that recur also works inside functions
+  Ast = case LoopType of
+          variable ->
+            NameAst = erl_syntax:variable(LoopIdAtom),
+            ArgsAst = erl_syntax:list(Args),
+            application_mfa(clj_core, invoke, [NameAst, ArgsAst]);
+          function ->
+            NameAst = erl_syntax:atom(LoopIdAtom),
+            erl_syntax:application(NameAst, Args)
+        end,
+  push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% throw
 %%------------------------------------------------------------------------------

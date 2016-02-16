@@ -513,9 +513,33 @@ loop(_Config) ->
    } = analyze_one(<<"(loop* [x 1 y :a] y)">>),
   2 = length(Bindings2),
 
-  true = LoopId0 =/= LoopId1,
-  true = LoopId1 =/= LoopId2,
-  true = LoopId0 =/= LoopId2,
+  false = clj_core:equiv(LoopId0, LoopId1),
+  false = clj_core:equiv(LoopId1, LoopId2),
+  false = clj_core:equiv(LoopId0, LoopId2),
+
+  ct:comment("loop with zero bindings, body and recur"),
+  #{ op       := loop
+   , bindings := Bindings3
+   , loop_id  := _LoopId3
+   , body     := _Body3
+   } = analyze_one(<<"(loop* [] (recur))">>),
+  0 = length(Bindings3),
+
+  ct:comment("loop with two bindings, body and recur"),
+  #{ op       := loop
+   , bindings := Bindings4
+   , loop_id  := _LoopId4
+   , body     := _Body4
+   } = analyze_one(<<"(loop* [x 1 y 2] (recur 1 2))">>),
+  2 = length(Bindings4),
+
+  ct:comment("loop with two bindings and recur mismatch"),
+  ok = try analyze_one(<<"(loop* [x 1 y 2] (recur))">>), error
+       catch _:_ -> ok end,
+
+  ct:comment("loop with no bindings and recur not in tail position"),
+  ok = try analyze_one(<<"(loop* [] (recur) 1)">>), error
+       catch _:_ -> ok end,
 
   {comments, ""}.
 
@@ -650,8 +674,13 @@ erl_fun(_Config) ->
    , arity    := undefined
    } = analyze_one(<<"erlang/is_atom.hello">>),
 
-  {comments, ""}.
+  #{ op       := erl_fun
+   , module   := erlang
+   , function := 'is_atom'
+   , arity    := undefined
+   } = analyze_one(<<"erlang/is_atom.e">>),
 
+  {comments, ""}.
 
 %%------------------------------------------------------------------------------
 %% Helper functions
