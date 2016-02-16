@@ -2,6 +2,7 @@
 
 -export([
          default/0,
+         context/1,
          context/2,
          push_expr/2,
          pop_expr/1,
@@ -53,6 +54,9 @@ default() ->
    , current_ns => UserSym
    , locals     => clj_scope:new()
    }.
+
+-spec context(env()) -> context().
+context(#{context := Ctx}) -> Ctx.
 
 -spec context(env(), context()) -> env().
 context(Env, Ctx) -> Env#{context => Ctx}.

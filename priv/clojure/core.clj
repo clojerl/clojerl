@@ -30,8 +30,8 @@
 (def not
   (fn* [a] (erlang/not.1 a)))
 
-(def <-
-  (fn* [a b] (erlang/=:=.e a b)))
+(def <
+  (fn* [a b] (erlang/<.e a b)))
 
 (def assert ^:macro
   (fn* [v] (if (not v) (throw :assert))))
