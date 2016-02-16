@@ -73,9 +73,7 @@ special_forms() ->
    , <<"reify*">>   => undefined
 
    , <<"throw">>    => fun parse_throw/2
-   , <<"try">>      => undefined
-   , <<"catch">>    => undefined
-   , <<"finally">>  => undefined
+   , <<"try">>      => fun parse_try/2
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
@@ -831,6 +829,106 @@ parse_throw(Env, List) ->
                },
 
   clj_env:push_expr(Env, ThrowExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse try
+%%------------------------------------------------------------------------------
+
+-spec parse_try(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_try(Env, List) ->
+  CatchSymbol = clj_core:symbol(<<"catch">>),
+  FinallySymbol = clj_core:symbol(<<"finally">>),
+  IsCatch = fun(X) ->
+                clj_core:'seq?'(X) andalso
+                  clj_core:equiv(clj_core:first(X), CatchSymbol)
+            end,
+  IsFinally = fun(X) ->
+                clj_core:'seq?'(X) andalso
+                  clj_core:equiv(clj_core:first(X), FinallySymbol)
+            end,
+
+  IsNotCatchFinally = fun(X) -> not IsCatch(X) andalso not IsFinally(X) end,
+
+  {Body, CatchFinallyTail} = lists:splitwith( IsNotCatchFinally
+                                            , clj_core:seq2(clj_core:rest(List))
+                                            ),
+  {Catches, FinallyTail}   = lists:splitwith(IsCatch, CatchFinallyTail),
+  {Finallies, Tail}        = lists:splitwith(IsFinally, FinallyTail),
+
+  clj_utils:throw_when( Tail =/= []
+                      , <<"Only catch or finally clause can follow catch in "
+                          "try expression">>
+                      , clj_reader:location_meta(List)
+                      ),
+
+  clj_utils:throw_when( length(Finallies) > 1
+                      , <<"Only one finally clause allowed in try expression">>
+                      , clj_reader:location_meta(List)
+                      ),
+
+  Env1             = clj_env:put(Env, in_try, true),
+  {BodyExpr, Env2} = clj_env:pop_expr(analyze_body(Env1, Body)),
+
+  ParseCatchesFun      = fun(Form, EnvAcc) -> parse_catch(EnvAcc, Form) end,
+  Env3                 = clj_env:context(Env2, expr),
+  {CatchesExprs, Env4} =
+    clj_env:last_exprs( lists:foldl(ParseCatchesFun, Env3, Catches)
+                      , length(Catches)
+                      ),
+
+  {FinallyExpr, Env5} = case Finallies of
+                          [Finally] ->
+                            RestFinally = clj_core:rest(Finally),
+                            clj_env:pop_expr(analyze_body(Env4, RestFinally));
+                          _ ->
+                            {undefined, Env4}
+                        end,
+
+  TryExpr = #{ op      => 'try'
+             , env     => ?DEBUG(Env)
+             , form    => List
+             , body    => BodyExpr
+             , catches => CatchesExprs
+             , finally => FinallyExpr
+             },
+
+  Env6 = clj_env:remove(Env5, in_try),
+  clj_env:push_expr(Env6, TryExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse catch
+%%------------------------------------------------------------------------------
+
+-spec parse_catch(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_catch(Env, List) ->
+  ErrType = clj_core:second(List),
+  ErrName = clj_core:third(List),
+  Body    = lists:sublist(clj_core:seq2(List), 4, clj_core:count(List)),
+
+  clj_utils:throw_when( not is_valid_bind_symbol(ErrName)
+                      , [<<"Bad binding form:">>, ErrName]
+                      , clj_reader:location_meta(ErrName)
+                      ),
+
+  Env1 = clj_env:remove(Env, in_try),
+  Local = #{ op   => binding
+           , env  => ?DEBUG(Env1)
+           , form => ErrName
+           , name => ErrName
+           },
+
+  Env2 = clj_env:put_locals(Env1, [Local]),
+  {BodyExpr, Env3} = clj_env:pop_expr(analyze_body(Env2, Body)),
+
+  CatchExpr = #{ op    => 'catch'
+               , env   => ?DEBUG(Env1)
+               , class => ErrType
+               , local => Local
+               , form  => List
+               , body  => BodyExpr
+               },
+
+  clj_env:push_expr(Env3, CatchExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze invoke
