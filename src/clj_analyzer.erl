@@ -54,26 +54,22 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{ <<"ns">>       => fun parse_ns/2
-   , <<"def">>      => fun parse_def/2
-   , <<"quote">>    => fun parse_quote/2
-   , <<"fn*">>      => fun parse_fn/2
-   , <<"do">>       => fun parse_do/2
-   , <<"if">>       => fun parse_if/2
-   , <<"let*">>     => fun parse_let/2
-   , <<"loop*">>    => fun parse_loop/2
-   , <<"recur">>    => fun parse_recur/2
-
-   , <<"case*">>    => undefined
-   , <<"letfn*">>   => undefined
-   , <<"var">>      => undefined
-   , <<"import*">>  => undefined
-
-   , <<"deftype*">> => undefined
-   , <<"reify*">>   => undefined
-
-   , <<"throw">>    => fun parse_throw/2
-   , <<"try">>      => fun parse_try/2
+  #{ <<"ns">>         => fun parse_ns/2
+   , <<"def">>        => fun parse_def/2
+   , <<"quote">>      => fun parse_quote/2
+   , <<"fn*">>        => fun parse_fn/2
+   , <<"do">>         => fun parse_do/2
+   , <<"if">>         => fun parse_if/2
+   , <<"let*">>       => fun parse_let/2
+   , <<"loop*">>      => fun parse_loop/2
+   , <<"recur">>      => fun parse_recur/2
+   , <<"throw">>      => fun parse_throw/2
+   , <<"try">>        => fun parse_try/2
+   , <<"var">>        => fun parse_var/2
+   , <<"letfn*">>     => undefined
+   , <<"case*">>      => undefined
+   , <<"deftype*">>   => undefined
+   , <<"defrecord*">> => undefined
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
@@ -167,15 +163,12 @@ parse_ns(Env, List) ->
 
 -spec parse_quote(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_quote(Env, List) ->
-  case clj_core:count(List) of
-    2 -> ok;
-    Count ->
-      CountBin = integer_to_binary(Count - 1),
-      clj_utils:throw( <<"Wrong number of args to quote, had: "
-                         , CountBin/binary>>
-                     , clj_reader:location_meta(List)
-                     )
-  end,
+  Count = clj_core:count(List),
+  clj_utils:throw_when( Count =/= 2
+                      , [<<"Wrong number of args to quote, had: ">>, Count - 1]
+                      , clj_reader:location_meta(List)
+                      ),
+
   Second = clj_core:second(List),
   {ConstExpr, NewEnv} = clj_env:pop_expr(analyze_const(Env, Second)),
   Expr = #{ op   => quote
@@ -931,6 +924,37 @@ parse_catch(Env, List) ->
   clj_env:push_expr(Env3, CatchExpr).
 
 %%------------------------------------------------------------------------------
+%% Parse var
+%%------------------------------------------------------------------------------
+
+-spec parse_var(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_var(Env, List) ->
+  Count = clj_core:count(List),
+  clj_utils:throw_when( Count =/= 2
+                      , [<<"Wrong number of args to var, had: ">>, Count]
+                      , clj_reader:location_meta(List)
+                      ),
+
+  VarSymbol = clj_core:second(List),
+
+  case resolve(Env, VarSymbol) of
+    {{var, Var}, Env1} ->
+      VarConstExpr = #{ op   => constant
+                      , env  => ?DEBUG(Env)
+                      , tag  => clj_core:type(Var)
+                      , form => Var
+                      },
+      clj_env:push_expr(Env1, VarConstExpr);
+    {undefined, _} ->
+      clj_utils:throw([ <<"Unable to resolve var: ">>
+                      , VarSymbol
+                      , <<" in this context">>
+                      ]
+                     , clj_reader:location_meta(VarSymbol)
+                     )
+  end.
+
+%%------------------------------------------------------------------------------
 %% Analyze invoke
 %%------------------------------------------------------------------------------
 
@@ -978,7 +1002,7 @@ analyze_symbol(Env, Symbol) ->
                  , arity    => Arity
                  },
       clj_env:push_expr(Env1, FunExpr);
-    {Var, Env1} ->
+    {{var, Var}, Env1} ->
       VarExpr = var_expr(Var, Symbol, Env1),
       clj_env:push_expr(Env1, VarExpr)
   end.
@@ -996,7 +1020,7 @@ var_expr(Var, Symbol, _Env) ->
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
-  { 'clojerl.Var':type() | erl_fun() | {local, map()} | undefined
+  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | undefined
   , clj_env:env()
   }.
 resolve(Env, Symbol) ->
@@ -1016,12 +1040,12 @@ resolve(Env, Symbol) ->
           %% Let's see how this works out.
           {erl_fun(Env1, Symbol), Env1};
         {Var, Env1} ->
-          {Var, Env1}
+          {{var, Var}, Env1}
       end;
     {_, _, UsedVar, _} when UsedVar =/= undefined ->
-      {UsedVar, Env};
+      {{var, UsedVar}, Env};
     {_, _, _, CurNsVar} when CurNsVar =/= undefined ->
-      {CurNsVar, Env};
+      {{var, CurNsVar}, Env};
     _ ->
       {undefined, Env}
   end.
