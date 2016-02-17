@@ -18,6 +18,7 @@
          map/1,
          set/1,
          throw/1,
+         'try'/1,
          erl_fun/1
         ]).
 
@@ -638,6 +639,73 @@ throw(_Config) ->
        catch _:<<"1:1: Wrong number of args to throw, had: 4">> ->
            ok
        end,
+
+  {comments, ""}.
+
+-spec 'try'(config()) -> result().
+'try'(_Config) ->
+  ct:comment("try with no catch and no finally"),
+  #{ op      := 'try'
+   , body    := #{op := do}
+   , catches := []
+   , finally := undefined
+   } = analyze_one(<<"(try 1)">>),
+
+  ct:comment("try with one catch and no finally"),
+  #{ op      := 'try'
+   , catches := [Catch1_1]
+   , finally := undefined
+   } = analyze_one(<<"(try 1 (catch :error err err))">>),
+
+  #{ op    := 'catch'
+   , local := #{op := binding, name := ErrName1_1}
+   , body  := #{op := do}
+   } = Catch1_1,
+
+  true = clj_core:equiv(ErrName1_1, clj_core:symbol(<<"err">>)),
+
+  ct:comment("try with two catches and no finally"),
+  #{ op      := 'try'
+   , catches := [Catch2_1, Catch2_2]
+   , finally := undefined
+   } = analyze_one(<<"(try 1"
+                     "  (catch :error err-1 err-1)"
+                     "  (catch :throw err-2 err-2))">>
+                  ),
+
+  #{ op    := 'catch'
+   , local := #{op := binding, name := ErrName2_1}
+   , class := error
+   , body  := #{op := do}
+   } = Catch2_1,
+
+  #{ op    := 'catch'
+   , local := #{op := binding, name := ErrName2_2}
+   , class := throw
+   , body  := #{op := do}
+   } = Catch2_2,
+
+  true = clj_core:equiv(ErrName2_1, clj_core:symbol(<<"err-1">>)),
+  true = clj_core:equiv(ErrName2_2, clj_core:symbol(<<"err-2">>)),
+
+  ct:comment("try, catch and finally"),
+  #{ op      := 'try'
+   , catches := [Catch3_1]
+   , finally := Finally3
+   } = analyze_one(<<"(try 1 (catch :error e e) (finally 2))">>),
+
+  #{ op    := 'catch'
+   , local := #{op := binding, name := ErrName3_1}
+   , class := error
+   , body  := #{op := do}
+   } = Catch3_1,
+
+  true = clj_core:equiv(ErrName3_1, clj_core:symbol(<<"e">>)),
+
+  #{ op         := do
+   , statements := []
+   , ret        := #{op := constant, form := 2}
+   } = Finally3,
 
   {comments, ""}.
 
