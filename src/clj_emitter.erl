@@ -408,7 +408,57 @@ ast(#{op := throw} = Expr, State) ->
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
 
   Ast = application_mfa(erlang, throw, [Exception]),
-  push_ast(Ast, State1).
+  push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
+%% try
+%%------------------------------------------------------------------------------
+ast(#{op := 'try'} = Expr, State) ->
+  #{ body    := BodyExpr
+   , catches := CatchesExprs
+   , finally := FinallyExpr
+   } = Expr,
+
+  {Body, State1} = pop_ast(ast(BodyExpr, State)),
+  {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
+                             , length(CatchesExprs)
+                             ),
+
+  {Finally, State2} = case FinallyExpr of
+                        undefined -> {undefined, State1};
+                        _         -> pop_ast(ast(FinallyExpr, State))
+                      end,
+
+  After = case Finally of
+            undefined -> [];
+            _         -> [Finally]
+          end,
+
+  TryAst    = erl_syntax:try_expr([Body], [], Catches, After),
+
+  %% We need to wrap everything in a fun to create a new variable scope.
+  ClauseAst = erl_syntax:clause([], [TryAst]),
+  FunAst    = erl_syntax:fun_expr([ClauseAst]),
+  ApplyAst  = erl_syntax:application(FunAst, []),
+
+  push_ast(ApplyAst, State2);
+%%------------------------------------------------------------------------------
+%% catch
+%%------------------------------------------------------------------------------
+ast(#{op := 'catch'} = Expr, State) ->
+  #{ class := ErrType
+   , local := Local
+   , body  := BodyExpr
+   } = Expr,
+
+  ClassAst          = erl_syntax:atom(ErrType),
+  {NameAst, State1} = pop_ast(ast(Local, State)),
+  ClassNameAst      = erl_syntax:class_qualifier(ClassAst, NameAst),
+
+  {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
+
+  Ast = erl_syntax:clause([ClassNameAst], [], [Body]),
+
+  push_ast(Ast, State2).
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
