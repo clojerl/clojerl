@@ -31,7 +31,8 @@
     'cond'/1,
     erl_fun/1,
     unsupported_reader/1,
-    tuple/1
+    tuple/1,
+    tagged/1
    ]
   ).
 
@@ -949,5 +950,26 @@ tuple(_Config) ->
   ct:comment("Read a tuple whose first element is an keyword"),
   T = clj_reader:read(<<"#[:random, :hello, 2.5, 'world]">>),
   'clojerl.erlang.Tuple' = clj_core:type(T),
+
+  {comments, ""}.
+
+tagged(_Config) ->
+  ct:comment("Use default readers"),
+  <<"2016">> = clj_reader:read(<<"#inst \"2016\"">>),
+  <<"de305d54-75b4-431b-adb2-eb6b9e546014">> =
+    clj_reader:read(<<"#uuid \"de305d54-75b4-431b-adb2-eb6b9e546014\"">>),
+
+  ct:comment("Don't provide a symbol"),
+  ok = try clj_reader:read(<<"#1">>), error
+       catch _:<<"1:2: Reader tag must be a symbol">> -> ok end,
+
+  ct:comment("Provide a missing reader"),
+  ok = try clj_reader:read(<<"#bla 1">>), error
+       catch _:<<"1:2: No reader function for tag bla">> -> ok end,
+
+  ct:comment("Provide additional reader"),
+  DataReaders = #{<<"bla">> => fun(_) -> bla end},
+  Opts = #{data_readers => DataReaders},
+  bla = clj_reader:read(<<"#bla 1">>, Opts),
 
   {comments, ""}.
