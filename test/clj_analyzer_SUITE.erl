@@ -19,6 +19,7 @@
          set/1,
          throw/1,
          'try'/1,
+         var/1,
          erl_fun/1
         ]).
 
@@ -708,6 +709,20 @@ throw(_Config) ->
    } = Finally3,
 
   {comments, ""}.
+
+-spec var(config()) -> result().
+var(_Config) ->
+  ct:comment("Use var with symbol for existing var"),
+  [_ , #{op := constant, form := VarX}] = analyze_all(<<"(def x 1) (var x)">>),
+  <<"x">> = clj_core:name(VarX),
+  'clojerl.Var' = clj_core:type(VarX),
+
+  ct:comment("Use var with symbol for non-existing var"),
+  ok = try analyze_all(<<"(var y)">>), error
+       catch _:_ -> ok end,
+
+  {comments, ""}.
+
 
 -spec erl_fun(config()) -> result().
 erl_fun(_Config) ->
