@@ -2,7 +2,12 @@
 
 -export([all/0, init_per_suite/1]).
 
--export([str/1]).
+-export([ count/1
+        , seq/1
+        , is_sequential/1
+        , str/1
+        , complete_coverage/1
+        ]).
 
 -type config() :: list().
 -type result() :: {comments, string()}.
@@ -22,6 +27,30 @@ init_per_suite(Config) ->
 %% Test Cases
 %%------------------------------------------------------------------------------
 
+-spec count(config()) -> result().
+count(_Config) ->
+  3 = clj_core:count({1, 2, 3}),
+  0 = clj_core:count({}),
+
+  {comments, ""}.
+
+-spec seq(config()) -> result().
+seq(_Config) ->
+  [1, 2, 3] = clj_core:seq({1, 2, 3}),
+
+  [1] = clj_core:seq({1}),
+
+  undefined = clj_core:seq({}),
+
+  {comments, ""}.
+
+-spec is_sequential(config()) -> result().
+is_sequential(_Config) ->
+  true = clj_core:'sequential?'({1, 2, 3}),
+  true = clj_core:'sequential?'({}),
+
+  {comments, ""}.
+
 -spec str(config()) -> result().
 str(_Config) ->
   Tuple = {1, 2, 3, 4},
@@ -29,5 +58,11 @@ str(_Config) ->
 
   EmptyTuple = {},
   <<"#[]">> = clj_core:str(EmptyTuple),
+
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  ok = 'clojerl.erlang.Tuple':'clojerl.ISequential.noop'({}),
 
   {comments, ""}.
