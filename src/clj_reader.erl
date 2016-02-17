@@ -9,8 +9,9 @@
 
 -type location() :: {non_neg_integer(), non_neg_integer()}.
 
--type opts() :: #{ read_cond => allow | preserve
-                 , features  => 'clojerl.Set':type()
+-type opts() :: #{ read_cond    => allow | preserve
+                 , features     => 'clojerl.Set':type()
+                 , data_readers => #{binary() => function()}
                  }.
 
 -export_type([location/0, opts/0]).
@@ -769,7 +770,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $? -> read_cond(NewState);
     $: -> read_erl_fun(NewState);
     $< -> clj_utils:throw(<<"Unreadable form">>, location(State));
-    X  -> clj_utils:throw({unsupported_reader, <<"#", X>>}, location(State))
+    _  -> read_tagged(consume_char(State))
   end.
 
 %%------------------------------------------------------------------------------
@@ -1011,6 +1012,48 @@ valid_erl_fun(First, Second) ->
     _ ->
       false
   end.
+
+%%------------------------------------------------------------------------------
+%% # reader tag
+%%------------------------------------------------------------------------------
+
+-spec read_tagged(state()) -> state().
+read_tagged(#{opts := Opts} = State) ->
+  {Symbol, State1} = pop_form(read_one(State)),
+
+  clj_utils:throw_when( not clj_core:'symbol?'(Symbol)
+                      , <<"Reader tag must be a symbol">>
+                      , location(State)
+                      ),
+
+  DataReaders    = clj_core:get(Opts, 'data_readers'),
+  AllDataReaders = clj_core:merge([default_data_readers(), DataReaders]),
+  SymbolName     = clj_core:str(Symbol),
+  ReadFun        = clj_core:get(AllDataReaders, SymbolName, undefined),
+
+  clj_utils:throw_when( ReadFun == undefined
+                      , [<<"No reader function for tag ">>, Symbol]
+                      , location(State)
+                      ),
+
+  {Form, State2} = pop_form(read_one(State1)),
+  ReadForm       = clj_core:invoke(ReadFun, [Form]),
+
+  push_form(ReadForm, State2).
+
+-spec default_data_readers() -> map().
+default_data_readers() ->
+  #{ <<"inst">> => fun read_instant_date/1
+   , <<"uuid">> => fun default_uuid_reader/1
+   }.
+
+-spec read_instant_date(binary()) -> any().
+read_instant_date(Date) ->
+  Date.
+
+-spec default_uuid_reader(binary()) -> any().
+default_uuid_reader(UUID) ->
+  UUID.
 
 %%------------------------------------------------------------------------------
 %% Utility functions
