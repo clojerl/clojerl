@@ -307,7 +307,9 @@ ast(#{op := 'if'} = Expr, State) ->
 
   {Test, State1} = pop_ast(ast(TestExpr, State)),
 
-  True          = erl_syntax:variable('True'),
+  TrueSymbol    = clj_core:gensym(<<"true_">>),
+  TrueSymbolStr = binary_to_list(clj_core:str(TrueSymbol)),
+  True          = erl_syntax:variable(TrueSymbolStr),
   FalseAtom     = erl_syntax:atom(false),
   UndefinedAtom = erl_syntax:atom(undefined),
   TrueGuards    = [ application_mfa(erlang, '=/=', [True, FalseAtom])
