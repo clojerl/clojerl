@@ -26,10 +26,11 @@
          'seq?'/1,
          'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
          'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
-         'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1,
+         'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1, 'var?'/1,
          deref/1,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
+         assoc/3,
          merge/1,
          'contains?'/2,
          boolean/1,
@@ -103,7 +104,10 @@ conj(Coll, Item) ->
 cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
-  'clojerl.IColl':cons(seq2(Seq), Item).
+  case 'seq?'(Seq) of
+    true  -> 'clojerl.IColl':cons(Seq, Item);
+    false -> 'clojerl.IColl':cons(seq2(Seq), Item)
+  end.
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
@@ -223,6 +227,10 @@ keyword(Namespace, Name) ->
 -spec 'regex?'(any()) -> boolean().
 'regex?'(X) -> type(X) == re_pattern.
 
+-spec 'var?'(any()) -> boolean().
+'var?'(X) ->
+  type(X) == 'clojerl.Var'.
+
 -spec deref(any()) -> any().
 deref(X) ->
   'clojerl.IDeref':deref(X).
@@ -246,6 +254,13 @@ get(X, Key) -> 'clojerl.ILookup':get(X, Key).
 -spec get(any(), any(), any()) -> any().
 get(undefined, _Key, _NotFound) -> undefined;
 get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
+
+-spec assoc('clojerl.Associative':type(), any(), any()) -> 
+  'clojerl.Associative':type().
+assoc(undefined, Key, Value) ->
+  hash_map([Key, Value]);
+assoc(Map, Key, Value) ->
+  'clojerl.Associative':assoc(Map, Key, Value).
 
 -spec merge([any()]) -> any().
 merge([]) ->
