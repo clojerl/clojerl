@@ -7,6 +7,7 @@
         , parse_number/1
         , parse_symbol/1
         , desugar_meta/1
+        , binary_append/2
         , binary_join/2
         , ends_with/2
         , throw/1
@@ -138,6 +139,10 @@ desugar_meta(Meta) ->
     _ ->
       throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
+
+-spec binary_append([binary()], binary()) -> binary().
+binary_append(X, Y) when is_binary(X), is_binary(Y) ->
+  <<X/binary, Y/binary>>.
 
 -spec binary_join([binary()], binary()) -> binary().
 binary_join([], _) ->

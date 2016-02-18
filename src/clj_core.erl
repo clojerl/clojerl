@@ -294,15 +294,24 @@ list(Items) ->
 
 -spec vector(list()) -> 'clojerl.Vector':type().
 vector(Items) ->
-  'clojerl.Vector':new(Items).
+  case count(Items) of
+    0 -> 'clojerl.Vector':new([]);
+    _ -> 'clojerl.Vector':new(seq(Items))
+  end.
 
 -spec hash_map(list()) -> 'clojerl.Map':type().
 hash_map(Items) ->
-  'clojerl.Map':new(Items).
+  case count(Items) of
+    0 -> 'clojerl.Map':new([]);
+    _ -> 'clojerl.Map':new(seq(Items))
+  end.
 
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
-  'clojerl.Set':new(Items).
+  case count(Items) of
+    0 -> 'clojerl.Set':new([]);
+    _ -> 'clojerl.Set':new(seq(Items))
+  end.
 
 -spec keys('clojerl.IMap':type()) -> list().
 keys(Map) ->

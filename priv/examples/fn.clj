@@ -226,6 +226,8 @@
 
 (variadic-recursive 15)
 
+;; Define a function with a named fn* that uses the same name
+
 (def same-name-fn
   (fn* same-name-fn
        ([x & xs]
@@ -243,3 +245,15 @@
   (fn* [] (fn* [x] (erlang/-.e x 1))))
 
 (clojure.core/prn ((dec-fn) 10))
+
+
+;; Use a recursive fn* inside a var fn
+
+(clojure.core/defn recur-fn []
+  (clojure.core/let [f (fn* [x]
+            (if (erlang/<.e 0 x)
+              (recur (erlang/-.e x 1))
+              x))]
+    (f 5)))
+
+(clojure.core/prn (recur-fn))

@@ -112,7 +112,7 @@ val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
             Seq       -> Seq
           end,
 
-  Args2 = process_args(Var, Args1, fun(X) -> X end),
+  Args2 = process_args(Var, Args1, fun clj_core:seq/1),
 
   erlang:apply(Module, Function, Args2).
 

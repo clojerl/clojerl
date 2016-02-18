@@ -45,11 +45,12 @@ macroexpand_1(Env, Form) ->
   of
     true ->
       Var = clj_core:deref(MacroVar),
-      Args = [Form, Env1] ++ clj_core:seq(clj_core:rest(Form)),
-      try clj_core:invoke(Var, Args)
-      catch throw:Error ->
-          clj_utils:throw(Error, clj_reader:location_meta(Form))
-      end;
+      Args = [Form, Env1] ++ clj_core:seq2(clj_core:rest(Form)),
+      clj_core:invoke(Var, Args);
+      %% try clj_core:invoke(Var, Args)
+      %% catch throw:Error ->
+      %%     clj_utils:throw(Error, clj_reader:location_meta(Form))
+      %% end;
     false -> Form
   end.
 
@@ -250,10 +251,13 @@ parse_fn(Env, List) ->
              _         -> {function, DefNameSym}
            end,
 
+  %% Remove def_name do that inner fn* are not influenced by it.
+  Env1Bis = remove_def_name(Env1),
+
   %% If it is a def analyze methods' args but not the body, 
   %% we just want arity information first.
   {MethodsExprs, Env2} =
-    analyze_fn_methods(Env1, MethodsList, LoopId, IsOnce, not IsDef),
+    analyze_fn_methods(Env1Bis, MethodsList, LoopId, IsOnce, not IsDef),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
@@ -515,7 +519,7 @@ parse_let(Env, Form) ->
 -spec parse_loop(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_loop(Env, Form) ->
   LoopId = clj_core:gensym(<<"loop_">>),
-  Env1 = clj_env:put(Env, loop_id, {variable, LoopId}),
+  Env1 = clj_env:put(Env, loop_id, {loop, LoopId}),
   {LoopExprExtra, Env2} = analyze_let(Env1, Form),
   LoopExpr = maps:merge(#{ op      => loop
                          , form    => Form
@@ -721,6 +725,10 @@ parse_def(Env, List) ->
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 add_def_name(Env, NameSym) ->
   clj_env:put(Env, def_name, NameSym).
+
+-spec remove_def_name(clj_env:env()) -> clj_env:env().
+remove_def_name(Env) ->
+  clj_env:remove(Env, def_name).
 
 -spec get_def_name(clj_env:env()) -> 'clojerl.Symbol':type() | undefined.
 get_def_name(Env) ->

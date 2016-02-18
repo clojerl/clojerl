@@ -309,14 +309,265 @@
              ;; m     (merge {:arglists (list 'quote (sigs fdecl))} m)
              m     (conj (if (meta name) (meta name) {}) m)]
          (list 'def (with-meta name m)
-               ;;todo - restore propagation of fn name
-               ;;must figure out how to convey primitive hints to self calls first
-               (cons 'clojure.core/fn (list* (seq fdecl)))))))
+               (cons 'clojure.core/fn         ;; can't use syntax-quote here yet because
+                                              ;; we haven't defined all the necessary functions
+                     (list* (seq fdecl)))))))
 
-;;;;; 
+(defn to-tuple
+  "Returns a tuple of Objects containing the contents of coll, which
+  can be any Collection.  Maps to erlang:list_to_tuple/2."
+  {:tag "clojerl.erlang.Tuple"
+   :added "1.0"
+   :static true}
+  [coll] (erlang/list_to_tuple.e (seq coll)))
 
-(def str
-  (fn* [x] (clj_core/str.e x)))
+(defn vector
+  "Creates a new vector containing the args."
+  {:added "1.0"
+   :static true}
+  ([] [])
+  ([a] [a])
+  ([a b] [a b])
+  ([a b c] [a b c])
+  ([a b c d] [a b c d])
+  ([a b c d & args]
+     (clj_core/vector.e (cons a (cons b (cons c (cons d args)))))))
+
+(defn vec
+  "Creates a new vector containing the contents of coll. Java arrays
+  will be aliased and should not be modified."
+  {:added "1.0"
+   :static true}
+  ([coll]
+   (if (vector? coll)
+     (if (extends? :clojerl.IMeta coll)
+       (with-meta coll nil)
+       (clj_core/vector.e coll))
+     (clj_core/vector.e coll))))
+
+(defn hash-map
+  "keyval => key val
+  Returns a new hash map with supplied mappings.  If any keys are
+  equal, they are handled as if by repeated uses of assoc."
+  {:added "1.0"
+   :static true}
+  ([] {})
+  ([& keyvals]
+   (clj_core/hash_map.e keyvals)))
+
+(defn hash-set
+  "Returns a new hash set with supplied keys.  Any equal keys are
+  handled as if by repeated uses of conj."
+  {:added "1.0"
+   :static true}
+  ([] #{})
+  ([& keys]
+   (clj_core/hash_set.e keys)))
+
+(defn sorted-map
+  "keyval => key val
+  Returns a new sorted map with supplied mappings.  If any keys are
+  equal, they are handled as if by repeated uses of assoc."
+  {:added "1.0"
+   :static true}
+  ([& keyvals]
+   (throw :unsupported)
+   #_(clojure.lang.PersistentTreeMap/create keyvals)))
+
+(defn sorted-map-by
+  "keyval => key val
+  Returns a new sorted map with supplied mappings, using the supplied
+  comparator.  If any keys are equal, they are handled as if by
+  repeated uses of assoc."
+  {:added "1.0"
+   :static true}
+  ([comparator & keyvals]
+   (throw :unsupported)
+   #_(clojure.lang.PersistentTreeMap/create comparator keyvals)))
+
+(defn sorted-set
+  "Returns a new sorted set with supplied keys.  Any equal keys are
+  handled as if by repeated uses of conj."
+  {:added "1.0"
+   :static true}
+  ([& keys]
+   (throw :unsupported)
+   #_(clojure.lang.PersistentTreeSet/create keys)))
+
+(defn sorted-set-by
+  "Returns a new sorted set with supplied keys, using the supplied
+  comparator.  Any equal keys are handled as if by repeated uses of
+  conj."
+  {:added "1.1"
+   :static true}
+  ([comparator & keys]
+   (throw :unsupported)
+   #_(clojure.lang.PersistentTreeSet/create comparator keys)))
+
+;;;;;;;;;;;;;;;;;;;;
+
+(defn nil?
+  "Returns true if x is nil, false otherwise."
+  {:tag Boolean
+   :added "1.0"
+   :static true
+   :inline (fn [x] (list 'erlang/=:=.e x nil))}
+  [x] (erlang/=:=.e x nil))
+
+(def
+  ^{:macro true
+    :doc "Like defn, but the resulting function name is declared as a
+  macro and will be used as a macro by the compiler when it is
+  called."
+    :arglists '([name doc-string? attr-map? [params*] body]
+                [name doc-string? attr-map? ([params*] body)+ attr-map?])
+    :added "1.0"}
+  defmacro (fn [&form &env name & args]
+             (let [name   (with-meta name (conj (meta name) {:macro true}))
+                   prefix (loop [p (list name) args args]
+                            (let [f (first args)]
+                              (if (string? f)
+                                (recur (cons f p) (next args))
+                                (if (map? f)
+                                  (recur (cons f p) (next args))
+                                  p))))
+                   fdecl (loop [fd args]
+                           (if (string? (first fd))
+                             (recur (next fd))
+                             (if (map? (first fd))
+                               (recur (next fd))
+                               fd)))
+                   fdecl (if (vector? (first fdecl))
+                           (list fdecl)
+                           fdecl)
+                   add-implicit-args (fn [fd]
+                             (let [args (first fd)]
+                               (cons (vec (cons '&form (cons '&env args)))
+                                     (next fd))))
+                   add-args (fn [acc ds]
+                              (if (nil? ds)
+                                acc
+                                (let [d (first ds)]
+                                  (if (map? d)
+                                    (conj acc d)
+                                    (recur (conj acc (add-implicit-args d))
+                                           (next ds))))))
+                   fdecl (seq (add-args [] fdecl))
+                   decl (loop [p prefix d fdecl]
+                          (if p
+                            (recur (next p) (cons (first p) d))
+                            d))]
+               (cons 'clojure.core/defn decl))))
+
+(defmacro when
+  "Evaluates test. If logical true, evaluates body in an implicit do."
+  {:added "1.0"}
+  [test & body]
+  (list 'if test (cons 'do body)))
+
+(defmacro when-not
+  "Evaluates test. If logical false, evaluates body in an implicit do."
+  {:added "1.0"}
+  [test & body]
+    (list 'if test nil (cons 'do body)))
+
+(defn false?
+  "Returns true if x is the value false, false otherwise."
+  {:tag Boolean,
+   :added "1.0"
+   :static true}
+  [x] (erlang/=:=.e x false))
+
+(defn true?
+  "Returns true if x is the value true, false otherwise."
+  {:tag Boolean,
+   :added "1.0"
+   :static true}
+  [x] (erlang/=:=.e x true))
+
+(defn not
+  "Returns true if x is logical false, false otherwise."
+  {:tag Boolean
+   :added "1.0"
+   :static true}
+  [x] (if x false true))
+
+(defn some?
+  "Returns true if x is not nil, false otherwise."
+  {:tag Boolean
+   :added "1.6"
+   :static true}
+  [x] (not (nil? x)))
+
+(defn str
+  "With no args, returns the empty string. With one arg x, returns
+  x.toString().  (str nil) returns the empty string. With more than
+  one arg, returns the concatenation of the str values of the args."
+  {:tag :clojerl.String
+   :added "1.0"
+   :static true}
+  (^:clojerl.String [] "")
+  (^:clojerl.String [^Object x]
+   (if (nil? x) "" (clj_core/str.e x)))
+  (^:clojerl.String [x & ys]
+     ((fn [acc more]
+          (if more
+            (recur (clj_utils/binary_append.e acc (str (first more)))
+                   (next more))
+            acc))
+      (clj_core/str.e x) ys)))
+
+(defn keyword?
+  "Return true if x is a Keyword"
+  {:added "1.0"
+   :static true}
+  [x] (instance? :clojerl.Keyword x))
+
+(defn symbol
+  "Returns a Symbol with the given namespace and name."
+  {:tag clojure.lang.Symbol
+   :added "1.0"
+   :static true}
+  ([name] (if (symbol? name) name (clj_core/symbol.e name)))
+  ([ns name] (clj_core/symbol.e ns name)))
+
+(defn gensym
+  "Returns a new symbol with a unique name. If a prefix string is
+  supplied, the name is prefix# where # is some unique number. If
+  prefix is not supplied, the prefix is 'G__'."
+  {:added "1.0"
+   :static true}
+  ([] (gensym "G__"))
+  ([prefix-string] (clj_core/gensym.e prefix-string)))
+
+(defmacro cond
+  "Takes a set of test/expr pairs. It evaluates each test one at a
+  time.  If a test returns logical true, cond evaluates and returns
+  the value of the corresponding expr and doesn't evaluate any of the
+  other tests or exprs. (cond) returns nil."
+  {:added "1.0"}
+  [& clauses]
+    (when clauses
+      (list 'if (first clauses)
+            (if (next clauses)
+                (second clauses)
+                (throw "cond requires an even number of forms"))
+            (cons 'clojure.core/cond (nnext clauses)))))
+
+(defn keyword
+  "Returns a Keyword with the given namespace and name.  Do not use :
+  in the keyword strings, it will be added automatically."
+  {:tag clojure.lang.Keyword
+   :added "1.0"
+   :static true}
+  ([name] (cond (keyword? name) name
+                (symbol? name) (clj_core/keyword.e (clj_core/namespace.e name)
+                                                   (clj_core/name.e name))
+                (string? name) (clj_core/keyword.e name)))
+  ([ns name] (clj_core/keyword.e ns name)))
+
+;;------------------------------------------------------------------------------
+;;------------------------------------------------------------------------------
 
 (def prn
   (fn* [x]
@@ -372,18 +623,6 @@
 
   (def merge
     (fn* [& xs] (clj_core/merge.e xs)))
-
-  (def
-    ^{:doc "Like defn, but the resulting function name is declared as a
-  macro and will be used as a macro by the compiler when it is
-  called."
-      :arglists '([name doc-string? attr-map? [params*] body]
-                  [name doc-string? attr-map? ([params*] body)+ attr-map?])
-      :added "1.0"}
-    defmacro (fn [&form &env name & args]
-               (let [m    (merge {:macro true} (meta name))
-                     name (with-meta name m)]
-                 (apply list 'defn name args))))
 
   (defn reduce
     ([f coll]

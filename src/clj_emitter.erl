@@ -352,7 +352,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             FunAst = erl_syntax:fun_expr([Clause]),
             erl_syntax:application(FunAst, []);
           loop  ->
-            %% Emit to nested functions for 'loop' expressions.
+            %% Emit two nested funs for 'loop' expressions.
             %% An outer unnamed fun that initializes the bindings
             %% and an inner named fun that receives the initialized
             %% values as arguments and on every recur.
@@ -390,12 +390,16 @@ ast(#{op := recur} = Expr, State) ->
 
   LoopIdAtom = 'clojerl.Symbol':to_atom(LoopId),
 
-  %% We need to use invoke so that recur also works inside functions
+  %% We need to use invoke so that recur also works inside functions 
+  %% (i.e not funs)
   Ast = case LoopType of
           variable ->
             NameAst = erl_syntax:variable(LoopIdAtom),
             ArgsAst = erl_syntax:list(Args),
             application_mfa(clj_core, invoke, [NameAst, ArgsAst]);
+          loop ->
+            NameAst = erl_syntax:variable(LoopIdAtom),
+            erl_syntax:application(NameAst, Args);
           function ->
             NameAst = erl_syntax:atom(LoopIdAtom),
             erl_syntax:application(NameAst, Args)
@@ -405,11 +409,15 @@ ast(#{op := recur} = Expr, State) ->
 %% throw
 %%------------------------------------------------------------------------------
 ast(#{op := throw} = Expr, State) ->
-  #{exception := ExceptionExpr} = Expr,
+  #{ exception := ExceptionExpr
+   , form      := Form
+   } = Expr,
 
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
+  Location    = clj_reader:location_meta(Form),
+  LocationAst = erl_syntax:abstract(Location),
 
-  Ast = application_mfa(erlang, throw, [Exception]),
+  Ast = application_mfa(clj_utils, throw, [Exception, LocationAst]),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% try
