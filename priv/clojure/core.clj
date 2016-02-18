@@ -7,12 +7,6 @@
   list (fn* [& items] (clojerl.List/new.e items)))
 
 (def
-  ^{:arglists '([& items])
-    :doc "Creates a new list containing the items."
-    :added "1.0"}
-  list* (fn* [items] (clojerl.List/new.e items)))
-
-(def
   ^{:arglists '([x seq])
     :doc "Returns a new seq where x is the first element and seq is
     the rest."
@@ -52,7 +46,7 @@
    :doc "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil."
    :added "1.0"
-   :static true}  
+   :static true}
  next (fn ^:static next [x] (clj_core/next.e x)))
 
 (def
@@ -61,7 +55,7 @@
    :doc "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
    :added "1.0"
-   :static true}  
+   :static true}
  rest (fn ^:static rest [x] (clj_core/rest.e x)))
 
 (def
@@ -239,11 +233,11 @@
  sigs
  (fn [fdecl]
    (assert-valid-fdecl fdecl)
-   (let [asig 
+   (let [asig
          (fn [fdecl]
            (let [arglist (first fdecl)
                  ;elide implicit macro args
-                 arglist (if (clj_utils/equals.e '&form (first arglist)) 
+                 arglist (if (clj_utils/equals.e '&form (first arglist))
                            (clj_core/subvec.e arglist 2 (clj_core/count.e arglist))
                            arglist)
                  body (next fdecl)]
@@ -259,7 +253,7 @@
            (seq ret)))
        (list (asig fdecl))))))
 
-(def 
+(def
  ^{:arglists '([coll])
    :doc "Return the last item in coll, in linear time"
    :added "1.0"
@@ -269,7 +263,7 @@
           (recur (next s))
           (first s))))
 
-(def 
+(def
  ^{:arglists '([coll])
    :doc "Return a seq of all but the last item in coll, in linear time"
    :added "1.0"
@@ -311,7 +305,7 @@
          (list 'def (with-meta name m)
                (cons 'clojure.core/fn         ;; can't use syntax-quote here yet because
                                               ;; we haven't defined all the necessary functions
-                     (list* (seq fdecl)))))))
+                     (clojerl.List/new.e (seq fdecl)))))))
 
 (defn to-tuple
   "Returns a tuple of Objects containing the contents of coll, which
@@ -561,10 +555,154 @@
    :added "1.0"
    :static true}
   ([name] (cond (keyword? name) name
-                (symbol? name) (clj_core/keyword.e (clj_core/namespace.e name)
-                                                   (clj_core/name.e name))
-                (string? name) (clj_core/keyword.e name)))
-  ([ns name] (clj_core/keyword.e ns name)))
+                (symbol? name) (clojerl.Keyword/new.e (clj_core/namespace.e name)
+                                                      (clj_core/name.e name))
+                (string? name) (clojerl.Keyword/new.e name)))
+  ([ns name] (clojerl.Keyword/new.e ns name)))
+
+(defn find-keyword
+  "Returns a Keyword with the given namespace and name if one already
+  exists.  This function will not intern a new keyword. If the keyword
+  has not already been interned, it will return nil.  Do not use :
+  in the keyword strings, it will be added automatically."
+  {:tag clojure.lang.Keyword
+   :added "1.3"
+   :static true}
+  ([name] (cond (keyword? name) name
+                (symbol? name) (clojerl.Keyword/find.e (clj_core/namespace.e name)
+                                                       (clj_core/name.e name))
+                (string? name) (clojerl.Keyword/find.e name)))
+  ([ns name] (clojerl.Keyword/find.e ns name)))
+
+(defn spread
+  {:private true
+   :static true}
+  [arglist]
+  (cond
+    (nil? arglist) nil
+    (nil? (next arglist)) (seq (first arglist))
+    :else (cons (first arglist) (spread (next arglist)))))
+
+(defn list*
+  "Creates a new list containing the items prepended to the rest, the
+  last of which will be treated as a sequence."
+  {:added "1.0"
+   :static true}
+  ([args] (seq args))
+  ([a args] (cons a args))
+  ([a b args] (cons a (cons b args)))
+  ([a b c args] (cons a (cons b (cons c args))))
+  ([a b c d & more]
+     (cons a (cons b (cons c (cons d (spread more)))))))
+
+(defn apply
+  "Applies fn f to the argument list formed by prepending intervening arguments to args."
+  {:added "1.0"
+   :static true}
+  ([f args]
+   (clj_core/invoke.e f (seq args)))
+  ([f x args]
+   (clj_core/invoke.e f (list* x args)))
+  ([f x y args]
+   (clj_core/invoke.e f (list* x y args)))
+  ([f x y z args]
+   (clj_core/invoke.e f (list* x y z args)))
+  ([f a b c d args]
+   (clj_core/invoke.e f (cons a (cons b (cons c (cons d (spread args))))))))
+
+(defn vary-meta
+ "Returns an object of the same type and value as obj, with
+  (apply f (meta obj) args) as its metadata."
+ {:added "1.0"
+   :static true}
+ [obj f & args]
+ (with-meta obj (apply f (meta obj) args)))
+
+(defmacro lazy-seq
+  "Takes a body of expressions that returns an ISeq or nil, and yields
+  a Seqable object that will invoke the body only the first time seq
+  is called, and will cache the result and return it on all subsequent
+  seq calls. See also - realized?"
+  {:added "1.0"}
+  [& body]
+  (throw :unimplemented)
+  #_(list 'new 'clojure.lang.LazySeq (list* '^{:once true} fn* [] body)))
+
+(defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
+  (throw :unimplemented)
+  #_(clojure.lang.ChunkBuffer. capacity))
+
+(defn ^:static chunk-append [^clojure.lang.ChunkBuffer b x]
+  (throw :unimplemented)
+  #_(.add b x))
+
+(defn ^:static ^clojure.lang.IChunk chunk [^clojure.lang.ChunkBuffer b]
+  (throw :unimplemented)
+  #_(.chunk b))
+
+(defn ^:static  ^clojure.lang.IChunk chunk-first ^clojure.lang.IChunk [^clojure.lang.IChunkedSeq s]
+  (throw :unimplemented)
+  #_(.chunkedFirst s))
+
+(defn ^:static ^clojure.lang.ISeq chunk-rest ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
+  (throw :unimplemented)
+  #_(.chunkedMore s))
+
+(defn ^:static ^clojure.lang.ISeq chunk-next ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
+  (throw :unimplemented)
+  #_(.chunkedNext s))
+
+(defn ^:static chunk-cons [chunk rest]
+  (throw :unimplemented)
+  #_(if (clojure.lang.Numbers/isZero (clojure.lang.RT/count chunk))
+    rest
+    (clojure.lang.ChunkedCons. chunk rest)))
+
+(defn ^:static chunked-seq? [s]
+  (throw :unimplemented)
+  #_(instance? clojure.lang.IChunkedSeq s))
+
+#_(defn concat
+  "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
+  {:added "1.0"
+   :static true}
+  ([] (lazy-seq nil))
+  ([x] (lazy-seq x))
+  ([x y]
+    (lazy-seq
+      (let [s (seq x)]
+        (if s
+          (if (chunked-seq? s)
+            (chunk-cons (chunk-first s) (concat (chunk-rest s) y))
+            (cons (first s) (concat (rest s) y)))
+          y))))
+  ([x y & zs]
+     (let [cat (fn cat [xys zs]
+                 (lazy-seq
+                   (let [xys (seq xys)]
+                     (if xys
+                       (if (chunked-seq? xys)
+                         (chunk-cons (chunk-first xys)
+                                     (cat (chunk-rest xys) zs))
+                         (cons (first xys) (cat (rest xys) zs)))
+                       (when zs
+                         (cat (first zs) (next zs)))))))]
+       (cat (concat x y) zs))))
+
+(def concat
+  (fn*
+   ([] (list))
+   ([x] (apply list x))
+   ([x y]
+    (if (seq x)
+      (cons (first (seq x)) (concat (rest (seq x)) y))
+        y))
+   ([x y & zs]
+    (if (seq zs)
+      (apply concat (concat x y) (first zs) (next zs))
+      (concat x y)))))
+
+;;;;;;;;;;;;;;;;at this point all the support for syntax-quote exists;;;;;;;;;;;;;;;;;;;;;;
 
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------
@@ -572,14 +710,6 @@
 (def prn
   (fn* [x]
        (io/format.e "~s~n" (seq [(str x)]))))
-
-(def apply
-    (fn*
-     ([f args] (clj_core/invoke.e f (seq args)))
-     ([f x args] (clj_core/invoke.e f (cons x (seq args))))
-     ([f x y args] (clj_core/invoke.e f (cons x (cons y (seq args)))))
-     ([f x y z args] (clj_core/invoke.e f (cons x (cons y (cons z (seq args))))))
-     ([f a b c d args] (clj_core/invoke.e f (cons a (cons b (cons c (cons d (seq args)))))))))
 
 (def =
   (fn* [a b] (erlang/==.2 a b)))
@@ -598,19 +728,6 @@
 
   (def reverse
     (fn* [s] (lists/reverse.e (seq s))))
-
-  (def concat
-    (fn*
-     ([] (list))
-     ([x] (apply list x))
-     ([x y]
-      (if (seq x)
-        (cons (first (seq x)) (concat (rest (seq x)) y))
-        y))
-     ([x y & zs]
-      (if (seq zs)
-        (apply concat (concat x y) (first zs) (next zs))
-        (concat x y)))))
 
   (def vector
     (fn* [& xs] (clj_core/vector.e (seq xs))))
