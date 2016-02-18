@@ -23,21 +23,34 @@ is_special(S) ->
 
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand_1(Env, Form) ->
-  Op = clj_core:first(Form),
-  {MacroVar, Env1} = lookup_var(Op, false, Env),
+  Op       = clj_core:first(Form),
+  IsSymbol = clj_core:'symbol?'(Op),
+  IsVar    = clj_core:'var?'(Op),
+
+  {MacroVar, Env1} = if
+                       IsSymbol -> lookup_var(Op, false, Env);
+                       IsVar ->
+                         VarSymbol = clj_core:symbol( clj_core:namespace(Op)
+                                                    , clj_core:name(Op)
+                                                    ),
+                         lookup_var(VarSymbol, false, Env);
+                       true ->
+                         {undefined, Env}
+                     end,
 
   case
-    is_special(Op)
-    orelse (not clj_core:'symbol?'(Op))
-    orelse (MacroVar == undefined)
-    orelse (not 'clojerl.Var':is_macro(MacroVar))
+    not is_special(Op)
+    andalso (MacroVar =/= undefined)
+    andalso ('clojerl.Var':is_macro(MacroVar))
   of
-    true -> Form;
-    false ->
-      {MacroVar, Env2} = lookup_var(Op, false, Env1),
+    true ->
       Var = clj_core:deref(MacroVar),
-      Args = [Form, Env2] ++ clj_core:seq(clj_core:rest(Form)),
-      clj_core:invoke(Var, Args)
+      Args = [Form, Env1] ++ clj_core:seq(clj_core:rest(Form)),
+      try clj_core:invoke(Var, Args)
+      catch throw:Error ->
+          clj_utils:throw(Error, clj_reader:location_meta(Form))
+      end;
+    false -> Form
   end.
 
 -spec macroexpand(clj_env:env(), 'clojerl.List':type()) -> any().
@@ -198,26 +211,33 @@ parse_fn(Env, List) ->
                   false -> clj_core:seq2(Methods)
                 end,
 
+  Env0 = clj_env:add_locals_scope(Env),
+
   %% Add the name of the fn as a local with a modified name so that we can
   %% identify the fun as a clojure function when evaluated with erl_eval
   %% (see clojerl.erlang.Fn)
   PrefixNameSym = 'clojerl.erlang.Fn':prefix(NameSym),
   LocalExpr     = #{op => local, name => PrefixNameSym},
-  Env0          = clj_env:put_local( clj_env:add_locals_scope(Env)
-                                   , NameSym
-                                   , LocalExpr
-                                   ),
 
   %% If there is a def var we add it to the local scope
-  DefVarNsSym = clj_env:current_ns(Env),
-  DefNameSym  = case get_def_name(Env) of
-                  undefined -> clj_core:symbol(<<>>);
-                  DNS -> DNS
+  DefNameSym  = get_def_name(Env),
+  IsDef       = DefNameSym =/= undefined,
+  DefVar      = case IsDef of
+                  true  -> 
+                    DefVarNsSym = clj_env:current_ns(Env),
+                    'clojerl.Var':new( clj_core:name(DefVarNsSym)
+                                     , clj_core:name(DefNameSym)
+                                     );
+                  false -> undefined
                 end,
-  DefVar      = 'clojerl.Var':new( clj_core:name(DefVarNsSym)
-                                 , clj_core:name(DefNameSym)
-                                 ),
-  Env1        = clj_env:update_var(Env0, DefVar),
+
+  %% If it is a def we only register the var, otherwise register the local.
+  Env1 = case IsDef of
+           true  -> 
+             clj_env:update_var(Env0, DefVar);
+           false -> 
+             clj_env:put_local(Env0, NameSym, LocalExpr)
+         end,
 
   OpMeta      = clj_core:meta(Op),
   OnceKeyword = clj_core:keyword(<<"once">>),
@@ -230,9 +250,10 @@ parse_fn(Env, List) ->
              _         -> {function, DefNameSym}
            end,
 
-  %% Analyze methods' args but not the body, we just want arity information
+  %% If it is a def analyze methods' args but not the body, 
+  %% we just want arity information first.
   {MethodsExprs, Env2} =
-    analyze_fn_methods(Env1, MethodsList, LoopId, IsOnce, false),
+    analyze_fn_methods(Env1, MethodsList, LoopId, IsOnce, not IsDef),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
@@ -277,15 +298,22 @@ parse_fn(Env, List) ->
   %% Now that we have all the fn info we re-analyze the methods
   %% with the associated var, so that a recursive
   %% call can be correctly resolved.
-  VarMeta = #{ 'variadic?'     => IsVariadic
-             , max_fixed_arity => MaxFixedArity
-             , variadic_arity  => VariadicArity
-             },
-  DefVar1 = clj_core:with_meta(DefVar, VarMeta),
-  Env3    = clj_env:update_var(Env2, DefVar1),
 
   {MethodsExprs1, Env4} =
-    analyze_fn_methods(Env3, MethodsList, LoopId, IsOnce, true),
+    case IsDef of
+      true  -> 
+        VarMeta = #{ 'variadic?'     => IsVariadic
+                   , max_fixed_arity => MaxFixedArity
+                   , variadic_arity  => VariadicArity
+                   },
+        DefVar1 = clj_core:with_meta(DefVar, VarMeta),
+        Env3    = clj_env:update_var(Env2, DefVar1),
+
+        analyze_fn_methods(Env3, MethodsList, LoopId, IsOnce, true);
+      false -> 
+        {MethodsExprs, Env2}
+    end,
+
 
   FnExpr = #{ op              => fn
             , env             => ?DEBUG(Env)
