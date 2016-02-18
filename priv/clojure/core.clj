@@ -225,13 +225,16 @@
  with-meta (fn ^:static with-meta [x m]
              (clj_core/with_meta.e x m)))
 
-#_(def ^{:private true :dynamic true}
-  assert-valid-fdecl (fn [fdecl]))
+(def ^{:private true :dynamic true}
+  assert-valid-fdecl
+  (fn [fdecl]
+    (throw :unimplemented)))
 
-#_(def
+(def
  ^{:private true}
  sigs
  (fn [fdecl]
+   (throw :unimplemented)
    (assert-valid-fdecl fdecl)
    (let [asig
          (fn [fdecl]

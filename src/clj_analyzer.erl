@@ -224,7 +224,7 @@ parse_fn(Env, List) ->
   DefNameSym  = get_def_name(Env),
   IsDef       = DefNameSym =/= undefined,
   DefVar      = case IsDef of
-                  true  -> 
+                  true  ->
                     DefVarNsSym = clj_env:current_ns(Env),
                     'clojerl.Var':new( clj_core:name(DefVarNsSym)
                                      , clj_core:name(DefNameSym)
@@ -234,9 +234,9 @@ parse_fn(Env, List) ->
 
   %% If it is a def we only register the var, otherwise register the local.
   Env1 = case IsDef of
-           true  -> 
+           true  ->
              clj_env:update_var(Env0, DefVar);
-           false -> 
+           false ->
              clj_env:put_local(Env0, NameSym, LocalExpr)
          end,
 
@@ -247,14 +247,14 @@ parse_fn(Env, List) ->
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
   LoopId = case get_def_name(Env) of
-             undefined -> {variable, PrefixNameSym};
-             _         -> {function, DefNameSym}
+             undefined -> {fn, PrefixNameSym};
+             _         -> {var, DefNameSym}
            end,
 
   %% Remove def_name do that inner fn* are not influenced by it.
   Env1Bis = remove_def_name(Env1),
 
-  %% If it is a def analyze methods' args but not the body, 
+  %% If it is a def analyze methods' args but not the body,
   %% we just want arity information first.
   {MethodsExprs, Env2} =
     analyze_fn_methods(Env1Bis, MethodsList, LoopId, IsOnce, not IsDef),
@@ -305,7 +305,7 @@ parse_fn(Env, List) ->
 
   {MethodsExprs1, Env4} =
     case IsDef of
-      true  -> 
+      true  ->
         VarMeta = #{ 'variadic?'     => IsVariadic
                    , max_fixed_arity => MaxFixedArity
                    , variadic_arity  => VariadicArity
@@ -314,7 +314,7 @@ parse_fn(Env, List) ->
         Env3    = clj_env:update_var(Env2, DefVar1),
 
         analyze_fn_methods(Env3, MethodsList, LoopId, IsOnce, true);
-      false -> 
+      false ->
         {MethodsExprs, Env2}
     end,
 

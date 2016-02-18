@@ -390,17 +390,17 @@ ast(#{op := recur} = Expr, State) ->
 
   LoopIdAtom = 'clojerl.Symbol':to_atom(LoopId),
 
-  %% We need to use invoke so that recur also works inside functions 
+  %% We need to use invoke so that recur also works inside functions
   %% (i.e not funs)
   Ast = case LoopType of
-          variable ->
+          fn ->
             NameAst = erl_syntax:variable(LoopIdAtom),
             ArgsAst = erl_syntax:list(Args),
             application_mfa(clj_core, invoke, [NameAst, ArgsAst]);
           loop ->
             NameAst = erl_syntax:variable(LoopIdAtom),
             erl_syntax:application(NameAst, Args);
-          function ->
+          var ->
             NameAst = erl_syntax:atom(LoopIdAtom),
             erl_syntax:application(NameAst, Args)
         end,
