@@ -103,19 +103,24 @@ cons(_Config) ->
   EmptyMap = clj_core:hash_map([]),
 
   ct:comment("Conj a key-value pair to an empty map"),
-  OneMap = clj_core:conj(EmptyMap, [1, 2]),
+  OneMap = clj_core:conj(EmptyMap, clj_core:vector([1, 2])),
 
   1    = clj_core:count(OneMap),
   true = clj_core:equiv(OneMap, #{1 => 2}),
 
   ct:comment("Conj a key-value pair to a map with one"),
-  TwoMap = clj_core:conj(OneMap, [3, 4]),
+  TwoMap = clj_core:conj(OneMap, clj_core:vector([3, 4])),
 
   2    = clj_core:count(TwoMap),
   true = clj_core:equiv(TwoMap, #{1 => 2, 3 => 4}),
 
+  ct:comment("Conj another map to a map with one"),
+  ThreeMap = clj_core:conj(TwoMap, #{5 => 6}),
+  3    = clj_core:count(ThreeMap),
+  true = clj_core:equiv(ThreeMap, #{1 => 2, 3 => 4, 5 => 6}),
+
   ct:comment("Conj something that is not a key-value pair to an empty map"),
-  ok = try clj_core:conj(EmptyMap, [1]), error
+  ok = try clj_core:conj(EmptyMap, clj_core:vector([1])), error
        catch _:_ -> ok end,
 
   {comments, ""}.

@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.Associative').
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
@@ -12,6 +13,10 @@
 -behavior('clojerl.Stringable').
 
 -export([new/1]).
+-export([ 'clojerl.Associative.contains_key'/2
+        , 'clojerl.Associative.entry_at'/2
+        , 'clojerl.Associative.assoc'/3
+        ]).
 -export(['clojerl.Counted.count'/1]).
 -export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
@@ -46,6 +51,15 @@ build_key_values(KeyValues, [K, V | Items]) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
+'clojerl.Associative.contains_key'(#?TYPE{name = ?M, data = Map}, Key) ->
+  maps:is_key(Map, Key).
+
+'clojerl.Associative.entry_at'(#?TYPE{name = ?M, data = Map}, Key) ->
+  maps:get(Map, Key).
+
+'clojerl.Associative.assoc'(#?TYPE{name = ?M, data = Map} = M, Key, Value) ->
+  M#?TYPE{data = Map#{Key => Value}}.
+
 'clojerl.Counted.count'(#?TYPE{name = ?M, data = Map}) -> maps:size(Map).
 
 'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
@@ -59,12 +73,7 @@ build_key_values(KeyValues, [K, V | Items]) ->
   end.
 
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Map} = HashMap, X) ->
-  case clj_core:seq(X) of
-    [K, V] ->
-      HashMap#?TYPE{data = Map#{K => V}};
-    _ ->
-      throw(<<"Can't conj something that is not a key/value pair.">>)
-  end.
+  HashMap#?TYPE{data = clj_core:conj(Map, X)}.
 
 'clojerl.IColl.empty'(_) -> new([]).
 

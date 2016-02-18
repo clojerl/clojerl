@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.Associative').
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
@@ -10,6 +11,10 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
+-export([ 'clojerl.Associative.contains_key'/2
+        , 'clojerl.Associative.entry_at'/2
+        , 'clojerl.Associative.assoc'/3
+        ]).
 -export(['clojerl.Counted.count'/1]).
 -export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
@@ -23,6 +28,19 @@
         ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
+
+%%------------------------------------------------------------------------------
+%% Protocols
+%%------------------------------------------------------------------------------
+
+'clojerl.Associative.contains_key'(Map, Key) ->
+  maps:is_key(Map, Key).
+
+'clojerl.Associative.entry_at'(Map, Key) ->
+  maps:get(Map, Key).
+
+'clojerl.Associative.assoc'(Map, Key, Value) ->
+  Map#{Key => Value}.
 
 'clojerl.Stringable.str'(Map) when is_map(Map) ->
   StrFun = fun(Key) ->
@@ -47,12 +65,18 @@
 'clojerl.Counted.count'(Map) -> maps:size(Map).
 
 'clojerl.IColl.cons'(Map, X) ->
-  case clj_core:seq(X) of
-    [K, V] ->
+  IsVector = clj_core:'vector?'(X),
+  IsMap    = clj_core:'map?'(X),
+  case clj_core:seq2(X) of
+    [K, V] when IsVector -> 
       Map#{K => V};
+    KVs when IsMap ->
+      Fun = fun(KV, Acc) -> 
+                clj_core:assoc(Acc, clj_core:first(KV), clj_core:second(KV)) 
+            end,
+      lists:foldl(Fun, Map, KVs);
     _ ->
-      throw(<<"Can't conj something that is not"
-              " a key/value pair to a map.">>)
+      throw(<<"Can't conj something that is not a key/value pair to a map.">>)
   end.
 
 'clojerl.IColl.empty'(_) -> #{}.
