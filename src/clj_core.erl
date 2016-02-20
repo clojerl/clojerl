@@ -4,6 +4,7 @@
 
 -export([
          type/1,
+         load/1, load/2,
          count/1,
          'empty?'/1, empty/1,
          seq/1, seq2/1,
@@ -56,6 +57,50 @@ type(X) when is_function(X) -> 'clojerl.erlang.Fn';
 type(undefined)             -> 'clojerl.Nil';
 type(X) when is_atom(X)     -> 'clojerl.Keyword';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
+
+-spec load(binary()) -> undefined.
+load(ScriptBase) ->
+  load(ScriptBase, true).
+
+-spec load(binary(), boolean()) -> undefined.
+load(ScriptBase, FailIfNotFound) ->
+  NsBin = binary:replace(ScriptBase, <<"/">>, <<".">>, [global]),
+  case load_ns(NsBin) of
+    ok -> ok;
+    _ ->
+      FilePath = <<ScriptBase/binary, ".clj">>,
+      case resolve_file(FilePath) of
+        undefined ->
+          clj_utils:throw_when(FailIfNotFound
+                               , [ <<"Could not locate ">>, NsBin
+                                 , <<".beam or ">>, FilePath
+                                 , <<" on code path.">>
+                                 ]
+                              );
+        FullFilePath -> clj_compiler:compile_file(FullFilePath)
+      end
+  end,
+  undefined.
+
+-spec load_ns(binary()) -> ok | error.
+load_ns(NsBin) ->
+  case code:ensure_loaded(binary_to_atom(NsBin, utf8)) of
+    {module, _} -> ok;
+    _           -> error
+  end.
+
+-spec resolve_file(binary()) -> binary() | undefined.
+resolve_file(FilePath) ->
+  Found = [ filename:join(CP, FilePath)
+            || CP <- code:get_path(),
+               filelib:is_regular(filename:join(CP, FilePath))
+          ],
+
+  case length(Found) of
+    0 -> undefined;
+    1 -> first(Found);
+    _ -> clj_utils:throw([<<"Found more than one ">>, FilePath])
+  end.
 
 -spec count(any()) -> integer().
 count(Seq) ->
@@ -255,7 +300,7 @@ get(X, Key) -> 'clojerl.ILookup':get(X, Key).
 get(undefined, _Key, _NotFound) -> undefined;
 get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
 
--spec assoc('clojerl.Associative':type(), any(), any()) -> 
+-spec assoc('clojerl.Associative':type(), any(), any()) ->
   'clojerl.Associative':type().
 assoc(undefined, Key, Value) ->
   hash_map([Key, Value]);

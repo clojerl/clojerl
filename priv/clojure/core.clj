@@ -20,262 +20,261 @@
   let (fn* let [_&form _&env & decl] (cons 'let* decl)))
 
 (def
- ^{:macro true
-   :added "1.0"}
- loop (fn* loop [_&form _&env & decl] (cons 'loop* decl)))
+  ^{:macro true
+    :added "1.0"}
+  loop (fn* loop [_&form _&env & decl] (cons 'loop* decl)))
 
 (def
- ^{:macro true
-   :added "1.0"}
- fn (fn* fn [&form _&env & decl]
-        (let [x (cons 'fn* (clojerl.List/new.e decl))]
-          (clj_core/with_meta.e x (clj_core/meta.e &form)))))
-
+  ^{:macro true
+    :added "1.0"}
+  fn (fn* fn [&form _&env & decl]
+         (let [x (cons 'fn* (clojerl.List/new.e decl))]
+           (clj_core/with_meta.e x (clj_core/meta.e &form)))))
 
 (def
- ^{:arglists '([coll])
-   :doc "Returns the first item in the collection. Calls seq on its
+  ^{:arglists '([coll])
+    :doc "Returns the first item in the collection. Calls seq on its
     argument. If coll is nil, returns nil."
-   :added "1.0"
-   :static true}
- first (fn ^:static first [coll] (clj_core/first.e coll)))
+    :added "1.0"
+    :static true}
+  first (fn ^:static first [coll] (clj_core/first.e coll)))
 
 (def
- ^{:arglists '([coll])
-   :tag cojerl.ISeq
-   :doc "Returns a seq of the items after the first. Calls seq on its
+  ^{:arglists '([coll])
+    :tag cojerl.ISeq
+    :doc "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil."
-   :added "1.0"
-   :static true}
- next (fn ^:static next [x] (clj_core/next.e x)))
+    :added "1.0"
+    :static true}
+  next (fn ^:static next [x] (clj_core/next.e x)))
 
 (def
- ^{:arglists '([coll])
-   :tag clojerl.ISeq
-   :doc "Returns a possibly empty seq of the items after the first. Calls seq on its
+  ^{:arglists '([coll])
+    :tag clojerl.ISeq
+    :doc "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
-   :added "1.0"
-   :static true}
- rest (fn ^:static rest [x] (clj_core/rest.e x)))
+    :added "1.0"
+    :static true}
+  rest (fn ^:static rest [x] (clj_core/rest.e x)))
 
 (def
- ^{:arglists '([coll x] [coll x & xs])
-   :doc "conj[oin]. Returns a new collection with the xs
+  ^{:arglists '([coll x] [coll x & xs])
+    :doc "conj[oin]. Returns a new collection with the xs
     'added'. (conj nil item) returns (item).  The 'addition' may
     happen at different 'places' depending on the concrete type."
-   :added "1.0"
-   :static true}
- conj (fn ^:static conj
-        ([] [])
-        ([coll] coll)
-        ([coll x] (clj_core/conj.e coll x))
-        ([coll x & xs]
-         (if xs
-           (recur (conj coll x) (first xs) (next xs))
-           (conj coll x)))))
+    :added "1.0"
+    :static true}
+  conj (fn ^:static conj
+         ([] [])
+         ([coll] coll)
+         ([coll x] (clj_core/conj.e coll x))
+         ([coll x & xs]
+          (if xs
+            (recur (conj coll x) (first xs) (next xs))
+            (conj coll x)))))
 
 (def
- ^{:doc "Same as (first (next x))"
-   :arglists '([x])
-   :added "1.0"
-   :static true}
- second (fn ^:static second [x] (first (next x))))
+  ^{:doc "Same as (first (next x))"
+    :arglists '([x])
+    :added "1.0"
+    :static true}
+  second (fn ^:static second [x] (first (next x))))
 
 (def
- ^{:doc "Same as (first (first x))"
-   :arglists '([x])
-   :added "1.0"
-   :static true}
- ffirst (fn ^:static ffirst [x] (first (first x))))
+  ^{:doc "Same as (first (first x))"
+    :arglists '([x])
+    :added "1.0"
+    :static true}
+  ffirst (fn ^:static ffirst [x] (first (first x))))
 
 (def
- ^{:doc "Same as (next (first x))"
-   :arglists '([x])
-   :added "1.0"
-   :static true}
- nfirst (fn ^:static nfirst [x] (next (first x))))
+  ^{:doc "Same as (next (first x))"
+    :arglists '([x])
+    :added "1.0"
+    :static true}
+  nfirst (fn ^:static nfirst [x] (next (first x))))
 
 (def
- ^{:doc "Same as (first (next x))"
-   :arglists '([x])
-   :added "1.0"
-   :static true}
- fnext (fn ^:static fnext [x] (first (next x))))
+  ^{:doc "Same as (first (next x))"
+    :arglists '([x])
+    :added "1.0"
+    :static true}
+  fnext (fn ^:static fnext [x] (first (next x))))
 
 (def
- ^{:doc "Same as (next (next x))"
-   :arglists '([x])
-   :added "1.0"
-   :static true}
- nnext (fn ^:static nnext [x] (next (next x))))
+  ^{:doc "Same as (next (next x))"
+    :arglists '([x])
+    :added "1.0"
+    :static true}
+  nnext (fn ^:static nnext [x] (next (next x))))
 
 (def
- ^{:arglists '([coll])
-   :doc "Returns a seq on the collection. If the collection is
+  ^{:arglists '([coll])
+    :doc "Returns a seq on the collection. If the collection is
     empty, returns nil.  (seq nil) returns nil. seq also works on
     Strings, native Java arrays (of reference types) and any objects
     that implement Iterable. Note that seqs cache values, thus seq
     should not be used on any Iterable whose iterator repeatedly
     returns the same mutable object."
-   :tag clojure.lang.ISeq
-   :added "1.0"
-   :static true}
- seq (fn ^:static seq [coll] (clj_core/seq.e coll)))
+    :tag clojure.lang.ISeq
+    :added "1.0"
+    :static true}
+  seq (fn ^:static seq [coll] (clj_core/seq.e coll)))
 
 (def
- ^{:arglists '([p x])
-   :doc "Evaluates x and tests if it extends the protocol
+  ^{:arglists '([p x])
+    :doc "Evaluates x and tests if it extends the protocol
     p. Returns true or false"
-   :added "1.0"}
- extends? (fn extends? [p x]
-            (clj_core/extends?.e p (clj_core/type.e x))))
+    :added "1.0"}
+  extends? (fn extends? [p x]
+             (clj_core/extends?.e p (clj_core/type.e x))))
 
 (def
- ^{:arglists '([t x])
-   :doc "Evaluates x and tests if it is of type t.
+  ^{:arglists '([t x])
+    :doc "Evaluates x and tests if it is of type t.
     Returns true or false"
-   :added "1.0"}
- instance? (fn instance? [t x] (erlang/==.e t (clj_core/type.e x))))
+    :added "1.0"}
+  instance? (fn instance? [t x] (erlang/==.e t (clj_core/type.e x))))
 
 (def
- ^{:arglists '([x])
-   :doc "Return true if x implements ISeq"
-   :added "1.0"
-   :static true}
- seq? (fn ^:static seq? [x] (extends? :clojerl.ISeq x)))
+  ^{:arglists '([x])
+    :doc "Return true if x implements ISeq"
+    :added "1.0"
+    :static true}
+  seq? (fn ^:static seq? [x] (extends? :clojerl.ISeq x)))
 
 (def
- ^{:arglists '([x])
-   :doc "Return true if x implements IMeta"
-   :added "1.0"
-   :static true}
- meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
+  ^{:arglists '([x])
+    :doc "Return true if x implements IMeta"
+    :added "1.0"
+    :static true}
+  meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
 
 
 #_(def
- ^{:arglists '([x])
-   :doc "Return true if x is a Character"
-   :added "1.0"
-   :static true}
- char? (fn ^:static char? [x] (extends? Character x)))
+    ^{:arglists '([x])
+      :doc "Return true if x is a Character"
+      :added "1.0"
+      :static true}
+    char? (fn ^:static char? [x] (extends? Character x)))
 
 (def
- ^{:arglists '([x])
-   :doc "Return true if x is a String"
-   :added "1.0"
-   :static true}
- string? (fn ^:static string? [x] (instance? :clojerl.String x)))
+  ^{:arglists '([x])
+    :doc "Return true if x is a String"
+    :added "1.0"
+    :static true}
+  string? (fn ^:static string? [x] (instance? :clojerl.String x)))
 
 (def
- ^{:arglists '([x])
-   :doc "Return true if x implements IMap"
-   :added "1.0"
-   :static true}
- map? (fn ^:static map? [x] (extends? :clojerl.IMap x)))
+  ^{:arglists '([x])
+    :doc "Return true if x implements IMap"
+    :added "1.0"
+    :static true}
+  map? (fn ^:static map? [x] (extends? :clojerl.IMap x)))
 
 (def
- ^{:arglists '([x])
-   :doc "Return true if x is a Vector"
-   :added "1.0"
-   :static true}
- vector? (fn ^:static vector? [x] (instance? :clojerl.Vector x)))
+  ^{:arglists '([x])
+    :doc "Return true if x is a Vector"
+    :added "1.0"
+    :static true}
+  vector? (fn ^:static vector? [x] (instance? :clojerl.Vector x)))
 
 (def
- ^{:arglists '([x])
-   :doc "Return true if x is a Symbol"
-   :added "1.0"
-   :static true}
- symbol? (fn ^:static symbol? [x] (instance? :clojerl.Symbol x)))
+  ^{:arglists '([x])
+    :doc "Return true if x is a Symbol"
+    :added "1.0"
+    :static true}
+  symbol? (fn ^:static symbol? [x] (instance? :clojerl.Symbol x)))
 
 (def
- ^{:arglists '([map key val] [map key val & kvs])
-   :doc "assoc[iate]. When applied to a map, returns a new map of the
+  ^{:arglists '([map key val] [map key val & kvs])
+    :doc "assoc[iate]. When applied to a map, returns a new map of the
     same (hashed/sorted) type, that contains the mapping of key(s) to
     val(s). When applied to a vector, returns a new vector that
     contains val at index. Note - index must be <= (count vector)."
-   :added "1.0"
-   :static true}
- assoc
- (fn ^:static assoc
-   ([map key val] (clj_core/assoc.e map key val))
-   ([map key val & kvs]
-    (let [ret (assoc map key val)]
-      (if kvs
-        (if (next kvs)
-          (recur ret (first kvs) (second kvs) (nnext kvs))
-          (throw "assoc expects even number of arguments after map/vector, found odd number"))
-        ret)))))
+    :added "1.0"
+    :static true}
+  assoc
+  (fn ^:static assoc
+    ([map key val] (clj_core/assoc.e map key val))
+    ([map key val & kvs]
+     (let [ret (assoc map key val)]
+       (if kvs
+         (if (next kvs)
+           (recur ret (first kvs) (second kvs) (nnext kvs))
+           (throw "assoc expects even number of arguments after map/vector, found odd number"))
+         ret)))))
 
 ;;;;;;;;;;;;;;;;; metadata ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def
- ^{:arglists '([obj])
-   :doc "Returns the metadata of obj, returns nil if there is no metadata."
-   :added "1.0"
-   :static true}
- meta (fn ^:static meta [x]
-        (if (meta? x)
-          (clj_core/meta.e x))))
+  ^{:arglists '([obj])
+    :doc "Returns the metadata of obj, returns nil if there is no metadata."
+    :added "1.0"
+    :static true}
+  meta (fn ^:static meta [x]
+         (if (meta? x)
+           (clj_core/meta.e x))))
 
 (def
- ^{:arglists '([^clojure.lang.IObj obj m])
-   :doc "Returns an object of the same type and value as obj, with
+  ^{:arglists '([^clojure.lang.IObj obj m])
+    :doc "Returns an object of the same type and value as obj, with
     map m as its metadata."
-   :added "1.0"
-   :static true}
- with-meta (fn ^:static with-meta [x m]
-             (clj_core/with_meta.e x m)))
+    :added "1.0"
+    :static true}
+  with-meta (fn ^:static with-meta [x m]
+              (clj_core/with_meta.e x m)))
 
 (def ^{:private true :dynamic true}
   assert-valid-fdecl
   (fn [fdecl]
-    (throw :unimplemented)))
+    (throw "unimplemented")))
 
 (def
- ^{:private true}
- sigs
- (fn [fdecl]
-   (throw :unimplemented)
-   (assert-valid-fdecl fdecl)
-   (let [asig
-         (fn [fdecl]
-           (let [arglist (first fdecl)
-                 ;elide implicit macro args
-                 arglist (if (clj_utils/equals.e '&form (first arglist))
-                           (clj_core/subvec.e arglist 2 (clj_core/count.e arglist))
-                           arglist)
-                 body (next fdecl)]
-             (if (map? (first body))
-               (if (next body)
-                 (with-meta arglist (conj (if (meta arglist) (meta arglist) {}) (first body)))
-                 arglist)
-               arglist)))]
-     (if (seq? (first fdecl))
-       (loop [ret [] fdecls fdecl]
-         (if fdecls
-           (recur (conj ret (asig (first fdecls))) (next fdecls))
-           (seq ret)))
-       (list (asig fdecl))))))
+  ^{:private true}
+  sigs
+  (fn [fdecl]
+    (throw "unimplemented")
+    (assert-valid-fdecl fdecl)
+    (let [asig
+          (fn [fdecl]
+            (let [arglist (first fdecl)
+                                        ;elide implicit macro args
+                  arglist (if (clj_utils/equals.e '&form (first arglist))
+                            (clj_core/subvec.e arglist 2 (clj_core/count.e arglist))
+                            arglist)
+                  body (next fdecl)]
+              (if (map? (first body))
+                (if (next body)
+                  (with-meta arglist (conj (if (meta arglist) (meta arglist) {}) (first body)))
+                  arglist)
+                arglist)))]
+      (if (seq? (first fdecl))
+        (loop [ret [] fdecls fdecl]
+          (if fdecls
+            (recur (conj ret (asig (first fdecls))) (next fdecls))
+            (seq ret)))
+        (list (asig fdecl))))))
 
 (def
- ^{:arglists '([coll])
-   :doc "Return the last item in coll, in linear time"
-   :added "1.0"
-   :static true}
- last (fn ^:static last [s]
-        (if (next s)
-          (recur (next s))
-          (first s))))
+  ^{:arglists '([coll])
+    :doc "Return the last item in coll, in linear time"
+    :added "1.0"
+    :static true}
+  last (fn ^:static last [s]
+         (if (next s)
+           (recur (next s))
+           (first s))))
 
 (def
- ^{:arglists '([coll])
-   :doc "Return a seq of all but the last item in coll, in linear time"
-   :added "1.0"
-   :static true}
- butlast (fn ^:static butlast [s]
-           (loop [ret [] s s]
-             (if (next s)
-               (recur (conj ret (first s)) (next s))
-               (seq ret)))))
+  ^{:arglists '([coll])
+    :doc "Return a seq of all but the last item in coll, in linear time"
+    :added "1.0"
+    :static true}
+  butlast (fn ^:static butlast [s]
+            (loop [ret [] s s]
+              (if (next s)
+                (recur (conj ret (first s)) (next s))
+                (seq ret)))))
 
 (def ^:macro defn
   (fn* [form env name & fdecl]
@@ -301,13 +300,13 @@
                      (conj m (last fdecl))
                      m)
              fdecl (if (map? (last fdecl))
-                      (butlast fdecl)
-                      fdecl)
-             ;; m     (merge {:arglists (list 'quote (sigs fdecl))} m)
+                     (butlast fdecl)
+                     fdecl)
+             ;; m     (conj {:arglists (list 'quote (sigs fdecl))} m)
              m     (conj (if (meta name) (meta name) {}) m)]
          (list 'def (with-meta name m)
-               (cons 'clojure.core/fn         ;; can't use syntax-quote here yet because
-                                              ;; we haven't defined all the necessary functions
+               (cons 'clojure.core/fn ;; can't use syntax-quote here yet because
+                     ;; we haven't defined all the necessary functions
                      (clojerl.List/new.e (seq fdecl)))))))
 
 (defn to-tuple
@@ -328,7 +327,7 @@
   ([a b c] [a b c])
   ([a b c d] [a b c d])
   ([a b c d & args]
-     (clj_core/vector.e (cons a (cons b (cons c (cons d args)))))))
+   (clj_core/vector.e (cons a (cons b (cons c (cons d args)))))))
 
 (defn vec
   "Creates a new vector containing the contents of coll. Java arrays
@@ -368,7 +367,7 @@
   {:added "1.0"
    :static true}
   ([& keyvals]
-   (throw :unsupported)
+   (throw "unsupported")
    #_(clojure.lang.PersistentTreeMap/create keyvals)))
 
 (defn sorted-map-by
@@ -379,7 +378,7 @@
   {:added "1.0"
    :static true}
   ([comparator & keyvals]
-   (throw :unsupported)
+   (throw "unsupported")
    #_(clojure.lang.PersistentTreeMap/create comparator keyvals)))
 
 (defn sorted-set
@@ -388,7 +387,7 @@
   {:added "1.0"
    :static true}
   ([& keys]
-   (throw :unsupported)
+   (throw "unsupported")
    #_(clojure.lang.PersistentTreeSet/create keys)))
 
 (defn sorted-set-by
@@ -398,7 +397,7 @@
   {:added "1.1"
    :static true}
   ([comparator & keys]
-   (throw :unsupported)
+   (throw "unsupported")
    #_(clojure.lang.PersistentTreeSet/create comparator keys)))
 
 ;;;;;;;;;;;;;;;;;;;;
@@ -438,9 +437,9 @@
                            (list fdecl)
                            fdecl)
                    add-implicit-args (fn [fd]
-                             (let [args (first fd)]
-                               (cons (vec (cons '&form (cons '&env args)))
-                                     (next fd))))
+                                       (let [args (first fd)]
+                                         (cons (vec (cons '&form (cons '&env args)))
+                                               (next fd))))
                    add-args (fn [acc ds]
                               (if (nil? ds)
                                 acc
@@ -466,7 +465,7 @@
   "Evaluates test. If logical false, evaluates body in an implicit do."
   {:added "1.0"}
   [test & body]
-    (list 'if test nil (cons 'do body)))
+  (list 'if test nil (cons 'do body)))
 
 (defn false?
   "Returns true if x is the value false, false otherwise."
@@ -505,14 +504,14 @@
    :static true}
   (^:clojerl.String [] "")
   (^:clojerl.String [^Object x]
-   (if (nil? x) "" (clj_core/str.e x)))
+                    (if (nil? x) "" (clj_core/str.e x)))
   (^:clojerl.String [x & ys]
-     ((fn [acc more]
-          (if more
-            (recur (clj_utils/binary_append.e acc (str (first more)))
-                   (next more))
-            acc))
-      (clj_core/str.e x) ys)))
+                    ((fn [acc more]
+                       (if more
+                         (recur (clj_utils/binary_append.e acc (str (first more)))
+                                (next more))
+                         acc))
+                     (clj_core/str.e x) ys)))
 
 (defn keyword?
   "Return true if x is a Keyword"
@@ -544,12 +543,12 @@
   other tests or exprs. (cond) returns nil."
   {:added "1.0"}
   [& clauses]
-    (when clauses
-      (list 'if (first clauses)
-            (if (next clauses)
-                (second clauses)
-                (throw "cond requires an even number of forms"))
-            (cons 'clojure.core/cond (nnext clauses)))))
+  (when clauses
+    (list 'if (first clauses)
+          (if (next clauses)
+            (second clauses)
+            (throw "cond requires an even number of forms"))
+          (cons 'clojure.core/cond (nnext clauses)))))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
@@ -596,7 +595,7 @@
   ([a b args] (cons a (cons b args)))
   ([a b c args] (cons a (cons b (cons c args))))
   ([a b c d & more]
-     (cons a (cons b (cons c (cons d (spread more)))))))
+   (cons a (cons b (cons c (cons d (spread more)))))))
 
 (defn apply
   "Applies fn f to the argument list formed by prepending intervening arguments to args."
@@ -614,12 +613,12 @@
    (clj_core/invoke.e f (cons a (cons b (cons c (cons d (spread args))))))))
 
 (defn vary-meta
- "Returns an object of the same type and value as obj, with
+  "Returns an object of the same type and value as obj, with
   (apply f (meta obj) args) as its metadata."
- {:added "1.0"
+  {:added "1.0"
    :static true}
- [obj f & args]
- (with-meta obj (apply f (meta obj) args)))
+  [obj f & args]
+  (with-meta obj (apply f (meta obj) args)))
 
 (defmacro lazy-seq
   "Takes a body of expressions that returns an ISeq or nil, and yields
@@ -628,68 +627,63 @@
   seq calls. See also - realized?"
   {:added "1.0"}
   [& body]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(list 'new 'clojure.lang.LazySeq (list* '^{:once true} fn* [] body)))
 
 (defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(clojure.lang.ChunkBuffer. capacity))
 
 (defn ^:static chunk-append [^clojure.lang.ChunkBuffer b x]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(.add b x))
 
 (defn ^:static ^clojure.lang.IChunk chunk [^clojure.lang.ChunkBuffer b]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(.chunk b))
 
 (defn ^:static  ^clojure.lang.IChunk chunk-first ^clojure.lang.IChunk [^clojure.lang.IChunkedSeq s]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(.chunkedFirst s))
 
 (defn ^:static ^clojure.lang.ISeq chunk-rest ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(.chunkedMore s))
 
 (defn ^:static ^clojure.lang.ISeq chunk-next ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(.chunkedNext s))
 
 (defn ^:static chunk-cons [chunk rest]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(if (clojure.lang.Numbers/isZero (clojure.lang.RT/count chunk))
-    rest
-    (clojure.lang.ChunkedCons. chunk rest)))
+      rest
+      (clojure.lang.ChunkedCons. chunk rest)))
 
 (defn ^:static chunked-seq? [s]
-  (throw :unimplemented)
+  (throw "unimplemented")
   #_(instance? clojure.lang.IChunkedSeq s))
 
 #_(defn concat
-  "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
-  {:added "1.0"
-   :static true}
-  ([] (lazy-seq nil))
-  ([x] (lazy-seq x))
-  ([x y]
-    (lazy-seq
+    "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
+    {:added "1.0"
+     :static true}
+    ([] (lazy-seq nil))
+    ([x] (lazy-seq x))
+    ([x y]
+     (lazy-seq
       (let [s (seq x)]
         (if s
-          (if (chunked-seq? s)
-            (chunk-cons (chunk-first s) (concat (chunk-rest s) y))
-            (cons (first s) (concat (rest s) y)))
+          (cons (first s) (concat (rest s) y))
           y))))
-  ([x y & zs]
+    ([x y & zs]
      (let [cat (fn cat [xys zs]
                  (lazy-seq
-                   (let [xys (seq xys)]
-                     (if xys
-                       (if (chunked-seq? xys)
-                         (chunk-cons (chunk-first xys)
-                                     (cat (chunk-rest xys) zs))
-                         (cons (first xys) (cat (rest xys) zs)))
-                       (when zs
-                         (cat (first zs) (next zs)))))))]
+                  (let [xys (seq xys)]
+                    (if xys
+                      (cons (first xys) (cat (rest xys) zs))
+                      (when zs
+                        (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
 
 (def concat
@@ -699,7 +693,7 @@
    ([x y]
     (if (seq x)
       (cons (first (seq x)) (concat (rest (seq x)) y))
-        y))
+      y))
    ([x y & zs]
     (if (seq zs)
       (apply concat (concat x y) (first zs) (next zs))
@@ -707,74 +701,518 @@
 
 ;;;;;;;;;;;;;;;;at this point all the support for syntax-quote exists;;;;;;;;;;;;;;;;;;;;;;
 
-;;------------------------------------------------------------------------------
-;;------------------------------------------------------------------------------
+;;;;;;;;;;;;;;;;;;; sequence fns  ;;;;;;;;;;;;;;;;;;;;;;;
+(defn zero?
+  "Returns true if num is zero, else false"
+  {:inline (fn [x] `(erlang/==.e ~x 0))
+   :added "1.0"}
+  [x] (erlang/==.e x 0))
 
-(def prn
-  (fn* [x]
-       (io/format.e "~s~n" (seq [(str x)]))))
+(defn count
+  "Returns the number of items in the collection. (count nil) returns
+  0.  Also works on strings, arrays, and Java Collections and Maps"
+  {:inline (fn  [x] `(clj_core/count.e ~x))
+   :added "1.0"}
+  [coll] (clj_core/count.e coll))
 
-(def =
-  (fn* [a b] (erlang/==.2 a b)))
+(defn int
+  "Coerce to int"
+  {
+   :inline (fn  [x] `(clj_core/to_int.e ~x))
+   :added "1.0"}
+  [x] (clj_core/to_int.e x))
 
-(def not
-  (fn* [a] (erlang/not.1 a)))
+(defn nth
+  "Returns the value at the index. get returns nil if index out of
+  bounds, nth throws an exception unless not-found is supplied.  nth
+  also works for strings, Java arrays, regex Matchers and Lists, and,
+  in O(n) time, for sequences."
+  {:inline (fn  [c i & nf] `(clj_core/nth.e ~c ~i ~@nf))
+   :inline-arities #{2 3}
+   :added "1.0"}
+  ([coll index] (clj_core/nth.e coll index))
+  ([coll index not-found] (clj_core/nth.e coll index not-found)))
 
-(def assert ^:macro
-  (fn* [v] (if (not v) (throw :assert))))
+(defn <
+  "Returns non-nil if nums are in monotonically increasing order,
+  otherwise false."
+  {:inline (fn [x y] `(erlamg/<.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (erlang/<.e x y))
+  ([x y & more]
+   (if (< x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (< y (first more)))
+     false)))
 
-(def <
-  (fn* [a b] (erlang/<.e a b)))
+(defn inc'
+  "Returns a number one greater than num. Supports arbitrary precision.
+  See also: inc"
+  {:inline (fn [x] `(erlang/+.e ~x 1))
+   :added "1.0"}
+  [x] (erlang/+.e x 1))
 
-#_(
+(defn inc
+  "Returns a number one greater than num. Does not auto-promote
+  longs, will throw on overflow. See also: inc'"
+  {:inline (fn [x] `(inc' ~x))
+   :added "1.2"}
+  [x] (inc' x))
 
+;; reduce is defined again later after InternalReduce loads
+(defn ^:private ^:static
+  reduce1
+  ([f coll]
+   (let [s (seq coll)]
+     (if s
+       (reduce1 f (first s) (next s))
+       (f))))
+  ([f val coll]
+   (let [s (seq coll)]
+     (if s
+       (recur f (f val (first s)) (next s))
+       val))))
 
-  (def reverse
-    (fn* [s] (lists/reverse.e (seq s))))
+(defn reverse
+  "Returns a seq of the items in coll in reverse order. Not lazy."
+  {:added "1.0"
+   :static true}
+  [coll]
+  (reduce1 conj '() coll))
 
-  (def vector
-    (fn* [& xs] (clj_core/vector.e (seq xs))))
+;;math stuff
+(defn ^:private nary-inline
+  ([op] (nary-inline op op))
+  ([op unchecked-op]
+   (throw "unsupported")
+   (fn
+     ([x] #_`(. clojure.lang.Numbers (~op ~x)))
+     ([x y] #_`(. clojure.lang.Numbers (~op ~x ~y)))
+     ([x y & more]
+      #_(reduce1
+         (fn [a b] `(. clojure.lang.Numbers (~op ~a ~b)))
+         `(. clojure.lang.Numbers (~op ~x ~y)) more)))))
 
-  (def hash-map
-    (fn* [& xs] (clj_core/hash_map.e (seq xs))))
+(defn ^:private >1? [n] (erlang/>.e n 1))
+(defn ^:private >0? [n] (erlang/>.e n 0))
 
-  (def hash-set
-    (fn* [& xs] (clj_core/hash_set.e (seq xs))))
+(defn +'
+  "Returns the sum of nums. (+) returns 0. Supports arbitrary precision.
+  See also: +"
+  {:inline (nary-inline 'addP)
+   :inline-arities >1?
+   :added "1.0"}
+  ([] 0)
+  ([x] x)
+  ([x y] (erlang/+.e x y))
+  ([x y & more]
+   (reduce1 +' (+' x y) more)))
 
-  (def merge
-    (fn* [& xs] (clj_core/merge.e xs)))
+(defn +
+  "Returns the sum of nums. (+) returns 0. Does not auto-promote
+  longs, will throw on overflow. See also: +'"
+  {:inline (nary-inline 'add 'unchecked_add)
+   :inline-arities >1?
+   :added "1.2"}
+  ([] 0)
+  ([x] x)
+  ([x y] (+' x y))
+  ([x y & more]
+   (reduce1 + (+ x y) more)))
 
-  (defn reduce
-    ([f coll]
-     (reduce f (first coll) (rest coll)))
-    ([f val coll]
-     (if (seq coll)
-       (reduce f (f val (first coll)) (rest coll))
-       val)))
+(defn *'
+  "Returns the product of nums. (*) returns 1. Supports arbitrary precision.
+  See also: *"
+  {:inline (nary-inline 'multiplyP)
+   :inline-arities >1?
+   :added "1.0"}
+  ([] 1)
+  ([x] x)
+  ([x y] (erlang/*.e x y))
+  ([x y & more]
+   (reduce1 *' (*' x y) more)))
 
-  (defn +
-    ([] 0)
-    ([x] x)
-    ([x y] (erlang/+.e x y))
-    ([x y & more]
-     (reduce + (+ x y) more)))
+(defn *
+  "Returns the product of nums. (*) returns 1. Does not auto-promote
+  longs, will throw on overflow. See also: *'"
+  {:inline (nary-inline 'multiply 'unchecked_multiply)
+   :inline-arities >1?
+   :added "1.2"}
+  ([] 1)
+  ([x] x)
+  ([x y] (*' x y))
+  ([x y & more]
+   (reduce1 * (* x y) more)))
 
-  (defn -
-    ([] 0)
-    ([x] x)
-    ([x y] (erlang/-.e x y))
-    ([x y & more]
-     (reduce - (- x y) more)))
+(defn /
+  "If no denominators are supplied, returns 1/numerator,
+  else returns numerator divided by all of the denominators."
+  {:inline (nary-inline 'divide)
+   :inline-arities >1?
+   :added "1.0"}
+  ([x] (/ 1 x))
+  ([x y] (erlang// x y))
+  ([x y & more]
+   (reduce1 / (/ x y) more)))
 
-  (defn comp [& fs]
-    (let* [fs (reverse fs)]
-          (fn* [& xs]
-               (reduce #(%2 %1)
-                       (apply (first fs) xs)
-                       (rest fs)))))
+(defn -'
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result. Supports arbitrary precision.
+  See also: -"
+  {:inline (nary-inline 'minusP)
+   :inline-arities >0?
+   :added "1.0"}
+  ([x] (erlang/-.e x))
+  ([x y] (erlang/-.e x y))
+  ([x y & more]
+   (reduce1 -' (-' x y) more)))
 
-  (defn require
-    "Loads libs, skipping any that are already loaded. Each argument is
+(defn -
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result. Does not auto-promote
+  longs, will throw on overflow. See also: -'"
+  {:inline (nary-inline 'minus 'unchecked_minus)
+   :inline-arities >0?
+   :added "1.2"}
+  ([x] (-' x))
+  ([x y] (-' x y))
+  ([x y & more]
+   (reduce1 - (- x y) more)))
+
+(defn <=
+  "Returns non-nil if nums are in monotonically non-decreasing order,
+  otherwise false."
+  {:inline (fn [x y] `(erlang/=<.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (erlang/=<.e x y))
+  ([x y & more]
+   (if (<= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (<= y (first more)))
+     false)))
+
+(defn >
+  "Returns non-nil if nums are in monotonically decreasing order,
+  otherwise false."
+  {:inline (fn [x y] `(erlang/>.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (erlamg/>.e x y))
+  ([x y & more]
+   (if (> x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (> y (first more)))
+     false)))
+
+(defn >=
+  "Returns non-nil if nums are in monotonically non-increasing order,
+  otherwise false."
+  {:inline (fn [x y] `(erlang/>=.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (erlang/>=.e x y))
+  ([x y & more]
+   (if (>= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (>= y (first more)))
+     false)))
+
+(defn ==
+  "Returns non-nil if nums all have the equivalent
+  value (type-independent), otherwise false"
+  {:inline (fn [x y] `(erlang/==.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (erlang/==.e x y))
+  ([x y & more]
+   (if (== x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (== y (first more)))
+     false)))
+
+(defn max
+  "Returns the greatest of the nums."
+  {:added "1.0"
+   :inline-arities >1?
+   :inline (nary-inline 'max)}
+  ([x] x)
+  ([x y] (if (< x y) y x))
+  ([x y & more]
+   (reduce1 max (max x y) more)))
+
+(defn min
+  "Returns the least of the nums."
+  {:added "1.0"
+   :inline-arities >1?
+   :inline (nary-inline 'min)}
+  ([x] x)
+  ([x y] (if (> x y) y x))
+  ([x y & more]
+   (reduce1 min (min x y) more)))
+
+(defn dec'
+  "Returns a number one less than num. Supports arbitrary precision.
+  See also: dec"
+  {:inline (fn [x] `(erlang/-.e ~x 1))
+   :added "1.0"}
+  [x] (erlang/-.e x 1))
+
+(defn dec
+  "Returns a number one less than num. Does not auto-promote
+  longs, will throw on overflow. See also: dec'"
+  {:inline (fn [x] `(dec' ~x))
+   :added "1.2"}
+  [x] (dec' x))
+
+(defn unchecked-inc-int
+  "Returns a number one greater than x, an int.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_inc ~x)))
+   :added "1.0"}
+  [x]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_inc x)))
+
+(defn unchecked-inc
+  "Returns a number one greater than x, a long.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_inc ~x)))
+   :added "1.0"}
+  [x]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_inc x)))
+
+(defn unchecked-dec-int
+  "Returns a number one less than x, an int.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_dec ~x)))
+   :added "1.0"}
+  [x]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_dec x)))
+
+(defn unchecked-dec
+  "Returns a number one less than x, a long.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_dec ~x)))
+   :added "1.0"}
+  [x]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_dec x)))
+
+(defn unchecked-negate-int
+  "Returns the negation of x, an int.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_negate ~x)))
+   :added "1.0"}
+  [x]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_negate x)))
+
+(defn unchecked-negate
+  "Returns the negation of x, a long.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_minus ~x)))
+   :added "1.0"}
+  [x]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_minus x)))
+
+(defn unchecked-add-int
+  "Returns the sum of x and y, both int.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_add ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_add x y)))
+
+(defn unchecked-add
+  "Returns the sum of x and y, both long.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_add ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_add x y)))
+
+(defn unchecked-subtract-int
+  "Returns the difference of x and y, both int.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_subtract ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_subtract x y)))
+
+(defn unchecked-subtract
+  "Returns the difference of x and y, both long.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_minus ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_minus x y)))
+
+(defn unchecked-multiply-int
+  "Returns the product of x and y, both int.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_multiply ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_multiply x y)))
+
+(defn unchecked-multiply
+  "Returns the product of x and y, both long.
+  Note - uses a primitive operator subject to overflow."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_multiply ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_multiply x y)))
+
+(defn unchecked-divide-int
+  "Returns the division of x by y, both int.
+  Note - uses a primitive operator subject to truncation."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_divide ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_divide x y)))
+
+(defn unchecked-remainder-int
+  "Returns the remainder of division of x by y, both int.
+  Note - uses a primitive operator subject to truncation."
+  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_remainder ~x ~y)))
+   :added "1.0"}
+  [x y]
+  (throw "unsupported")
+  #_(. clojure.lang.Numbers (unchecked_int_remainder x y)))
+
+(defn pos?
+  "Returns true if num is greater than zero, else false"
+  {:inline (fn [x] `(> ~x 0))
+   :added "1.0"}
+  [x] (> x 0))
+
+(defn neg?
+  "Returns true if num is less than zero, else false"
+  {:inline (fn [x] `(< ~x 0))
+   :added "1.0"}
+  [x] (< x 0))
+
+(defn quot
+  "quot[ient] of dividing numerator by denominator."
+  {:added "1.0"
+   :static true
+   :inline (fn [x y] `(erlang/trunc.e (/ ~x ~y)))}
+  [num div]
+  (erlang/trunc.e (/ num div)))
+
+(defn rem
+  "remainder of dividing numerator by denominator."
+  {:added "1.0"
+   :static true
+   :inline (fn [x y] `(erlang/rem.e ~x ~y))}
+  [num div]
+  (erlang/rem.e num div))
+
+(defn rationalize
+  "returns the rational value of num"
+  {:added "1.0"
+   :static true}
+  [num]
+  (throw "unimplemented")
+  #_(. clojure.lang.Numbers (rationalize num)))
+
+;;;;;;;;;;;;
+
+(defn name
+  "Returns the name String of a string, symbol or keyword."
+  {:tag String
+   :added "1.0"
+   :static true}
+  [x]
+  (if (string? x) x (clj_core/name.e x)))
+
+(defn namespace
+  "Returns the namespace String of a symbol or keyword, or nil if not present."
+  {:tag String
+   :added "1.0"
+   :static true}
+  [^clojure.lang.Named x]
+  (clj_core/namespace.e x))
+
+(defmacro defn-
+  "same as defn, yielding non-public def"
+  {:added "1.0"}
+  [name & decls]
+  (list* `defn (with-meta name (assoc (meta name) :private true)) decls))
+
+(defn subs
+  "Returns the substring of s beginning at start inclusive, and ending
+  at end (defaults to length of string), exclusive."
+  {:added "1.0"
+   :static true}
+  ([s start] (subs s start (erlang/size.e s)))
+  ([s start end] (binary/part.e s start (- end start))))
+
+(defn- root-resource
+  "Returns the root directory path for a lib"
+  {:tag String}
+  [lib]
+  (str "/"
+       (binary/replace.e (name lib) "." "/" (seq [:global]))))
+
+(defn- last-index-of [s x]
+  (let [matches (binary/matches.e s x)]
+    (if (seq matches)
+      (first (last matches))
+      -1)))
+
+(defn- root-directory
+  "Returns the root resource path for a lib"
+  [lib]
+  (let [d (root-resource lib)]
+    (subs d 0 (last-index-of d "/"))))
+
+(defn load
+  "Loads Clojure code from resources in the code path. A path is interpreted
+  as code path-relative if it begins with a slash or relative to the root
+  directory for the current namespace otherwise."
+  [& paths]
+  (loop [paths paths]
+    (when paths
+      (let [path (first paths)
+            path (if (clojerl.String/starts_with.e path "/")
+                   path
+                   (throw "unimplemented")
+                   #_(str (root-directory (name *ns*)) "/" path))]
+        (clj_core/load.e (subs path 1))
+        (recur (next paths))))))
+
+(defn- load-libs
+  [& libs]
+  (loop [libs libs]
+    (when libs
+      (load (root-resource (first libs)))
+      (recur (next libs)))))
+
+(defn require
+  "Loads libs, skipping any that are already loaded. Each argument is
   either a libspec that identifies a lib, a prefix list that identifies
   multiple libs whose names share a common prefix, or a flag that modifies
   how all the identified libs are loaded. Use :require in the ns macro
@@ -819,8 +1257,22 @@
   The following would load the libraries clojure.zip and clojure.set
   abbreviated as 's'.
   (require '(clojure zip [set :as s]))"
-    {:added "1.0"}
+  {:added "1.0"}
 
-    [& _args]
-    #_(apply load-libs :require args))
-  )
+  [& args]
+  (apply load-libs #_ :require args))
+
+;;------------------------------------------------------------------------------
+;;------------------------------------------------------------------------------
+
+(defn prn
+  [& xs]
+  (io/format.e "~s~n" (seq [(apply str xs)])))
+
+(defn =
+  [a b]
+  (erlang/==.2 a b))
+
+(defmacro assert
+  [v]
+  (when (not v) (throw :assert)))

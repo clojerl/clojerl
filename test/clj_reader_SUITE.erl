@@ -745,7 +745,7 @@ eval(_Config) ->
   1 = clj_reader:read(<<"#=(do 1)">>),
 
   ct:comment("Read eval (str 1)"),
-  <<"1">> = clj_reader:read(<<"#=(clj_core/str 1)">>),
+  <<"1">> = clj_reader:read(<<"#=(clj_core/str.e 1)">>),
 
   {comments, ""}.
 

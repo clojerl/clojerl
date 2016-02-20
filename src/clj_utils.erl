@@ -59,7 +59,7 @@ parse_number(Number) ->
   {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()}.
 parse_symbol(<<>>) ->
   undefined;
-parse_symbol(<<"::", _/binary>>) ->
+parse_symbol(<<"::"/utf8, _/binary>>) ->
   undefined;
 parse_symbol(<<"/">>) ->
   {undefined, <<"/">>};
@@ -80,7 +80,7 @@ parse_symbol(Str) ->
   end.
 
 verify_symbol_name({_, Name} = Result) ->
-  NotNumeric = fun(<<C, _/binary>>) -> char_type(C) =/= number end,
+  NotNumeric = fun(<<C/utf8, _/binary>>) -> char_type(C) =/= number end,
   NoEndColon = fun(X) -> binary:last(X) =/= $: end,
   NoSlash = fun(X) -> binary:match(X, <<"/">>) == nomatch end,
   ApplyPred = fun(Fun) -> Fun(Name) end,
