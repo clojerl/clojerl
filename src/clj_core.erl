@@ -11,14 +11,10 @@
          equiv/2,
          conj/2,
          cons/2,
-         first/1,
-         next/1,
-         rest/1,
-         second/1,
-         third/1,
-         fourth/1,
-         name/1,
-         namespace/1,
+         first/1, next/1, rest/1,
+         second/1, third/1, fourth/1,
+         peek/1, pop/1,
+         name/1, namespace/1,
          symbol/1, symbol/2,
          keyword/1, keyword/2,
          'extends?'/2,
@@ -189,6 +185,14 @@ third(Seq) ->
 -spec fourth(any()) -> any().
 fourth(Seq) ->
   first(next(next(next(Seq)))).
+
+-spec peek(any()) -> any().
+peek(undefined) -> undefined;
+peek(Stack)     -> 'clojerl.IStack':peek(Stack).
+
+-spec pop(any()) -> any().
+pop(undefined) -> undefined;
+pop(Stack)     -> 'clojerl.IStack':pop(Stack).
 
 -spec name(any()) -> any().
 name(X) ->

@@ -5,6 +5,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
+-behavior('clojerl.IStack').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
@@ -18,6 +19,9 @@
         , 'clojerl.ISeq.next'/1
         ]).
 -export(['clojerl.ISequential.noop'/1]).
+-export([ 'clojerl.IStack.peek'/1
+        , 'clojerl.IStack.pop'/1
+        ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -48,6 +52,12 @@
 'clojerl.ISeq.next'([_ | Rest]) -> Rest.
 
 'clojerl.ISequential.noop'(_) -> ok.
+
+'clojerl.IStack.peek'([]) -> undefined;
+'clojerl.IStack.peek'([X | _]) -> X.
+
+'clojerl.IStack.pop'([]) -> [];
+'clojerl.IStack.pop'([_ | Rest]) -> Rest.
 
 'clojerl.IColl.cons'([], X) ->
   [X];

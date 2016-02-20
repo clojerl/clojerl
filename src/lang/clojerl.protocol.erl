@@ -27,7 +27,7 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
           FunctionBin = atom_to_binary(FunctionName, utf8),
           ProtocolBin = atom_to_binary(Protocol, utf8),
           Value = clj_core:str(Head),
-          throw(<<"Type '", TypeBin/binary, "'"
+          error(<<"Type '", TypeBin/binary, "'"
                   " has no implementation for function '",
                   FunctionBin/binary,
                   "' in protocol '",

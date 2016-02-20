@@ -349,10 +349,11 @@ meta(_Config) ->
 syntax_quote(_Config) ->
   WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
   QuoteSym = clj_core:symbol(<<"quote">>),
+  QuoteFun = fun(X) -> clj_core:list([QuoteSym, X]) end,
 
   ct:comment("Read special form"),
   DoSym = clj_core:symbol(<<"do">>),
-  QuoteDoList = clj_core:list([QuoteSym, DoSym]),
+  QuoteDoList = QuoteFun(DoSym),
   DoSyntaxQuote = clj_reader:read(<<"`do">>),
   true = clj_core:equiv(clj_core:first(DoSyntaxQuote), WithMetaSym),
   true = clj_core:equiv(clj_core:second(DoSyntaxQuote), QuoteDoList),
@@ -379,20 +380,22 @@ syntax_quote(_Config) ->
   UserHelloSym = clj_core:symbol(<<"$user">>, <<"hello">>),
   HelloSyntaxQuote = clj_reader:read(<<"`hello">>),
   true = clj_core:equiv(clj_core:first(HelloSyntaxQuote), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(HelloSyntaxQuote), UserHelloSym),
+  true = clj_core:equiv( clj_core:second(HelloSyntaxQuote)
+                       , QuoteFun(UserHelloSym)
+                       ),
 
   ct:comment("Read qualified symbol"),
   SomeNsHelloSym = clj_core:symbol(<<"some-ns">>, <<"hello">>),
   SomeNsHelloSyntaxQuote = clj_reader:read(<<"`some-ns/hello">>),
   true = clj_core:equiv(clj_core:first(SomeNsHelloSyntaxQuote), WithMetaSym),
   true = clj_core:equiv( clj_core:second(SomeNsHelloSyntaxQuote)
-                       , SomeNsHelloSym
+                       , QuoteFun(SomeNsHelloSym)
                        ),
 
   ct:comment("Read auto-gen symbol"),
   ListGenSym = clj_reader:read(<<"`hello#">>),
-  GenSym = clj_core:second(ListGenSym),
-  GenSymName = clj_core:name(GenSym),
+  QuotedGenSym = clj_core:second(ListGenSym),
+  GenSymName = clj_core:name(clj_core:second(QuotedGenSym)),
   {match, _} = re:run(GenSymName, "hello__\\d+__auto__"),
 
   ct:comment("Read auto-gen symbol, "
@@ -419,7 +422,7 @@ syntax_quote(_Config) ->
   ct:comment("Read list and empty list"),
   WithMetaListHello = clj_reader:read(<<"`(hello :world)">>),
   ListHelloCheck = clj_reader:read(<<"(clojure.core/concat"
-                                     "  (clojure.core/list $user/hello)"
+                                     "  (clojure.core/list '$user/hello)"
                                      "  (clojure.core/list :world))">>),
   true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaListHello))
                        , ListHelloCheck
@@ -436,7 +439,7 @@ syntax_quote(_Config) ->
   MapWithMetaCheck = clj_reader:read(<<"(clojure.core/apply"
                                        "  clojure.core/hash-map"
                                        "  (clojure.core/concat"
-                                       "    (clojure.core/list $user/hello)"
+                                       "    (clojure.core/list '$user/hello)"
                                        "    (clojure.core/list :world)))">>),
   true = clj_core:equiv(clj_core:first(MapWithMeta), WithMetaSym),
   true = clj_core:equiv(clj_core:second(MapWithMeta), MapWithMetaCheck),
@@ -447,7 +450,7 @@ syntax_quote(_Config) ->
     clj_reader:read(<<"(clojure.core/apply"
                       "  clojure.core/vector"
                       "  (clojure.core/concat"
-                      "    (clojure.core/list $user/hello)"
+                      "    (clojure.core/list '$user/hello)"
                       "    (clojure.core/list :world)))">>),
   true = clj_core:equiv(clj_core:first(VectorWithMeta), WithMetaSym),
   true = clj_core:equiv(clj_core:second(VectorWithMeta), VectorWithMetaCheck),
@@ -459,7 +462,7 @@ syntax_quote(_Config) ->
                       "  clojure.core/hash-set"
                       "  (clojure.core/concat"
                       "    (clojure.core/list :world)"
-                      "    (clojure.core/list $user/hello)))">>),
+                      "    (clojure.core/list '$user/hello)))">>),
   true = clj_core:equiv(clj_core:first(SetWithMeta), WithMetaSym),
   true = clj_core:equiv(clj_core:second(SetWithMeta), SetWithMetaCheck),
 
