@@ -1261,6 +1261,154 @@
   (throw "unimplemented")
   #_(. clojure.lang.Numbers (rationalize num)))
 
+;;Bit ops
+
+(defn bit-not
+  "Bitwise complement"
+  {:inline (fn [x] `(. clojure.lang.Numbers (not ~x)))
+   :added "1.0"}
+  [x] (erlang/bnot.e x))
+
+
+(defn bit-and
+  "Bitwise and"
+   {:inline (nary-inline 'and)
+    :inline-arities >1?
+    :added "1.0"}
+   ([x y] (erlang/band.e x y))
+   ([x y & more]
+      (reduce1 bit-and (bit-and x y) more)))
+
+(defn bit-or
+  "Bitwise or"
+  {:inline (nary-inline 'or)
+   :inline-arities >1?
+   :added "1.0"}
+  ([x y] (erlang/bor.e x y))
+  ([x y & more]
+    (reduce1 bit-or (bit-or x y) more)))
+
+(defn bit-xor
+  "Bitwise exclusive or"
+  {:inline (nary-inline 'xor)
+   :inline-arities >1?
+   :added "1.0"}
+  ([x y] (erlang/bxor.e x y))
+  ([x y & more]
+    (reduce1 bit-xor (bit-xor x y) more)))
+
+(defn bit-and-not
+  "Bitwise and with complement"
+  {:inline (nary-inline 'andNot)
+   :inline-arities >1?
+   :added "1.0"
+   :static true}
+  ([x y] (bit-not (bit-and x y)))
+  ([x y & more]
+    (reduce1 bit-and-not (bit-and-not x y) more)))
+
+
+(defn bit-clear
+  "Clear bit at index n"
+  {:added "1.0"
+   :static true}
+  [x n]
+  (throw "unimplemented")
+  #_(. clojure.lang.Numbers clearBit x n))
+
+(defn bit-set
+  "Set bit at index n"
+  {:added "1.0"
+   :static true}
+  [x n]
+  (throw "unimplemented")
+  #_(. clojure.lang.Numbers setBit x n))
+
+(defn bit-flip
+  "Flip bit at index n"
+  {:added "1.0"
+   :static true}
+  [x n]
+  (throw "unimplemented")
+  #_(. clojure.lang.Numbers flipBit x n))
+
+(defn bit-test
+  "Test bit at index n"
+  {:added "1.0"
+   :static true}
+  [x n]
+  (throw "unimplemented")
+  #_(. clojure.lang.Numbers testBit x n))
+
+
+(defn bit-shift-left
+  "Bitwise shift left"
+  {:inline (fn [x n] `(. clojure.lang.Numbers (shiftLeft ~x ~n)))
+   :added "1.0"}
+  [x n] (erlang/bsl.e x n))
+
+(defn bit-shift-right
+  "Bitwise shift right"
+  {:inline (fn [x n] `(. clojure.lang.Numbers (shiftRight ~x ~n)))
+   :added "1.0"}
+  [x n] (erlang/bsr.e x n))
+
+(defn unsigned-bit-shift-right
+  "Bitwise shift right, without sign-extension."
+  {:inline (fn [x n] `(. clojure.lang.Numbers (unsignedShiftRight ~x ~n)))
+   :added "1.6"}
+  [x n]
+  (throw "unimplemented")
+  #_(. clojure.lang.Numbers unsignedShiftRight x n))
+
+(defn integer?
+  "Returns true if n is an integer"
+  {:added "1.0"
+   :static true}
+  [n]
+  (erlang/is_integer.e n))
+
+(defn even?
+  "Returns true if n is even, throws an exception if n is not an integer"
+  {:added "1.0"
+   :static true}
+   [n] (if (integer? n)
+        (zero? (bit-and n 1))
+        (throw (str "Argument must be an integer: " n))))
+
+(defn odd?
+  "Returns true if n is odd, throws an exception if n is not an integer"
+  {:added "1.0"
+   :static true}
+  [n] (not (even? n)))
+
+
+;;
+
+(defn complement
+  "Takes a fn f and returns a fn that takes the same arguments as f,
+  has the same effects, if any, and returns the opposite truth value."
+  {:added "1.0"
+   :static true}
+  [f]
+  (fn
+    ([] (not (f)))
+    ([x] (not (f x)))
+    ([x y] (not (f x y)))
+    ([x y & zs] (not (apply f x y zs)))))
+
+(defn constantly
+  "Returns a function that takes any number of arguments and returns x."
+  {:added "1.0"
+   :static true}
+  [x] (fn [& args] x))
+
+(defn identity
+  "Returns its argument."
+  {:added "1.0"
+   :static true}
+  [x] x)
+
 ;;;;;;;;;;;;
 
 (defn name
