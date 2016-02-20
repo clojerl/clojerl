@@ -376,7 +376,9 @@ syntax_quote(Form, Env) ->
   QuoteSymbol = clj_core:symbol(<<"quote">>),
   if
     IsSpecial    -> {clj_core:list([QuoteSymbol, Form]), Env};
-    IsSymbol     -> syntax_quote_symbol(Form, Env);
+    IsSymbol     ->
+      {Symbol, Env1} = syntax_quote_symbol(Form, Env),
+      {clj_core:list([QuoteSymbol, Symbol]), Env1};
     IsUnquote    -> {clj_core:second(Form), Env};
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->

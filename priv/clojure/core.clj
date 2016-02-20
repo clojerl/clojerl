@@ -700,6 +700,129 @@
       (concat x y)))))
 
 ;;;;;;;;;;;;;;;;at this point all the support for syntax-quote exists;;;;;;;;;;;;;;;;;;;;;;
+(defmacro delay
+  "Takes a body of expressions and yields a Delay object that will
+  invoke the body only the first time it is forced (with force or deref/@), and
+  will cache the result and return it on all subsequent force
+  calls. See also - realized?"
+  {:added "1.0"}
+  [& body]
+    (list 'new 'clojure.lang.Delay (list* `^{:once true} fn* [] body)))
+
+(defn delay?
+  "returns true if x is a Delay created with delay"
+  {:added "1.0"
+   :static true}
+  [x]
+  (throw "unimplemented")
+  #_(instance? clojure.lang.Delay x))
+
+(defn force
+  "If x is a Delay, returns the (possibly cached) value of its expression, else returns x"
+  {:added "1.0"
+   :static true}
+  [x]
+  (throw "unimplemented")
+  #_(. clojure.lang.Delay (force x)))
+
+(defmacro if-not
+  "Evaluates test. If logical false, evaluates and returns then expr,
+  otherwise else expr, if supplied, else nil."
+  {:added "1.0"}
+  ([test then] `(if-not ~test ~then nil))
+  ([test then else]
+   `(if (not ~test) ~then ~else)))
+
+(defn identical?
+  "Tests if 2 arguments are the same object"
+  {:inline (fn [x y] `(erlang/=:=.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x y] (erlang/=:=.e x y)))
+
+;equiv-based
+(defn =
+  "Equality. Returns true if x equals y, false if not. Same as
+  Java x.equals(y) except it also works for nil, and compares
+  numbers and collections in a type-independent manner.  Clojure's immutable data
+  structures define equals() (and thus =) as a value, not an identity,
+  comparison."
+  {:inline (fn [x y] `(clj_core/equiv.e ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (clj_core/equiv.e x y))
+  ([x y & more]
+   (if (clj_core/equiv.e x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (clj_core/equiv.e y (first more)))
+     false)))
+
+;equals-based
+#_(defn =
+  "Equality. Returns true if x equals y, false if not. Same as Java
+  x.equals(y) except it also works for nil. Boxed numbers must have
+  same type. Clojure's immutable data structures define equals() (and
+  thus =) as a value, not an identity, comparison."
+  {:inline (fn [x y] `(. clojure.lang.Util equals ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x] true)
+  ([x y] (clojure.lang.Util/equals x y))
+  ([x y & more]
+   (if (= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (= y (first more)))
+     false)))
+
+(defn not=
+  "Same as (not (= obj1 obj2))"
+  {:tag Boolean
+   :added "1.0"
+   :static true}
+  ([x] false)
+  ([x y] (not (= x y)))
+  ([x y & more]
+   (not (apply = x y more))))
+
+(defn compare
+  "Comparator. Returns a negative number, zero, or a positive number
+  when x is logically 'less than', 'equal to', or 'greater than'
+  y. Same as Java x.compareTo(y) except it also works for nil, and
+  compares numbers and collections in a type-independent manner. x
+  must implement Comparable"
+  {
+   :inline (fn [x y] `(. clojure.lang.Util compare ~x ~y))
+   :added "1.0"}
+  [x y]
+  (throw "unimplemented")
+  #_(. clojure.lang.Util (compare x y)))
+
+(defmacro and
+  "Evaluates exprs one at a time, from left to right. If a form
+  returns logical false (nil or false), and returns that value and
+  doesn't evaluate any of the other expressions, otherwise it returns
+  the value of the last expr. (and) returns true."
+  {:added "1.0"}
+  ([] true)
+  ([x] x)
+  ([x & next]
+   `(let [and# ~x]
+      (if and# (and ~@next) and#))))
+
+(defmacro or
+  "Evaluates exprs one at a time, from left to right. If a form
+  returns a logical true value, or returns that value and doesn't
+  evaluate any of the other expressions, otherwise it returns the
+  value of the last expression. (or) returns nil."
+  {:added "1.0"}
+  ([] nil)
+  ([x] x)
+  ([x & next]
+      `(let [or# ~x]
+         (if or# or# (or ~@next)))))
 
 ;;;;;;;;;;;;;;;;;;; sequence fns  ;;;;;;;;;;;;;;;;;;;;;;;
 (defn zero?
