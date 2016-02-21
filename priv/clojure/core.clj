@@ -1428,7 +1428,112 @@
    :static true}
   [coll] (erlang/pop.e coll))
 
-;;;;;;;;;;;;
+;;map stuff
+
+(defn contains?
+  "Returns true if key is present in the given collection, otherwise
+  returns false.  Note that for numerically indexed collections like
+  vectors and Java arrays, this tests if the numeric key is within the
+  range of indexes. 'contains?' operates constant or logarithmic time;
+  it will not perform a linear search for a value.  See also 'some'."
+  {:added "1.0"
+   :static true}
+  [coll key] (clj_core/contains?.e coll key))
+
+(defn get
+  "Returns the value mapped to key, not-found or nil if key not present."
+  {:inline (fn  [m k & nf] `(clj_core/get.e ~m ~k ~@nf))
+   :inline-arities #{2 3}
+   :added "1.0"}
+  ([map key]
+   (clj_core/get.e map key))
+  ([map key not-found]
+   (clj_core/get.e map key not-found)))
+
+(defn dissoc
+  "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
+  that does not contain a mapping for key(s)."
+  {:added "1.0"
+   :static true}
+  ([map] map)
+  ([map key]
+   (clj_core/dissoc.e map key))
+  ([map key & ks]
+   (let [ret (dissoc map key)]
+     (if ks
+       (recur ret (first ks) (next ks))
+       ret))))
+
+(defn disj
+  "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
+  does not contain key(s)."
+  {:added "1.0"
+   :static true}
+  ([set] set)
+  ([^clojure.lang.IPersistentSet set key]
+   (when set
+     (clj_core/disj.e set key)))
+  ([set key & ks]
+   (when set
+     (let [ret (disj set key)]
+       (if ks
+         (recur ret (first ks) (next ks))
+         ret)))))
+
+(defn find
+  "Returns the map entry for key, or nil if key not present."
+  {:added "1.0"
+   :static true}
+  [map key] (clj_core/find.e map key))
+
+(defn select-keys
+  "Returns a map containing only those entries in map whose key is in keys"
+  {:added "1.0"
+   :static true}
+  [map keyseq]
+    (loop [ret {} keys (seq keyseq)]
+      (if keys
+        (let [entry (clj_core/find.e map (first keys))]
+          (recur
+           (if entry
+             (conj ret entry)
+             ret)
+           (next keys)))
+        (with-meta ret (meta map)))))
+
+(defn keys
+  "Returns a sequence of the map's keys, in the same order as (seq map)."
+  {:added "1.0"
+   :static true}
+  [map] (clj_core/keys.e map))
+
+(defn vals
+  "Returns a sequence of the map's values, in the same order as (seq map)."
+  {:added "1.0"
+   :static true}
+  [map] (clj_core/vals.e map))
+
+(defn key
+  "Returns the key of the map entry."
+  {:added "1.0"
+   :static true}
+  [e]
+  (first e))
+
+(defn val
+  "Returns the value in the map entry."
+  {:added "1.0"
+   :static true}
+  [e]
+  (second e))
+
+(defn rseq
+  "Returns, in constant time, a seq of the items in rev (which
+  can be a vector or sorted-map), in reverse order. If rev is empty returns nil"
+  {:added "1.0"
+   :static true}
+  [rev]
+    (clj_core/rseq.e rev))
 
 (defn name
   "Returns the name String of a string, symbol or keyword."
@@ -1445,6 +1550,78 @@
    :static true}
   [^clojure.lang.Named x]
   (clj_core/namespace.e x))
+
+(defmacro locking
+  "Executes exprs in an implicit do, while holding the monitor of x.
+  Will release the monitor of x in all circumstances."
+  {:added "1.0"}
+  [x & body]
+  (throw "unsupported")
+  #_`(let [lockee# ~x]
+     (try
+      (monitor-enter lockee#)
+      ~@body
+      (finally
+       (monitor-exit lockee#)))))
+
+(defmacro ..
+  "form => fieldName-symbol or (instanceMethodName-symbol args*)
+  Expands into a member access (.) of the first member on the first
+  argument, followed by the next member on the result, etc. For
+  instance:
+  (.. System (getProperties) (get \"os.name\"))
+  expands to:
+  (. (. System (getProperties)) (get \"os.name\"))
+  but is easier to write, read, and understand."
+  {:added "1.0"}
+  ([x form] `(. ~x ~form))
+  ([x form & more] `(.. (. ~x ~form) ~@more)))
+
+(defmacro ->
+  "Threads the expr through the forms. Inserts x as the
+  second item in the first form, making a list of it if it is not a
+  list already. If there are more forms, inserts the first form as the
+  second item in second form, etc."
+  {:added "1.0"}
+  [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(~(first form) ~x ~@(next form)) (meta form))
+                       (list form x))]
+        (recur threaded (next forms)))
+      x)))
+
+(defmacro ->>
+  "Threads the expr through the forms. Inserts x as the
+  last item in the first form, making a list of it if it is not a
+  list already. If there are more forms, inserts the first form as the
+  last item in second form, etc."
+  {:added "1.1"}
+  [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+              (with-meta `(~(first form) ~@(next form)  ~x) (meta form))
+              (list form x))]
+        (recur threaded (next forms)))
+      x)))
+
+(def map)
+
+(defn ^:private check-valid-options
+  "Throws an exception if the given option map contains keys not listed
+  as valid, else returns nil."
+  [options & valid-keys]
+  (when (seq (apply disj (apply hash-set (keys options)) valid-keys))
+    (throw
+      (apply str "Only these options are valid: "
+             (first valid-keys)
+             (map #(str ", " %) (rest valid-keys))))))
+
+;;;;;;;;;;;;
 
 (defmacro defn-
   "same as defn, yielding non-public def"

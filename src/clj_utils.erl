@@ -1,6 +1,6 @@
 -module(clj_utils).
 
--compile({no_auto_import, [throw/1]}).
+-compile({no_auto_import, [throw/1, error/1]}).
 
 -export([ char_type/1
         , char_type/2
@@ -10,6 +10,7 @@
         , binary_append/2
         , binary_join/2
         , ends_with/2
+        , error/1
         , throw/1
         , throw/2
         , throw_when/2
@@ -159,7 +160,14 @@ ends_with(Str, Ends) ->
   EndsSize = byte_size(Ends),
   Ends == binary:part(Str, {StrSize, - EndsSize}).
 
--spec throw(boolean()) -> no_return().
+-spec error(any()) -> no_return().
+error(List) when is_list(List) ->
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  error(Reason);
+error(Reason) when is_binary(Reason) ->
+  erlang:error(Reason).
+
+-spec throw(any()) -> no_return().
 throw(Reason) ->
   throw(Reason, undefined).
 

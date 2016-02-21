@@ -9,7 +9,7 @@
          'empty?'/1, empty/1,
          seq/1, seq2/1,
          equiv/2,
-         conj/2,
+         conj/2, disj/2,
          cons/2,
          first/1, next/1, rest/1,
          second/1, third/1, fourth/1,
@@ -18,16 +18,14 @@
          symbol/1, symbol/2,
          keyword/1, keyword/2,
          'extends?'/2,
-         'coll?'/1,
-         'sequential?'/1,
-         'seq?'/1,
+         'coll?'/1, 'sequential?'/1, 'associative?'/1, 'seq?'/1,
          'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
          'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
          'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1, 'var?'/1,
          deref/1,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
-         assoc/3,
+         assoc/3, dissoc/2, find/2,
          merge/1,
          'contains?'/2,
          boolean/1,
@@ -137,6 +135,12 @@ conj(undefined, Item) ->
 conj(Coll, Item) ->
   'clojerl.IColl':cons(Coll, Item).
 
+-spec disj(any(), any()) -> any().
+disj(undefined, _Item) ->
+  undefined;
+disj(Coll, Item) ->
+  'clojerl.ISet':disjoin(Coll, Item).
+
 %% @doc Clojure's cons builds a cons cell, which is actually
 %%      the equivalent to a vanilla Erlang Head and Tail.
 %% TODO: it is possible that it should actually return a vanilla
@@ -230,6 +234,10 @@ keyword(Namespace, Name) ->
 'sequential?'(X) ->
   'extends?'('clojerl.ISequential', type(X)).
 
+-spec 'associative?'(any()) -> boolean().
+'associative?'(X) ->
+  'extends?'('clojerl.Associative', type(X)).
+
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
   'extends?'('clojerl.ISeq', type(X)).
@@ -248,7 +256,7 @@ keyword(Namespace, Name) ->
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
-  type(X) == 'clojerl.Set'.
+  'extends?'('clojerl.ISet', type(X)).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
@@ -296,6 +304,20 @@ with_meta(X, Meta) ->
 'meta?'(X) ->
   'extends?'('clojerl.IMeta', type(X)).
 
+-spec 'contains?'(any(), any()) -> boolean().
+'contains?'(undefined, _) ->
+  false;
+'contains?'(Coll, Key) ->
+  IsAssociative = 'associative?'(Coll),
+  IsSet = 'set?'(Coll),
+
+  if
+    IsAssociative -> 'clojerl.Associative':contains_key(Coll, Key);
+    IsSet -> 'clojerl.ISet':contains(Coll, Key);
+    true  ->
+      clj_utils:error([ "contains? not supported on type: ", name(type(Coll))])
+  end.
+
 -spec get(any(), any()) -> any().
 get(undefined, _Key) -> undefined;
 get(X, Key) -> 'clojerl.ILookup':get(X, Key).
@@ -311,6 +333,21 @@ assoc(undefined, Key, Value) ->
 assoc(Map, Key, Value) ->
   'clojerl.Associative':assoc(Map, Key, Value).
 
+-spec dissoc('clojerl.IMap':type(), any()) -> 'clojerl.IMap':type().
+dissoc(undefined, _Key) ->
+  undefined;
+dissoc(Map, Key) ->
+  'clojerl.IMap':without(Map, Key).
+
+-spec find(any(), any()) -> any().
+find(undefined, _) ->
+  undefined;
+find(Map, Key) ->
+  case 'associative?'(Map) of
+    true  -> 'clojerl.Associative':entry_at(Map, Key);
+    false -> undefined
+  end.
+
 -spec merge([any()]) -> any().
 merge([]) ->
   undefined;
@@ -324,9 +361,6 @@ merge([First, Second | Rest]) ->
   ConjFun = fun(Item, Acc) -> conj(Acc, Item) end,
   Result = lists:foldl(ConjFun, First, seq2(Second)),
   merge([Result | Rest]).
-
--spec 'contains?'(any(), any()) -> any().
-'contains?'(X, Key) -> get(X, Key) =/= undefined.
 
 -spec boolean(any()) -> boolean().
 boolean(undefined) -> false;

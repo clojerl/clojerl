@@ -25,6 +25,7 @@
         ]).
 -export([ 'clojerl.IMap.keys'/1
         , 'clojerl.IMap.vals'/1
+        , 'clojerl.IMap.without'/2
         ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
@@ -34,33 +35,18 @@
 %%------------------------------------------------------------------------------
 
 'clojerl.Associative.contains_key'(Map, Key) ->
-  maps:is_key(Map, Key).
+  maps:is_key(Key, Map).
 
 'clojerl.Associative.entry_at'(Map, Key) ->
-  maps:get(Map, Key).
+  case maps:is_key(Key, Map) of
+    true ->
+      Val = maps:get(Key, Map),
+      clj_core:vector([Key, Val]);
+    false -> undefined
+  end.
 
 'clojerl.Associative.assoc'(Map, Key, Value) ->
   Map#{Key => Value}.
-
-'clojerl.Stringable.str'(Map) when is_map(Map) ->
-  StrFun = fun(Key) ->
-               KeyStr = clj_core:str(Key),
-               ValStr = clj_core:str(maps:get(Key, Map)),
-
-               clj_utils:binary_join([KeyStr, ValStr], <<" ">>)
-           end,
-  KeyValueStrs = lists:map(StrFun, maps:keys(Map)),
-  Strs = clj_utils:binary_join(KeyValueStrs, <<", ">>),
-  <<"{", Strs/binary, "}">>.
-
-'clojerl.Seqable.seq'(Map) when is_map(Map) ->
-  FoldFun = fun(K, V, List) ->
-                [clj_core:vector([K, V]) | List]
-            end,
-  case maps:fold(FoldFun, [], Map) of
-    [] -> undefined;
-    X -> X
-  end.
 
 'clojerl.Counted.count'(Map) -> maps:size(Map).
 
@@ -68,11 +54,11 @@
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
   case clj_core:seq2(X) of
-    [K, V] when IsVector -> 
+    [K, V] when IsVector ->
       Map#{K => V};
     KVs when IsMap ->
-      Fun = fun(KV, Acc) -> 
-                clj_core:assoc(Acc, clj_core:first(KV), clj_core:second(KV)) 
+      Fun = fun(KV, Acc) ->
+                clj_core:assoc(Acc, clj_core:first(KV), clj_core:second(KV))
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->
@@ -119,3 +105,26 @@ remove_meta(K, V, Acc) ->
 
 'clojerl.IMap.vals'(Map) ->
   maps:values(Map).
+
+'clojerl.IMap.without'(Map, Key) ->
+  maps:remove(Key, Map).
+
+'clojerl.Stringable.str'(Map) when is_map(Map) ->
+  StrFun = fun(Key) ->
+               KeyStr = clj_core:str(Key),
+               ValStr = clj_core:str(maps:get(Key, Map)),
+
+               clj_utils:binary_join([KeyStr, ValStr], <<" ">>)
+           end,
+  KeyValueStrs = lists:map(StrFun, maps:keys(Map)),
+  Strs = clj_utils:binary_join(KeyValueStrs, <<", ">>),
+  <<"{", Strs/binary, "}">>.
+
+'clojerl.Seqable.seq'(Map) when is_map(Map) ->
+  FoldFun = fun(K, V, List) ->
+                [clj_core:vector([K, V]) | List]
+            end,
+  case maps:fold(FoldFun, [], Map) of
+    [] -> undefined;
+    X -> X
+  end.
