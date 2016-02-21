@@ -5,7 +5,6 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
--behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.Seqable').
@@ -17,9 +16,6 @@
         , 'clojerl.IColl.empty'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
--export([ 'clojerl.ILookup.get'/2
-        , 'clojerl.ILookup.get'/3
-        ]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -64,17 +60,6 @@ new(Values) when is_list(Values) ->
 'clojerl.IEquiv.equiv'(_, _) ->
   false.
 
-%% clojerl.ILookup
-
-'clojerl.ILookup.get'(#?TYPE{name = ?M} = Set, Key) ->
-  'clojerl.ILookup.get'(Set, Key, undefined).
-
-'clojerl.ILookup.get'(#?TYPE{name = ?M, data = MapSet}, Key, NotFound) ->
-  case maps:is_key(Key, MapSet) of
-    true -> Key;
-    false -> NotFound
-  end.
-
 %% clojerl.IMeta
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
@@ -92,7 +77,10 @@ new(Values) when is_list(Values) ->
   maps:is_key(Key, MapSet).
 
 'clojerl.ISet.get'(#?TYPE{name = ?M, data = MapSet}, Key) ->
-  maps:get(Key, MapSet, undefined).
+  case maps:is_key(Key, MapSet) of
+    true  -> Key;
+    false -> undefined
+  end.
 
 %% clojerl.Seqable
 

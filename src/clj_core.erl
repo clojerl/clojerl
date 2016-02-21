@@ -320,11 +320,23 @@ with_meta(X, Meta) ->
 
 -spec get(any(), any()) -> any().
 get(undefined, _Key) -> undefined;
-get(X, Key) -> 'clojerl.ILookup':get(X, Key).
+get(X, Key) ->
+  case 'set?'(X) of
+    true  -> 'clojerl.ISet':get(X, Key);
+    false -> 'clojerl.ILookup':get(X, Key)
+  end.
 
 -spec get(any(), any(), any()) -> any().
 get(undefined, _Key, _NotFound) -> undefined;
-get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
+get(X, Key, NotFound) ->
+  case 'set?'(X) of
+    true  ->
+      case 'clojerl.ISet':'contains'(X, Key) of
+        true  -> 'clojerl.ISet':get(X, Key);
+        false -> NotFound
+      end;
+    false -> 'clojerl.ILookup':get(X, Key, NotFound)
+  end.
 
 -spec assoc('clojerl.Associative':type(), any(), any()) ->
   'clojerl.Associative':type().
