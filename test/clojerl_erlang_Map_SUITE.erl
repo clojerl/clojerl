@@ -8,6 +8,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , associative/1
         , complete_coverage/1
         ]).
 
@@ -124,6 +125,29 @@ cons(_Config) ->
   ct:comment("Conj something that is not a key-value pair to an empty map"),
   ok = try clj_core:conj(EmptyMap, clj_core:vector([1])), error
        catch _:_ -> ok end,
+
+  {comments, ""}.
+
+-spec associative(config()) -> result().
+associative(_Config) ->
+  EmptyMap = #{},
+  false    = clj_core:'contains?'(EmptyMap, 1),
+
+  OneMap = clj_core:assoc(EmptyMap, 1, a),
+  true   = clj_core:'contains?'(OneMap, 1),
+  false  = clj_core:'contains?'(OneMap, 2),
+
+  TwoMap = clj_core:assoc(OneMap, 2, b),
+  true   = clj_core:'contains?'(TwoMap, 1),
+  true   = clj_core:'contains?'(TwoMap, 2),
+
+  Pair   = clj_core:find(TwoMap, 2),
+  true   = clj_core:equiv(Pair, clj_core:vector([2, b])),
+
+  undefined = clj_core:find(TwoMap, 3),
+
+  TwoMap = clj_core:dissoc(TwoMap, 3),
+  OneMap = clj_core:dissoc(TwoMap, 2),
 
   {comments, ""}.
 
