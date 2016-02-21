@@ -20,6 +20,16 @@ starts_with(Str, Prefix) ->
 %%------------------------------------------------------------------------------
 
 'clojerl.Seqable.seq'(<<>>) -> undefined;
-'clojerl.Seqable.seq'(Str) -> unicode:characters_to_list(Str).
+'clojerl.Seqable.seq'(Str) ->
+  to_seq(Str, []).
 
 'clojerl.Stringable.str'(Str) -> Str.
+
+%%------------------------------------------------------------------------------
+%% Helper functions
+%%------------------------------------------------------------------------------
+
+to_seq(<<>>, Result) ->
+  lists:reverse(Result);
+to_seq(<<Ch/utf8, Rest/binary>>, Result) ->
+  to_seq(Rest, [<<Ch/utf8>> | Result]).
