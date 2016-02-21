@@ -9,6 +9,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , stack/1
         , complete_coverage/1
         ]).
 
@@ -131,6 +132,22 @@ cons(_Config) ->
 
   2    = clj_core:count(TwoList),
   true = clj_core:equiv(TwoList, [2, 1]),
+
+  {comments, ""}.
+
+-spec stack(config()) -> result().
+stack(_Config) ->
+  EmptyList = [],
+  undefined = clj_core:peek(EmptyList),
+  EmptyList = clj_core:pop(EmptyList),
+
+  OneList   = [1],
+  1         = clj_core:peek(OneList),
+  EmptyList = clj_core:pop(OneList),
+
+  TwoList   = [2, 1],
+  2         = clj_core:peek(TwoList),
+  OneList = clj_core:pop(TwoList),
 
   {comments, ""}.
 
