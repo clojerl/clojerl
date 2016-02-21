@@ -47,10 +47,6 @@ macroexpand_1(Env, Form) ->
       Var = clj_core:deref(MacroVar),
       Args = [Form, Env1] ++ clj_core:seq2(clj_core:rest(Form)),
       clj_core:invoke(Var, Args);
-      %% try clj_core:invoke(Var, Args)
-      %% catch throw:Error ->
-      %%     clj_utils:throw(Error, clj_reader:location_meta(Form))
-      %% end;
     false -> Form
   end.
 
