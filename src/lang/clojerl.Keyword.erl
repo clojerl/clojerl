@@ -4,7 +4,11 @@
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
--export([new/1, new/2]).
+-export([ new/1
+        , new/2
+        , find/1
+        , find/2
+        ]).
 
 -export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.Named.name'/1
@@ -21,6 +25,22 @@ new(Name) ->
 -spec new(binary(), binary()) -> type().
 new(Namespace, Name) ->
   binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8).
+
+-spec find(binary()) -> type().
+find(Name) ->
+  try
+    binary_to_existing_atom(Name, utf8)
+  catch
+    _:_ -> undefined
+  end.
+
+-spec find(binary(), binary()) -> type().
+find(Namespace, Name) ->
+  try
+    binary_to_existing_atom(<<Namespace/binary, "/", Name/binary>>, utf8)
+  catch
+    _:_ -> undefined
+  end.
 
 %%------------------------------------------------------------------------------
 %% Protocols

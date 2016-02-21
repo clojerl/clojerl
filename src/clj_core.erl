@@ -4,32 +4,28 @@
 
 -export([
          type/1,
+         load/1, load/2,
          count/1,
          'empty?'/1, empty/1,
          seq/1, seq2/1,
          equiv/2,
-         conj/2,
+         conj/2, disj/2,
          cons/2,
-         first/1,
-         next/1,
-         rest/1,
-         second/1,
-         third/1,
-         fourth/1,
-         name/1,
-         namespace/1,
+         first/1, next/1, rest/1,
+         second/1, third/1, fourth/1,
+         peek/1, pop/1,
+         name/1, namespace/1,
          symbol/1, symbol/2,
          keyword/1, keyword/2,
          'extends?'/2,
-         'coll?'/1,
-         'sequential?'/1,
-         'seq?'/1,
+         'coll?'/1, 'sequential?'/1, 'associative?'/1, 'seq?'/1,
          'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
          'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
-         'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1,
+         'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1, 'var?'/1,
          deref/1,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
+         assoc/3, dissoc/2, find/2,
          merge/1,
          'contains?'/2,
          boolean/1,
@@ -55,6 +51,50 @@ type(X) when is_function(X) -> 'clojerl.erlang.Fn';
 type(undefined)             -> 'clojerl.Nil';
 type(X) when is_atom(X)     -> 'clojerl.Keyword';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
+
+-spec load(binary()) -> undefined.
+load(ScriptBase) ->
+  load(ScriptBase, true).
+
+-spec load(binary(), boolean()) -> undefined.
+load(ScriptBase, FailIfNotFound) ->
+  NsBin = binary:replace(ScriptBase, <<"/">>, <<".">>, [global]),
+  case load_ns(NsBin) of
+    ok -> ok;
+    _ ->
+      FilePath = <<ScriptBase/binary, ".clj">>,
+      case resolve_file(FilePath) of
+        undefined ->
+          clj_utils:throw_when(FailIfNotFound
+                               , [ <<"Could not locate ">>, NsBin
+                                 , <<".beam or ">>, FilePath
+                                 , <<" on code path.">>
+                                 ]
+                              );
+        FullFilePath -> clj_compiler:compile_file(FullFilePath)
+      end
+  end,
+  undefined.
+
+-spec load_ns(binary()) -> ok | error.
+load_ns(NsBin) ->
+  case code:ensure_loaded(binary_to_atom(NsBin, utf8)) of
+    {module, _} -> ok;
+    _           -> error
+  end.
+
+-spec resolve_file(binary()) -> binary() | undefined.
+resolve_file(FilePath) ->
+  Found = [ filename:join(CP, FilePath)
+            || CP <- code:get_path(),
+               filelib:is_regular(filename:join(CP, FilePath))
+          ],
+
+  case length(Found) of
+    0 -> undefined;
+    1 -> first(Found);
+    _ -> clj_utils:throw([<<"Found more than one ">>, FilePath])
+  end.
 
 -spec count(any()) -> integer().
 count(Seq) ->
@@ -95,6 +135,12 @@ conj(undefined, Item) ->
 conj(Coll, Item) ->
   'clojerl.IColl':cons(Coll, Item).
 
+-spec disj(any(), any()) -> any().
+disj(undefined, _Item) ->
+  undefined;
+disj(Coll, Item) ->
+  'clojerl.ISet':disjoin(Coll, Item).
+
 %% @doc Clojure's cons builds a cons cell, which is actually
 %%      the equivalent to a vanilla Erlang Head and Tail.
 %% TODO: it is possible that it should actually return a vanilla
@@ -103,7 +149,10 @@ conj(Coll, Item) ->
 cons(Item, undefined) ->
   list([Item]);
 cons(Item, Seq) ->
-  'clojerl.IColl':cons(seq2(Seq), Item).
+  case 'seq?'(Seq) of
+    true  -> 'clojerl.IColl':cons(Seq, Item);
+    false -> 'clojerl.IColl':cons(seq2(Seq), Item)
+  end.
 
 -spec first(any()) -> any().
 first(undefined) -> undefined;
@@ -141,6 +190,14 @@ third(Seq) ->
 fourth(Seq) ->
   first(next(next(next(Seq)))).
 
+-spec peek(any()) -> any().
+peek(undefined) -> undefined;
+peek(Stack)     -> 'clojerl.IStack':peek(Stack).
+
+-spec pop(any()) -> any().
+pop(undefined) -> undefined;
+pop(Stack)     -> 'clojerl.IStack':pop(Stack).
+
 -spec name(any()) -> any().
 name(X) ->
   'clojerl.Named':name(X).
@@ -177,6 +234,10 @@ keyword(Namespace, Name) ->
 'sequential?'(X) ->
   'extends?'('clojerl.ISequential', type(X)).
 
+-spec 'associative?'(any()) -> boolean().
+'associative?'(X) ->
+  'extends?'('clojerl.Associative', type(X)).
+
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
   'extends?'('clojerl.ISeq', type(X)).
@@ -195,7 +256,7 @@ keyword(Namespace, Name) ->
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
-  type(X) == 'clojerl.Set'.
+  'extends?'('clojerl.ISet', type(X)).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
@@ -223,6 +284,10 @@ keyword(Namespace, Name) ->
 -spec 'regex?'(any()) -> boolean().
 'regex?'(X) -> type(X) == re_pattern.
 
+-spec 'var?'(any()) -> boolean().
+'var?'(X) ->
+  type(X) == 'clojerl.Var'.
+
 -spec deref(any()) -> any().
 deref(X) ->
   'clojerl.IDeref':deref(X).
@@ -239,13 +304,61 @@ with_meta(X, Meta) ->
 'meta?'(X) ->
   'extends?'('clojerl.IMeta', type(X)).
 
+-spec 'contains?'(any(), any()) -> boolean().
+'contains?'(undefined, _) ->
+  false;
+'contains?'(Coll, Key) ->
+  IsAssociative = 'associative?'(Coll),
+  IsSet = 'set?'(Coll),
+
+  if
+    IsAssociative -> 'clojerl.Associative':contains_key(Coll, Key);
+    IsSet -> 'clojerl.ISet':contains(Coll, Key);
+    true  ->
+      clj_utils:error([ "contains? not supported on type: ", name(type(Coll))])
+  end.
+
 -spec get(any(), any()) -> any().
 get(undefined, _Key) -> undefined;
-get(X, Key) -> 'clojerl.ILookup':get(X, Key).
+get(X, Key) ->
+  case 'set?'(X) of
+    true  -> 'clojerl.ISet':get(X, Key);
+    false -> 'clojerl.ILookup':get(X, Key)
+  end.
 
 -spec get(any(), any(), any()) -> any().
 get(undefined, _Key, _NotFound) -> undefined;
-get(X, Key, NotFound) -> 'clojerl.ILookup':get(X, Key, NotFound).
+get(X, Key, NotFound) ->
+  case 'set?'(X) of
+    true  ->
+      case 'clojerl.ISet':'contains'(X, Key) of
+        true  -> 'clojerl.ISet':get(X, Key);
+        false -> NotFound
+      end;
+    false -> 'clojerl.ILookup':get(X, Key, NotFound)
+  end.
+
+-spec assoc('clojerl.Associative':type(), any(), any()) ->
+  'clojerl.Associative':type().
+assoc(undefined, Key, Value) ->
+  hash_map([Key, Value]);
+assoc(Map, Key, Value) ->
+  'clojerl.Associative':assoc(Map, Key, Value).
+
+-spec dissoc('clojerl.IMap':type(), any()) -> 'clojerl.IMap':type().
+dissoc(undefined, _Key) ->
+  undefined;
+dissoc(Map, Key) ->
+  'clojerl.IMap':without(Map, Key).
+
+-spec find(any(), any()) -> any().
+find(undefined, _) ->
+  undefined;
+find(Map, Key) ->
+  case 'associative?'(Map) of
+    true  -> 'clojerl.Associative':entry_at(Map, Key);
+    false -> undefined
+  end.
 
 -spec merge([any()]) -> any().
 merge([]) ->
@@ -260,9 +373,6 @@ merge([First, Second | Rest]) ->
   ConjFun = fun(Item, Acc) -> conj(Acc, Item) end,
   Result = lists:foldl(ConjFun, First, seq2(Second)),
   merge([Result | Rest]).
-
--spec 'contains?'(any(), any()) -> any().
-'contains?'(X, Key) -> get(X, Key) =/= undefined.
 
 -spec boolean(any()) -> boolean().
 boolean(undefined) -> false;
@@ -279,15 +389,24 @@ list(Items) ->
 
 -spec vector(list()) -> 'clojerl.Vector':type().
 vector(Items) ->
-  'clojerl.Vector':new(Items).
+  case count(Items) of
+    0 -> 'clojerl.Vector':new([]);
+    _ -> 'clojerl.Vector':new(seq(Items))
+  end.
 
 -spec hash_map(list()) -> 'clojerl.Map':type().
 hash_map(Items) ->
-  'clojerl.Map':new(Items).
+  case count(Items) of
+    0 -> 'clojerl.Map':new([]);
+    _ -> 'clojerl.Map':new(seq(Items))
+  end.
 
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
-  'clojerl.Set':new(Items).
+  case count(Items) of
+    0 -> 'clojerl.Set':new([]);
+    _ -> 'clojerl.Set':new(seq(Items))
+  end.
 
 -spec keys('clojerl.IMap':type()) -> list().
 keys(Map) ->

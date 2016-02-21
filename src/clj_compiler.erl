@@ -33,7 +33,13 @@
 -spec default_options() -> map().
 default_options() ->
   #{ output_dir => "ebin"
-   , erl_flags  => [debug_info, verbose, report_errors, report_warnings]
+   , erl_flags  => [ debug_info
+                   , verbose
+                   , report_errors
+                   , report_warnings
+                   , nowarn_unused_vars
+                   , nowarn_shadow_vars
+                   ]
    , clj_flags  => []
    }.
 

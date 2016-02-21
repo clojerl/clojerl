@@ -7,6 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISequential').
+-behavior('clojerl.IStack').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
@@ -21,6 +22,9 @@
         , 'clojerl.IMeta.with_meta'/2
         ]).
 -export(['clojerl.ISequential.noop'/1]).
+-export([ 'clojerl.IStack.peek'/1
+        , 'clojerl.IStack.pop'/1
+        ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -65,6 +69,20 @@ new(Items) when is_list(Items) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
 
 'clojerl.ISequential.noop'(_) -> ok.
+
+'clojerl.IStack.peek'(#?TYPE{name = ?M, data = Array}) ->
+  case array:size(Array) of
+    0    -> undefined;
+    Size -> array:get(Size - 1, Array)
+  end.
+
+'clojerl.IStack.pop'(#?TYPE{name = ?M, data = Array} = Vector) ->
+  case array:size(Array) of
+    0    -> clj_utils:throw(<<"Can't pop empty vector">>);
+    Size ->
+      NewArray = array:resize(Size - 1, Array),
+      Vector#?TYPE{data = NewArray}
+  end.
 
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of

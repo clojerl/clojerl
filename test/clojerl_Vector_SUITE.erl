@@ -9,6 +9,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , stack/1
         , complete_coverage/1
         ]).
 
@@ -123,6 +124,24 @@ cons(_Config) ->
 
   2    = clj_core:count(TwoVector),
   true = clj_core:equiv(TwoVector, [1, 2]),
+
+  {comments, ""}.
+
+-spec stack(config()) -> result().
+stack(_Config) ->
+  EmptyVector = clj_core:vector([]),
+  undefined = clj_core:peek(EmptyVector),
+  ok = try EmptyVector = clj_core:pop(EmptyVector), error
+       catch _ -> ok
+       end,
+
+  OneVector = clj_core:vector([1]),
+  1         = clj_core:peek(OneVector),
+  true      = clj_core:equiv(clj_core:pop(OneVector), EmptyVector),
+
+  TwoVector   = clj_core:vector([1, 2]),
+  2         = clj_core:peek(TwoVector),
+  true      = clj_core:equiv(clj_core:pop(TwoVector), OneVector),
 
   {comments, ""}.
 

@@ -8,6 +8,7 @@
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
+-behavior('clojerl.IStack').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
@@ -26,6 +27,9 @@
         , 'clojerl.ISeq.more'/1
         ]).
 -export(['clojerl.ISequential.noop'/1]).
+-export([ 'clojerl.IStack.peek'/1
+        , 'clojerl.IStack.pop'/1
+        ]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -77,6 +81,14 @@ new(Items) when is_list(Items) ->
   List#?TYPE{data = Rest}.
 
 'clojerl.ISequential.noop'(_) -> ok.
+
+'clojerl.IStack.peek'(#?TYPE{name = ?M, data = List}) ->
+  clj_core:peek(List).
+
+'clojerl.IStack.pop'(#?TYPE{name = ?M, data = []} = List) ->
+  List;
+'clojerl.IStack.pop'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
+  List#?TYPE{data = Rest}.
 
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = []}) -> undefined;
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Seq}) -> Seq.

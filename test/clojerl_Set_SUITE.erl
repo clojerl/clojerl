@@ -8,6 +8,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , disjoin/1
         , complete_coverage/1
         ]).
 
@@ -36,7 +37,8 @@ new(_Config) ->
   2 = clj_core:get(Set, 2),
   3 = clj_core:get(Set, 3),
   4 = clj_core:get(Set, 4),
-  undefined = clj_core:get(Set, 5),
+  undefined   = clj_core:get(Set, 5),
+  'not-found' = clj_core:get(Set, 5, 'not-found'),
 
   Set2 = clj_core:hash_set([]),
   undefined = clj_core:get(Set2, whatever),
@@ -112,6 +114,19 @@ cons(_Config) ->
 
   {comments, ""}.
 
+-spec disjoin(config()) -> result().
+disjoin(_Config) ->
+  EmptySet = clj_core:hash_set([]),
+  EmptySet = clj_core:disj(EmptySet, whatever),
+
+  OneSet = clj_core:conj(EmptySet, 1),
+  true   = clj_core:equiv(clj_core:disj(OneSet, 1), EmptySet),
+
+  TwoSet = clj_core:conj(OneSet, 2),
+  true   = clj_core:equiv(clj_core:disj(TwoSet, 2), OneSet),
+
+  {comments, ""}.
+
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   NotEmptySet = clj_core:hash_set([a, b, 2, 3]),
@@ -122,4 +137,3 @@ complete_coverage(_Config) ->
   #{a := 1} = clj_core:meta(SetMeta),
 
   {comments, ""}.
-

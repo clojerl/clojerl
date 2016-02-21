@@ -5,6 +5,7 @@
 -export([ invoke/1
         , name/1
         , str/1
+        , complete_coverage/1
         ]).
 
 -type config() :: list().
@@ -60,5 +61,17 @@ str(_Config) ->
 
   HelloWorldKeyword = clj_core:keyword(<<"hello">>, <<"world">>),
   <<":hello/world">> = clj_core:str(HelloWorldKeyword),
+
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  ct:comment("Find existing leywords"),
+  str = 'clojerl.Keyword':find(<<"str">>),
+  'hello/world' = 'clojerl.Keyword':find(<<"hello">>, <<"world">>),
+
+  ct:comment("Find existing leywords"),
+  undefined = 'clojerl.Keyword':find(<<"123456">>),
+  undefined = 'clojerl.Keyword':find(<<"123456">>, <<"123456">>),
 
   {comments, ""}.

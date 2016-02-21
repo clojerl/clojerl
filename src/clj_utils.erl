@@ -1,14 +1,16 @@
 -module(clj_utils).
 
--compile({no_auto_import, [throw/1]}).
+-compile({no_auto_import, [throw/1, error/1]}).
 
 -export([ char_type/1
         , char_type/2
         , parse_number/1
         , parse_symbol/1
         , desugar_meta/1
+        , binary_append/2
         , binary_join/2
         , ends_with/2
+        , error/1
         , throw/1
         , throw/2
         , throw_when/2
@@ -58,7 +60,7 @@ parse_number(Number) ->
   {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()}.
 parse_symbol(<<>>) ->
   undefined;
-parse_symbol(<<"::", _/binary>>) ->
+parse_symbol(<<"::"/utf8, _/binary>>) ->
   undefined;
 parse_symbol(<<"/">>) ->
   {undefined, <<"/">>};
@@ -79,7 +81,7 @@ parse_symbol(Str) ->
   end.
 
 verify_symbol_name({_, Name} = Result) ->
-  NotNumeric = fun(<<C, _/binary>>) -> char_type(C) =/= number end,
+  NotNumeric = fun(<<C/utf8, _/binary>>) -> char_type(C) =/= number end,
   NoEndColon = fun(X) -> binary:last(X) =/= $: end,
   NoSlash = fun(X) -> binary:match(X, <<"/">>) == nomatch end,
   ApplyPred = fun(Fun) -> Fun(Name) end,
@@ -139,6 +141,10 @@ desugar_meta(Meta) ->
       throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
 
+-spec binary_append([binary()], binary()) -> binary().
+binary_append(X, Y) when is_binary(X), is_binary(Y) ->
+  <<X/binary, Y/binary>>.
+
 -spec binary_join([binary()], binary()) -> binary().
 binary_join([], _) ->
   <<>>;
@@ -154,7 +160,14 @@ ends_with(Str, Ends) ->
   EndsSize = byte_size(Ends),
   Ends == binary:part(Str, {StrSize, - EndsSize}).
 
--spec throw(boolean()) -> no_return().
+-spec error(any()) -> no_return().
+error(List) when is_list(List) ->
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  error(Reason);
+error(Reason) when is_binary(Reason) ->
+  erlang:error(Reason).
+
+-spec throw(any()) -> no_return().
 throw(Reason) ->
   throw(Reason, undefined).
 

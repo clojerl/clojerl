@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.Associative').
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
@@ -12,6 +13,10 @@
 -behavior('clojerl.Stringable').
 
 -export([new/1]).
+-export([ 'clojerl.Associative.contains_key'/2
+        , 'clojerl.Associative.entry_at'/2
+        , 'clojerl.Associative.assoc'/3
+        ]).
 -export(['clojerl.Counted.count'/1]).
 -export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
@@ -22,6 +27,7 @@
         ]).
 -export([ 'clojerl.IMap.keys'/1
         , 'clojerl.IMap.vals'/1
+        , 'clojerl.IMap.without'/2
         ]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
@@ -46,7 +52,27 @@ build_key_values(KeyValues, [K, V | Items]) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.Associative
+
+'clojerl.Associative.contains_key'(#?TYPE{name = ?M, data = Map}, Key) ->
+  maps:is_key(Key, Map).
+
+'clojerl.Associative.entry_at'(#?TYPE{name = ?M, data = Map}, Key) ->
+  case maps:is_key(Key, Map) of
+    true ->
+      Val = maps:get(Key, Map),
+      clj_core:vector([Key, Val]);
+    false -> undefined
+  end.
+
+'clojerl.Associative.assoc'(#?TYPE{name = ?M, data = Map} = M, Key, Value) ->
+  M#?TYPE{data = Map#{Key => Value}}.
+
+%% clojerl.Counted
+
 'clojerl.Counted.count'(#?TYPE{name = ?M, data = Map}) -> maps:size(Map).
+
+%% clojerl.IEquiv
 
 'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
@@ -58,15 +84,14 @@ build_key_values(KeyValues, [K, V | Items]) ->
     false -> false
   end.
 
+%% clojerl.IColl
+
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Map} = HashMap, X) ->
-  case clj_core:seq(X) of
-    [K, V] ->
-      HashMap#?TYPE{data = Map#{K => V}};
-    _ ->
-      throw(<<"Can't conj something that is not a key/value pair.">>)
-  end.
+  HashMap#?TYPE{data = clj_core:conj(Map, X)}.
 
 'clojerl.IColl.empty'(_) -> new([]).
+
+%% clojerl.ILookup
 
 'clojerl.ILookup.get'(#?TYPE{name = ?M} = Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).
@@ -74,17 +99,26 @@ build_key_values(KeyValues, [K, V | Items]) ->
 'clojerl.ILookup.get'(#?TYPE{name = ?M, data = Map}, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
 
+%% clojerl.IMap
+
 'clojerl.IMap.keys'(#?TYPE{name = ?M, data = Map}) ->
   maps:keys(Map).
 
 'clojerl.IMap.vals'(#?TYPE{name = ?M, data = Map}) ->
   maps:values(Map).
 
+'clojerl.IMap.without'(#?TYPE{name = ?M, data = Map} = M, Key) ->
+  M#?TYPE{data = maps:remove(Key, Map)}.
+
+%% clojerl.IMeta
+
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
 'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
   Map#?TYPE{info = Info#{meta => Metadata}}.
+
+%% clojerl.Seqable
 
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Map}) ->
   FoldFun = fun(K, V, List) ->
@@ -94,6 +128,8 @@ build_key_values(KeyValues, [K, V | Items]) ->
     [] -> undefined;
     X -> X
   end.
+
+%% clojerl.Stringable
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Map}) ->
   StrFun = fun(Key) ->
