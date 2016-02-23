@@ -32,15 +32,16 @@
 
 -spec default_options() -> map().
 default_options() ->
-  #{ output_dir => "ebin"
-   , erl_flags  => [ debug_info
-                   , verbose
-                   , report_errors
-                   , report_warnings
-                   , nowarn_unused_vars
-                   , nowarn_shadow_vars
-                   ]
-   , clj_flags  => []
+  #{ output_dir  => "ebin"
+   , erl_flags   => [ debug_info
+                    , verbose
+                    , report_errors
+                    , report_warnings
+                    , nowarn_unused_vars
+                    , nowarn_shadow_vars
+                    ]
+   , clj_flags   => []
+   , reader_opts => #{}
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().
@@ -69,8 +70,13 @@ compile_file(File, Opts) when is_binary(File) ->
   clj_env:env().
 compile_file(File, Opts, Env) when is_binary(File) ->
   case file:read_file(File) of
-    {ok, Src} -> compile(Src, Opts, Env);
-    Error -> throw(Error)
+    {ok, Src} ->
+      FileStr  = binary_to_list(File),
+      ErlFlags = maps:get(erl_flags, Opts, []),
+      Opts1    = Opts#{erl_flags => [{source, FileStr} | ErlFlags]},
+      compile(Src, Opts1, Env);
+    Error ->
+      throw(Error)
   end.
 
 -spec compile(binary()) -> clj_env:env().
@@ -85,7 +91,7 @@ compile(Src, Opts) when is_binary(Src) ->
 compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
-  RdrOpts  = maps:get(reader_opts, Opts, #{}),
+  RdrOpts  = maps:get(reader_opts, Opts),
 
   Env  = clj_env:put(Env0, clj_flags, CljFlags),
   CompileSingleForm = fun(Form, EnvAcc) ->
@@ -94,10 +100,11 @@ compile(Src, Opts0, Env0) when is_binary(Src) ->
   Env1 = clj_reader:read_fold(CompileSingleForm, Src, RdrOpts, Env),
   {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
 
-  CompileFormsFun = fun(Forms) -> compile_forms(Forms, Opts) end,
+  %% Compile all modules
   ensure_output_dir(Opts),
+  lists:foreach(compile_forms_fun(Opts), ModulesForms),
 
-  lists:foreach(CompileFormsFun, ModulesForms),
+  %% Eval all expressions
   eval_expressions(Expressions),
 
   clj_env:remove(Env2, clj_flags).
@@ -160,11 +167,13 @@ compile_single_form(Form, Env, Opts) ->
   Env2 = clj_emitter:emit(Env1),
   case clj_emitter:is_macro(Env2) of
     false -> Env2;
-    true ->
+    true  ->
       %% If the last emitted expression was the def of a macro
       %% compile the resulting modules so far.
       {ModulesForms, _, _} = clj_emitter:remove_state(Env2),
-      lists:foreach(compile_forms_fun(Opts), ModulesForms),
+      lists:foreach( compile_forms_fun(Opts#{partial => true})
+                   , ModulesForms
+                   ),
       Env2
   end.
 
@@ -178,17 +187,37 @@ compile_forms([], _) ->
   undefined;
 compile_forms(Forms, Opts) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
-  ErlFlags = maps:get(erl_flags, Opts),
+
+  IsPartial = maps:get(partial, Opts, false),
+  ErlFlags  = case IsPartial  of
+                true  -> [];
+                false -> maps:get(erl_flags, Opts)
+              end,
+
+  %% case clj_utils:time(fun() -> compile:forms(Forms, ErlFlags) end) of
   case compile:forms(Forms, ErlFlags) of
     {ok, Name, Binary} ->
-      OutputDir = maps:get(output_dir, Opts),
-      BeamFilename = <<(atom_to_binary(Name, utf8))/binary, ".beam">>,
-      BeamPath = filename:join([OutputDir, BeamFilename]),
-      ok = file:write_file(BeamPath, Binary),
-      {module, Name} = code:load_binary(Name, binary_to_list(BeamPath), Binary),
-      Name;
+      %% io:format("Compiled ~p with ~p forms~n", [Name, length(Forms)]),
+
+      case IsPartial of
+        false ->
+          OutputDir    = maps:get(output_dir, Opts),
+          NameBin      = atom_to_binary(Name, utf8),
+          BeamFilename = <<NameBin/binary, ".beam">>,
+          BeamPath     = filename:join([OutputDir, BeamFilename]),
+          ok           = file:write_file(BeamPath, Binary),
+          %% io:format("Writing to disk ~s...~n", [BeamPath]),
+
+          BeamPathStr = binary_to_list(BeamPath),
+          {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
+          Name;
+        true ->
+          %% io:format("Not writing to disk...~n"),
+          {module, Name} = code:load_binary(Name, "", Binary),
+          Name
+      end;
     Error ->
-      throw(Error)
+      error(Error)
   end.
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].

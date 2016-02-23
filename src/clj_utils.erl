@@ -19,6 +19,7 @@
         , warn_when/3
         , group_by/2
         , trace_while/2
+        , time/1
         ]).
 
 -define(INT_PATTERN,
@@ -83,9 +84,9 @@ parse_symbol(Str) ->
 verify_symbol_name({_, Name} = Result) ->
   NotNumeric = fun(<<C/utf8, _/binary>>) -> char_type(C) =/= number end,
   NoEndColon = fun(X) -> binary:last(X) =/= $: end,
-  NoSlash = fun(X) -> binary:match(X, <<"/">>) == nomatch end,
+  NoDoubleSlash = fun(X) -> re:run(X, <<"/.*?/">>) == nomatch end,
   ApplyPred = fun(Fun) -> Fun(Name) end,
-  case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoSlash]) of
+  case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoDoubleSlash]) of
     true -> Result;
     false -> undefined
   end.
@@ -243,6 +244,12 @@ trace_while(Filename, Fun) ->
 
   eep:stop_tracing(),
   eep:convert_tracing(Filename).
+
+-spec time(function()) -> ok.
+time(Fun) ->
+  {T, V} = timer:tc(Fun),
+  io:format("~p ms~n", [T / 1000]),
+  V.
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

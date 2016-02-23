@@ -45,18 +45,18 @@ remove_state(Env) ->
    , asts    := ReversedExpressions
    } = State,
 
-  ModulesForms  = lists:map( fun clj_module:to_forms/1
+  ModulesForms  = lists:map( fun(M) ->
+                                 Fs = clj_module:to_forms(M),
+                                 erl_syntax:revert_forms(Fs)
+                             end
                            , maps:values(Modules)
-                           ),
-  ModulesForms1 = lists:map( fun erl_syntax:revert_forms/1
-                           , ModulesForms
                            ),
 
   Expressions   = lists:map( fun erl_syntax:revert/1
                            , lists:reverse(ReversedExpressions)
                            ),
 
-  { ModulesForms1
+  { ModulesForms
   , Expressions
   , clj_env:remove(Env, emitter)
   }.
@@ -152,16 +152,14 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         pop_ast(ast(InitExpr, State1))
     end,
 
-  ValFunExportAst = export_attribute([{ValName, 0}]),
-
   ValClause = erl_syntax:clause([], [ValAst]),
   ValFunAst = function_form(ValName, [ValClause]),
 
   Vars      = [Var],
   FunAsts   = [ValFunAst],
-  AttrsAsts = [ValFunExportAst],
+  Exports   = [{ValName, 0}],
 
-  State3 = add_functions_attributes(Module, FunAsts, AttrsAsts, Vars, State2),
+  State3 = add_functions_attributes(Module, FunAsts, [], Vars, Exports, State2),
 
   push_ast(VarAst, State3#{is_macro => IsMacro});
 %%------------------------------------------------------------------------------
@@ -480,22 +478,6 @@ function_form(Name, Clauses) when is_atom(Name) ->
   NameAst = erl_syntax:atom(Name),
   erl_syntax:function(NameAst, Clauses).
 
--spec export_attribute({atom(), integer()}) ->
-  ast().
-export_attribute(FAs) when is_list(FAs) ->
-  ExportAtom = erl_syntax:atom(export),
-  Fun  = fun({Function, Arity}) -> arity_qualifier(Function, Arity) end,
-  Asts = lists:map(Fun, FAs),
-  ListAst = erl_syntax:list(Asts),
-  erl_syntax:attribute(ExportAtom, [ListAst]).
-
--spec arity_qualifier(atom(), integer()) -> ast().
-arity_qualifier(Function, Arity) when is_atom(Function),
-                                      is_integer(Arity) ->
-  FunctionAtomAst = erl_syntax:atom(Function),
-  ArityIntegerAst = erl_syntax:integer(Arity),
-  erl_syntax:arity_qualifier(FunctionAtomAst, ArityIntegerAst).
-
 -spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
 method_to_function_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, function).
@@ -559,15 +541,15 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
         FunAst = function_form(Name, ClausesAst),
-        add_functions_attributes(Module, [FunAst], [], [], StateAcc2)
+        add_functions_attributes(Module, [FunAst], [], [], [], StateAcc2)
     end,
 
   State1 = lists:foldl(FunctionFun, State, maps:values(GroupedMethods)),
 
-  ExportFun = fun(Arity, StateAcc) ->
-                  Attr = export_attribute([{Name, Arity}]),
-                  add_functions_attributes(Module, [], [Attr], [], StateAcc)
-              end,
+  ExportFun =
+    fun(Arity, StateAcc) ->
+        add_functions_attributes(Module, [], [], [], [{Name, Arity}], StateAcc)
+    end,
 
   lists:foldl(ExportFun, State1, maps:keys(GroupedMethods)).
 
@@ -580,17 +562,20 @@ ensure_module(Name, State = #{modules := Modules}) ->
       State#{modules => Modules#{Name => ModuleDef}}
   end.
 
--spec add_functions_attributes(atom(), [ast()], [ast()], [var()], state()) ->
+-spec add_functions_attributes(
+  atom(), [ast()], [ast()], [var()], [{atom(), non_neg_integer()}], state()
+) ->
    state().
-add_functions_attributes(Name, Funs, Attrs, Vars, State) ->
+add_functions_attributes(Name, Funs, Attrs, Vars, Exports, State) ->
   #{modules := Modules} = State,
   Module = maps:get(Name, Modules),
 
   Module0 = clj_module:add_vars(Module, Vars),
   Module1 = clj_module:add_functions(Module0, Funs),
   Module2 = clj_module:add_attributes(Module1, Attrs),
+  Module3 = clj_module:add_exports(Module2, Exports),
 
-  State#{modules => Modules#{Name => Module2}}.
+  State#{modules => Modules#{Name => Module3}}.
 
 %% Push & pop asts
 

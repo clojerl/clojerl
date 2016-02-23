@@ -859,7 +859,7 @@
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
-  {:inline (fn [x y] `(erlamg/<.e ~x ~y))
+  {:inline (fn [x y] `(erlang/<.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -977,7 +977,7 @@
    :inline-arities >1?
    :added "1.0"}
   ([x] (/ 1 x))
-  ([x y] (erlang// x y))
+  ([x y] (erlang//.e x y))
   ([x y & more]
    (reduce1 / (/ x y) more)))
 
@@ -1027,7 +1027,7 @@
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
-  ([x y] (erlamg/>.e x y))
+  ([x y] (erlang/>.e x y))
   ([x y & more]
    (if (> x y)
      (if (next more)
@@ -1678,7 +1678,7 @@
       (load (root-resource (first libs)))
       (recur (next libs)))))
 
-(defn require
+(defmacro require
   "Loads libs, skipping any that are already loaded. Each argument is
   either a libspec that identifies a lib, a prefix list that identifies
   multiple libs whose names share a common prefix, or a flag that modifies

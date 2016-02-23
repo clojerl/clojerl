@@ -11,19 +11,18 @@
         ]).
 
 -type namespace() ::
-        #{name    => 'clojerl.Symbol':type(),
-          defs    => #{binary() => 'clojerl.Var':type()},
-          uses    => #{binary() => 'clojerl.Var':type()},
-          aliases => #{binary() => 'clojerl.Symbol':type()},
-          forms   => []}.
+        #{ name    => 'clojerl.Symbol':type()
+         , defs    => #{binary() => 'clojerl.Var':type()}
+         , uses    => #{binary() => 'clojerl.Var':type()}
+         , aliases => #{binary() => 'clojerl.Symbol':type()}
+         }.
 
 -spec new('clojerl.Symbol':type()) -> namespace().
 new(Name) ->
-  #{ name => Name
-   , defs => #{}
-   , uses => #{}
+  #{ name    => Name
+   , defs    => #{}
+   , uses    => #{}
    , aliases => #{}
-   , forms => []
    }.
 
 -spec name(namespace()) -> 'clojerl.Symbol':type().
