@@ -94,28 +94,27 @@ ast(#{op := var, var := Var} = _Expr, State) ->
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
-  NameSym  = maps:get(name, Expr),
-  NameAtom = case get_lexical_rename(Expr, State) of
-               undefined ->
-                 'clojerl.Symbol':to_atom(NameSym);
-               LexicalNameSym ->
-                 'clojerl.Symbol':to_atom(LexicalNameSym)
-               end,
-  Ast      = erl_syntax:variable(NameAtom),
+  NameSym = maps:get(name, Expr),
+  NameBin = case get_lexical_rename(Expr, State) of
+              undefined ->
+                clj_core:str(NameSym);
+              LexicalNameSym ->
+                clj_core:str(LexicalNameSym)
+              end,
+  Ast     = erl_syntax:variable(binary_to_list(NameBin)),
 
   push_ast(Ast, State);
 ast(#{op := local} = Expr, State) ->
-  NameSym  = maps:get(name, Expr),
-  NameAtom = case get_lexical_rename(Expr, State) of
-               undefined ->
-                 'clojerl.Symbol':to_atom(NameSym);
-               LexicalNameSym ->
-                 'clojerl.Symbol':to_atom(LexicalNameSym)
-               end,
-  Ast      = erl_syntax:variable(NameAtom),
+  NameSym = maps:get(name, Expr),
+  NameBin = case get_lexical_rename(Expr, State) of
+              undefined ->
+                clj_core:str(NameSym);
+              LexicalNameSym ->
+                clj_core:str(LexicalNameSym)
+              end,
+  Ast     = erl_syntax:variable(binary_to_list(NameBin)),
 
   push_ast(Ast, State);
-%%------------------------------------------------------------------------------
 %% do
 %%------------------------------------------------------------------------------
 ast(#{op := do} = Expr, State) ->
@@ -360,8 +359,8 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             LoopClause = erl_syntax:clause(ArgsAsts, [], [Body]),
 
             LoopId     = maps:get(loop_id, Expr),
-            LoopIdAtom = 'clojerl.Symbol':to_atom(LoopId),
-            NameAst    = erl_syntax:variable(LoopIdAtom),
+            LoopIdStr  = binary_to_list(clj_core:str(LoopId)),
+            NameAst    = erl_syntax:variable(LoopIdStr),
             LoopFunAst = erl_syntax:named_fun_expr(NameAst, [LoopClause]),
             LoopAppAst = erl_syntax:application(LoopFunAst, ArgsAsts),
 
@@ -386,20 +385,20 @@ ast(#{op := recur} = Expr, State) ->
                           , length(ArgsExprs)
                           ),
 
-  LoopIdAtom = 'clojerl.Symbol':to_atom(LoopId),
+  LoopIdStr = binary_to_list(clj_core:str(LoopId)),
 
   %% We need to use invoke so that recur also works inside functions
   %% (i.e not funs)
   Ast = case LoopType of
           fn ->
-            NameAst = erl_syntax:variable(LoopIdAtom),
+            NameAst = erl_syntax:variable(LoopIdStr),
             ArgsAst = erl_syntax:list(Args),
             application_mfa(clj_core, invoke, [NameAst, ArgsAst]);
           loop ->
-            NameAst = erl_syntax:variable(LoopIdAtom),
+            NameAst = erl_syntax:variable(LoopIdStr),
             erl_syntax:application(NameAst, Args);
           var ->
-            NameAst = erl_syntax:atom(LoopIdAtom),
+            NameAst = erl_syntax:atom(LoopIdStr),
             erl_syntax:application(NameAst, Args)
         end,
   push_ast(Ast, State1);

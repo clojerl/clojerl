@@ -7,7 +7,7 @@
 
 -spec resolve(atom(), atom(), list()) -> any().
 resolve(Protocol, FunctionName, Args = [Head | _]) ->
-  TypeModule = clj_core:type(Head),
+  TypeModule   = clj_core:type(Head),
   ImplFunction = impl_function(Protocol, FunctionName),
 
   IsExported = erlang:function_exported(TypeModule, ImplFunction, length(Args)),
@@ -55,8 +55,8 @@ impl_module(Protocol, Type) when is_atom(Protocol),
 -spec impl_function(atom(), atom()) -> atom().
 impl_function(Protocol, Function) when is_atom(Protocol),
                                        is_atom(Function) ->
-  list_to_atom(
-    atom_to_list(Protocol)
-    ++ "."
-    ++ atom_to_list(Function)
-   ).
+  binary_to_atom(<<(atom_to_binary(Protocol, utf8))/binary,
+                   ".",
+                   (atom_to_binary(Function, utf8))/binary>>
+                , utf8
+                ).
