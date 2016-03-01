@@ -20,6 +20,9 @@
         , group_by/2
         , trace_while/2
         , time/1
+        , time/2
+        , bench/3
+        , bench/4
         ]).
 
 -define(INT_PATTERN,
@@ -239,17 +242,41 @@ trace_while(Filename, Fun) ->
   eep:start_file_tracing(Filename),
 
   receive stop -> ok
-  after 5000 -> ok
+  after 10000 -> ok
   end,
 
   eep:stop_tracing(),
   eep:convert_tracing(Filename).
 
 -spec time(function()) -> ok.
-time(Fun) ->
-  {T, V} = timer:tc(Fun),
+time(Fun) when is_function(Fun) ->
+  time(Fun, []).
+
+-spec time(function(), list()) -> ok.
+time(Fun, Args) ->
+  {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
   io:format("~p ms~n", [T / 1000]),
   V.
+
+bench(Name, Fun, Trials) ->
+  bench(Name, Fun, [], Trials).
+
+bench(Name, Fun, Args, Trials) ->
+    print_result(Name, repeat_tc(Fun, Args, Trials)).
+
+repeat_tc(Fun, Args, Trials) ->
+  Repeat = fun
+             R(0) -> ok;
+             R(N) -> apply(Fun, Args), R(N - 1)
+           end,
+
+    {Time, _} = timer:tc(fun() -> Repeat(Trials) end),
+    {Time, Trials}.
+
+
+print_result(Name, {Time, Trials}) ->
+    io:format("~s: ~.3f ms (~.2f per second)~n",
+              [Name, (Time / 1000) / Trials, Trials / (Time / 1000000)]).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions
