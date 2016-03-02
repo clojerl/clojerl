@@ -159,6 +159,8 @@ binary_join([H | T], Sep) ->
   <<H/binary, B/binary>>.
 
 -spec ends_with(binary(), binary()) -> ok.
+ends_with(Str, Ends) when size(Ends) > size(Str)->
+  false;
 ends_with(Str, Ends) ->
   StrSize = byte_size(Str),
   EndsSize = byte_size(Ends),

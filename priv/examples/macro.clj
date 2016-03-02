@@ -7,10 +7,10 @@
   (fn* [form env name args & body]
        (cons 'def
              (cons name
-                   [(cons 'fn* (cons args [body]))])
-                   )))
+                   [(cons 'fn* (cons args body))]))))
 
 (defn hello [name]
-  (io/format.e "~s~n" (seq [name])))
+  (io/format.e "Going to say hi...")
+  (io/format.e "Hello ~s!~n" (seq [name])))
 
 (hello "Moto")

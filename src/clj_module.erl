@@ -26,6 +26,8 @@
         , is_clojure/1
         ]).
 
+-define(FAKE_FUNS, clj_module_fake_funs).
+
 -type var_id() :: binary().
 
 -type function_id() :: {atom(), integer()}.
@@ -54,6 +56,7 @@ start_link() ->
 -spec init(term()) -> {ok, term()}.
 init(_) ->
   ets:new(?MODULE, [set, public, named_table, {keypos, 2}]),
+  ets:new(?FAKE_FUNS, [set, public, named_table, {keypos, 1}]),
   {ok, []}.
 
 -spec handle_call(term(), term(), term()) -> term().
@@ -80,22 +83,35 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 
 -spec fun_for(module(), atom(), integer()) -> function().
-fun_for(Name, Function, Arity) ->
-  io:format("fun_for ~p~n", [{Name, Function, Arity}]),
-  Module = get(Name),
-  case maps:get({Function, Arity}, Module#module.funs, undefined) of
-    undefined -> throw({notfound, {Name, Function, Arity}});
-    FunctionAst ->
-      %% io:format("Before ~s~n", [clj_compiler:ast_to_string([FunctionAst])]),
-      {function, _, _, _, Clauses} = replace_calls(FunctionAst, Name),
-      %% io:format("Clauses ~p~n", [Clauses]),
-      FunAst = {'fun', 0, {clauses, Clauses}},
-      %% io:format("After ~s~n", [clj_compiler:ast_to_string([FunAst])]),
-      {value, Fun, _} = erl_eval:expr(FunAst, []),
-      Fun
+fun_for(Name, Function0, Arity) ->
+  FBin = atom_to_binary(Function0, utf8),
+  Function = case clj_utils:ends_with(FBin, <<"__val">>) of
+               true  -> binary_to_atom(binary:part(FBin, 0, size(FBin) - 5), utf8);
+               false -> Function0
+             end,
+
+  MFA = {Name, Function, Arity},
+  case ets:lookup(?FAKE_FUNS, MFA) of
+    [] ->
+      io:format("fun_for ~p~n", [MFA]),
+      Module = get(Name),
+      case maps:get({Function, Arity}, Module#module.funs, undefined) of
+        undefined -> throw({notfound, {Name, Function, Arity}});
+        FunctionAst ->
+          %% io:format("Before ~s~n", [clj_compiler:ast_to_string([FunctionAst])]),
+          {function, _, _, _, Clauses} = replace_calls(FunctionAst, Name, Function),
+          %% io:format("Clauses ~p~n", [Clauses]),
+          FunAst = {'named_fun', 0, Function, Clauses},
+          %% io:format("After ~s~n", [clj_compiler:ast_to_string([FunAst])]),
+          {value, Fun, _} = erl_eval:expr(FunAst, []),
+          ets:insert(?FAKE_FUNS, {MFA, Fun}),
+          Fun
+      end;
+    [{_, Fun}] -> Fun
   end.
 
--spec replace_calls(erl_parse:abstract_form(), module()) -> erl_parse:abstract_form().
+-spec replace_calls(erl_parse:abstract_form(), module(), atom()) ->
+  erl_parse:abstract_form().
 replace_calls( { call, Line
                , { remote, _
                  , {atom, _, Module}
@@ -103,24 +119,31 @@ replace_calls( { call, Line
                  }
                , Args
                }
-             , Module) ->
+             , Module
+             , TopFunction) ->
   Remote = {remote, Line,
             {atom, Line, ?MODULE},
             {atom, Line, fun_for}
            },
 
   Arity = length(Args),
-  io:format("Changing call to ~p~n", [{Module, Function, Arity}]),
+  %% io:format("Changing call to ~p~n", [{Module, Function, Arity}]),
   FunCall = {call, Line, Remote, [
     {atom, Line, Module}, {atom, Line, Function}, {integer, Line, Arity}
   ]},
-  Args1 = replace_calls(Args, Module),
+  Args1 = replace_calls(Args, Module, TopFunction),
   {call, Line, FunCall, Args1};
-replace_calls(Ast, Module) when is_tuple(Ast) ->
-  list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
-replace_calls(Ast, Module) when is_list(Ast) ->
-  [replace_calls(Item, Module) || Item <- Ast];
-replace_calls(Ast, _) ->
+replace_calls( {call, Line, {atom, _, TopFunction}, Args}
+             , Module
+             , TopFunction) ->
+  %% io:format("Changing recursive call to ~p~n", [TopFunction]),
+  Args1 = replace_calls(Args, Module, TopFunction),
+  {call, Line, {var, Line, TopFunction}, Args1};
+replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
+  list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
+replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
+  [replace_calls(Item, Module, TopFunction) || Item <- Ast];
+replace_calls(Ast, _, _) ->
   Ast.
 
 -spec load(atom()) -> ok | {error, term()}.
