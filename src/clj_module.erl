@@ -16,7 +16,7 @@
         , load/1
         , is_loaded/1
         , to_forms/1
-        , fun_from/3
+        , fun_for/3
 
         , add_vars/2
         , add_attributes/2
@@ -79,19 +79,48 @@ code_change(_OldVsn, State, _Extra) ->
 %% Exported Functions
 %%------------------------------------------------------------------------------
 
--spec fun_from(atom(), atom(), non_neg_integer()) -> function().
-fun_from(Name, Function, Arity) ->
+-spec fun_for(module(), atom(), integer()) -> function().
+fun_for(Name, Function, Arity) ->
+  io:format("fun_for ~p~n", [{Name, Function, Arity}]),
   Module = get(Name),
   case maps:get({Function, Arity}, Module#module.funs, undefined) of
-    undefined -> undefined;
-    FunAst ->
-      FunAst2 = replace_calls(FunAst),
-      {value, Fun, _} = erl_eval:exprs(FunAst2, []),
+    undefined -> throw({notfound, {Name, Function, Arity}});
+    FunctionAst ->
+      %% io:format("Before ~s~n", [clj_compiler:ast_to_string([FunctionAst])]),
+      {function, _, _, _, Clauses} = replace_calls(FunctionAst, Name),
+      %% io:format("Clauses ~p~n", [Clauses]),
+      FunAst = {'fun', 0, {clauses, Clauses}},
+      %% io:format("After ~s~n", [clj_compiler:ast_to_string([FunAst])]),
+      {value, Fun, _} = erl_eval:expr(FunAst, []),
       Fun
   end.
 
--spec replace_calls(erl_parse:abstract_form()) -> erl_parse:abstract_form().
-replace_calls(Ast) ->
+-spec replace_calls(erl_parse:abstract_form(), module()) -> erl_parse:abstract_form().
+replace_calls( { call, Line
+               , { remote, _
+                 , {atom, _, Module}
+                 , {atom, _, Function}
+                 }
+               , Args
+               }
+             , Module) ->
+  Remote = {remote, Line,
+            {atom, Line, ?MODULE},
+            {atom, Line, fun_for}
+           },
+
+  Arity = length(Args),
+  io:format("Changing call to ~p~n", [{Module, Function, Arity}]),
+  FunCall = {call, Line, Remote, [
+    {atom, Line, Module}, {atom, Line, Function}, {integer, Line, Arity}
+  ]},
+  Args1 = replace_calls(Args, Module),
+  {call, Line, FunCall, Args1};
+replace_calls(Ast, Module) when is_tuple(Ast) ->
+  list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
+replace_calls(Ast, Module) when is_list(Ast) ->
+  [replace_calls(Item, Module) || Item <- Ast];
+replace_calls(Ast, _) ->
   Ast.
 
 -spec load(atom()) -> ok | {error, term()}.

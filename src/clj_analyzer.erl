@@ -43,9 +43,19 @@ macroexpand_1(Env, Form) ->
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
-      Var = clj_core:deref(MacroVar),
       Args = [Form, Env1] ++ clj_core:seq2(clj_core:rest(Form)),
-      clj_core:invoke(Var, Args);
+      try
+        clj_core:deref(MacroVar),
+        clj_core:invoke(MacroVar, Args)
+      catch
+        _:<<"Could not deref", _/binary>> ->
+          Module   = 'clojerl.Var':module(MacroVar),
+          Function = 'clojerl.Var':function(MacroVar),
+          Args1    = 'clojerl.Var':process_args(MacroVar, Args, fun(X) -> X end),
+          Arity    = length(Args1),
+          Fun = clj_module:fun_for(Module, Function, Arity),
+          clj_core:invoke(Fun, Args)
+      end;
     false -> Form
   end.
 

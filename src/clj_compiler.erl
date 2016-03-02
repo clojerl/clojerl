@@ -165,7 +165,7 @@ ensure_output_dir(Opts) ->
 compile_single_form(Form, Env, Opts) ->
   Env1 = clj_emitter:without_state(Env, fun clj_analyzer:analyze/2, [Form]),
   Env2 = clj_emitter:emit(Env1),
-  case clj_emitter:is_macro(Env2) of
+  case false of %% clj_emitter:is_macro(Env2) of
     false -> Env2;
     true  ->
       %% If the last emitted expression was the def of a macro
