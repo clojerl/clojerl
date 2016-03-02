@@ -8,12 +8,10 @@
 
 -type ast() :: erl_syntax:syntaxTree().
 
--type state() :: #{ modules         => #{atom() => clj_module:module()}
-                  , asts            => [ast()]
+-type state() :: #{ asts            => [ast()]
                   , lexical_renames => clj_scope:scope()
+                  , is_macro        => boolean()
                   }.
-
--type var() :: 'clojerl.Var':type().
 
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
@@ -39,25 +37,13 @@ without_state(Env, Fun, Args) ->
   , clj_env:env()
   }.
 remove_state(Env) ->
+  ModulesForms = lists:map(fun clj_module:to_forms/1, clj_module:all()),
+
   State = clj_env:get(Env, emitter, initial_state()),
-
-  #{ modules := Modules
-   , asts    := ReversedExpressions
-   } = State,
-
-  ModulesForms  = lists:map( fun(M) ->
-                                 Fs = clj_module:to_forms(M),
-                                 erl_syntax:revert_forms(Fs)
-                             end
-                           , maps:values(Modules)
-                           ),
-
-  Expressions   = lists:map( fun erl_syntax:revert/1
-                           , lists:reverse(ReversedExpressions)
-                           ),
+  Exprs = lists:reverse(maps:get(asts, State)),
 
   { ModulesForms
-  , Expressions
+  , Exprs
   , clj_env:remove(Env, emitter)
   }.
 
@@ -68,8 +54,7 @@ is_macro(Env) ->
 
 -spec initial_state() -> state().
 initial_state() ->
-  #{ modules         => #{}
-   , asts            => []
+  #{ asts            => []
    , lexical_renames => clj_scope:new()
    , is_macro        => false
    }.
@@ -139,28 +124,30 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
   IsMacro = 'clojerl.Var':is_macro(Var),
 
-  State1 = ensure_module(Module, State),
+  ok = ensure_module(Module),
   VarAst = erl_syntax:abstract(Var),
-  {ValAst, State2} =
+  {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
         { VarAst
-        , add_functions(Module, Name, FnExpr, State1)
+        , add_functions(Module, Name, FnExpr, State)
         };
       _ ->
-        pop_ast(ast(InitExpr, State1))
+        pop_ast(ast(InitExpr, State))
     end,
 
   ValClause = erl_syntax:clause([], [ValAst]),
   ValFunAst = function_form(ValName, [ValClause]),
 
-  Vars      = [Var],
-  FunAsts   = [ValFunAst],
-  Exports   = [{ValName, 0}],
+  Vars    = [Var],
+  Funs    = [ValFunAst],
+  Exports = [{ValName, 0}],
 
-  State3 = add_functions_attributes(Module, FunAsts, [], Vars, Exports, State2),
+  ok = clj_module:add_vars(Module, Vars),
+  ok = clj_module:add_functions(Module, Funs),
+  ok = clj_module:add_exports(Module, Exports),
 
-  push_ast(VarAst, State3#{is_macro => IsMacro});
+  push_ast(VarAst, State1#{is_macro => IsMacro});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -532,6 +519,12 @@ group_methods(Methods) ->
 add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
   GroupedMethods = group_methods(Methods),
 
+  ExportFun = fun(Arity) ->
+                  ok = clj_module:add_exports(Module, [{Name, Arity}])
+              end,
+
+  lists:foreach(ExportFun, maps:keys(GroupedMethods)),
+
   FunctionFun =
     fun(MethodsList, StateAcc) ->
         StateAcc1 = lists:foldl( fun method_to_function_clause/2
@@ -539,48 +532,28 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
                                , MethodsList
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
+
         FunAst = function_form(Name, ClausesAst),
-        add_functions_attributes(Module, [FunAst], [], [], [], StateAcc2)
+        ok = clj_module:add_functions(Module, [FunAst]),
+
+        StateAcc2
     end,
 
-  State1 = lists:foldl(FunctionFun, State, maps:values(GroupedMethods)),
+  lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
 
-  ExportFun =
-    fun(Arity, StateAcc) ->
-        add_functions_attributes(Module, [], [], [], [{Name, Arity}], StateAcc)
-    end,
-
-  lists:foldl(ExportFun, State1, maps:keys(GroupedMethods)).
-
--spec ensure_module(atom(), state()) -> state().
-ensure_module(Name, State = #{modules := Modules}) ->
-  case maps:is_key(Name, Modules) of
-    true  -> State;
-    false ->
-      {ok, ModuleDef} = clj_module:load(Name),
-      State#{modules => Modules#{Name => ModuleDef}}
+-spec ensure_module(atom()) -> ok.
+ensure_module(Name) ->
+  case clj_module:is_loaded(Name) of
+    true  -> ok;
+    false -> ok = clj_module:load(Name)
   end.
-
--spec add_functions_attributes(
-  atom(), [ast()], [ast()], [var()], [{atom(), non_neg_integer()}], state()
-) ->
-   state().
-add_functions_attributes(Name, Funs, Attrs, Vars, Exports, State) ->
-  #{modules := Modules} = State,
-  Module = maps:get(Name, Modules),
-
-  Module0 = clj_module:add_vars(Module, Vars),
-  Module1 = clj_module:add_functions(Module0, Funs),
-  Module2 = clj_module:add_attributes(Module1, Attrs),
-  Module3 = clj_module:add_exports(Module2, Exports),
-
-  State#{modules => Modules#{Name => Module3}}.
 
 %% Push & pop asts
 
 -spec push_ast(ast(), state()) -> state().
 push_ast(Ast, State = #{asts := Asts}) ->
-  State#{asts => [Ast | Asts]}.
+  Reverted = erl_syntax:revert(Ast),
+  State#{asts => [Reverted | Asts]}.
 
 -spec pop_ast(state()) -> {ast(), state()}.
 pop_ast(State = #{asts := [Ast | Asts]}) ->
