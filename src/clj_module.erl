@@ -1,6 +1,6 @@
 -module(clj_module).
 -behavior(gen_server).
--compile({no_auto_import,[get/1]}).
+-compile({no_auto_import, [get/1]}).
 
 -export([start_link/0]).
 
@@ -159,11 +159,12 @@ add_attributes(Name, Attrs) ->
 -spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
   clj_module().
 add_exports(Name, Exports) ->
-  UpdateFun = fun(Module) ->
-                  AddExport = fun(E, M) -> M#{E => true} end,
-                  Exports1  = lists:foldl(AddExport, Module#module.exports, Exports),
-                  Module#module{exports = Exports1}
-              end,
+  UpdateFun =
+    fun(Module) ->
+        AddExport = fun(E, M) -> M#{E => true} end,
+        Exports1  = lists:foldl(AddExport, Module#module.exports, Exports),
+        Module#module{exports = Exports1}
+    end,
   update(Name, UpdateFun).
 
 -spec add_functions(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().

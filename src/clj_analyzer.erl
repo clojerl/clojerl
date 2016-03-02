@@ -27,16 +27,15 @@ macroexpand_1(Env, Form) ->
   IsSymbol = clj_core:'symbol?'(Op),
   IsVar    = clj_core:'var?'(Op),
 
-  {MacroVar, Env1} = if
-                       IsSymbol -> lookup_var(Op, false, Env);
-                       IsVar ->
-                         VarSymbol = clj_core:symbol( clj_core:namespace(Op)
-                                                    , clj_core:name(Op)
-                                                    ),
-                         lookup_var(VarSymbol, false, Env);
-                       true ->
-                         {undefined, Env}
-                     end,
+  {MacroVar, Env1} =
+    if
+      IsSymbol -> lookup_var(Op, false, Env);
+      IsVar ->
+        VarSymbol = clj_core:symbol(clj_core:namespace(Op), clj_core:name(Op)),
+        lookup_var(VarSymbol, false, Env);
+      true ->
+        {undefined, Env}
+    end,
 
   case
     not is_special(Op)

@@ -4,13 +4,13 @@
 
 -type type() :: any().
 
--callback 'clojerl.Associative.contains_key'(A :: type(), K :: any()) -> 
+-callback 'clojerl.Associative.contains_key'(A :: type(), K :: any()) ->
   boolean().
 
--callback 'clojerl.Associative.entry_at'(A :: type(), K :: any()) -> 
+-callback 'clojerl.Associative.entry_at'(A :: type(), K :: any()) ->
   any().
 
--callback 'clojerl.Associative.assoc'(A :: type(), K :: any(), V :: any()) -> 
+-callback 'clojerl.Associative.assoc'(A :: type(), K :: any(), V :: any()) ->
   any().
 
 -spec contains_key(type(), any()) -> boolean().
