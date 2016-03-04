@@ -27,6 +27,7 @@
         ]).
 
 -define(FAKE_FUNS, clj_module_fake_funs).
+-define(MODULE_FUNCTIONS, clj_module_funs).
 
 -type var_id() :: binary().
 
@@ -37,7 +38,6 @@
                   vars    :: #{var_id() => 'clojerl.Var':type()},
                   attrs   :: [erl_syntax:syntaxTree()],
                   exports :: #{export() => true},
-                  funs    :: #{function_id() => erl_syntax:syntaxTree()},
                   rest    :: [erl_syntax:syntaxTree()]
                 }).
 
@@ -57,6 +57,8 @@ start_link() ->
 init(_) ->
   ets:new(?MODULE, [set, public, named_table, {keypos, 2}]),
   ets:new(?FAKE_FUNS, [set, public, named_table, {keypos, 1}]),
+  ets:new(?MODULE_FUNCTIONS, [set, public, named_table, {keypos, 1}]),
+
   {ok, []}.
 
 -spec handle_call(term(), term(), term()) -> term().
@@ -88,10 +90,9 @@ fun_for(Name, Function, Arity) ->
   case ets:lookup(?FAKE_FUNS, MFA) of
     [] ->
       %% io:format("fun_for ~p~n", [MFA]),
-      Module = get(Name),
-      case maps:get({Function, Arity}, Module#module.funs, undefined) of
-        undefined -> throw({notfound, {Name, Function, Arity}});
-        FunctionAst ->
+      case get(?MODULE_FUNCTIONS, MFA) of
+        undefined -> throw({notfound, MFA});
+        {_, FunctionAst} ->
           {function, _, _, _, Clauses} = replace_calls(FunctionAst, Name, Function),
           FunAst = {'named_fun', 0, Function, Clauses},
           {value, Fun, _} = erl_eval:expr(FunAst, []),
@@ -165,7 +166,7 @@ load(Name) ->
 
 -spec is_loaded(module()) -> boolean().
 is_loaded(Name) ->
-  [] =/= ets:lookup(?MODULE, Name).
+  ets:member(?MODULE, Name).
 
 -spec all() -> [clj_module()].
 all() -> ets:tab2list(?MODULE).
@@ -175,7 +176,6 @@ to_forms(#module{name = Name} = Module) ->
   #module{ attrs   = Attrs
          , exports = Exports
          , vars    = Vars
-         , funs    = Funs
          , rest    = Rest
          } = Module,
 
@@ -184,7 +184,7 @@ to_forms(#module{name = Name} = Module) ->
   ClojureAttr1 = erl_syntax:revert(ClojureAttr),
 
   UniqueAttrs = lists:usort([ClojureAttr1 | Attrs]),
-  UniqueFuns  = maps:values(Funs),
+  Funs        = [X || {_, X} <- ets:tab2list(?MODULE_FUNCTIONS)],
 
   VarsAtom    = erl_syntax:atom(vars),
   VarsAttr    = erl_syntax:attribute(VarsAtom, [erl_syntax:abstract(Vars)]),
@@ -193,7 +193,7 @@ to_forms(#module{name = Name} = Module) ->
   ExportAttr = export_attribute(maps:keys(Exports)),
   ModuleAttr = attribute_module(Name),
 
-  [ModuleAttr, VarsAttr1, ExportAttr | UniqueAttrs ++ Rest ++ UniqueFuns].
+  [ModuleAttr, VarsAttr1, ExportAttr | UniqueAttrs ++ Rest ++ Funs].
 
 -spec add_vars(atom(), ['clojerl.Var':type()]) -> ok.
 add_vars(Name, Vars) ->
@@ -206,7 +206,7 @@ add_vars(Name, Vars) ->
         Vars1 = lists:foldl(AddByKeyFun, Module#module.vars, Vars),
         Module#module{vars = Vars1}
     end,
-  update(Name, UpdateFun).
+  update(?MODULE, Name, UpdateFun).
 
 -spec add_attributes(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
 add_attributes(Name, Attrs) ->
@@ -214,7 +214,7 @@ add_attributes(Name, Attrs) ->
                   Attrs1 = erl_syntax:revert_forms(Attrs),
                   Module#module{attrs = Attrs1 ++ Module#module.attrs}
               end,
-  update(Name, UpdateFun).
+  update(?MODULE, Name, UpdateFun).
 
 -spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
   clj_module().
@@ -225,19 +225,11 @@ add_exports(Name, Exports) ->
         Exports1  = lists:foldl(AddExport, Module#module.exports, Exports),
         Module#module{exports = Exports1}
     end,
-  update(Name, UpdateFun).
+  update(?MODULE, Name, UpdateFun).
 
--spec add_functions(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
+-spec add_functions(module(), [erl_syntax:syntaxTree()]) -> clj_module().
 add_functions(Name, AddFuns) ->
-  UpdateFun = fun(Module) ->
-                  AddByKeyFun = fun(F, Acc) ->
-                                    K = function_id(F),
-                                    Acc#{K => erl_syntax:revert(F)}
-                                end,
-                  Funs1 = lists:foldl(AddByKeyFun, Module#module.funs, AddFuns),
-                  Module#module{funs = Funs1}
-              end,
-  update(Name, UpdateFun).
+  save_functions(Name, AddFuns).
 
 -spec is_clojure(module()) -> boolean().
 is_clojure(Name) ->
@@ -248,23 +240,23 @@ is_clojure(Name) ->
 %% Helper Functions
 %%------------------------------------------------------------------------------
 
--spec get(module()) -> clj_module().
-get(Name) ->
-  case ets:lookup(?MODULE, Name) of
-    [] -> throw({notfound, Name});
-    [Module] -> Module
+-spec get(atom(), module()) -> clj_module().
+get(Table, Id) ->
+  case ets:lookup(Table, Id) of
+    [] -> throw({notfound, Id});
+    [Value] -> Value
   end.
 
--spec save(clj_module()) -> ok.
-save(Module) ->
-  true = ets:insert(?MODULE, Module),
+-spec save(atom(), term()) -> ok.
+save(Table, Value) ->
+  true = ets:insert(Table, Value),
   ok.
 
--spec update(atom(), function()) -> ok.
-update(Name, UpdateFun) ->
-  Module = get(Name),
-  Module1 = UpdateFun(Module),
-  true = ets:insert(?MODULE, Module1),
+-spec update(atom(), atom(), function()) -> ok.
+update(Table, Id, UpdateFun) ->
+  Value = get(Table, Id),
+  NewValue = UpdateFun(Value),
+  true = ets:insert(Table, NewValue),
   ok.
 
 -spec new([erl_syntax:syntaxTree()]) -> ok | {error, term()}.
@@ -294,17 +286,16 @@ new(Forms) ->
   Exports    = concrete_export(ExportAttrs),
   ExportsMap = lists:foldl(fun(E, M) -> M#{E => true} end, #{}, Exports),
 
-  IndexedFuns = index_functions(Funs),
+  ok = save_functions(Name, Funs),
 
   Module = #module{ name    = Name
                   , vars    = Vars
                   , attrs   = erl_syntax:revert_forms(Attrs)
                   , exports = ExportsMap
-                  , funs    = IndexedFuns
                   , rest    = erl_syntax:revert_forms(Rest2)
                   },
 
-  save(Module).
+  save(?MODULE, Module).
 
 -spec from_binary(atom()) -> ok | {error, term()}.
 from_binary(Name) when is_atom(Name) ->
@@ -356,14 +347,14 @@ function_arity(Function) ->
 function_id(Function) ->
   {function_name(Function), function_arity(Function)}.
 
--spec index_functions([erl_syntax:syntaxTree()]) ->
-  #{atom() => erl_syntax:syntaxTree()}.
-index_functions(Funs) ->
-  IndexFun = fun(F, M) ->
-                 Key = function_id(F),
-                 M#{Key => erl_syntax:revert(F)}
+-spec save_functions(module(), [erl_syntax:syntaxTree()]) -> ok.
+save_functions(Module, Funs) ->
+  SaveFun = fun(F) ->
+                {Function, Arity} = function_id(F),
+                MFA = {Module, Function, Arity},
+                save(?MODULE_FUNCTIONS, {MFA, erl_syntax:revert(F)})
              end,
-  lists:foldl(IndexFun, #{}, Funs).
+  lists:foreach(SaveFun, Funs).
 
 -spec concrete_export(erl_syntax:syntaxTree()) ->
   [{atom(), non_neg_integer()}].
