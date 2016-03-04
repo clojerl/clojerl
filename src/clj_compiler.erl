@@ -26,6 +26,9 @@
                     , clj_flags  => [clj_flag()]
                     }.
 
+-define(TIME(X), clj_utils:time(fun() -> X end)).
+-define(TIME(L, X), clj_utils:time(L, fun() -> X end)).
+
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
@@ -97,7 +100,7 @@ compile(Src, Opts0, Env0) when is_binary(Src) ->
   CompileSingleForm = fun(Form, EnvAcc) ->
                           compile_single_form(Form, EnvAcc, Opts)
                       end,
-  Env1 = clj_reader:read_fold(CompileSingleForm, Src, RdrOpts, Env),
+  Env1 = ?TIME(clj_reader:read_fold(CompileSingleForm, Src, RdrOpts, Env)),
   {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
 
   %% Compile all modules
@@ -162,20 +165,9 @@ ensure_output_dir(Opts) ->
   ok.
 
 -spec compile_single_form(any(), clj_env:env(), options()) -> clj_env:env().
-compile_single_form(Form, Env, Opts) ->
-  Env1 = clj_emitter:without_state(Env, fun clj_analyzer:analyze/2, [Form]),
-  Env2 = clj_emitter:emit(Env1),
-  case false of %% clj_emitter:is_macro(Env2) of
-    false -> Env2;
-    true  ->
-      %% If the last emitted expression was the def of a macro
-      %% compile the resulting modules so far.
-      {ModulesForms, _, _} = clj_emitter:remove_state(Env2),
-      lists:foreach( compile_forms_fun(Opts#{partial => true})
-                   , ModulesForms
-                   ),
-      Env2
-  end.
+compile_single_form(Form, Env, _Opts) ->
+  Env1 = clj_analyzer:analyze(Env, Form),
+  ?TIME("emit", clj_emitter:emit(Env1)).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -187,35 +179,21 @@ compile_forms([], _) ->
   undefined;
 compile_forms(Forms, Opts) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
+  ErlFlags  = maps:get(erl_flags, Opts),
 
-  IsPartial = maps:get(partial, Opts, false),
-  ErlFlags  = case IsPartial  of
-                true  -> [];
-                false -> maps:get(erl_flags, Opts)
-              end,
-
-  %% case clj_utils:time(fun() -> compile:forms(Forms, ErlFlags) end) of
-  case compile:forms(Forms, ErlFlags) of
+  case ?TIME(compile:forms(Forms, ErlFlags)) of
+  %% case compile:forms(Forms, ErlFlags) of
     {ok, Name, Binary} ->
       %% io:format("Compiled ~p with ~p forms~n", [Name, length(Forms)]),
+      OutputDir    = maps:get(output_dir, Opts),
+      NameBin      = atom_to_binary(Name, utf8),
+      BeamFilename = <<NameBin/binary, ".beam">>,
+      BeamPath     = filename:join([OutputDir, BeamFilename]),
+      ok           = file:write_file(BeamPath, Binary),
 
-      case IsPartial of
-        false ->
-          OutputDir    = maps:get(output_dir, Opts),
-          NameBin      = atom_to_binary(Name, utf8),
-          BeamFilename = <<NameBin/binary, ".beam">>,
-          BeamPath     = filename:join([OutputDir, BeamFilename]),
-          ok           = file:write_file(BeamPath, Binary),
-          %% io:format("Writing to disk ~s...~n", [BeamPath]),
-
-          BeamPathStr = binary_to_list(BeamPath),
-          {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
-          Name;
-        true ->
-          %% io:format("Not writing to disk...~n"),
-          {module, Name} = code:load_binary(Name, "", Binary),
-          Name
-      end;
+      BeamPathStr = binary_to_list(BeamPath),
+      {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
+      Name;
     Error ->
       error(Error)
   end.

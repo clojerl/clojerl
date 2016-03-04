@@ -13,6 +13,8 @@
                   , is_macro        => boolean()
                   }.
 
+-define(TIME(L, X), clj_utils:time(L, fun() -> X end)).
+
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
   case clj_env:pop_expr(Env0) of
@@ -124,13 +126,13 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
   IsMacro = 'clojerl.Var':is_macro(Var),
 
-  ok = ensure_module(Module),
+  ok = ?TIME("ensure_module", ensure_module(Module)),
   VarAst = erl_syntax:abstract(Var),
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
         { VarAst
-        , add_functions(Module, Name, FnExpr, State)
+        , ?TIME("add_functions", add_functions(Module, Name, FnExpr, State))
         };
       _ ->
         pop_ast(ast(InitExpr, State))
@@ -143,10 +145,14 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Funs    = [ValFunAst],
   Exports = [{ValName, 0}],
 
-  ok = clj_module:add_vars(Module, Vars),
-  ok = clj_module:add_functions(Module, Funs),
-  ok = clj_module:add_exports(Module, Exports),
-
+  ?TIME(
+     "update_module",
+     begin
+       ok = clj_module:add_vars(Module, Vars),
+       ok = clj_module:add_functions(Module, Funs),
+       ok = clj_module:add_exports(Module, Exports)
+     end
+    ),
   push_ast(VarAst, State1#{is_macro => IsMacro});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
