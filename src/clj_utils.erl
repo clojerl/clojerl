@@ -21,6 +21,7 @@
         , trace_while/2
         , time/1
         , time/2
+        , time/3
         , bench/3
         , bench/4
         ]).
@@ -252,12 +253,16 @@ trace_while(Filename, Fun) ->
 
 -spec time(function()) -> ok.
 time(Fun) when is_function(Fun) ->
-  time(Fun, []).
+  time("Time", Fun).
 
--spec time(function(), list()) -> ok.
-time(Fun, Args) ->
+-spec time(string(), function()) -> ok.
+time(Label, Fun) when is_function(Fun) ->
+  time(Label, Fun, []).
+
+-spec time(string(), function(), list()) -> ok.
+time(Label, Fun, Args) ->
   {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
-  io:format("~p ms~n", [T / 1000]),
+  io:format("~s: ~p ms~n", [Label, T / 1000]),
   V.
 
 bench(Name, Fun, Trials) ->
