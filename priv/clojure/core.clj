@@ -1265,7 +1265,7 @@
 
 (defn bit-not
   "Bitwise complement"
-  {:inline (fn [x] `(. clojure.lang.Numbers (not ~x)))
+  {:inline (fn [x] `(erlang/bnot.e ~x))
    :added "1.0"}
   [x] (erlang/bnot.e x))
 
@@ -1343,19 +1343,19 @@
 
 (defn bit-shift-left
   "Bitwise shift left"
-  {:inline (fn [x n] `(. clojure.lang.Numbers (shiftLeft ~x ~n)))
+  {:inline (fn [x n] `(erlang/bsl.e ~x ~n))
    :added "1.0"}
   [x n] (erlang/bsl.e x n))
 
 (defn bit-shift-right
   "Bitwise shift right"
-  {:inline (fn [x n] `(. clojure.lang.Numbers (shiftRight ~x ~n)))
+  {:inline (fn [x n] `(erlang/bsr.e ~x ~n))
    :added "1.0"}
   [x n] (erlang/bsr.e x n))
 
 (defn unsigned-bit-shift-right
   "Bitwise shift right, without sign-extension."
-  {:inline (fn [x n] `(. clojure.lang.Numbers (unsignedShiftRight ~x ~n)))
+  {:inline (fn [x n] `(erlang/bsr.e ~x ~n))
    :added "1.6"}
   [x n]
   (throw "unimplemented")

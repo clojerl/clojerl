@@ -83,32 +83,40 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 
 -spec fun_for(module(), atom(), integer()) -> function().
-fun_for(Name, Function0, Arity) ->
-  FBin = atom_to_binary(Function0, utf8),
-  Function = case clj_utils:ends_with(FBin, <<"__val">>) of
-               true  -> binary_to_atom(binary:part(FBin, 0, size(FBin) - 5), utf8);
-               false -> Function0
-             end,
-
+fun_for(Name, Function, Arity) ->
   MFA = {Name, Function, Arity},
   case ets:lookup(?FAKE_FUNS, MFA) of
     [] ->
-      io:format("fun_for ~p~n", [MFA]),
+      %% io:format("fun_for ~p~n", [MFA]),
       Module = get(Name),
       case maps:get({Function, Arity}, Module#module.funs, undefined) of
         undefined -> throw({notfound, {Name, Function, Arity}});
         FunctionAst ->
-          %% io:format("Before ~s~n", [clj_compiler:ast_to_string([FunctionAst])]),
           {function, _, _, _, Clauses} = replace_calls(FunctionAst, Name, Function),
-          %% io:format("Clauses ~p~n", [Clauses]),
           FunAst = {'named_fun', 0, Function, Clauses},
-          %% io:format("After ~s~n", [clj_compiler:ast_to_string([FunAst])]),
           {value, Fun, _} = erl_eval:expr(FunAst, []),
-          ets:insert(?FAKE_FUNS, {MFA, Fun}),
-          Fun
+          Fun1 = check_var_val(Function, Arity, Fun),
+          ets:insert(?FAKE_FUNS, {MFA, Fun1}),
+          Fun1
       end;
-    [{_, Fun}] -> Fun
+    [{_, Fun}] ->
+      Fun
   end.
+
+-spec check_var_val(atom(), integer(), function()) -> function().
+check_var_val(Function, 0, Fun) ->
+  FunctionBin = atom_to_binary(Function, utf8),
+  case clj_utils:ends_with(FunctionBin, <<"__val">>) of
+    true ->
+      Value = Fun(),
+      case clj_core:'var?'(Value) of
+        true  -> fun() -> 'clojerl.FakeVar':new(Value) end;
+        false -> Fun
+      end;
+    false -> Fun
+  end;
+check_var_val(_Function, _Arity, Fun) ->
+  Fun.
 
 -spec replace_calls(erl_parse:abstract_form(), module(), atom()) ->
   erl_parse:abstract_form().
