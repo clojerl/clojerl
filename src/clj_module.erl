@@ -319,11 +319,10 @@ from_binary(Name) when is_atom(Name) ->
     _ ->
       clj_utils:throw([ <<"Could not load object code for namespace: ">>
                       , atom_to_binary(Name, utf8)
-                      ]
-                     )
+                      ])
   end.
--spec attribute_module(atom()) -> erl_syntax:syntaxTree().
 
+-spec attribute_module(atom()) -> erl_syntax:syntaxTree().
 attribute_module(Name) when is_atom(Name) ->
   ModuleAtom = erl_syntax:atom(module),
   NameAtom = erl_syntax:atom(Name),

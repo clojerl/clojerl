@@ -55,8 +55,6 @@ impl_module(Protocol, Type) when is_atom(Protocol),
 -spec impl_function(atom(), atom()) -> atom().
 impl_function(Protocol, Function) when is_atom(Protocol),
                                        is_atom(Function) ->
-  binary_to_atom(<<(atom_to_binary(Protocol, utf8))/binary,
-                   ".",
-                   (atom_to_binary(Function, utf8))/binary>>
-                , utf8
-                ).
+  ProtocolBin = atom_to_binary(Protocol, utf8),
+  FunctionBin = atom_to_binary(Function, utf8),
+  binary_to_atom(<<ProtocolBin/binary, ".", FunctionBin/binary>>, utf8).
