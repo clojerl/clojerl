@@ -6,7 +6,6 @@
         , meta/1
         , name/1
         , str/1
-        , to_atom/1
         ]).
 
 -type config() :: list().
@@ -71,15 +70,5 @@ str(_Config) ->
 
   HelloWorldSymbol = clj_core:symbol(<<"hello">>, <<"world">>),
   <<"hello/world">> = clj_core:str(HelloWorldSymbol),
-
-  {comments, ""}.
-
--spec to_atom(config()) -> result().
-to_atom(_Config) ->
-  HelloSymbol = clj_core:symbol(<<"hello">>),
-  hello = 'clojerl.Symbol':to_atom(HelloSymbol),
-
-  HelloWorldSymbol = clj_core:symbol(<<"hello">>, <<"world">>),
-  'hello/world' = 'clojerl.Symbol':to_atom(HelloWorldSymbol),
 
   {comments, ""}.

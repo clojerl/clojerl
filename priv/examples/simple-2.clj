@@ -1,5 +1,5 @@
 (ns examples.simple-2)
 
-#_(clojure.core/require 'examples.simple1)
+(clojure.core/require examples.simple)
 
 (def x examples.simple/x)

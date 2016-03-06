@@ -19,6 +19,11 @@
         , warn_when/3
         , group_by/2
         , trace_while/2
+        , time/1
+        , time/2
+        , time/3
+        , bench/3
+        , bench/4
         ]).
 
 -define(INT_PATTERN,
@@ -83,9 +88,9 @@ parse_symbol(Str) ->
 verify_symbol_name({_, Name} = Result) ->
   NotNumeric = fun(<<C/utf8, _/binary>>) -> char_type(C) =/= number end,
   NoEndColon = fun(X) -> binary:last(X) =/= $: end,
-  NoSlash = fun(X) -> binary:match(X, <<"/">>) == nomatch end,
+  NoDoubleSlash = fun(X) -> re:run(X, <<"/.*?/">>) == nomatch end,
   ApplyPred = fun(Fun) -> Fun(Name) end,
-  case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoSlash]) of
+  case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoDoubleSlash]) of
     true -> Result;
     false -> undefined
   end.
@@ -155,6 +160,8 @@ binary_join([H | T], Sep) ->
   <<H/binary, B/binary>>.
 
 -spec ends_with(binary(), binary()) -> ok.
+ends_with(Str, Ends) when size(Ends) > size(Str)->
+  false;
 ends_with(Str, Ends) ->
   StrSize = byte_size(Str),
   EndsSize = byte_size(Ends),
@@ -238,11 +245,45 @@ trace_while(Filename, Fun) ->
   eep:start_file_tracing(Filename),
 
   receive stop -> ok
-  after 5000 -> ok
+  after 10000 -> ok
   end,
 
   eep:stop_tracing(),
   eep:convert_tracing(Filename).
+
+-spec time(function()) -> ok.
+time(Fun) when is_function(Fun) ->
+  time("Time", Fun).
+
+-spec time(string(), function()) -> ok.
+time(Label, Fun) when is_function(Fun) ->
+  time(Label, Fun, []).
+
+-spec time(string(), function(), list()) -> ok.
+time(Label, Fun, Args) ->
+  {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
+  io:format("~s: ~p ms~n", [Label, T / 1000]),
+  V.
+
+bench(Name, Fun, Trials) ->
+  bench(Name, Fun, [], Trials).
+
+bench(Name, Fun, Args, Trials) ->
+    print_result(Name, repeat_tc(Fun, Args, Trials)).
+
+repeat_tc(Fun, Args, Trials) ->
+  Repeat = fun
+             R(0) -> ok;
+             R(N) -> apply(Fun, Args), R(N - 1)
+           end,
+
+    {Time, _} = timer:tc(fun() -> Repeat(Trials) end),
+    {Time, Trials}.
+
+
+print_result(Name, {Time, Trials}) ->
+    io:format("~s: ~.3f ms (~.2f per second)~n",
+              [Name, (Time / 1000) / Trials, Trials / (Time / 1000000)]).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions

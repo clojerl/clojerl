@@ -12,6 +12,7 @@ start() ->
 
 -spec start(any(), any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_Type, _Args) ->
+  {ok, _} = clojerl_sup:start_link(),
   load_modules(),
   {ok, self()}.
 

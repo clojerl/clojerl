@@ -7,7 +7,7 @@
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
--export([new/1, new/2, to_atom/1]).
+-export([new/1, new/2]).
 
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
@@ -28,12 +28,6 @@ new(Name) when is_binary(Name) ->
 new(Namespace, Name) when is_binary(Namespace) orelse Namespace == undefined,
                           is_binary(Name) ->
   #?TYPE{data = {Namespace, Name}}.
-
--spec to_atom(type()) -> atom().
-to_atom(#?TYPE{name = ?M, data = {undefined, Name}}) ->
-  binary_to_atom(Name, utf8);
-to_atom(#?TYPE{name = ?M, data = {Ns, Name}}) ->
-  binary_to_atom(<<Ns/binary, "/", Name/binary>>, utf8).
 
 %%------------------------------------------------------------------------------
 %% Protocols

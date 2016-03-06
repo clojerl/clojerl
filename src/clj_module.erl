@@ -1,25 +1,37 @@
 -module(clj_module).
 
--export([ load/1
+-compile({no_auto_import, [get/1]}).
+
+-export([ init/0
+
+        , all/0
+        , load/1
+        , is_loaded/1
         , to_forms/1
+        , fake_fun/3
 
         , add_vars/2
         , add_attributes/2
+        , add_exports/2
         , add_functions/2
 
         , is_clojure/1
         ]).
 
--type var_id() :: binary().
-
+%% -type var_id()      :: binary().
 -type function_id() :: {atom(), integer()}.
+%% -type export()      :: {atom(), non_neg_integer()}.
 
--type clj_module() ::
-        #{ module => erl_syntax:syntaxTree()
-         , vars   => #{var_id() => 'clojerl.Var':type()}
-         , attrs  => [erl_syntax:syntaxTree()]
-         , funs   => #{function_id() => erl_syntax:syntaxTree()}
-         }.
+-record(module, { name      :: atom(),
+                  vars      :: ets:tid(),
+                  funs      :: ets:tid(),
+                  fake_funs :: ets:tid(),
+                  exports   :: ets:tid(),
+                  attrs     :: [erl_syntax:syntaxTree()],
+                  rest      :: [erl_syntax:syntaxTree()]
+                }).
+
+-type clj_module() :: #module{}.
 
 -export_type([clj_module/0]).
 
@@ -27,34 +39,229 @@
 %% Exported Functions
 %%------------------------------------------------------------------------------
 
--spec load(atom()) -> {ok, clj_module()} | {error, term()}.
-load(Module) ->
-  case code:ensure_loaded(Module) of
-    {module, Module} ->
-      from_binary(Module);
-    {error, _} ->
-      {ok, new([attribute_module(Module)])}
+-spec init() -> ok.
+init() ->
+  TabId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
+  erlang:put(?MODULE, TabId),
+  ok.
+
+%% @doc Gets the named fake fun that corresponds to the mfa provided.
+%%      A fake fun is generated during compile-time and it provides the
+%%      same functionality as its original. The only difference is that
+%%      all calls to functions in the same module are replaced by a call
+%%      to clj_module:fake_fun/3.
+%%      This is necessary so that macro functions can be used without
+%%      having to generate, compile and load the binary for the partial
+%%      module each time a macro is found.
+-spec fake_fun(module(), atom(), integer()) -> function() | notfound.
+fake_fun(Name, Function, Arity) ->
+  Module        = get(modules_table_id(), Name),
+  FakeFunsTable = Module#module.fake_funs,
+  FA = {Function, Arity},
+  case ets:lookup(FakeFunsTable, FA) of
+    [] ->
+      case get(Module#module.funs, FA) of
+        undefined -> notfound;
+        {_, FunctionAst} ->
+          {function, _, _, _, Clauses} =
+            replace_calls(FunctionAst, Name, Function),
+          FunAst = {'named_fun', 0, Function, Clauses},
+          {value, Fun, _} = erl_eval:expr(FunAst, []),
+          Fun1 = check_var_val(Function, Arity, Fun),
+          save(Module#module.fake_funs, {FA, Fun1}),
+          Fun1
+      end;
+    [{_, Fun}] ->
+      Fun
   end.
 
--spec attribute_module(atom()) -> erl_syntax:syntaxTree().
-attribute_module(Name) when is_atom(Name) ->
-  ModuleAtom = erl_syntax:atom(module),
-  NameAtom = erl_syntax:atom(Name),
-  erl_syntax:attribute(ModuleAtom, [NameAtom]).
+%% @doc Checks if the function is actually the one that provides the value
+%%      of a var, Then it checks if the value returned is the var itself and
+%%      if so replaces the returned value for a clojerl.FakeVar, which
+%%      reimplements clojerl.IFn protocol so that the invoke is done using
+%%      the var's corresponding fake fun.
+-spec check_var_val(atom(), integer(), function()) -> function().
+check_var_val(Function, 0, Fun) ->
+  FunctionBin = atom_to_binary(Function, utf8),
+  case clj_utils:ends_with(FunctionBin, <<"__val">>) of
+    true ->
+      Value = Fun(),
+      FakeValFun = fun() -> 'clojerl.FakeVar':new(Value) end,
+      case clj_core:'var?'(Value) of
+        true  -> FakeValFun;
+        false -> Fun
+      end;
+    false -> Fun
+  end;
+check_var_val(_Function, _Arity, Fun) ->
+  Fun.
 
+%% @doc Processes a function's ast and modifies all calls to functions in the
+%%      function's own module for a call to the fun returned by
+%%      clj_module:fake_fun/3.
+%%      If the call is a recursive call to the top function then it changes
+%%      the call to a variable built using the value of TopFunction.
+-spec replace_calls(erl_parse:abstract_form(), module(), atom()) ->
+  erl_parse:abstract_form().
+replace_calls( { call, Line
+               , { remote, _
+                 , {atom, _, Module}
+                 , {atom, _, Function}
+                 }
+               , Args
+               }
+             , Module
+             , TopFunction) ->
+  Remote = {remote, Line,
+            {atom, Line, ?MODULE},
+            {atom, Line, fake_fun}
+           },
 
--spec new([erl_syntax:syntaxTree()]) -> clj_module().
+  Arity = length(Args),
+  FunCall = {call, Line, Remote, [
+    {atom, Line, Module}, {atom, Line, Function}, {integer, Line, Arity}
+  ]},
+  Args1 = replace_calls(Args, Module, TopFunction),
+  {call, Line, FunCall, Args1};
+replace_calls( {call, Line, {atom, _, TopFunction}, Args}
+             , Module
+             , TopFunction) ->
+  Args1 = replace_calls(Args, Module, TopFunction),
+  {call, Line, {var, Line, TopFunction}, Args1};
+replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
+  list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
+replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
+  [replace_calls(Item, Module, TopFunction) || Item <- Ast];
+replace_calls(Ast, _, _) ->
+  Ast.
+
+-spec load(atom()) -> ok | {error, term()}.
+load(Name) ->
+  case code:ensure_loaded(Name) of
+    {module, Name} ->
+      from_binary(Name);
+    {error, _} ->
+      new([attribute_module(Name)])
+  end.
+
+-spec is_loaded(module()) -> boolean().
+is_loaded(Name) ->
+  ets:member(modules_table_id(), Name).
+
+-spec all() -> [clj_module()].
+all() -> ets:tab2list(modules_table_id()).
+
+-spec to_forms(clj_module()) -> [erl_syntax:syntaxTree()].
+to_forms(#module{name = Name} = Module) ->
+  #module{ vars    = VarsTable
+         , funs    = FunsTable
+         , exports = ExportsTable
+         , attrs   = Attrs
+         , rest    = Rest
+         } = Module,
+
+  ModuleAttr   = attribute_module(Name),
+
+  VarsList     = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
+  Vars         = maps:from_list(VarsList),
+  VarsAtom     = erl_syntax:atom(vars),
+  VarsAttr     = erl_syntax:attribute(VarsAtom, [erl_syntax:abstract(Vars)]),
+  VarsAttr1    = erl_syntax:revert(VarsAttr),
+
+  Exports      = [X || {X} <- ets:tab2list(ExportsTable)],
+  ExportAttr   = export_attribute(Exports),
+
+  ClojureAtom  = erl_syntax:atom(clojure),
+  ClojureAttr  = erl_syntax:attribute(ClojureAtom, [erl_syntax:atom(true)]),
+  ClojureAttr1 = erl_syntax:revert(ClojureAttr),
+
+  UniqueAttrs  = lists:usort([ClojureAttr1 | Attrs]),
+
+  Funs         = [X || {_, X} <- ets:tab2list(FunsTable)],
+
+  [ModuleAttr, VarsAttr1, ExportAttr | UniqueAttrs ++ Rest ++ Funs].
+
+-spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
+add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
+  add_vars(get(modules_table_id(), ModuleName), Vars);
+add_vars(Module, Vars) ->
+  AddFun = fun(V) ->
+               K = clj_core:name(V),
+               save(Module#module.vars, {K, V})
+           end,
+  lists:foreach(AddFun, Vars),
+  Module.
+
+-spec add_attributes(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
+add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
+  add_attributes(get(modules_table_id(), ModuleName), Attrs);
+add_attributes(Module, []) ->
+  Module;
+add_attributes(Module, Attrs) ->
+  Attrs1 = erl_syntax:revert_forms(Attrs),
+  Module1 = Module#module{attrs = Attrs1 ++ Module#module.attrs},
+  save(modules_table_id(), Module1).
+
+-spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
+  clj_module().
+add_exports(ModuleName, Exports) when is_atom(ModuleName)  ->
+  add_exports(get(modules_table_id(), ModuleName), Exports);
+add_exports(Module, Exports) ->
+  AddExport = fun(E) ->
+                  save(Module#module.exports, {E})
+              end,
+  ok = lists:foreach(AddExport, Exports),
+  Module.
+
+-spec add_functions(module() | clj_module(), [erl_syntax:syntaxTree()]) ->
+  clj_module().
+add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
+  add_functions(get(modules_table_id(), ModuleName), Funs);
+add_functions(Module, Funs) ->
+  SaveFun = fun(F) ->
+                save(Module#module.funs, {function_id(F), erl_syntax:revert(F)})
+            end,
+  lists:foreach(SaveFun, Funs),
+  Module.
+
+-spec is_clojure(module()) -> boolean().
+is_clojure(Name) ->
+  Attrs = Name:module_info(attributes),
+  lists:keymember(clojure, 1, Attrs).
+
+%%------------------------------------------------------------------------------
+%% Helper Functions
+%%------------------------------------------------------------------------------
+
+-spec modules_table_id() -> ets:tid().
+modules_table_id() ->
+  erlang:get(?MODULE).
+
+-spec get(atom(), module()) -> clj_module().
+get(Table, Id) ->
+  case ets:lookup(Table, Id) of
+    [] -> throw({notfound, Id});
+    [Value] -> Value
+  end.
+
+-spec save(atom(), term()) -> term().
+save(Table, Value) ->
+  true = ets:insert(Table, Value),
+  Value.
+
+-spec new([erl_syntax:syntaxTree()]) -> ok | {error, term()}.
 new(Forms) ->
-  {[ModuleAttr], Rest} = lists:partition(fun is_module_attribute/1, Forms),
-  {Attrs, Rest1} = lists:partition(fun is_attribute/1, Rest),
+  {[ModuleAttr], Rest} = lists:partition(is_attribute_fun(module), Forms),
+  {AllAttrs, Rest1} = lists:partition(fun is_attribute/1, Rest),
   {Funs, Rest2} = lists:partition(fun is_function/1, Rest1),
 
   [ModuleAst] = erl_syntax:attribute_arguments(ModuleAttr),
-  Module = erl_syntax:concrete(ModuleAst),
-  {VarsAttrs, RestAttrs} = lists:partition(fun is_vars_attribute/1, Attrs),
+  Name        = erl_syntax:concrete(ModuleAst),
+  {VarsAttrs, RestAttrs} = lists:partition(is_attribute_fun(vars), AllAttrs),
+
   clj_utils:throw_when( length(VarsAttrs) > 1
                       , [ <<"The module ">>
-                        , atom_to_binary(Module, utf8)
+                        , atom_to_binary(Name, utf8)
                         , <<" contains more than one 'vars' attributes.">>
                         ]
                       ),
@@ -65,97 +272,58 @@ new(Forms) ->
              erl_syntax:concrete(V)
          end,
 
-  IndexedFuns = index_functions(Funs),
+  {ExportAttrs, Attrs} = lists:partition(is_attribute_fun(export), RestAttrs),
+  Exports = concrete_export(ExportAttrs),
 
-  #{ module => ModuleAttr
-   , vars   => Vars
-   , attrs  => RestAttrs
-   , funs   => IndexedFuns
-   , rest   => Rest2
-   }.
+  TableOpts = [set, protected, {keypos, 1}],
+  Module = #module{ name      = Name
+                  , vars      = ets:new(var, TableOpts)
+                  , funs      = ets:new(funs, TableOpts)
+                  , fake_funs = ets:new(fake_funs, TableOpts)
+                  , exports   = ets:new(exports, TableOpts)
+                  , attrs     = erl_syntax:revert_forms(Attrs)
+                  , rest      = erl_syntax:revert_forms(Rest2)
+                  },
 
--spec from_binary(atom()) -> clj_module().
-from_binary(ModuleName) when is_atom(ModuleName) ->
-  case code:get_object_code(ModuleName) of
-    {ModuleName, Binary, _} ->
+  Module1 = add_functions(Module, Funs),
+  Module2 = add_vars(Module1, maps:values(Vars)),
+  Module3 = add_exports(Module2, Exports),
+
+  save(modules_table_id(), Module3).
+
+-spec from_binary(atom()) -> ok | {error, term()}.
+from_binary(Name) when is_atom(Name) ->
+  case code:get_object_code(Name) of
+    {Name, Binary, _} ->
       case beam_lib:chunks(Binary, [abstract_code]) of
         {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
-          {ok, new(Forms)};
+          new(Forms);
         Error ->
           Error
       end;
     _ ->
       clj_utils:throw([ <<"Could not load object code for namespace: ">>
-                      , atom_to_binary(ModuleName, utf8)
-                      ]
-                     )
+                      , atom_to_binary(Name, utf8)
+                      ])
   end.
 
--spec to_forms(clj_module()) -> [erl_syntax:syntaxTree()].
-to_forms(#{module := Module} = Def) ->
-  #{ attrs := Attrs
-   , vars  := Vars
-   , funs  := Funs
-   , rest  := Rest
-   } = Def,
-
-  ClojureAtom = erl_syntax:atom(clojure),
-  ClojureAttr = erl_syntax:attribute(ClojureAtom, [erl_syntax:atom(true)]),
-
-  UniqueAttrs = lists:usort(erl_syntax:revert_forms([ClojureAttr | Attrs])),
-  UniqueFuns  = lists:usort(maps:values(Funs)),
-
-  VarsAtom    = erl_syntax:atom(vars),
-  VarsAttr    = erl_syntax:attribute(VarsAtom, [erl_syntax:abstract(Vars)]),
-
-  [Module, VarsAttr | UniqueAttrs ++ Rest ++ UniqueFuns].
-
--spec add_vars(clj_module(), ['clojerl.Var':type()]) -> clj_module().
-add_vars(#{vars := Vars} = Module, AddVars) ->
-  AddByKeyFun = fun(V, Acc) ->
-                    K = clj_core:name(V),
-                    Acc#{K => V}
-                end,
-  Vars1 = lists:foldl(AddByKeyFun, Vars, AddVars),
-  Module#{vars => Vars1}.
-
--spec add_attributes(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
-add_attributes(#{attrs := Attrs} = Module, AddAttrs) ->
-  Module#{attrs => AddAttrs ++ Attrs}.
-
--spec add_functions(clj_module(), [erl_syntax:syntaxTree()]) -> clj_module().
-add_functions(#{funs := Funs} = Module, AddFuns) ->
-  AddByKeyFun = fun(F, Acc) ->
-                    K = function_id(F),
-                    Acc#{K => F}
-                end,
-  Funs1 = lists:foldl(AddByKeyFun, Funs, AddFuns),
-  Module#{funs => Funs1}.
-
--spec is_clojure(module()) -> boolean().
-is_clojure(Module) ->
-  Attrs = Module:module_info(attributes),
-  lists:keymember(clojure, 1, Attrs).
-
-%%------------------------------------------------------------------------------
-%% Helper Functions
-%%------------------------------------------------------------------------------
-
--spec is_module_attribute(erl_syntax:syntaxTree()) -> boolean.
-is_module_attribute(Form) ->
-  erl_syntax:type(Form) =:= attribute
-    andalso
-    erl_syntax:concrete(erl_syntax:attribute_name(Form)) =:= module.
+-spec attribute_module(atom()) -> erl_syntax:syntaxTree().
+attribute_module(Name) when is_atom(Name) ->
+  ModuleAtom = erl_syntax:atom(module),
+  NameAtom = erl_syntax:atom(Name),
+  Attr = erl_syntax:attribute(ModuleAtom, [NameAtom]),
+  erl_syntax:revert(Attr).
 
 -spec is_attribute(erl_syntax:syntaxTree()) -> boolean.
 is_attribute(Form) ->
   erl_syntax:type(Form) =:= attribute.
 
--spec is_vars_attribute(erl_syntax:syntaxTree()) -> boolean.
-is_vars_attribute(Form) ->
-  erl_syntax:type(Form) =:= attribute
-    andalso
-    erl_syntax:concrete(erl_syntax:attribute_name(Form)) =:= vars.
+-spec is_attribute_fun(atom()) -> function().
+is_attribute_fun(Name) ->
+  fun(Form) ->
+      is_attribute(Form) andalso
+        erl_syntax:concrete(erl_syntax:attribute_name(Form)) =:= Name
+  end.
 
 -spec is_function(erl_syntax:syntaxTree()) -> boolean.
 is_function(Form) ->
@@ -173,11 +341,33 @@ function_arity(Function) ->
 function_id(Function) ->
   {function_name(Function), function_arity(Function)}.
 
--spec index_functions([erl_syntax:syntaxTree()]) ->
-  #{atom() => erl_syntax:syntaxTree()}.
-index_functions(Funs) ->
-  IndexFun = fun(F, M) ->
-                 Key = function_id(F),
-                 M#{Key => F}
-             end,
-  lists:foldl(IndexFun, #{}, Funs).
+-spec concrete_export(erl_syntax:syntaxTree()) ->
+  [{atom(), non_neg_integer()}].
+concrete_export(ExportAttrs) ->
+  Exports  = lists:flatmap(fun erl_syntax:attribute_arguments/1, ExportAttrs),
+  Exports1 = lists:flatmap(fun erl_syntax:concrete/1, Exports),
+  lists:map(fun concrete_arity_qualifier/1, Exports1).
+
+-spec concrete_arity_qualifier(erl_syntax:syntaxTree()) ->
+  {atom(), non_neg_integer()}.
+concrete_arity_qualifier({NameAst, ArityAst}) ->
+  { erl_syntax:concrete(NameAst)
+  , erl_syntax:concrete(ArityAst)
+  }.
+
+-spec export_attribute([{atom(), integer()}]) ->
+  erl_syntax:syntaxTree().
+export_attribute(FAs) when is_list(FAs) ->
+  ExportAtom = erl_syntax:atom(export),
+  Fun  = fun({Function, Arity}) -> arity_qualifier(Function, Arity) end,
+  Asts = lists:usort(lists:map(Fun, FAs)),
+  ListAst = erl_syntax:list(Asts),
+  Attr = erl_syntax:attribute(ExportAtom, [ListAst]),
+  erl_syntax:revert(Attr).
+
+-spec arity_qualifier(atom(), integer()) -> erl_syntax:syntaxTree().
+arity_qualifier(Function, Arity) when is_atom(Function),
+                                      is_integer(Arity) ->
+  FunctionAtomAst = erl_syntax:atom(Function),
+  ArityIntegerAst = erl_syntax:integer(Arity),
+  erl_syntax:arity_qualifier(FunctionAtomAst, ArityIntegerAst).

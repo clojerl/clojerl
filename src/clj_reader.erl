@@ -952,6 +952,7 @@ read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
     nomatch ->
       read_one(State);
     Form when IsSplicing ->
+      PendingFormsFun = fun push_pending_form/2,
       case clj_core:'sequential?'(Form) of
         false ->
           clj_utils:throw( <<"Spliced form list in read-cond-splicing must "
@@ -961,7 +962,7 @@ read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
         true ->
           Seq = clj_core:seq2(Form),
           Items = clj_core:seq2(Seq),
-          lists:foldl(fun push_pending_form/2, State, lists:reverse(Items))
+          lists:foldl(PendingFormsFun, State, lists:reverse(Items))
       end;
     Form ->
       push_form(Form, State)
