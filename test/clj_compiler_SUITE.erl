@@ -61,7 +61,7 @@ compile_files(_Config) ->
   ct:comment("Compile all priv/clojure/*.clj files succesfully"),
   Wildcard1 = relative_path(<<"priv/clojure/*.clj">>),
   Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
-  FilesBin1 = lists:map(fun list_to_binary/1, Files1),
+  FilesBin1 = lists:map(fun erlang:list_to_binary/1, Files1),
   _Env1 = clj_compiler:compile_files(FilesBin1),
 
   ct:comment("Compile two files and use vars from one and the other"),

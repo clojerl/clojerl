@@ -89,12 +89,11 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts, Env) when is_binary(Src) ->
-  Self = erlang:self(),
-  {Pid, Ref} = erlang:spawn_monitor(fun() -> do_compile(Src, Opts, Env, Self) end),
+  DoCompile   = fun() -> do_compile(Src, Opts, Env) end,
+  {_Pid, Ref} = erlang:spawn_monitor(DoCompile),
   receive
-    {result, Env1} -> Env1;
-    {'DOWN', Ref, process, Pid, Info} ->
-      throw(Info)
+    {'DOWN', Ref, _, _, {shutdown, Result}} -> Result;
+    {'DOWN', Ref, _, _, Info} -> throw(Info)
   end.
 
 -spec eval(any()) -> {any(), clj_env:env()}.
@@ -107,12 +106,11 @@ eval(Form, Opts) ->
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Opts, Env) ->
-  Self = erlang:self(),
-  {Pid, Ref} = erlang:spawn_monitor(fun() -> do_eval(Form, Opts, Env, Self) end),
+  DoEval      = fun() -> do_eval(Form, Opts, Env) end,
+  {_Pid, Ref} = erlang:spawn_monitor(DoEval),
   receive
-    {result, Env1} -> Env1;
-    {'DOWN', Ref, process, Pid, Info} ->
-      throw(Info)
+    {'DOWN', Ref, _, _, {shutdown, Result}} -> Result;
+    {'DOWN', Ref, _, _, Info} -> throw(Info)
   end.
 
 %% Flags
@@ -129,43 +127,59 @@ no_warn_dynamic_var_name(Env) ->
 %% Helper functions
 %%------------------------------------------------------------------------------
 
--spec do_compile(binary(), options(), clj_env:env(), pid()) -> ok.
-do_compile(Src, Opts0, Env0, From) when is_binary(Src) ->
-  ok = clj_module:init(),
+-spec do_compile(binary(), options(), clj_env:env()) -> ok.
+do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts),
 
-  Env  = clj_env:put(Env0, clj_flags, CljFlags),
-  Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, RdrOpts, Env),
-  {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
+  Result =
+    try
+      ok = clj_module:init(),
+      Env  = clj_env:put(Env0, clj_flags, CljFlags),
+      Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, RdrOpts, Env),
+      {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
 
-  %% Compile all modules
-  ensure_output_dir(Opts),
-  lists:foreach(compile_forms_fun(Opts), ModulesForms),
+      %% Compile all modules
+      ensure_output_dir(Opts),
+      lists:foreach(compile_forms_fun(Opts), ModulesForms),
 
-  %% Eval all expressions
-  eval_expressions(Expressions),
+      %% Eval all expressions
+      eval_expressions(Expressions),
 
-  Env3 = clj_env:remove(Env2, clj_flags),
-  From ! {result, Env3},
-  ok.
+      Env3 = clj_env:remove(Env2, clj_flags),
+      {shutdown, Env3}
+    catch
+      Kind:Error ->
+        {error, Kind, Error, erlang:get_stacktrace()}
+    end,
 
--spec do_eval(any(), options(), clj_env:env(), pid()) -> ok.
-do_eval(Form, Opts0, Env0, From) ->
-  ok = clj_module:init(),
-  Opts = maps:merge(default_options(), Opts0),
-  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
-  Env1 = compile_single_form(Form, Env),
-  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
+  exit(Result).
 
-  lists:foreach(compile_forms_fun(Opts), ModulesForms),
+-spec do_eval(any(), options(), clj_env:env()) -> ok.
+do_eval(Form, Opts0, Env0) ->
+  Opts     = maps:merge(default_options(), Opts0),
+  CljFlags = maps:get(clj_flags, Opts),
 
-  [Value] = eval_expressions(Exprs),
-  Result  = {Value, clj_env:remove(Env2, clj_flags)},
+  Result =
+    try
+      ok   = clj_module:init(),
+      Env  = clj_env:put(Env0, clj_flags, CljFlags),
+      Env1 = compile_single_form(Form, Env),
+      {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
 
-  From ! {result, Result},
-  ok.
+      lists:foreach(compile_forms_fun(Opts), ModulesForms),
+
+      [Value] = eval_expressions(Exprs),
+
+      Env3  = {Value, clj_env:remove(Env2, clj_flags)},
+      {shutdown, Env3}
+    catch
+      Kind:Error ->
+        {error, Kind, Error, erlang:get_stacktrace()}
+    end,
+
+  exit(Result).
 
 -spec check_flag(clj_flag(), clj_env:env()) -> boolean().
 check_flag(Flag, Env) ->

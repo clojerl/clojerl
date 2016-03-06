@@ -8,7 +8,7 @@
         , load/1
         , is_loaded/1
         , to_forms/1
-        , fun_for/3
+        , fake_fun/3
 
         , add_vars/2
         , add_attributes/2
@@ -45,18 +45,26 @@ init() ->
   erlang:put(?MODULE, TabId),
   ok.
 
--spec fun_for(module(), atom(), integer()) -> function().
-fun_for(Name, Function, Arity) ->
+%% @doc Gets the named fake fun that corresponds to the mfa provided.
+%%      A fake fun is generated during compile-time and it provides the
+%%      same functionality as its original. The only difference is that
+%%      all calls to functions in the same module are replaced by a call
+%%      to clj_module:fake_fun/3.
+%%      This is necessary so that macro functions can be used without
+%%      having to generate, compile and load the binary for the partial
+%%      module each time a macro is found.
+-spec fake_fun(module(), atom(), integer()) -> function() | notfound.
+fake_fun(Name, Function, Arity) ->
   Module        = get(modules_table_id(), Name),
   FakeFunsTable = Module#module.fake_funs,
   FA = {Function, Arity},
   case ets:lookup(FakeFunsTable, FA) of
     [] ->
-      %% io:format("fun_for ~p~n", [MFA]),
       case get(Module#module.funs, FA) of
-        undefined -> throw({notfound, FA});
+        undefined -> notfound;
         {_, FunctionAst} ->
-          {function, _, _, _, Clauses} = replace_calls(FunctionAst, Name, Function),
+          {function, _, _, _, Clauses} =
+            replace_calls(FunctionAst, Name, Function),
           FunAst = {'named_fun', 0, Function, Clauses},
           {value, Fun, _} = erl_eval:expr(FunAst, []),
           Fun1 = check_var_val(Function, Arity, Fun),
@@ -67,14 +75,20 @@ fun_for(Name, Function, Arity) ->
       Fun
   end.
 
+%% @doc Checks if the function is actually the one that provides the value
+%%      of a var, Then it checks if the value returned is the var itself and
+%%      if so replaces the returned value for a clojerl.FakeVar, which
+%%      reimplements clojerl.IFn protocol so that the invoke is done using
+%%      the var's corresponding fake fun.
 -spec check_var_val(atom(), integer(), function()) -> function().
 check_var_val(Function, 0, Fun) ->
   FunctionBin = atom_to_binary(Function, utf8),
   case clj_utils:ends_with(FunctionBin, <<"__val">>) of
     true ->
       Value = Fun(),
+      FakeValFun = fun() -> 'clojerl.FakeVar':new(Value) end,
       case clj_core:'var?'(Value) of
-        true  -> fun() -> 'clojerl.FakeVar':new(Value) end;
+        true  -> FakeValFun;
         false -> Fun
       end;
     false -> Fun
@@ -82,6 +96,11 @@ check_var_val(Function, 0, Fun) ->
 check_var_val(_Function, _Arity, Fun) ->
   Fun.
 
+%% @doc Processes a function's ast and modifies all calls to functions in the
+%%      function's own module for a call to the fun returned by
+%%      clj_module:fake_fun/3.
+%%      If the call is a recursive call to the top function then it changes
+%%      the call to a variable built using the value of TopFunction.
 -spec replace_calls(erl_parse:abstract_form(), module(), atom()) ->
   erl_parse:abstract_form().
 replace_calls( { call, Line
@@ -95,11 +114,10 @@ replace_calls( { call, Line
              , TopFunction) ->
   Remote = {remote, Line,
             {atom, Line, ?MODULE},
-            {atom, Line, fun_for}
+            {atom, Line, fake_fun}
            },
 
   Arity = length(Args),
-  %% io:format("Changing call to ~p~n", [{Module, Function, Arity}]),
   FunCall = {call, Line, Remote, [
     {atom, Line, Module}, {atom, Line, Function}, {integer, Line, Arity}
   ]},
@@ -108,7 +126,6 @@ replace_calls( { call, Line
 replace_calls( {call, Line, {atom, _, TopFunction}, Args}
              , Module
              , TopFunction) ->
-  %% io:format("Changing recursive call to ~p~n", [TopFunction]),
   Args1 = replace_calls(Args, Module, TopFunction),
   {call, Line, {var, Line, TopFunction}, Args1};
 replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->

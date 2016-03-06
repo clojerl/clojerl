@@ -3,14 +3,12 @@
 -export([ emit/1
         , remove_state/1
         , without_state/3
-        , is_macro/1
         ]).
 
 -type ast() :: erl_syntax:syntaxTree().
 
 -type state() :: #{ asts            => [ast()]
                   , lexical_renames => clj_scope:scope()
-                  , is_macro        => boolean()
                   }.
 
 -spec emit(clj_env:env()) -> clj_env:env().
@@ -19,7 +17,7 @@ emit(Env0) ->
     {undefined, _} -> Env0;
     {Expr, Env} ->
       State = clj_env:get(Env, emitter, initial_state()),
-      clj_env:put(Env, emitter, ast(Expr, State#{is_macro => false}))
+      clj_env:put(Env, emitter, ast(Expr, State))
   end.
 
 %% @doc Applies Fun to the Env and Args but it first removes the emitter
@@ -47,16 +45,10 @@ remove_state(Env) ->
   , clj_env:remove(Env, emitter)
   }.
 
--spec is_macro(clj_env:env()) -> clj_env:env().
-is_macro(Env) ->
-  #{is_macro := IsMacro} = clj_env:get(Env, emitter, initial_state()),
-  IsMacro.
-
 -spec initial_state() -> state().
 initial_state() ->
   #{ asts            => []
    , lexical_renames => clj_scope:new()
-   , is_macro        => false
    }.
 
 %%------------------------------------------------------------------------------
@@ -122,7 +114,6 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Module  = 'clojerl.Var':module(Var),
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
-  IsMacro = 'clojerl.Var':is_macro(Var),
 
   ok = ensure_module(Module),
   VarAst = erl_syntax:abstract(Var),
@@ -147,7 +138,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   _ = clj_module:add_functions(Module, Funs),
   _ = clj_module:add_exports(Module, Exports),
 
-  push_ast(VarAst, State1#{is_macro => IsMacro});
+  push_ast(VarAst, State1);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
