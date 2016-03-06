@@ -245,7 +245,7 @@ trace_while(Filename, Fun) ->
   eep:start_file_tracing(Filename),
 
   receive stop -> ok
-  after 10000 -> ok
+  after 5000 -> ok
   end,
 
   eep:stop_tracing(),

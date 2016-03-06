@@ -106,8 +106,10 @@ analyze_form(Env, Form) ->
   IsSeq = clj_core:'seq?'(Form),
   case clj_core:type(Form) of
     _ when IsSeq ->
-      Op = clj_core:first(Form),
-      analyze_seq(Env, Op, Form);
+      case clj_core:'empty?'(Form) of
+        true  -> analyze_const(Env, Form);
+        false -> analyze_seq(Env, clj_core:first(Form), Form)
+      end;
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
     'clojerl.Vector' ->
