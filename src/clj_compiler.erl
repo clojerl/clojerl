@@ -26,9 +26,6 @@
                     , clj_flags  => [clj_flag()]
                     }.
 
--define(TIME(X), clj_utils:time(fun() -> X end)).
--define(TIME(L, X), clj_utils:time(L, fun() -> X end)).
-
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
@@ -91,26 +88,14 @@ compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
-compile(Src, Opts0, Env0) when is_binary(Src) ->
-  Opts     = maps:merge(default_options(), Opts0),
-  CljFlags = maps:get(clj_flags, Opts),
-  RdrOpts  = maps:get(reader_opts, Opts),
-
-  Env  = clj_env:put(Env0, clj_flags, CljFlags),
-  CompileSingleForm = fun(Form, EnvAcc) ->
-                          compile_single_form(Form, EnvAcc, Opts)
-                      end,
-  Env1 = ?TIME(clj_reader:read_fold(CompileSingleForm, Src, RdrOpts, Env)),
-  {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
-
-  %% Compile all modules
-  ensure_output_dir(Opts),
-  lists:foreach(compile_forms_fun(Opts), ModulesForms),
-
-  %% Eval all expressions
-  eval_expressions(Expressions),
-
-  clj_env:remove(Env2, clj_flags).
+compile(Src, Opts, Env) when is_binary(Src) ->
+  Self = erlang:self(),
+  {Pid, Ref} = erlang:spawn_monitor(fun() -> do_compile(Src, Opts, Env, Self) end),
+  receive
+    {result, Env1} -> Env1;
+    {'DOWN', Ref, process, Pid, Info} ->
+      throw(Info)
+  end.
 
 -spec eval(any()) -> {any(), clj_env:env()}.
 eval(Form) ->
@@ -121,17 +106,14 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts0, Env0) ->
-  Opts = maps:merge(default_options(), Opts0),
-  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
-  Env1 = clj_analyzer:analyze(Env, Form),
-  Env2 = clj_emitter:emit(Env1),
-  {ModulesForms, Exprs, Env3} = clj_emitter:remove_state(Env2),
-
-  lists:foreach(compile_forms_fun(Opts), ModulesForms),
-
-  [Value] = eval_expressions(Exprs),
-  {Value, clj_env:remove(Env3, clj_flags)}.
+eval(Form, Opts, Env) ->
+  Self = erlang:self(),
+  {Pid, Ref} = erlang:spawn_monitor(fun() -> do_eval(Form, Opts, Env, Self) end),
+  receive
+    {result, Env1} -> Env1;
+    {'DOWN', Ref, process, Pid, Info} ->
+      throw(Info)
+  end.
 
 %% Flags
 
@@ -146,6 +128,44 @@ no_warn_dynamic_var_name(Env) ->
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec do_compile(binary(), options(), clj_env:env(), pid()) -> ok.
+do_compile(Src, Opts0, Env0, From) when is_binary(Src) ->
+  ok = clj_module:init(),
+  Opts     = maps:merge(default_options(), Opts0),
+  CljFlags = maps:get(clj_flags, Opts),
+  RdrOpts  = maps:get(reader_opts, Opts),
+
+  Env  = clj_env:put(Env0, clj_flags, CljFlags),
+  Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, RdrOpts, Env),
+  {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
+
+  %% Compile all modules
+  ensure_output_dir(Opts),
+  lists:foreach(compile_forms_fun(Opts), ModulesForms),
+
+  %% Eval all expressions
+  eval_expressions(Expressions),
+
+  Env3 = clj_env:remove(Env2, clj_flags),
+  From ! {result, Env3},
+  ok.
+
+-spec do_eval(any(), options(), clj_env:env(), pid()) -> ok.
+do_eval(Form, Opts0, Env0, From) ->
+  ok = clj_module:init(),
+  Opts = maps:merge(default_options(), Opts0),
+  Env  = clj_env:put(Env0, clj_flags, maps:get(clj_flags, Opts)),
+  Env1 = compile_single_form(Form, Env),
+  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
+
+  lists:foreach(compile_forms_fun(Opts), ModulesForms),
+
+  [Value] = eval_expressions(Exprs),
+  Result  = {Value, clj_env:remove(Env2, clj_flags)},
+
+  From ! {result, Result},
+  ok.
 
 -spec check_flag(clj_flag(), clj_env:env()) -> boolean().
 check_flag(Flag, Env) ->
@@ -164,10 +184,10 @@ ensure_output_dir(Opts) ->
   true = code:add_path(OutputDir),
   ok.
 
--spec compile_single_form(any(), clj_env:env(), options()) -> clj_env:env().
-compile_single_form(Form, Env, _Opts) ->
+-spec compile_single_form(any(), clj_env:env()) -> clj_env:env().
+compile_single_form(Form, Env) ->
   Env1 = clj_analyzer:analyze(Env, Form),
-  ?TIME("emit", clj_emitter:emit(Env1)).
+  clj_emitter:emit(Env1).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -181,8 +201,7 @@ compile_forms(Forms, Opts) ->
   %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
   ErlFlags  = maps:get(erl_flags, Opts),
 
-  case ?TIME(compile:forms(Forms, ErlFlags)) of
-  %% case compile:forms(Forms, ErlFlags) of
+  case compile:forms(Forms, ErlFlags) of
     {ok, Name, Binary} ->
       %% io:format("Compiled ~p with ~p forms~n", [Name, length(Forms)]),
       OutputDir    = maps:get(output_dir, Opts),

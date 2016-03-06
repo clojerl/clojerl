@@ -13,8 +13,6 @@
                   , is_macro        => boolean()
                   }.
 
--define(TIME(L, X), clj_utils:time(L, fun() -> X end)).
-
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
   case clj_env:pop_expr(Env0) of
@@ -126,13 +124,13 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
   IsMacro = 'clojerl.Var':is_macro(Var),
 
-  ok = ?TIME("ensure_module", ensure_module(Module)),
+  ok = ensure_module(Module),
   VarAst = erl_syntax:abstract(Var),
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
         { VarAst
-        , ?TIME("add_functions", add_functions(Module, Name, FnExpr, State))
+        , add_functions(Module, Name, FnExpr, State)
         };
       _ ->
         pop_ast(ast(InitExpr, State))
@@ -145,14 +143,10 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Funs    = [ValFunAst],
   Exports = [{ValName, 0}],
 
-  ?TIME(
-     "update_module",
-     begin
-       ok = clj_module:add_vars(Module, Vars),
-       ok = clj_module:add_functions(Module, Funs),
-       ok = clj_module:add_exports(Module, Exports)
-     end
-    ),
+  _ = clj_module:add_vars(Module, Vars),
+  _ = clj_module:add_functions(Module, Funs),
+  _ = clj_module:add_exports(Module, Exports),
+
   push_ast(VarAst, State1#{is_macro => IsMacro});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
@@ -526,7 +520,7 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
   GroupedMethods = group_methods(Methods),
 
   ExportFun = fun(Arity) ->
-                  ok = clj_module:add_exports(Module, [{Name, Arity}])
+                  clj_module:add_exports(Module, [{Name, Arity}])
               end,
 
   lists:foreach(ExportFun, maps:keys(GroupedMethods)),
@@ -540,7 +534,7 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
         FunAst = function_form(Name, ClausesAst),
-        ok = clj_module:add_functions(Module, [FunAst]),
+        clj_module:add_functions(Module, [FunAst]),
 
         StateAcc2
     end,
@@ -551,7 +545,7 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
 ensure_module(Name) ->
   case clj_module:is_loaded(Name) of
     true  -> ok;
-    false -> ok = clj_module:load(Name)
+    false -> clj_module:load(Name), ok
   end.
 
 %% Push & pop asts

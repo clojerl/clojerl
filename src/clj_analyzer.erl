@@ -745,7 +745,8 @@ restore_def_name(Env, PreviousEnv) ->
     undefined ->
       clj_env:remove(Env, def_name);
     NameSym ->
-      clj_env:put(Env, def_name, NameSym)
+      %% This is just in case there are nested defs
+      add_def_name(Env, NameSym)
   end.
 
 -spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
