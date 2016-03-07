@@ -51,7 +51,7 @@ do_count(Fn, Count) ->
 'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Fn}, X) ->
   clj_core:cons(X, do_seq(Fn, [])).
 
-'clojerl.IColl.empty'(_) -> new([]).
+'clojerl.IColl.empty'(_) -> [].
 
 'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
