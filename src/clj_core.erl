@@ -141,10 +141,10 @@ disj(undefined, _Item) ->
 disj(Coll, Item) ->
   'clojerl.ISet':disjoin(Coll, Item).
 
-%% @doc Clojure's cons builds a cons cell, which is actually
-%%      the equivalent to a vanilla Erlang Head and Tail.
-%% TODO: it is possible that it should actually return a vanilla
-%%       Erlang list.
+%% @doc Clojure's cons builds a cons cell. In most cases it is just
+%%      a vanilla Erlang Head and Tail. When dealing with LazySeqs
+%%      it is a clojerl.Cons cell, so that the realization of values
+%%      can be postponed until they are used.
 -spec cons(any(), any()) -> list().
 cons(Item, undefined) ->
   list([Item]);
