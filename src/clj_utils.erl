@@ -24,6 +24,7 @@
         , time/3
         , bench/3
         , bench/4
+        , code_from_binary/1
         ]).
 
 -define(INT_PATTERN,
@@ -284,6 +285,22 @@ repeat_tc(Fun, Args, Trials) ->
 print_result(Name, {Time, Trials}) ->
     io:format("~s: ~.3f ms (~.2f per second)~n",
               [Name, (Time / 1000) / Trials, Trials / (Time / 1000000)]).
+
+-spec code_from_binary(atom()) -> [erl_parse:abstract_form()] | {error, term()}.
+code_from_binary(Name) when is_atom(Name) ->
+  case code:get_object_code(Name) of
+    {Name, Binary, _} ->
+      case beam_lib:chunks(Binary, [abstract_code]) of
+        {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
+          Forms;
+        Error ->
+          Error
+      end;
+    _ ->
+      clj_utils:throw([ <<"Could not load object code for namespace: ">>
+                      , atom_to_binary(Name, utf8)
+                      ])
+  end.
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions
