@@ -393,6 +393,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                      , 'variadic?' => IsVariadic andalso Id == Arity - 1
                      , arg_id      => Id
                      , local       => arg
+                     , shadow      => clj_env:get_local(Env1, Name)
                      },
         {Id + 1, [ParamExpr | Exprs]}
     end,
