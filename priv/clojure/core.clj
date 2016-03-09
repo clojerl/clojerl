@@ -147,11 +147,17 @@
 
 (def
   ^{:arglists '([x])
+    :doc "Return true if x implements ISeq"
+    :added "1.0"
+    :static true}
+  lazy-seq? (fn ^:static seq? [x] (instance? :clojerl.LazySeq x)))
+
+(def
+  ^{:arglists '([x])
     :doc "Return true if x implements IMeta"
     :added "1.0"
     :static true}
   meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
-
 
 #_(def
     ^{:arglists '([x])
@@ -2476,5 +2482,8 @@
   [v]
   (when (not v) (throw :assert)))
 
-
-(prn (map #(prn %) [1 2 3 4]))
+(->> (map #(prn %) [1 2 3 4])
+     seq
+     (take 10)
+     ;; prn
+     )

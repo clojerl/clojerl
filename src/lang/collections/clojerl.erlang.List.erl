@@ -33,7 +33,7 @@
 
 'clojerl.Stringable.str'([]) ->
   <<"()">>;
-'clojerl.Stringable.str'(Items) ->
+'clojerl.Stringable.str'(Items) when is_list(Items) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.

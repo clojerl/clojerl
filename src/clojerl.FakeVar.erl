@@ -16,7 +16,7 @@ new(Var) ->
   Module   = 'clojerl.Var':module(Var),
   Function = 'clojerl.Var':function(Var),
 
-  Args1 = case clj_core:seq(Args) of
+  Args1 = case clj_core:seq_to_list(Args) of
             undefined -> [];
             Seq       -> Seq
           end,

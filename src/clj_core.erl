@@ -7,7 +7,7 @@
          load/1, load/2,
          count/1,
          'empty?'/1, empty/1,
-         seq/1, seq2/1,
+         seq/1, seq2/1, seq_to_list/1,
          equiv/2,
          conj/2, disj/2,
          cons/2,
@@ -111,6 +111,13 @@ empty(Coll) ->
 -spec seq(any()) -> list() | undefined.
 seq(Seqable) ->
   'clojerl.Seqable':seq(Seqable).
+
+-spec seq_to_list(any()) -> list().
+seq_to_list(undefined) -> [];
+seq_to_list([]) -> [];
+seq_to_list(Seqable) ->
+  Seq = seq(Seqable),
+  [first(Seq) | seq_to_list(next(Seq))].
 
 -spec seq2(any()) -> list().
 seq2(Seqable) ->

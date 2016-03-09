@@ -43,13 +43,14 @@ new(Fn) when is_function(Fn) ->
   do_count(Fn, 0).
 
 do_count(Fn, Count) ->
+  erlang:display(do_count),
   case clj_core:invoke(Fn, []) of
     undefined -> Count;
     {_, Fn1} -> do_count(Fn1, Count + 1)
   end.
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Fn}, X) ->
-  clj_core:cons(X, do_seq(Fn, [])).
+'clojerl.IColl.cons'(#?TYPE{name = ?M} = LazySeq, X) ->
+  'clojerl.Cons':new(X, LazySeq).
 
 'clojerl.IColl.empty'(_) -> [].
 
@@ -70,38 +71,26 @@ do_count(Fn, Count) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 'clojerl.ISeq.first'(#?TYPE{name = ?M, data = Fn}) ->
-  Fn.
+  Seq = clj_core:invoke(Fn, []),
+  clj_core:first(Seq).
 
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = []}) -> undefined;
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = [_ | []]}) -> undefined;
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
-  List#?TYPE{name = ?M, data = Rest}.
+'clojerl.ISeq.next'(#?TYPE{name = ?M, data = Fn}) ->
+  Seq = clj_core:invoke(Fn, []),
+  clj_core:next(Seq).
 
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = []}) -> undefined;
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
-  List#?TYPE{data = Rest}.
+'clojerl.ISeq.more'(#?TYPE{name = ?M, data = Fn}) ->
+  Seq = clj_core:invoke(Fn, []),
+  clj_core:rest(Seq).
 
 'clojerl.ISequential.noop'(_) -> ok.
 
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Fn}) ->
-  do_seq(Fn, []).
+  case clj_core:invoke(Fn, []) of
+    undefined -> undefined;
+    Seq -> 'clojerl.Cons':new(clj_core:first(Seq),clj_core:next(Seq))
+  end.
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Fn}) ->
   {uniq, Uniq} = erlang:fun_info(Fn, uniq),
   UniqBin = clj_core:str(Uniq),
   <<"#<clojerl.LazySeq@", UniqBin/binary, ">">>.
-
-do_seq(Fn, Items) ->
-  case clj_core:seq(clj_core:invoke(Fn, [])) of
-    undefined   ->
-      io:format("End of lazy seq: ~p~n", [Items]),
-      lists:reverse(Items);
-    Seq ->
-      io:format("Seq: ~p~n", [Seq]),
-      case lists:last(Seq) of
-        ContFn when is_function(ContFn) ->
-          do_seq(ContFn, lists:droplast(Seq) ++ Items);
-        _ ->
-          Seq ++ Items
-      end
-  end.
