@@ -97,8 +97,8 @@ resolve_file(FilePath) ->
   end.
 
 -spec count(any()) -> integer().
-count(Seq) ->
-  'clojerl.Counted':count(Seq).
+count(undefined) -> 0;
+count(Seq)       -> 'clojerl.Counted':count(Seq).
 
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->

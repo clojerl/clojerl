@@ -40,13 +40,9 @@ new(Fn) when is_function(Fn) ->
 %%------------------------------------------------------------------------------
 
 'clojerl.Counted.count'(#?TYPE{name = ?M, data = Fn}) ->
-  do_count(Fn, 0).
-
-do_count(Fn, Count) ->
-  erlang:display(do_count),
   case clj_core:invoke(Fn, []) of
-    undefined -> Count;
-    {_, Fn1} -> do_count(Fn1, Count + 1)
+    undefined -> 0;
+    Seq       -> clj_core:count(Seq)
   end.
 
 'clojerl.IColl.cons'(#?TYPE{name = ?M} = LazySeq, X) ->
