@@ -2481,9 +2481,3 @@
 (defmacro assert
   [v]
   (when (not v) (throw :assert)))
-
-(->> (map #(prn %) [1 2 3 4])
-     seq
-     (take 10)
-     ;; prn
-     )
