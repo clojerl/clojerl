@@ -71,8 +71,10 @@ new(Fn) when is_function(Fn) ->
   clj_core:first(Seq).
 
 'clojerl.ISeq.next'(#?TYPE{name = ?M, data = Fn}) ->
-  Seq = clj_core:invoke(Fn, []),
-  clj_core:next(Seq).
+  case clj_core:invoke(Fn, []) of
+    undefined -> [];
+    Seq -> clj_core:next(Seq)
+  end.
 
 'clojerl.ISeq.more'(#?TYPE{name = ?M, data = Fn}) ->
   Seq = clj_core:invoke(Fn, []),

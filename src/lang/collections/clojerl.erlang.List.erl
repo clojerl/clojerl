@@ -44,7 +44,7 @@
 'clojerl.ISeq.first'([]) -> undefined;
 'clojerl.ISeq.first'([First | _]) -> First.
 
-'clojerl.ISeq.more'([]) -> undefined;
+'clojerl.ISeq.more'([]) -> [];
 'clojerl.ISeq.more'([_ | Rest]) -> Rest.
 
 'clojerl.ISeq.next'([]) -> undefined;

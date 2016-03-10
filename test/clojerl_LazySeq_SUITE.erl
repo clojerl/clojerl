@@ -137,8 +137,11 @@ complete_coverage(_Config) ->
   {comments, ""}.
 
 -spec range(integer(), integer()) -> 'clojerl.LazySeq':type().
-range(Start, End) when Start > End ->
-  undefined;
-range(Start, End) when Start =< End->
-  Fun = fun() -> 'clojerl.Cons':new(Start, range(Start + 1, End)) end,
+range(Start, End) ->
+  Fun = fun
+          () when Start =< End ->
+            'clojerl.Cons':new(Start, range(Start + 1, End));
+          () when Start > End ->
+            undefined
+        end,
   'clojerl.LazySeq':new(Fun).

@@ -117,7 +117,7 @@ seq_to_list(undefined) -> [];
 seq_to_list([]) -> [];
 seq_to_list(Seqable) ->
   Seq = seq(Seqable),
-  [first(Seq) | seq_to_list(next(Seq))].
+  [first(Seq) | seq_to_list(rest(Seq))].
 
 -spec seq2(any()) -> list().
 seq2(Seqable) ->
@@ -178,7 +178,7 @@ next(Seq) ->
   end.
 
 -spec rest(any()) -> any().
-rest(undefined) -> undefined;
+rest(undefined) -> [];
 rest(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':more(Seq);
