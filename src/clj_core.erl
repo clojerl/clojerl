@@ -116,8 +116,10 @@ seq(Seqable) ->
 seq_to_list(undefined) -> [];
 seq_to_list([]) -> [];
 seq_to_list(Seqable) ->
-  Seq = seq(Seqable),
-  [first(Seq) | seq_to_list(rest(Seq))].
+  case seq(Seqable) of
+    undefined -> seq_to_list(undefined);
+    Seq -> [first(Seq) | seq_to_list(rest(Seq))]
+  end.
 
 -spec seq2(any()) -> list().
 seq2(Seqable) ->

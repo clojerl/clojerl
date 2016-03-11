@@ -52,12 +52,13 @@ count(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
+  Regex = <<"#<clojerl.LazySeq@\\d+>">>,
   LazySeq3 = range(1, 3),
-  Str3 = clj_core:str(LazySeq3),
-  {match, _} = re:run(Str3, <<"#<clojerl.LazySeq@\\d+>">>),
+  {match, _} = re:run(clj_core:str(LazySeq3), Regex),
 
   LazySeq0 = range(1, 0),
-  <<>> = clj_core:str(LazySeq0),
+  {match, _} = re:run(clj_core:str(LazySeq0), Regex),
+  <<>> = clj_core:str(clj_core:rest(LazySeq0)),
 
   {comments, ""}.
 
@@ -77,13 +78,13 @@ seq(_Config) ->
 
   LazySeq1 = range(1, 1),
   1 = clj_core:first(LazySeq1),
-  undefined = clj_core:next(LazySeq1),
+  true = undefined =/= clj_core:next(LazySeq1),
   [] = clj_core:seq2(clj_core:rest(LazySeq1)),
 
-  LazySeq0 = range(1, 0),
+  LazySeq0  = range(1, 0),
   undefined = clj_core:first(LazySeq0),
-  undefined = clj_core:next(LazySeq0),
-  undefined = clj_core:rest(LazySeq0),
+  true      = undefined =/= clj_core:next(LazySeq0),
+  true      = undefined =/= clj_core:rest(LazySeq0),
 
   {comments, ""}.
 
