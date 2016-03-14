@@ -54,9 +54,9 @@ new(Fn) when is_function(Fn) ->
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+'clojerl.IEquiv.equiv'(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(X, clj_core:seq(Y));
+    true  -> clj_core:equiv(clj_core:seq_to_list(LazySeq), clj_core:seq(Y));
     false -> false
   end.
 
