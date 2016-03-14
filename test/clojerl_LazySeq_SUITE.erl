@@ -90,11 +90,15 @@ seq(_Config) ->
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  ct:comment("Check that lists with the same elements are equivalent"),
+  ct:comment("Check that lazy seqs with the same elements are equivalent"),
   LazySeq1 = clj_core:with_meta(range(1, 3), #{a => 1}),
   LazySeq2 = clj_core:with_meta(range(1, 3), #{b => 2}),
 
   true = clj_core:equiv(LazySeq1, LazySeq2),
+
+  ct:comment("Check that a lazy seq and a list with the "
+             "same elements are equivalent"),
+  true = clj_core:equiv(LazySeq1, [1, 2, 3]),
 
   ct:comment("Check that lists with the same elements are not equivalent"),
   LazySeq3 = clj_core:with_meta(range(1, 4), #{c => 3}),

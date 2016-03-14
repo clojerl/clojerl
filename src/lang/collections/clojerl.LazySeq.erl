@@ -85,7 +85,7 @@ new(Fn) when is_function(Fn) ->
 'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Fn}) ->
   case clj_core:invoke(Fn, []) of
     undefined -> undefined;
-    Seq -> 'clojerl.Cons':new(clj_core:first(Seq),clj_core:next(Seq))
+    Seq -> 'clojerl.Cons':new(clj_core:first(Seq), clj_core:next(Seq))
   end.
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Fn}) ->
