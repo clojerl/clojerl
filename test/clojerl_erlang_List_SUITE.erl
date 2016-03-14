@@ -83,7 +83,7 @@ seq(_Config) ->
   List3 = [],
   undefined = clj_core:first(List3),
   undefined = clj_core:next(List3),
-  undefined = clj_core:rest(List3),
+  [] = clj_core:rest(List3),
 
   {comments, ""}.
 

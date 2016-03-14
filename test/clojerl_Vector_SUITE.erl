@@ -98,7 +98,7 @@ seq(_Config) ->
   Vector3 = clj_core:vector([]),
   undefined = clj_core:first(Vector3),
   undefined = clj_core:next(Vector3),
-  undefined = clj_core:rest(Vector3),
+  [] = clj_core:rest(Vector3),
 
   {comments, ""}.
 

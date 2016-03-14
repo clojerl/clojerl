@@ -45,10 +45,9 @@ seq(_Config) ->
 
   undefined = clj_core:first(Nil),
   undefined = clj_core:next(Nil),
-  undefined = clj_core:rest(Nil),
+  [] = clj_core:rest(Nil),
 
   {comments, ""}.
-
 
 -spec str(config()) -> result().
 str(_Config) ->

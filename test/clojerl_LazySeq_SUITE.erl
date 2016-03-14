@@ -58,7 +58,7 @@ str(_Config) ->
 
   LazySeq0 = range(1, 0),
   {match, _} = re:run(clj_core:str(LazySeq0), Regex),
-  <<>> = clj_core:str(clj_core:rest(LazySeq0)),
+  <<"()">> = clj_core:str(clj_core:rest(LazySeq0)),
 
   {comments, ""}.
 
