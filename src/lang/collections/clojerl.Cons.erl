@@ -3,6 +3,7 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.Counted').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
@@ -48,9 +49,9 @@ new(First, More) ->
                       , #?TYPE{name = ?M, data = {YFirst, YMore}}
                       ) ->
   clj_core:equiv(XFirst, YFirst) andalso clj_core:equiv(XMore, YMore);
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+'clojerl.IEquiv.equiv'(#?TYPE{name = ?M} = Cons, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(clj_core:seq(X), clj_core:seq(Y));
+    true  -> clj_core:equiv(clj_core:seq_to_list(Cons), clj_core:seq(Y));
     false -> false
   end.
 
