@@ -32,7 +32,9 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
                   FunctionBin/binary,
                   "' in protocol '",
                   ProtocolBin/binary, "' ",
-                  "(value = ", Value/binary, ")">>)
+                  "(value = ", Value/binary, ", args = ",
+                  (clj_core:str(Args))/binary,
+                  ")">>)
         end
   end.
 

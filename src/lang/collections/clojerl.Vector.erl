@@ -3,8 +3,9 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.Counted').
--behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
+-behavior('clojerl.IEquiv').
+-behavior('clojerl.IFn').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
@@ -14,10 +15,11 @@
 -export([new/1]).
 
 -export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IEquiv.equiv'/2]).
 -export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
         ]).
+-export([ 'clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -61,6 +63,12 @@ new(Items) when is_list(Items) ->
     true  -> clj_core:equiv(array:to_list(X), clj_core:seq(Y));
     false -> false
   end.
+
+'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Array}, [Index]) ->
+  array:get(Index, Array);
+'clojerl.IFn.invoke'(#?TYPE{name = ?M}, Args) ->
+  CountBin = integer_to_binary(length(Args)),
+  throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

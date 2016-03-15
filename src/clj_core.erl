@@ -7,7 +7,7 @@
          load/1, load/2,
          count/1,
          'empty?'/1, empty/1,
-         seq/1, seq2/1,
+         seq/1, seq2/1, seq_to_list/1,
          equiv/2,
          conj/2, disj/2,
          cons/2,
@@ -97,8 +97,8 @@ resolve_file(FilePath) ->
   end.
 
 -spec count(any()) -> integer().
-count(Seq) ->
-  'clojerl.Counted':count(Seq).
+count(undefined) -> 0;
+count(Seq)       -> 'clojerl.Counted':count(Seq).
 
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->
@@ -111,6 +111,15 @@ empty(Coll) ->
 -spec seq(any()) -> list() | undefined.
 seq(Seqable) ->
   'clojerl.Seqable':seq(Seqable).
+
+-spec seq_to_list(any()) -> list().
+seq_to_list(undefined) -> [];
+seq_to_list([]) -> [];
+seq_to_list(Seqable) ->
+  case seq(Seqable) of
+    undefined -> seq_to_list(undefined);
+    Seq -> [first(Seq) | seq_to_list(rest(Seq))]
+  end.
 
 -spec seq2(any()) -> list().
 seq2(Seqable) ->
@@ -141,10 +150,10 @@ disj(undefined, _Item) ->
 disj(Coll, Item) ->
   'clojerl.ISet':disjoin(Coll, Item).
 
-%% @doc Clojure's cons builds a cons cell, which is actually
-%%      the equivalent to a vanilla Erlang Head and Tail.
-%% TODO: it is possible that it should actually return a vanilla
-%%       Erlang list.
+%% @doc Clojure's cons builds a cons cell. In most cases it is just
+%%      a vanilla Erlang Head and Tail. When dealing with LazySeqs
+%%      it is a clojerl.Cons cell, so that the realization of values
+%%      can be postponed until they are used.
 -spec cons(any(), any()) -> list().
 cons(Item, undefined) ->
   list([Item]);
@@ -171,7 +180,7 @@ next(Seq) ->
   end.
 
 -spec rest(any()) -> any().
-rest(undefined) -> undefined;
+rest(undefined) -> [];
 rest(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':more(Seq);

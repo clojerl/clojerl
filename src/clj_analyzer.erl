@@ -106,8 +106,10 @@ analyze_form(Env, Form) ->
   IsSeq = clj_core:'seq?'(Form),
   case clj_core:type(Form) of
     _ when IsSeq ->
-      Op = clj_core:first(Form),
-      analyze_seq(Env, Op, Form);
+      case clj_core:'empty?'(Form) of
+        true  -> analyze_const(Env, Form);
+        false -> analyze_seq(Env, clj_core:first(Form), Form)
+      end;
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
     'clojerl.Vector' ->
@@ -391,6 +393,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                      , 'variadic?' => IsVariadic andalso Id == Arity - 1
                      , arg_id      => Id
                      , local       => arg
+                     , shadow      => clj_env:get_local(Env1, Name)
                      },
         {Id + 1, [ParamExpr | Exprs]}
     end,

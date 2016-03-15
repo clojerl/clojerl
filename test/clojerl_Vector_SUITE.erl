@@ -6,6 +6,7 @@
         , count/1
         , str/1
         , is_sequential/1
+        , invoke/1
         , seq/1
         , equiv/1
         , cons/1
@@ -68,6 +69,20 @@ is_sequential(_Config) ->
 
   {comments, ""}.
 
+-spec invoke(config()) -> result().
+invoke(_Config) ->
+  ct:comment("Invoke a vector "),
+  Vector = clj_core:vector([1, b, 3]),
+  1 = clj_core:invoke(Vector, [0]),
+  b = clj_core:invoke(Vector, [1]),
+  3 = clj_core:invoke(Vector, [2]),
+
+  ct:comment("Invoke a vector with two arguments"),
+  ok = try clj_core:invoke(Vector, [1, 2]), error
+       catch _:_ -> ok end,
+
+  {comments, ""}.
+
 -spec seq(config()) -> result().
 seq(_Config) ->
   Vector = clj_core:vector([1, 2, 3]),
@@ -83,7 +98,7 @@ seq(_Config) ->
   Vector3 = clj_core:vector([]),
   undefined = clj_core:first(Vector3),
   undefined = clj_core:next(Vector3),
-  undefined = clj_core:rest(Vector3),
+  [] = clj_core:rest(Vector3),
 
   {comments, ""}.
 

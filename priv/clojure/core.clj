@@ -1,5 +1,7 @@
 (ns clojure.core)
 
+(def ^:dynamic *ns* nil)
+
 (def
   ^{:arglists '([& items])
     :doc "Creates a new list containing the items."
@@ -145,11 +147,17 @@
 
 (def
   ^{:arglists '([x])
+    :doc "Return true if x implements ISeq"
+    :added "1.0"
+    :static true}
+  lazy-seq? (fn ^:static seq? [x] (instance? :clojerl.LazySeq x)))
+
+(def
+  ^{:arglists '([x])
     :doc "Return true if x implements IMeta"
     :added "1.0"
     :static true}
   meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
-
 
 #_(def
     ^{:arglists '([x])
@@ -627,8 +635,7 @@
   seq calls. See also - realized?"
   {:added "1.0"}
   [& body]
-  (throw "unimplemented")
-  #_(list 'new 'clojure.lang.LazySeq (list* '^{:once true} fn* [] body)))
+  (list 'clojerl.LazySeq/new.e (list* '^{:once true} fn* [] body)))
 
 (defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
   (throw "unimplemented")
@@ -707,23 +714,21 @@
   calls. See also - realized?"
   {:added "1.0"}
   [& body]
-    (list 'new 'clojure.lang.Delay (list* `^{:once true} fn* [] body)))
+    (list 'clojerl.Delay/new.e (list* `^{:once true} fn* [] body)))
 
 (defn delay?
   "returns true if x is a Delay created with delay"
   {:added "1.0"
    :static true}
   [x]
-  (throw "unimplemented")
-  #_(instance? clojure.lang.Delay x))
+  (instance? :clojerl.Delay x))
 
 (defn force
   "If x is a Delay, returns the (possibly cached) value of its expression, else returns x"
   {:added "1.0"
    :static true}
   [x]
-  (throw "unimplemented")
-  #_(. clojure.lang.Delay (force x)))
+  (clojerl.Delay/force.e x))
 
 (defmacro if-not
   "Evaluates test. If logical false, evaluates and returns then expr,
@@ -1620,6 +1625,739 @@
       (apply str "Only these options are valid: "
              (first valid-keys)
              (map #(str ", " %) (rest valid-keys))))))
+
+;;multimethods
+;; MISSING
+
+;;;;;;;;; var stuff
+
+(defmacro ^{:private true} assert-args
+  [& pairs]
+  `(do (when-not ~(first pairs)
+         (throw (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form)))))
+     ~(let [more (nnext pairs)]
+        (when more
+          (list* `assert-args more)))))
+
+(defmacro if-let
+  "bindings => binding-form test
+  If test is true, evaluates then with binding-form bound to the value of
+  test, if not, yields else"
+  {:added "1.0"}
+  ([bindings then]
+   `(if-let ~bindings ~then nil))
+  ([bindings then else & oldform]
+   (assert-args
+     (vector? bindings) "a vector for its binding"
+     (nil? oldform) "1 or 2 forms after binding vector"
+     (= 2 (count bindings)) "exactly 2 forms in binding vector")
+   (let [form (bindings 0) tst (bindings 1)]
+     `(let [temp# ~tst]
+        (if temp#
+          (let [~form temp#]
+            ~then)
+          ~else)))))
+
+(defmacro when-let
+  "bindings => binding-form test
+  When test is true, evaluates body with binding-form bound to the value of test"
+  {:added "1.0"}
+  [bindings & body]
+  (assert-args
+     (vector? bindings) "a vector for its binding"
+     (= 2 (count bindings)) "exactly 2 forms in binding vector")
+   (let [form (bindings 0) tst (bindings 1)]
+    `(let [temp# ~tst]
+       (when temp#
+         (let [~form temp#]
+           ~@body)))))
+
+(defmacro if-some
+  "bindings => binding-form test
+   If test is not nil, evaluates then with binding-form bound to the
+   value of test, if not, yields else"
+  {:added "1.6"}
+  ([bindings then]
+   `(if-some ~bindings ~then nil))
+  ([bindings then else & oldform]
+   (assert-args
+     (vector? bindings) "a vector for its binding"
+     (nil? oldform) "1 or 2 forms after binding vector"
+     (= 2 (count bindings)) "exactly 2 forms in binding vector")
+   (let [form (bindings 0) tst (bindings 1)]
+     `(let [temp# ~tst]
+        (if (nil? temp#)
+          ~else
+          (let [~form temp#]
+            ~then))))))
+
+(defmacro when-some
+  "bindings => binding-form test
+   When test is not nil, evaluates body with binding-form bound to the
+   value of test"
+  {:added "1.6"}
+  [bindings & body]
+  (assert-args
+     (vector? bindings) "a vector for its binding"
+     (= 2 (count bindings)) "exactly 2 forms in binding vector")
+   (let [form (bindings 0) tst (bindings 1)]
+    `(let [temp# ~tst]
+       (if (nil? temp#)
+         nil
+         (let [~form temp#]
+           ~@body)))))
+
+;; MISSING
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Refs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; agent, atom, ref
+;; MISSING
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
+
+(defn comp
+  "Takes a set of functions and returns a fn that is the composition
+  of those fns.  The returned fn takes a variable number of args,
+  applies the rightmost of fns to the args, the next
+  fn (right-to-left) to the result, etc."
+  {:added "1.0"
+   :static true}
+  ([] identity)
+  ([f] f)
+  ([f g]
+     (fn
+       ([] (f (g)))
+       ([x] (f (g x)))
+       ([x y] (f (g x y)))
+       ([x y z] (f (g x y z)))
+       ([x y z & args] (f (apply g x y z args)))))
+  ([f g & fs]
+     (reduce1 comp (list* f g fs))))
+
+(defn juxt
+  "Takes a set of functions and returns a fn that is the juxtaposition
+  of those fns.  The returned fn takes a variable number of args, and
+  returns a vector containing the result of applying each fn to the
+  args (left-to-right).
+  ((juxt a b c) x) => [(a x) (b x) (c x)]"
+  {:added "1.1"
+   :static true}
+  ([f]
+     (fn
+       ([] [(f)])
+       ([x] [(f x)])
+       ([x y] [(f x y)])
+       ([x y z] [(f x y z)])
+       ([x y z & args] [(apply f x y z args)])))
+  ([f g]
+     (fn
+       ([] [(f) (g)])
+       ([x] [(f x) (g x)])
+       ([x y] [(f x y) (g x y)])
+       ([x y z] [(f x y z) (g x y z)])
+       ([x y z & args] [(apply f x y z args) (apply g x y z args)])))
+  ([f g h]
+     (fn
+       ([] [(f) (g) (h)])
+       ([x] [(f x) (g x) (h x)])
+       ([x y] [(f x y) (g x y) (h x y)])
+       ([x y z] [(f x y z) (g x y z) (h x y z)])
+       ([x y z & args] [(apply f x y z args) (apply g x y z args) (apply h x y z args)])))
+  ([f g h & fs]
+     (let [fs (list* f g h fs)]
+       (fn
+         ([] (reduce1 #(conj %1 (%2)) [] fs))
+         ([x] (reduce1 #(conj %1 (%2 x)) [] fs))
+         ([x y] (reduce1 #(conj %1 (%2 x y)) [] fs))
+         ([x y z] (reduce1 #(conj %1 (%2 x y z)) [] fs))
+         ([x y z & args] (reduce1 #(conj %1 (apply %2 x y z args)) [] fs))))))
+
+(defn partial
+  "Takes a function f and fewer than the normal arguments to f, and
+  returns a fn that takes a variable number of additional args. When
+  called, the returned function calls f with args + additional args."
+  {:added "1.0"
+   :static true}
+  ([f] f)
+  ([f arg1]
+   (fn
+     ([] (f arg1))
+     ([x] (f arg1 x))
+     ([x y] (f arg1 x y))
+     ([x y z] (f arg1 x y z))
+     ([x y z & args] (apply f arg1 x y z args))))
+  ([f arg1 arg2]
+   (fn
+     ([] (f arg1 arg2))
+     ([x] (f arg1 arg2 x))
+     ([x y] (f arg1 arg2 x y))
+     ([x y z] (f arg1 arg2 x y z))
+     ([x y z & args] (apply f arg1 arg2 x y z args))))
+  ([f arg1 arg2 arg3]
+   (fn
+     ([] (f arg1 arg2 arg3))
+     ([x] (f arg1 arg2 arg3 x))
+     ([x y] (f arg1 arg2 arg3 x y))
+     ([x y z] (f arg1 arg2 arg3 x y z))
+     ([x y z & args] (apply f arg1 arg2 arg3 x y z args))))
+  ([f arg1 arg2 arg3 & more]
+   (fn [& args] (apply f arg1 arg2 arg3 (concat more args)))))
+
+;;;;;;;;;;;;;;;;;;; sequence fns  ;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn sequence
+  "Coerces coll to a (possibly empty) sequence, if it is not already
+  one. Will not force a lazy seq. (sequence nil) yields (), When a
+  transducer is supplied, returns a lazy sequence of applications of
+  the transform to the items in coll(s), i.e. to the set of first
+  items of each coll, followed by the set of second
+  items in each coll, until any one of the colls is exhausted.  Any
+  remaining items in other colls are ignored. The transform should accept
+  number-of-colls arguments"
+  {:added "1.0"
+   :static true}
+  ([coll]
+     (if (seq? coll) coll
+         (or (seq coll) ())))
+  #_ (([xform coll]
+       (or (clojure.lang.RT/chunkIteratorSeq
+            (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
+           ()))
+      ([xform coll & colls]
+       (or (clojure.lang.RT/chunkIteratorSeq
+            (clojure.lang.TransformerIterator/createMulti
+             xform
+             (map #(clojure.lang.RT/iter %) (cons coll colls))))
+           ()))))
+
+(defn every?
+  "Returns true if (pred x) is logical true for every x in coll, else
+  false."
+  {:tag Boolean
+   :added "1.0"
+   :static true}
+  [pred coll]
+  (cond
+   (nil? (seq coll)) true
+   (pred (first coll)) (recur pred (next coll))
+   :else false))
+
+(def
+ ^{:tag Boolean
+   :doc "Returns false if (pred x) is logical true for every x in
+  coll, else true."
+   :arglists '([pred coll])
+   :added "1.0"}
+ not-every? (comp not every?))
+
+(defn some
+  "Returns the first logical true value of (pred x) for any x in coll,
+  else nil.  One common idiom is to use a set as pred, for example
+  this will return :fred if :fred is in the sequence, otherwise nil:
+  (some #{:fred} coll)"
+  {:added "1.0"
+   :static true}
+  [pred coll]
+    (when (seq coll)
+      (or (pred (first coll)) (recur pred (next coll)))))
+
+(def
+ ^{:tag Boolean
+   :doc "Returns false if (pred x) is logical true for any x in coll,
+  else true."
+   :arglists '([pred coll])
+   :added "1.0"}
+ not-any? (comp not some))
+
+;will be redefed later with arg checks
+(defmacro dotimes
+  "bindings => name n
+  Repeatedly executes body (presumably for side-effects) with name
+  bound to integers from 0 through n-1."
+  {:added "1.0"}
+  [bindings & body]
+  (let [i (first bindings)
+        n (second bindings)]
+    `(let [n# (clojure.lang.RT/longCast ~n)]
+       (loop [~i 0]
+         (when (< ~i n#)
+           ~@body
+           (recur (unchecked-inc ~i)))))))
+
+(defn map
+  "Returns a lazy sequence consisting of the result of applying f to
+  the set of first items of each coll, followed by applying f to the
+  set of second items in each coll, until any one of the colls is
+  exhausted.  Any remaining items in other colls are ignored. Function
+  f should accept number-of-colls arguments. Returns a transducer when
+  no collection is provided."
+  {:added "1.0"
+   :static true}
+  ([f]
+    (fn [rf]
+      (fn
+        ([] (rf))
+        ([result] (rf result))
+        ([result input]
+           (rf result (f input)))
+        ([result input & inputs]
+           (rf result (apply f input inputs))))))
+  ([f coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (cons (f (first s)) (map f (rest s))))))
+  ([f c1 c2]
+   (lazy-seq
+    (let [s1 (seq c1) s2 (seq c2)]
+      (when (and s1 s2)
+        (cons (f (first s1) (first s2))
+              (map f (rest s1) (rest s2)))))))
+  ([f c1 c2 c3]
+   (lazy-seq
+    (let [s1 (seq c1) s2 (seq c2) s3 (seq c3)]
+      (when (and  s1 s2 s3)
+        (cons (f (first s1) (first s2) (first s3))
+              (map f (rest s1) (rest s2) (rest s3)))))))
+  ([f c1 c2 c3 & colls]
+   (let [step (fn step [cs]
+                 (lazy-seq
+                  (let [ss (map seq cs)]
+                    (when (every? identity ss)
+                      (cons (map first ss) (step (map rest ss)))))))]
+     (map #(apply f %) (step (conj colls c3 c2 c1))))))
+
+(defmacro declare
+  "defs the supplied var names with no bindings, useful for making forward declarations."
+  {:added "1.0"}
+  [& names] `(do ~@(map #(list 'def (vary-meta % assoc :declared true)) names)))
+
+(declare cat)
+
+(defn mapcat
+  "Returns the result of applying concat to the result of applying map
+  to f and colls.  Thus function f should return a collection. Returns
+  a transducer when no collections are provided"
+  {:added "1.0"
+   :static true}
+  ([f] (comp (map f) cat))
+  ([f & colls]
+     (apply concat (apply map f colls))))
+
+(defn filter
+  "Returns a lazy sequence of the items in coll for which
+  (pred item) returns true. pred must be free of side-effects.
+  Returns a transducer when no collection is provided."
+  {:added "1.0"
+   :static true}
+  ([pred]
+    (fn [rf]
+      (fn
+        ([] (rf))
+        ([result] (rf result))
+        ([result input]
+           (if (pred input)
+             (rf result input)
+             result)))))
+  ([pred coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (if true #_(chunked-seq? s)
+        #_(let [c (chunk-first s)
+              size (count c)
+              b (chunk-buffer size)]
+          (dotimes [i size]
+              (let [v (.nth c i)]
+                (when (pred v)
+                  (chunk-append b v))))
+          (chunk-cons (chunk b) (filter pred (chunk-rest s))))
+        (let [f (first s) r (rest s)]
+          (if (pred f)
+            (cons f (filter pred r))
+            (filter pred r))))))))
+
+
+(defn remove
+  "Returns a lazy sequence of the items in coll for which
+  (pred item) returns false. pred must be free of side-effects.
+  Returns a transducer when no collection is provided."
+  {:added "1.0"
+   :static true}
+  ([pred] (filter (complement pred)))
+  ([pred coll]
+     (filter (complement pred) coll)))
+
+(defn reduced
+  "Wraps x in a way such that a reduce will terminate with the value x"
+  {:added "1.5"}
+  [x]
+  (throw "unimplemented")
+  #_(clojure.lang.Reduced. x))
+
+(defn reduced?
+  "Returns true if x is the result of a call to reduced"
+  {:inline (fn [x] `(clojure.lang.RT/isReduced ~x ))
+   :inline-arities #{1}
+   :added "1.5"}
+  [x]
+  (throw "unimplemented")
+  #_(clojure.lang.RT/isReduced x))
+
+(defn ensure-reduced
+  "If x is already reduced?, returns it, else returns (reduced x)"
+  {:added "1.7"}
+  [x]
+  (throw "unimplemented")
+  #_(if (reduced? x) x (reduced x)))
+
+(defn unreduced
+  "If x is reduced?, returns (deref x), else returns x"
+  {:added "1.7"}
+  [x]
+  (throw "unimplemented")
+  #_(if (reduced? x) (deref x) x))
+
+(defn take
+  "Returns a lazy sequence of the first n items in coll, or all items if
+  there are fewer than n.  Returns a stateful transducer when
+  no collection is provided."
+  {:added "1.0"
+   :static true}
+  #_([n]
+     (fn [rf]
+       (let [nv (volatile! n)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
+              (let [n @nv
+                    nn (vswap! nv dec)
+                    result (if (pos? n)
+                             (rf result input)
+                             result)]
+                (if (not (pos? nn))
+                  (ensure-reduced result)
+                  result)))))))
+  ([n coll]
+     (lazy-seq
+      (when (pos? n)
+        (when-let [s (seq coll)]
+          (cons (first s) (take (dec n) (rest s))))))))
+
+(defn take-while
+  "Returns a lazy sequence of successive items from coll while
+  (pred item) returns true. pred must be free of side-effects.
+  Returns a transducer when no collection is provided."
+  {:added "1.0"
+   :static true}
+  ([pred]
+     (fn [rf]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+            (if (pred input)
+              (rf result input)
+              (reduced result))))))
+  ([pred coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (when (pred (first s))
+          (cons (first s) (take-while pred (rest s))))))))
+
+(defn drop
+  "Returns a lazy sequence of all but the first n items in coll.
+  Returns a stateful transducer when no collection is provided."
+  {:added "1.0"
+   :static true}
+  #_([n]
+     (fn [rf]
+       (let [nv (volatile! n)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
+              (let [n @nv]
+                (vswap! nv dec)
+                (if (pos? n)
+                  result
+                  (rf result input))))))))
+  ([n coll]
+     (let [step (fn [n coll]
+                  (let [s (seq coll)]
+                    (if (and (pos? n) s)
+                      (recur (dec n) (rest s))
+                      s)))]
+       (lazy-seq (step n coll)))))
+
+(defn drop-last
+  "Return a lazy sequence of all but the last n (default 1) items in coll"
+  {:added "1.0"
+   :static true}
+  ([s] (drop-last 1 s))
+  ([n s] (map (fn [x _] x) s (drop n s))))
+
+(defn take-last
+  "Returns a seq of the last n items in coll.  Depending on the type
+  of coll may be no better than linear time.  For vectors, see also subvec."
+  {:added "1.1"
+   :static true}
+  [n coll]
+  (loop [s (seq coll), lead (seq (drop n coll))]
+    (if lead
+      (recur (next s) (next lead))
+      s)))
+
+(defn drop-while
+  "Returns a lazy sequence of the items in coll starting from the
+  first item for which (pred item) returns logical false.  Returns a
+  stateful transducer when no collection is provided."
+  {:added "1.0"
+   :static true}
+  #_([pred]
+     (fn [rf]
+       (let [dv (volatile! true)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
+              (let [drop? @dv]
+                (if (and drop? (pred input))
+                  result
+                  (do
+                    (vreset! dv nil)
+                    (rf result input)))))))))
+  ([pred coll]
+     (let [step (fn [pred coll]
+                  (let [s (seq coll)]
+                    (if (and s (pred (first s)))
+                      (recur pred (rest s))
+                      s)))]
+       (lazy-seq (step pred coll)))))
+
+(defn cycle
+  "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
+  {:added "1.0"
+   :static true}
+  [coll] (clojure.lang.Cycle/create (seq coll)))
+
+(defn split-at
+  "Returns a vector of [(take n coll) (drop n coll)]"
+  {:added "1.0"
+   :static true}
+  [n coll]
+    [(take n coll) (drop n coll)])
+
+(defn split-with
+  "Returns a vector of [(take-while pred coll) (drop-while pred coll)]"
+  {:added "1.0"
+   :static true}
+  [pred coll]
+    [(take-while pred coll) (drop-while pred coll)])
+
+(defn repeat
+  "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
+  {:added "1.0"
+   :static true}
+  ([x] (clojure.lang.Repeat/create x))
+  ([n x] (clojure.lang.Repeat/create n x)))
+
+(defn replicate
+  "DEPRECATED: Use 'repeat' instead.
+   Returns a lazy seq of n xs."
+  {:added "1.0"
+   :deprecated "1.3"}
+  [n x] (take n (repeat x)))
+
+(defn iterate
+  "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of side-effects"
+  {:added "1.0"
+   :static true}
+  [f x] (clojure.lang.Iterate/create f x) )
+
+(defn range
+  "Returns a lazy seq of nums from start (inclusive) to end
+  (exclusive), by step, where start defaults to 0, step to 1, and end to
+  infinity. When step is equal to 0, returns an infinite sequence of
+  start. When start is equal to end, returns empty list."
+  {:added "1.0"
+   :static true}
+  ([]
+   (iterate inc' 0))
+  ([end]
+   (clojure.lang.Range/create end))
+  ([start end]
+   (clojure.lang.Range/create start end))
+  ([start end step]
+   (clojure.lang.Range/create start end step)))
+
+(defn merge
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping from
+  the latter (left-to-right) will be the mapping in the result."
+  {:added "1.0"
+   :static true}
+  [& maps]
+  (when (some identity maps)
+    (reduce1 #(conj (or %1 {}) %2) maps)))
+
+(defn merge-with
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping(s)
+  from the latter (left-to-right) will be combined with the mapping in
+  the result by calling (f val-in-result val-in-latter)."
+  {:added "1.0"
+   :static true}
+  [f & maps]
+  (when (some identity maps)
+    (let [merge-entry (fn [m e]
+			(let [k (key e) v (val e)]
+			  (if (contains? m k)
+			    (assoc m k (f (get m k) v))
+			    (assoc m k v))))
+          merge2 (fn [m1 m2]
+		   (reduce1 merge-entry (or m1 {}) (seq m2)))]
+      (reduce1 merge2 maps))))
+
+
+
+(defn zipmap
+  "Returns a map with the keys mapped to the corresponding vals."
+  {:added "1.0"
+   :static true}
+  [keys vals]
+    (loop [map {}
+           ks (seq keys)
+           vs (seq vals)]
+      (if (and ks vs)
+        (recur (assoc map (first ks) (first vs))
+               (next ks)
+               (next vs))
+        map)))
+
+(defn line-seq
+  "Returns the lines of text from rdr as a lazy sequence of strings.
+  rdr must implement java.io.BufferedReader."
+  {:added "1.0"
+   :static true}
+  [^java.io.BufferedReader rdr]
+  (throw "unimplemented")
+  #_(when-let [line (.readLine rdr)]
+    (cons line (lazy-seq (line-seq rdr)))))
+
+(defn comparator
+  "Returns an implementation of java.util.Comparator based upon pred."
+  {:added "1.0"
+   :static true}
+  [pred]
+    (fn [x y]
+      (cond (pred x y) -1 (pred y x) 1 :else 0)))
+
+(defn sort
+  "Returns a sorted sequence of the items in coll. If no comparator is
+  supplied, uses compare.  comparator must implement
+  java.util.Comparator.  Guaranteed to be stable: equal elements will
+  not be reordered.  If coll is a Java array, it will be modified.  To
+  avoid this, sort a copy of the array."
+  {:added "1.0"
+   :static true}
+  ([coll]
+   (sort compare coll))
+  ([comp coll]
+   (if (seq coll)
+     (let [a (to-tuple coll)]
+       #_(. java.util.Arrays (sort a comp))
+       (lists/sort.e (seq a)))
+     ())))
+
+(defn sort-by
+  "Returns a sorted sequence of the items in coll, where the sort
+  order is determined by comparing (keyfn item).  If no comparator is
+  supplied, uses compare.  comparator must implement
+  java.util.Comparator.  Guaranteed to be stable: equal elements will
+  not be reordered.  If coll is a Java array, it will be modified.  To
+  avoid this, sort a copy of the array."
+  {:added "1.0"
+   :static true}
+  ([keyfn coll]
+   (sort-by keyfn compare coll))
+  ([keyfn comp coll]
+   (sort (fn [x y] (comp (keyfn x) (keyfn y))) coll)))
+
+(defn dorun
+  "When lazy sequences are produced via functions that have side
+  effects, any effects other than those needed to produce the first
+  element in the seq do not occur until the seq is consumed. dorun can
+  be used to force any effects. Walks through the successive nexts of
+  the seq, does not retain the head and returns nil."
+  {:added "1.0"
+   :static true}
+  ([coll]
+   (when-let [s (seq coll)]
+     (recur (next s))))
+  ([n coll]
+   (when (and (seq coll) (pos? n))
+     (recur (dec n) (next coll)))))
+
+(defn doall
+  "When lazy sequences are produced via functions that have side
+  effects, any effects other than those needed to produce the first
+  element in the seq do not occur until the seq is consumed. doall can
+  be used to force any effects. Walks through the successive nexts of
+  the seq, retains the head and returns it, thus causing the entire
+  seq to reside in memory at one time."
+  {:added "1.0"
+   :static true}
+  ([coll]
+   (dorun coll)
+   coll)
+  ([n coll]
+   (dorun n coll)
+   coll))
+
+(defn nthnext
+  "Returns the nth next of coll, (seq coll) when n is 0."
+  {:added "1.0"
+   :static true}
+  [coll n]
+    (loop [n n xs (seq coll)]
+      (if (and xs (pos? n))
+        (recur (dec n) (next xs))
+        xs)))
+
+(defn nthrest
+  "Returns the nth rest of coll, coll when n is 0."
+  {:added "1.3"
+   :static true}
+  [coll n]
+    (loop [n n xs coll]
+      (if-let [xs (and (pos? n) (seq xs))]
+        (recur (dec n) (rest xs))
+        xs)))
+
+(defn partition
+  "Returns a lazy sequence of lists of n items each, at offsets step
+  apart. If step is not supplied, defaults to n, i.e. the partitions
+  do not overlap. If a pad collection is supplied, use its elements as
+  necessary to complete last partition upto n items. In case there are
+  not enough padding elements, return a partition with less than n items."
+  {:added "1.0"
+   :static true}
+  ([n coll]
+     (partition n n coll))
+  ([n step coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [p (doall (take n s))]
+           (when (= n (count p))
+             (cons p (partition n step (nthrest s step))))))))
+  ([n step pad coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [p (doall (take n s))]
+           (if (= n (count p))
+             (cons p (partition n step pad (nthrest s step)))
+             (list (take n (concat p pad)))))))))
 
 ;;;;;;;;;;;;
 

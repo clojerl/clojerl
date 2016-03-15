@@ -130,13 +130,9 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValClause = erl_syntax:clause([], [ValAst]),
   ValFunAst = function_form(ValName, [ValClause]),
 
-  Vars    = [Var],
-  Funs    = [ValFunAst],
-  Exports = [{ValName, 0}],
-
-  _ = clj_module:add_vars(Module, Vars),
-  _ = clj_module:add_functions(Module, Funs),
-  _ = clj_module:add_exports(Module, Exports),
+  clj_module:add_vars(Module, [Var]),
+  clj_module:add_functions(Module, [ValFunAst]),
+  clj_module:add_exports(Module, [{ValName, 0}]),
 
   push_ast(VarAst, State1);
 %%------------------------------------------------------------------------------
@@ -465,11 +461,14 @@ method_to_case_clause(MethodExpr, State) ->
 
 -spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
   ast().
-method_to_clause(MethodExpr, State, ClauseFor) ->
+method_to_clause(MethodExpr, State0, ClauseFor) ->
   #{ params      := ParamsExprs
    , body        := BodyExpr
    , 'variadic?' := IsVariadic
    } = MethodExpr,
+
+  State00 = add_lexical_renames_scope(State0),
+  State = lists:foldl(fun put_lexical_rename/2, State00, ParamsExprs),
 
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ParamsExprs)
                           , length(ParamsExprs)
@@ -490,7 +489,10 @@ method_to_clause(MethodExpr, State, ClauseFor) ->
           end,
 
   Clause = erl_syntax:clause(Args1, Guards, [Body]),
-  push_ast(Clause, State2).
+
+  State3 = remove_lexical_renames_scope(State2),
+
+  push_ast(Clause, State3).
 
 -spec application_mfa(module(), atom(), list()) -> ast().
 application_mfa(Module, Function, Args) ->
@@ -568,8 +570,12 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 -spec get_lexical_rename(map(), state()) -> 'clojerl.Symbol':type() | undefined.
 get_lexical_rename(BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
-  Code = hash_scope(BindingExpr),
-  clj_scope:get(Renames, Code).
+  case shadow_depth(BindingExpr) of
+    0 -> maps:get(name, BindingExpr);
+    _ ->
+      Code = hash_scope(BindingExpr),
+      clj_scope:get(Renames, Code)
+  end.
 
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(BindingExpr, State) ->

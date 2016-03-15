@@ -16,11 +16,7 @@ new(Var) ->
   Module   = 'clojerl.Var':module(Var),
   Function = 'clojerl.Var':function(Var),
 
-  Args1 = case clj_core:seq(Args) of
-            undefined -> [];
-            Seq       -> Seq
-          end,
-
+  Args1 = clj_core:seq_to_list(Args),
   Args2 = 'clojerl.Var':process_args(Var, Args1, fun clj_core:seq/1),
 
   Fun = clj_module:fake_fun(Module, Function, length(Args2)),

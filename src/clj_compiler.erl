@@ -151,7 +151,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
       {shutdown, Env3}
     catch
       Kind:Error ->
-        {error, Kind, Error, erlang:get_stacktrace()}
+        {Kind, Error, erlang:get_stacktrace()}
     end,
 
   exit(Result).
@@ -176,7 +176,7 @@ do_eval(Form, Opts0, Env0) ->
       {shutdown, Env3}
     catch
       Kind:Error ->
-        {error, Kind, Error, erlang:get_stacktrace()}
+        {Kind, Error, erlang:get_stacktrace()}
     end,
 
   exit(Result).

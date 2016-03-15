@@ -139,7 +139,7 @@ replace_calls(Ast, _, _) ->
 load(Name) ->
   case code:ensure_loaded(Name) of
     {module, Name} ->
-      from_binary(Name);
+      new(clj_utils:code_from_binary(Name));
     {error, _} ->
       new([attribute_module(Name)])
   end.
@@ -290,22 +290,6 @@ new(Forms) ->
   Module3 = add_exports(Module2, Exports),
 
   save(modules_table_id(), Module3).
-
--spec from_binary(atom()) -> ok | {error, term()}.
-from_binary(Name) when is_atom(Name) ->
-  case code:get_object_code(Name) of
-    {Name, Binary, _} ->
-      case beam_lib:chunks(Binary, [abstract_code]) of
-        {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
-          new(Forms);
-        Error ->
-          Error
-      end;
-    _ ->
-      clj_utils:throw([ <<"Could not load object code for namespace: ">>
-                      , atom_to_binary(Name, utf8)
-                      ])
-  end.
 
 -spec attribute_module(atom()) -> erl_syntax:syntaxTree().
 attribute_module(Name) when is_atom(Name) ->
