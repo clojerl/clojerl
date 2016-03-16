@@ -239,6 +239,5 @@ eval_expressions(Expressions) ->
   {Values, _} = erl_eval:expr_list(Expressions, []),
   Values.
 
--spec ast_to_string([erl_syntax:syntaxTree()]) -> string().
-ast_to_string(Forms) ->
-  erl_prettypr:format(erl_syntax:form_list(Forms)).
+-spec ast_to_string([erl_parse:abstract_form()]) -> string().
+ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).
