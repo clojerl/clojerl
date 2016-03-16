@@ -171,7 +171,6 @@ do_eval(Form, Opts0, Env0) ->
       lists:foreach(compile_forms_fun(Opts), ModulesForms),
 
       [Value] = eval_expressions(Exprs),
-
       Env3  = {Value, clj_env:remove(Env2, clj_flags)},
       {shutdown, Env3}
     catch
