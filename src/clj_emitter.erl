@@ -5,7 +5,7 @@
         , without_state/3
         ]).
 
--type ast() :: erl_syntax:syntaxTree().
+-type ast() :: erl_parse:abstract_form().
 
 -type state() :: #{ asts            => [ast()]
                   , lexical_renames => clj_scope:scope()
@@ -57,7 +57,7 @@ initial_state() ->
 
 -spec ast(map(), state()) -> {[ast()], state()}.
 ast(#{op := constant, form := Form}, State) ->
-  Ast = erl_syntax:abstract(Form),
+  Ast = erl_syntax:revert(erl_syntax:abstract(Form)),
   push_ast(Ast, State);
 ast(#{op := quote, expr := Expr}, State) ->
   ast(Expr, State);
@@ -78,7 +78,7 @@ ast(#{op := binding} = Expr, State) ->
               LexicalNameSym ->
                 clj_core:str(LexicalNameSym)
               end,
-  Ast     = erl_syntax:variable(binary_to_list(NameBin)),
+  Ast     = {var, 0, binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
 ast(#{op := local} = Expr, State) ->
@@ -89,7 +89,7 @@ ast(#{op := local} = Expr, State) ->
               LexicalNameSym ->
                 clj_core:str(LexicalNameSym)
               end,
-  Ast     = erl_syntax:variable(binary_to_list(NameBin)),
+  Ast     = {var, 0, binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
 %% do
@@ -104,7 +104,7 @@ ast(#{op := do} = Expr, State) ->
                           , StmsCount
                           ),
   {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
-  Ast = erl_syntax:block_expr(Stms ++ [Ret]),
+  Ast = {block, 0, Stms ++ [Ret]},
 
   push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
 
   ok = ensure_module(Module),
-  VarAst = erl_syntax:abstract(Var),
+  VarAst = erl_syntax:revert(erl_syntax:abstract(Var)),
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
@@ -127,7 +127,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         pop_ast(ast(InitExpr, State))
     end,
 
-  ValClause = erl_syntax:clause([], [ValAst]),
+  ValClause = {clause, 0, [], [], [ValAst]},
   ValFunAst = function_form(ValName, [ValClause]),
 
   clj_module:add_vars(Module, [Var]),
@@ -146,14 +146,14 @@ ast(#{op := fn} = Expr, State) ->
 
   ListArgSym  = clj_core:gensym(<<"list_arg">>),
   ListArgName = clj_core:name(ListArgSym),
-  ListArgAst  = erl_syntax:variable(binary_to_list(ListArgName)),
-  CaseAst     = erl_syntax:case_expr(ListArgAst, ClausesAsts),
+  ListArgAst  = {var, 0, binary_to_atom(ListArgName, utf8)},
+  CaseAst     = {'case', 0, ListArgAst, ClausesAsts},
 
   #{name := NameSym} = maps:get(local, Expr, undefined),
   Name         = clj_core:name(NameSym),
-  NameAst      = erl_syntax:variable(binary_to_list(Name)),
-  FunClauseAst = erl_syntax:clause([ListArgAst], none, [CaseAst]),
-  FunAst       = erl_syntax:named_fun_expr(NameAst, [FunClauseAst]),
+  NameAtom     = binary_to_atom(Name, utf8),
+  FunClauseAst = {clause, 0, [ListArgAst], [], [CaseAst]},
+  FunAst       = {named_fun, 0, NameAtom, [FunClauseAst]},
 
   push_ast(FunAst, State2);
 ast(#{op := erl_fun, invoke := true} = Expr, State) ->
@@ -161,9 +161,9 @@ ast(#{op := erl_fun, invoke := true} = Expr, State) ->
    , function := Function
    } = Expr,
 
-  ModuleTree = erl_syntax:atom(Module),
-  FunctionTree = erl_syntax:atom(Function),
-  Ast = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
+  ModuleAst   = {atom, 0, Module},
+  FunctionAst = {atom, 0, Function},
+  Ast         = {remote, 0, ModuleAst, FunctionAst},
 
   push_ast(Ast, State);
 ast(#{op := erl_fun} = Expr, State) ->
@@ -183,13 +183,12 @@ ast(#{op := erl_fun} = Expr, State) ->
                       , clj_reader:location_meta(Symbol)
                       ),
 
-  ModuleTree   = erl_syntax:atom(Module),
-  FunctionTree = erl_syntax:atom(Function),
-  ArityTree    = erl_syntax:abstract(Arity),
-
-  ArityQualifier  = erl_syntax:arity_qualifier(FunctionTree, ArityTree),
-  ModuleQualifier = erl_syntax:module_qualifier(ModuleTree, ArityQualifier),
-  Ast = erl_syntax:implicit_fun(ModuleQualifier),
+  Ast = {'fun', 0, { function
+                   , {atom, 0, Module}
+                   , {atom, 0, Function}
+                   , {integer, 0, Arity}
+                   }
+        },
 
   push_ast(Ast, State);
 ast(#{op := invoke} = Expr, State) ->
@@ -205,18 +204,18 @@ ast(#{op := invoke} = Expr, State) ->
     #{op := var, var := Var} ->
       Module   = 'clojerl.Var':module(Var),
       Function = 'clojerl.Var':function(Var),
-      Args1    = 'clojerl.Var':process_args(Var, Args, fun erl_syntax:list/1),
+      Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
       Ast      = application_mfa(Module, Function, Args1),
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
-      Ast = erl_syntax:application(FunAst, Args),
+      Ast = {call, 0, FunAst, Args},
 
       push_ast(Ast, State2);
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
-      ArgsAst = erl_syntax:list(Args),
+      ArgsAst = list_ast(Args),
       Ast     = application_mfa(clj_core, invoke, [FunAst, ArgsAst]),
 
       push_ast(Ast, State2)
@@ -230,7 +229,7 @@ ast(#{op := vector} = Expr, State) ->
   {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
                            , length(ItemsExprs)
                            ),
-  ListItems = erl_syntax:list(Items),
+  ListItems = list_ast(Items),
 
   Ast = application_mfa('clojerl.Vector', new, [ListItems]),
   push_ast(Ast, State1);
@@ -253,7 +252,7 @@ ast(#{op := map} = Expr, State) ->
            end,
 
   Items = PairUp(Keys, Vals, []),
-  ListItems = erl_syntax:list(Items),
+  ListItems = list_ast(Items),
 
   Ast = application_mfa('clojerl.Map', new, [ListItems]),
   push_ast(Ast, State2);
@@ -263,7 +262,7 @@ ast(#{op := set} = Expr, State) ->
   {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
                            , length(ItemsExprs)
                            ),
-  ListItems = erl_syntax:list(Items),
+  ListItems = list_ast(Items),
 
   Ast = application_mfa('clojerl.Set', new, [ListItems]),
   push_ast(Ast, State1);
@@ -279,21 +278,21 @@ ast(#{op := 'if'} = Expr, State) ->
   {Test, State1} = pop_ast(ast(TestExpr, State)),
 
   TrueSymbol    = clj_core:gensym(<<"true_">>),
-  TrueSymbolStr = binary_to_list(clj_core:str(TrueSymbol)),
-  True          = erl_syntax:variable(TrueSymbolStr),
-  FalseAtom     = erl_syntax:atom(false),
-  UndefinedAtom = erl_syntax:atom(undefined),
-  TrueGuards    = [ application_mfa(erlang, '=/=', [True, FalseAtom])
-                  , application_mfa(erlang, '=/=', [True, UndefinedAtom])
+  TrueSymbolAt  = binary_to_atom(clj_core:str(TrueSymbol), utf8),
+  True          = {var, 0, TrueSymbolAt},
+  FalseAtom     = {atom, 0, false},
+  UndefinedAtom = {atom, 0, undefined},
+  TrueGuards    = [ {op, 2, '=/=', True, FalseAtom}
+                  , {op, 2, '=/=', True, UndefinedAtom}
                   ],
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause    = erl_syntax:clause([True], TrueGuards, [ThenAst]),
+  TrueClause    = {clause, 0, [True], [TrueGuards], [ThenAst]},
 
-  Whatever = erl_syntax:variable('_'),
+  Whatever = {var, 0, '_'},
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause = erl_syntax:clause([Whatever], [], [ElseAst]),
+  FalseClause = {clause, 0, [Whatever], [], [ElseAst]},
 
-  Ast = erl_syntax:case_expr(Test, [TrueClause, FalseClause]),
+  Ast = {'case', 0, Test, [TrueClause, FalseClause]},
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% let
@@ -309,7 +308,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   MatchAstFun = fun(BindingExpr = #{init := InitExpr}, StateAcc) ->
                     {Binding, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
                     {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
-                    MatchAst = erl_syntax:match_expr(Binding, Init),
+                    MatchAst = {match, 0, Binding, Init},
                     push_ast(MatchAst, StateAcc2)
                 end,
 
@@ -319,9 +318,9 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 
   Ast = case Op of
           'let' ->
-            Clause = erl_syntax:clause([], [], Matches ++ [Body]),
-            FunAst = erl_syntax:fun_expr([Clause]),
-            erl_syntax:application(FunAst, []);
+            Clause = {clause, 0, [], [], Matches ++ [Body]},
+            FunAst = {'fun', 0, {clauses, [Clause]}},
+            {call, 0, FunAst, []};
           loop  ->
             %% Emit two nested funs for 'loop' expressions.
             %% An outer unnamed fun that initializes the bindings
@@ -330,17 +329,16 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             StateTmp = lists:foldl(fun ast/2, State3, BindingsExprs),
             {ArgsAsts, _} = pop_ast(StateTmp, length(BindingsExprs)),
 
-            LoopClause = erl_syntax:clause(ArgsAsts, [], [Body]),
+            LoopClause = {clause, 0, ArgsAsts, [], [Body]},
 
             LoopId     = maps:get(loop_id, Expr),
-            LoopIdStr  = binary_to_list(clj_core:str(LoopId)),
-            NameAst    = erl_syntax:variable(LoopIdStr),
-            LoopFunAst = erl_syntax:named_fun_expr(NameAst, [LoopClause]),
-            LoopAppAst = erl_syntax:application(LoopFunAst, ArgsAsts),
+            LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
+            LoopFunAst = {named_fun, 0, LoopIdAtom, [LoopClause]},
+            LoopAppAst = {call, 0, LoopFunAst, ArgsAsts},
 
-            Clause = erl_syntax:clause([], [], Matches ++ [LoopAppAst]),
-            FunAst = erl_syntax:fun_expr([Clause]),
-            erl_syntax:application(FunAst, [])
+            Clause = {clause, 0, [], [], Matches ++ [LoopAppAst]},
+            FunAst = {'fun', 0, {clauses, [Clause]}},
+            {call, 0, FunAst, []}
         end,
 
   State4 = remove_lexical_renames_scope(State3),
@@ -359,21 +357,21 @@ ast(#{op := recur} = Expr, State) ->
                           , length(ArgsExprs)
                           ),
 
-  LoopIdStr = binary_to_list(clj_core:str(LoopId)),
+  LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
 
   %% We need to use invoke so that recur also works inside functions
   %% (i.e not funs)
   Ast = case LoopType of
           fn ->
-            NameAst = erl_syntax:variable(LoopIdStr),
-            ArgsAst = erl_syntax:list(Args),
+            NameAst = {var, 0, LoopIdAtom},
+            ArgsAst = list_ast(Args),
             application_mfa(clj_core, invoke, [NameAst, ArgsAst]);
           loop ->
-            NameAst = erl_syntax:variable(LoopIdStr),
-            erl_syntax:application(NameAst, Args);
+            NameAst = {var, 0, LoopIdAtom},
+            {call, 0, NameAst, Args};
           var ->
-            NameAst = erl_syntax:atom(LoopIdStr),
-            erl_syntax:application(NameAst, Args)
+            NameAst = {atom, 0, LoopIdAtom},
+            {call, 0, NameAst, Args}
         end,
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -386,7 +384,7 @@ ast(#{op := throw} = Expr, State) ->
 
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
   Location    = clj_reader:location_meta(Form),
-  LocationAst = erl_syntax:abstract(Location),
+  LocationAst = erl_syntax:revert(erl_syntax:abstract(Location)),
 
   Ast = application_mfa(clj_utils, throw, [Exception, LocationAst]),
   push_ast(Ast, State1);
@@ -414,12 +412,12 @@ ast(#{op := 'try'} = Expr, State) ->
             _         -> [Finally]
           end,
 
-  TryAst    = erl_syntax:try_expr([Body], [], Catches, After),
+  TryAst    = {'try', 0, [Body], [], Catches, After},
 
   %% We need to wrap everything in a fun to create a new variable scope.
-  ClauseAst = erl_syntax:clause([], [TryAst]),
-  FunAst    = erl_syntax:fun_expr([ClauseAst]),
-  ApplyAst  = erl_syntax:application(FunAst, []),
+  ClauseAst = {clause, 0, [], [], [TryAst]},
+  FunAst    = {'fun', 0, {clauses, [ClauseAst]}},
+  ApplyAst  = {call, 0, FunAst, []},
 
   push_ast(ApplyAst, State2);
 %%------------------------------------------------------------------------------
@@ -431,13 +429,13 @@ ast(#{op := 'catch'} = Expr, State) ->
    , body  := BodyExpr
    } = Expr,
 
-  ClassAst          = erl_syntax:atom(ErrType),
+  ClassAst          = {atom, 0, ErrType},
   {NameAst, State1} = pop_ast(ast(Local, State)),
-  ClassNameAst      = erl_syntax:class_qualifier(ClassAst, NameAst),
+  ClassNameAst      = {tuple, 0, [ClassAst, NameAst, {var, 0, '_'}]},
 
   {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
 
-  Ast = erl_syntax:clause([ClassNameAst], [], [Body]),
+  Ast = {clause, 0, [ClassNameAst], [], [Body]},
 
   push_ast(Ast, State2).
 
@@ -445,11 +443,26 @@ ast(#{op := 'catch'} = Expr, State) ->
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
 
--spec function_form(atom(), [ast()]) ->
-  ast().
-function_form(Name, Clauses) when is_atom(Name) ->
-  NameAst = erl_syntax:atom(Name),
-  erl_syntax:function(NameAst, Clauses).
+-spec list_ast(list()) -> ast().
+list_ast([]) ->
+  {nil, 0};
+list_ast(List) when is_list(List) ->
+  list_ast(List, {nil, 0}).
+
+-spec list_ast(list(), any()) -> ast().
+list_ast(Heads, Tail) when is_list(Heads) ->
+  do_list_ast(Heads, Tail).
+
+-spec do_list_ast(list(), ast()) -> ast().
+do_list_ast([], Tail) ->
+  Tail;
+do_list_ast([H | Hs], Tail) ->
+  {cons, 0, H, do_list_ast(Hs, Tail)}.
+
+-spec function_form(atom(), [ast()]) -> ast().
+function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
+  {clause, _, Args, _, _} = Clause,
+  {function, 0, Name, length(Args), Clauses}.
 
 -spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
 method_to_function_clause(MethodExpr, State) ->
@@ -483,12 +496,12 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
             'case' when IsVariadic, ParamCount == 1 ->
               Args;
             'case' when IsVariadic ->
-              [erl_syntax:list(lists:droplast(Args), lists:last(Args))];
+              [list_ast(lists:droplast(Args), lists:last(Args))];
             'case' ->
-              [erl_syntax:list(Args)]
+              [list_ast(Args)]
           end,
 
-  Clause = erl_syntax:clause(Args1, Guards, [Body]),
+  Clause = {clause, 0, Args1, Guards, [Body]},
 
   State3 = remove_lexical_renames_scope(State2),
 
@@ -496,12 +509,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
 
 -spec application_mfa(module(), atom(), list()) -> ast().
 application_mfa(Module, Function, Args) ->
-  ModuleTree = erl_syntax:atom(Module),
-  FunctionTree = erl_syntax:atom(Function),
-
-  ValQualifier = erl_syntax:module_qualifier(ModuleTree, FunctionTree),
-
-  erl_syntax:application(ValQualifier, Args).
+  {call, 0, {remote, 0, {atom, 0, Module}, {atom, 0, Function}}, Args}.
 
 -spec group_methods([map()]) -> #{integer() => [map()]}.
 group_methods(Methods) ->
@@ -527,6 +535,7 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
         FunAst = function_form(Name, ClausesAst),
+
         clj_module:add_functions(Module, [FunAst]),
 
         StateAcc2
@@ -545,8 +554,7 @@ ensure_module(Name) ->
 
 -spec push_ast(ast(), state()) -> state().
 push_ast(Ast, State = #{asts := Asts}) ->
-  Reverted = erl_syntax:revert(Ast),
-  State#{asts => [Reverted | Asts]}.
+  State#{asts => [Ast | Asts]}.
 
 -spec pop_ast(state()) -> {ast(), state()}.
 pop_ast(State = #{asts := [Ast | Asts]}) ->
