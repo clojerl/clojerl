@@ -443,13 +443,21 @@ ast(#{op := 'catch'} = Expr, State) ->
 %% AST Helper Functions
 %%------------------------------------------------------------------------------
 
+-spec list_ast(list()) -> ast().
+list_ast([]) ->
+  {nil, 0};
+list_ast(List) when is_list(List) ->
+  list_ast(List, {nil, 0}).
+
 -spec list_ast(list(), any()) -> ast().
 list_ast(Heads, Tail) when is_list(Heads) ->
-  erl_syntax:revert(erl_syntax:list(Heads, Tail)).
+  do_list_ast(Heads, Tail).
 
--spec list_ast(list()) -> ast().
-list_ast(List) when is_list(List) ->
-  erl_syntax:revert(erl_syntax:list(List)).
+-spec do_list_ast(list(), ast()) -> ast().
+do_list_ast([], Tail) ->
+  Tail;
+do_list_ast([H | Hs], Tail) ->
+  {cons, 0, H, do_list_ast(Hs, Tail)}.
 
 -spec function_form(atom(), [ast()]) -> ast().
 function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
