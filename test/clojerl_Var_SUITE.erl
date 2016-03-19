@@ -14,6 +14,7 @@
         , meta/1
         , name/1
         , str/1
+        , dynamic_bindings/1
         ]).
 
 -type config() :: list().
@@ -148,5 +149,24 @@ str(_Config) ->
   Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
 
   <<"#'clojerl_Var_SUITE/forty-two">> = clj_core:str(Var),
+
+  {comments, ""}.
+
+-spec dynamic_bindings(config()) -> result().
+dynamic_bindings(_Config) ->
+  Ns   = <<"clojerl_Var_SUITE">>,
+  Name = <<"forty-two">>,
+  Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+
+  42 = clj_core:deref(Var),
+
+  BindingsMap = #{Var => 84},
+  'clojerl.Var':push_bindings(BindingsMap),
+
+  84 = clj_core:deref(Var),
+
+  'clojerl.Var':pop_bindings(),
+
+  42 = clj_core:deref(Var),
 
   {comments, ""}.

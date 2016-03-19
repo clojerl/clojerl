@@ -20,6 +20,10 @@
         , process_args/3
         ]).
 
+-export([ push_bindings/1
+        , pop_bindings/0
+        ]).
+
 -export(['clojerl.IDeref.deref'/1]).
 -export(['clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
@@ -62,6 +66,24 @@ function(#?TYPE{name = ?M, data = {_, Name}}) ->
 val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
   binary_to_atom(<<Name/binary, "__val">>, utf8).
 
+-spec push_bindings(map()) -> ok.
+push_bindings(BindingsMap) ->
+  Bindings      = erlang:get(dynamic_bindings),
+  ct:pal(Bindings),
+  NewBindings   = clj_scope:new(Bindings),
+  AddBindingFun = fun(K, V, Acc) -> clj_scope:put(Acc, clj_core:str(K), V) end,
+  NewBindings1  = maps:fold(AddBindingFun, NewBindings, BindingsMap),
+
+  erlang:put(dynamic_bindings, NewBindings1),
+  ok.
+
+-spec pop_bindings() -> ok.
+pop_bindings() ->
+  Bindings = erlang:get(dynamic_bindings),
+  Parent   = clj_scope:parent(Bindings),
+  erlang:put(dynamic_bindings, Parent),
+  ok.
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
@@ -80,7 +102,11 @@ val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
   FunctionVal = val_function(Var),
 
   case erlang:function_exported(Module, FunctionVal, 0) of
-    true -> Module:FunctionVal();
+    true ->
+      case dynamic_binding(Var) of
+        undefined -> Module:FunctionVal();
+        Value     -> Value
+      end;
     false ->
       throw(<<"Could not derefence ",
               Ns/binary, "/", Name/binary, ". "
@@ -138,4 +164,13 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
                       end,
       Args1 ++ [RestFun(Rest)];
     _ -> Args
+  end.
+
+-spec dynamic_binding('clojerl.Var':type()) -> any().
+dynamic_binding(Var) ->
+  case erlang:get(dynamic_bindings) of
+    undefined -> undefined;
+    Bindings  ->
+      Key = clj_core:str(Var),
+      clj_scope:get(Bindings, Key)
   end.
