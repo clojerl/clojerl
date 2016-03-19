@@ -12,6 +12,7 @@
 -type opts() :: #{ read_cond    => allow | preserve
                  , features     => 'clojerl.Set':type()
                  , data_readers => #{binary() => function()}
+                 , file         => file:filename_all()
                  }.
 
 -export_type([location/0, opts/0]).
@@ -65,7 +66,11 @@ read_fold_loop(Fun, State) ->
 -spec location_meta(any()) -> location().
 location_meta(X) ->
   case clj_core:'meta?'(X) of
-    true  -> clj_core:get(clj_core:meta(X), loc);
+    true  ->
+      Meta = clj_core:meta(X),
+      #{ loc  => clj_core:get(Meta, loc, undefined)
+       , file => clj_core:get(Meta, file, undefined)
+       };
     false -> undefined
   end.
 
@@ -284,8 +289,7 @@ read_keyword(#{ src := <<":", _/binary>>
 
 -spec read_symbol(state()) -> state().
 read_symbol(State) ->
-  Loc  = maps:get(loc, State),
-  Meta = #{loc => Loc},
+  Meta = file_location_meta(State),
 
   {Token, State1} = read_token(State),
   Symbol = case clj_utils:parse_symbol(Token) of
@@ -581,7 +585,7 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
   #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
-  List = clj_core:with_meta(clj_core:list(Items), #{loc => Loc}),
+  List = clj_core:with_meta(clj_core:list(Items), file_location_meta(State0)),
 
   State2#{forms => [List | Forms]}.
 
@@ -601,7 +605,9 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
   #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
-  Vector = clj_core:with_meta(clj_core:vector(Items), #{loc => Loc}),
+  Vector = clj_core:with_meta( clj_core:vector(Items)
+                             , file_location_meta(State0)
+                             ),
 
   State2#{forms => [Vector | Forms]}.
 
@@ -623,7 +629,9 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = clj_core:with_meta(clj_core:hash_map(Items), #{loc => Loc}),
+      Map = clj_core:with_meta( clj_core:hash_map(Items)
+                              , file_location_meta(State0)
+                              ),
       State2#{forms => [Map | Forms]};
     _ ->
       clj_utils:throw( <<"Map literal must contain an even number of forms">>
@@ -789,7 +797,7 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_fn(state()) -> state().
-read_fn(#{loc := Loc} = State) ->
+read_fn(State) ->
   case erlang:get(arg_env) of
     undefined -> ok;
     _         -> clj_utils:throw( <<"Nested #()s are not allowed">>
@@ -815,7 +823,7 @@ read_fn(#{loc := Loc} = State) ->
 
   FnSymbol = clj_core:symbol(<<"fn*">>),
   FnForm = clj_core:list([FnSymbol, ArgsVector, Form]),
-  FnFormWithMeta = clj_core:with_meta(FnForm, #{loc => Loc}),
+  FnFormWithMeta = clj_core:with_meta(FnForm, file_location_meta(State)),
 
   push_form(FnFormWithMeta, NewState).
 
@@ -842,7 +850,7 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
 
   Items       = lists:reverse(ReversedItems),
   Set         = clj_core:hash_set(Items),
-  SetWithMeta = clj_core:with_meta(Set, #{loc => Loc}),
+  SetWithMeta = clj_core:with_meta(Set, file_location_meta(State0)),
 
   State2#{forms => [SetWithMeta | Forms]}.
 
@@ -1063,8 +1071,10 @@ default_uuid_reader(UUID) ->
 %%------------------------------------------------------------------------------
 
 -spec location(state()) -> state().
-location(State) ->
-  maps:get(loc, State, undefined).
+location(#{opts := Opts} = State) ->
+  #{ loc  => maps:get(loc, State, undefined)
+   , file => maps:get(file, Opts, undefined)
+   }.
 
 -spec location_started(state(), location()) -> state().
 location_started(State, Loc) ->
@@ -1187,3 +1197,13 @@ add_scope(#{bindings := Bindings} = State) ->
 -spec remove_scope(state()) -> state().
 remove_scope(#{bindings := Bindings} = State) ->
   State#{bindings => clj_scope:parent(Bindings)}.
+
+-spec file_location_meta(state()) -> map().
+file_location_meta(State) ->
+  Loc  = maps:get(loc, State),
+  Opts = maps:get(opts, State),
+
+  case maps:is_key(file, Opts) of
+    true  -> #{loc => Loc, file => maps:get(file, Opts)};
+    false -> #{loc => Loc}
+  end.

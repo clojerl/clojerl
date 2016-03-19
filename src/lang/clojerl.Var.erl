@@ -69,11 +69,9 @@ val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
 -spec push_bindings(map()) -> ok.
 push_bindings(BindingsMap) ->
   Bindings      = erlang:get(dynamic_bindings),
-  ct:pal(Bindings),
   NewBindings   = clj_scope:new(Bindings),
   AddBindingFun = fun(K, V, Acc) -> clj_scope:put(Acc, clj_core:str(K), V) end,
   NewBindings1  = maps:fold(AddBindingFun, NewBindings, BindingsMap),
-
   erlang:put(dynamic_bindings, NewBindings1),
   ok.
 
