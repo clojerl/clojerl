@@ -171,7 +171,7 @@ parse_ns(Env, List) ->
   case clj_core:'symbol?'(Second) of
     true ->
       {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
-      NewEnv;
+      analyze_const(NewEnv, undefined);
     false ->
       clj_utils:throw( <<"First argument to ns must a symbol">>
                      , clj_reader:location_meta(List)

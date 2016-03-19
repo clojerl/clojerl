@@ -132,7 +132,10 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
     true when ArgCount =< MaxFixedArity, MaxFixedArity =/= undefined ->
       Args;
     true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
-      {Args1, Rest} = lists:split(VariadicArity, Args),
+      {Args1, Rest} = case VariadicArity < ArgCount of
+                        true -> lists:split(VariadicArity, Args);
+                        false -> {Args, []}
+                      end,
       Args1 ++ [RestFun(Rest)];
     _ -> Args
   end.
