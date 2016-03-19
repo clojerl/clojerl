@@ -46,8 +46,11 @@ compile_file(_Config) ->
 
   ct:comment("Try to compile an invalid file"),
   ErrorPath = relative_path(<<"priv/examples/error.clj">>),
-  ok = try clj_compiler:compile_file(ErrorPath), error
-       catch _:_ -> ok end,
+  ok = try
+         clj_compiler:compile_file(ErrorPath), error
+       catch
+         _:<<"error.clj:", _/binary>> -> ok
+       end,
 
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath = relative_path(<<"priv/examples/abcdef_42.clj">>),
