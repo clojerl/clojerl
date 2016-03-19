@@ -22,8 +22,8 @@ new(Parent) ->
   }.
 
 -spec parent(scope()) -> scope() | undefined.
-parent(Scope) ->
-  maps:get(parent, Scope).
+parent(undefined) -> undefined;
+parent(Scope)     -> maps:get(parent, Scope).
 
 -spec put(scope(), any(), any()) -> scope().
 put(Scope = #{mappings := Mappings}, Key, Value) ->

@@ -84,8 +84,9 @@ ns(_Config) ->
   ct:comment("Change namespace and analyze keyword"),
   HelloKeyword = clj_core:keyword(<<"bla">>, <<"hello">>),
 
-  [#{op := constant,
-     form := HelloKeyword}] = analyze_all(<<"(ns bla) ::hello">>),
+  [ #{op := constant, form := undefined}
+  , #{op := constant, form := HelloKeyword}
+  ] = analyze_all(<<"(ns bla) ::hello">>),
 
   {comments, ""}.
 
@@ -132,7 +133,9 @@ def(_Config) ->
 
   #{op := def} = analyze_one(<<"(def $user/x 1)">>),
 
-  [#{op := def}] = analyze_all(<<"(ns bla) (def x 1)">>),
+  [ #{op := constant, form := undefined}
+  , #{op := def}
+  ] = analyze_all(<<"(ns bla) (def x 1)">>),
 
   ct:comment("Function vars should have fn information in their metadata"),
   #{ op  := def
