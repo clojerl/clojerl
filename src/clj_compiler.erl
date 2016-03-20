@@ -71,9 +71,13 @@ compile_file(File, Opts) when is_binary(File) ->
 compile_file(File, Opts, Env) when is_binary(File) ->
   case file:read_file(File) of
     {ok, Src} ->
-      FileStr  = binary_to_list(File),
-      ErlFlags = maps:get(erl_flags, Opts, []),
-      Opts1    = Opts#{erl_flags => [{source, FileStr} | ErlFlags]},
+      Filename    = filename:basename(File),
+      FilenameStr = binary_to_list(Filename),
+      ErlFlags    = maps:get(erl_flags, Opts, []),
+      ReaderOpts  = maps:get(reader_opts, Opts, #{}),
+      Opts1       = Opts#{ erl_flags   => [{source, FilenameStr} | ErlFlags]
+                         , reader_opts => ReaderOpts#{file => Filename}
+                         },
       compile(Src, Opts1, Env);
     Error ->
       throw(Error)
@@ -92,8 +96,12 @@ compile(Src, Opts, Env) when is_binary(Src) ->
   DoCompile   = fun() -> do_compile(Src, Opts, Env) end,
   {_Pid, Ref} = erlang:spawn_monitor(DoCompile),
   receive
-    {'DOWN', Ref, _, _, {shutdown, Result}} -> Result;
-    {'DOWN', Ref, _, _, Info} -> throw(Info)
+    {'DOWN', Ref, _, _, {shutdown, Result}} ->
+      Result;
+    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
+      erlang:raise(Kind, Error, Stacktrace);
+    {'DOWN', Ref, _, _, Info} ->
+      throw(Info)
   end.
 
 -spec eval(any()) -> {any(), clj_env:env()}.
@@ -109,8 +117,12 @@ eval(Form, Opts, Env) ->
   DoEval      = fun() -> do_eval(Form, Opts, Env) end,
   {_Pid, Ref} = erlang:spawn_monitor(DoEval),
   receive
-    {'DOWN', Ref, _, _, {shutdown, Result}} -> Result;
-    {'DOWN', Ref, _, _, Info} -> throw(Info)
+    {'DOWN', Ref, _, _, {shutdown, Result}} ->
+      Result;
+    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
+      erlang:raise(Kind, Error, Stacktrace);
+    {'DOWN', Ref, _, _, Info} ->
+      throw(Info)
   end.
 
 %% Flags
