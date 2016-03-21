@@ -29,7 +29,6 @@
     unreadable_form/1,
     discard/1,
     'cond'/1,
-    erl_fun/1,
     unsupported_reader/1,
     tuple/1,
     tagged/1
@@ -890,36 +889,6 @@ discard(_Config) ->
                            AllowClrFeatureOpts)
        catch _:<<"?:1:23: Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
-       end,
-
-  {comments, ""}.
-
-erl_fun(_Config) ->
-  ct:comment("Read Erlang function"),
-  SomeFunction1 = fun some:function/1,
-  SomeFunction1 = clj_reader:read(<<"#:some/function[1]">>),
-
-  SomeFunction2 = fun some:function/2,
-  SomeFunction2 = clj_reader:read(<<"#: some/function[2]">>),
-
-  ct:comment("Don't provide a fully qualified symbol"),
-  ok = try clj_reader:read_all(<<"#:function[1]">>)
-       catch _:_ -> ok
-       end,
-
-  ct:comment("Don't provide a vector"),
-  ok = try clj_reader:read_all(<<"#:some/function">>)
-       catch _:_ -> ok
-       end,
-
-  ct:comment("Don't provide a symbol"),
-  ok = try clj_reader:read_all(<<"#:1[1]">>)
-       catch _:_ -> ok
-       end,
-
-  ct:comment("Provide a vector with more than one element"),
-  ok = try clj_reader:read_all(<<"#:some/function[1, 2]">>)
-       catch _:_ -> ok
        end,
 
   {comments, ""}.
