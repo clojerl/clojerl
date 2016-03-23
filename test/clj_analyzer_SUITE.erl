@@ -1,26 +1,28 @@
 -module(clj_analyzer_SUITE).
 
--export([all/0]).
+-export([ all/0
+        , init_per_testcase/2
+        ]
+       ).
 
--export([
-         constants/1,
-         ns/1,
-         def/1,
-         quote/1,
-         fn/1,
-         do/1,
-         'if'/1,
-         'let'/1,
-         loop/1,
-         invoke/1,
-         symbol/1,
-         vector/1,
-         map/1,
-         set/1,
-         throw/1,
-         'try'/1,
-         var/1,
-         erl_fun/1
+-export([ constants/1
+        , ns/1
+        , def/1
+        , quote/1
+        , fn/1
+        , do/1
+        , 'if'/1
+        , 'let'/1
+        , loop/1
+        , invoke/1
+        , symbol/1
+        , vector/1
+        , map/1
+        , set/1
+        , throw/1
+        , 'try'/1
+        , var/1
+        , erl_fun/1
         ]).
 
 -spec all() -> [atom()].
@@ -28,6 +30,11 @@ all() ->
   ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
   Exports = ?MODULE:module_info(exports),
   [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+
+-spec init_per_testcase(any(), config()) -> config().
+init_per_testcase(_, Config) ->
+  clj_module:init(),
+  Config.
 
 -type config() :: list().
 -type result() :: {comments, string()}.

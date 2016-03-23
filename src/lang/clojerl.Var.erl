@@ -22,6 +22,7 @@
 
 -export([ push_bindings/1
         , pop_bindings/0
+        , dynamic_binding/2
         ]).
 
 -export(['clojerl.IDeref.deref'/1]).
@@ -82,6 +83,17 @@ pop_bindings() ->
   erlang:put(dynamic_bindings, Parent),
   ok.
 
+-spec dynamic_binding('clojerl.Var':type(), any()) -> any().
+dynamic_binding(Var, Value) ->
+  case erlang:get(dynamic_bindings) of
+    undefined -> throw(<<"Can't change root binding">>);
+    Bindings  ->
+      Key = clj_core:str(Var),
+      NewBindings = clj_scope:put(Bindings, Key, Value),
+      erlang:put(dynamic_bindings, NewBindings),
+      Value
+  end.
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
@@ -106,7 +118,7 @@ pop_bindings() ->
         Value     -> Value
       end;
     false ->
-      throw(<<"Could not derefence ",
+      throw(<<"Could not dereference ",
               Ns/binary, "/", Name/binary, ". "
               "There is no Erlang function "
               "to back it up.">>)

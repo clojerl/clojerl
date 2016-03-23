@@ -22,7 +22,7 @@
          'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
          'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
          'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1, 'var?'/1,
-         deref/1,
+         deref/1, 'set!'/2,
          meta/1, with_meta/2, 'meta?'/1,
          get/2, get/3,
          assoc/3, dissoc/2, find/2,
@@ -300,6 +300,10 @@ keyword(Namespace, Name) ->
 -spec deref(any()) -> any().
 deref(X) ->
   'clojerl.IDeref':deref(X).
+
+-spec 'set!'('clojerl.Var':type(), any()) -> any().
+'set!'(Var, Value) ->
+  'clojerl.Var':dynamic_binding(Var, Value).
 
 -spec meta(any()) -> any().
 meta(X) ->

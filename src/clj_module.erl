@@ -296,7 +296,7 @@ is_attribute(_) -> false.
 -spec is_attribute_fun(atom()) -> function().
 is_attribute_fun(Name) ->
   fun
-    ({attribute, 0, AttrName, _}) when Name =:= AttrName -> true;
+    ({attribute, _, AttrName, _}) when Name =:= AttrName -> true;
     (_) -> false
   end.
 

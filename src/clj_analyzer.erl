@@ -43,7 +43,11 @@ macroexpand_1(Env, Form) ->
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
-      Args = [Form, Env1] ++ clj_core:seq2(clj_core:rest(Form)),
+      EnvSymbol       = clj_core:symbol(<<"clojure.core">>, <<"*env*">>),
+      {EnvVar, Env2}  = lookup_var(EnvSymbol, false, Env1),
+      ok = 'clojerl.Var':push_bindings(#{EnvVar => Env2}),
+
+      Args = [Form, Env2] ++ clj_core:seq2(clj_core:rest(Form)),
       try
         Module   = 'clojerl.Var':module(MacroVar),
         Function = 'clojerl.Var':function(MacroVar),
@@ -51,20 +55,26 @@ macroexpand_1(Env, Form) ->
         Args1    = 'clojerl.Var':process_args(MacroVar, Args, SeqFun),
         Arity    = length(Args1),
         FakeFun  = clj_module:fake_fun(Module, Function, Arity),
-        clj_core:invoke(FakeFun, Args1)
+        Value    = clj_core:invoke(FakeFun, Args1),
+
+        {Value, clj_core:deref(EnvVar)}
       catch
         throw:{notfound, _} ->
-          clj_core:invoke(MacroVar, Args)
+          Value2 = clj_core:invoke(MacroVar, Args),
+
+          {Value2, clj_core:deref(EnvVar)}
+      after
+          'clojerl.Var':pop_bindings()
       end;
-    false -> Form
+    false -> {Form, Env1}
   end.
 
 -spec macroexpand(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand(Env, Form) ->
-  ExpandedForm = macroexpand_1(Env, Form),
+  {ExpandedForm, Env1} = macroexpand_1(Env, Form),
   case clj_core:equiv(ExpandedForm, Form) of
-    true -> {Form, Env};
-    false -> macroexpand_1(Env, ExpandedForm)
+    true -> {Form, Env1};
+    false -> macroexpand_1(Env1, ExpandedForm)
   end.
 
 %%------------------------------------------------------------------------------
@@ -73,8 +83,10 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{ <<"ns">>         => fun parse_ns/2
-   , <<"def">>        => fun parse_def/2
+  #{
+   %%  <<"ns">>         => fun parse_ns/2
+   %%,
+     <<"def">>        => fun parse_def/2
    , <<"quote">>      => fun parse_quote/2
    , <<"fn*">>        => fun parse_fn/2
    , <<"do">>         => fun parse_do/2
@@ -143,8 +155,8 @@ analyze_const(Env, Constant) ->
 analyze_seq(_Env, undefined, List) ->
   clj_utils:throw(<<"Can't call nil">>, clj_reader:location_meta(List));
 analyze_seq(Env, Op, List) ->
-  IsSymbol     = clj_core:'symbol?'(Op),
-  ExpandedList = macroexpand_1(Env, List),
+  IsSymbol             = clj_core:'symbol?'(Op),
+  {ExpandedList, Env1} = macroexpand_1(Env, List),
   case clj_core:equiv(List, ExpandedList) of
     true ->
       OpKey = case IsSymbol of
@@ -153,30 +165,30 @@ analyze_seq(Env, Op, List) ->
               end,
       case maps:get(OpKey, special_forms(), undefined) of
         ParseFun when IsSymbol, ParseFun =/= undefined ->
-          ParseFun(Env, List);
+          ParseFun(Env1, List);
         undefined ->
-          analyze_invoke(Env, List)
+          analyze_invoke(Env1, List)
       end;
     false ->
-      analyze_form(Env, ExpandedList)
+      analyze_form(Env1, ExpandedList)
   end.
 
 %%------------------------------------------------------------------------------
 %% Parse ns
 %%------------------------------------------------------------------------------
 
--spec parse_ns(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
-parse_ns(Env, List) ->
-  Second = clj_core:second(List),
-  case clj_core:'symbol?'(Second) of
-    true ->
-      {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
-      analyze_const(NewEnv, undefined);
-    false ->
-      clj_utils:throw( <<"First argument to ns must a symbol">>
-                     , clj_reader:location_meta(List)
-                     )
-  end.
+%%-spec parse_ns(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+%%parse_ns(Env, List) ->
+%%  Second = clj_core:second(List),
+%%  case clj_core:'symbol?'(Second) of
+%%    true ->
+%%      {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
+%%      analyze_const(NewEnv, undefined);
+%%    false ->
+%%      clj_utils:throw( <<"First argument to ns must a symbol">>
+%%                     , clj_reader:location_meta(List)
+%%                     )
+%%  end.
 
 %%------------------------------------------------------------------------------
 %% Parse quote
