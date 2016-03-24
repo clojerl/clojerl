@@ -21,5 +21,6 @@ repl(Env) ->
     catch
         _:Error ->
             io:format("~s~n", [clj_core:str(Error)]),
+            io:format("~p~n", [erlang:get_stacktrace()]),
             repl(Env)
     end.

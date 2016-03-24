@@ -2357,6 +2357,141 @@
              (cons p (partition n step pad (nthrest s step)))
              (list (take n (concat p pad)))))))))
 
+;; evaluation
+
+(defn eval
+  "Evaluates the form data structure (not text!) and returns the result."
+  {:added "1.0"
+   :static true}
+  [form] (clj_compiler/eval.e form))
+
+(defmacro doseq
+  "Repeatedly executes body (presumably for side-effects) with
+  bindings and filtering as provided by \"for\".  Does not retain
+  the head of the sequence. Returns nil."
+  {:added "1.0"}
+  [seq-exprs & body]
+  (assert-args
+     (vector? seq-exprs) "a vector for its binding"
+     (even? (count seq-exprs)) "an even number of forms in binding vector")
+  (let [step (fn step [recform exprs]
+               (if-not exprs
+                 [true `(do ~@body)]
+                 (let [k (first exprs)
+                       v (second exprs)]
+                   (if (keyword? k)
+                     (let [steppair (step recform (nnext exprs))
+                           needrec (steppair 0)
+                           subform (steppair 1)]
+                       (cond
+                         (= k :let) [needrec `(let ~v ~subform)]
+                         (= k :while) [false `(when ~v
+                                                ~subform
+                                                ~@(when needrec [recform]))]
+                         (= k :when) [false `(if ~v
+                                               (do
+                                                 ~subform
+                                                 ~@(when needrec [recform]))
+                                               ~recform)]))
+                     (let [seq- (gensym "seq_")
+                           chunk- (with-meta (gensym "chunk_")
+                                             {:tag 'clojure.lang.IChunk})
+                           count- (gensym "count_")
+                           i- (gensym "i_")
+                           recform `(recur (next ~seq-) nil 0 0)
+                           steppair (step recform (nnext exprs))
+                           needrec (steppair 0)
+                           subform (steppair 1)
+                           recform-chunk
+                             `(recur ~seq- ~chunk- ~count- (unchecked-inc ~i-))
+                           steppair-chunk (step recform-chunk (nnext exprs))
+                           subform-chunk (steppair-chunk 1)]
+                       [true
+                        `(loop [~seq- (seq ~v), ~chunk- nil,
+                                ~count- 0, ~i- 0]
+                           (if (< ~i- ~count-)
+                             (let [~k (.nth ~chunk- ~i-)]
+                               ~subform-chunk
+                               ~@(when needrec [recform-chunk]))
+                             (when-let [~seq- (seq ~seq-)]
+                               (if true #_(chunked-seq? ~seq-)
+                                 #_(let [c# (chunk-first ~seq-)]
+                                   (recur (chunk-rest ~seq-) c#
+                                          (int (count c#)) (int 0)))
+                                 (let [~k (first ~seq-)]
+                                   ~subform
+                                   ~@(when needrec [recform]))))))])))))]
+    (nth (step nil (seq seq-exprs)) 1)))
+
+
+(defn await
+  "Blocks the current thread (indefinitely!) until all actions
+  dispatched thus far, from this thread or agent, to the agent(s) have
+  occurred.  Will block on failed agents.  Will never return if
+  a failed agent is restarted with :clear-actions true."
+  {:added "1.0"
+   :static true}
+  [& agents]
+  (throw "unimplemented")
+  #_(io! "await in transaction"
+    (when *agent*
+      (throw (new Exception "Can't await in agent action")))
+    (let [latch (new java.util.concurrent.CountDownLatch (count agents))
+          count-down (fn [agent] (. latch (countDown)) agent)]
+      (doseq [agent agents]
+        (send agent count-down))
+      (. latch (await)))))
+
+(defn ^:static await1 [^clojure.lang.Agent a]
+  (throw "unimplemented")
+  #_(when (pos? (.getQueueCount a))
+    (await a))
+    a)
+
+(defn await-for
+  "Blocks the current thread until all actions dispatched thus
+  far (from this thread or agent) to the agents have occurred, or the
+  timeout (in milliseconds) has elapsed. Returns logical false if
+  returning due to timeout, logical true otherwise."
+  {:added "1.0"
+   :static true}
+  [timeout-ms & agents]
+  (throw "unimplemented")
+    #_(io! "await-for in transaction"
+     (when *agent*
+       (throw (new Exception "Can't await in agent action")))
+     (let [latch (new java.util.concurrent.CountDownLatch (count agents))
+           count-down (fn [agent] (. latch (countDown)) agent)]
+       (doseq [agent agents]
+           (send agent count-down))
+       (. latch (await  timeout-ms (. java.util.concurrent.TimeUnit MILLISECONDS))))))
+
+(defmacro dotimes
+  "bindings => name n
+  Repeatedly executes body (presumably for side-effects) with name
+  bound to integers from 0 through n-1."
+  {:added "1.0"}
+  [bindings & body]
+  (assert-args
+     (vector? bindings) "a vector for its binding"
+     (= 2 (count bindings)) "exactly 2 forms in binding vector")
+  (let [i (first bindings)
+        n (second bindings)]
+    `(let [n# (long ~n)]
+       (loop [~i 0]
+         (when (< ~i n#)
+           ~@body
+           (recur (unchecked-inc ~i)))))))
+
+#_(defn into
+  "Returns a new coll consisting of to-coll with all of the items of
+  from-coll conjoined."
+  {:added "1.0"}
+  [to from]
+    (let [ret to items (seq from)]
+      (if items
+        (recur (conj ret (first items)) (next items))
+        ret)))
 ;;;;;;;;;;;;
 
 (defmacro defn-
@@ -2470,7 +2605,8 @@
 
 (defn prn
   [& xs]
-  (io/format.e "~s~n" (seq [(apply str xs)])))
+  (io/format.e "~s~n" (seq [(apply str xs)]))
+  nil)
 
 (defn =
   [a b]
