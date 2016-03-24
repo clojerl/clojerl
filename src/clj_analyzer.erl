@@ -21,7 +21,7 @@ is_special(S) ->
   clj_core:'symbol?'(S) andalso
     maps:is_key(clj_core:str(S), special_forms()).
 
--spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
+-spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> {any(), clj_env:env()}.
 macroexpand_1(Env, Form) ->
   Op       = clj_core:first(Form),
   IsSymbol = clj_core:'symbol?'(Op),
@@ -69,7 +69,8 @@ macroexpand_1(Env, Form) ->
     false -> {Form, Env1}
   end.
 
--spec macroexpand(clj_env:env(), 'clojerl.List':type()) -> any().
+-spec macroexpand(clj_env:env(), 'clojerl.List':type()) ->
+  {any(), clj_env:env()}.
 macroexpand(Env, Form) ->
   {ExpandedForm, Env1} = macroexpand_1(Env, Form),
   case clj_core:equiv(ExpandedForm, Form) of
@@ -805,7 +806,8 @@ validate_def_args(List) ->
                      )
   end.
 
--spec lookup_var('clojerl.Symbol':type(), clj_env:env()) -> ok.
+-spec lookup_var('clojerl.Symbol':type(), clj_env:env()) ->
+  {'clojerl.Var':type(), clj_env:env()}.
 lookup_var(VarSymbol, Env) ->
   lookup_var(VarSymbol, true, Env).
 
