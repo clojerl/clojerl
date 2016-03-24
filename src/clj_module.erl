@@ -233,6 +233,8 @@ modules_table_id() ->
   erlang:get(?MODULE).
 
 -spec get(atom(), module()) -> clj_module().
+get(undefined, Id) -> %% If there is no table then nothing will be found.
+  throw({notfound, Id});
 get(Table, Id) ->
   case ets:lookup(Table, Id) of
     [] -> throw({notfound, Id});

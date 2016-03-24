@@ -1,9 +1,6 @@
 -module(clj_analyzer_SUITE).
 
--export([ all/0
-        , init_per_testcase/2
-        ]
-       ).
+-export([all/0]).
 
 -export([ constants/1
         , ns/1
@@ -30,11 +27,6 @@ all() ->
   ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
   Exports = ?MODULE:module_info(exports),
   [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
-
--spec init_per_testcase(any(), config()) -> config().
-init_per_testcase(_, Config) ->
-  clj_module:init(),
-  Config.
 
 -type config() :: list().
 -type result() :: {comments, string()}.
