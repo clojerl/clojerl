@@ -2410,7 +2410,7 @@
                         `(loop [~seq- (seq ~v), ~chunk- nil,
                                 ~count- 0, ~i- 0]
                            (if (< ~i- ~count-)
-                             (let [~k (.nth ~chunk- ~i-)]
+                             (let [~k (clj_core/nth.e ~chunk- ~i-)]
                                ~subform-chunk
                                ~@(when needrec [recform-chunk]))
                              (when-let [~seq- (seq ~seq-)]

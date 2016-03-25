@@ -5,7 +5,7 @@
 -export([
          type/1,
          load/1, load/2,
-         count/1,
+         count/1, nth/2, nth/3,
          'empty?'/1, empty/1,
          seq/1, seq2/1, seq_to_list/1,
          equiv/2,
@@ -99,6 +99,14 @@ resolve_file(FilePath) ->
 -spec count(any()) -> integer().
 count(undefined) -> 0;
 count(Seq)       -> 'clojerl.Counted':count(Seq).
+
+-spec nth(any(), integer()) -> integer().
+nth(undefined, _) -> undefined;
+nth(Coll, N)      -> 'clojerl.Indexed':nth(Coll, N).
+
+-spec nth(any(), integer(), any()) -> integer().
+nth(undefined, _, _)   -> undefined;
+nth(Coll, N, NotFound) -> 'clojerl.Indexed':nth(Coll, N, NotFound).
 
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->
