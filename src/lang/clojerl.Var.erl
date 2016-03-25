@@ -24,6 +24,7 @@
         , pop_bindings/0
         , get_bindings/0
         , find/1
+        , dynamic_binding/1
         , dynamic_binding/2
         ]).
 
@@ -89,7 +90,7 @@ pop_bindings() ->
 get_bindings() ->
   case erlang:get(dynamic_bindings) of
     undefined -> #{};
-    Bindings  -> cjl_scope:to_map(Bindings)
+    Bindings  -> clj_scope:to_map(Bindings)
   end.
 
 -spec find('clojerl.Symbol':type()) -> 'clojerl.Var':type().
@@ -107,6 +108,15 @@ find(Symbol) ->
         false -> undefined
       end;
     false -> undefined
+  end.
+
+-spec dynamic_binding('clojerl.Var':type()) -> any().
+dynamic_binding(Var) ->
+  case erlang:get(dynamic_bindings) of
+    undefined -> undefined;
+    Bindings  ->
+      Key = clj_core:str(Var),
+      clj_scope:get(Bindings, Key)
   end.
 
 -spec dynamic_binding('clojerl.Var':type(), any()) -> any().
@@ -200,13 +210,4 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
                       end,
       Args1 ++ [RestFun(Rest)];
     _ -> Args
-  end.
-
--spec dynamic_binding('clojerl.Var':type()) -> any().
-dynamic_binding(Var) ->
-  case erlang:get(dynamic_bindings) of
-    undefined -> undefined;
-    Bindings  ->
-      Key = clj_core:str(Var),
-      clj_scope:get(Bindings, Key)
   end.
