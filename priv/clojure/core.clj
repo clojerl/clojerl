@@ -1705,7 +1705,137 @@
          (let [~form temp#]
            ~@body)))))
 
-;; MISSING
+(defn push-thread-bindings
+  "WARNING: This is a low-level function. Prefer high-level macros like
+  binding where ever possible.
+
+  Takes a map of Var/value pairs. Binds each Var to the associated value for
+  the current thread. Each call *MUST* be accompanied by a matching call to
+  pop-thread-bindings wrapped in a try-finally!
+
+      (push-thread-bindings bindings)
+      (try
+        ...
+        (finally
+          (pop-thread-bindings)))"
+  {:added "1.1"
+   :static true}
+  [bindings]
+  (clojerl.Var/push_bindings.e bindings))
+
+(defn pop-thread-bindings
+  "Pop one set of bindings pushed with push-binding before. It is an error to
+  pop bindings without pushing before."
+  {:added "1.1"
+   :static true}
+  []
+  (clojerl.Var/pop_bindings.e))
+
+(defn get-thread-bindings
+  "Get a map with the Var/value pairs which is currently in effect for the
+  current thread."
+  {:added "1.1"
+   :static true}
+  []
+  (clojerl.Var/get_bindings.e))
+
+(defmacro binding
+  "binding => var-symbol init-expr
+
+  Creates new bindings for the (already-existing) vars, with the
+  supplied initial values, executes the exprs in an implicit do, then
+  re-establishes the bindings that existed before.  The new bindings
+  are made in parallel (unlike let); all init-exprs are evaluated
+  before the vars are bound to their new values."
+  {:added "1.0"}
+  [bindings & body]
+  (assert-args
+    (vector? bindings) "a vector for its binding"
+    (even? (count bindings)) "an even number of forms in binding vector")
+  (let [var-ize (fn [var-vals]
+                  (loop [ret [] vvs (seq var-vals)]
+                    (if vvs
+                      (recur  (conj (conj ret `(var ~(first vvs))) (second vvs))
+                             (next (next vvs)))
+                      (seq ret))))]
+    `(let []
+       (push-thread-bindings (hash-map ~@(var-ize bindings)))
+       (try
+         ~@body
+         (finally
+           (pop-thread-bindings))))))
+
+(defn with-bindings*
+  "Takes a map of Var/value pairs. Installs for the given Vars the associated
+  values as thread-local bindings. Then calls f with the supplied arguments.
+  Pops the installed bindings after f returned. Returns whatever f returns."
+  {:added "1.1"
+   :static true}
+  [binding-map f & args]
+  (push-thread-bindings binding-map)
+  (try
+    (apply f args)
+    (finally
+      (pop-thread-bindings))))
+
+(defmacro with-bindings
+  "Takes a map of Var/value pairs. Installs for the given Vars the associated
+  values as thread-local bindings. Then executes body. Pops the installed
+  bindings after body was evaluated. Returns the value of body."
+  {:added "1.1"}
+  [binding-map & body]
+  `(with-bindings* ~binding-map (fn [] ~@body)))
+
+(defn bound-fn*
+  "Returns a function, which will install the same bindings in effect as in
+  the thread at the time bound-fn* was called and then call f with any given
+  arguments. This may be used to define a helper function which runs on a
+  different thread, but needs the same bindings in place."
+  {:added "1.1"
+   :static true}
+  [f]
+  (let [bindings (get-thread-bindings)]
+    (fn [& args]
+      (apply with-bindings* bindings f args))))
+
+(defmacro bound-fn
+  "Returns a function defined by the given fntail, which will install the
+  same bindings in effect as in the thread at the time bound-fn was called.
+  This may be used to define a helper function which runs on a different
+  thread, but needs the same bindings in place."
+  {:added "1.1"}
+  [& fntail]
+  `(bound-fn* (fn ~@fntail)))
+
+(defn find-var
+  "Returns the global var named by the namespace-qualified symbol, or
+  nil if no var with that name."
+  {:added "1.0"
+   :static true}
+  [sym] (clojerl.Var/find.e sym))
+
+(defn binding-conveyor-fn
+  {:private true
+   :added "1.3"}
+  [f]
+  (throw "unimplemented")
+  #_(let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+    (fn
+      ([]
+         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (f))
+      ([x]
+         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (f x))
+      ([x y]
+         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (f x y))
+      ([x y z]
+         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (f x y z))
+      ([x y z & args]
+         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (apply f x y z args)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Refs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -1,34 +1,32 @@
 -module(clj_env).
 
--export([
-         default/0,
-         context/1,
-         context/2,
-         push_expr/2,
-         pop_expr/1,
-         last_exprs/2,
-         exprs/1,
+-export([ default/0
+        , context/1
+        , context/2
+        , push_expr/2
+        , pop_expr/1
+        , last_exprs/2
+        , exprs/1
 
-         find_or_create_ns/2,
-         current_ns/1,
-         current_ns/2,
-         update_ns/3,
-         find_ns/2,
-         resolve_ns/2,
+        , find_or_create_ns/2
+        , current_ns/1
+        , current_ns/2
+        , update_ns/3
+        , find_ns/2
+        , resolve_ns/2
 
-         add_locals_scope/1,
-         remove_locals_scope/1,
-         get_local/2,
-         put_local/3,
-         put_locals/2,
+        , add_locals_scope/1
+        , remove_locals_scope/1
+        , get_local/2
+        , put_local/3
+        , put_locals/2
+        , get/2
+        , get/3
+        , put/3
+        , remove/2
 
-         get/2,
-         get/3,
-         put/3,
-         remove/2,
-
-         update_var/2,
-         find_var/2
+        , update_var/2
+        , find_var/2
         ]).
 
 -type context() :: expr | return | statement.
@@ -126,7 +124,7 @@ update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
     undefined ->
       Env;
     Ns ->
-      NewNs = Fun(Ns),
+      NewNs  = Fun(Ns),
       NewNss = maps:put(NameBin, NewNs, Nss),
       Env#{namespaces => NewNss}
   end.
@@ -143,7 +141,7 @@ resolve_ns(Env, SymNs) ->
   case find_ns(Env, SymNs) of
     undefined ->
       CurrentNsSym = current_ns(Env),
-      CurrentNs = find_ns(Env, CurrentNsSym),
+      CurrentNs    = find_ns(Env, CurrentNsSym),
       AliasedNsSym = clj_namespace:alias(CurrentNs, SymNs),
       find_ns(Env, AliasedNsSym);
     Ns ->

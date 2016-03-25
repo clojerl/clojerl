@@ -22,6 +22,8 @@
 
 -export([ push_bindings/1
         , pop_bindings/0
+        , get_bindings/0
+        , find/1
         , dynamic_binding/2
         ]).
 
@@ -82,6 +84,30 @@ pop_bindings() ->
   Parent   = clj_scope:parent(Bindings),
   erlang:put(dynamic_bindings, Parent),
   ok.
+
+-spec get_bindings() -> ok.
+get_bindings() ->
+  case erlang:get(dynamic_bindings) of
+    undefined -> #{};
+    Bindings  -> cjl_scope:to_map(Bindings)
+  end.
+
+-spec find('clojerl.Symbol':type()) -> 'clojerl.Var':type().
+find(Symbol) ->
+  Ns   = clj_core:namespace(Symbol),
+  Name = clj_core:name(Symbol),
+
+  NsAtom   = binary_to_atom(Ns, utf8),
+
+  case erlang:function_exported(NsAtom, module_info, 1) of
+    true ->
+      Attrs = NsAtom:module_info(attributes),
+      case lists:keyfind(vars, 1, Attrs) of
+        {vars, [VarsMap]} -> maps:get(Name, VarsMap, undefined);
+        false -> undefined
+      end;
+    false -> undefined
+  end.
 
 -spec dynamic_binding('clojerl.Var':type(), any()) -> any().
 dynamic_binding(Var, Value) ->

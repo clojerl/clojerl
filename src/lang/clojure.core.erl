@@ -16,9 +16,8 @@
         ]
        ).
 
-ns(_Env, Form, Symbol) ->
+ns(Form, Env, Symbol) ->
   EnvVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*env*">>),
-  Env    = clj_core:deref(EnvVar),
   case clj_core:'symbol?'(Symbol) of
     true ->
       {_, NewEnv} = clj_env:find_or_create_ns(Env, Symbol),
