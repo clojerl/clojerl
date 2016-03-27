@@ -5753,15 +5753,12 @@
   {:arglists '([name docstring? attr-map? references*])
    :added "1.0"}
   [name & references]
-  (if (symbol? name)
-    (let [res (clj_env/find_or_create_ns.e &env name)]
-      (clj_core/set!.e #'*env* (erlang/element.e 2 res))
-      nil)
-    (throw "First argument to ns must be a symbol"))
-  #_(let [process-reference
-        (fn [[kname & args]]
-          `(~(symbol "clojure.core" (clojure.core/name kname))
-             ~@(map #(list 'quote %) args)))
+  (let [process-reference
+        (fn [all-args]
+          (let [kname (first all-args)
+                args  (rest all-args)]
+            `(~(symbol "clojure.core" (clojure.core/name kname))
+              ~@(map #(list 'quote %) args))))
         docstring  (when (string? (first references)) (first references))
         references (if docstring (next references) references)
         name (if docstring
@@ -5775,22 +5772,27 @@
         gen-class-clause (first (filter #(= :gen-class (first %)) references))
         gen-class-call
           (when gen-class-clause
-            (list* `gen-class :name (.replace (str name) \- \_) :impl-ns name :main true (next gen-class-clause)))
+            (list* `gen-class
+                   :name (binary/replace.e (str name) "-" "_")
+                   :impl-ns name
+                   :main true (next gen-class-clause)))
         references (remove #(= :gen-class (first %)) references)
         ;ns-effect (clojure.core/in-ns name)
         name-metadata (meta name)]
     `(do
        (clojure.core/in-ns '~name)
-       ~@(when name-metadata
-           `((.resetMeta (clojure.lang.Namespace/find '~name) ~name-metadata)))
+       #_~@(when name-metadata
+             `((.resetMeta (clojure.lang.Namespace/find '~name) ~name-metadata)))
        (with-loading-context
-        ~@(when gen-class-call (list gen-class-call))
-        ~@(when (and (not= name 'clojure.core) (not-any? #(= :refer-clojure (first %)) references))
-            `((clojure.core/refer '~'clojure.core)))
-        ~@(map process-reference references))
-        (if (.equals '~name 'clojure.core)
-          nil
-          (do (dosync (commute @#'*loaded-libs* conj '~name)) nil)))))
+         #_~@(when gen-class-call (list gen-class-call))
+         ~@(when (and (not= name 'clojure.core)
+                      (not-any? #(= :refer-clojure (first %)) references))
+             `((clojure.core/refer '~'clojure.core)))
+         ~@(map process-reference references))
+       #_(if (.equals '~name 'clojure.core)
+           nil
+           (do (dosync (commute @#'*loaded-libs* conj '~name)) nil)))))
+
 
 (defmacro refer-clojure
   "Same as (refer 'clojure.core <filters>)"

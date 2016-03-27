@@ -1,7 +1,20 @@
 -module('clojure.core').
 
 -vars(#{ <<"ns">>    => { '7ype', 'clojerl.Var', {<<"clojure.core">>, <<"ns">>}
-                        , #{meta => #{macro => true}}
+                        , #{meta => #{ macro           => true
+                                     , 'variadic?'     => true
+                                     , max_fixed_arity => undefined
+                                     , variadic_arity  => 4
+                                     }
+                           }
+                        }
+       , <<"in-ns">> => { '7ype', 'clojerl.Var', {<<"clojure.core">>, <<"in-ns">>}
+                        , #{meta => #{ macro           => true
+                                     , 'variadic?'     => true
+                                     , max_fixed_arity => undefined
+                                     , variadic_arity  => 4
+                                     }
+                           }
                         }
        , <<"*ns*">>  => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*ns*">>}, #{}}
        , <<"*env*">> => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*env*">>}, #{}}
@@ -22,35 +35,57 @@
 
 -clojure(true).
 
--export([ ns/3
+-export([ ns/4
         , ns__val/0
+        , 'in-ns'/4
+        , 'in-ns__val'/0
         , '*ns*__val'/0
         , '*env*__val'/0
+
         , '*assert*__val'/0
+
         , '*out*__val'/0
         , '*in*__val'/0
+
         , '*print-dup*__val'/0
         , '*flush-on-newline*__val'/0
         , '*print-readably*__val'/0
         ]).
 
-ns(Form, Env, Symbol) ->
+ns(Form, Env, Name, References) ->
+  'in-ns'(Form, Env, Name, References).
+
+ns__val() ->
+  Var  = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
+  Meta = #{ macro           => true
+          , 'variadic?'     => true
+          , max_fixed_arity => undefined
+          , variadic_arity  => 4
+          },
+  clj_core:with_meta(Var, Meta).
+
+'in-ns'(Form, Env, MaybeQuotedName, _) ->
+  Name   = maybe_unquote_form(MaybeQuotedName),
   EnvVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*env*">>),
-  case clj_core:'symbol?'(Symbol) of
+  case clj_core:'symbol?'(Name) of
     true ->
-      {_, NewEnv} = clj_env:find_or_create_ns(Env, Symbol),
+      {_, NewEnv} = clj_env:find_or_create_ns(Env, Name),
       clj_core:'set!'(EnvVar, NewEnv),
       undefined;
     false ->
-      clj_utils:throw( <<"First argument to ns must be a symbol">>
+      clj_utils:throw( <<"First argument to in-ns must be a symbol">>
                      , clj_reader:location_meta(Form)
                      )
   end.
 
-
-ns__val() ->
+'in-ns__val'() ->
   Var = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
-  clj_core:with_meta(Var, #{}).
+  Meta = #{ macro           => true
+          , 'variadic?'     => true
+          , max_fixed_arity => undefined
+          , variadic_arity  => 4
+          },
+  clj_core:with_meta(Var, Meta).
 
 '*ns*__val'() -> throw(unbound).
 
@@ -67,3 +102,15 @@ ns__val() ->
 '*flush-on-newline*__val'() -> true.
 
 '*print-readably*__val'() -> true.
+
+%% @private
+maybe_unquote_form(MaybeQuotedForm) ->
+  case clj_core:'seq?'(MaybeQuotedForm) of
+    false -> MaybeQuotedForm;
+    true  ->
+      Quote = clj_core:first(MaybeQuotedForm),
+      case clj_core:equiv(Quote, clj_core:symbol(<<"quote">>)) of
+        true  -> clj_core:second(MaybeQuotedForm);
+        false -> MaybeQuotedForm
+      end
+  end.

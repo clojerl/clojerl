@@ -772,7 +772,7 @@ var_fn_info(Var, #{op := fn} = Expr) ->
   RemoveKeys = [op, env, methods, form, once, local],
   ExprInfo = maps:without(RemoveKeys, Expr),
   VarMeta = clj_core:meta(Var),
-  VarMeta1 = clj_core:merge([VarMeta, ExprInfo]),
+  VarMeta1 = clj_core:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
   clj_core:with_meta(Var, VarMeta1);
 var_fn_info(Var, _) ->
   Var.

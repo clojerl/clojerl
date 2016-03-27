@@ -399,8 +399,6 @@ nth(Index, List, Default) ->
   end.
 
 -spec location_to_binary(undefined | clj_reader:location()) -> binary().
-location_to_binary(undefined) ->
-  <<"?:?:?: ">>;
 location_to_binary(#{loc := {Line, Col}, file := Filename}) ->
   LineBin     = integer_to_binary(Line),
   ColBin      = integer_to_binary(Col),
@@ -409,5 +407,7 @@ location_to_binary(#{loc := {Line, Col}, file := Filename}) ->
                   _ -> Filename
                 end,
   <<FilenameBin/binary, ":", LineBin/binary, ":", ColBin/binary, ": ">>;
-location_to_binary(Location) ->
-  location_to_binary(Location#{file => undefined}).
+location_to_binary(#{loc := {_Line, _Col}} = Location) ->
+  location_to_binary(Location#{file => undefined});
+location_to_binary(_) ->
+  <<"?:?:?: ">>.

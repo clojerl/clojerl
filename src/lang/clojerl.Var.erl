@@ -189,7 +189,7 @@ dynamic_binding(Var, Value) ->
   erlang:apply(Module, Function, Args2).
 
 -spec process_args(type(), [any()], function()) -> [any()].
-process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
+process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
   Meta = case 'clojerl.IMeta.meta'(Var) of
            undefined -> #{};
            M -> M
@@ -210,4 +210,6 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
                       end,
       Args1 ++ [RestFun(Rest)];
     _ -> Args
-  end.
+  end;
+process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
+  process_args(Var, clj_core:seq_to_list(Args), RestFun).

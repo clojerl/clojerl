@@ -202,10 +202,20 @@ ast(#{op := invoke} = Expr, State) ->
 
   case FExpr of
     #{op := var, var := Var} ->
-      Module   = 'clojerl.Var':module(Var),
-      Function = 'clojerl.Var':function(Var),
-      Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-      Ast      = application_mfa(Module, Function, Args1),
+      VarMeta = clj_core:meta(Var),
+      Module  = 'clojerl.Var':module(Var),
+
+      Ast = case clj_core:get(VarMeta, 'fn?', false) of
+              true ->
+                Function = 'clojerl.Var':function(Var),
+                Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+                application_mfa(Module, Function, Args1);
+              false ->
+                ValFunction = 'clojerl.Var':val_function(Var),
+                FunAst      = application_mfa(Module, ValFunction, []),
+                ArgsAst     = list_ast(Args),
+                application_mfa(clj_core, invoke, [FunAst, ArgsAst])
+            end,
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
