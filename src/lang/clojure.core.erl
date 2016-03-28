@@ -11,8 +11,8 @@
        , <<"in-ns">> => { '7ype', 'clojerl.Var', {<<"clojure.core">>, <<"in-ns">>}
                         , #{meta => #{ macro           => true
                                      , 'variadic?'     => true
-                                     , max_fixed_arity => undefined
-                                     , variadic_arity  => 4
+                                     , max_fixed_arity => 3
+                                     , variadic_arity  => undefined
                                      }
                            }
                         }
@@ -37,7 +37,7 @@
 
 -export([ ns/4
         , ns__val/0
-        , 'in-ns'/4
+        , 'in-ns'/3
         , 'in-ns__val'/0
         , '*ns*__val'/0
         , '*env*__val'/0
@@ -52,8 +52,8 @@
         , '*print-readably*__val'/0
         ]).
 
-ns(Form, Env, Name, References) ->
-  'in-ns'(Form, Env, Name, References).
+ns(Form, Env, Name, _References) ->
+  'in-ns'(Form, Env, Name).
 
 ns__val() ->
   Var  = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
@@ -64,8 +64,8 @@ ns__val() ->
           },
   clj_core:with_meta(Var, Meta).
 
-'in-ns'(Form, Env, MaybeQuotedName, _) ->
-  Name   = maybe_unquote_form(MaybeQuotedName),
+'in-ns'(Form, Env, MaybeQuotedName) ->
+  Name   = 'maybe-unquote'(MaybeQuotedName),
   EnvVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*env*">>),
   case clj_core:'symbol?'(Name) of
     true ->
@@ -82,8 +82,8 @@ ns__val() ->
   Var = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
   Meta = #{ macro           => true
           , 'variadic?'     => true
-          , max_fixed_arity => undefined
-          , variadic_arity  => 4
+          , max_fixed_arity => 3
+          , variadic_arity  => undefined
           },
   clj_core:with_meta(Var, Meta).
 
@@ -104,7 +104,7 @@ ns__val() ->
 '*print-readably*__val'() -> true.
 
 %% @private
-maybe_unquote_form(MaybeQuotedForm) ->
+'maybe-unquote'(MaybeQuotedForm) ->
   case clj_core:'seq?'(MaybeQuotedForm) of
     false -> MaybeQuotedForm;
     true  ->
