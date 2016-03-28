@@ -97,7 +97,10 @@ special_forms() ->
    , <<"recur">>      => fun parse_recur/2
    , <<"throw">>      => fun parse_throw/2
    , <<"try">>        => fun parse_try/2
+   , <<"catch">>      => undefined
+   , <<"finally">>    => undefined
    , <<"var">>        => fun parse_var/2
+
    , <<"letfn*">>     => undefined
    , <<"case*">>      => undefined
    , <<"deftype*">>   => undefined
