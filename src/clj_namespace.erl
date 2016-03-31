@@ -1,13 +1,15 @@
 -module(clj_namespace).
 
--export([
-         new/1,
-         name/1,
-         intern/2,
-         update_var/2,
-         def/2,
-         use/2,
-         alias/2
+-export([ new/1
+        , load/1
+        , load_or_create/1
+
+        , name/1
+        , intern/2
+        , update_var/2
+        , def/2
+        , use/2
+        , alias/2
         ]).
 
 -type namespace() ::
@@ -24,6 +26,41 @@ new(Name) ->
    , uses    => #{}
    , aliases => #{}
    }.
+
+%% @doc Tries to get the vars from the module associated to the
+%%      namespace. If the module is not found or if it doesn't
+%%      have a 'vars' attribute, then undefined is returned.
+-spec load('clojerl.Symbol':type()) -> namespace() | undefined.
+load(Name) ->
+  NameStr = clj_core:name(Name),
+  Module  = binary_to_atom(NameStr, utf8),
+
+  _ = code:ensure_loaded(Module),
+
+  Vars = case erlang:function_exported(Module, module_info, 1) of
+           true ->
+             Attrs = Module:module_info(attributes),
+             case lists:keyfind(vars, 1, Attrs) of
+               {vars, [VarsMap]} -> maps:values(VarsMap);
+               false             -> undefined
+             end;
+           false -> undefined
+         end,
+
+  case Vars of
+    undefined ->
+      undefined;
+    _ ->
+      NewNs = clj_namespace:new(Name),
+      lists:foldl(fun(Var, Ns) -> update_var(Ns, Var) end, NewNs, Vars)
+  end.
+
+-spec load_or_create('clojerl.Symbol':type()) -> namespace().
+load_or_create(Name) ->
+  case load(Name) of
+    undefined -> clj_namespace:new(Name);
+    Ns        -> Ns
+  end.
 
 -spec name(namespace()) -> 'clojerl.Symbol':type().
 name(_Ns = #{name := Name}) -> Name.

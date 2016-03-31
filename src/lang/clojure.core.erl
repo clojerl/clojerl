@@ -87,9 +87,13 @@ ns__val() ->
           },
   clj_core:with_meta(Var, Meta).
 
-'*ns*__val'() -> throw(unbound).
+'*ns*__val'() -> unbound.
 
-'*env*__val'() -> throw(unbound).
+'*env*__val'() ->
+  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*env*">>) of
+    undefined -> unbound;
+    X         -> X
+  end.
 
 '*assert*__val'() -> true.
 

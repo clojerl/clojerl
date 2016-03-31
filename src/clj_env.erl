@@ -13,6 +13,7 @@
         , current_ns/2
         , update_ns/3
         , find_ns/2
+        , find_ns/3
         , resolve_ns/2
 
         , add_locals_scope/1
@@ -131,8 +132,16 @@ update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
 
 %% @doc Tries to find a namespace by its name symbol.
 -spec find_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
-find_ns(_Env = #{namespaces := Nss}, SymNs) ->
-  maps:get(clj_core:str(SymNs), Nss, undefined).
+find_ns(Env, SymNs) ->
+  find_ns(Env, SymNs, false).
+
+%% @doc Tries to find a namespace by its name symbol.
+-spec find_ns(env(), 'clojerl.Symbol':type(), boolean()) -> clj_namespace:namespace().
+find_ns(_Env = #{namespaces := Nss}, SymNs, Load) ->
+  case maps:get(clj_core:str(SymNs), Nss, undefined) of
+    undefined when Load -> clj_namespace:load(SymNs);
+    Ns -> Ns
+  end.
 
 %% @doc Tries to find a namespace by its name symbol or by itsalias
 %%      in the current namespace if it is there.
@@ -206,44 +215,15 @@ find_var(Env, Symbol) ->
 find_var(Env, Symbol, LoadModule) ->
   NsSym = case clj_core:namespace(Symbol) of
             undefined -> current_ns(Env);
-            NsStr -> clj_core:symbol(NsStr)
+            NsStr     -> clj_core:symbol(NsStr)
           end,
   case find_ns(Env, NsSym) of
     undefined when LoadModule ->
-      find_var(load_module_vars(Env, NsSym), Symbol, false);
+      Ns = clj_namespace:load_or_create(NsSym),
+      find_var(add_ns(Env, Ns), Symbol, false);
     undefined ->
       {undefined, Env};
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
       {clj_namespace:def(Ns, NameSym), Env}
   end.
-
-%% @private
-%% @doc Tries to get the vars from the module associated to the
-%%      namespace. If the module is not found or if it doesn't
-%%      have a 'vars' attribute, then a dummy module is added with
-%%      no vars.
--spec load_module_vars(env(), 'clojerl.Symbol':type()) -> env().
-load_module_vars(Env, NsSym) ->
-  NameStr = clj_core:name(NsSym),
-  Module  = binary_to_atom(NameStr, utf8),
-
-  _ = code:ensure_loaded(Module),
-
-  Vars = case erlang:function_exported(Module, module_info, 1) of
-           true ->
-             Attrs = Module:module_info(attributes),
-             case lists:keyfind(vars, 1, Attrs) of
-               {vars, [VarsMap]} -> maps:values(VarsMap);
-               false             -> []
-             end;
-           false -> []
-         end,
-  NewNs  = clj_namespace:new(NsSym),
-  NewNs1 = lists:foldl(fun add_var/2, NewNs, Vars),
-  add_ns(Env, NewNs1).
-
--spec add_var('clojerl.Var':type(), clj_namespace:namespace()) ->
-  clj_namespace:namespace().
-add_var(Var, Ns) ->
-  clj_namespace:update_var(Ns, Var).

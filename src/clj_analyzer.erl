@@ -720,11 +720,13 @@ parse_def(Env, List) ->
                          , clj_reader:location_meta(VarSymbol)
                          ),
 
-      Env2 = clj_env:update_var(Env1, Var1),
-      Init = case Docstring of
-               undefined -> clj_core:third(List);
-               _ -> clj_core:fourth(List)
-             end,
+      Env2  = clj_env:update_var(Env1, Var1),
+      Count = clj_core:count(List),
+      Init  = case Docstring of
+                undefined when Count =:= 3 -> clj_core:third(List);
+                _ when Count =:= 4 -> clj_core:fourth(List);
+                _ -> unbound %% TODO: Create type clojerl.Unbound
+              end,
 
       ExprEnv2 = add_def_name(clj_env:context(Env2, expr), VarSymbol),
       {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),

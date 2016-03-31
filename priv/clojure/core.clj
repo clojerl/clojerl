@@ -2254,10 +2254,10 @@
   {:added "1.0"
    :static true}
   ([ref]
-   (throw "unimplemented")
-   #_(if (instance? clojure.lang.IDeref ref)
-       (.deref ^clojure.lang.IDeref ref)
-       (deref-future ref)))
+   (if (extends? :clojerl.IDeref ref)
+     (clj_core/deref.e ref)
+     (throw "unimplemented")
+     #_(deref-future ref)))
   ([ref timeout-ms timeout-val]
    (throw "unimplemented")
    #_(if (instance? clojure.lang.IBlockingDeref ref)
@@ -3435,9 +3435,8 @@
   "Returns the Class of x"
   {:added "1.0"
    :static true}
-  ^Class [^Object x]
-  (throw "unimplemented")
-  #_(if (nil? x) x (. x (getClass))))
+  ^clojerl.Keyword [^Object x]
+  (if (nil? x) x (clj_core/type.e x)))
 
 (defn type
   "Returns the :type metadata of x, or its Class if none"
@@ -4131,28 +4130,28 @@
   "Returns the namespace named by the symbol or nil if it doesn't exist."
   {:added "1.0"
    :static true}
-  [sym] (clojure.lang.Namespace/find sym))
+  [sym] (clj_env/find_ns.e *env* sym true))
 
-(defn create-ns
+(defmacro create-ns
   "Create a new namespace named by the symbol if one doesn't already
   exist, returns it or the already-existing namespace of the same
   name."
   {:added "1.0"
    :static true}
-  [sym] (clojure.lang.Namespace/findOrCreate sym))
+  [sym] (clj_env/find_or_create_ns.e &env sym))
 
-(defn remove-ns
+(defmacro remove-ns
   "Removes the namespace named by the symbol. Use with caution.
   Cannot be used to remove the clojure namespace."
   {:added "1.0"
    :static true}
-  [sym] (clojure.lang.Namespace/remove sym))
+  [sym] (clj_env/remove_ns.e &env sym))
 
-(defn all-ns
+(defmacro all-ns
   "Returns a sequence of all namespaces."
   {:added "1.0"
    :static true}
-  [] (clojure.lang.Namespace/all))
+  [] (clj_env/all_ns.e &env))
 
 (defn the-ns
   "If passed a namespace, returns it. Else, when passed a symbol,
@@ -4199,7 +4198,8 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
+  {}
+  #_(throw "unimplemented")
   #_(let [ns (the-ns ns)]
     (filter-key val (fn [^clojerl.Var v] (and (instance? :clojerl.Var v)
                                  (= ns (.ns v))
@@ -4211,7 +4211,8 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
+  {}
+  #_(throw "unimplemented")
   #_(filter-key val (partial instance? Class) (ns-map ns)))
 
 (defn ns-interns
@@ -4219,7 +4220,8 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
+  {}
+  #_(throw "unimplemented")
   #_(let [ns (the-ns ns)]
     (filter-key val (fn [^clojure.lang.Var v] (and (instance? clojure.lang.Var v)
                                  (= ns (.ns v))))
@@ -4242,8 +4244,7 @@
   clashes. Use :use in the ns macro in preference to calling this directly."
   {:added "1.0"}
   [ns-sym & filters]
-  (throw "unimplemented")
-  #_(let [ns (or (find-ns ns-sym) (throw (str "No namespace: " ns-sym)))
+  (let [ns (or (find-ns ns-sym) (throw (str "No namespace: " ns-sym)))
         fs (apply hash-map filters)
         nspublics (ns-publics ns)
         rename (or (:rename fs) {})
@@ -4251,7 +4252,7 @@
         to-do (if (= :all (:refer fs))
                 (keys nspublics)
                 (or (:refer fs) (:only fs) (keys nspublics)))]
-    (when (and to-do (not (extends? :clojerl.Sequential to-do)))
+    (when (and to-do (not (extends? :clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
     (doseq [sym to-do]
       (when-not (exclude sym)
@@ -4260,7 +4261,7 @@
             (throw (if (get (ns-interns ns) sym)
                      (str sym " is not public")
                      (str sym " does not exist"))))
-          (. *ns* (refer (or (rename sym) sym) v)))))))
+          (clj_namespace/refer.e *ns* (or (rename sym) sym) v))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -5729,6 +5730,24 @@
          (finally
           (. clojure.lang.Var (popThreadBindings)))))))
 
+(defn maybe-unquote
+  [name]
+  (if (seq? name)
+    (if (= (first name) 'quote)
+      (second name)
+      name)
+    name))
+
+(defn in-ns
+  [name]
+  (let [name (maybe-unquote name)]
+    (if (symbol? name)
+      (let [res (clj_env/find_or_create_ns.e @#'*env* name)
+            env (erlang/element.e 2 res)]
+        (clj_core/set!.e #'*env* env)
+        nil)
+      (throw (str "First argument to in-ns must be a symbol, got: " (type name))))))
+
 (defmacro ns
   "Sets *ns* to the namespace named by name (unevaluated), creating it
   if needed.  references can be zero or more of: (:refer-clojure ...)
@@ -5779,26 +5798,27 @@
         references (remove #(= :gen-class (first %)) references)
         ;ns-effect (clojure.core/in-ns name)
         name-metadata (meta name)]
-    `(do
-       (clojure.core/in-ns '~name)
-       #_~@(when name-metadata
-             `((.resetMeta (clojure.lang.Namespace/find '~name) ~name-metadata)))
-       (with-loading-context
-         #_~@(when gen-class-call (list gen-class-call))
-         ~@(when (and (not= name 'clojure.core)
-                      (not-any? #(= :refer-clojure (first %)) references))
-             `((clojure.core/refer '~'clojure.core)))
-         ~@(map process-reference references))
-       #_(if (.equals '~name 'clojure.core)
-           nil
-           (do (dosync (commute @#'*loaded-libs* conj '~name)) nil)))))
 
+    (do
+      (in-ns name)
+      #_(when name-metadata
+          `((.resetMeta (clojure.lang.Namespace/find '~name) ~name-metadata)))
+      (with-loading-context
+        (when (and (not= name 'clojure.core)
+                   (not-any? #(= :refer-clojure (first %)) references))
+          (clojure.core/refer 'clojure.core))
+        (map process-reference references))
+      nil
+      #_(if (= '~name 'clojure.core)
+          nil
+          (do (dosync (commute @#'*loaded-libs* conj '~name)) nil))
+      )))
 
 (defmacro refer-clojure
   "Same as (refer 'clojure.core <filters>)"
   {:added "1.0"}
   [& filters]
-  `(clojure.core/refer '~'clojure.core ~@filters))
+  (apply refer 'clojure.core filters))
 
 (defmacro defonce
   "defs name to have the root value of the expr iff the named var has no root value,

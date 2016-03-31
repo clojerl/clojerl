@@ -115,8 +115,9 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok = ensure_module(Module),
+  ok     = ensure_module(Module),
   VarAst = erl_syntax:revert(erl_syntax:abstract(Var)),
+
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
@@ -124,7 +125,11 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         , add_functions(Module, Name, FnExpr, State)
         };
       _ ->
-        pop_ast(ast(InitExpr, State))
+        {V, S} = pop_ast(ast(InitExpr, State)),
+        case 'clojerl.Var':is_dynamic(Var) of
+          true  -> {var_val_function(V, VarAst), S};
+          false -> {V, S}
+        end
     end,
 
   ValClause = {clause, 0, [], [], [ValAst]},
@@ -626,3 +631,13 @@ do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= undefined ->
   do_shadow_depth(Shadowed, Depth + 1);
 do_shadow_depth(_, Depth) ->
   Depth.
+
+-spec var_val_function(ast(), ast()) -> ast().
+var_val_function(Val, VarAst) ->
+  TestAst            = application_mfa('clojerl.Var', dynamic_binding, [VarAst]),
+  UndefinedAtom      = {atom, 0, undefined},
+  UndefinedClauseAst = {clause, 0, [UndefinedAtom], [], [Val]},
+  XAtom              = {var, 0, x},
+  ValueClauseAst     = {clause, 0, [XAtom], [], [XAtom]},
+
+  {'case', 0, TestAst, [UndefinedClauseAst, ValueClauseAst]}.
