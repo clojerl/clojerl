@@ -154,19 +154,33 @@ str(_Config) ->
 
 -spec dynamic_bindings(config()) -> result().
 dynamic_bindings(_Config) ->
-  Ns   = <<"clojerl_Var_SUITE">>,
-  Name = <<"forty-two">>,
-  Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  Ns     = <<"clojerl_Var_SUITE">>,
+  Name   = <<"forty-two">>,
+  Var    = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  VarStr = clj_core:str(Var),
 
+  ct:comment("deref'd value should be the root binding"),
   42 = clj_core:deref(Var),
 
-  BindingsMap = #{Var => 84},
-  'clojerl.Var':push_bindings(BindingsMap),
+  ct:comment("deref'd value should be the dynamic binding"),
+  'clojerl.Var':push_bindings(#{Var => 84}),
 
   84 = clj_core:deref(Var),
 
+  clj_core:'set!'(Var, 85),
+
+  85 = clj_core:deref(Var),
+
+  #{VarStr := 85} = 'clojerl.Var':get_bindings(),
+
   'clojerl.Var':pop_bindings(),
 
+  #{} = 'clojerl.Var':get_bindings(),
+
   42 = clj_core:deref(Var),
+
+  ok = try clj_core:'set!'(Var, 43), error
+       catch _:<<"Can't change root binding">> -> ok
+       end,
 
   {comments, ""}.

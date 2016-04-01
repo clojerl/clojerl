@@ -20,10 +20,11 @@
         , process_args/3
         ]).
 
+-export([find/1]).
+
 -export([ push_bindings/1
         , pop_bindings/0
         , get_bindings/0
-        , find/1
         , dynamic_binding/1
         , dynamic_binding/2
         ]).
@@ -95,6 +96,7 @@ get_bindings() ->
     Bindings  -> clj_scope:to_map(Bindings)
   end.
 
+%% @doc Used by clojure.core/find-var
 -spec find('clojerl.Symbol':type()) -> 'clojerl.Var':type().
 find(Symbol) ->
   Ns   = clj_core:namespace(Symbol),
@@ -212,6 +214,4 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
                       end,
       Args1 ++ [RestFun(Rest)];
     _ -> Args
-  end;
-process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
-  process_args(Var, clj_core:seq_to_list(Args), RestFun).
+  end.

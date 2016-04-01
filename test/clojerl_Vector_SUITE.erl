@@ -7,6 +7,7 @@
         , str/1
         , is_sequential/1
         , invoke/1
+        , nth/1
         , seq/1
         , equiv/1
         , cons/1
@@ -80,6 +81,19 @@ invoke(_Config) ->
   ct:comment("Invoke a vector with two arguments"),
   ok = try clj_core:invoke(Vector, [1, 2]), error
        catch _:_ -> ok end,
+
+  {comments, ""}.
+
+-spec nth(config()) -> result().
+nth(_Config) ->
+  Vector = clj_core:vector([1, b, 3]),
+
+  1 = clj_core:nth(Vector, 0),
+  b = clj_core:nth(Vector, 1),
+  3 = clj_core:nth(Vector, 2),
+
+  3 = clj_core:nth(Vector, 2, not_found),
+  not_found = clj_core:nth(Vector, 42, not_found),
 
   {comments, ""}.
 
