@@ -4,7 +4,7 @@
                         , #{meta => #{ macro           => true
                                      , 'variadic?'     => true
                                      , max_fixed_arity => undefined
-                                     , variadic_arity  => 4
+                                     , variadic_arity  => 3
                                      }
                            }
                         }
@@ -60,7 +60,7 @@ ns__val() ->
   Meta = #{ macro           => true
           , 'variadic?'     => true
           , max_fixed_arity => undefined
-          , variadic_arity  => 4
+          , variadic_arity  => 3
           },
   clj_core:with_meta(Var, Meta).
 

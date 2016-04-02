@@ -99,10 +99,10 @@ get_bindings() ->
 %% @doc Used by clojure.core/find-var
 -spec find('clojerl.Symbol':type()) -> 'clojerl.Var':type().
 find(Symbol) ->
-  Ns   = clj_core:namespace(Symbol),
-  Name = clj_core:name(Symbol),
+  Ns     = clj_core:namespace(Symbol),
+  Name   = clj_core:name(Symbol),
 
-  NsAtom   = binary_to_atom(Ns, utf8),
+  NsAtom = binary_to_atom(Ns, utf8),
 
   case erlang:function_exported(NsAtom, module_info, 1) of
     true ->
@@ -209,7 +209,7 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
       Args;
     true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
       {Args1, Rest} = case VariadicArity < ArgCount of
-                        true -> lists:split(VariadicArity, Args);
+                        true  -> lists:split(VariadicArity, Args);
                         false -> {Args, []}
                       end,
       Args1 ++ [RestFun(Rest)];
