@@ -517,7 +517,7 @@ parse_if(Env, Form) ->
 
   IfExpr = #{ op   => 'if'
             , form => Form
-            , env  => ?DEBUG(Env3)
+            , env  => ?DEBUG(Env)
             , test => TestExpr
             , then => ThenExpr
             , else => ElseExpr
@@ -531,14 +531,14 @@ parse_if(Env, Form) ->
 
 -spec parse_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_let(Env, Form) ->
-  {LetExprExtra, _Env2} = analyze_let(Env, Form),
+  {LetExprExtra, Env1} = analyze_let(Env, Form),
   LetExpr = maps:merge(#{ op   => 'let'
                         , form => Form
-                        , env  => ?DEBUG(Env2)
+                        , env  => ?DEBUG(Env)
                         },
                        LetExprExtra),
 
-  clj_env:push_expr(Env, LetExpr).
+  clj_env:push_expr(Env1, LetExpr).
 
 -spec parse_loop(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_loop(Env, Form) ->
@@ -605,7 +605,7 @@ parse_binding({Name, Init}, Env) ->
              true  -> loop;
              false -> 'let'
            end,
-  {InitExpr, _} = clj_env:pop_expr(analyze_form(Env, Init)),
+  {InitExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Init)),
   BindExpr = #{ op     => binding
               , env    => ?DEBUG(Env)
               , name   => Name
@@ -615,7 +615,7 @@ parse_binding({Name, Init}, Env) ->
               , local  => OpAtom
               },
 
-  Env2 = clj_env:put_local(Env, Name, maps:remove(env, BindExpr)),
+  Env2 = clj_env:put_local(Env1, Name, maps:remove(env, BindExpr)),
   clj_env:push_expr(Env2, BindExpr).
 
 -spec validate_bindings('clojerl.List':type()) -> ok.
@@ -869,7 +869,7 @@ parse_throw(Env, List) ->
 
   Second = clj_core:second(List),
   ExceptionEnv = clj_env:context(Env, expr),
-  {ExceptionExpr, _} = clj_env:pop_expr(analyze_form(ExceptionEnv, Second)),
+  {ExceptionExpr, Env1} = clj_env:pop_expr(analyze_form(ExceptionEnv, Second)),
 
   ThrowExpr = #{ op        => throw
                , env       => ?DEBUG(Env3)
@@ -877,7 +877,7 @@ parse_throw(Env, List) ->
                , exception => ExceptionExpr
                },
 
-  clj_env:push_expr(Env, ThrowExpr).
+  clj_env:push_expr(Env1, ThrowExpr).
 
 %%------------------------------------------------------------------------------
 %% Parse try
