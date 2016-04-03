@@ -542,17 +542,20 @@ parse_let(Env, Form) ->
 
 -spec parse_loop(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_loop(Env, Form) ->
-  LoopId = clj_core:gensym(<<"loop_">>),
+  LoopId    = clj_core:gensym(<<"loop_">>),
+  OldLoopId = clj_env:get(Env, loop_id),
   Env1 = clj_env:put(Env, loop_id, {loop, LoopId}),
+
   {LoopExprExtra, Env2} = analyze_let(Env1, Form),
   LoopExpr = maps:merge(#{ op      => loop
                          , form    => Form
-                         , env     => ?DEBUG(Env2)
+                         , env     => ?DEBUG(Env)
                          , loop_id => LoopId
                          },
                         LoopExprExtra),
 
-  clj_env:push_expr(Env2, LoopExpr).
+  Env3 = clj_env:put(Env2, loop_id, OldLoopId),
+  clj_env:push_expr(Env3, LoopExpr).
 
 -spec analyze_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_let(Env, Form) ->
