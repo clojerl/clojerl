@@ -15,6 +15,7 @@
         , find_ns/2
         , find_ns/3
         , resolve_ns/2
+        , remove_ns/2
 
         , add_locals_scope/1
         , remove_locals_scope/1
@@ -155,6 +156,16 @@ resolve_ns(Env, SymNs) ->
       find_ns(Env, AliasedNsSym);
     Ns ->
       Ns
+  end.
+
+-spec remove_ns(env(), 'clojerl.Symbol':type()) -> env().
+remove_ns(Env, SymNs) ->
+  case find_ns(Env, SymNs) of
+    undefined -> Env;
+    _ ->
+      #{namespaces := Namespaces} = Env,
+      NewNamespaces = maps:remove(clj_core:str(SymNs), Namespaces),
+      Env#{namespaces := NewNamespaces}
   end.
 
 -spec add_locals_scope(env()) -> env().

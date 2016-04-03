@@ -7,9 +7,11 @@
         , parse_number/1
         , parse_symbol/1
         , desugar_meta/1
+
         , binary_append/2
         , binary_join/2
         , ends_with/2
+
         , error/1
         , throw/1
         , throw/2
@@ -17,13 +19,16 @@
         , throw_when/3
         , warn_when/2
         , warn_when/3
+
         , group_by/2
-        , trace_while/2
+
+        , trace_while/4
         , time/1
         , time/2
         , time/3
         , bench/3
         , bench/4
+
         , code_from_binary/1
         ]).
 
@@ -229,8 +234,8 @@ group_by(GroupBy, List) ->
   ReverseValue = fun(_, V) -> lists:reverse(V) end,
   maps:map(ReverseValue, Map).
 
--spec trace_while(string(), function()) -> ok.
-trace_while(Filename, Fun) ->
+-spec trace_while(string(), function(), [module()], timeout()) -> ok.
+trace_while(Filename, Fun, Modules, Timeout) ->
   Self = self(),
   F = fun() ->
           Self ! start,
@@ -243,14 +248,16 @@ trace_while(Filename, Fun) ->
   after 1000 -> throw(<<"Fun never started">>)
   end,
 
-  eep:start_file_tracing(Filename),
+  Timestamp = integer_to_list(erlang:monotonic_time()),
+  FilenameUnique = Filename ++ Timestamp,
+  eep:start_file_tracing(FilenameUnique, [], Modules),
 
   receive stop -> ok
-  after 5000 -> ok
+  after Timeout -> ok
   end,
 
   eep:stop_tracing(),
-  eep:convert_tracing(Filename).
+  eep:convert_tracing(FilenameUnique).
 
 -spec time(function()) -> ok.
 time(Fun) when is_function(Fun) ->

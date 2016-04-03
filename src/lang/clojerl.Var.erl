@@ -12,6 +12,7 @@
 -export([ new/2
         , is_dynamic/1
         , is_macro/1
+        , has_root/1
         ]).
 
 -export([ function/1
@@ -53,10 +54,15 @@ is_dynamic(#?TYPE{name = ?M}) ->
   false.
 
 -spec is_macro(type()) -> boolean().
-
 is_macro(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
   maps:get(macro, Meta, false);
 is_macro(#?TYPE{name = ?M}) ->
+  false.
+
+-spec has_root(type()) -> boolean().
+has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+  maps:get(has_root, Meta, false);
+has_root(#?TYPE{name = ?M}) ->
   false.
 
 -spec module(type()) -> atom().
