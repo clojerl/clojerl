@@ -1,11 +1,12 @@
 PROJECT = clojerl
 
-SHELL_DEPS = sync eep
+SHELL_DEPS = sync eep eper
 TEST_DEPS = xref_runner
 COVER_SPEC = test/clojerl.spec
 
 dep_sync        = git https://github.com/jfacorro/sync.git jfacorro.clj_support
 dep_eep         = git https://github.com/virtan/eep v1.1
+dep_eper        = git https://github.com/massemanet/eper 0.97.3
 dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.5
 
 include erlang.mk
