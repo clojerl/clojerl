@@ -80,11 +80,13 @@ seq(_Config) ->
   1 = clj_core:first(LazySeq1),
   true = undefined =/= clj_core:next(LazySeq1),
   [] = clj_core:seq2(clj_core:rest(LazySeq1)),
+  undefined = clj_core:seq(clj_core:rest(LazySeq1)),
 
   LazySeq0  = range(1, 0),
   undefined = clj_core:first(LazySeq0),
   true      = undefined =/= clj_core:next(LazySeq0),
   true      = undefined =/= clj_core:rest(LazySeq0),
+  undefined = clj_core:seq(clj_core:rest(LazySeq0)),
 
   {comments, ""}.
 

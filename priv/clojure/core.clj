@@ -2256,7 +2256,7 @@
   ([ref]
    (if (extends? :clojerl.IDeref ref)
      (clj_core/deref.e ref)
-     (throw "unimplemented")
+     (throw (str "unimplemented deref for type " (type ref)))
      #_(deref-future ref)))
   ([ref timeout-ms timeout-val]
    (throw "unimplemented")
@@ -2774,7 +2774,6 @@
             (cons f (filter pred r))
             (filter pred r))))))))
 
-
 (defn remove
   "Returns a lazy sequence of the items in coll for which
   (pred item) returns false. pred must be free of side-effects.
@@ -2937,7 +2936,9 @@
   "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
   {:added "1.0"
    :static true}
-  [coll] (clojure.lang.Cycle/create (seq coll)))
+  [coll] (lazy-seq
+          (when-let [s (seq coll)]
+            (concat s (cycle s)))))
 
 (defn split-at
   "Returns a vector of [(take n coll) (drop n coll)]"
@@ -2957,8 +2958,8 @@
   "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
   {:added "1.0"
    :static true}
-  ([x] (clojure.lang.Repeat/create x))
-  ([n x] (clojure.lang.Repeat/create n x)))
+  ([x] (lazy-seq (cons x (repeat x))))
+  ([n x] (take n (repeat x))))
 
 (defn replicate
   "DEPRECATED: Use 'repeat' instead.
@@ -2971,7 +2972,7 @@
   "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of side-effects"
   {:added "1.0"
    :static true}
-  [f x] (clojure.lang.Iterate/create f x) )
+  [f x] (cons x (lazy-seq (iterate f (f x)))))
 
 (defn range
   "Returns a lazy seq of nums from start (inclusive) to end
@@ -2980,14 +2981,24 @@
   start. When start is equal to end, returns empty list."
   {:added "1.0"
    :static true}
-  ([]
-   (iterate inc' 0))
-  ([end]
-   (clojure.lang.Range/create end))
-  ([start end]
-   (clojure.lang.Range/create start end))
+  ([] (range 0 999999999999 1))
+  ([end] (range 0 end 1))
+  ([start end] (range start end 1))
   ([start end step]
-   (clojure.lang.Range/create start end step)))
+   (lazy-seq
+    (let [b (chunk-buffer 32)
+          comp (cond (or (zero? step) (= start end)) not=
+                     (pos? step) <
+                     (neg? step) >)]
+      (loop [i start]
+        (if (and (< (count b) 32)
+                 (comp i end))
+          (do
+            (chunk-append b i)
+            (recur (+ i step)))
+          (chunk-cons (chunk b)
+                      (when (comp i end)
+                        (range i end step)))))))))
 
 (defn merge
   "Returns a map that consists of the rest of the maps conj-ed onto
@@ -3716,7 +3727,8 @@
      (apply pr more))))
 
 (def ^:private ^String system-newline
-     (System/getProperty "line.separator"))
+  (let [os-family (first (os/type.e))]
+    (if (= os-family :win32) "\r\n" "\n")))
 
 (defn newline
   "Writes a platform-specific newline to *out*"
@@ -4132,26 +4144,28 @@
    :static true}
   [sym] (clj_env/find_ns.e *env* sym true))
 
-(defmacro create-ns
+(defn create-ns
   "Create a new namespace named by the symbol if one doesn't already
   exist, returns it or the already-existing namespace of the same
   name."
   {:added "1.0"
    :static true}
-  [sym] (clj_env/find_or_create_ns.e &env sym))
+  [sym]
+  (clj_core/set!.e #'*env* (clj_env/find_or_create_ns.e *env* sym)))
 
-(defmacro remove-ns
+(defn remove-ns
   "Removes the namespace named by the symbol. Use with caution.
   Cannot be used to remove the clojure namespace."
   {:added "1.0"
    :static true}
-  [sym] (clj_env/remove_ns.e &env sym))
+  [sym]
+  (clj_core/set!.e #'*env* (clj_env/remove_ns.e *env* sym)))
 
-(defmacro all-ns
+(defn all-ns
   "Returns a sequence of all namespaces."
   {:added "1.0"
    :static true}
-  [] (clj_env/all_ns.e &env))
+  [] (clj_env/all_ns.e *env*))
 
 (defn the-ns
   "If passed a namespace, returns it. Else, when passed a symbol,
@@ -4163,7 +4177,7 @@
   (throw "unimplemented")
   #_(if (instance? :clojerl.Namespace x)
     x
-    (or (find-ns x) (throw (Exception. (str "No namespace: " x " found"))))))
+    (or (find-ns x) (throw (str "No namespace: " x " found")))))
 
 (defn ns-name
   "Returns the name of the namespace, a symbol."
@@ -5006,8 +5020,6 @@
                    xs seen)))]
      (step coll #{}))))
 
-
-
 (defn replace
   "Given a map of replacement pairs and a vector/collection, returns a
   vector/seq with any elements = a key in smap replaced with the
@@ -5111,9 +5123,7 @@
    :deprecated "1.1"}
   [url]
   (println "WARNING: add-classpath is deprecated")
-  (clojure.lang.RT/addURL url))
-
-
+  (code/add_patha.e (erlang/binary_to_list.e url)))
 
 (defn hash
   "Returns the hash code of its argument. Note this is the hash code
@@ -5125,7 +5135,6 @@
   [x]
   (throw "unimplemented")
   #_(. clojure.lang.Util (hasheq x)))
-
 
 (defn mix-collection-hash
   "Mix final collection hash for ordered or unordered collections.
@@ -5707,9 +5716,10 @@
   string syntax"
   {:added "1.0"
    :static true}
-  ^String [fmt & args]
-  (io_lib/format.e fmt args)
-  #_(String/format fmt (to-array args)))
+  ^clojerl.String [fmt & args]
+  (->> (clj_core/seq_to_list.e args)
+       (io_lib/format.e fmt)
+       erlang/list_to_binary.e))
 
 (defn printf
   "Prints formatted output, as per format"
@@ -5743,7 +5753,7 @@
   (let [name (maybe-unquote name)]
     (if (symbol? name)
       (let [res (clj_env/find_or_create_ns.e @#'*env* name)
-            env (erlang/element.e 2 res)]
+            env (second res)]
         (clj_core/set!.e #'*env* env)
         nil)
       (throw (str "First argument to in-ns must be a symbol, got: " (type name))))))
@@ -5774,10 +5784,11 @@
   [name & references]
   (let [process-reference
         (fn [all-args]
-          (let [kname (first all-args)
-                args  (rest all-args)]
-            `(~(symbol "clojure.core" (clojure.core/name kname))
-              ~@(map #(list 'quote %) args))))
+          (let [kname    (first all-args)
+                args     (rest all-args)
+                name-str (clojure.core/name kname)
+                name-sym (symbol "clojure.core" (str name-str "*"))]
+            (apply (find-var name-sym) args)))
         docstring  (when (string? (first references)) (first references))
         references (if docstring (next references) references)
         name (if docstring
@@ -5798,7 +5809,6 @@
         references (remove #(= :gen-class (first %)) references)
         ;ns-effect (clojure.core/in-ns name)
         name-metadata (meta name)]
-
     (do
       (in-ns name)
       #_(when name-metadata
@@ -5807,7 +5817,7 @@
         (when (and (not= name 'clojure.core)
                    (not-any? #(= :refer-clojure (first %)) references))
           (clojure.core/refer 'clojure.core))
-        (map process-reference references))
+        (doall (map process-reference references)))
       nil
       #_(if (= '~name 'clojure.core)
           nil
@@ -5826,10 +5836,54 @@
   {:added "1.0"}
   [name expr]
   `(let [v# (def ~name)]
-     (when-not (.hasRoot v#)
+     (when-not (clojerl.Var/has_root.e v#)
        (def ~name ~expr))))
 
 ;;;;;;;;;;; require/use/load, contributed by Stephen C. Gilardi ;;;;;;;;;;;;;;;;;;
+
+(defonce
+  ^{:dynamic true
+    :private true
+    :doc "A ref to a sorted set of symbols representing loaded libs"}
+  *loaded-libs* #{})
+
+(defonce ^:dynamic
+  ^{:private true
+    :doc "A stack of paths currently being loaded by this thread"}
+  *pending-paths* ())
+
+(defonce ^:dynamic
+  ^{:private true :doc
+    "True while a verbose load is pending"}
+  *loading-verbosely* false)
+
+(defn- throw-if
+  "Throws a CompilerException with a message if pred is true"
+  [pred fmt & args]
+  (when pred
+    (let [message   (apply format fmt args)
+          raw-trace (try (throw :ex) (catch :throw ex (erlang/get_stacktrace.e)))
+          ;;boring?   #(not= (.getMethodName %) "doInvoke")
+          ;;trace (into-array (drop 2 (drop-while boring? raw-trace)))
+          ]
+      ;;(.setStackTrace exception trace)
+      (erlang/raise.e :error message raw-trace))))
+
+(defn- libspec?
+  "Returns true if x is a libspec"
+  [x]
+  (or (symbol? x)
+      (and (vector? x)
+           (or
+            (nil? (second x))
+            (keyword? (second x))))))
+
+(defn- prependss
+  "Prepends a symbol or a seq to coll"
+  [x coll]
+  (if (symbol? x)
+    (cons x coll)
+    (concat x coll)))
 
 (defn- root-resource
   "Returns the root directory path for a lib"
@@ -5837,6 +5891,12 @@
   [lib]
   (str "/"
        (binary/replace.e (name lib) "." "/" (seq [:global]))))
+
+(defn- index-of [s x]
+  (let [matches (binary/matches.e s x)]
+    (if (seq matches)
+      (ffirst matches)
+      -1)))
 
 (defn- last-index-of [s x]
   (let [matches (binary/matches.e s x)]
@@ -5849,6 +5909,116 @@
   [lib]
   (let [d (root-resource lib)]
     (subs d 0 (last-index-of d "/"))))
+
+(def ^:declared ^:redef load)
+
+(defn- load-one
+  "Loads a lib given its name. If need-ns, ensures that the associated
+  namespace exists after loading. If require, records the load so any
+  duplicate loads can be skipped."
+  [lib need-ns require]
+  (load (root-resource lib))
+  (throw-if (and need-ns (not (find-ns lib)))
+            "namespace '%s' not found after loading '%s'"
+            lib (root-resource lib))
+  (when require
+    (clj_core/set!.e #'*loaded-libs* (conj *loaded-libs* lib))))
+
+(defn- load-all
+  "Loads a lib given its name and forces a load of any libs it directly or
+  indirectly loads. If need-ns, ensures that the associated namespace
+  exists after loading. If require, records the load so any duplicate loads
+  can be skipped."
+  [lib need-ns require]
+  (clj_core/set!.e #'*loaded-libs*
+                   (reduce1 conj
+                            *loaded-libs*
+                            (binding [*loaded-libs* (sorted-set)]
+                              (load-one lib need-ns require)
+                              @*loaded-libs*))))
+
+(defn- load-lib
+  "Loads a lib with options"
+  [prefix lib & options]
+  (throw-if (and prefix (pos? (index-of (name lib) "\\.")))
+            "Found lib name '%s' containing period with prefix '%s'.  lib names inside prefix lists must not contain periods"
+            (name lib) prefix)
+  (let [lib (if prefix (symbol (str prefix \. lib)) lib)
+        opts (apply hash-map options)
+        as         (:as opts)
+        reload     (:reload opts)
+        reload-all (:reload-all opts)
+        require    (:require opts)
+        use        (:use opts)
+        verbose    (:verbose opts)
+        loaded (contains? @#'*loaded-libs* lib)
+        load (cond reload-all
+                   load-all
+                   (or reload (not require) (not loaded))
+                   load-one)
+        need-ns (or as use)
+        filter-opts (select-keys opts '(:exclude :only :rename :refer))
+        undefined-on-entry (not (find-ns lib))]
+    (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
+      (if load
+        (try
+          (load lib need-ns require)
+          (catch :throw e
+            (when undefined-on-entry
+              (remove-ns lib))
+            (throw e)))
+        (throw-if (and need-ns (not (find-ns lib)))
+                  "namespace '%s' not found" lib))
+      (when (and need-ns *loading-verbosely*)
+        (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
+      (when as
+        (when *loading-verbosely*
+          (printf "(clojure.core/alias '%s '%s)\n" as lib))
+        (alias as lib))
+      (when (or use (:refer filter-opts))
+        (when *loading-verbosely*
+          (printf "(clojure.core/refer '%s" lib)
+          (doseq [opt filter-opts]
+            (printf " %s '%s" (key opt) (print-str (val opt))))
+          (printf ")\n"))
+        (apply refer lib (mapcat seq filter-opts))))))
+
+(defn- load-libs
+  "Loads libs, interpreting libspecs, prefix lists, and flags for
+  forwarding to load-lib"
+  [& args]
+  (let [flags (filter keyword? args)
+        opts (interleave flags (repeat true))
+        args (filter (complement keyword?) args)]
+    ; check for unsupported options
+    (let [supported #{:as :reload :reload-all :require :use :verbose :refer}
+          unsupported (seq (remove supported flags))]
+      (throw-if unsupported
+                (apply str "Unsupported option(s) supplied: "
+                       (interpose "," unsupported))))
+    ; check a load target was specified
+    (throw-if (not (seq args)) "Nothing specified to load")
+    (doseq [arg args]
+      (if (libspec? arg)
+        (apply load-lib nil (prependss arg opts))
+        (let [prefix (first arg)
+              args   (rest arg)]
+          (throw-if (nil? prefix) "prefix cannot be nil")
+          (doseq [arg args]
+            (apply load-lib prefix (prependss arg opts))))))))
+
+(defn- check-cyclic-dependency
+  "Detects and rejects non-trivial cyclic load dependencies. The
+  exception message shows the dependency chain with the cycle
+  highlighted. Ignores the trivial case of a file attempting to load
+  itself because that can occur when a gen-class'd class loads its
+  implementation."
+  [path]
+  (when (some #{path} (rest *pending-paths*))
+    (let [pending (map #(if (= % path) (str "[ " % " ]") %)
+                       (cons path *pending-paths*))
+          chain (apply str (interpose "->" pending))]
+      (throw-if true "Cyclic load dependency: %s" chain))))
 
 (defn load
   "Loads Clojure code from resources in the code path. A path is interpreted
@@ -5865,12 +6035,16 @@
         (clj_core/load.e (subs path 1))
         (recur (next paths))))))
 
-(defn- load-libs
+#_(defn- load-libs
   [& libs]
   (loop [libs libs]
     (when libs
       (load (root-resource (first libs)))
       (recur (next libs)))))
+
+(defn require*
+  [& args]
+  (apply load-libs #_:require args))
 
 (defmacro require
   "Loads libs, skipping any that are already loaded. Each argument is
@@ -5921,7 +6095,7 @@
   {:added "1.0"}
 
   [& args]
-  (apply load-libs #_ :require args))
+  (apply require* args))
 
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------

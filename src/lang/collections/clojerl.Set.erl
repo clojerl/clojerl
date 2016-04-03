@@ -3,8 +3,9 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.Counted').
--behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
+-behavior('clojerl.IEquiv').
+-behavior('clojerl.IFn').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.Seqable').
@@ -16,6 +17,7 @@
         , 'clojerl.IColl.empty'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -59,6 +61,17 @@ new(Values) when is_list(Values) ->
   clj_core:equiv(X, Y);
 'clojerl.IEquiv.equiv'(_, _) ->
   false.
+
+%% clojerl.IFn
+
+'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
+  case clj_core:get(MapSet, Item) of
+    true      -> Item;
+    undefined -> undefined
+  end;
+'clojerl.IFn.invoke'(_, Args) ->
+  CountBin = integer_to_binary(length(Args)),
+  throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
 
 %% clojerl.IMeta
 
