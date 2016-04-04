@@ -6106,11 +6106,3 @@
   [& xs]
   (io/format.e "~s~n" (seq [(apply str xs)]))
   nil)
-
-(defn =
-  [a b]
-  (erlang/==.2 a b))
-
-(defmacro assert
-  [v]
-  (when (not v) (throw :assert)))

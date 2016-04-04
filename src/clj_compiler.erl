@@ -21,16 +21,18 @@
 -type clj_flag() :: 'no-warn-symbol-as-erl-fun'
                   | 'no-warn-dynamic-var-name'.
 
--type options() :: #{ output_dir => string()
-                    , erl_flags  => [atom()]
-                    , clj_flags  => [clj_flag()]
+-type options() :: #{ output_dir  => string()
+                    , erl_flags   => [atom()]
+                    , clj_flags   => [clj_flag()]
+                    , reader_opts => map()
+                    , verbose     => boolean()
                     }.
 
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
 
--spec default_options() -> map().
+-spec default_options() -> options().
 default_options() ->
   #{ output_dir  => "ebin"
    , erl_flags   => [ debug_info
@@ -42,6 +44,7 @@ default_options() ->
                     ]
    , clj_flags   => []
    , reader_opts => #{}
+   , verbose     => false
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().
@@ -68,9 +71,10 @@ compile_file(File, Opts) when is_binary(File) ->
 
 -spec compile_file(file:filename_all(), options(), clj_env:env()) ->
   clj_env:env().
-compile_file(File, Opts, Env) when is_binary(File) ->
+compile_file(File, Opts0, Env) when is_binary(File) ->
   case file:read_file(File) of
     {ok, Src} ->
+      Opts        = maps:merge(default_options(), Opts0),
       Filename    = filename:basename(File),
       FilenameStr = binary_to_list(Filename),
       ErlFlags    = maps:get(erl_flags, Opts, []),
@@ -78,6 +82,7 @@ compile_file(File, Opts, Env) when is_binary(File) ->
       Opts1       = Opts#{ erl_flags   => [{source, FilenameStr} | ErlFlags]
                          , reader_opts => ReaderOpts#{file => Filename}
                          },
+      when_verbose(Opts1, <<"Compiling ", File/binary, "\n">>),
       compile(Src, Opts1, Env);
     Error ->
       throw(Error)
@@ -252,3 +257,9 @@ eval_expressions(Expressions) ->
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().
 ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).
+
+-spec when_verbose(options(), binary()) -> ok.
+when_verbose(#{verbose := true}, Message) ->
+  io:format(Message);
+when_verbose(_, _) ->
+  ok.

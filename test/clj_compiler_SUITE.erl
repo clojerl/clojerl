@@ -39,38 +39,42 @@ compile(_Config) ->
 
 -spec compile_file(config()) -> result().
 compile_file(_Config) ->
+  Opts = #{verbose => true},
+
   ct:comment("Compile a file and check a var's value by deref'ing it"),
   SimplePath = relative_path(<<"priv/examples/simple.clj">>),
-  Env = clj_compiler:compile_file(SimplePath),
+  Env = clj_compiler:compile_file(SimplePath, Opts),
   check_var_value(Env, <<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile an invalid file"),
   ErrorPath = relative_path(<<"priv/examples/error.clj">>),
   ok = try
-         clj_compiler:compile_file(ErrorPath), error
+         clj_compiler:compile_file(ErrorPath, Opts), error
        catch
          _:<<"error.clj:", _/binary>> -> ok
        end,
 
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath = relative_path(<<"priv/examples/abcdef_42.clj">>),
-  ok = try clj_compiler:compile_file(NotExistsPath), error
+  ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
        catch _:_ -> ok end,
 
   {comments, ""}.
 
 -spec compile_files(config()) -> result().
 compile_files(_Config) ->
+  Opts = #{verbose => true},
+
   ct:comment("Compile all priv/clojure/*.clj files succesfully"),
   Wildcard1 = relative_path(<<"priv/clojure/*.clj">>),
   Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
   FilesBin1 = lists:map(fun erlang:list_to_binary/1, Files1),
-  _Env1 = clj_compiler:compile_files(FilesBin1),
+  _Env1 = clj_compiler:compile_files(FilesBin1, Opts),
 
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath  = relative_path(<<"priv/examples/simple.clj">>),
   Simple2Path = relative_path(<<"priv/examples/simple-2.clj">>),
-  Env = clj_compiler:compile_files([SimplePath, Simple2Path]),
+  Env = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
 
   check_var_value(Env, <<"examples.simple-2">>, <<"x">>, 1),
 
@@ -79,7 +83,7 @@ compile_files(_Config) ->
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
   ErrorPath = relative_path(<<"priv/examples/error.clj">>),
   FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],
-  _Env2 = clj_compiler:compile_files(FilesBin2),
+  _Env2 = clj_compiler:compile_files(FilesBin2, Opts),
 
   {comments, ""}.
 

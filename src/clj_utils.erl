@@ -288,7 +288,6 @@ repeat_tc(Fun, Args, Trials) ->
     {Time, _} = timer:tc(fun() -> Repeat(Trials) end),
     {Time, Trials}.
 
-
 print_result(Name, {Time, Trials}) ->
     io:format("~s: ~.3f ms (~.2f per second)~n",
               [Name, (Time / 1000) / Trials, Trials / (Time / 1000000)]).
