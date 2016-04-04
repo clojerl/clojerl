@@ -6022,31 +6022,11 @@
           chain (apply str (interpose "->" pending))]
       (throw-if true "Cyclic load dependency: %s" chain))))
 
-(defn load
-  "Loads Clojure code from resources in the code path. A path is interpreted
-  as code path-relative if it begins with a slash or relative to the root
-  directory for the current namespace otherwise."
-  [& paths]
-  (loop [paths paths]
-    (when paths
-      (let [path (first paths)
-            path (if (clojerl.String/starts_with.e path "/")
-                   path
-                   (throw "unimplemented")
-                   #_(str (root-directory (name *ns*)) "/" path))]
-        (clj_core/load.e (subs path 1))
-        (recur (next paths))))))
-
-#_(defn- load-libs
-  [& libs]
-  (loop [libs libs]
-    (when libs
-      (load (root-resource (first libs)))
-      (recur (next libs)))))
+;; Public
 
 (defn require*
   [& args]
-  (apply load-libs #_:require args))
+  (apply load-libs :require args))
 
 (defmacro require
   "Loads libs, skipping any that are already loaded. Each argument is
@@ -6098,6 +6078,309 @@
 
   [& args]
   (apply require* args))
+
+(defn use
+  "Like 'require, but also refers to each lib's namespace using
+  clojure.core/refer. Use :use in the ns macro in preference to calling
+  this directly.
+
+  'use accepts additional options in libspecs: :exclude, :only, :rename.
+  The arguments and semantics for :exclude, :only, and :rename are the same
+  as those documented for clojure.core/refer."
+  {:added "1.0"}
+  [& args] (apply load-libs :require :use args))
+
+(defn loaded-libs
+  "Returns a sorted set of symbols naming the currently loaded libs"
+  {:added "1.0"}
+  [] @#'*loaded-libs*)
+
+(defn load
+  "Loads Clojure code from resources in the code path. A path is interpreted
+  as code path-relative if it begins with a slash or relative to the root
+  directory for the current namespace otherwise."
+  [& paths]
+  (doseq [path paths]
+    (let [path (if (clojerl.String/starts_with.e path "/")
+                 path
+                 (throw "unimplemented")
+                 #_(str (root-directory (name *ns*)) "/" path))]
+      (when *loading-verbosely*
+        (printf "(clojure.core/load \"%s\")\n" path)
+        (flush))
+      (check-cyclic-dependency path)
+      (when-not (= path (first *pending-paths*))
+        (binding [*pending-paths* (conj *pending-paths* path)]
+          (clj_core/load.e (subs path 1)))))))
+
+(defn compile
+  "Compiles the namespace named by the symbol lib into a set of
+  classfiles. The source for the lib must be in a proper
+  classpath-relative directory. The output files will go into the
+  directory specified by *compile-path*, and that directory too must
+  be in the classpath."
+  {:added "1.0"}
+  [lib]
+  (binding [*compile-files* true]
+    (load-one lib true true))
+  lib)
+
+;;;;;;;;;;;;; nested associative ops ;;;;;;;;;;;
+
+(defn get-in
+  "Returns the value in a nested associative structure,
+  where ks is a sequence of keys. Returns nil if the key
+  is not present, or the not-found value if supplied."
+  {:added "1.2"
+   :static true}
+  ([m ks]
+     (reduce1 get m ks))
+  ([m ks not-found]
+     (loop [sentinel (erlang/make_ref.e)
+            m m
+            ks (seq ks)]
+       (if ks
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
+             not-found
+             (recur sentinel m (next ks))))
+         m))))
+
+
+(defn assoc-in
+  "Associates a value in a nested associative structure, where ks is a
+  sequence of keys and v is the new value and returns a new nested structure.
+  If any levels do not exist, hash-maps will be created."
+  {:added "1.0"
+   :static true}
+  [m ks v]
+  (let [k  (first ks)
+        ks (rest ks)]
+    (if ks
+      (assoc m k (assoc-in (get m k) ks v))
+      (assoc m k v))))
+
+(defn update-in
+  "'Updates' a value in a nested associative structure, where ks is a
+  sequence of keys and f is a function that will take the old value
+  and any supplied args and return the new value, and returns a new
+  nested structure.  If any levels do not exist, hash-maps will be
+  created."
+  {:added "1.0"
+   :static true}
+  ([m ks f & args]
+   (let [k  (first ks)
+         ks (rest ks)]
+     (if ks
+       (assoc m k (apply update-in (get m k) ks f args))
+       (assoc m k (apply f (get m k) args))))))
+
+(defn update
+  "'Updates' a value in an associative structure, where k is a
+  key and f is a function that will take the old value
+  and any supplied args and return the new value, and returns a new
+  structure.  If the key does not exist, nil is passed as the old value."
+  {:added "1.7"
+   :static true}
+  ([m k f]
+   (assoc m k (f (get m k))))
+  ([m k f x]
+   (assoc m k (f (get m k) x)))
+  ([m k f x y]
+   (assoc m k (f (get m k) x y)))
+  ([m k f x y z]
+   (assoc m k (f (get m k) x y z)))
+  ([m k f x y z & more]
+   (assoc m k (apply f (get m k) x y z more))))
+
+(defn empty?
+  "Returns true if coll has no items - same as (not (seq coll)).
+  Please use the idiom (seq x) rather than (not (empty? x))"
+  {:added "1.0"
+   :static true}
+  [coll] (not (seq coll)))
+
+(defn coll?
+  "Returns true if x implements IPersistentCollection"
+  {:added "1.0"
+   :static true}
+  [x] (extends? :clojerl.IColl x))
+
+(defn list?
+  "Returns true if x implements IPersistentList"
+  {:added "1.0"
+   :static true}
+  [x] (or  (instance? :clojerl.List x)
+           (instance? :clojerl.erlang.List x)))
+
+(defn ifn?
+  "Returns true if x implements IFn. Note that many data structures
+  (e.g. sets and maps) implement IFn"
+  {:added "1.0"
+   :static true}
+  [x] (extends? :clojerl.IFn x))
+
+(defn fn?
+  "Returns true if x implements Fn, i.e. is an object created via fn."
+  {:added "1.0"
+   :static true}
+  [x] (extends? :clojerl.erlang.Fn x))
+
+(defn associative?
+ "Returns true if coll implements Associative"
+ {:added "1.0"
+  :static true}
+  [coll] (extends? :clojerl.Associative coll))
+
+(defn sequential?
+ "Returns true if coll implements Sequential"
+ {:added "1.0"
+  :static true}
+  [coll] (extends? :clojerl.ISequential coll))
+
+(defn sorted?
+ "Returns true if coll implements Sorted"
+ {:added "1.0"
+   :static true}
+  [coll] (extends? :clojerl.Sorted coll))
+
+(defn counted?
+ "Returns true if coll implements count in constant time"
+ {:added "1.0"
+   :static true}
+  [coll] (extends? :clojerl.Counted coll))
+
+(defn reversible?
+ "Returns true if coll implements Reversible"
+ {:added "1.0"
+   :static true}
+  [coll] (extends? :clojerl.Reversible coll))
+
+(def ^:dynamic
+ ^{:doc "bound in a repl thread to the most recent value printed"
+   :added "1.0"}
+ *1)
+
+(def ^:dynamic
+ ^{:doc "bound in a repl thread to the second most recent value printed"
+   :added "1.0"}
+ *2)
+
+(def ^:dynamic
+ ^{:doc "bound in a repl thread to the third most recent value printed"
+   :added "1.0"}
+ *3)
+
+(def ^:dynamic
+ ^{:doc "bound in a repl thread to the most recent exception caught by the repl"
+   :added "1.0"}
+ *e)
+
+(defn trampoline
+  "trampoline can be used to convert algorithms requiring mutual
+  recursion without stack consumption. Calls f with supplied args, if
+  any. If f returns a fn, calls that fn with no arguments, and
+  continues to repeat, until the return value is not a fn, then
+  returns that non-fn value. Note that if you want to return a fn as a
+  final value, you must wrap it in some data structure and unpack it
+  after trampoline returns."
+  {:added "1.0"
+   :static true}
+  ([f]
+   (throw "unimplemented, not needed"))
+  ([f & args]
+   (throw "unimplemented, not needed")))
+
+(defn intern
+  "Finds or creates a var named by the symbol name in the namespace
+  ns (which can be a symbol or a namespace), setting its root binding
+  to val if supplied. The namespace must exist. The var will adopt any
+  metadata from the name symbol.  Returns the var."
+  {:added "1.0"
+   :static true}
+  ([ns ^clojure.lang.Symbol name]
+   (throw "unimplemented")
+   #_(let [v (clojure.lang.Var/intern (the-ns ns) name)]
+     (when (meta name) (.setMeta v (meta name)))
+     v))
+  ([ns name val]
+   (throw "unimplemented")
+   #_(let [v (clojure.lang.Var/intern (the-ns ns) name val)]
+     (when (meta name) (.setMeta v (meta name)))
+     v)))
+
+(defmacro while
+  "Repeatedly executes body while test expression is true. Presumes
+  some side-effect will cause test to become false/nil. Returns nil"
+  {:added "1.0"}
+  [test & body]
+  `(loop []
+     (when ~test
+       ~@body
+       (recur))))
+
+(defn memoize
+  "Returns a memoized version of a referentially transparent function. The
+  memoized version of the function keeps a cache of the mapping from arguments
+  to results and, when calls with the same arguments are repeated often, has
+  higher performance at the expense of higher memory use."
+  {:added "1.0"
+   :static true}
+  [f]
+  (let [mem (atom {})]
+    (fn [& args]
+      (if-let [e (find @mem args)]
+        (val e)
+        (let [ret (apply f args)]
+          (swap! mem assoc args ret)
+          ret)))))
+
+(defmacro condp
+  "Takes a binary predicate, an expression, and a set of clauses.
+  Each clause can take the form of either:
+
+  test-expr result-expr
+
+  test-expr :>> result-fn
+
+  Note :>> is an ordinary keyword.
+
+  For each clause, (pred test-expr expr) is evaluated. If it returns
+  logical true, the clause is a match. If a binary clause matches, the
+  result-expr is returned, if a ternary clause matches, its result-fn,
+  which must be a unary function, is called with the result of the
+  predicate as its argument, the result of that call being the return
+  value of condp. A single default expression can follow the clauses,
+  and its value will be returned if no clause matches. If no default
+  expression is provided and no clause matches, an
+  IllegalArgumentException is thrown."
+  {:added "1.0"}
+
+  [pred expr & clauses]
+  (let [gpred (gensym "pred__")
+        gexpr (gensym "expr__")
+        emit (fn emit [pred expr args]
+               (let [res    (split-at (if (= :>> (second args)) 3 2) args)
+                     clause (first res)
+                     a      (first clause)
+                     b      (second clause)
+                     c      (nth clause 2)
+                     more   (second res)
+                     n (count clause)]
+                 (cond
+                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause: " ~expr)))
+                   (= 1 n) a
+                   (= 2 n) `(if (~pred ~a ~expr)
+                              ~b
+                              ~(emit pred expr more))
+                   :else `(if-let [p# (~pred ~a ~expr)]
+                            (~c p#)
+                            ~(emit pred expr more)))))]
+    `(let [~gpred ~pred
+           ~gexpr ~expr]
+       ~(emit gpred gexpr clauses))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; var documentation ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------

@@ -18,6 +18,8 @@
                         }
        , <<"*ns*">>  => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*ns*">>}, #{}}
        , <<"*env*">> => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*env*">>}, #{}}
+       , <<"*compile-files*">>  =>
+           {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*compile-files*">>}, #{}}
 
        , <<"*assert*">> =>
            {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*assert*">>}, #{}}
@@ -41,6 +43,7 @@
         , 'in-ns__val'/0
         , '*ns*__val'/0
         , '*env*__val'/0
+        , '*compile-files*__val'/0
 
         , '*assert*__val'/0
 
@@ -92,6 +95,12 @@ ns__val() ->
 '*env*__val'() ->
   case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*env*">>) of
     undefined -> unbound;
+    X         -> X
+  end.
+
+'*compile-files*__val'() ->
+  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*compile-files*">>) of
+    undefined -> false;
     X         -> X
   end.
 
