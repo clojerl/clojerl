@@ -2256,7 +2256,7 @@
   ([ref]
    (if (extends? :clojerl.IDeref ref)
      (clj_core/deref.e ref)
-     (throw (str "unimplemented deref for type " (type ref)))
+     (throw (str "unimplemented deref for type " (clj_core/type.e ref)))
      #_(deref-future ref)))
   ([ref timeout-ms timeout-val]
    (throw "unimplemented")
@@ -3895,9 +3895,11 @@
  expr."
   {:added "1.0"}
   [expr]
-  `(let [start# (. System (nanoTime))
+  `(let [start# (erlang/monotonic_time.e :nano_seconds)
          ret# ~expr]
-     (prn (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) " msecs"))
+     (prn (str "Elapsed time: "
+               (/ (- (erlang/monotonic_time.e :nano_seconds) start#) 1000000.0)
+               " msecs"))
      ret#))
 
 
