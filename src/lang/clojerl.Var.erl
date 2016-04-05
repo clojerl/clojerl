@@ -12,6 +12,7 @@
 -export([ new/2
         , is_dynamic/1
         , is_macro/1
+        , is_public/1
         , has_root/1
         ]).
 
@@ -58,6 +59,12 @@ is_macro(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
   maps:get(macro, Meta, false);
 is_macro(#?TYPE{name = ?M}) ->
   false.
+
+-spec is_public(type()) -> boolean().
+is_public(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+  not maps:get(private, Meta, false);
+is_public(#?TYPE{name = ?M}) ->
+  true.
 
 -spec has_root(type()) -> boolean().
 has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->

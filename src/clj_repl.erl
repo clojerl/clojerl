@@ -1,6 +1,9 @@
 -module(clj_repl).
 
--export([repl/1]).
+-export([repl/0, repl/1]).
+
+-spec repl() -> clj_env:env().
+repl() -> repl(clj_env:default()).
 
 -spec repl(clj_env:env()) -> clj_env:env().
 repl(Env) ->

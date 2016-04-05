@@ -111,7 +111,8 @@ def(_Config) ->
 
   ct:comment("Qualified var that doesn't exist"),
   ok = try analyze_one(<<"(def x/y)">>)
-       catch _:<<"?:1:6: Can't refer to qualified var that doesn't exist">> ->
+       catch
+         _:<<"?:1:6: Can't refer to qualified var that doesn't exist: x/y">> ->
            ok
        end,
 

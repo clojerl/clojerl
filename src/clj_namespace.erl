@@ -7,24 +7,27 @@
         , name/1
         , intern/2
         , update_var/2
-        , def/2
-        , use/2
+        , get_mappings/1
+
+        , refer/3
+        , mapping/2
         , alias/2
         ]).
 
 -type namespace() ::
-        #{ name    => 'clojerl.Symbol':type()
-         , defs    => #{binary() => 'clojerl.Var':type()}
-         , uses    => #{binary() => 'clojerl.Var':type()}
-         , aliases => #{binary() => 'clojerl.Symbol':type()}
+        #{ name     => 'clojerl.Symbol':type()
+         , mappings => #{binary() => 'clojerl.Var':type()}
+         , aliases  => #{binary() => 'clojerl.Symbol':type()}
          }.
 
 -spec new('clojerl.Symbol':type()) -> namespace().
-new(Name) ->
-  #{ name    => Name
-   , defs    => #{}
-   , uses    => #{}
-   , aliases => #{}
+new(NameSym) ->
+  clj_utils:throw_when( not clj_core:'symbol?'(NameSym)
+                      , <<"Namespace name must be a symbol">>
+                      ),
+  #{ name     => NameSym
+   , mappings => #{}
+   , aliases  => #{}
    }.
 
 %% @doc Tries to get the vars from the module associated to the
@@ -66,38 +69,49 @@ load_or_create(Name) ->
 name(_Ns = #{name := Name}) -> Name.
 
 -spec intern(namespace(), 'clojerl.Symbol':type()) -> namespace().
-intern( Namespace = #{ name := NsName
-                     , defs := Defs
+intern( Namespace = #{ name     := NsName
+                     , mappings := Mappings
                      }
       , Symbol
       ) ->
-  case clj_core:namespace(Symbol) of
-    undefined ->
-      Var = 'clojerl.Var':new(clj_core:name(NsName), clj_core:name(Symbol)),
-      SymbolBin = clj_core:str(Symbol),
-      NewDefs = maps:put(SymbolBin, Var, Defs),
-      Namespace#{defs => NewDefs};
-    _ ->
-      throw(<<"Can't intern namespace-qualified symbol">>)
-  end.
+  clj_utils:throw_when( clj_core:namespace(Symbol) =/= undefined
+                      , <<"Can't intern namespace-qualified symbol">>
+                      ),
+
+  Var = 'clojerl.Var':new(clj_core:name(NsName), clj_core:name(Symbol)),
+  SymbolBin = clj_core:name(Symbol),
+  NewMappings = maps:put(SymbolBin, Var, Mappings),
+  Namespace#{mappings => NewMappings}.
 
 -spec update_var(namespace(), 'clojerl.Var':type()) -> namespace().
-update_var(Namespace = #{defs := Defs}, Var) ->
-  VarName = clj_core:name(Var),
-  NewDefs = maps:put(VarName, Var, Defs),
-  Namespace#{defs => NewDefs}.
+update_var(Namespace = #{mappings := Mappings}, Var) ->
+  VarName     = clj_core:name(Var),
+  NewMappings = maps:put(VarName, Var, Mappings),
+  Namespace#{mappings => NewMappings}.
 
--spec def(namespace(), 'clojerl.Symbol':type()) ->
-  'clojerl.Var':type() | undefined.
-def(_Namespace = #{defs := Defs}, Symbol) ->
-  maps:get(clj_core:str(Symbol), Defs, undefined).
+-spec get_mappings(namespace()) -> map().
+get_mappings(#{mappings := Mappings}) -> Mappings.
 
--spec use(namespace(), 'clojerl.Symbol':type()) ->
+-spec refer(namespace(), 'clojerl.Symbol':type(), 'clojerl.Var':type()) ->
+  namespace().
+refer(#{mappings := Mappings} = Namespace, Sym, Var) ->
+  clj_utils:throw_when( not clj_core:'symbol?'(Sym)
+                      , <<"Name for refer var is not a symbol">>
+                      ),
+
+  clj_utils:throw_when( clj_core:namespace(Sym) =/= undefined
+                      , <<"Can't refer namespace-qualified symbol">>
+                      ),
+
+  Name = clj_core:name(Sym),
+  Namespace#{mappings := Mappings#{Name => Var}}.
+
+-spec mapping(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | undefined.
-use(_Namespace = #{uses := Uses}, Symbol) ->
-  maps:get(clj_core:str(Symbol), Uses, undefined).
+mapping(_Namespace = #{mappings := Mappings}, Symbol) ->
+  maps:get(clj_core:name(Symbol), Mappings, undefined).
 
 -spec alias(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Symbol':type() | undefined.
 alias(_Namespace = #{aliases := Aliases}, Symbol) ->
-  maps:get(clj_core:str(Symbol), Aliases, undefined).
+  maps:get(clj_core:name(Symbol), Aliases, undefined).

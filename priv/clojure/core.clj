@@ -4175,9 +4175,8 @@
   found."
   {:added "1.0"
    :static true}
-  ^clojure.lang.Namespace [x]
-  (throw "unimplemented")
-  #_(if (instance? :clojerl.Namespace x)
+  [x]
+  (if-not (symbol? x)
     x
     (or (find-ns x) (throw (str "No namespace: " x " found")))))
 
@@ -4186,16 +4185,14 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
-  #_(.getName (the-ns ns)))
+  (clj_namespace/name.e (the-ns ns)))
 
 (defn ns-map
   "Returns a map of all the mappings for the namespace."
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
-  #_(.getMappings (the-ns ns)))
+  (clj_namespace/get_mappings.e (the-ns ns)))
 
 (defn ns-unmap
   "Removes the mappings for the symbol from the namespace."
@@ -4215,11 +4212,10 @@
    :static true}
   [ns]
   {}
-  #_(throw "unimplemented")
-  #_(let [ns (the-ns ns)]
-    (filter-key val (fn [^clojerl.Var v] (and (instance? :clojerl.Var v)
-                                 (= ns (.ns v))
-                                 (.isPublic v)))
+  (let [ns (the-ns ns)]
+    (filter-key val (fn [v] (and (instance? :clojerl.Var v)
+                                (= ns (find-ns (symbol (namespace v))))
+                                (clojerl.Var/is_public.e v)))
                 (ns-map ns))))
 
 (defn ns-imports
@@ -4227,8 +4223,7 @@
   {:added "1.0"
    :static true}
   [ns]
-  {}
-  #_(throw "unimplemented")
+  (throw "unimplemented")
   #_(filter-key val (partial instance? Class) (ns-map ns)))
 
 (defn ns-interns
@@ -4236,11 +4231,10 @@
   {:added "1.0"
    :static true}
   [ns]
-  {}
-  #_(throw "unimplemented")
-  #_(let [ns (the-ns ns)]
-    (filter-key val (fn [^clojure.lang.Var v] (and (instance? clojure.lang.Var v)
-                                 (= ns (.ns v))))
+  (let [ns (the-ns ns)]
+    (filter-key val (fn [v]
+                      (and (instance? :clojerl.Var v)
+                           (= ns (find-ns (symbol (namespace v))))))
                 (ns-map ns))))
 
 (defn refer
@@ -4270,14 +4264,17 @@
                 (or (:refer fs) (:only fs) (keys nspublics)))]
     (when (and to-do (not (extends? :clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
-    (doseq [sym to-do]
-      (when-not (exclude sym)
-        (let [v (nspublics sym)]
+    (doseq [name to-do]
+      (when-not (exclude name)
+        (let [v (nspublics name)
+              sym (symbol name)]
           (when-not v
-            (throw (if (get (ns-interns ns) sym)
-                     (str sym " is not public")
-                     (str sym " does not exist"))))
-          (clj_namespace/refer.e *ns* (or (rename sym) sym) v))))))
+            (throw (if (get (ns-interns ns) name)
+                     (str name " is not public")
+                     (str name " does not exist"))))
+          (clj_namespace/refer.e
+           (clj_env/find_ns.e *env* (clj_env/current_ns.e *env*))
+           (or (rename sym) sym) v))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -5863,7 +5860,7 @@
   "Throws a CompilerException with a message if pred is true"
   [pred fmt & args]
   (when pred
-    (let [message   (apply format fmt args)
+    (let [message   (apply format fmt (map str args))
           raw-trace (try (throw :ex) (catch :throw ex (erlang/get_stacktrace.e)))
           ;;boring?   #(not= (.getMethodName %) "doInvoke")
           ;;trace (into-array (drop 2 (drop-while boring? raw-trace)))
@@ -5921,7 +5918,7 @@
   [lib need-ns require]
   (load (root-resource lib))
   (throw-if (and need-ns (not (find-ns lib)))
-            "namespace '%s' not found after loading '%s'"
+            "namespace '~s' not found after loading '~s'"
             lib (root-resource lib))
   (when require
     (clj_core/set!.e #'*loaded-libs* (conj *loaded-libs* lib))))
@@ -6079,6 +6076,9 @@
   [& args]
   (apply require* args))
 
+(defn use*
+  [& args] (apply load-libs :require :use args))
+
 (defn use
   "Like 'require, but also refers to each lib's namespace using
   clojure.core/refer. Use :use in the ns macro in preference to calling
@@ -6088,7 +6088,7 @@
   The arguments and semantics for :exclude, :only, and :rename are the same
   as those documented for clojure.core/refer."
   {:added "1.0"}
-  [& args] (apply load-libs :require :use args))
+  [& args] (apply use* args))
 
 (defn loaded-libs
   "Returns a sorted set of symbols naming the currently loaded libs"

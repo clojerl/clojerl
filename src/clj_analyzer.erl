@@ -691,7 +691,9 @@ parse_def(Env, List) ->
   VarSymbol = clj_core:second(List),
   case lookup_var(VarSymbol, Env) of
     {undefined, _} ->
-      clj_utils:throw( <<"Can't refer to qualified var that doesn't exist">>
+      clj_utils:throw( [ <<"Can't refer to qualified var that doesn't exist: ">>
+                       , VarSymbol
+                       ]
                      , clj_reader:location_meta(VarSymbol)
                      );
     {Var, Env1} ->
@@ -1086,13 +1088,12 @@ resolve(Env, Symbol) ->
   CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
   Local     = clj_env:get_local(Env, Symbol),
   NsStr     = clj_core:namespace(Symbol),
-  UsedVar   = clj_namespace:use(CurrentNs, Symbol),
-  CurNsVar  = clj_namespace:def(CurrentNs, Symbol),
+  MappedVar = clj_namespace:mapping(CurrentNs, Symbol),
 
-  case {Local, NsStr, UsedVar, CurNsVar} of
-    {Local, _, _, _} when Local =/= undefined ->
+  case {Local, NsStr, MappedVar} of
+    {Local, _, _} when Local =/= undefined ->
       {{local, Local}, Env};
-    {_, NsStr, _, _} when NsStr =/= undefined ->
+    {_, NsStr, _} when NsStr =/= undefined ->
       case clj_env:find_var(Env, Symbol) of
         {undefined, Env1} ->
           %% If there is no var then assume it's a Module:Function pair.
@@ -1101,10 +1102,8 @@ resolve(Env, Symbol) ->
         {Var, Env1} ->
           {{var, Var}, Env1}
       end;
-    {_, _, UsedVar, _} when UsedVar =/= undefined ->
-      {{var, UsedVar}, Env};
-    {_, _, _, CurNsVar} when CurNsVar =/= undefined ->
-      {{var, CurNsVar}, Env};
+    {_, _, MappedVar} when MappedVar =/= undefined ->
+      {{var, MappedVar}, Env};
     _ ->
       {undefined, Env}
   end.

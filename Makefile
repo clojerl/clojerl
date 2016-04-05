@@ -29,3 +29,8 @@ coverage-html:
 
 tests-shell: build-ct-suites
 	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS} -s sync
+
+REPL_OPTS = ${SHELL_OPTS} -s clj_repl repl
+
+repl:
+	@rlwrap erl -pa ebin -pa deps/*/ebin ${REPL_OPTS} -noshell

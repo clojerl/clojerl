@@ -216,8 +216,8 @@ pop(undefined) -> undefined;
 pop(Stack)     -> 'clojerl.IStack':pop(Stack).
 
 -spec name(any()) -> any().
-name(X) ->
-  'clojerl.Named':name(X).
+name(X) when is_binary(X) -> X;
+name(X) -> 'clojerl.Named':name(X).
 
 -spec namespace(any()) -> any().
 namespace(X) ->
