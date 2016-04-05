@@ -6,6 +6,7 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IFn').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
@@ -22,6 +23,7 @@
         , 'clojerl.IColl.empty'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
         ]).
@@ -83,6 +85,16 @@ build_key_values(KeyValues, [K, V | Items]) ->
     true  -> clj_core:equiv(X, Y);
     false -> false
   end.
+
+%% clojerl.IFn
+
+'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Map}, [Key]) ->
+  clj_core:get(Map, Key);
+'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Map}, [Key, NotFound]) ->
+  clj_core:get(Map, Key, NotFound);
+'clojerl.IFn.invoke'(_, Args) ->
+  CountBin = integer_to_binary(length(Args)),
+  throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
 %% clojerl.IColl
 
