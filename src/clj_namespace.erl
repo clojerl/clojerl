@@ -78,10 +78,9 @@ intern( Namespace = #{ name     := NsName
                       , <<"Can't intern namespace-qualified symbol">>
                       ),
 
-  Var = 'clojerl.Var':new(clj_core:name(NsName), clj_core:name(Symbol)),
-  SymbolBin = clj_core:name(Symbol),
-  NewMappings = maps:put(SymbolBin, Var, Mappings),
-  Namespace#{mappings => NewMappings}.
+  Var     = 'clojerl.Var':new(clj_core:name(NsName), clj_core:name(Symbol)),
+  SymName = clj_core:name(Symbol),
+  Namespace#{mappings => Mappings#{SymName => Var}}.
 
 -spec update_var(namespace(), 'clojerl.Var':type()) -> namespace().
 update_var(Namespace = #{mappings := Mappings}, Var) ->
