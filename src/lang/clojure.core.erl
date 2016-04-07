@@ -9,15 +9,13 @@
                            }
                         }
        , <<"in-ns">> => { '7ype', 'clojerl.Var', {<<"clojure.core">>, <<"in-ns">>}
-                        , #{meta => #{ macro           => true
-                                     , 'variadic?'     => true
-                                     , max_fixed_arity => 3
+                        , #{meta => #{ 'variadic?'     => true
+                                     , max_fixed_arity => 1
                                      , variadic_arity  => undefined
                                      }
                            }
                         }
        , <<"*ns*">>  => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*ns*">>}, #{}}
-       , <<"*env*">> => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*env*">>}, #{}}
        , <<"*compile-files*">>  =>
            {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*compile-files*">>}, #{}}
 
@@ -39,10 +37,9 @@
 
 -export([ ns/4
         , ns__val/0
-        , 'in-ns'/3
+        , 'in-ns'/1
         , 'in-ns__val'/0
         , '*ns*__val'/0
-        , '*env*__val'/0
         , '*compile-files*__val'/0
 
         , '*assert*__val'/0
@@ -55,8 +52,15 @@
         , '*print-readably*__val'/0
         ]).
 
-ns(Form, Env, Name, _References) ->
-  'in-ns'(Form, Env, Name).
+ns(_Form, _Env, Name, _References) ->
+  clj_utils:throw_when( not clj_core:'symbol?'(Name)
+                      , <<"First argument to ns must be a symbol">>
+                      , clj_reader:location_meta(Name)
+                      ),
+
+  InNsSym = clj_core:symbol(<<"clojure.core">>, <<"in-ns">>),
+  QuoteSym = clj_core:symbol(<<"quote">>),
+  clj_core:list([InNsSym, clj_core:list([QuoteSym, Name])]).
 
 ns__val() ->
   Var  = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
@@ -67,35 +71,34 @@ ns__val() ->
           },
   clj_core:with_meta(Var, Meta).
 
-'in-ns'(Form, Env, MaybeQuotedName) ->
-  Name   = 'maybe-unquote'(MaybeQuotedName),
-  EnvVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*env*">>),
-  case clj_core:'symbol?'(Name) of
-    true ->
-      {_, NewEnv} = clj_env:find_or_create_ns(Env, Name),
-      clj_core:'set!'(EnvVar, NewEnv),
-      undefined;
-    false ->
-      clj_utils:throw( <<"First argument to in-ns must be a symbol">>
-                     , clj_reader:location_meta(Form)
-                     )
-  end.
+'in-ns'(MaybeQuotedName) ->
+  Name  = 'maybe-unquote'(MaybeQuotedName),
+
+  clj_utils:throw_when( not clj_core:'symbol?'(Name)
+                      , <<"First argument to ns must be a symbol">>
+                      , clj_reader:location_meta(Name)
+                      ),
+
+  NsVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*ns*">>),
+  Ns = clj_namespace:find_or_create(Name),
+  clj_core:'set!'(NsVar, Ns),
+  undefined.
 
 'in-ns__val'() ->
-  Var = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
-  Meta = #{ macro           => true
-          , 'variadic?'     => true
-          , max_fixed_arity => 3
+  Var = 'clojerl.Var':new(<<"clojure.core">>, <<"in-ns">>),
+  Meta = #{ 'variadic?'     => true
+          , max_fixed_arity => 1
           , variadic_arity  => undefined
           },
   clj_core:with_meta(Var, Meta).
 
-'*ns*__val'() -> unbound.
-
-'*env*__val'() ->
-  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*env*">>) of
-    undefined -> unbound;
-    X         -> X
+'*ns*__val'() ->
+  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*ns*">>) of
+    undefined -> 
+      ClojureCoreSym = clj_core:symbol(<<"clojure.core">>),
+      clj_namespace:find_or_create(ClojureCoreSym);
+    X -> 
+      X
   end.
 
 '*compile-files*__val'() ->

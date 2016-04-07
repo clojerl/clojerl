@@ -7,8 +7,18 @@ repl() -> repl(clj_env:default()).
 
 -spec repl(clj_env:env()) -> clj_env:env().
 repl(Env) ->
+  {ok, []} = application:ensure_all_started(clojerl),
+  ok = clojerl:ensure_modules(),
+  'clojerl.Var':push_bindings(#{}),
+  UserSym = clj_core:symbol(<<"$user">>),
+  clj_namespace:find_or_create(UserSym),
+  loop(Env).
+
+-spec loop(clj_env:env()) -> clj_env:env().
+loop(Env) ->
   try
-    CurrentNsSym = clj_env:current_ns(Env),
+    CurrentNs    = clj_namespace:current(),
+    CurrentNsSym = clj_namespace:name(CurrentNs),
     CurrentNsBin = clj_core:str(CurrentNsSym),
     PromptBin    = <<CurrentNsBin/binary, "=> ">>,
 
@@ -29,13 +39,14 @@ repl(Env) ->
 
     %% Print
     io:format("~s~n", [Output]),
+
     %% Loop
-    repl(Env1)
+    loop(Env1)
   catch
     _:Error ->
       io:format("~s~n", [clj_core:str(Error)]),
       io:format("~p~n", [erlang:get_stacktrace()]),
-      repl(Env)
+      loop(Env)
   end.
 
 -spec skip_whitespace(binary()) -> 'request-prompt' | binary().

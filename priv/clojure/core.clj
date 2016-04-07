@@ -4144,7 +4144,7 @@
   "Returns the namespace named by the symbol or nil if it doesn't exist."
   {:added "1.0"
    :static true}
-  [sym] (clj_env/find_ns.e *env* sym true))
+  [sym] (clj_namespace/find.e sym))
 
 (defn create-ns
   "Create a new namespace named by the symbol if one doesn't already
@@ -4153,7 +4153,7 @@
   {:added "1.0"
    :static true}
   [sym]
-  (clj_core/set!.e #'*env* (clj_env/find_or_create_ns.e *env* sym)))
+  (clj_namespace/find_or_create.e sym))
 
 (defn remove-ns
   "Removes the namespace named by the symbol. Use with caution.
@@ -4161,13 +4161,13 @@
   {:added "1.0"
    :static true}
   [sym]
-  (clj_core/set!.e #'*env* (clj_env/remove_ns.e *env* sym)))
+  (clj_namespace/remove.e sym))
 
 (defn all-ns
   "Returns a sequence of all namespaces."
   {:added "1.0"
    :static true}
-  [] (clj_env/all_ns.e *env*))
+  [] (clj_namespace/all.e))
 
 (defn the-ns
   "If passed a namespace, returns it. Else, when passed a symbol,
@@ -4266,15 +4266,13 @@
       (throw ":only/:refer value must be a sequential collection of symbols"))
     (doseq [name to-do]
       (when-not (exclude name)
-        (let [v (nspublics name)
+        (let [v   (nspublics name)
               sym (symbol name)]
           (when-not v
             (throw (if (get (ns-interns ns) name)
                      (str name " is not public")
                      (str name " does not exist"))))
-          (clj_namespace/refer.e
-           (clj_env/find_ns.e *env* (clj_env/current_ns.e *env*))
-           (or (rename sym) sym) v))))))
+          (clj_namespace/refer.e ns (or (rename sym) sym) v))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -5751,10 +5749,7 @@
   [name]
   (let [name (maybe-unquote name)]
     (if (symbol? name)
-      (let [res (clj_env/find_or_create_ns.e @#'*env* name)
-            env (second res)]
-        (clj_core/set!.e #'*env* env)
-        nil)
+      (clj_namespace/find_or_create.e name)
       (throw (str "First argument to in-ns must be a symbol, got: " (type name))))))
 
 (defmacro ns
@@ -5815,8 +5810,8 @@
       (with-loading-context
         (when (and (not= name 'clojure.core)
                    (not-any? #(= :refer-clojure (first %)) references))
-          (clojure.core/refer 'clojure.core))
-        (doall (map process-reference references)))
+          (refer 'clojure.core))
+        (clj_core/seq_to_list.e (map process-reference references)))
       nil
       #_(if (= '~name 'clojure.core)
           nil

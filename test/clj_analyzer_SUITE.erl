@@ -1,6 +1,10 @@
 -module(clj_analyzer_SUITE).
 
--export([all/0]).
+-export([ all/0
+        , init_per_suite/1
+        , init_per_testcase/2
+        , end_per_testcase/2
+        ]).
 
 -export([ constants/1
         , ns/1
@@ -22,14 +26,29 @@
         , erl_fun/1
         ]).
 
+-type config() :: list().
+-type result() :: {comments, string()}.
+
 -spec all() -> [atom()].
 all() ->
   ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
   Exports = ?MODULE:module_info(exports),
   [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
 
--type config() :: list().
--type result() :: {comments, string()}.
+-spec init_per_suite(config()) -> config().
+init_per_suite(Config) ->
+  application:ensure_all_started(clojerl),
+  Config.
+
+-spec init_per_testcase(_, config()) -> config().
+init_per_testcase(_, Config) ->
+  'clojerl.Var':push_bindings(#{}),
+  Config.
+
+-spec end_per_testcase(_, config()) -> config().
+end_per_testcase(_, Config) ->
+  'clojerl.Var':pop_bindings(),
+  Config.
 
 %%------------------------------------------------------------------------------
 %% Test Cases
@@ -81,9 +100,9 @@ ns(_Config) ->
        end,
 
   ct:comment("Change namespace and analyze keyword"),
-  HelloKeyword = clj_core:keyword(<<"bla">>, <<"hello">>),
+  HelloKeyword = clj_core:keyword(<<"clojure.core">>, <<"hello">>),
 
-  [ #{op := constant, form := undefined}
+  [ #{op := invoke}
   , #{op := constant, form := HelloKeyword}
   ] = analyze_all(<<"(ns bla) ::hello">>),
 

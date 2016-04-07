@@ -8,15 +8,6 @@
         , last_exprs/2
         , exprs/1
 
-        , find_or_create_ns/2
-        , current_ns/1
-        , current_ns/2
-        , update_ns/3
-        , find_ns/2
-        , find_ns/3
-        , resolve_ns/2
-        , remove_ns/2
-
         , add_locals_scope/1
         , remove_locals_scope/1
         , get_local/2
@@ -33,10 +24,8 @@
 
 -type context() :: expr | return | statement.
 
--type env() :: #{ namespaces => []
-                , context    => context()
+-type env() :: #{ context    => context()
                 , exprs      => []
-                , current_ns => 'clojerl.Symbol':type()
                 , locals     => clj_scope:scope()
                 }.
 
@@ -44,14 +33,8 @@
 
 -spec default() -> env().
 default() ->
-  UserSym = clj_core:symbol(<<"$user">>),
-  UserBin = clj_core:str(UserSym),
-  UserNs = clj_namespace:new(UserSym),
-
-  #{ namespaces => #{UserBin => UserNs}
-   , context    => expr
+  #{ context    => expr
    , exprs      => []
-   , current_ns => UserSym
    , locals     => clj_scope:new()
    }.
 
@@ -82,91 +65,6 @@ last_exprs(Env = #{exprs := AllExprs}, N) when N >= 0 ->
 
 -spec exprs(env()) -> [any()].
 exprs(#{exprs := AllExprs}) -> lists:reverse(AllExprs).
-
--spec find_or_create_ns(env(), 'clojerl.Symbol':type()) -> env().
-find_or_create_ns(Env, NsSym) ->
-  case find_ns(Env, NsSym) of
-    undefined ->
-      Ns = clj_namespace:new(NsSym),
-      {Ns, current_ns(add_ns(Env, Ns), NsSym)};
-    Ns ->
-      {Ns, current_ns(Env, NsSym)}
-  end.
-
-%% @private
--spec add_ns(env(), clj_namespace:namespace()) -> env().
-add_ns(Env = #{namespaces := Namespaces}, Ns) ->
-  NsSym = clj_namespace:name(Ns),
-  case find_ns(Env, NsSym) of
-    undefined ->
-      NewNamespaces = maps:put(clj_core:str(NsSym), Ns, Namespaces),
-      Env#{namespaces => NewNamespaces};
-    _ ->
-      Env
-  end.
-
--spec current_ns(env()) -> 'clojure.Symbol':type().
-current_ns(#{current_ns := CurrentNs}) ->
-  CurrentNs.
-
--spec current_ns(env(), 'clojerl.Symbol':type()) -> env().
-current_ns(Env, CurrentNs) ->
-  case find_ns(Env, CurrentNs) of
-    undefined ->
-      throw(<<"The specified namespace does not exist">>);
-    _ ->
-      Env#{current_ns => CurrentNs}
-  end.
-
--spec update_ns(env(), 'clojerl.Symbol':type(), function()) ->
-  clj_namespace:namespace().
-update_ns(Env = #{namespaces := Nss}, Name, Fun) ->
-  NameBin = clj_core:str(Name),
-  case maps:get(NameBin, Nss, undefined) of
-    undefined ->
-      Env;
-    Ns ->
-      NewNs  = Fun(Ns),
-      NewNss = maps:put(NameBin, NewNs, Nss),
-      Env#{namespaces => NewNss}
-  end.
-
-%% @doc Tries to find a namespace by its name symbol.
--spec find_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
-find_ns(Env, SymNs) ->
-  find_ns(Env, SymNs, false).
-
-%% @doc Tries to find a namespace by its name symbol.
--spec find_ns(env(), 'clojerl.Symbol':type(), boolean()) -> clj_namespace:namespace().
-find_ns(_Env = #{namespaces := Nss}, SymNs, Load) ->
-  case maps:get(clj_core:str(SymNs), Nss, undefined) of
-    undefined when Load -> clj_namespace:load(SymNs);
-    Ns -> Ns
-  end.
-
-%% @doc Tries to find a namespace by its name symbol or by itsalias
-%%      in the current namespace if it is there.
--spec resolve_ns(env(), 'clojerl.Symbol':type()) -> clj_namespace:namespace().
-resolve_ns(Env, SymNs) ->
-  case find_ns(Env, SymNs) of
-    undefined ->
-      CurrentNsSym = current_ns(Env),
-      CurrentNs    = find_ns(Env, CurrentNsSym),
-      AliasedNsSym = clj_namespace:alias(CurrentNs, SymNs),
-      find_ns(Env, AliasedNsSym);
-    Ns ->
-      Ns
-  end.
-
--spec remove_ns(env(), 'clojerl.Symbol':type()) -> env().
-remove_ns(Env, SymNs) ->
-  case find_ns(Env, SymNs) of
-    undefined -> Env;
-    _ ->
-      #{namespaces := Namespaces} = Env,
-      NewNamespaces = maps:remove(clj_core:str(SymNs), Namespaces),
-      Env#{namespaces := NewNamespaces}
-  end.
 
 -spec add_locals_scope(env()) -> env().
 add_locals_scope(Env = #{locals := ParentLocals}) ->
@@ -211,8 +109,9 @@ remove(Env, Name) ->
 -spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
 update_var(Env, Var) ->
   VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
-  Fun = fun(Ns) -> clj_namespace:update_var(Ns, Var) end,
-  update_ns(Env, VarNsSym, Fun).
+  Ns = clj_namespace:find(VarNsSym),
+  clj_namespace:update_var(Ns, Var),
+  Env.
 
 %% @private
 -spec find_var(env(), 'clojerl.Symbol':type()) ->
@@ -223,18 +122,20 @@ find_var(Env, Symbol) ->
 %% @private
 -spec find_var(env(), 'clojerl.Symbol':type(), boolean()) ->
   {'clojerl.Var':type() | undefined, env()}.
-find_var(Env, Symbol, LoadModule) ->
-  NsSym = case clj_core:namespace(Symbol) of
-            undefined -> current_ns(Env);
-            NsStr     -> clj_core:symbol(NsStr)
-          end,
-  case find_ns(Env, NsSym) of
-    undefined when LoadModule ->
-      Ns = clj_namespace:load_or_create(NsSym),
-      find_var(add_ns(Env, Ns), Symbol, false);
+find_var(Env, Symbol, _CreateNs) ->
+  NsStr = clj_core:namespace(Symbol),
+  Ns = case NsStr of
+         undefined -> clj_namespace:current();
+         NsStr     -> clj_namespace:find(clj_core:symbol(NsStr))
+       end,
+  case Ns of
+    %%undefined when CreateNs ->
+    %%  NsSym = clj_core:symbol(NsStr),
+    %%  clj_namespace:find_or_create(NsSym),
+    %%  find_var(Env, Symbol, false);
     undefined ->
       {undefined, Env};
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
-      {clj_namespace:def(Ns, NameSym), Env}
+      {clj_namespace:mapping(Ns, NameSym), Env}
   end.

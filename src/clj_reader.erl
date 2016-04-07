@@ -263,13 +263,12 @@ unicode_char(State, Base, Length, IsExact) ->
 %%------------------------------------------------------------------------------
 
 -spec read_keyword(state()) -> state().
-read_keyword(#{ src := <<":", _/binary>>
-              , env := Env
-              } = State0) ->
+read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
   Keyword = case clj_utils:parse_symbol(Token) of
               {undefined, <<":", Name/binary>>} ->
-                NsSym = clj_env:current_ns(Env),
+                Ns    = clj_namespace:current(),
+                NsSym = clj_namespace:name(Ns),
                 Namespace = clj_core:name(NsSym),
                 clj_core:keyword(Namespace, Name);
               {undefined, Name} ->
@@ -363,6 +362,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
 
     push_form(NewFormWithMeta, NewState#{env => Env2})
   catch _:Reason ->
+      erlang:raise(throw, Reason, erlang:get_stacktrace()),
       clj_utils:throw(Reason, location(NewState))
   after
     erlang:erase(gensym_env)
@@ -458,7 +458,9 @@ register_gensym(Symbol, Env) ->
 
 -spec resolve_symbol(any(), clj_env:env()) -> {any(), clj_env:env()}.
 resolve_symbol(Symbol, Env) ->
-  CurrentNsSym = clj_env:current_ns(Env),
+  CurrentNs    = clj_namespace:current(),
+  CurrentNsSym = clj_namespace:name(CurrentNs),
+
   case clj_core:namespace(Symbol) of
     undefined ->
       case clj_env:find_var(Env, Symbol) of
@@ -472,7 +474,7 @@ resolve_symbol(Symbol, Env) ->
           {Sym, Env1}
       end;
     NamespaceStr ->
-      case clj_env:resolve_ns(Env, clj_core:symbol(NamespaceStr)) of
+      case clj_namespace:resolve(clj_core:symbol(NamespaceStr)) of
         undefined ->
           {Symbol, Env};
         Ns ->

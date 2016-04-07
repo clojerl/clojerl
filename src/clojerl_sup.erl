@@ -10,5 +10,8 @@ start_link() ->
 -spec init(term()) -> term().
 init(_Args) ->
   SupFlags = #{strategy => one_for_one},
-  Specs    = [],
+  Specs    = [#{ id    => clj_namespace
+               , start => {clj_namespace, start_link, []}
+               }
+             ],
   {ok, {SupFlags, Specs}}.

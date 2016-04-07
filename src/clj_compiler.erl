@@ -119,16 +119,17 @@ eval(Form, Opts) ->
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Opts, Env) ->
-  DoEval      = fun() -> do_eval(Form, Opts, Env) end,
-  {_Pid, Ref} = erlang:spawn_monitor(DoEval),
-  receive
-    {'DOWN', Ref, _, _, {shutdown, Result}} ->
-      Result;
-    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
-      erlang:raise(Kind, Error, Stacktrace);
-    {'DOWN', Ref, _, _, Info} ->
-      throw(Info)
-  end.
+  do_eval(Form, Opts, Env).
+  %% DoEval      = fun() -> do_eval(Form, Opts, Env) end,
+  %% {_Pid, Ref} = erlang:spawn_monitor(DoEval),
+  %% receive
+  %%   {'DOWN', Ref, _, _, {shutdown, Result}} ->
+  %%     Result;
+  %%   {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
+  %%     erlang:raise(Kind, Error, Stacktrace);
+  %%   {'DOWN', Ref, _, _, Info} ->
+  %%     throw(Info)
+  %% end.
 
 %% Flags
 
@@ -149,6 +150,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts),
+  'clojerl.Var':push_bindings(#{}),
 
   Result =
     try
@@ -169,6 +171,8 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     catch
       Kind:Error ->
         {Kind, Error, erlang:get_stacktrace()}
+    after
+      'clojerl.Var':pop_bindings()
     end,
 
   exit(Result).
@@ -178,24 +182,15 @@ do_eval(Form, Opts0, Env0) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
 
-  Result =
-    try
-      ok   = clj_module:init(),
-      Env  = clj_env:put(Env0, clj_flags, CljFlags),
-      Env1 = compile_single_form(Form, Env),
-      {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
+  ok   = clj_module:init(),
+  Env  = clj_env:put(Env0, clj_flags, CljFlags),
+  Env1 = compile_single_form(Form, Env),
+  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
 
-      lists:foreach(compile_forms_fun(Opts), ModulesForms),
+  lists:foreach(compile_forms_fun(Opts), ModulesForms),
 
-      [Value] = eval_expressions(Exprs),
-      Env3  = {Value, clj_env:remove(Env2, clj_flags)},
-      {shutdown, Env3}
-    catch
-      Kind:Error ->
-        {Kind, Error, erlang:get_stacktrace()}
-    end,
-
-  exit(Result).
+  [Value] = eval_expressions(Exprs),
+  {Value, clj_env:remove(Env2, clj_flags)}.
 
 -spec check_flag(clj_flag(), clj_env:env()) -> boolean().
 check_flag(Flag, Env) ->
