@@ -139,7 +139,10 @@ dynamic_binding(Var) ->
 -spec dynamic_binding('clojerl.Var':type(), any()) -> any().
 dynamic_binding(Var, Value) ->
   case erlang:get(dynamic_bindings) of
-    undefined -> throw(<<"Can't change root binding">>);
+    undefined -> 
+      push_bindings(#{}),
+      dynamic_binding(Var, Value);
+      %$ throw(<<"Can't change root binding">>);
     Bindings  ->
       Key = clj_core:str(Var),
       NewBindings = clj_scope:put(Bindings, Key, Value),

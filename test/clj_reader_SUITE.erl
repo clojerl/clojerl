@@ -136,7 +136,8 @@ string(_Config) ->
 
 keyword(_Config) ->
   SomeNsSymbol = clj_core:symbol(<<"some-ns">>),
-  {_Ns, Env} = clj_env:find_or_create_ns(clj_env:default(), SomeNsSymbol),
+  Env = clj_env:default(),
+  clj_namespace:find_or_create(SomeNsSymbol),
 
   Keyword1 = clj_core:keyword(<<"hello-world">>),
   Keyword1 = clj_reader:read(<<":hello-world">>, #{}, Env),
@@ -376,7 +377,7 @@ syntax_quote(_Config) ->
   ct:comment("Read values that can have metadata"),
 
   ct:comment("Read unqualified symbol"),
-  UserHelloSym = clj_core:symbol(<<"$user">>, <<"hello">>),
+  UserHelloSym = clj_core:symbol(<<"clojure.core">>, <<"hello">>),
   HelloSyntaxQuote = clj_reader:read(<<"`hello">>),
   true = clj_core:equiv(clj_core:first(HelloSyntaxQuote), WithMetaSym),
   true = clj_core:equiv( clj_core:second(HelloSyntaxQuote)
@@ -421,7 +422,7 @@ syntax_quote(_Config) ->
   ct:comment("Read list and empty list"),
   WithMetaListHello = clj_reader:read(<<"`(hello :world)">>),
   ListHelloCheck = clj_reader:read(<<"(clojure.core/concat"
-                                     "  (clojure.core/list '$user/hello)"
+                                     "  (clojure.core/list 'clojure.core/hello)"
                                      "  (clojure.core/list :world))">>),
   true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaListHello))
                        , ListHelloCheck
@@ -435,11 +436,12 @@ syntax_quote(_Config) ->
 
   ct:comment("Read map"),
   MapWithMeta = clj_reader:read(<<"`{hello :world}">>),
-  MapWithMetaCheck = clj_reader:read(<<"(clojure.core/apply"
-                                       "  clojure.core/hash-map"
-                                       "  (clojure.core/concat"
-                                       "    (clojure.core/list '$user/hello)"
-                                       "    (clojure.core/list :world)))">>),
+  MapWithMetaCheck =
+    clj_reader:read(<<"(clojure.core/apply"
+                      "  clojure.core/hash-map"
+                      "  (clojure.core/concat"
+                      "    (clojure.core/list 'clojure.core/hello)"
+                      "    (clojure.core/list :world)))">>),
   true = clj_core:equiv(clj_core:first(MapWithMeta), WithMetaSym),
   true = clj_core:equiv(clj_core:second(MapWithMeta), MapWithMetaCheck),
 
@@ -449,7 +451,7 @@ syntax_quote(_Config) ->
     clj_reader:read(<<"(clojure.core/apply"
                       "  clojure.core/vector"
                       "  (clojure.core/concat"
-                      "    (clojure.core/list '$user/hello)"
+                      "    (clojure.core/list 'clojure.core/hello)"
                       "    (clojure.core/list :world)))">>),
   true = clj_core:equiv(clj_core:first(VectorWithMeta), WithMetaSym),
   true = clj_core:equiv(clj_core:second(VectorWithMeta), VectorWithMetaCheck),
@@ -461,7 +463,7 @@ syntax_quote(_Config) ->
                       "  clojure.core/hash-set"
                       "  (clojure.core/concat"
                       "    (clojure.core/list :world)"
-                      "    (clojure.core/list '$user/hello)))">>),
+                      "    (clojure.core/list 'clojure.core/hello)))">>),
   true = clj_core:equiv(clj_core:first(SetWithMeta), WithMetaSym),
   true = clj_core:equiv(clj_core:second(SetWithMeta), SetWithMetaCheck),
 
