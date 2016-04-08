@@ -227,8 +227,4 @@ dynamic_bindings(_Config) ->
 
   42 = clj_core:deref(Var),
 
-  ok = try clj_core:'set!'(Var, 43), error
-       catch _:<<"Can't change root binding">> -> ok
-       end,
-
   {comments, ""}.
