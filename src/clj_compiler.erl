@@ -156,15 +156,12 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     try
       ok = clj_module:init(),
       Env  = clj_env:put(Env0, clj_flags, CljFlags),
-      Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, RdrOpts, Env),
-      {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
+      Env1 = clj_reader:read_fold(fun emit_eval_form/2, Src, RdrOpts, Env),
+      {_, Env2} = clj_emitter:remove_state(Env1),
 
       %% Compile all modules
       ensure_output_dir(Opts),
-      lists:foreach(compile_forms_fun(Opts), ModulesForms),
-
-      %% Eval all expressions
-      eval_expressions(Expressions),
+      lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
       Env3 = clj_env:remove(Env2, clj_flags),
       {shutdown, Env3}
@@ -184,13 +181,15 @@ do_eval(Form, Opts0, Env0) ->
 
   ok   = clj_module:init(),
   Env  = clj_env:put(Env0, clj_flags, CljFlags),
-  Env1 = compile_single_form(Form, Env),
-  {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
+  %% Emit & eval form and keep the resulting value
+  Env1 = clj_analyzer:analyze(Env, Form),
+  Env2 = clj_emitter:emit(Env1),
+  {Exprs, Env3} = clj_emitter:remove_state(Env2),
 
-  lists:foreach(compile_forms_fun(Opts), ModulesForms),
+  lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
   [Value] = eval_expressions(Exprs),
-  {Value, clj_env:remove(Env2, clj_flags)}.
+  {Value, clj_env:remove(Env3, clj_flags)}.
 
 -spec check_flag(clj_flag(), clj_env:env()) -> boolean().
 check_flag(Flag, Env) ->
@@ -209,10 +208,13 @@ ensure_output_dir(Opts) ->
   true = code:add_path(OutputDir),
   ok.
 
--spec compile_single_form(any(), clj_env:env()) -> clj_env:env().
-compile_single_form(Form, Env) ->
+-spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
+emit_eval_form(Form, Env) ->
   Env1 = clj_analyzer:analyze(Env, Form),
-  clj_emitter:emit(Env1).
+  Env2 = clj_emitter:emit(Env1),
+  {Exprs, Env3} = clj_emitter:remove_state(Env2),
+  eval_expressions(Exprs),
+  Env3.
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -247,7 +249,15 @@ eval_expressions([]) ->
   [];
 eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
-  {Values, _} = erl_eval:expr_list(Expressions, []),
+  CurrentNs     = clj_namespace:current(),
+  CurrentNsSym  = clj_namespace:name(CurrentNs),
+  CurrentNsAtom = erlang:binary_to_atom(clj_core:str(CurrentNsSym), utf8),
+  ReplacedExprs = case CurrentNsAtom of
+                    'clojure.core' -> Expressions;
+                    _ -> [clj_module:replace_calls(Expr, CurrentNsAtom, '_')
+                          || Expr <- Expressions]
+                  end,
+  {Values, _} = erl_eval:expr_list(ReplacedExprs, []),
   Values.
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().

@@ -5,10 +5,13 @@
 -export([ init/0
 
         , all/0
+        , all_forms/0
         , load/1
         , is_loaded/1
         , to_forms/1
+
         , fake_fun/3
+        , replace_calls/3
 
         , add_vars/2
         , add_attributes/2
@@ -54,8 +57,8 @@ init() ->
 %%      having to generate, compile and load the binary for the partial
 %%      module each time a macro is found.
 -spec fake_fun(module(), atom(), integer()) -> function() | notfound.
-fake_fun(Name, Function, Arity) ->
-  Module        = get(modules_table_id(), Name),
+fake_fun(ModuleName, Function, Arity) ->
+  Module        = get(modules_table_id(), ModuleName),
   FakeFunsTable = Module#module.fake_funs,
   FA = {Function, Arity},
   case ets:lookup(FakeFunsTable, FA) of
@@ -64,7 +67,7 @@ fake_fun(Name, Function, Arity) ->
         undefined -> notfound;
         {_, FunctionAst} ->
           {function, _, _, _, Clauses} =
-            replace_calls(FunctionAst, Name, Function),
+            replace_calls(FunctionAst, ModuleName, Function),
           FunAst = {'named_fun', 0, Function, Clauses},
           {value, Fun, _} = erl_eval:expr(FunAst, []),
           Fun1 = check_var_val(Function, Arity, Fun),
@@ -110,8 +113,9 @@ replace_calls( { call, Line
                  }
                , Args
                }
-             , Module
-             , TopFunction) ->
+             , CurrentModule
+             , TopFunction) when CurrentModule =:= Module;
+                                 CurrentModule =:= '_' ->
   Remote = {remote, Line,
             {atom, Line, ?MODULE},
             {atom, Line, fake_fun}
@@ -150,6 +154,12 @@ is_loaded(Name) ->
 
 -spec all() -> [clj_module()].
 all() -> ets:tab2list(modules_table_id()).
+
+%% @doc Returns a list where each element is a list with the abstract
+%%      forms of all stored modules.
+-spec all_forms() -> [[erl_parse:abstract_form()]].
+all_forms() ->
+  lists:map(fun clj_module:to_forms/1, all()).
 
 -spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
 to_forms(#module{name = Name} = Module) ->
@@ -221,8 +231,16 @@ add_functions(Module, Funs) ->
 
 -spec is_clojure(module()) -> boolean().
 is_clojure(Name) ->
-  Attrs = Name:module_info(attributes),
-  lists:keymember(clojure, 1, Attrs).
+  Key = {?MODULE, is_clojure, Name},
+  case erlang:get(Key) of
+    undefined ->
+      Attrs = Name:module_info(attributes),
+      IsClojure = lists:keymember(clojure, 1, Attrs),
+      erlang:put(Key, IsClojure),
+      IsClojure;
+    Value ->
+      Value
+  end.
 
 %%------------------------------------------------------------------------------
 %% Helper Functions
