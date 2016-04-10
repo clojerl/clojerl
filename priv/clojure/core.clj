@@ -4211,10 +4211,9 @@
   {:added "1.0"
    :static true}
   [ns]
-  {}
   (let [ns (the-ns ns)]
     (filter-key val (fn [v] (and (instance? :clojerl.Var v)
-                                (= ns (find-ns (symbol (namespace v))))
+                                (identical? ns (find-ns (symbol (namespace v))))
                                 (clojerl.Var/is_public.e v)))
                 (ns-map ns))))
 
@@ -4272,7 +4271,7 @@
             (throw (if (get (ns-interns ns) name)
                      (str name " is not public")
                      (str name " does not exist"))))
-          (clj_namespace/refer.e ns (or (rename sym) sym) v))))))
+          (clj_namespace/refer.e *ns* (or (rename sym) sym) v))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -5782,7 +5781,8 @@
                 args     (rest all-args)
                 name-str (clojure.core/name kname)
                 name-sym (symbol "clojure.core" (str name-str "*"))]
-            (apply (find-var name-sym) args)))
+            `(~(symbol "clojure.core" (clojure.core/name kname))
+              ~@(map #(list 'quote %) args))))
         docstring  (when (string? (first references)) (first references))
         references (if docstring (next references) references)
         name (if docstring
