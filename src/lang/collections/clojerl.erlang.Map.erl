@@ -102,9 +102,9 @@ remove_meta(K, V, Acc) ->
 
 %% clojerl.IFn
 
-'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Map}, [Key]) ->
+'clojerl.IFn.invoke'(Map, [Key]) ->
   clj_core:get(Map, Key);
-'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Map}, [Key, NotFound]) ->
+'clojerl.IFn.invoke'(Map, [Key, NotFound]) ->
   clj_core:get(Map, Key, NotFound);
 'clojerl.IFn.invoke'(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
