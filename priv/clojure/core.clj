@@ -3692,17 +3692,23 @@
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
-(defmulti print-method (fn [x writer]
-                         (let [t (get (meta x) :type)]
-                           (if (keyword? t) t (class x)))))
-(defmulti print-dup (fn [x writer] (class x)))
+;; TODO: implement multimethods
+#_ ((defmulti print-method (fn [x writer]
+                             (let [t (get (meta x) :type)]
+                               (if (keyword? t) t (class x)))))
+    (defmulti print-dup (fn [x writer] (class x))))
+
+(defn print-method [x writer]
+  (io/format.e writer "~s" (seq [x])))
+
+(defn print-dup [x writer]
+  (io/format.e writer "~s" (seq [x])))
 
 (defn pr-on
   {:private true
    :static true}
   [x w]
-  (throw "unimplemented")
-  #_(if *print-dup*
+  (if *print-dup*
     (print-dup x w)
     (print-method x w))
   nil)
@@ -3716,12 +3722,10 @@
    :added "1.0"}
   ([] nil)
   ([x]
-   (throw "unimplemented")
    (pr-on x *out*))
   ([x & more]
-   (throw "unimplemented")
    (pr x)
-   #_(. *out* (append \space))
+   (io/put_chars.e *out* " ")
    (if-let [nmore (next more)]
      (recur (first more) nmore)
      (apply pr more))))
@@ -3735,9 +3739,7 @@
   {:added "1.0"
    :static true}
   []
-  (throw "unimplemented")
-  #_(. *out* (append system-newline))
-  nil)
+  (io/nl.e *out*))
 
 (defn flush
   "Flushes the output stream that is the current value of
@@ -3745,9 +3747,7 @@
   {:added "1.0"
    :static true}
   []
-  (throw "unimplemented")
-  #_(. *out* (flush))
-  nil)
+  (io/put_chars.e *out* ""))
 
 (defn prn
   "Same as pr followed by (newline). Observes *flush-on-newline*"
@@ -3765,7 +3765,7 @@
   {:added "1.0"
    :static true}
   [& more]
-  #_(binding [*print-readably* nil]
+  (binding [*print-readably* nil]
     (apply pr more)))
 
 (defn println
@@ -3773,7 +3773,7 @@
   {:added "1.0"
    :static true}
   [& more]
-  #_(binding [*print-readably* nil]
+  (binding [*print-readably* nil]
     (apply prn more)))
 
 #_(defn read
@@ -5838,7 +5838,8 @@
   ^{:dynamic true
     :private true
     :doc "A ref to a sorted set of symbols representing loaded libs"}
-  *loaded-libs* #{})
+  *loaded-libs* ;; TODO: should be a sorted-set
+  #{})
 
 (defonce ^:dynamic
   ^{:private true
@@ -5926,15 +5927,16 @@
   (clj_core/set!.e #'*loaded-libs*
                    (reduce1 conj
                             *loaded-libs*
-                            (binding [*loaded-libs* (sorted-set)]
+                            ;; TODO: should be a sorted-set
+                            (binding [*loaded-libs* (hash-set)]
                               (load-one lib need-ns require)
-                              @*loaded-libs*))))
+                              *loaded-libs*))))
 
 (defn- load-lib
   "Loads a lib with options"
   [prefix lib & options]
   (throw-if (and prefix (pos? (index-of (name lib) "\\.")))
-            "Found lib name '%s' containing period with prefix '%s'.  lib names inside prefix lists must not contain periods"
+            "Found lib name '~s' containing period with prefix '~s'.  lib names inside prefix lists must not contain periods"
             (name lib) prefix)
   (let [lib (if prefix (symbol (str prefix \. lib)) lib)
         opts (apply hash-map options)
@@ -5961,18 +5963,18 @@
               (remove-ns lib))
             (throw e)))
         (throw-if (and need-ns (not (find-ns lib)))
-                  "namespace '%s' not found" lib))
+                  "namespace '~s' not found" lib))
       (when (and need-ns *loading-verbosely*)
-        (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
+        (printf "(clojure.core/in-ns '~s)\n" (str (ns-name *ns*))))
       (when as
         (when *loading-verbosely*
-          (printf "(clojure.core/alias '%s '%s)\n" as lib))
+          (printf "(clojure.core/alias '~s '~s)\n" (str as) (str lib)))
         (alias as lib))
       (when (or use (:refer filter-opts))
         (when *loading-verbosely*
-          (printf "(clojure.core/refer '%s" lib)
+          (printf "(clojure.core/refer '~s" (str lib))
           (doseq [opt filter-opts]
-            (printf " %s '%s" (key opt) (print-str (val opt))))
+            (printf " ~s '~s" (key opt) (print-str (val opt))))
           (printf ")\n"))
         (apply refer lib (mapcat seq filter-opts))))))
 
@@ -6093,7 +6095,7 @@
                  (throw "unimplemented")
                  #_(str (root-directory (name *ns*)) "/" path))]
       (when *loading-verbosely*
-        (printf "(clojure.core/load \"%s\")\n" path)
+        (printf "(clojure.core/load \"~s\")\n" path)
         (flush))
       (check-cyclic-dependency path)
       (when-not (= path (first *pending-paths*))
