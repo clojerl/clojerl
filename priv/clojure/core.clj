@@ -4263,7 +4263,10 @@
                 (or (:refer fs) (:only fs) (keys nspublics)))]
     (when (and to-do (not (extends? :clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
-    (doseq [name to-do]
+    ;; keys in maps are strings to avoid be able to use the underlying map
+    ;; implementation. We convert all to-do's to strings since some filters
+    ;; could contains symbols
+    (doseq [name (map name to-do)]
       (when-not (exclude name)
         (let [v   (nspublics name)
               sym (symbol name)]
@@ -4278,10 +4281,9 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
-  #_(let [ns (the-ns ns)]
-    (filter-key val (fn [^clojerl.Var v] (and (instance? :clojerl.Var v)
-                                                  (not= ns (.ns v))))
+  (let [ns (the-ns ns)]
+    (filter-key val (fn [v] (and (instance? :clojerl.Var v)
+                                (not= ns (find-ns (symbol (namespace v))))))
                 (ns-map ns))))
 
 (defn alias
@@ -6064,9 +6066,6 @@
   [& args]
   (apply load-libs :require args))
 
-(defn use*
-  [& args] (apply load-libs :require :use args))
-
 (defn use
   "Like 'require, but also refers to each lib's namespace using
   clojure.core/refer. Use :use in the ns macro in preference to calling
@@ -6076,7 +6075,7 @@
   The arguments and semantics for :exclude, :only, and :rename are the same
   as those documented for clojure.core/refer."
   {:added "1.0"}
-  [& args] (apply use* args))
+  [& args] (apply load-libs :require :use args))
 
 (defn loaded-libs
   "Returns a sorted set of symbols naming the currently loaded libs"
