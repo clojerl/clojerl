@@ -44,9 +44,13 @@
 
 -spec init() -> ok.
 init() ->
-  TabId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
-  erlang:put(?MODULE, TabId),
-  ok.
+  case modules_table_id() of
+    undefined ->
+      TabId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
+      erlang:put(?MODULE, TabId),
+      ok;
+    _ -> ok
+  end.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%      A fake fun is generated during compile-time and it provides the
