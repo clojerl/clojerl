@@ -4292,8 +4292,7 @@
   {:added "1.0"
    :static true}
   [alias namespace-sym]
-  (throw "unimplemented")
-  #_(.addAlias *ns* alias (the-ns namespace-sym)))
+  (clj_namespace/add_alias.e *ns* alias (the-ns namespace-sym)))
 
 (defn ns-aliases
   "Returns a map of the aliases for the namespace."
@@ -6014,11 +6013,7 @@
 
 ;; Public
 
-(defn require*
-  [& args]
-  (apply load-libs :require args))
-
-(defmacro require
+(defn require
   "Loads libs, skipping any that are already loaded. Each argument is
   either a libspec that identifies a lib, a prefix list that identifies
   multiple libs whose names share a common prefix, or a flag that modifies
@@ -6067,7 +6062,7 @@
   {:added "1.0"}
 
   [& args]
-  (apply require* args))
+  (apply load-libs :require args))
 
 (defn use*
   [& args] (apply load-libs :require :use args))

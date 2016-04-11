@@ -1,5 +1,6 @@
 (ns examples.ns
-  (:use examples.simple))
+  (:use examples.simple)
+  (:require [examples.simple :as simple]))
 
 (defn ten-ten [] (repeat 10 10))
 
@@ -8,3 +9,5 @@
 (prn :a)
 
 (prn x)
+
+(prn simple/x)

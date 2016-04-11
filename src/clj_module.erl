@@ -110,23 +110,35 @@ replace_calls( { call, Line
                , { remote, _
                  , {atom, _, Module}
                  , {atom, _, Function}
-                 }
+                 } = RemoteOriginal
                , Args
                }
              , CurrentModule
              , TopFunction) when CurrentModule =:= Module;
                                  CurrentModule =:= '_' ->
-  Remote = {remote, Line,
-            {atom, Line, ?MODULE},
-            {atom, Line, fake_fun}
-           },
 
+  Args1 = replace_calls(Args, CurrentModule, TopFunction),
   Arity = length(Args),
-  FunCall = {call, Line, Remote, [
-    {atom, Line, Module}, {atom, Line, Function}, {integer, Line, Arity}
-  ]},
-  Args1 = replace_calls(Args, Module, TopFunction),
-  {call, Line, FunCall, Args1};
+  %% Only replace the call if the module is loaded exists. If it is not,
+  %% then the replacement is happening for the evaluation of an expression
+  %% where the called function hasn't been declared in the same evaluation.
+  case is_loaded(Module) of
+    true  ->
+      Remote = {remote, Line,
+                {atom, Line, ?MODULE},
+                {atom, Line, fake_fun}
+               },
+
+      FunCall = { call, Line, Remote
+                , [ {atom, Line, Module}
+                  , {atom, Line, Function}
+                  , {integer, Line, Arity}
+                  ]
+                },
+      {call, Line, FunCall, Args1};
+    false ->
+      {call, Line, RemoteOriginal, Args1}
+  end;
 replace_calls( {call, Line, {atom, _, TopFunction}, Args}
              , Module
              , TopFunction) ->

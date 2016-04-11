@@ -252,12 +252,9 @@ eval_expressions(Expressions) ->
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
   CurrentNsAtom = erlang:binary_to_atom(clj_core:str(CurrentNsSym), utf8),
-  ReplacedExprs = case CurrentNsAtom of
-                    'clojure.core' -> Expressions;
-                    _ -> [clj_module:replace_calls(Expr, CurrentNsAtom, '_')
-                          || Expr <- Expressions]
-                  end,
-  {Values, _} = erl_eval:expr_list(ReplacedExprs, []),
+  ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom, '_')
+                   || Expr <- Expressions],
+  {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
   Values.
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().

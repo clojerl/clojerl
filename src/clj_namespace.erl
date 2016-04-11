@@ -16,6 +16,7 @@
         , get_mappings/1
 
         , refer/3
+        , add_alias/3
         , mapping/2
         , alias/2
         ]).
@@ -122,6 +123,15 @@ refer(Ns, Sym, Var) ->
 
   gen_server:call(?MODULE, {intern, Ns, Sym, Var}).
 
+-spec add_alias(namespace(), 'clojerl.Symbol':type(), namespace()) ->
+  namespace().
+add_alias(Ns, AliasSym, AliasedNs) ->
+  clj_utils:throw_when( not clj_core:'symbol?'(AliasSym)
+                      , <<"Name for refer var is not a symbol">>
+                      ),
+
+  gen_server:call(?MODULE, {add_alias, Ns, AliasSym, AliasedNs}).
+
 -spec mapping(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | undefined.
 mapping(#namespace{mappings = Mappings}, Symbol) ->
@@ -145,7 +155,7 @@ alias(#namespace{aliases = Aliases}, Symbol) ->
 start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-init([]) -> 
+init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
   {ok, undefined}.
 
@@ -169,20 +179,26 @@ handle_call( {intern, Ns = #namespace{mappings = Mappings}, Symbol, Var}
            ) ->
   save(Mappings, {clj_core:name(Symbol), Var}),
   {reply, Ns, State};
+handle_call( {add_alias, Ns = #namespace{aliases = Aliases}, Symbol, AliasedNs}
+           , _From
+           , State
+           ) ->
+  save(Aliases, {clj_core:name(Symbol), AliasedNs}),
+  {reply, Ns, State};
 handle_call({remove, Name}, _From, State) ->
   Result = ok =:= ets:delete(?MODULE, clj_core:name(Name)),
   {reply, Result, State}.
 
-handle_cast(_Msg, State) -> 
+handle_cast(_Msg, State) ->
   {ok, State}.
 
-handle_info(_Msg, State) -> 
+handle_info(_Msg, State) ->
   {ok, State}.
 
-terminate(_Msg, State) -> 
+terminate(_Msg, State) ->
   {ok, State}.
 
-code_change(_Msg, _From, State) -> 
+code_change(_Msg, _From, State) ->
   {ok, State}.
 
 %%------------------------------------------------------------------------------
@@ -236,10 +252,10 @@ load(Name) ->
   case Vars of
     undefined -> undefined;
     _ ->
-      UpdateVarFun = fun(Var, Ns = #namespace{mappings = Mappings}) -> 
+      UpdateVarFun = fun(Var, Ns = #namespace{mappings = Mappings}) ->
                          save(Mappings, {clj_core:name(Var), Var}),
                          Ns
                      end,
-      
+
       lists:foldl(UpdateVarFun, new(Name), Vars)
   end.

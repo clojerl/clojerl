@@ -117,22 +117,17 @@ update_var(Env, Var) ->
 -spec find_var(env(), 'clojerl.Symbol':type()) ->
   {'clojerl.Var':type() | undefined, env()}.
 find_var(Env, Symbol) ->
-  find_var(Env, Symbol, true).
-
-%% @private
--spec find_var(env(), 'clojerl.Symbol':type(), boolean()) ->
-  {'clojerl.Var':type() | undefined, env()}.
-find_var(Env, Symbol, _CreateNs) ->
   NsStr = clj_core:namespace(Symbol),
   Ns = case NsStr of
          undefined -> clj_namespace:current();
-         NsStr     -> clj_namespace:find(clj_core:symbol(NsStr))
+         NsStr     ->
+           NsSym = clj_core:symbol(NsStr),
+           case clj_namespace:find(NsSym) of
+             undefined -> clj_namespace:alias(clj_namespace:current(), NsSym);
+             NsTemp    -> NsTemp
+           end
        end,
   case Ns of
-    %%undefined when CreateNs ->
-    %%  NsSym = clj_core:symbol(NsStr),
-    %%  clj_namespace:find_or_create(NsSym),
-    %%  find_var(Env, Symbol, false);
     undefined ->
       {undefined, Env};
     Ns ->
