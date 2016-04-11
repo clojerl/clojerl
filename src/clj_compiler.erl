@@ -153,7 +153,6 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts),
-  'clojerl.Var':push_bindings(#{}),
 
   Result =
     try
@@ -171,8 +170,6 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     catch
       Kind:Error ->
         {Kind, Error, erlang:get_stacktrace()}
-    after
-      'clojerl.Var':pop_bindings()
     end,
 
   exit(Result).
