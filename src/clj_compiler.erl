@@ -122,17 +122,21 @@ eval(Form, Opts0, Env0) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
 
-  ok   = clj_module:init(),
-  Env  = clj_env:put(Env0, clj_flags, CljFlags),
-  %% Emit & eval form and keep the resulting value
-  Env1 = clj_analyzer:analyze(Env, Form),
-  Env2 = clj_emitter:emit(Env1),
-  {Exprs, Env3} = clj_emitter:remove_state(Env2),
+  try
+    ok   = clj_module:init(),
+    Env  = clj_env:put(Env0, clj_flags, CljFlags),
+    %% Emit & eval form and keep the resulting value
+    Env1 = clj_analyzer:analyze(Env, Form),
+    Env2 = clj_emitter:emit(Env1),
+    {Exprs, Env3} = clj_emitter:remove_state(Env2),
 
-  lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
+    lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
-  [Value] = eval_expressions(Exprs),
-  {Value, clj_env:remove(Env3, clj_flags)}.
+    [Value] = eval_expressions(Exprs),
+    {Value, clj_env:remove(Env3, clj_flags)}
+  after
+    ok = clj_module:terminate()
+  end.
 
 %% Flags
 
@@ -170,6 +174,8 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     catch
       Kind:Error ->
         {Kind, Error, erlang:get_stacktrace()}
+    after
+      ok = clj_module:terminate()
     end,
 
   exit(Result).

@@ -3,6 +3,7 @@
 -compile({no_auto_import, [get/1]}).
 
 -export([ init/0
+        , terminate/0
 
         , all/0
         , all_forms/0
@@ -50,6 +51,16 @@ init() ->
       erlang:put(?MODULE, TabId),
       ok;
     _ -> ok
+  end.
+
+-spec terminate() -> ok.
+terminate() ->
+  case modules_table_id() of
+    undefined -> ok;
+    TabId ->
+      ets:delete(TabId),
+      erlang:erase(?MODULE),
+      ok
   end.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
@@ -157,11 +168,15 @@ replace_calls(Ast, _, _) ->
 
 -spec load(atom()) -> ok | {error, term()}.
 load(Name) ->
-  case code:ensure_loaded(Name) of
-    {module, Name} ->
-      new(clj_utils:code_from_binary(Name));
-    {error, _} ->
-      new([attribute_module(Name)])
+  case is_loaded(Name) of
+    true -> ok;
+    false ->
+      case code:ensure_loaded(Name) of
+        {module, Name} ->
+          new(clj_utils:code_from_binary(Name));
+        {error, _} ->
+          new([attribute_module(Name)])
+      end
   end.
 
 -spec is_loaded(module()) -> boolean().
