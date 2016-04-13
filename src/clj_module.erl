@@ -3,12 +3,16 @@
 -compile({no_auto_import, [get/1]}).
 
 -export([ init/0
+        , terminate/0
 
         , all/0
+        , all_forms/0
         , load/1
         , is_loaded/1
         , to_forms/1
+
         , fake_fun/3
+        , replace_calls/3
 
         , add_vars/2
         , add_attributes/2
@@ -41,9 +45,23 @@
 
 -spec init() -> ok.
 init() ->
-  TabId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
-  erlang:put(?MODULE, TabId),
-  ok.
+  case modules_table_id() of
+    undefined ->
+      TabId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
+      erlang:put(?MODULE, TabId),
+      ok;
+    _ -> ok
+  end.
+
+-spec terminate() -> ok.
+terminate() ->
+  case modules_table_id() of
+    undefined -> ok;
+    TabId ->
+      ets:delete(TabId),
+      erlang:erase(?MODULE),
+      ok
+  end.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%      A fake fun is generated during compile-time and it provides the
@@ -54,8 +72,8 @@ init() ->
 %%      having to generate, compile and load the binary for the partial
 %%      module each time a macro is found.
 -spec fake_fun(module(), atom(), integer()) -> function() | notfound.
-fake_fun(Name, Function, Arity) ->
-  Module        = get(modules_table_id(), Name),
+fake_fun(ModuleName, Function, Arity) ->
+  Module        = get(modules_table_id(), ModuleName),
   FakeFunsTable = Module#module.fake_funs,
   FA = {Function, Arity},
   case ets:lookup(FakeFunsTable, FA) of
@@ -64,7 +82,7 @@ fake_fun(Name, Function, Arity) ->
         undefined -> notfound;
         {_, FunctionAst} ->
           {function, _, _, _, Clauses} =
-            replace_calls(FunctionAst, Name, Function),
+            replace_calls(FunctionAst, ModuleName, Function),
           FunAst = {'named_fun', 0, Function, Clauses},
           {value, Fun, _} = erl_eval:expr(FunAst, []),
           Fun1 = check_var_val(Function, Arity, Fun),
@@ -107,22 +125,35 @@ replace_calls( { call, Line
                , { remote, _
                  , {atom, _, Module}
                  , {atom, _, Function}
-                 }
+                 } = RemoteOriginal
                , Args
                }
-             , Module
-             , TopFunction) ->
-  Remote = {remote, Line,
-            {atom, Line, ?MODULE},
-            {atom, Line, fake_fun}
-           },
+             , CurrentModule
+             , TopFunction) when CurrentModule =:= Module;
+                                 CurrentModule =:= '_' ->
 
+  Args1 = replace_calls(Args, CurrentModule, TopFunction),
   Arity = length(Args),
-  FunCall = {call, Line, Remote, [
-    {atom, Line, Module}, {atom, Line, Function}, {integer, Line, Arity}
-  ]},
-  Args1 = replace_calls(Args, Module, TopFunction),
-  {call, Line, FunCall, Args1};
+  %% Only replace the call if the module is loaded exists. If it is not,
+  %% then the replacement is happening for the evaluation of an expression
+  %% where the called function hasn't been declared in the same evaluation.
+  case is_loaded(Module) of
+    true  ->
+      Remote = {remote, Line,
+                {atom, Line, ?MODULE},
+                {atom, Line, fake_fun}
+               },
+
+      FunCall = { call, Line, Remote
+                , [ {atom, Line, Module}
+                  , {atom, Line, Function}
+                  , {integer, Line, Arity}
+                  ]
+                },
+      {call, Line, FunCall, Args1};
+    false ->
+      {call, Line, RemoteOriginal, Args1}
+  end;
 replace_calls( {call, Line, {atom, _, TopFunction}, Args}
              , Module
              , TopFunction) ->
@@ -137,11 +168,15 @@ replace_calls(Ast, _, _) ->
 
 -spec load(atom()) -> ok | {error, term()}.
 load(Name) ->
-  case code:ensure_loaded(Name) of
-    {module, Name} ->
-      new(clj_utils:code_from_binary(Name));
-    {error, _} ->
-      new([attribute_module(Name)])
+  case is_loaded(Name) of
+    true -> ok;
+    false ->
+      case code:ensure_loaded(Name) of
+        {module, Name} ->
+          new(clj_utils:code_from_binary(Name));
+        {error, _} ->
+          new([attribute_module(Name)])
+      end
   end.
 
 -spec is_loaded(module()) -> boolean().
@@ -150,6 +185,12 @@ is_loaded(Name) ->
 
 -spec all() -> [clj_module()].
 all() -> ets:tab2list(modules_table_id()).
+
+%% @doc Returns a list where each element is a list with the abstract
+%%      forms of all stored modules.
+-spec all_forms() -> [[erl_parse:abstract_form()]].
+all_forms() ->
+  lists:map(fun clj_module:to_forms/1, all()).
 
 -spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
 to_forms(#module{name = Name} = Module) ->
@@ -221,8 +262,16 @@ add_functions(Module, Funs) ->
 
 -spec is_clojure(module()) -> boolean().
 is_clojure(Name) ->
-  Attrs = Name:module_info(attributes),
-  lists:keymember(clojure, 1, Attrs).
+  Key = {?MODULE, is_clojure, Name},
+  case erlang:get(Key) of
+    undefined ->
+      Attrs = Name:module_info(attributes),
+      IsClojure = lists:keymember(clojure, 1, Attrs),
+      erlang:put(Key, IsClojure),
+      IsClojure;
+    Value ->
+      Value
+  end.
 
 %%------------------------------------------------------------------------------
 %% Helper Functions

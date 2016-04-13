@@ -248,8 +248,10 @@ trace_while(Filename, Fun, Modules, Timeout) ->
   after 1000 -> throw(<<"Fun never started">>)
   end,
 
-  Timestamp = integer_to_list(erlang:monotonic_time()),
-  FilenameUnique = Filename ++ Timestamp,
+  {{Y, M, D}, {Hours, Mins, Secs}} = calendar:local_time(),
+  FilenameUnique = io_lib:format( "~s-~p-~p-~p-~p-~p-~p"
+                                , [Filename, Y, M, D, Hours, Mins, Secs]
+                                ),
   eep:start_file_tracing(FilenameUnique, [], Modules),
 
   receive stop -> ok

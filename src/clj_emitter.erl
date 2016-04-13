@@ -30,18 +30,14 @@ without_state(Env, Fun, Args) ->
   clj_env:put(Env1, emitter, State).
 
 -spec remove_state(clj_env:env()) ->
-  { [[erl_parse:abstract_form()]]
-  , [erl_parse:abstract_expr()]
+  { [erl_parse:abstract_expr()]
   , clj_env:env()
   }.
 remove_state(Env) ->
-  ModulesForms = lists:map(fun clj_module:to_forms/1, clj_module:all()),
-
   State = clj_env:get(Env, emitter, initial_state()),
   Exprs = lists:reverse(maps:get(asts, State)),
 
-  { ModulesForms
-  , Exprs
+  { Exprs
   , clj_env:remove(Env, emitter)
   }.
 

@@ -1108,8 +1108,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_inc ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
-  #_(. clojure.lang.Numbers (unchecked_int_inc x)))
+  (inc x))
 
 (defn unchecked-inc
   "Returns a number one greater than x, a long.
@@ -1117,8 +1116,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_inc ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
-  #_(. clojure.lang.Numbers (unchecked_inc x)))
+  (inc x))
 
 (defn unchecked-dec-int
   "Returns a number one less than x, an int.
@@ -2677,7 +2675,7 @@
   [bindings & body]
   (let [i (first bindings)
         n (second bindings)]
-    `(let [n# (clojure.lang.RT/longCast ~n)]
+    `(let [n# ~n]
        (loop [~i 0]
          (when (< ~i n#)
            ~@body
@@ -3469,9 +3467,7 @@
   "Coerce to long"
   {:inline (fn  [x] `(. clojure.lang.RT (longCast ~x)))
    :added "1.0"}
-  [^Number x]
-  (throw "unimplemented")
-  #_(clojure.lang.RT/longCast x))
+  [^Number x] x)
 
 (defn float
   "Coerce to float"
@@ -3692,17 +3688,23 @@
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
-(defmulti print-method (fn [x writer]
-                         (let [t (get (meta x) :type)]
-                           (if (keyword? t) t (class x)))))
-(defmulti print-dup (fn [x writer] (class x)))
+;; TODO: implement multimethods
+#_ ((defmulti print-method (fn [x writer]
+                             (let [t (get (meta x) :type)]
+                               (if (keyword? t) t (class x)))))
+    (defmulti print-dup (fn [x writer] (class x))))
+
+(defn print-method [x writer]
+  (io/format.e writer "~s" (seq [x])))
+
+(defn print-dup [x writer]
+  (io/format.e writer "~s" (seq [x])))
 
 (defn pr-on
   {:private true
    :static true}
   [x w]
-  (throw "unimplemented")
-  #_(if *print-dup*
+  (if *print-dup*
     (print-dup x w)
     (print-method x w))
   nil)
@@ -3716,12 +3718,10 @@
    :added "1.0"}
   ([] nil)
   ([x]
-   (throw "unimplemented")
    (pr-on x *out*))
   ([x & more]
-   (throw "unimplemented")
    (pr x)
-   #_(. *out* (append \space))
+   (io/put_chars.e *out* " ")
    (if-let [nmore (next more)]
      (recur (first more) nmore)
      (apply pr more))))
@@ -3735,9 +3735,7 @@
   {:added "1.0"
    :static true}
   []
-  (throw "unimplemented")
-  #_(. *out* (append system-newline))
-  nil)
+  (io/nl.e *out*))
 
 (defn flush
   "Flushes the output stream that is the current value of
@@ -3745,9 +3743,7 @@
   {:added "1.0"
    :static true}
   []
-  (throw "unimplemented")
-  #_(. *out* (flush))
-  nil)
+  (io/put_chars.e *out* ""))
 
 (defn prn
   "Same as pr followed by (newline). Observes *flush-on-newline*"
@@ -3765,7 +3761,7 @@
   {:added "1.0"
    :static true}
   [& more]
-  #_(binding [*print-readably* nil]
+  (binding [*print-readably* nil]
     (apply pr more)))
 
 (defn println
@@ -3773,7 +3769,7 @@
   {:added "1.0"
    :static true}
   [& more]
-  #_(binding [*print-readably* nil]
+  (binding [*print-readably* nil]
     (apply prn more)))
 
 #_(defn read
@@ -4144,7 +4140,7 @@
   "Returns the namespace named by the symbol or nil if it doesn't exist."
   {:added "1.0"
    :static true}
-  [sym] (clj_env/find_ns.e *env* sym true))
+  [sym] (clj_namespace/find.e sym))
 
 (defn create-ns
   "Create a new namespace named by the symbol if one doesn't already
@@ -4153,7 +4149,7 @@
   {:added "1.0"
    :static true}
   [sym]
-  (clj_core/set!.e #'*env* (clj_env/find_or_create_ns.e *env* sym)))
+  (clj_namespace/find_or_create.e sym))
 
 (defn remove-ns
   "Removes the namespace named by the symbol. Use with caution.
@@ -4161,13 +4157,13 @@
   {:added "1.0"
    :static true}
   [sym]
-  (clj_core/set!.e #'*env* (clj_env/remove_ns.e *env* sym)))
+  (clj_namespace/remove.e sym))
 
 (defn all-ns
   "Returns a sequence of all namespaces."
   {:added "1.0"
    :static true}
-  [] (clj_env/all_ns.e *env*))
+  [] (clj_namespace/all.e))
 
 (defn the-ns
   "If passed a namespace, returns it. Else, when passed a symbol,
@@ -4211,10 +4207,9 @@
   {:added "1.0"
    :static true}
   [ns]
-  {}
   (let [ns (the-ns ns)]
     (filter-key val (fn [v] (and (instance? :clojerl.Var v)
-                                (= ns (find-ns (symbol (namespace v))))
+                                (identical? ns (find-ns (symbol (namespace v))))
                                 (clojerl.Var/is_public.e v)))
                 (ns-map ns))))
 
@@ -4264,27 +4259,27 @@
                 (or (:refer fs) (:only fs) (keys nspublics)))]
     (when (and to-do (not (extends? :clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
-    (doseq [name to-do]
+    ;; keys in maps are strings to avoid be able to use the underlying map
+    ;; implementation. We convert all to-do's to strings since some filters
+    ;; could contains symbols
+    (doseq [name (map name to-do)]
       (when-not (exclude name)
-        (let [v (nspublics name)
+        (let [v   (nspublics name)
               sym (symbol name)]
           (when-not v
             (throw (if (get (ns-interns ns) name)
                      (str name " is not public")
                      (str name " does not exist"))))
-          (clj_namespace/refer.e
-           (clj_env/find_ns.e *env* (clj_env/current_ns.e *env*))
-           (or (rename sym) sym) v))))))
+          (clj_namespace/refer.e *ns* (or (rename sym) sym) v))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
-  #_(let [ns (the-ns ns)]
-    (filter-key val (fn [^clojerl.Var v] (and (instance? :clojerl.Var v)
-                                                  (not= ns (.ns v))))
+  (let [ns (the-ns ns)]
+    (filter-key val (fn [v] (and (instance? :clojerl.Var v)
+                                (not= ns (find-ns (symbol (namespace v))))))
                 (ns-map ns))))
 
 (defn alias
@@ -4295,8 +4290,7 @@
   {:added "1.0"
    :static true}
   [alias namespace-sym]
-  (throw "unimplemented")
-  #_(.addAlias *ns* alias (the-ns namespace-sym)))
+  (clj_namespace/add_alias.e *ns* alias (the-ns namespace-sym)))
 
 (defn ns-aliases
   "Returns a map of the aliases for the namespace."
@@ -5751,10 +5745,7 @@
   [name]
   (let [name (maybe-unquote name)]
     (if (symbol? name)
-      (let [res (clj_env/find_or_create_ns.e @#'*env* name)
-            env (second res)]
-        (clj_core/set!.e #'*env* env)
-        nil)
+      (clj_namespace/find_or_create.e name)
       (throw (str "First argument to in-ns must be a symbol, got: " (type name))))))
 
 (defmacro ns
@@ -5787,7 +5778,8 @@
                 args     (rest all-args)
                 name-str (clojure.core/name kname)
                 name-sym (symbol "clojure.core" (str name-str "*"))]
-            (apply (find-var name-sym) args)))
+            `(~(symbol "clojure.core" (clojure.core/name kname))
+              ~@(map #(list 'quote %) args))))
         docstring  (when (string? (first references)) (first references))
         references (if docstring (next references) references)
         name (if docstring
@@ -5808,20 +5800,18 @@
         references (remove #(= :gen-class (first %)) references)
         ;ns-effect (clojure.core/in-ns name)
         name-metadata (meta name)]
-    (do
-      (in-ns name)
-      #_(when name-metadata
-          `((.resetMeta (clojure.lang.Namespace/find '~name) ~name-metadata)))
-      (with-loading-context
-        (when (and (not= name 'clojure.core)
-                   (not-any? #(= :refer-clojure (first %)) references))
-          (clojure.core/refer 'clojure.core))
-        (doall (map process-reference references)))
-      nil
-      #_(if (= '~name 'clojure.core)
-          nil
-          (do (dosync (commute @#'*loaded-libs* conj '~name)) nil))
-      )))
+
+    `(do
+       (clojure.core/in-ns '~name)
+       (with-loading-context
+         ;; ~@(when gen-class-call (list gen-class-call))
+         ~@(when (and (not= name 'clojure.core)
+                      (not-any? #(= :refer-clojure (first %)) references))
+             `((clojure.core/refer '~'clojure.core)))
+         ~@(map process-reference references))
+       #_(if (= '~name 'clojure.core)
+         nil
+         (do (dosync (commute @#'*loaded-libs* conj '~name)) nil)))))
 
 (defmacro refer-clojure
   "Same as (refer 'clojure.core <filters>)"
@@ -5844,7 +5834,8 @@
   ^{:dynamic true
     :private true
     :doc "A ref to a sorted set of symbols representing loaded libs"}
-  *loaded-libs* #{})
+  *loaded-libs* ;; TODO: should be a sorted-set
+  #{})
 
 (defonce ^:dynamic
   ^{:private true
@@ -5932,15 +5923,16 @@
   (clj_core/set!.e #'*loaded-libs*
                    (reduce1 conj
                             *loaded-libs*
-                            (binding [*loaded-libs* (sorted-set)]
+                            ;; TODO: should be a sorted-set
+                            (binding [*loaded-libs* (hash-set)]
                               (load-one lib need-ns require)
-                              @*loaded-libs*))))
+                              *loaded-libs*))))
 
 (defn- load-lib
   "Loads a lib with options"
   [prefix lib & options]
   (throw-if (and prefix (pos? (index-of (name lib) "\\.")))
-            "Found lib name '%s' containing period with prefix '%s'.  lib names inside prefix lists must not contain periods"
+            "Found lib name '~s' containing period with prefix '~s'.  lib names inside prefix lists must not contain periods"
             (name lib) prefix)
   (let [lib (if prefix (symbol (str prefix \. lib)) lib)
         opts (apply hash-map options)
@@ -5967,18 +5959,18 @@
               (remove-ns lib))
             (throw e)))
         (throw-if (and need-ns (not (find-ns lib)))
-                  "namespace '%s' not found" lib))
+                  "namespace '~s' not found" lib))
       (when (and need-ns *loading-verbosely*)
-        (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
+        (printf "(clojure.core/in-ns '~s)\n" (str (ns-name *ns*))))
       (when as
         (when *loading-verbosely*
-          (printf "(clojure.core/alias '%s '%s)\n" as lib))
+          (printf "(clojure.core/alias '~s '~s)\n" (str as) (str lib)))
         (alias as lib))
       (when (or use (:refer filter-opts))
         (when *loading-verbosely*
-          (printf "(clojure.core/refer '%s" lib)
+          (printf "(clojure.core/refer '~s" (str lib))
           (doseq [opt filter-opts]
-            (printf " %s '%s" (key opt) (print-str (val opt))))
+            (printf " ~s '~s" (key opt) (print-str (val opt))))
           (printf ")\n"))
         (apply refer lib (mapcat seq filter-opts))))))
 
@@ -6021,11 +6013,7 @@
 
 ;; Public
 
-(defn require*
-  [& args]
-  (apply load-libs :require args))
-
-(defmacro require
+(defn require
   "Loads libs, skipping any that are already loaded. Each argument is
   either a libspec that identifies a lib, a prefix list that identifies
   multiple libs whose names share a common prefix, or a flag that modifies
@@ -6074,10 +6062,7 @@
   {:added "1.0"}
 
   [& args]
-  (apply require* args))
-
-(defn use*
-  [& args] (apply load-libs :require :use args))
+  (apply load-libs :require args))
 
 (defn use
   "Like 'require, but also refers to each lib's namespace using
@@ -6088,7 +6073,7 @@
   The arguments and semantics for :exclude, :only, and :rename are the same
   as those documented for clojure.core/refer."
   {:added "1.0"}
-  [& args] (apply use* args))
+  [& args] (apply load-libs :require :use args))
 
 (defn loaded-libs
   "Returns a sorted set of symbols naming the currently loaded libs"
@@ -6106,7 +6091,7 @@
                  (throw "unimplemented")
                  #_(str (root-directory (name *ns*)) "/" path))]
       (when *loading-verbosely*
-        (printf "(clojure.core/load \"%s\")\n" path)
+        (printf "(clojure.core/load \"~s\")\n" path)
         (flush))
       (check-cyclic-dependency path)
       (when-not (= path (first *pending-paths*))

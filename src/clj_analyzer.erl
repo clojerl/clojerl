@@ -24,18 +24,10 @@ is_special(S) ->
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> {any(), clj_env:env()}.
 macroexpand_1(Env, Form) ->
   Op       = clj_core:first(Form),
-  IsSymbol = clj_core:'symbol?'(Op),
-  IsVar    = clj_core:'var?'(Op),
-
-  {MacroVar, Env1} =
-    if
-      IsSymbol -> lookup_var(Op, false, Env);
-      IsVar ->
-        VarSymbol = clj_core:symbol(clj_core:namespace(Op), clj_core:name(Op)),
-        lookup_var(VarSymbol, false, Env);
-      true ->
-        {undefined, Env}
-    end,
+  MacroVar = case clj_core:'symbol?'(Op) of
+               true -> lookup_var(Op, false);
+               false -> undefined
+             end,
 
   case
     not is_special(Op)
@@ -43,11 +35,7 @@ macroexpand_1(Env, Form) ->
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
-      EnvSymbol       = clj_core:symbol(<<"clojure.core">>, <<"*env*">>),
-      {EnvVar, Env2}  = lookup_var(EnvSymbol, false, Env1),
-      ok = 'clojerl.Var':push_bindings(#{EnvVar => Env2}),
-
-      Args = [Form, Env2] ++ clj_core:seq2(clj_core:rest(Form)),
+      Args = [Form, Env] ++ clj_core:seq2(clj_core:rest(Form)),
       try
         Module   = 'clojerl.Var':module(MacroVar),
         Function = 'clojerl.Var':function(MacroVar),
@@ -55,27 +43,22 @@ macroexpand_1(Env, Form) ->
         Args1    = 'clojerl.Var':process_args(MacroVar, Args, SeqFun),
         Arity    = length(Args1),
         FakeFun  = clj_module:fake_fun(Module, Function, Arity),
-        Value    = clj_core:invoke(FakeFun, Args1),
 
-        {Value, clj_core:deref(EnvVar)}
+        clj_core:invoke(FakeFun, Args1)
       catch
         throw:{notfound, _} ->
-          Value2 = clj_core:invoke(MacroVar, Args),
-
-          {Value2, clj_core:deref(EnvVar)}
-      after
-          'clojerl.Var':pop_bindings()
+          clj_core:invoke(MacroVar, Args)
       end;
-    false -> {Form, Env1}
+    false -> Form
   end.
 
 -spec macroexpand(clj_env:env(), 'clojerl.List':type()) ->
-  {any(), clj_env:env()}.
+  any().
 macroexpand(Env, Form) ->
-  {ExpandedForm, Env1} = macroexpand_1(Env, Form),
+  ExpandedForm = macroexpand_1(Env, Form),
   case clj_core:equiv(ExpandedForm, Form) of
-    true -> {Form, Env1};
-    false -> macroexpand_1(Env1, ExpandedForm)
+    true -> {Form, Env};
+    false -> macroexpand_1(Env, ExpandedForm)
   end.
 
 %%------------------------------------------------------------------------------
@@ -159,8 +142,8 @@ analyze_const(Env, Constant) ->
 analyze_seq(_Env, undefined, List) ->
   clj_utils:throw(<<"Can't call nil">>, clj_reader:location_meta(List));
 analyze_seq(Env, Op, List) ->
-  IsSymbol             = clj_core:'symbol?'(Op),
-  {ExpandedList, Env1} = macroexpand_1(Env, List),
+  IsSymbol     = clj_core:'symbol?'(Op),
+  ExpandedList = macroexpand_1(Env, List),
   case clj_core:equiv(List, ExpandedList) of
     true ->
       OpKey = case IsSymbol of
@@ -169,30 +152,13 @@ analyze_seq(Env, Op, List) ->
               end,
       case maps:get(OpKey, special_forms(), undefined) of
         ParseFun when IsSymbol, ParseFun =/= undefined ->
-          ParseFun(Env1, List);
+          ParseFun(Env, List);
         undefined ->
-          analyze_invoke(Env1, List)
+          analyze_invoke(Env, List)
       end;
     false ->
-      analyze_form(Env1, ExpandedList)
+      analyze_form(Env, ExpandedList)
   end.
-
-%%------------------------------------------------------------------------------
-%% Parse ns
-%%------------------------------------------------------------------------------
-
-%%-spec parse_ns(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
-%%parse_ns(Env, List) ->
-%%  Second = clj_core:second(List),
-%%  case clj_core:'symbol?'(Second) of
-%%    true ->
-%%      {_, NewEnv} = clj_env:find_or_create_ns(Env, Second),
-%%      analyze_const(NewEnv, undefined);
-%%    false ->
-%%      clj_utils:throw( <<"First argument to ns must a symbol">>
-%%                     , clj_reader:location_meta(List)
-%%                     )
-%%  end.
 
 %%------------------------------------------------------------------------------
 %% Parse quote
@@ -248,7 +214,8 @@ parse_fn(Env, List) ->
   IsDef       = DefNameSym =/= undefined,
   DefVar      = case IsDef of
                   true  ->
-                    DefVarNsSym = clj_env:current_ns(Env),
+                    DefVarNs    = clj_namespace:current(),
+                    DefVarNsSym = clj_namespace:name(DefVarNs),
                     'clojerl.Var':new( clj_core:name(DefVarNsSym)
                                      , clj_core:name(DefNameSym)
                                      );
@@ -258,7 +225,8 @@ parse_fn(Env, List) ->
   %% If it is a def we only register the var, otherwise register the local.
   Env1 = case IsDef of
            true  ->
-             clj_env:update_var(Env0, DefVar);
+             clj_namespace:update_var(DefVar),
+             Env0;
            false ->
              clj_env:put_local(Env0, NameSym, LocalExpr)
          end,
@@ -334,9 +302,9 @@ parse_fn(Env, List) ->
                    , variadic_arity  => VariadicArity
                    },
         DefVar1 = clj_core:with_meta(DefVar, VarMeta),
-        Env3    = clj_env:update_var(Env2, DefVar1),
+        clj_namespace:update_var(DefVar1),
 
-        analyze_fn_methods(Env3, MethodsList, LoopId, IsOnce, true);
+        analyze_fn_methods(Env2, MethodsList, LoopId, IsOnce, true);
       false ->
         {MethodsExprs, Env2}
     end,
@@ -689,18 +657,19 @@ parse_recur(Env, List) ->
 parse_def(Env, List) ->
   Docstring = validate_def_args(List),
   VarSymbol = clj_core:second(List),
-  case lookup_var(VarSymbol, Env) of
-    {undefined, _} ->
+  case lookup_var(VarSymbol) of
+    undefined ->
       clj_utils:throw( [ <<"Can't refer to qualified var that doesn't exist: ">>
                        , VarSymbol
                        ]
                      , clj_reader:location_meta(VarSymbol)
                      );
-    {Var, Env1} ->
-      VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
-      CurrentNs = clj_env:current_ns(Env1),
+    Var ->
+      VarNsSym     = clj_core:symbol(clj_core:namespace(Var)),
+      CurrentNs    = clj_namespace:current(),
+      CurrentNsSym = clj_namespace:name(CurrentNs),
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
-                            andalso not clj_core:equiv(CurrentNs, VarNsSym)
+                            andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
                           , <<"Can't create defs outside of current ns">>
                           , clj_reader:location_meta(List)
                           ),
@@ -725,7 +694,7 @@ parse_def(Env, List) ->
                          , clj_reader:location_meta(VarSymbol)
                          ),
 
-      Env2  = clj_env:update_var(Env1, Var1),
+      clj_namespace:update_var(Var1),
       Count = clj_core:count(List),
       Init  = case Docstring of
                 undefined when Count =:= 3 -> clj_core:third(List);
@@ -733,11 +702,11 @@ parse_def(Env, List) ->
                 _ -> unbound %% TODO: Create type clojerl.Unbound
               end,
 
-      ExprEnv2 = add_def_name(clj_env:context(Env2, expr), VarSymbol),
-      {InitExpr, Env3} = clj_env:pop_expr(analyze_form(ExprEnv2, Init)),
+      ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
+      {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
 
       Var2 = var_fn_info(Var1, InitExpr),
-      Env4 = clj_env:update_var(Env3, Var2),
+      clj_namespace:update_var(Var2),
 
       DefExpr = #{ op      => def
                  , env     => ?DEBUG(Env)
@@ -749,8 +718,8 @@ parse_def(Env, List) ->
                  , dynamic => IsDynamic
                  },
 
-      Env5 = restore_def_name(Env4, Env2),
-      clj_env:push_expr(Env5, DefExpr)
+      Env2 = restore_def_name(Env1, Env),
+      clj_env:push_expr(Env2, DefExpr)
   end.
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
@@ -816,31 +785,33 @@ validate_def_args(List) ->
                      )
   end.
 
--spec lookup_var('clojerl.Symbol':type(), clj_env:env()) ->
-  {'clojerl.Var':type(), clj_env:env()}.
-lookup_var(VarSymbol, Env) ->
-  lookup_var(VarSymbol, true, Env).
+-spec lookup_var('clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | undefined.
+lookup_var(VarSymbol) ->
+  lookup_var(VarSymbol, true).
 
--spec lookup_var('clojerl.Symbol':type(), boolean(), clj_env:env()) ->
-  {'clojerl.Var':type(), clj_env:env()}.
-lookup_var(VarSymbol, true = _CreateNew, Env) ->
+-spec lookup_var('clojerl.Symbol':type(), boolean()) ->
+  'clojerl.Var':type() | undefined.
+lookup_var(VarSymbol, true = _CreateNew) ->
   NsSym = case clj_core:namespace(VarSymbol) of
             undefined -> undefined;
             NsStr     -> clj_core:symbol(NsStr)
           end,
 
   NameSym   = clj_core:symbol(clj_core:name(VarSymbol)),
-  InternFun = fun(Ns) -> clj_namespace:intern(Ns, NameSym) end,
 
-  CurrentNs = clj_env:current_ns(Env),
-  case clj_core:equiv(CurrentNs, NsSym) of
+  CurrentNs    = clj_namespace:current(),
+  CurrentNsSym = clj_namespace:name(CurrentNs),
+
+  case clj_core:equiv(CurrentNsSym, NsSym) of
     Equal when Equal; NsSym == undefined ->
-      NewEnv = clj_env:update_ns(Env, CurrentNs, InternFun),
-      lookup_var(VarSymbol, false, NewEnv);
+      Ns = clj_namespace:find(CurrentNsSym),
+      clj_namespace:intern(Ns, NameSym),
+      lookup_var(VarSymbol, false);
     false ->
-      lookup_var(VarSymbol, false, Env)
+      lookup_var(VarSymbol, false)
   end;
-lookup_var(VarSymbol, false, Env) ->
+lookup_var(VarSymbol, false) ->
   NsStr = clj_core:namespace(VarSymbol),
   NameStr = clj_core:name(VarSymbol),
 
@@ -848,14 +819,15 @@ lookup_var(VarSymbol, false, Env) ->
     {undefined, NameStr} when NameStr == <<"ns">>;
                               NameStr == <<"in-ns">> ->
       ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, NameStr),
-      clj_env:find_var(Env, ClojureCoreSym);
+      clj_namespace:find_var(ClojureCoreSym);
     {undefined, _} ->
-      CurrentNsSym = clj_env:current_ns(Env),
+      CurrentNs    = clj_namespace:current(),
+      CurrentNsSym = clj_namespace:name(CurrentNs),
       Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
-      clj_env:find_var(Env, Symbol);
+      clj_namespace:find_var(Symbol);
     {NsStr, NameStr} ->
       Symbol = clj_core:symbol(NsStr, NameStr),
-      clj_env:find_var(Env, Symbol)
+      clj_namespace:find_var(Symbol)
   end.
 
 %%------------------------------------------------------------------------------
@@ -1085,7 +1057,7 @@ var_expr(Var, Symbol, _Env) ->
   , clj_env:env()
   }.
 resolve(Env, Symbol) ->
-  CurrentNs = clj_env:find_ns(Env, clj_env:current_ns(Env)),
+  CurrentNs = clj_namespace:current(),
   Local     = clj_env:get_local(Env, Symbol),
   NsStr     = clj_core:namespace(Symbol),
   MappedVar = clj_namespace:mapping(CurrentNs, Symbol),
@@ -1094,13 +1066,13 @@ resolve(Env, Symbol) ->
     {Local, _, _} when Local =/= undefined ->
       {{local, Local}, Env};
     {_, NsStr, _} when NsStr =/= undefined ->
-      case clj_env:find_var(Env, Symbol) of
-        {undefined, Env1} ->
+      case clj_namespace:find_var(Symbol) of
+        undefined ->
           %% If there is no var then assume it's a Module:Function pair.
           %% Let's see how this works out.
-          {erl_fun(Env1, Symbol), Env1};
-        {Var, Env1} ->
-          {{var, Var}, Env1}
+          {erl_fun(Env, Symbol), Env};
+        Var ->
+          {{var, Var}, Env}
       end;
     {_, _, MappedVar} when MappedVar =/= undefined ->
       {{var, MappedVar}, Env};

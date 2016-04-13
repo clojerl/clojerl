@@ -34,3 +34,6 @@ REPL_OPTS = ${SHELL_OPTS} -s clj_repl repl
 
 repl:
 	@rlwrap erl -pa ebin -pa deps/*/ebin ${REPL_OPTS} -noshell
+
+shell-no-sync: SHELL_OPTS = -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
+shell-no-sync: shell;

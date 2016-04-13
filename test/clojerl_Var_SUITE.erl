@@ -17,6 +17,7 @@
         , str/1
         , find/1
         , dynamic_bindings/1
+        , complete_coverage/1
         ]).
 
 -type config() :: list().
@@ -207,8 +208,16 @@ dynamic_bindings(_Config) ->
   Var    = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
   VarStr = clj_core:str(Var),
 
+  #{} = 'clojerl.Var':get_bindings(),
+
   ct:comment("deref'd value should be the root binding"),
   42 = clj_core:deref(Var),
+
+  ct:comment("Change value"),
+  clj_core:'set!'(Var, 85),
+  85 = clj_core:deref(Var),
+
+  clj_core:'set!'(Var, 42),
 
   ct:comment("deref'd value should be the dynamic binding"),
   'clojerl.Var':push_bindings(#{Var => 84}),
@@ -223,12 +232,23 @@ dynamic_bindings(_Config) ->
 
   'clojerl.Var':pop_bindings(),
 
-  #{} = 'clojerl.Var':get_bindings(),
-
   42 = clj_core:deref(Var),
 
-  ok = try clj_core:'set!'(Var, 43), error
-       catch _:<<"Can't change root binding">> -> ok
-       end,
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  Ns     = <<"clojerl_Var_SUITE">>,
+  Name   = <<"forty-two">>,
+  Var    = 'clojerl.Var':new(Ns, Name),
+
+  VarPrivate = clj_core:with_meta(Var, #{private => true}),
+  VarNoRoot  = clj_core:with_meta(Var, #{has_root => true}),
+
+  true  = 'clojerl.Var':is_public(Var),
+  false = 'clojerl.Var':is_public(VarPrivate),
+
+  true  = 'clojerl.Var':has_root(VarNoRoot),
+  false = 'clojerl.Var':has_root(Var),
 
   {comments, ""}.
