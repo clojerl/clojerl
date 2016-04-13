@@ -8,6 +8,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , invoke/1
         , disjoin/1
         , complete_coverage/1
         ]).
@@ -111,6 +112,25 @@ cons(_Config) ->
 
   ct:comment("Conj an existing element in the set"),
   TwoSet = clj_core:conj(TwoSet, 1),
+
+  {comments, ""}.
+
+-spec invoke(config()) -> result().
+invoke(_Config) ->
+  HelloKeyword = clj_core:keyword(<<"hello">>),
+  EmptySet     = clj_core:hash_set([]),
+
+  undefined = clj_core:invoke(EmptySet, [HelloKeyword]),
+
+  HelloSet = clj_core:conj(EmptySet, HelloKeyword),
+  HelloKeyword = clj_core:invoke(HelloSet, [HelloKeyword]),
+
+  ok = try
+         clj_core:invoke(HelloSet, [HelloKeyword, extra]),
+         error
+       catch _:_ ->
+           ok
+       end,
 
   {comments, ""}.
 

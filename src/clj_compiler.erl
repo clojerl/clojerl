@@ -21,16 +21,18 @@
 -type clj_flag() :: 'no-warn-symbol-as-erl-fun'
                   | 'no-warn-dynamic-var-name'.
 
--type options() :: #{ output_dir => string()
-                    , erl_flags  => [atom()]
-                    , clj_flags  => [clj_flag()]
+-type options() :: #{ output_dir  => string()
+                    , erl_flags   => [atom()]
+                    , clj_flags   => [clj_flag()]
+                    , reader_opts => map()
+                    , verbose     => boolean()
                     }.
 
 %%------------------------------------------------------------------------------
 %% Public API
 %%------------------------------------------------------------------------------
 
--spec default_options() -> map().
+-spec default_options() -> options().
 default_options() ->
   #{ output_dir  => "ebin"
    , erl_flags   => [ debug_info
@@ -42,6 +44,7 @@ default_options() ->
                     ]
    , clj_flags   => []
    , reader_opts => #{}
+   , verbose     => false
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().
@@ -68,9 +71,10 @@ compile_file(File, Opts) when is_binary(File) ->
 
 -spec compile_file(file:filename_all(), options(), clj_env:env()) ->
   clj_env:env().
-compile_file(File, Opts, Env) when is_binary(File) ->
+compile_file(File, Opts0, Env) when is_binary(File) ->
   case file:read_file(File) of
     {ok, Src} ->
+      Opts        = maps:merge(default_options(), Opts0),
       Filename    = filename:basename(File),
       FilenameStr = binary_to_list(Filename),
       ErlFlags    = maps:get(erl_flags, Opts, []),
@@ -78,6 +82,7 @@ compile_file(File, Opts, Env) when is_binary(File) ->
       Opts1       = Opts#{ erl_flags   => [{source, FilenameStr} | ErlFlags]
                          , reader_opts => ReaderOpts#{file => Filename}
                          },
+      when_verbose(Opts1, <<"Compiling ", File/binary, "\n">>),
       compile(Src, Opts1, Env);
     Error ->
       throw(Error)
@@ -113,16 +118,24 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts, Env) ->
-  DoEval      = fun() -> do_eval(Form, Opts, Env) end,
-  {_Pid, Ref} = erlang:spawn_monitor(DoEval),
-  receive
-    {'DOWN', Ref, _, _, {shutdown, Result}} ->
-      Result;
-    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
-      erlang:raise(Kind, Error, Stacktrace);
-    {'DOWN', Ref, _, _, Info} ->
-      throw(Info)
+eval(Form, Opts0, Env0) ->
+  Opts     = maps:merge(default_options(), Opts0),
+  CljFlags = maps:get(clj_flags, Opts),
+
+  try
+    ok   = clj_module:init(),
+    Env  = clj_env:put(Env0, clj_flags, CljFlags),
+    %% Emit & eval form and keep the resulting value
+    Env1 = clj_analyzer:analyze(Env, Form),
+    Env2 = clj_emitter:emit(Env1),
+    {Exprs, Env3} = clj_emitter:remove_state(Env2),
+
+    lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
+
+    [Value] = eval_expressions(Exprs),
+    {Value, clj_env:remove(Env3, clj_flags)}
+  after
+    ok = clj_module:terminate()
   end.
 
 %% Flags
@@ -149,45 +162,20 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     try
       ok = clj_module:init(),
       Env  = clj_env:put(Env0, clj_flags, CljFlags),
-      Env1 = clj_reader:read_fold(fun compile_single_form/2, Src, RdrOpts, Env),
-      {ModulesForms, Expressions, Env2} = clj_emitter:remove_state(Env1),
+      Env1 = clj_reader:read_fold(fun emit_eval_form/2, Src, RdrOpts, Env),
+      {_, Env2} = clj_emitter:remove_state(Env1),
 
       %% Compile all modules
       ensure_output_dir(Opts),
-      lists:foreach(compile_forms_fun(Opts), ModulesForms),
-
-      %% Eval all expressions
-      eval_expressions(Expressions),
+      lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
       Env3 = clj_env:remove(Env2, clj_flags),
       {shutdown, Env3}
     catch
       Kind:Error ->
         {Kind, Error, erlang:get_stacktrace()}
-    end,
-
-  exit(Result).
-
--spec do_eval(any(), options(), clj_env:env()) -> ok.
-do_eval(Form, Opts0, Env0) ->
-  Opts     = maps:merge(default_options(), Opts0),
-  CljFlags = maps:get(clj_flags, Opts),
-
-  Result =
-    try
-      ok   = clj_module:init(),
-      Env  = clj_env:put(Env0, clj_flags, CljFlags),
-      Env1 = compile_single_form(Form, Env),
-      {ModulesForms, Exprs, Env2} = clj_emitter:remove_state(Env1),
-
-      lists:foreach(compile_forms_fun(Opts), ModulesForms),
-
-      [Value] = eval_expressions(Exprs),
-      Env3  = {Value, clj_env:remove(Env2, clj_flags)},
-      {shutdown, Env3}
-    catch
-      Kind:Error ->
-        {Kind, Error, erlang:get_stacktrace()}
+    after
+      ok = clj_module:terminate()
     end,
 
   exit(Result).
@@ -209,10 +197,13 @@ ensure_output_dir(Opts) ->
   true = code:add_path(OutputDir),
   ok.
 
--spec compile_single_form(any(), clj_env:env()) -> clj_env:env().
-compile_single_form(Form, Env) ->
+-spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
+emit_eval_form(Form, Env) ->
   Env1 = clj_analyzer:analyze(Env, Form),
-  clj_emitter:emit(Env1).
+  Env2 = clj_emitter:emit(Env1),
+  {Exprs, Env3} = clj_emitter:remove_state(Env2),
+  eval_expressions(Exprs),
+  Env3.
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -247,8 +238,19 @@ eval_expressions([]) ->
   [];
 eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
-  {Values, _} = erl_eval:expr_list(Expressions, []),
+  CurrentNs     = clj_namespace:current(),
+  CurrentNsSym  = clj_namespace:name(CurrentNs),
+  CurrentNsAtom = erlang:binary_to_atom(clj_core:str(CurrentNsSym), utf8),
+  ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom, '_')
+                   || Expr <- Expressions],
+  {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
   Values.
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().
 ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).
+
+-spec when_verbose(options(), binary()) -> ok.
+when_verbose(#{verbose := true}, Message) ->
+  io:format(Message);
+when_verbose(_, _) ->
+  ok.

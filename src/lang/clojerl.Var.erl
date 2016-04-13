@@ -12,6 +12,8 @@
 -export([ new/2
         , is_dynamic/1
         , is_macro/1
+        , is_public/1
+        , has_root/1
         ]).
 
 -export([ function/1
@@ -22,6 +24,9 @@
 
 -export([ push_bindings/1
         , pop_bindings/0
+        , get_bindings/0
+        , dynamic_binding/1
+        , dynamic_binding/2
         ]).
 
 -export(['clojerl.IDeref.deref'/1]).
@@ -48,10 +53,21 @@ is_dynamic(#?TYPE{name = ?M}) ->
   false.
 
 -spec is_macro(type()) -> boolean().
-
 is_macro(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
   maps:get(macro, Meta, false);
 is_macro(#?TYPE{name = ?M}) ->
+  false.
+
+-spec is_public(type()) -> boolean().
+is_public(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+  not maps:get(private, Meta, false);
+is_public(#?TYPE{name = ?M}) ->
+  true.
+
+-spec has_root(type()) -> boolean().
+has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+  maps:get(has_root, Meta, false);
+has_root(#?TYPE{name = ?M}) ->
   false.
 
 -spec module(type()) -> atom().
@@ -70,8 +86,10 @@ val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
 push_bindings(BindingsMap) ->
   Bindings      = erlang:get(dynamic_bindings),
   NewBindings   = clj_scope:new(Bindings),
-  AddBindingFun = fun(K, V, Acc) -> clj_scope:put(Acc, clj_core:str(K), V) end,
-  NewBindings1  = maps:fold(AddBindingFun, NewBindings, BindingsMap),
+  AddBindingFun = fun(K, Acc) ->
+                      clj_scope:put(Acc, clj_core:str(K), clj_core:get(BindingsMap, K))
+                  end,
+  NewBindings1  = lists:foldl(AddBindingFun, NewBindings, clj_core:keys(BindingsMap)),
   erlang:put(dynamic_bindings, NewBindings1),
   ok.
 
@@ -81,6 +99,35 @@ pop_bindings() ->
   Parent   = clj_scope:parent(Bindings),
   erlang:put(dynamic_bindings, Parent),
   ok.
+
+-spec get_bindings() -> ok.
+get_bindings() ->
+  case erlang:get(dynamic_bindings) of
+    undefined -> #{};
+    Bindings  -> clj_scope:to_map(Bindings)
+  end.
+
+-spec dynamic_binding('clojerl.Var':type()) -> any().
+dynamic_binding(Var) ->
+  case erlang:get(dynamic_bindings) of
+    undefined -> undefined;
+    Bindings  ->
+      Key = clj_core:str(Var),
+      clj_scope:get(Bindings, Key)
+  end.
+
+-spec dynamic_binding('clojerl.Var':type(), any()) -> any().
+dynamic_binding(Var, Value) ->
+  case erlang:get(dynamic_bindings) of
+    undefined ->
+      push_bindings(#{}),
+      dynamic_binding(Var, Value);
+    Bindings  ->
+      Key = clj_core:str(Var),
+      NewBindings = clj_scope:put(Bindings, Key, Value),
+      erlang:put(dynamic_bindings, NewBindings),
+      Value
+  end.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -106,7 +153,7 @@ pop_bindings() ->
         Value     -> Value
       end;
     false ->
-      throw(<<"Could not derefence ",
+      throw(<<"Could not dereference ",
               Ns/binary, "/", Name/binary, ". "
               "There is no Erlang function "
               "to back it up.">>)
@@ -141,7 +188,7 @@ pop_bindings() ->
   erlang:apply(Module, Function, Args2).
 
 -spec process_args(type(), [any()], function()) -> [any()].
-process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
+process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
   Meta = case 'clojerl.IMeta.meta'(Var) of
            undefined -> #{};
            M -> M
@@ -157,18 +204,11 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
       Args;
     true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
       {Args1, Rest} = case VariadicArity < ArgCount of
-                        true -> lists:split(VariadicArity, Args);
+                        true  -> lists:split(VariadicArity, Args);
                         false -> {Args, []}
                       end,
       Args1 ++ [RestFun(Rest)];
     _ -> Args
-  end.
-
--spec dynamic_binding('clojerl.Var':type()) -> any().
-dynamic_binding(Var) ->
-  case erlang:get(dynamic_bindings) of
-    undefined -> undefined;
-    Bindings  ->
-      Key = clj_core:str(Var),
-      clj_scope:get(Bindings, Key)
-  end.
+  end;
+process_args(Var, Args, RestFun) ->
+  process_args(Var, clj_core:seq_to_list(Args), RestFun).

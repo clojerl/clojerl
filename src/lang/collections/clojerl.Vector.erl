@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.Indexed').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
 -behavior('clojerl.Seqable').
@@ -24,6 +25,9 @@
         , 'clojerl.IMeta.with_meta'/2
         ]).
 -export(['clojerl.ISequential.noop'/1]).
+-export([ 'clojerl.Indexed.nth'/2
+        , 'clojerl.Indexed.nth'/3
+        ]).
 -export([ 'clojerl.IStack.peek'/1
         , 'clojerl.IStack.pop'/1
         ]).
@@ -77,6 +81,15 @@ new(Items) when is_list(Items) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
 
 'clojerl.ISequential.noop'(_) -> ok.
+
+'clojerl.Indexed.nth'(#?TYPE{name = ?M, data = Array}, N) ->
+  array:get(N, Array).
+
+'clojerl.Indexed.nth'(#?TYPE{name = ?M, data = Array}, N, NotFound) ->
+  case N > array:size(Array) of
+    true  -> NotFound;
+    false -> array:get(N, Array)
+  end.
 
 'clojerl.IStack.peek'(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of

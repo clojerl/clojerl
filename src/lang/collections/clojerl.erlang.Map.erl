@@ -6,6 +6,7 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IFn').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.Seqable').
@@ -20,6 +21,7 @@
         , 'clojerl.IColl.empty'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IFn.invoke'/2]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
         ]).
@@ -65,7 +67,11 @@
       throw(<<"Can't conj something that is not a key/value pair to a map.">>)
   end.
 
+%% clojerl.IColl
+
 'clojerl.IColl.empty'(_) -> #{}.
+
+%% clojerl.IEquiv
 
 'clojerl.IEquiv.equiv'(X, Y) when is_map(X), is_map(Y) ->
   case maps:size(X) =:= maps:size(Y) of
@@ -93,6 +99,16 @@ remove_meta(#?TYPE{} = K, V, Acc) ->
   Acc#{K1 => V};
 remove_meta(K, V, Acc) ->
   Acc#{K => V}.
+
+%% clojerl.IFn
+
+'clojerl.IFn.invoke'(Map, [Key]) ->
+  clj_core:get(Map, Key);
+'clojerl.IFn.invoke'(Map, [Key, NotFound]) ->
+  clj_core:get(Map, Key, NotFound);
+'clojerl.IFn.invoke'(_, Args) ->
+  CountBin = integer_to_binary(length(Args)),
+  throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
 'clojerl.ILookup.get'(Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).

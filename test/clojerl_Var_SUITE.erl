@@ -6,6 +6,7 @@
         , 'forty-two'/0
         , 'forty-two'/1
         , 'forty-two'/2
+        , 'forty-three'/2
         ]).
 
 -export([ deref/1
@@ -15,10 +16,18 @@
         , name/1
         , str/1
         , dynamic_bindings/1
+        , complete_coverage/1
         ]).
 
 -type config() :: list().
 -type result() :: {comments, string()}.
+
+-vars(#{<<"forty-two">> => { '7ype'
+                           , 'clojerl.Var'
+                           , {<<"clojerl_Var_SUITE">>, <<"forty-two">>}
+                           , #{}
+                           }
+       }).
 
 -spec all() -> [atom()].
 all() ->
@@ -53,6 +62,10 @@ init_per_suite(Config) ->
 'forty-two'(X, XS) ->
   Sum = lists:foldl(fun erlang:'+'/2, 0, XS),
   42 + X + Sum.
+
+-spec 'forty-three'(integer(), [integer()]) -> any().
+'forty-three'(X, XS) ->
+  [43, X, XS].
 
 -spec deref(config()) -> result().
 deref(_Config) ->
@@ -95,29 +108,40 @@ equiv(_Config) ->
 
 -spec invoke(config()) -> result().
 invoke(_Config) ->
-  Ns   = <<"clojerl_Var_SUITE">>,
-  Name = <<"forty-two">>,
+  Ns     = <<"clojerl_Var_SUITE">>,
+  Name42 = <<"forty-two">>,
+  Name43 = <<"forty-three">>,
 
-  Var  = 'clojerl.Var':new(Ns, Name),
-  42 = clj_core:invoke(Var, []),
-  45 = clj_core:invoke(Var, [3]),
+  Var42  = 'clojerl.Var':new(Ns, Name42),
+  42 = clj_core:invoke(Var42, []),
+  45 = clj_core:invoke(Var42, [3]),
 
-  false = 'clojerl.Var':is_dynamic(Var),
-  false = 'clojerl.Var':is_macro(Var),
+  false = 'clojerl.Var':is_dynamic(Var42),
+  false = 'clojerl.Var':is_macro(Var42),
 
-  Meta = #{ 'variadic?'     => true
-          , max_fixed_arity => 1
-          , variadic_arity  => 1
-          },
-  VarVariadic = clj_core:with_meta(Var, Meta),
-  43 = clj_core:invoke(VarVariadic, [1]),
-  47 = clj_core:invoke(VarVariadic, [3, 2]),
-  50 = clj_core:invoke(VarVariadic, [3, 2, 1, 2]),
+  Meta42 = #{ 'variadic?'     => true
+            , max_fixed_arity => 1
+            , variadic_arity  => 1
+            },
+  Var42Variadic = clj_core:with_meta(Var42, Meta42),
+  43 = clj_core:invoke(Var42Variadic, [1]),
+  47 = clj_core:invoke(Var42Variadic, [3, 2]),
+  50 = clj_core:invoke(Var42Variadic, [3, 2, 1, 2]),
 
-  false = 'clojerl.Var':is_dynamic(VarVariadic),
-  false = 'clojerl.Var':is_macro(VarVariadic),
+  false = 'clojerl.Var':is_dynamic(Var42Variadic),
+  false = 'clojerl.Var':is_macro(Var42Variadic),
 
-  'forty-two' = 'clojerl.Var':function(VarVariadic),
+  'forty-two' = 'clojerl.Var':function(Var42Variadic),
+
+  Var43  = 'clojerl.Var':new(Ns, Name43),
+  Meta43 = #{ 'variadic?'     => true
+            , max_fixed_arity => undefined
+            , variadic_arity  => 1
+            },
+  Var43Variadic = clj_core:with_meta(Var43, Meta43),
+  [43, 1, undefined]       = clj_core:invoke(Var43Variadic, [1]),
+  [43, 1, [2]]    = clj_core:invoke(Var43Variadic, [1, 2]),
+  [43, 1, [2, 3]] = clj_core:invoke(Var43Variadic, [1, 2, 3]),
 
   {comments, ""}.
 
@@ -154,19 +178,52 @@ str(_Config) ->
 
 -spec dynamic_bindings(config()) -> result().
 dynamic_bindings(_Config) ->
-  Ns   = <<"clojerl_Var_SUITE">>,
-  Name = <<"forty-two">>,
-  Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  Ns     = <<"clojerl_Var_SUITE">>,
+  Name   = <<"forty-two">>,
+  Var    = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  VarStr = clj_core:str(Var),
 
+  #{} = 'clojerl.Var':get_bindings(),
+
+  ct:comment("deref'd value should be the root binding"),
   42 = clj_core:deref(Var),
 
-  BindingsMap = #{Var => 84},
-  'clojerl.Var':push_bindings(BindingsMap),
+  ct:comment("Change value"),
+  clj_core:'set!'(Var, 85),
+  85 = clj_core:deref(Var),
+
+  clj_core:'set!'(Var, 42),
+
+  ct:comment("deref'd value should be the dynamic binding"),
+  'clojerl.Var':push_bindings(#{Var => 84}),
 
   84 = clj_core:deref(Var),
+
+  clj_core:'set!'(Var, 85),
+
+  85 = clj_core:deref(Var),
+
+  #{VarStr := 85} = 'clojerl.Var':get_bindings(),
 
   'clojerl.Var':pop_bindings(),
 
   42 = clj_core:deref(Var),
+
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  Ns     = <<"clojerl_Var_SUITE">>,
+  Name   = <<"forty-two">>,
+  Var    = 'clojerl.Var':new(Ns, Name),
+
+  VarPrivate = clj_core:with_meta(Var, #{private => true}),
+  VarNoRoot  = clj_core:with_meta(Var, #{has_root => true}),
+
+  true  = 'clojerl.Var':is_public(Var),
+  false = 'clojerl.Var':is_public(VarPrivate),
+
+  true  = 'clojerl.Var':has_root(VarNoRoot),
+  false = 'clojerl.Var':has_root(Var),
 
   {comments, ""}.

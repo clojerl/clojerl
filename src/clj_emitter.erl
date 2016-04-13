@@ -2,7 +2,6 @@
 
 -export([ emit/1
         , remove_state/1
-        , without_state/3
         ]).
 
 -type ast() :: erl_parse:abstract_form().
@@ -20,28 +19,15 @@ emit(Env0) ->
       clj_env:put(Env, emitter, ast(Expr, State))
   end.
 
-%% @doc Applies Fun to the Env and Args but it first removes the emitter
-%%      state that could be present in the Env.
--spec without_state(clj_env:env(), function(), [any()]) ->
-  clj_env:env().
-without_state(Env, Fun, Args) ->
-  State = clj_env:get(Env, emitter, initial_state()),
-  Env1 = apply(Fun, [clj_env:remove(Env, emitter) | Args]),
-  clj_env:put(Env1, emitter, State).
-
 -spec remove_state(clj_env:env()) ->
-  { [[erl_parse:abstract_form()]]
-  , [erl_parse:abstract_expr()]
+  { [erl_parse:abstract_expr()]
   , clj_env:env()
   }.
 remove_state(Env) ->
-  ModulesForms = lists:map(fun clj_module:to_forms/1, clj_module:all()),
-
   State = clj_env:get(Env, emitter, initial_state()),
   Exprs = lists:reverse(maps:get(asts, State)),
 
-  { ModulesForms
-  , Exprs
+  { Exprs
   , clj_env:remove(Env, emitter)
   }.
 
@@ -115,8 +101,9 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok = ensure_module(Module),
+  ok     = ensure_module(Module),
   VarAst = erl_syntax:revert(erl_syntax:abstract(Var)),
+
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
@@ -124,7 +111,13 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         , add_functions(Module, Name, FnExpr, State)
         };
       _ ->
-        pop_ast(ast(InitExpr, State))
+        {V, S} = pop_ast(ast(InitExpr, State)),
+        %% If the var is dynamic then the body of the val function needs
+        %% to take this into account.
+        case 'clojerl.Var':is_dynamic(Var) of
+          true  -> {var_val_function(V, VarAst), S};
+          false -> {V, S}
+        end
     end,
 
   ValClause = {clause, 0, [], [], [ValAst]},
@@ -202,10 +195,20 @@ ast(#{op := invoke} = Expr, State) ->
 
   case FExpr of
     #{op := var, var := Var} ->
-      Module   = 'clojerl.Var':module(Var),
-      Function = 'clojerl.Var':function(Var),
-      Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-      Ast      = application_mfa(Module, Function, Args1),
+      VarMeta = clj_core:meta(Var),
+      Module  = 'clojerl.Var':module(Var),
+
+      Ast = case clj_core:get(VarMeta, 'fn?', false) of
+              true ->
+                Function = 'clojerl.Var':function(Var),
+                Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+                application_mfa(Module, Function, Args1);
+              false ->
+                ValFunction = 'clojerl.Var':val_function(Var),
+                FunAst      = application_mfa(Module, ValFunction, []),
+                ArgsAst     = list_ast(Args),
+                application_mfa(clj_core, invoke, [FunAst, ArgsAst])
+            end,
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
@@ -616,3 +619,13 @@ do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= undefined ->
   do_shadow_depth(Shadowed, Depth + 1);
 do_shadow_depth(_, Depth) ->
   Depth.
+
+-spec var_val_function(ast(), ast()) -> ast().
+var_val_function(Val, VarAst) ->
+  TestAst            = application_mfa('clojerl.Var', dynamic_binding, [VarAst]),
+  UndefinedAtom      = {atom, 0, undefined},
+  UndefinedClauseAst = {clause, 0, [UndefinedAtom], [], [Val]},
+  XAtom              = {var, 0, x},
+  ValueClauseAst     = {clause, 0, [XAtom], [], [XAtom]},
+
+  {'case', 0, TestAst, [UndefinedClauseAst, ValueClauseAst]}.

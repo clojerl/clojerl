@@ -7,6 +7,7 @@
         , str/1
         , seq/1
         , equiv/1
+        , invoke/1
         , cons/1
         , associative/1
         , complete_coverage/1
@@ -96,6 +97,24 @@ equiv(_Config) ->
   false = clj_core:equiv(Map1, whatever),
   false = clj_core:equiv(Map1, 1),
   false = clj_core:equiv(Map1, [1]),
+
+  {comments, ""}.
+
+-spec invoke(config()) -> result().
+invoke(_Config) ->
+  Map = clj_core:hash_map([1, a, 2, b]),
+
+  ct:comment("Invoke a map"),
+  a = clj_core:invoke(Map, [1]),
+  b = clj_core:invoke(Map, [2]),
+  undefined = clj_core:invoke(Map, [3]),
+
+  ct:comment("Invoke a map with a not-found value"),
+  c = clj_core:invoke(Map, [3, c]),
+
+  ct:comment("Invoke a map with three arguments"),
+  ok = try clj_core:invoke(Map, [1, 2, 3]), error
+       catch _:_ -> ok end,
 
   {comments, ""}.
 

@@ -1,27 +1,33 @@
 -module(clj_analyzer_SUITE).
 
--export([all/0]).
-
--export([
-         constants/1,
-         ns/1,
-         def/1,
-         quote/1,
-         fn/1,
-         do/1,
-         'if'/1,
-         'let'/1,
-         loop/1,
-         invoke/1,
-         symbol/1,
-         vector/1,
-         map/1,
-         set/1,
-         throw/1,
-         'try'/1,
-         var/1,
-         erl_fun/1
+-export([ all/0
+        , init_per_suite/1
+        , init_per_testcase/2
+        , end_per_testcase/2
         ]).
+
+-export([ constants/1
+        , ns/1
+        , def/1
+        , quote/1
+        , fn/1
+        , do/1
+        , 'if'/1
+        , 'let'/1
+        , loop/1
+        , invoke/1
+        , symbol/1
+        , vector/1
+        , map/1
+        , set/1
+        , throw/1
+        , 'try'/1
+        , var/1
+        , erl_fun/1
+        ]).
+
+-type config() :: list().
+-type result() :: {comments, string()}.
 
 -spec all() -> [atom()].
 all() ->
@@ -29,8 +35,20 @@ all() ->
   Exports = ?MODULE:module_info(exports),
   [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
 
--type config() :: list().
--type result() :: {comments, string()}.
+-spec init_per_suite(config()) -> config().
+init_per_suite(Config) ->
+  application:ensure_all_started(clojerl),
+  Config.
+
+-spec init_per_testcase(_, config()) -> config().
+init_per_testcase(_, Config) ->
+  'clojerl.Var':push_bindings(#{}),
+  Config.
+
+-spec end_per_testcase(_, config()) -> config().
+end_per_testcase(_, Config) ->
+  'clojerl.Var':pop_bindings(),
+  Config.
 
 %%------------------------------------------------------------------------------
 %% Test Cases
@@ -82,9 +100,9 @@ ns(_Config) ->
        end,
 
   ct:comment("Change namespace and analyze keyword"),
-  HelloKeyword = clj_core:keyword(<<"bla">>, <<"hello">>),
+  HelloKeyword = clj_core:keyword(<<"clojure.core">>, <<"hello">>),
 
-  [ #{op := constant, form := undefined}
+  [ #{op := invoke}
   , #{op := constant, form := HelloKeyword}
   ] = analyze_all(<<"(ns bla) ::hello">>),
 
@@ -112,16 +130,17 @@ def(_Config) ->
 
   ct:comment("Qualified var that doesn't exist"),
   ok = try analyze_one(<<"(def x/y)">>)
-       catch _:<<"?:1:6: Can't refer to qualified var that doesn't exist">> ->
+       catch
+         _:<<"?:1:6: Can't refer to qualified var that doesn't exist: x/y">> ->
            ok
        end,
 
-  ct:comment("Create def outside current namespace"),
-  ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user)\n(def bla/x 2)">>)
-       catch _:Reason5 ->
-           <<"?:2:1: Can't create defs outside of current ns">> = Reason5,
-           ok
-       end,
+  %% ct:comment("Create def outside current namespace"),
+  %% ok = try analyze_all(<<"(ns bla) (def x 1) (ns $user)\n(def bla/x 2)">>)
+  %%      catch _:Reason5 ->
+  %%          <<"?:2:1: Can't create defs outside of current ns">> = Reason5,
+  %%          ok
+  %%      end,
 
   ct:comment("Not a dynamic var but its name suggest otherwise"),
   _ = analyze_one(<<"(def *x* 1)">>),
@@ -129,18 +148,18 @@ def(_Config) ->
   #{op := def,
     doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
 
-  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y $user/x)">>),
+  [_, #{op := def}] = analyze_all(<<"(def x 1) (def y clojure.core/x)">>),
 
-  #{op := def} = analyze_one(<<"(def $user/x 1)">>),
+  #{op := def} = analyze_one(<<"(def clojure.core/x 1)">>),
 
-  [ #{op := constant, form := undefined}
+  [ #{op := invoke, args := [_]}
   , #{op := def}
   ] = analyze_all(<<"(ns bla) (def x 1)">>),
 
   ct:comment("Function vars should have fn information in their metadata"),
   #{ op  := def
    , var := Var
-   } = analyze_one(<<"(def $user/x (fn* [x] x))">>),
+   } = analyze_one(<<"(def clojure.core/x (fn* [x] x))">>),
 
   VarMeta = clj_core:meta(Var),
 
@@ -169,11 +188,11 @@ def(_Config) ->
 quote(_Config) ->
   ct:comment("Quote with reader macro"),
   #{op := quote,
-    expr := #{op := constant}} = analyze_one(<<"'($user/x 1)">>),
+    expr := #{op := constant}} = analyze_one(<<"'(clojure.core/x 1)">>),
 
   ct:comment("Quote with quote symbol"),
   #{op := quote,
-    expr := #{op := constant}} = analyze_one(<<"(quote ($user/x 1))">>),
+    expr := #{op := constant}} = analyze_one(<<"(quote (clojure.core/x 1))">>),
 
   ct:comment("More than one arg to quote"),
   ok = try analyze_all(<<"(quote 1 2 3)">>)
@@ -334,8 +353,8 @@ fn(_Config) ->
        end,
 
   ct:comment("binding in fn should not leak out of fn* scope"),
-  ok = try analyze_all(<<"(fn* ([x y] x y)) x">>), error
-       catch _:<<"?:1:19: Unable to resolve symbol 'x' in this context">> ->
+  ok = try analyze_all(<<"(fn* ([zz y] zz y)) zz">>), error
+       catch _:<<"?:1:21: Unable to resolve symbol 'zz' in this context">> ->
            ok
        end,
 
@@ -589,8 +608,9 @@ invoke(_Config) ->
 -spec symbol(config()) -> result().
 symbol(_Config) ->
   ct:comment("Unresolved symbol"),
-  ok = try analyze_one(<<"hello">>)
-       catch _:<<"?:1:1: Unable to resolve symbol 'hello' in this context">> ->
+  ok = try analyze_one(<<"hello-world">>), error
+       catch _:<<"?:1:1: Unable to resolve symbol "
+                 "'hello-world' in this context">> ->
            ok
        end,
 
@@ -721,7 +741,7 @@ var(_Config) ->
   'clojerl.Var' = clj_core:type(VarX),
 
   ct:comment("Use var with symbol for non-existing var"),
-  ok = try analyze_all(<<"(var y)">>), error
+  ok = try analyze_all(<<"(var zz)">>), error
        catch _:_ -> ok end,
 
   {comments, ""}.
