@@ -17,9 +17,6 @@
         , get/3
         , put/3
         , remove/2
-
-        , update_var/2
-        , find_var/2
         ]).
 
 -type context() :: expr | return | statement.
@@ -105,32 +102,3 @@ put(Env, Name, Value) ->
 -spec remove(env(), atom()) -> ok.
 remove(Env, Name) ->
   maps:remove(Name, Env).
-
--spec update_var(env(), 'clojerl.Var':type()) -> clj_namespace:namespace().
-update_var(Env, Var) ->
-  VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
-  Ns = clj_namespace:find(VarNsSym),
-  clj_namespace:update_var(Ns, Var),
-  Env.
-
-%% @private
--spec find_var(env(), 'clojerl.Symbol':type()) ->
-  {'clojerl.Var':type() | undefined, env()}.
-find_var(Env, Symbol) ->
-  NsStr = clj_core:namespace(Symbol),
-  Ns = case NsStr of
-         undefined -> clj_namespace:current();
-         NsStr     ->
-           NsSym = clj_core:symbol(NsStr),
-           case clj_namespace:find(NsSym) of
-             undefined -> clj_namespace:alias(clj_namespace:current(), NsSym);
-             NsTemp    -> NsTemp
-           end
-       end,
-  case Ns of
-    undefined ->
-      {undefined, Env};
-    Ns ->
-      NameSym = clj_core:symbol(clj_core:name(Symbol)),
-      {clj_namespace:mapping(Ns, NameSym), Env}
-  end.

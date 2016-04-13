@@ -463,15 +463,15 @@ resolve_symbol(Symbol, Env) ->
 
   case clj_core:namespace(Symbol) of
     undefined ->
-      case clj_env:find_var(Env, Symbol) of
-        {undefined, Env1} ->
+      case clj_namespace:find_var(Symbol) of
+        undefined ->
           CurrentNsName = clj_core:name(CurrentNsSym),
           NameStr = clj_core:name(Symbol),
           Sym = clj_core:symbol(CurrentNsName, NameStr),
-          {Sym, Env1};
-        {Var, Env1} ->
+          {Sym, Env};
+        Var ->
           Sym = clj_core:symbol(clj_core:namespace(Var), clj_core:name(Var)),
-          {Sym, Env1}
+          {Sym, Env}
       end;
     NamespaceStr ->
       case clj_namespace:resolve(clj_core:symbol(NamespaceStr)) of

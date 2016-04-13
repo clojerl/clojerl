@@ -12,7 +12,9 @@
 
         , name/1
         , intern/2
+        , update_var/1
         , update_var/2
+        , find_var/1
         , get_mappings/1
 
         , refer/3
@@ -77,6 +79,26 @@ find(Name) ->
     Ns -> Ns
   end.
 
+-spec find_var('clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | undefined.
+find_var(Symbol) ->
+  NsStr = clj_core:namespace(Symbol),
+  Ns = case NsStr of
+         undefined -> clj_namespace:current();
+         NsStr     ->
+           NsSym = clj_core:symbol(NsStr),
+           case clj_namespace:find(NsSym) of
+             undefined -> clj_namespace:alias(clj_namespace:current(), NsSym);
+             NsTemp    -> NsTemp
+           end
+       end,
+  case Ns of
+    undefined -> undefined;
+    Ns ->
+      NameSym = clj_core:symbol(clj_core:name(Symbol)),
+      clj_namespace:mapping(Ns, NameSym)
+  end.
+
 -spec find_or_create('clojerl.Symbol':type()) -> namespace().
 find_or_create(Name) ->
   Ns = case find(Name) of
@@ -101,6 +123,11 @@ intern(Namespace = #namespace{name = NsName}, Symbol) ->
   SymName = clj_core:name(Symbol),
   Var     = 'clojerl.Var':new(clj_core:name(NsName), SymName),
   gen_server:call(?MODULE, {intern, Namespace, Symbol, Var}).
+
+-spec update_var('clojerl.Var':type()) -> namespace().
+update_var(Var) ->
+  VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
+  update_var(find(VarNsSym), Var).
 
 -spec update_var(namespace(), 'clojerl.Var':type()) -> namespace().
 update_var(Namespace, Var) ->

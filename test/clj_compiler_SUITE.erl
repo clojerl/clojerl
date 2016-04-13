@@ -31,8 +31,8 @@ init_per_suite(Config) ->
 -spec compile(config()) -> result().
 compile(_Config) ->
   ct:comment("Compile code and check a var's value by deref'ing it"),
-  Env = clj_compiler:compile(<<"(ns src) (def y :hello-world) 1">>),
-  check_var_value(Env, <<"src">>, <<"y">>, 'hello-world'),
+  _Env = clj_compiler:compile(<<"(ns src) (def y :hello-world) 1">>),
+  check_var_value(<<"src">>, <<"y">>, 'hello-world'),
 
   ct:comment("Try to compile invalid code"),
   ok = try
@@ -50,8 +50,8 @@ compile_file(_Config) ->
 
   ct:comment("Compile a file and check a var's value by deref'ing it"),
   SimplePath = relative_path(<<"priv/examples/simple.clj">>),
-  Env = clj_compiler:compile_file(SimplePath, Opts),
-  check_var_value(Env, <<"examples.simple">>, <<"x">>, 1),
+  _Env = clj_compiler:compile_file(SimplePath, Opts),
+  check_var_value(<<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile an invalid file"),
   ErrorPath = relative_path(<<"priv/examples/error.clj">>),
@@ -76,14 +76,14 @@ compile_files(_Config) ->
   Wildcard1 = relative_path(<<"priv/clojure/*.clj">>),
   Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
   FilesBin1 = lists:map(fun erlang:list_to_binary/1, Files1),
-  _Env1 = clj_compiler:compile_files(FilesBin1, Opts),
+  _ = clj_compiler:compile_files(FilesBin1, Opts),
 
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath  = relative_path(<<"priv/examples/simple.clj">>),
   Simple2Path = relative_path(<<"priv/examples/simple-2.clj">>),
-  Env = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
+  _ = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
 
-  check_var_value(Env, <<"examples.simple-2">>, <<"x">>, 1),
+  check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
   ct:comment("Compile all priv/examples/*.clj files succesfully"),
   Wildcard2 = relative_path(<<"priv/examples/*.clj">>),
@@ -100,10 +100,10 @@ eval(_Config) ->
   {1, _} = clj_compiler:eval(1),
 
   DefList = clj_reader:read(<<"(def hello :world)">>),
-  {Var, Env} = clj_compiler:eval(DefList),
-  Var = find_var(Env, <<"clojure.core">>, <<"hello">>),
+  {Var, _} = clj_compiler:eval(DefList),
+  Var = find_var(<<"clojure.core">>, <<"hello">>),
 
-  check_var_value(Env, <<"clojure.core">>, <<"hello">>, world),
+  check_var_value(<<"clojure.core">>, <<"hello">>, world),
 
   {comments, ""}.
 
@@ -114,15 +114,15 @@ eval(_Config) ->
 -spec relative_path(binary()) -> binary().
 relative_path(Path) -> <<"../../", Path/binary>>.
 
--spec check_var_value(clj_env:env(), binary(), binary(), any()) -> any().
-check_var_value(Env, Namespace, Name, Value) ->
-  Var   = find_var(Env, Namespace, Name),
+-spec check_var_value(binary(), binary(), any()) -> any().
+check_var_value(Namespace, Name, Value) ->
+  Var   = find_var(Namespace, Name),
   Value = clj_core:deref(Var).
 
--spec find_var(clj_env:env(), binary(), binary()) -> 'clojerl.Var':type().
-find_var(Env, Namespace, Name) ->
+-spec find_var(binary(), binary()) -> 'clojerl.Var':type().
+find_var(Namespace, Name) ->
   Symbol = clj_core:symbol(Namespace, Name),
-  case clj_env:find_var(Env, Symbol) of
-    {undefined, _} -> error;
-    {V, _} -> V
+  case clj_namespace:find_var(Symbol) of
+    undefined -> error;
+    V -> V
   end.
