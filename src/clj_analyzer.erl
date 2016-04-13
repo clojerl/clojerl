@@ -21,7 +21,7 @@ is_special(S) ->
   clj_core:'symbol?'(S) andalso
     maps:is_key(clj_core:str(S), special_forms()).
 
--spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> {any(), clj_env:env()}.
+-spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
 macroexpand_1(Env, Form) ->
   Op       = clj_core:first(Form),
   MacroVar = case clj_core:'symbol?'(Op) of
@@ -67,10 +67,7 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{
-   %%  <<"ns">>         => fun parse_ns/2
-   %%,
-     <<"def">>        => fun parse_def/2
+  #{ <<"def">>        => fun parse_def/2
    , <<"quote">>      => fun parse_quote/2
    , <<"fn*">>        => fun parse_fn/2
    , <<"do">>         => fun parse_do/2
@@ -805,8 +802,7 @@ lookup_var(VarSymbol, true = _CreateNew) ->
 
   case clj_core:equiv(CurrentNsSym, NsSym) of
     Equal when Equal; NsSym == undefined ->
-      Ns = clj_namespace:find(CurrentNsSym),
-      clj_namespace:intern(Ns, NameSym),
+      clj_namespace:intern(CurrentNs, NameSym),
       lookup_var(VarSymbol, false);
     false ->
       lookup_var(VarSymbol, false)

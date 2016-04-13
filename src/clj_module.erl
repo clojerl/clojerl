@@ -134,9 +134,9 @@ replace_calls( { call, Line
 
   Args1 = replace_calls(Args, CurrentModule, TopFunction),
   Arity = length(Args),
-  %% Only replace the call if the module is loaded exists. If it is not,
-  %% then the replacement is happening for the evaluation of an expression
-  %% where the called function hasn't been declared in the same evaluation.
+  %% Only replace the call if the module is loaded. If it is not, then the
+  %% replacement is happening for the evaluation of an expression where the
+  %% called function hasn't been declared in the same evaluation.
   case is_loaded(Module) of
     true  ->
       Remote = {remote, Line,

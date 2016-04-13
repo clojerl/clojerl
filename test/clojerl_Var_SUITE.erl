@@ -15,7 +15,6 @@
         , meta/1
         , name/1
         , str/1
-        , find/1
         , dynamic_bindings/1
         , complete_coverage/1
         ]).
@@ -174,30 +173,6 @@ str(_Config) ->
   Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
 
   <<"#'clojerl_Var_SUITE/forty-two">> = clj_core:str(Var),
-
-  {comments, ""}.
-
--spec find(config()) -> result().
-find(_Config) ->
-  Ns   = <<"clojerl_Var_SUITE">>,
-  Name = <<"forty-two">>,
-  Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
-
-  Symbol = clj_core:symbol(Ns, Name),
-  FoundVar = 'clojerl.Var':find(Symbol),
-  true = clj_core:equiv(Var, FoundVar),
-
-  ct:comment("Not existing ns returns undefined"),
-  SymbolNs = clj_core:symbol(<<"whatever">>, Name),
-  undefined = 'clojerl.Var':find(SymbolNs),
-
-  ct:comment("Not existing var returns undefined"),
-  SymbolName = clj_core:symbol(Ns, <<"whatever">>),
-  undefined = 'clojerl.Var':find(SymbolName),
-
-  ct:comment("Module without vars attribute returns undefined"),
-  SymbolNoVars = clj_core:symbol(<<"clj_core">>, <<"whatever">>),
-  undefined = 'clojerl.Var':find(SymbolNoVars),
 
   {comments, ""}.
 

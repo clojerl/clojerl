@@ -381,8 +381,8 @@ syntax_quote(Form, Env) ->
   if
     IsSpecial    -> {clj_core:list([QuoteSymbol, Form]), Env};
     IsSymbol     ->
-      {Symbol, Env1} = syntax_quote_symbol(Form, Env),
-      {clj_core:list([QuoteSymbol, Symbol]), Env1};
+      Symbol = syntax_quote_symbol(Form),
+      {clj_core:list([QuoteSymbol, Symbol]), Env};
     IsUnquote    -> {clj_core:second(Form), Env};
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
@@ -424,20 +424,20 @@ flatten_map(MapSeq, Vector) ->
   Vector2 = clj_core:conj(Vector1, clj_core:second(First)),
   flatten_map(clj_core:next(MapSeq), Vector2).
 
--spec syntax_quote_symbol(any(), clj_env:env()) -> {any(), clj_env:env()}.
-syntax_quote_symbol(Symbol, Env) ->
+-spec syntax_quote_symbol(any()) -> any().
+syntax_quote_symbol(Symbol) ->
   NamespaceStr = clj_core:namespace(Symbol),
   NameStr = clj_core:name(Symbol),
   IsGenSym = clj_utils:ends_with(NameStr, <<"#">>),
   case {NamespaceStr, IsGenSym} of
     {undefined, true} ->
-      register_gensym(Symbol, Env);
+      register_gensym(Symbol);
     _ ->
-      resolve_symbol(Symbol, Env)
+      resolve_symbol(Symbol)
   end.
 
--spec register_gensym(any(), clj_env:env()) -> {any(), clj_env:env()}.
-register_gensym(Symbol, Env) ->
+-spec register_gensym(any()) -> any().
+register_gensym(Symbol) ->
   GensymEnv = case erlang:get(gensym_env) of
                 undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
@@ -451,38 +451,19 @@ register_gensym(Symbol, Env) ->
       GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
       SymbolName = clj_core:name(Symbol),
       erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
-      {GenSym, Env};
+      GenSym;
     GenSym ->
-      {GenSym, Env}
+      GenSym
   end.
 
--spec resolve_symbol(any(), clj_env:env()) -> {any(), clj_env:env()}.
-resolve_symbol(Symbol, Env) ->
-  CurrentNs    = clj_namespace:current(),
-  CurrentNsSym = clj_namespace:name(CurrentNs),
-
-  case clj_core:namespace(Symbol) of
-    undefined ->
-      case clj_namespace:find_var(Symbol) of
-        undefined ->
-          CurrentNsName = clj_core:name(CurrentNsSym),
-          NameStr = clj_core:name(Symbol),
-          Sym = clj_core:symbol(CurrentNsName, NameStr),
-          {Sym, Env};
-        Var ->
-          Sym = clj_core:symbol(clj_core:namespace(Var), clj_core:name(Var)),
-          {Sym, Env}
-      end;
-    NamespaceStr ->
-      case clj_namespace:resolve(clj_core:symbol(NamespaceStr)) of
-        undefined ->
-          {Symbol, Env};
-        Ns ->
-          NsNameSym = clj_namespace:name(Ns),
-          NsNameStr = clj_core:name(NsNameSym),
-          NameStr = clj_core:name(Symbol),
-          {clj_core:symbol(NsNameStr, NameStr), Env}
-      end
+-spec resolve_symbol(any()) -> any().
+resolve_symbol(Symbol) ->
+  case clj_namespace:find_var(Symbol) of
+    undefined -> Symbol;
+    Var ->
+      Namespace = clj_core:namespace(Var),
+      Name      = clj_core:name(Var),
+      clj_core:symbol(Namespace, Name)
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->

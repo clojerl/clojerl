@@ -2,7 +2,6 @@
 
 -export([ emit/1
         , remove_state/1
-        , without_state/3
         ]).
 
 -type ast() :: erl_parse:abstract_form().
@@ -19,15 +18,6 @@ emit(Env0) ->
       State = clj_env:get(Env, emitter, initial_state()),
       clj_env:put(Env, emitter, ast(Expr, State))
   end.
-
-%% @doc Applies Fun to the Env and Args but it first removes the emitter
-%%      state that could be present in the Env.
--spec without_state(clj_env:env(), function(), [any()]) ->
-  clj_env:env().
-without_state(Env, Fun, Args) ->
-  State = clj_env:get(Env, emitter, initial_state()),
-  Env1 = apply(Fun, [clj_env:remove(Env, emitter) | Args]),
-  clj_env:put(Env1, emitter, State).
 
 -spec remove_state(clj_env:env()) ->
   { [erl_parse:abstract_expr()]
@@ -122,6 +112,8 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         };
       _ ->
         {V, S} = pop_ast(ast(InitExpr, State)),
+        %% If the var is dynamic then the body of the val function needs
+        %% to take this into account.
         case 'clojerl.Var':is_dynamic(Var) of
           true  -> {var_val_function(V, VarAst), S};
           false -> {V, S}

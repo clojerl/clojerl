@@ -5,7 +5,6 @@
         , current/1
 
         , all/0
-        , resolve/1
         , find/1
         , find_or_create/1
         , remove/1
@@ -55,20 +54,6 @@ current(#namespace{} = Ns) ->
 -spec all() -> namespace().
 all() -> ets:tab2list(?MODULE).
 
-%% @doc Tries to find a namespace by its name symbol or by its alias
-%%      in the current namespace if it is there.
--spec resolve('clojerl.Symbol':type()) -> namespace().
-resolve(SymNs) ->
-  case find(SymNs) of
-    undefined ->
-      CurrentNs = clj_namespace:current(),
-      case alias(CurrentNs, SymNs) of
-        undefined -> undefined;
-        AliasedNsSym -> find(AliasedNsSym)
-      end;
-    Ns -> Ns
-  end.
-
 %% @doc Tries to get the vars from the module associated to the
 %%      namespace. If the module is not found or if it doesn't
 %%      have a 'vars' attribute, then undefined is returned.
@@ -84,11 +69,11 @@ find(Name) ->
 find_var(Symbol) ->
   NsStr = clj_core:namespace(Symbol),
   Ns = case NsStr of
-         undefined -> clj_namespace:current();
+         undefined -> current();
          NsStr     ->
            NsSym = clj_core:symbol(NsStr),
-           case clj_namespace:find(NsSym) of
-             undefined -> clj_namespace:alias(clj_namespace:current(), NsSym);
+           case find(NsSym) of
+             undefined -> alias(current(), NsSym);
              NsTemp    -> NsTemp
            end
        end,
@@ -96,7 +81,7 @@ find_var(Symbol) ->
     undefined -> undefined;
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
-      clj_namespace:mapping(Ns, NameSym)
+      mapping(Ns, NameSym)
   end.
 
 -spec find_or_create('clojerl.Symbol':type()) -> namespace().
