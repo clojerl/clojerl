@@ -1108,8 +1108,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_inc ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
-  #_(. clojure.lang.Numbers (unchecked_int_inc x)))
+  (inc x))
 
 (defn unchecked-inc
   "Returns a number one greater than x, a long.
@@ -1117,8 +1116,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_inc ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
-  #_(. clojure.lang.Numbers (unchecked_inc x)))
+  (inc x))
 
 (defn unchecked-dec-int
   "Returns a number one less than x, an int.
@@ -2677,7 +2675,7 @@
   [bindings & body]
   (let [i (first bindings)
         n (second bindings)]
-    `(let [n# (clojure.lang.RT/longCast ~n)]
+    `(let [n# ~n]
        (loop [~i 0]
          (when (< ~i n#)
            ~@body
@@ -3469,9 +3467,7 @@
   "Coerce to long"
   {:inline (fn  [x] `(. clojure.lang.RT (longCast ~x)))
    :added "1.0"}
-  [^Number x]
-  (throw "unimplemented")
-  #_(clojure.lang.RT/longCast x))
+  [^Number x] x)
 
 (defn float
   "Coerce to float"
