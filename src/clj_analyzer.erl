@@ -24,17 +24,9 @@ is_special(S) ->
 -spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> {any(), clj_env:env()}.
 macroexpand_1(Env, Form) ->
   Op       = clj_core:first(Form),
-  IsSymbol = clj_core:'symbol?'(Op),
-  IsVar    = clj_core:'var?'(Op),
-
-  MacroVar = if
-               IsSymbol -> lookup_var(Op, false);
-               IsVar ->
-                 VarSymbol = clj_core:symbol( clj_core:namespace(Op)
-                                            , clj_core:name(Op)
-                                            ),
-                 lookup_var(VarSymbol, false);
-               true -> undefined
+  MacroVar = case clj_core:'symbol?'(Op) of
+               true -> lookup_var(Op, false);
+               false -> undefined
              end,
 
   case
