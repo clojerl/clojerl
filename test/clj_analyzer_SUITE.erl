@@ -20,6 +20,7 @@
         , vector/1
         , map/1
         , set/1
+        , tuple/1
         , throw/1
         , 'try'/1
         , var/1
@@ -80,15 +81,11 @@ constants(_Config) ->
   #{op := constant,
     form := <<"hello">>} = analyze_one(<<"\"hello\"">>),
 
-  ct:comment("Regex"),
-  {ok, Re} = re:compile(<<".*">>),
-  #{op := constant,
-    form := Re} = analyze_one(<<"#\".*\"">>),
-
   ct:comment("Keyword"),
   HelloKeyword = clj_core:keyword(<<"hello">>),
-  #{op := constant,
-    form := HelloKeyword} = analyze_one(<<":hello">>),
+  #{ op   := constant
+   , form := HelloKeyword
+   } = analyze_one(<<":hello">>),
 
   {comments, ""}.
 
@@ -639,9 +636,20 @@ map(_Config) ->
 
 -spec set(config()) -> result().
 set(_Config) ->
-  #{op := set} = analyze_one(<<"#{:name :lastname}">>),
+  #{ op    := set
+   , items := [_, _]
+   } = analyze_one(<<"#{:name :lastname}">>),
 
   {comments, ""}.
+
+-spec tuple(config()) -> result().
+tuple(_Config) ->
+  #{ op    := tuple
+   , items := [_, _]
+   } = analyze_one(<<"#[:name :lastname]">>),
+
+  {comments, ""}.
+
 
 -spec throw(config()) -> result().
 throw(_Config) ->

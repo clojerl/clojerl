@@ -669,7 +669,7 @@
   (throw "unimplemented")
   #_(instance? clojure.lang.IChunkedSeq s))
 
-#_(defn concat
+(defn concat
     "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
     {:added "1.0"
      :static true}
@@ -690,19 +690,6 @@
                       (when zs
                         (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
-
-(def concat
-  (fn*
-   ([] (list))
-   ([x] (apply list x))
-   ([x y]
-    (if (seq x)
-      (cons (first (seq x)) (concat (rest (seq x)) y))
-      y))
-   ([x y & zs]
-    (if (seq zs)
-      (apply concat (concat x y) (first zs) (next zs))
-      (concat x y)))))
 
 ;;;;;;;;;;;;;;;;at this point all the support for syntax-quote exists;;;;;;;;;;;;;;;;;;;;;;
 (defmacro delay
@@ -800,6 +787,7 @@
    :inline (fn [x y] `(. clojure.lang.Util compare ~x ~y))
    :added "1.0"}
   [x y]
+  ;; TODO: replace with Erlang comparison operators
   (throw "unimplemented")
   #_(. clojure.lang.Util (compare x y)))
 

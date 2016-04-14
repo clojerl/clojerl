@@ -269,6 +269,15 @@ ast(#{op := set} = Expr, State) ->
 
   Ast = application_mfa('clojerl.Set', new, [ListItems]),
   push_ast(Ast, State1);
+ast(#{op := tuple} = Expr, State) ->
+  #{items := ItemsExprs} = Expr,
+
+  {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
+                           , length(ItemsExprs)
+                           ),
+
+  Ast = {tuple, 0, Items},
+  push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% if
 %%------------------------------------------------------------------------------

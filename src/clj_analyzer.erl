@@ -114,6 +114,8 @@ analyze_form(Env, Form) ->
       analyze_map(Env, Form);
     'clojerl.Set' ->
       analyze_set(Env, Form);
+    'clojerl.erlang.Tuple' ->
+      analyze_tuple(Env, Form);
     _ ->
       analyze_const(Env, Form)
   end.
@@ -1178,10 +1180,32 @@ analyze_set(Env, Set) ->
   Count = clj_core:count(Set),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
-  VectorExpr = #{ op    => set
-                , env   => ?DEBUG(Env2)
-                , form  => Set
-                , items => ItemsExpr
-                },
+  SetExpr = #{ op    => set
+             , env   => ?DEBUG(Env2)
+             , form  => Set
+             , items => ItemsExpr
+             },
 
-  clj_env:push_expr(Env2, VectorExpr).
+  clj_env:push_expr(Env2, SetExpr).
+
+%%------------------------------------------------------------------------------
+%% Analyze tuple
+%%------------------------------------------------------------------------------
+
+-spec analyze_tuple(clj_env:env(), 'clojerl.erlang.Tuple':type()) ->
+  clj_env:env().
+analyze_tuple(Env, Tuple) ->
+  ExprEnv = clj_env:context(Env, expr),
+  Items = erlang:tuple_to_list(Tuple),
+  Env1 = analyze_forms(ExprEnv, Items),
+
+  Count = erlang:tuple_size(Tuple),
+  {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
+
+  TupleExpr = #{ op    => tuple
+               , env   => ?DEBUG(Env2)
+               , form  => Tuple
+               , items => ItemsExpr
+               },
+
+  clj_env:push_expr(Env2, TupleExpr).

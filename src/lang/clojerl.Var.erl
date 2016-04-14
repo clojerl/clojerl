@@ -40,7 +40,7 @@
         ]).
 -export(['clojerl.Stringable.str'/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #?TYPE{data :: {binary(), binary()}}.
 
 -spec new(binary(), binary()) -> type().
 new(Ns, Name) ->

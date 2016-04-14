@@ -18,7 +18,7 @@
         ]).
 -export(['clojerl.Stringable.str'/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #?TYPE{data :: {undefined | binary(), binary()}}.
 
 -spec new(binary()) -> type().
 new(Name) when is_binary(Name) ->
