@@ -14,6 +14,7 @@
         , is_macro/1
         , is_public/1
         , has_root/1
+        , get/1
         ]).
 
 -export([ function/1
@@ -69,6 +70,9 @@ has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
   maps:get(has_root, Meta, false);
 has_root(#?TYPE{name = ?M}) ->
   false.
+
+-spec get(type()) -> boolean().
+get(Var) -> 'clojerl.IDeref.deref'(Var).
 
 -spec module(type()) -> atom().
 module(#?TYPE{name = ?M, data = {Ns, _}}) ->

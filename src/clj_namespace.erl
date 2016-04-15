@@ -14,6 +14,7 @@
         , update_var/1
         , update_var/2
         , find_var/1
+        , find_var/2
         , get_mappings/1
 
         , refer/3
@@ -67,9 +68,14 @@ find(Name) ->
 -spec find_var('clojerl.Symbol':type()) ->
   'clojerl.Var':type() | undefined.
 find_var(Symbol) ->
+  find_var(current(), Symbol).
+
+-spec find_var(namespace(), 'clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | undefined.
+find_var(DefaultNs, Symbol) ->
   NsStr = clj_core:namespace(Symbol),
   Ns = case NsStr of
-         undefined -> current();
+         undefined -> DefaultNs;
          NsStr     ->
            NsSym = clj_core:symbol(NsStr),
            case find(NsSym) of
