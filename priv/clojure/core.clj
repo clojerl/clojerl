@@ -669,7 +669,7 @@
   (throw "unimplemented")
   #_(instance? clojure.lang.IChunkedSeq s))
 
-(defn concat
+#_(defn concat
     "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
     {:added "1.0"
      :static true}
@@ -690,6 +690,19 @@
                       (when zs
                         (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
+
+(def concat
+  (fn*
+   ([] (list))
+   ([x] (apply list x))
+   ([x y]
+    (if (seq x)
+      (cons (first (seq x)) (concat (rest (seq x)) y))
+      y))
+   ([x y & zs]
+    (if (seq zs)
+      (apply concat (concat x y) (first zs) (next zs))
+      (concat x y)))))
 
 ;;;;;;;;;;;;;;;;at this point all the support for syntax-quote exists;;;;;;;;;;;;;;;;;;;;;;
 (defmacro delay
@@ -4335,266 +4348,265 @@
         (when (every? identity ss)
           (concat (map first ss) (apply interleave (map rest ss))))))))
 
-#_ ((defn var-get
-      "Gets the value in the var object"
-      {:added "1.0"
-       :static true}
-      [^clojure.lang.Var x] (. x (get)))
+(defn var-get
+  "Gets the value in the var object"
+  {:added "1.0"
+   :static true}
+  [x] (clojerl.Var/get.e x))
 
-    (defn var-set
-      "Sets the value in the var object to val. The var must be
+(defn var-set
+  "Sets the value in the var object to val. The var must be
   thread-locally bound."
-      {:added "1.0"
-       :static true}
-      [^clojure.lang.Var x val] (. x (set val)))
+  {:added "1.0"
+   :static true}
+  [x val] (clojerl.Var/dynamic_binding.e x val))
 
-    (defmacro with-local-vars
-      "varbinding=> symbol init-expr
+(defmacro with-local-vars
+  "varbinding=> symbol init-expr
 
   Executes the exprs in a context in which the symbols are bound to
   vars with per-thread bindings to the init-exprs.  The symbols refer
   to the var objects themselves, and must be accessed with var-get and
   var-set"
-      {:added "1.0"}
-      [name-vals-vec & body]
-      (assert-args
-       (vector? name-vals-vec) "a vector for its binding"
-       (even? (count name-vals-vec)) "an even number of forms in binding vector")
-      `(let [~@(interleave (take-nth 2 name-vals-vec)
-                           (repeat '(.. clojure.lang.Var create setDynamic)))]
-         (. clojure.lang.Var (pushThreadBindings (hash-map ~@name-vals-vec)))
-         (try
-           ~@body
-           (finally (. clojure.lang.Var (popThreadBindings))))))
+  {:added "1.0"}
+  [name-vals-vec & body]
+  (assert-args
+   (vector? name-vals-vec) "a vector for its binding"
+   (even? (count name-vals-vec)) "an even number of forms in binding vector")
+  `(let [~@(interleave (take-nth 2 name-vals-vec)
+                       (repeat '(.. clojure.lang.Var create setDynamic)))]
+     (clojerl.Var/push_bindings.e (hash-map ~@name-vals-vec))
+     (try
+       ~@body
+       (finally (clojerl.Var/pop_bindings.e)))))
 
-    (defn ns-resolve
-      "Returns the var or Class to which a symbol will be resolved in the
+(defn ns-resolve
+  "Returns the var or Class to which a symbol will be resolved in the
   namespace (unless found in the environment), else nil.  Note that
   if the symbol is fully qualified, the var/Class to which it resolves
   need not be present in the namespace."
-      {:added "1.0"
-       :static true}
-      ([ns sym]
-       (ns-resolve ns nil sym))
-      ([ns env sym]
-       (when-not (contains? env sym)
-         (clojure.lang.Compiler/maybeResolveIn (the-ns ns) sym))))
+  {:added "1.0"
+   :static true}
+  ([ns sym]
+   (ns-resolve ns nil sym))
+  ([ns env sym]
+   (when-not (contains? env sym)
+     (clj_namespace/find_var.e (the-ns ns) sym))))
 
-    (defn resolve
-      "same as (ns-resolve *ns* symbol) or (ns-resolve *ns* &env symbol)"
-      {:added "1.0"
-       :static true}
-      ([sym] (ns-resolve *ns* sym))
-      ([env sym] (ns-resolve *ns* env sym)))
+(defn resolve
+  "same as (ns-resolve *ns* symbol) or (ns-resolve *ns* &env symbol)"
+  {:added "1.0"
+   :static true}
+  ([sym] (ns-resolve *ns* sym))
+  ([env sym] (ns-resolve *ns* env sym)))
 
-    (defn array-map
-      "Constructs an array-map. If any keys are equal, they are handled as
+#_((defn array-map
+     "Constructs an array-map. If any keys are equal, they are handled as
   if by repeated uses of assoc."
-      {:added "1.0"
-       :static true}
-      ([] (. clojure.lang.PersistentArrayMap EMPTY))
-      ([& keyvals]
-       (clojure.lang.PersistentArrayMap/createAsIfByAssoc (to-array keyvals))))
+     {:added "1.0"
+      :static true}
+     ([] (. clojure.lang.PersistentArrayMap EMPTY))
+     ([& keyvals]
+      (clojure.lang.PersistentArrayMap/createAsIfByAssoc (to-array keyvals))))
 
-                                        ;redefine let and loop  with destructuring
-    (defn destructure [bindings]
-      (let [bents (partition 2 bindings)
-            pb (fn pb [bvec b v]
-                 (let [pvec
-                       (fn [bvec b val]
-                         (let [gvec (gensym "vec__")]
-                           (loop [ret (-> bvec (conj gvec) (conj val))
-                                  n 0
-                                  bs b
-                                  seen-rest? false]
-                             (if (seq bs)
-                               (let [firstb (first bs)]
-                                 (cond
-                                   (= firstb '&) (recur (pb ret (second bs) (list `nthnext gvec n))
-                                                        n
-                                                        (nnext bs)
-                                                        true)
-                                   (= firstb :as) (pb ret (second bs) gvec)
-                                   :else (if seen-rest?
-                                           (throw (new Exception "Unsupported binding form, only :as can follow & parameter"))
-                                           (recur (pb ret firstb  (list `nth gvec n nil))
-                                                  (inc n)
-                                                  (next bs)
-                                                  seen-rest?))))
-                               ret))))
-                       pmap
-                       (fn [bvec b v]
-                         (let [gmap (gensym "map__")
-                               gmapseq (with-meta gmap {:tag 'clojure.lang.ISeq})
-                               defaults (:or b)]
-                           (loop [ret (-> bvec (conj gmap) (conj v)
-                                          (conj gmap) (conj `(if (seq? ~gmap) (clojure.lang.PersistentHashMap/create (seq ~gmapseq)) ~gmap))
-                                          ((fn [ret]
-                                             (if (:as b)
-                                               (conj ret (:as b) gmap)
-                                               ret))))
-                                  bes (reduce1
-                                       (fn [bes entry]
-                                         (reduce1 #(assoc %1 %2 ((val entry) %2))
-                                                  (dissoc bes (key entry))
-                                                  ((key entry) bes)))
-                                       (dissoc b :as :or)
-                                       {:keys #(if (keyword? %) % (keyword (str %))),
-                                        :strs str, :syms #(list `quote %)})]
-                             (if (seq bes)
-                               (let [bb (key (first bes))
-                                     bk (val (first bes))
-                                     bv (if (contains? defaults bb)
-                                          (list `get gmap bk (defaults bb))
-                                          (list `get gmap bk))]
-                                 (recur (cond
-                                          (symbol? bb) (-> ret (conj (if (namespace bb) (symbol (name bb)) bb)) (conj bv))
-                                          (keyword? bb) (-> ret (conj (symbol (name bb)) bv))
-                                          :else (pb ret bb bv))
-                                        (next bes)))
-                               ret))))]
-                   (cond
-                     (symbol? b) (-> bvec (conj b) (conj v))
-                     (vector? b) (pvec bvec b v)
-                     (map? b) (pmap bvec b v)
-                     :else (throw (new Exception (str "Unsupported binding form: " b))))))
-            process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
-        (if (every? symbol? (map first bents))
-          bindings
-          (reduce1 process-entry [] bents))))
+   ;;redefine let and loop  with destructuring
 
-    (defmacro let
-      "binding => binding-form init-expr
+   (defn destructure [bindings]
+     (let [bents (partition 2 bindings)
+           pb (fn pb [bvec b v]
+                (let [pvec
+                      (fn [bvec b val]
+                        (let [gvec (gensym "vec__")]
+                          (loop [ret (-> bvec (conj gvec) (conj val))
+                                 n 0
+                                 bs b
+                                 seen-rest? false]
+                            (if (seq bs)
+                              (let [firstb (first bs)]
+                                (cond
+                                  (= firstb '&) (recur (pb ret (second bs) (list `nthnext gvec n))
+                                                       n
+                                                       (nnext bs)
+                                                       true)
+                                  (= firstb :as) (pb ret (second bs) gvec)
+                                  :else (if seen-rest?
+                                          (throw "Unsupported binding form, only :as can follow & parameter")
+                                          (recur (pb ret firstb  (list `nth gvec n nil))
+                                                 (inc n)
+                                                 (next bs)
+                                                 seen-rest?))))
+                              ret))))
+                      pmap
+                      (fn [bvec b v]
+                        (let [gmap (gensym "map__")
+                              gmapseq (with-meta gmap {:tag 'clojure.lang.ISeq})
+                              defaults (:or b)]
+                          (loop [ret (-> bvec (conj gmap) (conj v)
+                                         (conj gmap) (conj `(if (seq? ~gmap) (clojure.lang.PersistentHashMap/create (seq ~gmapseq)) ~gmap))
+                                         ((fn [ret]
+                                            (if (:as b)
+                                              (conj ret (:as b) gmap)
+                                              ret))))
+                                 bes (reduce1
+                                      (fn [bes entry]
+                                        (reduce1 #(assoc %1 %2 ((val entry) %2))
+                                                 (dissoc bes (key entry))
+                                                 ((key entry) bes)))
+                                      (dissoc b :as :or)
+                                      {:keys #(if (keyword? %) % (keyword (str %))),
+                                       :strs str, :syms #(list `quote %)})]
+                            (if (seq bes)
+                              (let [bb (key (first bes))
+                                    bk (val (first bes))
+                                    bv (if (contains? defaults bb)
+                                         (list `get gmap bk (defaults bb))
+                                         (list `get gmap bk))]
+                                (recur (cond
+                                         (symbol? bb) (-> ret (conj (if (namespace bb) (symbol (name bb)) bb)) (conj bv))
+                                         (keyword? bb) (-> ret (conj (symbol (name bb)) bv))
+                                         :else (pb ret bb bv))
+                                       (next bes)))
+                              ret))))]
+                  (cond
+                    (symbol? b) (-> bvec (conj b) (conj v))
+                    (vector? b) (pvec bvec b v)
+                    (map? b) (pmap bvec b v)
+                    :else (throw (str "Unsupported binding form: " b)))))
+           process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
+       (if (every? symbol? (map first bents))
+         bindings
+         (reduce1 process-entry [] bents))))
+
+   (defmacro let
+     "binding => binding-form init-expr
 
   Evaluates the exprs in a lexical context in which the symbols in
   the binding-forms are bound to their respective init-exprs or parts
   therein."
-      {:added "1.0", :special-form true, :forms '[(let [bindings*] exprs*)]}
-      [bindings & body]
-      (assert-args
-       (vector? bindings) "a vector for its binding"
-       (even? (count bindings)) "an even number of forms in binding vector")
-      `(let* ~(destructure bindings) ~@body))
+     {:added "1.0", :special-form true, :forms '[(let [bindings*] exprs*)]}
+     [bindings & body]
+     (assert-args
+      (vector? bindings) "a vector for its binding"
+      (even? (count bindings)) "an even number of forms in binding vector")
+     `(let* ~(destructure bindings) ~@body))
 
-    (defn ^{:private true}
-      maybe-destructured
-      [params body]
-      (if (every? symbol? params)
-        (cons params body)
-        (loop [params params
-               new-params (with-meta [] (meta params))
-               lets []]
-          (if params
-            (if (symbol? (first params))
-              (recur (next params) (conj new-params (first params)) lets)
-              (let [gparam (gensym "p__")]
-                (recur (next params) (conj new-params gparam)
-                       (-> lets (conj (first params)) (conj gparam)))))
-            `(~new-params
-              (let ~lets
-                ~@body))))))
+   (defn ^{:private true}
+     maybe-destructured
+     [params body]
+     (if (every? symbol? params)
+       (cons params body)
+       (loop [params params
+              new-params (with-meta [] (meta params))
+              lets []]
+         (if params
+           (if (symbol? (first params))
+             (recur (next params) (conj new-params (first params)) lets)
+             (let [gparam (gensym "p__")]
+               (recur (next params) (conj new-params gparam)
+                      (-> lets (conj (first params)) (conj gparam)))))
+           `(~new-params
+             (let ~lets
+               ~@body))))))
 
-                                        ;redefine fn with destructuring and pre/post conditions
-    (defmacro fn
-      "params => positional-params* , or positional-params* & next-param
+   ;;redefine fn with destructuring and pre/post conditions
+
+   (defmacro fn
+     "params => positional-params* , or positional-params* & next-param
   positional-param => binding-form
   next-param => binding-form
   name => symbol
 
   Defines a function"
-      {:added "1.0", :special-form true,
-       :forms '[(fn name? [params* ] exprs*) (fn name? ([params* ] exprs*)+)]}
-      [& sigs]
-      (let [name (if (symbol? (first sigs)) (first sigs) nil)
-            sigs (if name (next sigs) sigs)
-            sigs (if (vector? (first sigs))
-                   (list sigs)
-                   (if (seq? (first sigs))
-                     sigs
-                     ;; Assume single arity syntax
-                     (throw (IllegalArgumentException.
-                             (if (seq sigs)
-                               (str "Parameter declaration "
-                                    (first sigs)
-                                    " should be a vector")
-                               (str "Parameter declaration missing"))))))
-            psig (fn* [sig]
-                      ;; Ensure correct type before destructuring sig
-                      (when (not (seq? sig))
-                        (throw (IllegalArgumentException.
-                                (str "Invalid signature " sig
-                                     " should be a list"))))
-                      (let [[params & body] sig
-                            _ (when (not (vector? params))
-                                (throw (IllegalArgumentException.
-                                        (if (seq? (first sigs))
-                                          (str "Parameter declaration " params
-                                               " should be a vector")
-                                          (str "Invalid signature " sig
-                                               " should be a list")))))
-                            conds (when (and (next body) (map? (first body)))
-                                    (first body))
-                            body (if conds (next body) body)
-                            conds (or conds (meta params))
-                            pre (:pre conds)
-                            post (:post conds)
-                            body (if post
-                                   `((let [~'% ~(if (< 1 (count body))
-                                                  `(do ~@body)
-                                                  (first body))]
-                                       ~@(map (fn* [c] `(assert ~c)) post)
-                                       ~'%))
-                                   body)
-                            body (if pre
-                                   (concat (map (fn* [c] `(assert ~c)) pre)
-                                           body)
-                                   body)]
-                        (maybe-destructured params body)))
-            new-sigs (map psig sigs)]
-        (with-meta
-          (if name
-            (list* 'fn* name new-sigs)
-            (cons 'fn* new-sigs))
-          (meta &form))))
+     {:added "1.0", :special-form true,
+      :forms '[(fn name? [params* ] exprs*) (fn name? ([params* ] exprs*)+)]}
+     [& sigs]
+     (let [name (if (symbol? (first sigs)) (first sigs) nil)
+           sigs (if name (next sigs) sigs)
+           sigs (if (vector? (first sigs))
+                  (list sigs)
+                  (if (seq? (first sigs))
+                    sigs
+                    ;; Assume single arity syntax
+                    (throw (if (seq sigs)
+                             (str "Parameter declaration "
+                                  (first sigs)
+                                  " should be a vector")
+                             (str "Parameter declaration missing")))))
+           psig (fn* [sig]
+                     ;; Ensure correct type before destructuring sig
+                     (when (not (seq? sig))
+                       (throw (str "Invalid signature " sig
+                                   " should be a list")))
+                     (let [[params & body] sig
+                           _ (when (not (vector? params))
+                               (throw (if (seq? (first sigs))
+                                        (str "Parameter declaration " params
+                                             " should be a vector")
+                                        (str "Invalid signature " sig
+                                             " should be a list"))))
+                           conds (when (and (next body) (map? (first body)))
+                                   (first body))
+                           body (if conds (next body) body)
+                           conds (or conds (meta params))
+                           pre (:pre conds)
+                           post (:post conds)
+                           body (if post
+                                  `((let [~'% ~(if (< 1 (count body))
+                                                 `(do ~@body)
+                                                 (first body))]
+                                      ~@(map (fn* [c] `(assert ~c)) post)
+                                      ~'%))
+                                  body)
+                           body (if pre
+                                  (concat (map (fn* [c] `(assert ~c)) pre)
+                                          body)
+                                  body)]
+                       (maybe-destructured params body)))
+           new-sigs (map psig sigs)]
+       (with-meta
+         (if name
+           (list* 'fn* name new-sigs)
+           (cons 'fn* new-sigs))
+         (meta &form))))
 
-    (defmacro loop
-      "Evaluates the exprs in a lexical context in which the symbols in
+   (defmacro loop
+     "Evaluates the exprs in a lexical context in which the symbols in
   the binding-forms are bound to their respective init-exprs or parts
   therein. Acts as a recur target."
-      {:added "1.0", :special-form true, :forms '[(loop [bindings*] exprs*)]}
-      [bindings & body]
-      (assert-args
-       (vector? bindings) "a vector for its binding"
-       (even? (count bindings)) "an even number of forms in binding vector")
-      (let [db (destructure bindings)]
-        (if (= db bindings)
-          `(loop* ~bindings ~@body)
-          (let [vs (take-nth 2 (drop 1 bindings))
-                bs (take-nth 2 bindings)
-                gs (map (fn [b] (if (symbol? b) b (gensym))) bs)
-                bfs (reduce1 (fn [ret [b v g]]
-                               (if (symbol? b)
-                                 (conj ret g v)
-                                 (conj ret g v b g)))
-                             [] (map vector bs vs gs))]
-            `(let ~bfs
-               (loop* ~(vec (interleave gs gs))
-                      (let ~(vec (interleave bs gs))
-                        ~@body)))))))
+     {:added "1.0", :special-form true, :forms '[(loop [bindings*] exprs*)]}
+     [bindings & body]
+     (assert-args
+      (vector? bindings) "a vector for its binding"
+      (even? (count bindings)) "an even number of forms in binding vector")
+     (let [db (destructure bindings)]
+       (if (= db bindings)
+         `(loop* ~bindings ~@body)
+         (let [vs (take-nth 2 (drop 1 bindings))
+               bs (take-nth 2 bindings)
+               gs (map (fn [b] (if (symbol? b) b (gensym))) bs)
+               bfs (reduce1 (fn [ret [b v g]]
+                              (if (symbol? b)
+                                (conj ret g v)
+                                (conj ret g v b g)))
+                            [] (map vector bs vs gs))]
+           `(let ~bfs
+              (loop* ~(vec (interleave gs gs))
+                     (let ~(vec (interleave bs gs))
+                       ~@body)))))))
 
-    (defmacro when-first
-      "bindings => x xs
+   (defmacro when-first
+     "bindings => x xs
 
   Roughly the same as (when (seq xs) (let [x (first xs)] body)) but xs is evaluated only once"
-      {:added "1.0"}
-      [bindings & body]
-      (assert-args
-       (vector? bindings) "a vector for its binding"
-       (= 2 (count bindings)) "exactly 2 forms in binding vector")
-      (let [[x xs] bindings]
-        `(when-let [xs# (seq ~xs)]
-           (let [~x (first xs#)]
-             ~@body)))))
+     {:added "1.0"}
+     [bindings & body]
+     (assert-args
+      (vector? bindings) "a vector for its binding"
+      (= 2 (count bindings)) "exactly 2 forms in binding vector")
+     (let [[x xs] bindings]
+       `(when-let [xs# (seq ~xs)]
+          (let [~x (first xs#)]
+            ~@body)))))
 
 (defmacro lazy-cat
   "Expands to code which yields a lazy sequence of the concatenation
