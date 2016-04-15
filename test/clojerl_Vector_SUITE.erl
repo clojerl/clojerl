@@ -107,7 +107,7 @@ seq(_Config) ->
   Vector2 = clj_core:vector([1]),
   1 = clj_core:first(Vector2),
   undefined = clj_core:next(Vector2),
-  [] = clj_core:seq2(clj_core:rest(Vector2)),
+  [] = clj_core:seq_to_list(clj_core:rest(Vector2)),
 
   Vector3 = clj_core:vector([]),
   undefined = clj_core:first(Vector3),

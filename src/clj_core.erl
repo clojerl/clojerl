@@ -7,7 +7,7 @@
          load/1, load/2,
          count/1, nth/2, nth/3,
          'empty?'/1, empty/1,
-         seq/1, seq2/1, seq_to_list/1,
+         seq/1, seq_to_list/1,
          equiv/2,
          conj/2, disj/2,
          cons/2,
@@ -102,11 +102,29 @@ count(Seq)       -> 'clojerl.Counted':count(Seq).
 
 -spec nth(any(), integer()) -> integer().
 nth(undefined, _) -> undefined;
-nth(Coll, N)      -> 'clojerl.Indexed':nth(Coll, N).
+nth(Coll, N) ->
+  Type = type(Coll),
+  case 'extends?'('clojerl.Indexed', Type) of
+    true  -> 'clojerl.Indexed':nth(Coll, N);
+    false ->
+      case 'extends?'('clojerl.ISequential', Type) of
+        true  -> lists:nth(N + 1, seq_to_list(Coll));
+        false -> clj_utils:throw([<<"">>, Type])
+      end
+  end.
 
 -spec nth(any(), integer(), any()) -> integer().
 nth(undefined, _, _)   -> undefined;
-nth(Coll, N, NotFound) -> 'clojerl.Indexed':nth(Coll, N, NotFound).
+nth(Coll, N, NotFound) ->
+  Type = type(Coll),
+  case 'extends?'('clojerl.Indexed', Type) of
+    true  -> 'clojerl.Indexed':nth(Coll, N, NotFound);
+    false ->
+      case 'extends?'('clojerl.ISequential', Type) of
+        true  -> lists:nth(N + 1, seq_to_list(Coll));
+        false -> clj_utils:throw([<<"">>, Type])
+      end
+  end.
 
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->
@@ -127,13 +145,6 @@ seq_to_list(Seqable) ->
   case seq(Seqable) of
     undefined -> seq_to_list(undefined);
     Seq -> [first(Seq) | seq_to_list(rest(Seq))]
-  end.
-
--spec seq2(any()) -> list().
-seq2(Seqable) ->
-  case seq(Seqable) of
-    undefined -> [];
-    Seq -> Seq
   end.
 
 -spec equiv(any(), any()) -> boolean().
@@ -168,7 +179,7 @@ cons(Item, undefined) ->
 cons(Item, Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.IColl':cons(Seq, Item);
-    false -> 'clojerl.IColl':cons(seq2(Seq), Item)
+    false -> 'clojerl.IColl':cons(seq_to_list(Seq), Item)
   end.
 
 -spec first(any()) -> any().
@@ -392,7 +403,7 @@ merge([First, undefined | Rest]) ->
   merge([First | Rest]);
 merge([First, Second | Rest]) ->
   ConjFun = fun(Item, Acc) -> conj(Acc, Item) end,
-  Result = lists:foldl(ConjFun, First, seq2(Second)),
+  Result = lists:foldl(ConjFun, First, seq_to_list(Second)),
   merge([Result | Rest]).
 
 -spec boolean(any()) -> boolean().
