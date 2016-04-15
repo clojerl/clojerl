@@ -12,6 +12,7 @@
         , to_forms/1
 
         , fake_fun/3
+        , delete_fake_funs/2
         , replace_calls/3
 
         , add_vars/2
@@ -26,13 +27,14 @@
 -type function_id() :: {atom(), integer()}.
 %% -type export()      :: {atom(), non_neg_integer()}.
 
--record(module, { name      :: atom(),
-                  vars      :: ets:tid(),
-                  funs      :: ets:tid(),
-                  fake_funs :: ets:tid(),
-                  exports   :: ets:tid(),
-                  attrs     :: [erl_parse:abstract_form()],
-                  rest      :: [erl_parse:abstract_form()]
+-record(module, { name              :: atom(),
+                  vars              :: ets:tid(),
+                  funs              :: ets:tid(),
+                  fake_funs         :: ets:tid(),
+                  fake_funs_arities :: ets:tid(),
+                  exports           :: ets:tid(),
+                  attrs             :: [erl_parse:abstract_form()],
+                  rest              :: [erl_parse:abstract_form()]
                 }).
 
 -type clj_module() :: #module{}.
@@ -73,25 +75,50 @@ terminate() ->
 %%      module each time a macro is found.
 -spec fake_fun(module(), atom(), integer()) -> function() | notfound.
 fake_fun(ModuleName, Function, Arity) ->
-  Module        = get(modules_table_id(), ModuleName),
+  Module        = get(modules_table_id(), ModuleName, true),
   FakeFunsTable = Module#module.fake_funs,
   FA = {Function, Arity},
   case ets:lookup(FakeFunsTable, FA) of
     [] ->
-      case get(Module#module.funs, FA) of
-        undefined -> notfound;
-        {_, FunctionAst} ->
-          {function, _, _, _, Clauses} =
-            replace_calls(FunctionAst, ModuleName, Function),
-          FunAst = {'named_fun', 0, Function, Clauses},
-          {value, Fun, _} = erl_eval:expr(FunAst, []),
-          Fun1 = check_var_val(Function, Arity, Fun),
-          save(Module#module.fake_funs, {FA, Fun1}),
-          Fun1
-      end;
+      {_, FunctionAst} = get(Module#module.funs, FA),
+
+      {function, _, _, _, Clauses} =
+        replace_calls(FunctionAst, ModuleName, Function),
+      FunAst = {'named_fun', 0, Function, Clauses},
+
+      {value, Fun, _} = erl_eval:expr(FunAst, []),
+
+      Fun1 = check_var_val(Function, Arity, Fun),
+      save(Module#module.fake_funs, {FA, Fun1}),
+      add_fake_fun_arity(Module, Function, Arity),
+      Fun1;
     [{_, Fun}] ->
       Fun
   end.
+
+-spec add_fake_fun_arity(module(), atom(), integer()) -> ok.
+add_fake_fun_arity(Module, Function, Arity) ->
+  case get(Module#module.fake_funs_arities, Function) of
+    undefined ->
+      save(Module#module.fake_funs_arities, {Function, [Arity]});
+    {Function, Arities} ->
+      save(Module#module.fake_funs_arities, {Function, [Arity | Arities]})
+  end.
+
+-spec get_fake_fun_arities(module(), atom()) -> ok.
+get_fake_fun_arities(Module, Function) ->
+  case get(Module#module.fake_funs_arities, Function) of
+    undefined -> [];
+    {Function, Arities} -> Arities
+  end.
+
+-spec delete_fake_funs(module(), atom()) -> ok.
+delete_fake_funs(ModuleName, Function) ->
+  Module = get(modules_table_id(), ModuleName),
+  DeleteFun = fun(Arity) ->
+                  ets:delete(Module#module.fake_funs, {Function, Arity})
+              end,
+  ok = lists:foreach(DeleteFun, get_fake_fun_arities(Module, Function)).
 
 %% @doc Checks if the function is actually the one that provides the value
 %%      of a var, Then it checks if the value returned is the var itself and
@@ -281,12 +308,17 @@ is_clojure(Name) ->
 modules_table_id() ->
   erlang:get(?MODULE).
 
--spec get(atom(), module()) -> clj_module().
-get(undefined, Id) -> %% If there is no table then nothing will be found.
-  throw({notfound, Id});
+-spec get(atom(), module()) -> any().
 get(Table, Id) ->
+  get(Table, Id, false).
+
+-spec get(atom(), module(), boolean()) -> any().
+get(undefined, Id, _) -> %% If there is no table then nothing will be found.
+  throw({no_table, Id});
+get(Table, Id, Throw) ->
   case ets:lookup(Table, Id) of
-    [] -> throw({notfound, Id});
+    [] when Throw -> throw({notfound, Id});
+    []      -> undefined;
     [Value] -> Value
   end.
 
@@ -321,13 +353,14 @@ new(Forms) ->
   Exports = flat_exports(ExportAttrs),
 
   TableOpts = [set, protected, {keypos, 1}],
-  Module = #module{ name      = Name
-                  , vars      = ets:new(var, TableOpts)
-                  , funs      = ets:new(funs, TableOpts)
-                  , fake_funs = ets:new(fake_funs, TableOpts)
-                  , exports   = ets:new(exports, TableOpts)
-                  , attrs     = Attrs
-                  , rest      = Rest2
+  Module = #module{ name              = Name
+                  , vars              = ets:new(var, TableOpts)
+                  , funs              = ets:new(funs, TableOpts)
+                  , fake_funs         = ets:new(fake_funs, TableOpts)
+                  , fake_funs_arities = ets:new(fake_funs_arities, TableOpts)
+                  , exports           = ets:new(exports, TableOpts)
+                  , attrs             = Attrs
+                  , rest              = Rest2
                   },
 
   Module1 = add_functions(Module, Funs),
