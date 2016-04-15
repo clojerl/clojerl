@@ -384,6 +384,8 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
 
   FixedArity = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
+  OldLoopId = clj_env:get(Env1, loop_id),
+
   {BodyExpr, Env2} =
     case AnalyzeBody of
       true ->
@@ -409,7 +411,8 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                   , body        => BodyExpr
                   },
 
-  Env3 = clj_env:remove_locals_scope(Env2),
+  Env22 = clj_env:put(Env2, loop_id, OldLoopId),
+  Env3 = clj_env:remove_locals_scope(Env22),
   clj_env:push_expr(Env3, FnMethodExpr).
 
 -spec analyze_body(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
