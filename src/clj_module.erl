@@ -60,10 +60,24 @@ terminate() ->
   case modules_table_id() of
     undefined -> ok;
     TabId ->
+      lists:foreach(fun delete_fake_module/1, code:all_loaded()),
       ets:delete(TabId),
       erlang:erase(?MODULE),
       ok
   end.
+
+%% @private
+%% @doc Deletes all generated fake_modules.
+-spec delete_fake_module(ets:tid()) -> ok.
+delete_fake_module({Name, ""}) ->
+  case atom_to_list(Name) of
+    "fake_module_" ++ _ ->
+      code:delete(Name),
+      ok;
+    _ -> ok
+  end;
+delete_fake_module(_) ->
+  ok.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%      A fake fun is generated during compile-time and it provides the
@@ -73,6 +87,8 @@ terminate() ->
 %%      This is necessary so that macro functions can be used without
 %%      having to generate, compile and load the binary for the partial
 %%      module each time a macro is found.
+%%      A fake module is generated because a previous attempt that used
+%%      erl_eval to generate and execute the fake_fun was too slow.
 -spec fake_fun(module(), atom(), integer()) -> function() | notfound.
 fake_fun(ModuleName, Function, Arity) ->
   Module        = get(modules_table_id(), ModuleName, true),
@@ -84,10 +100,22 @@ fake_fun(ModuleName, Function, Arity) ->
 
       {function, _, _, _, Clauses} =
         replace_calls(FunctionAst, ModuleName, Function),
-      FunAst = {'named_fun', 0, Function, Clauses},
+      Int = erlang:unique_integer([positive, monotonic]),
+      FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
 
-      {value, Fun, _} = erl_eval:expr(FunAst, []),
+      ModuleAst  = {attribute, 0, module, FakeModuleName},
+      ExportAst  = {attribute, 0, export, [{Function, Arity}]},
+      ClojureAst = {attribute, 0, clojure, true},
+      FunAst     = {function, 0, Function, Arity, Clauses},
+      Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
 
+      Binary = case compile:forms(Forms, []) of
+                 {ok, _, Bin} -> Bin;
+                 Error -> throw(Error)
+               end,
+      code:load_binary(FakeModuleName, "", Binary),
+
+      Fun = erlang:make_fun(FakeModuleName, Function, Arity),
       Fun1 = check_var_val(Function, Arity, Fun),
       save(Module#module.fake_funs, {FA, Fun1}),
       add_fake_fun_arity(Module, Function, Arity),
@@ -96,6 +124,10 @@ fake_fun(ModuleName, Function, Arity) ->
       Fun
   end.
 
+%% @private
+%% @doc Keep all the arities of a Module:Function in an ETS table
+%%      so that when deleting them we don't have to traverse the whole
+%%      #module.fake_funs table.
 -spec add_fake_fun_arity(module(), atom(), integer()) -> ok.
 add_fake_fun_arity(Module, Function, Arity) ->
   case get(Module#module.fake_funs_arities, Function) of
@@ -105,6 +137,8 @@ add_fake_fun_arity(Module, Function, Arity) ->
       save(Module#module.fake_funs_arities, {Function, [Arity | Arities]})
   end.
 
+%% @private
+%% @doc Get all arities for Module:Function.
 -spec get_fake_fun_arities(module(), atom()) -> ok.
 get_fake_fun_arities(Module, Function) ->
   case get(Module#module.fake_funs_arities, Function) of
@@ -112,6 +146,8 @@ get_fake_fun_arities(Module, Function) ->
     {Function, Arities} -> Arities
   end.
 
+%% @doc Deletes all fake_funs for Module:Function of all arities.
+%%      This is used so that they can be replaced with new ones.
 -spec delete_fake_funs(module(), atom()) -> ok.
 delete_fake_funs(ModuleName, Function) ->
   Module = get(modules_table_id(), ModuleName),
@@ -185,7 +221,7 @@ replace_calls( {call, Line, {atom, _, TopFunction}, Args}
              , Module
              , TopFunction) ->
   Args1 = replace_calls(Args, Module, TopFunction),
-  {call, Line, {var, Line, TopFunction}, Args1};
+  {call, Line, {atom, Line, TopFunction}, Args1};
 replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
 replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
@@ -314,7 +350,7 @@ get(Table, Id) ->
 
 -spec get(atom(), module(), boolean()) -> any().
 get(undefined, Id, _) -> %% If there is no table then nothing will be found.
-  throw({no_table, Id});
+  throw({notable, Id});
 get(Table, Id, Throw) ->
   case ets:lookup(Table, Id) of
     [] when Throw -> throw({notfound, Id});
