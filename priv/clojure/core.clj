@@ -4508,7 +4508,7 @@
           (let ~lets
             ~@body))))))
 
-   ;;redefine fn with destructuring and pre/post conditions
+;;redefine fn with destructuring and pre/post conditions
 
 
 (defmacro fn
@@ -4927,14 +4927,16 @@
      (walk root)))
 
 (defn file-seq
-  "A tree seq on java.io.Files"
+  "A tree seq on all files in a directory structure"
   {:added "1.0"
    :static true}
   [dir]
-  (throw "unimplemented")
-  #_(tree-seq
-   (fn [^java.io.File f] (. f (isDirectory)))
-   (fn [^java.io.File d] (seq (. d (listFiles))))
+  (tree-seq
+   (fn [^java.io.File f] (filelib/is_dir.e f))
+   (fn [^java.io.File d] (->> (file/list_dir.e d)
+                             second
+                             (map erlang/list_to_binary.1)
+                             seq))
    dir))
 
 (defn xml-seq
@@ -5003,8 +5005,7 @@
             (do (vswap! seen conj input)
                 (rf result input))))))))
   ([coll]
-   (throw "unimplemented destructuring")
-   #_(let [step (fn step [xs seen]
+   (let [step (fn step [xs seen]
                 (lazy-seq
                   ((fn [[f :as xs] seen]
                      (when-let [s (seq xs)]
