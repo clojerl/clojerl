@@ -45,9 +45,9 @@ macroexpand_1(Env, Form) ->
         Arity    = length(Args1),
         FakeFun  = clj_module:fake_fun(Module, Function, Arity),
 
-        clj_core:invoke(FakeFun, Args1)
+        erlang:apply(FakeFun, Args1)
       catch
-        throw:{notfound, _} ->
+        throw:{Error, _} when Error =:= notfound; Error =:= notable ->
           clj_core:invoke(MacroVar, Args)
       end;
     false -> Form
