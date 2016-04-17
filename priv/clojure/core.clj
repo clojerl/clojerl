@@ -4584,7 +4584,7 @@
       `(loop* ~bindings ~@body)
       (let [vs (take-nth 2 (drop 1 bindings))
             bs (take-nth 2 bindings)
-            gs (map (fn [b] (if (symbol? b) b (gensym))) bs)
+            gs (vec (map (fn [b] (if (symbol? b) b (gensym))) bs))
             bfs (reduce1 (fn [ret [b v g]]
                            (if (symbol? b)
                              (conj ret g v)
@@ -5657,8 +5657,7 @@
   ([x] true)
   ([x y] (not (= x y)))
   ([x y & more]
-   (throw "unimplemented destructuring")
-   #_(if (not= x y)
+   (if (not= x y)
      (loop [s #{x y} [x & etc :as xs] more]
        (if xs
          (if (contains? s x)
