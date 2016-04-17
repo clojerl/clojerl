@@ -89,46 +89,50 @@ delete_fake_module(_) ->
 %%      module each time a macro is found.
 %%      A fake module is generated because a previous attempt that used
 %%      erl_eval to generate and execute the fake_fun was too slow.
--spec fake_fun(module(), atom(), integer()) -> function() | notfound.
+-spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
-  Module        = get(modules_table_id(), ModuleName, true),
-  FakeFunsTable = Module#module.fake_funs,
-  FA = {Function, Arity},
-  case ets:lookup(FakeFunsTable, FA) of
+  Module = get(modules_table_id(), ModuleName, true),
+  FA     = {Function, Arity},
+  case ets:lookup(Module#module.fake_funs, FA) of
     [] ->
-      {_, FunctionAst} = get(Module#module.funs, FA),
-
-      {function, _, _, _, Clauses} =
-        replace_calls(FunctionAst, ModuleName, Function),
-      Int = erlang:unique_integer([positive]),
-      FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
-
-      ModuleAst  = {attribute, 0, module, FakeModuleName},
-      ExportAst  = {attribute, 0, export, [{Function, Arity}]},
-      ClojureAst = {attribute, 0, clojure, true},
-      FunAst     = {function, 0, Function, Arity, Clauses},
-      Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
-
-      Binary = case compile:forms(Forms, []) of
-                 {ok, _, Bin} -> Bin;
-                 Error -> throw(Error)
-               end,
-      code:load_binary(FakeModuleName, "", Binary),
-
-      Fun = erlang:make_fun(FakeModuleName, Function, Arity),
-      Fun1 = check_var_val(Function, Arity, Fun),
-      save(Module#module.fake_funs, {FA, Fun1}),
+      Fun = build_fake_fun(Module, Function, Arity),
+      save(Module#module.fake_funs, {FA, Fun}),
       add_fake_fun_arity(Module, Function, Arity),
-      Fun1;
+      Fun;
     [{_, Fun}] ->
       Fun
   end.
 
 %% @private
+build_fake_fun(Module, Function, Arity) ->
+  {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
+
+  {function, _, _, _, Clauses} =
+    replace_calls(FunctionAst, Module#module.name, Function),
+  Int = erlang:unique_integer([positive]),
+  FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
+
+  ModuleAst  = {attribute, 0, module, FakeModuleName},
+  ExportAst  = {attribute, 0, export, [{Function, Arity}]},
+  ClojureAst = {attribute, 0, clojure, true},
+  FunAst     = {function, 0, Function, Arity, Clauses},
+  Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
+
+  Binary = case compile:forms(Forms, []) of
+             {ok, _, Bin} -> Bin;
+             Error -> throw(Error)
+           end,
+  code:load_binary(FakeModuleName, "", Binary),
+
+  Fun = erlang:make_fun(FakeModuleName, Function, Arity),
+  check_var_val(Function, Arity, Fun).
+
+
+%% @private
 %% @doc Keep all the arities of a Module:Function in an ETS table
 %%      so that when deleting them we don't have to traverse the whole
 %%      #module.fake_funs table.
--spec add_fake_fun_arity(module(), atom(), integer()) -> ok.
+-spec add_fake_fun_arity(clj_module(), atom(), integer()) -> ok.
 add_fake_fun_arity(Module, Function, Arity) ->
   case get(Module#module.fake_funs_arities, Function) of
     undefined ->
@@ -244,7 +248,10 @@ load(Name) ->
 
 -spec is_loaded(module()) -> boolean().
 is_loaded(Name) ->
-  ets:member(modules_table_id(), Name).
+  case modules_table_id() of
+    undefined -> false;
+    Id -> ets:member(Id, Name)
+  end.
 
 -spec all() -> [clj_module()].
 all() -> ets:tab2list(modules_table_id()).
@@ -350,10 +357,10 @@ get(Table, Id) ->
 
 -spec get(atom(), module(), boolean()) -> any().
 get(undefined, Id, _) -> %% If there is no table then nothing will be found.
-  throw({notable, Id});
+  throw({no_table, Id});
 get(Table, Id, Throw) ->
   case ets:lookup(Table, Id) of
-    [] when Throw -> throw({notfound, Id});
+    [] when Throw -> throw({not_found, Id});
     []      -> undefined;
     [Value] -> Value
   end.
