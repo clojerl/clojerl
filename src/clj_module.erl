@@ -100,7 +100,7 @@ fake_fun(ModuleName, Function, Arity) ->
 
       {function, _, _, _, Clauses} =
         replace_calls(FunctionAst, ModuleName, Function),
-      Int = erlang:unique_integer([positive, monotonic]),
+      Int = erlang:unique_integer([positive]),
       FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
 
       ModuleAst  = {attribute, 0, module, FakeModuleName},
