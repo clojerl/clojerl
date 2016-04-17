@@ -420,11 +420,10 @@ list(Items) ->
   'clojerl.List':new(Items).
 
 -spec vector(list()) -> 'clojerl.Vector':type().
+vector(Items) when is_list(Items) ->
+  'clojerl.Vector':new(Items);
 vector(Items) ->
-  case count(Items) of
-    0 -> 'clojerl.Vector':new([]);
-    _ -> 'clojerl.Vector':new(seq(Items))
-  end.
+  vector(seq_to_list(Items)).
 
 -spec hash_map(list()) -> 'clojerl.Map':type().
 hash_map(Items) ->
