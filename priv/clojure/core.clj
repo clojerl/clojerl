@@ -4396,8 +4396,7 @@
      ([& keyvals]
       (clojure.lang.PersistentArrayMap/createAsIfByAssoc (to-array keyvals)))))
 
-;;redefine let and loop  with destructuring
-
+;redefine let and loop  with destructuring
 (defn destructure [bindings]
   (let [bents (partition 2 bindings)
         pb (fn pb [bvec b v]
@@ -4495,9 +4494,7 @@
           (let ~lets
             ~@body))))))
 
-;;redefine fn with destructuring and pre/post conditions
-
-
+;redefine fn with destructuring and pre/post conditions
 (defmacro fn
   "params => positional-params* , or positional-params* & next-param
   positional-param => binding-form
