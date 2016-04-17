@@ -28,13 +28,12 @@ coverage-results:
 coverage-html:
 	@find . -name "cover.html" | sort -r | head -1 | xargs open
 
-tests-shell: build-ct-suites
-	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS} -s sync
+tests-shell: test-build
+	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS} # -s sync
 
-REPL_OPTS = ${SHELL_OPTS} -s clj_repl repl
-
+repl: SHELL_OPTS += -s clj_repl repl -noshell
 repl:
-	@rlwrap erl -pa ebin -pa deps/*/ebin ${REPL_OPTS} -noshell
+	@rlwrap erl -pa ebin -pa deps/*/ebin ${SHELL_OPTS}
 
 shell-no-sync: SHELL_OPTS = -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
 shell-no-sync: shell;
