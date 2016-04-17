@@ -83,7 +83,11 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
                          , reader_opts => ReaderOpts#{file => Filename}
                          },
       when_verbose(Opts1, <<"Compiling ", File/binary, "\n">>),
-      compile(Src, Opts1, Env);
+      CompileFun = case Opts1 of
+                     #{time := true} -> fun timed_compile/3;
+                     _               -> fun compile/3
+                   end,
+      CompileFun(Src, Opts1, Env);
     Error ->
       throw(Error)
   end.
@@ -95,6 +99,10 @@ compile(Src) when is_binary(Src) ->
 -spec compile(binary(), options()) -> clj_env:env().
 compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
+
+-spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
+timed_compile(Src, Opts, Env) when is_binary(Src) ->
+  clj_utils:time("Finished compiling", fun compile/3, [Src, Opts, Env]).
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts, Env) when is_binary(Src) ->
