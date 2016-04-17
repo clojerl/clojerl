@@ -412,9 +412,9 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                   , body        => BodyExpr
                   },
 
-  Env22 = clj_env:put(Env2, loop_id, OldLoopId),
-  Env3 = clj_env:remove_locals_scope(Env22),
-  clj_env:push_expr(Env3, FnMethodExpr).
+  Env3 = clj_env:put(Env2, loop_id, OldLoopId),
+  Env4 = clj_env:remove_locals_scope(Env3),
+  clj_env:push_expr(Env4, FnMethodExpr).
 
 -spec analyze_body(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_body(Env, List) ->
