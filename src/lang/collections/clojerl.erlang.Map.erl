@@ -55,7 +55,7 @@
 'clojerl.IColl.cons'(Map, X) ->
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
-  case clj_core:seq2(X) of
+  case clj_core:seq_to_list(X) of
     [K, V] when IsVector ->
       Map#{K => V};
     KVs when IsMap ->
