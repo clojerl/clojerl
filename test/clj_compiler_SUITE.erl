@@ -46,7 +46,7 @@ compile(_Config) ->
 
 -spec compile_file(config()) -> result().
 compile_file(_Config) ->
-  Opts = #{verbose => true},
+  Opts = #{verbose => true, time => true},
 
   ct:comment("Compile a file and check a var's value by deref'ing it"),
   SimplePath = relative_path(<<"priv/examples/simple.clj">>),
@@ -70,7 +70,7 @@ compile_file(_Config) ->
 
 -spec compile_files(config()) -> result().
 compile_files(_Config) ->
-  Opts = #{verbose => true},
+  Opts = #{verbose => true, time => true},
 
   ct:comment("Compile all priv/clojure/*.clj files succesfully"),
   Wildcard1 = relative_path(<<"priv/clojure/*.clj">>),

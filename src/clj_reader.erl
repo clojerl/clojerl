@@ -950,8 +950,8 @@ read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
                          , location(State)
                          );
         true ->
-          Seq = clj_core:seq2(Form),
-          Items = clj_core:seq2(Seq),
+          Seq   = clj_core:seq_to_list(Form),
+          Items = clj_core:seq_to_list(Seq),
           lists:foldl(PendingFormsFun, State, lists:reverse(Items))
       end;
     Form ->

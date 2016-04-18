@@ -218,12 +218,14 @@ complete_coverage(_Config) ->
   Var    = 'clojerl.Var':new(Ns, Name),
 
   VarPrivate = clj_core:with_meta(Var, #{private => true}),
-  VarNoRoot  = clj_core:with_meta(Var, #{has_root => true}),
+  VarRoot    = clj_core:with_meta(Var, #{has_root => true}),
 
   true  = 'clojerl.Var':is_public(Var),
   false = 'clojerl.Var':is_public(VarPrivate),
 
-  true  = 'clojerl.Var':has_root(VarNoRoot),
+  true  = 'clojerl.Var':has_root(VarRoot),
   false = 'clojerl.Var':has_root(Var),
+
+  42    = 'clojerl.Var':get(Var),
 
   {comments, ""}.

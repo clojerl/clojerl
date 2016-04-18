@@ -43,7 +43,7 @@ initial_state() ->
 
 -spec ast(map(), state()) -> {[ast()], state()}.
 ast(#{op := constant, form := Form}, State) ->
-  Ast = erl_syntax:revert(erl_syntax:abstract(Form)),
+  Ast = erl_parse:abstract(Form),
   push_ast(Ast, State);
 ast(#{op := quote, expr := Expr}, State) ->
   ast(Expr, State);
@@ -102,11 +102,12 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
 
   ok     = ensure_module(Module),
-  VarAst = erl_syntax:revert(erl_syntax:abstract(Var)),
+  VarAst = erl_parse:abstract(Var),
 
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
+        clj_module:delete_fake_funs(Module, Name),
         { VarAst
         , add_functions(Module, Name, FnExpr, State)
         };
@@ -396,7 +397,7 @@ ast(#{op := throw} = Expr, State) ->
 
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
   Location    = clj_reader:location_meta(Form),
-  LocationAst = erl_syntax:revert(erl_syntax:abstract(Location)),
+  LocationAst = erl_parse:abstract(Location),
 
   Ast = application_mfa(clj_utils, throw, [Exception, LocationAst]),
   push_ast(Ast, State1);
