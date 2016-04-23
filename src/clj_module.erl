@@ -7,7 +7,7 @@
 
         , all/0
         , all_forms/0
-        , load/1
+        , load/2
         , is_loaded/1
         , to_forms/1
 
@@ -28,6 +28,7 @@
 %% -type export()      :: {atom(), non_neg_integer()}.
 
 -record(module, { name              :: atom(),
+                  source = <<"">>   :: binary(),
                   vars              :: ets:tid(),
                   funs              :: ets:tid(),
                   fake_funs         :: ets:tid(),
@@ -233,8 +234,8 @@ replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
 replace_calls(Ast, _, _) ->
   Ast.
 
--spec load(atom()) -> ok | {error, term()}.
-load(Name) ->
+-spec load(atom(), binary()) -> ok | {error, term()}.
+load(Name, Source) ->
   case is_loaded(Name) of
     true -> ok;
     false ->
@@ -242,7 +243,7 @@ load(Name) ->
         {module, Name} ->
           new(clj_utils:code_from_binary(Name));
         {error, _} ->
-          new([attribute_module(Name)])
+          new(Name, Source)
       end
   end.
 
@@ -263,15 +264,18 @@ all_forms() ->
   lists:map(fun clj_module:to_forms/1, all()).
 
 -spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
-to_forms(#module{name = Name} = Module) ->
-  #module{ vars    = VarsTable
+to_forms(#module{} = Module) ->
+  #module{ name    = Name
+         , source  = Source
+         , vars    = VarsTable
          , funs    = FunsTable
          , exports = ExportsTable
          , attrs   = Attrs
          , rest    = Rest
          } = Module,
 
-  ModuleAttr   = attribute_module(Name),
+  ModuleAttr  = {attribute, 0, module, Name},
+  FileAttr    = {attribute, 0, file, {Source, 0}},
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
   Vars        = maps:from_list(VarsList),
@@ -286,7 +290,7 @@ to_forms(#module{name = Name} = Module) ->
 
   Funs         = [X || {_, X} <- ets:tab2list(FunsTable)],
 
-  [ModuleAttr, VarsAttr, ExportAttr | UniqueAttrs ++ Rest ++ Funs].
+  [ModuleAttr, FileAttr, VarsAttr, ExportAttr | UniqueAttrs ++ Rest ++ Funs].
 
 -spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
@@ -370,8 +374,15 @@ save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
 
+-spec new(atom(), binary()) -> ok | {error, term()}.
+new(Name, Source) when is_atom(Name), is_binary(Source) ->
+  new([ {attribute, 0, module, Name}
+      , {attribute, 0, file, {Source, 0}}
+      ]
+     ).
+
 -spec new([erl_parse:abstract_form()]) -> ok | {error, term()}.
-new(Forms) ->
+new(Forms) when is_list(Forms) ->
   {[ModuleAttr], Rest} = lists:partition(is_attribute_fun(module), Forms),
   {AllAttrs, Rest1} = lists:partition(fun is_attribute/1, Rest),
   {Funs, Rest2} = lists:partition(fun is_function/1, Rest1),
@@ -392,11 +403,16 @@ new(Forms) ->
              V
          end,
 
-  {ExportAttrs, Attrs} = lists:partition(is_attribute_fun(export), RestAttrs),
+  {ExportAttrs, RestAttrs1} = lists:partition(is_attribute_fun(export)
+                                             , RestAttrs
+                                             ),
   Exports = flat_exports(ExportAttrs),
+
+  {Source, Attrs} = source_file(RestAttrs1),
 
   TableOpts = [set, protected, {keypos, 1}],
   Module = #module{ name              = Name
+                  , source            = Source
                   , vars              = ets:new(var, TableOpts)
                   , funs              = ets:new(funs, TableOpts)
                   , fake_funs         = ets:new(fake_funs, TableOpts)
@@ -411,10 +427,6 @@ new(Forms) ->
   Module3 = add_exports(Module2, Exports),
 
   save(modules_table_id(), Module3).
-
--spec attribute_module(atom()) -> erl_parse:abstract_form().
-attribute_module(Name) when is_atom(Name) ->
-  {attribute, 0, module, Name}.
 
 -spec is_attribute(erl_parse:abstract_form()) -> boolean.
 is_attribute({attribute, _, _, _}) -> true;
@@ -445,3 +457,13 @@ function_id(Function) ->
   [{atom(), non_neg_integer()}].
 flat_exports(ExportAttrs) ->
   lists:flatmap(fun({attribute, _, _, Vals}) -> Vals end, ExportAttrs).
+
+-spec source_file([erl_parse:abstract_form()]) ->
+  {binary(), [erl_parse:abstract_form()]}.
+source_file(Attrs) ->
+  case lists:partition(is_attribute_fun(file), Attrs) of
+    {[], Attrs} -> Attrs;
+    {[FileAttr], RestAttrs} ->
+      {attribute, _, file, {Source, _}} = FileAttr,
+      {Source, RestAttrs}
+  end.

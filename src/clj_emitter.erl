@@ -43,39 +43,44 @@ initial_state() ->
 
 -spec ast(map(), state()) -> {[ast()], state()}.
 ast(#{op := constant, form := Form}, State) ->
-  Ast = erl_parse:abstract(Form),
+  Ast = erl_parse:abstract(Form, line_from(Form)),
   push_ast(Ast, State);
 ast(#{op := quote, expr := Expr}, State) ->
   ast(Expr, State);
 %%------------------------------------------------------------------------------
 %% var, binding & local
 %%------------------------------------------------------------------------------
-ast(#{op := var, var := Var} = _Expr, State) ->
+ast(#{op := var} = Expr, State) ->
+  #{ var  := Var
+   , form := Form
+   } = Expr,
   Module = 'clojerl.Var':module(Var),
   Name   = 'clojerl.Var':val_function(Var),
-  Ast    = application_mfa(Module, Name, []),
+  Ast    = application_mfa(Module, Name, [], anno_from(Form)),
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
-  NameSym = maps:get(name, Expr),
+  #{ name := NameSym
+   , form := Form
+   } = Expr,
   NameBin = case get_lexical_rename(Expr, State) of
               undefined ->
                 clj_core:str(NameSym);
               LexicalNameSym ->
                 clj_core:str(LexicalNameSym)
               end,
-  Ast     = {var, 0, binary_to_atom(NameBin, utf8)},
+  Ast     = {var, anno_from(Form), binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
 ast(#{op := local} = Expr, State) ->
-  NameSym = maps:get(name, Expr),
+  #{name := NameSym} = Expr,
   NameBin = case get_lexical_rename(Expr, State) of
               undefined ->
                 clj_core:str(NameSym);
               LexicalNameSym ->
                 clj_core:str(LexicalNameSym)
               end,
-  Ast     = {var, 0, binary_to_atom(NameBin, utf8)},
+  Ast     = {var, anno_from(NameSym), binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
 %% do
@@ -83,6 +88,7 @@ ast(#{op := local} = Expr, State) ->
 ast(#{op := do} = Expr, State) ->
   #{ statements := StatementsExprs
    , ret        := ReturnExpr
+   , form       := Form
    } = Expr,
 
   StmsCount = length(StatementsExprs),
@@ -90,7 +96,7 @@ ast(#{op := do} = Expr, State) ->
                           , StmsCount
                           ),
   {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
-  Ast = {block, 0, Stms ++ [Ret]},
+  Ast = {block, anno_from(Form), Stms ++ [Ret]},
 
   push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
@@ -101,7 +107,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok     = ensure_module(Module),
+  ok     = ensure_module(Module, file_from(Var)),
   VarAst = erl_parse:abstract(Var),
 
   {ValAst, State1} =
@@ -121,7 +127,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
         end
     end,
 
-  ValClause = {clause, 0, [], [], [ValAst]},
+  ValClause = {clause, anno_from(Var), [], [], [ValAst]},
   ValFunAst = function_form(ValName, [ValClause]),
 
   clj_module:add_vars(Module, [Var]),
@@ -133,31 +139,36 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
-  #{methods := Methods} = Expr,
+  #{ methods := Methods
+   , form    := Form
+   } = Expr,
 
   State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
   {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
 
+  Anno        = anno_from(Form),
   ListArgSym  = clj_core:gensym(<<"list_arg">>),
   ListArgName = clj_core:name(ListArgSym),
-  ListArgAst  = {var, 0, binary_to_atom(ListArgName, utf8)},
-  CaseAst     = {'case', 0, ListArgAst, ClausesAsts},
+  ListArgAst  = {var, Anno, binary_to_atom(ListArgName, utf8)},
+  CaseAst     = {'case', Anno, ListArgAst, ClausesAsts},
 
   #{name := NameSym} = maps:get(local, Expr, undefined),
   Name         = clj_core:name(NameSym),
   NameAtom     = binary_to_atom(Name, utf8),
-  FunClauseAst = {clause, 0, [ListArgAst], [], [CaseAst]},
-  FunAst       = {named_fun, 0, NameAtom, [FunClauseAst]},
+  FunClauseAst = {clause, Anno, [ListArgAst], [], [CaseAst]},
+  FunAst       = {named_fun, Anno, NameAtom, [FunClauseAst]},
 
   push_ast(FunAst, State2);
 ast(#{op := erl_fun, invoke := true} = Expr, State) ->
   #{ module   := Module
    , function := Function
+   , form     := Form
    } = Expr,
 
-  ModuleAst   = {atom, 0, Module},
-  FunctionAst = {atom, 0, Function},
-  Ast         = {remote, 0, ModuleAst, FunctionAst},
+  Anno        = anno_from(Form),
+  ModuleAst   = {atom, Anno, Module},
+  FunctionAst = {atom, Anno, Function},
+  Ast         = {remote, Anno, ModuleAst, FunctionAst},
 
   push_ast(Ast, State);
 ast(#{op := erl_fun} = Expr, State) ->
@@ -177,18 +188,22 @@ ast(#{op := erl_fun} = Expr, State) ->
                       , clj_reader:location_meta(Symbol)
                       ),
 
-  Ast = {'fun', 0, { function
-                   , {atom, 0, Module}
-                   , {atom, 0, Function}
-                   , {integer, 0, Arity}
-                   }
-        },
+  Anno = anno_from(Symbol),
+  Ast  = {'fun', Anno, { function
+                       , {atom, Anno, Module}
+                       , {atom, Anno, Function}
+                       , {integer, Anno, Arity}
+                       }
+         },
 
   push_ast(Ast, State);
 ast(#{op := invoke} = Expr, State) ->
   #{ args := ArgsExpr
    , f    := FExpr
+   , form := Form
    } = Expr,
+
+  Anno = anno_from(Form),
 
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExpr)
                           , length(ArgsExpr)
@@ -203,24 +218,24 @@ ast(#{op := invoke} = Expr, State) ->
               true ->
                 Function = 'clojerl.Var':function(Var),
                 Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-                application_mfa(Module, Function, Args1);
+                application_mfa(Module, Function, Args1, Anno);
               false ->
                 ValFunction = 'clojerl.Var':val_function(Var),
-                FunAst      = application_mfa(Module, ValFunction, []),
+                FunAst      = application_mfa(Module, ValFunction, [], Anno),
                 ArgsAst     = list_ast(Args),
-                application_mfa(clj_core, invoke, [FunAst, ArgsAst])
+                application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
             end,
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
-      Ast = {call, 0, FunAst, Args},
+      Ast = {call, Anno, FunAst, Args},
 
       push_ast(Ast, State2);
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),
-      Ast     = application_mfa(clj_core, invoke, [FunAst, ArgsAst]),
+      Ast     = application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno),
 
       push_ast(Ast, State2)
   end;
@@ -228,18 +243,21 @@ ast(#{op := invoke} = Expr, State) ->
 %% Literal data structures
 %%------------------------------------------------------------------------------
 ast(#{op := vector} = Expr, State) ->
-  #{items := ItemsExprs} = Expr,
+  #{ items := ItemsExprs
+   , form  := Form
+   } = Expr,
 
   {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
                            , length(ItemsExprs)
                            ),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa('clojerl.Vector', new, [ListItems]),
+  Ast = application_mfa('clojerl.Vector', new, [ListItems], anno_from(Form)),
   push_ast(Ast, State1);
 ast(#{op := map} = Expr, State) ->
   #{ keys := KeysExprs
    , vals := ValsExprs
+   , form := Form
    } = Expr,
 
   {Keys, State1} = pop_ast( lists:foldl(fun ast/2, State, KeysExprs)
@@ -258,26 +276,30 @@ ast(#{op := map} = Expr, State) ->
   Items = PairUp(Keys, Vals, []),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa('clojerl.Map', new, [ListItems]),
+  Ast = application_mfa('clojerl.Map', new, [ListItems], anno_from(Form)),
   push_ast(Ast, State2);
 ast(#{op := set} = Expr, State) ->
-  #{items := ItemsExprs} = Expr,
+  #{ items := ItemsExprs
+   , form  := Form
+   } = Expr,
 
   {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
                            , length(ItemsExprs)
                            ),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa('clojerl.Set', new, [ListItems]),
+  Ast = application_mfa('clojerl.Set', new, [ListItems], anno_from(Form)),
   push_ast(Ast, State1);
 ast(#{op := tuple} = Expr, State) ->
-  #{items := ItemsExprs} = Expr,
+  #{ items := ItemsExprs
+   , form  := Form
+   } = Expr,
 
   {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
                            , length(ItemsExprs)
                            ),
 
-  Ast = {tuple, 0, Items},
+  Ast = {tuple, anno_from(Form), Items},
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% if
@@ -286,26 +308,29 @@ ast(#{op := 'if'} = Expr, State) ->
   #{ test := TestExpr
    , then := ThenExpr
    , else := ElseExpr
+   , form := Form
    } = Expr,
+
+  Anno = anno_from(Form),
 
   {Test, State1} = pop_ast(ast(TestExpr, State)),
 
   TrueSymbol    = clj_core:gensym(<<"true_">>),
   TrueSymbolAt  = binary_to_atom(clj_core:str(TrueSymbol), utf8),
-  True          = {var, 0, TrueSymbolAt},
-  FalseAtom     = {atom, 0, false},
-  UndefinedAtom = {atom, 0, undefined},
+  True          = {var, Anno, TrueSymbolAt},
+  FalseAtom     = {atom, Anno, false},
+  UndefinedAtom = {atom, Anno, undefined},
   TrueGuards    = [ {op, 2, '=/=', True, FalseAtom}
                   , {op, 2, '=/=', True, UndefinedAtom}
                   ],
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause    = {clause, 0, [True], [TrueGuards], [ThenAst]},
+  TrueClause    = {clause, Anno, [True], [TrueGuards], [ThenAst]},
 
-  Whatever = {var, 0, '_'},
+  Whatever = {var, Anno, '_'},
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause = {clause, 0, [Whatever], [], [ElseAst]},
+  FalseClause = {clause, Anno, [Whatever], [], [ElseAst]},
 
-  Ast = {'case', 0, Test, [TrueClause, FalseClause]},
+  Ast = {'case', Anno, Test, [TrueClause, FalseClause]},
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% let
@@ -313,15 +338,19 @@ ast(#{op := 'if'} = Expr, State) ->
 ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   #{ body     := BodyExpr
    , bindings := BindingsExprs
+   , form := Form
    } = Expr,
+
+  Anno = anno_from(Form),
 
   State00 = add_lexical_renames_scope(State0),
   State = lists:foldl(fun put_lexical_rename/2, State00, BindingsExprs),
 
   MatchAstFun = fun(BindingExpr = #{init := InitExpr}, StateAcc) ->
+                    #{form := InitForm}  = BindingExpr,
                     {Binding, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
                     {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
-                    MatchAst = {match, 0, Binding, Init},
+                    MatchAst = {match, anno_from(InitForm), Binding, Init},
                     push_ast(MatchAst, StateAcc2)
                 end,
 
@@ -331,9 +360,9 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 
   Ast = case Op of
           'let' ->
-            Clause = {clause, 0, [], [], Matches ++ [Body]},
-            FunAst = {'fun', 0, {clauses, [Clause]}},
-            {call, 0, FunAst, []};
+            Clause = {clause, Anno, [], [], Matches ++ [Body]},
+            FunAst = {'fun', Anno, {clauses, [Clause]}},
+            {call, Anno, FunAst, []};
           loop  ->
             %% Emit two nested funs for 'loop' expressions.
             %% An outer unnamed fun that initializes the bindings
@@ -342,16 +371,16 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             StateTmp = lists:foldl(fun ast/2, State3, BindingsExprs),
             {ArgsAsts, _} = pop_ast(StateTmp, length(BindingsExprs)),
 
-            LoopClause = {clause, 0, ArgsAsts, [], [Body]},
+            LoopClause = {clause, Anno, ArgsAsts, [], [Body]},
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
-            LoopFunAst = {named_fun, 0, LoopIdAtom, [LoopClause]},
-            LoopAppAst = {call, 0, LoopFunAst, ArgsAsts},
+            LoopFunAst = {named_fun, Anno, LoopIdAtom, [LoopClause]},
+            LoopAppAst = {call, Anno, LoopFunAst, ArgsAsts},
 
-            Clause = {clause, 0, [], [], Matches ++ [LoopAppAst]},
-            FunAst = {'fun', 0, {clauses, [Clause]}},
-            {call, 0, FunAst, []}
+            Clause = {clause, Anno, [], [], Matches ++ [LoopAppAst]},
+            FunAst = {'fun', Anno, {clauses, [Clause]}},
+            {call, Anno, FunAst, []}
         end,
 
   State4 = remove_lexical_renames_scope(State3),
@@ -364,6 +393,7 @@ ast(#{op := recur} = Expr, State) ->
   #{ loop_id   := LoopId
    , loop_type := LoopType
    , exprs     := ArgsExprs
+   , form      := Form
    } = Expr,
 
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
@@ -372,19 +402,21 @@ ast(#{op := recur} = Expr, State) ->
 
   LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
 
+  Anno = anno_from(Form),
+
   %% We need to use invoke so that recur also works inside functions
   %% (i.e not funs)
   Ast = case LoopType of
           fn ->
-            NameAst = {var, 0, LoopIdAtom},
+            NameAst = {var, Anno, LoopIdAtom},
             ArgsAst = list_ast(Args),
-            application_mfa(clj_core, invoke, [NameAst, ArgsAst]);
+            application_mfa(clj_core, invoke, [NameAst, ArgsAst], Anno);
           loop ->
-            NameAst = {var, 0, LoopIdAtom},
-            {call, 0, NameAst, Args};
+            NameAst = {var, Anno, LoopIdAtom},
+            {call, Anno, NameAst, Args};
           var ->
-            NameAst = {atom, 0, LoopIdAtom},
-            {call, 0, NameAst, Args}
+            NameAst = {atom, Anno, LoopIdAtom},
+            {call, Anno, NameAst, Args}
         end,
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -397,9 +429,10 @@ ast(#{op := throw} = Expr, State) ->
 
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
   Location    = clj_reader:location_meta(Form),
-  LocationAst = erl_parse:abstract(Location),
+  _LocationAst = erl_parse:abstract(Location),
 
-  Ast = application_mfa(clj_utils, throw, [Exception, LocationAst]),
+  Anno = anno_from(Form),
+  Ast  = application_mfa(erlang, throw, [Exception], Anno),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% try
@@ -408,7 +441,10 @@ ast(#{op := 'try'} = Expr, State) ->
   #{ body    := BodyExpr
    , catches := CatchesExprs
    , finally := FinallyExpr
+   , form    := Form
    } = Expr,
+
+  Anno = anno_from(Form),
 
   {Body, State1} = pop_ast(ast(BodyExpr, State)),
   {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
@@ -425,12 +461,12 @@ ast(#{op := 'try'} = Expr, State) ->
             _         -> [Finally]
           end,
 
-  TryAst    = {'try', 0, [Body], [], Catches, After},
+  TryAst    = {'try', Anno, [Body], [], Catches, After},
 
   %% We need to wrap everything in a fun to create a new variable scope.
-  ClauseAst = {clause, 0, [], [], [TryAst]},
-  FunAst    = {'fun', 0, {clauses, [ClauseAst]}},
-  ApplyAst  = {call, 0, FunAst, []},
+  ClauseAst = {clause, Anno, [], [], [TryAst]},
+  FunAst    = {'fun', Anno, {clauses, [ClauseAst]}},
+  ApplyAst  = {call, Anno, FunAst, []},
 
   push_ast(ApplyAst, State2);
 %%------------------------------------------------------------------------------
@@ -440,15 +476,17 @@ ast(#{op := 'catch'} = Expr, State) ->
   #{ class := ErrType
    , local := Local
    , body  := BodyExpr
+   , form  := Form
    } = Expr,
 
-  ClassAst          = {atom, 0, ErrType},
+  Anno              = anno_from(Form),
+  ClassAst          = {atom, Anno, ErrType},
   {NameAst, State1} = pop_ast(ast(Local, State)),
-  ClassNameAst      = {tuple, 0, [ClassAst, NameAst, {var, 0, '_'}]},
+  ClassNameAst      = {tuple, Anno, [ClassAst, NameAst, {var, Anno, '_'}]},
 
   {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
 
-  Ast = {clause, 0, [ClassNameAst], [], [Body]},
+  Ast = {clause, Anno, [ClassNameAst], [], [Body]},
 
   push_ast(Ast, State2).
 
@@ -522,7 +560,15 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
 
 -spec application_mfa(module(), atom(), list()) -> ast().
 application_mfa(Module, Function, Args) ->
-  {call, 0, {remote, 0, {atom, 0, Module}, {atom, 0, Function}}, Args}.
+  application_mfa(Module, Function, Args, 0).
+
+-spec application_mfa(module(), atom(), list(), erl_anno:anno()) -> ast().
+application_mfa(Module, Function, Args, Anno) ->
+  { call
+  , Anno
+  , {remote, Anno, {atom, Anno, Module}, {atom, Anno, Function}}
+  , Args
+  }.
 
 -spec group_methods([map()]) -> #{integer() => [map()]}.
 group_methods(Methods) ->
@@ -556,11 +602,11 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
 
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
 
--spec ensure_module(atom()) -> ok.
-ensure_module(Name) ->
+-spec ensure_module(atom(), string()) -> ok.
+ensure_module(Name, Source) ->
   case clj_module:is_loaded(Name) of
     true  -> ok;
-    false -> clj_module:load(Name), ok
+    false -> clj_module:load(Name, Source), ok
   end.
 
 %% Push & pop asts
@@ -639,3 +685,41 @@ var_val_function(Val, VarAst) ->
   ValueClauseAst     = {clause, 0, [XAtom], [], [XAtom]},
 
   {'case', 0, TestAst, [UndefinedClauseAst, ValueClauseAst]}.
+
+-spec line_from(any()) -> erl_anno:line().
+line_from(Form) ->
+  case clj_core:'meta?'(Form) of
+    false -> 0;
+    true  ->
+      case clj_core:meta(Form) of
+        undefined -> 0;
+        Map ->
+          {Line, _Col} = clj_core:get(Map, loc, {0, 1}),
+          Line
+      end
+  end.
+
+-spec file_from(any()) -> binary().
+file_from(Form) ->
+  case clj_core:'meta?'(Form) of
+    false -> <<>>;
+    true  ->
+      case clj_core:meta(Form) of
+        undefined -> 0;
+        Map ->
+          clj_core:get(Map, file, <<>>)
+      end
+  end.
+
+-spec anno_from(any()) -> erl_anno:anno().
+anno_from(Form) ->
+  case clj_core:'meta?'(Form) of
+    false -> 0;
+    true  ->
+      case clj_core:meta(Form) of
+        undefined -> 0;
+        Map ->
+          LineCol = clj_core:get(Map, loc, {0, 1}),
+          erl_anno:new(LineCol)
+      end
+  end.
