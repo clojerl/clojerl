@@ -173,12 +173,14 @@ read_number(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_string(state()) -> state().
+%% Found closing double quotes
 read_string(#{ src     := <<"\"", _/binary>>
              , current := String
              } = State0
            ) ->
   State = consume_char(maps:remove(current, State0)),
-  push_form(String, State);
+  push_form(String, remove_scope(State));
+%% Process escaped character
 read_string(#{ src := <<"\\", _/binary>>
              , current := String
              } = State0
@@ -187,15 +189,24 @@ read_string(#{ src := <<"\\", _/binary>>
   State = State00#{current => <<String/binary, EscapedChar/binary>>},
 
   read_string(State);
-read_string(#{src := <<Char/utf8, _/binary>>,
-              current := String} = State0) ->
+%% Append character to current string
+read_string(#{ src     := <<Char/utf8, _/binary>>
+             , current := String} = State0) ->
   State = State0#{current => <<String/binary, Char/utf8>>},
   read_string(consume_char(State));
-read_string(#{src := <<"\"", _/binary>>} = State) ->
-  State1 = consume_char(State),
-  read_string(State1#{current => <<>>});
+%% Start consuming string
+read_string(#{src := <<"\"", _/binary>>, loc := Loc} = State) ->
+  State1 = add_scope(consume_char(State)),
+  read_string(location_started(State1#{current => <<>>}, Loc));
+%% Didn't find closing double quotes
 read_string(#{src := <<>>} = State) ->
-  clj_utils:throw(<<"EOF while reading string">>, location(State)).
+  {Line, Col} = scope_get(loc_started, State),
+  clj_utils:throw( [ <<"Started reading at (">>
+                   , Line, <<":">>, Col
+                   , <<") but found EOF while expecting '\"'">>
+                   ]
+                 , location(State)
+                 ).
 
 -spec escape_char(state()) -> {binary(), state()}.
 escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
@@ -866,7 +877,7 @@ read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
 read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   {ok, Regex} = re:compile(Current),
-  push_form(Regex, consume_char(State));
+  push_form(Regex, consume_char(maps:remove(current, State)));
 read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   NewState = State#{current => <<Current/binary, Ch/utf8>>},
