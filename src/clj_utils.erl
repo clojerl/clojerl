@@ -11,6 +11,7 @@
         , binary_append/2
         , binary_join/2
         , ends_with/2
+        , compare/2
 
         , error/1
         , throw/1
@@ -172,6 +173,14 @@ ends_with(Str, Ends) ->
   StrSize = byte_size(Str),
   EndsSize = byte_size(Ends),
   Ends == binary:part(Str, {StrSize, - EndsSize}).
+
+-spec compare(any(), any()) -> integer().
+compare(X, Y) ->
+  if
+    X <  Y -> -1;
+    X == Y -> 0;
+    X >  Y -> 1
+  end.
 
 -spec error(any()) -> no_return().
 error(List) when is_list(List) ->

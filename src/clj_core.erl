@@ -31,6 +31,7 @@
          boolean/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
+         subvec/3,
          keys/1, vals/1,
          'even?'/1,
          invoke/2,
@@ -424,6 +425,19 @@ vector(Items) when is_list(Items) ->
   'clojerl.Vector':new(Items);
 vector(Items) ->
   vector(seq_to_list(Items)).
+
+-spec subvec('clojerl.Vector':type(), integer(), integer()) ->
+  'clojerl.Vector':type().
+subvec(Vector, Start, End) ->
+  clj_utils:throw_when(End < Start
+                       orelse Start < 0
+                       orelse End > count(Vector),
+                       ["Index out of bounds"]
+                      ),
+  case Start of
+    End -> vector([]);
+    _   -> 'clojerl.Vector':subvec(Vector, Start, End)
+  end.
 
 -spec hash_map(list()) -> 'clojerl.Map':type().
 hash_map(Items) ->
