@@ -13,7 +13,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([new/1, subvec/3]).
 
 -export(['clojerl.Counted.count'/1]).
 -export([ 'clojerl.IColl.cons'/2
@@ -39,6 +39,14 @@
 -spec new(list()) -> type().
 new(Items) when is_list(Items) ->
   #?TYPE{data = array:from_list(Items, none)}.
+
+-spec subvec(type(), integer(), integer()) -> type().
+subvec(Vector, Start, End) ->
+  AddItemAtFun =
+    fun(Index, Subvec) ->
+        'clojerl.IColl.cons'(Subvec, 'clojerl.Indexed.nth'(Vector, Index))
+    end,
+  lists:foldl(AddItemAtFun, new([]), lists:seq(Start, End)).
 
 %%------------------------------------------------------------------------------
 %% Protocols
