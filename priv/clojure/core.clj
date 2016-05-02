@@ -1656,15 +1656,19 @@
           hierarchy (get options :hierarchy #'global-hierarchy)]
       (check-valid-options options :default :hierarchy)
       `(let [v# (def ~mm-name)]
-         (when-not (and (clojerl.Var/has_root.e v#) (instance? :clojerl.MultiFn (deref v#)))
-           (def ~(with-meta mm-name m)
-                (clojerl.MultiFn/create.e ~(name mm-name) ~dispatch-fn ~default ~hierarchy)))))))
+         (when-not (and (clojerl.Var/has_root.e v#)
+                        (instance? :clojerl.MultiFn (deref v#)))
+           (defn ~(with-meta mm-name m)
+             [& args]
+             (let [val# (apply ~dispatch-fn args)
+                   f    (clojerl.MultiFn/get_method.e ~(name mm-name) val# ~default ~hierarchy)]
+               (apply f args))))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
   [multifn dispatch-val & fn-tail]
-  `(clojerl.MultiFn/add_method.e ~(with-meta multifn {:tag 'clojure.lang.MultiFn}) ~dispatch-val (fn ~@fn-tail)))
+  `(clojerl.MultiFn/add_method.e ~(name multifn) ~dispatch-val (fn ~@fn-tail)))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
@@ -3988,7 +3992,7 @@
   {:added "1.0"
    :static true}
   [form]
-  (clj_analyzer/macroexpand_1.e form))
+  (clj_analyzer/macroexpand_1.e nil form))
 
 (defn macroexpand
   "Repeatedly calls macroexpand-1 on form until it no longer
