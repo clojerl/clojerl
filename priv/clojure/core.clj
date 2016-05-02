@@ -3432,17 +3432,17 @@
 
 (defn long
   "Coerce to long"
-  {:inline (fn  [x] `(. clojure.lang.RT (longCast ~x)))
+  {:inline (fn  [x] `(erlang/trunc.e ~x))
    :added "1.0"}
-  [^Number x]
-  (clj_core/to_integer.e x))
+  [x]
+  (erlang/trunc.e x))
 
 (defn float
   "Coerce to float"
-  {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedFloatCast 'floatCast) ~x)))
+  {:inline (fn  [x] `(erlang/float.e ~x))
    :added "1.0"}
-  [^Number x]
-  (clj_core/to_float.e x))
+  [x]
+  (erlang/float.e x))
 
 (defn double
   "Coerce to double"
@@ -3856,9 +3856,10 @@
   {:added "1.0"}
   [expr]
   `(let [start# (erlang/monotonic_time.e :nano_seconds)
-         ret# ~expr]
+         ret#   ~expr
+         stop#  (erlang/monotonic_time.e :nano_seconds)]
      (prn (str "Elapsed time: "
-               (/ (- (erlang/monotonic_time.e :nano_seconds) start#) 1000000.0)
+               (/ (- stop# start#) 1000000.0)
                " msecs"))
      ret#))
 
