@@ -16,15 +16,23 @@ resolve(Protocol, FunctionName, Args = [Head | _]) ->
       TypeBin = atom_to_binary(Type, utf8),
       FunctionBin = atom_to_binary(FunctionName, utf8),
       ProtocolBin = atom_to_binary(Protocol, utf8),
-      Value = clj_core:str(Head),
+      Value = maybe_str(Head),
+      ArgsStr = maybe_str(lists:map(fun maybe_str/1, Args)),
       error(<<"Type '", TypeBin/binary, "'"
               " has no implementation for function '",
               FunctionBin/binary,
               "' in protocol '",
               ProtocolBin/binary, "' ",
               "(value = ", Value/binary, ", args = ",
-              (clj_core:str(Args))/binary,
+              ArgsStr/binary,
               ")">>)
+  end.
+
+-spec maybe_str(term()) -> binary().
+maybe_str(X) ->
+  case 'extends?'('clojerl.Stringable', clj_core:type(X)) of
+    true -> clj_core:str(X);
+    false -> iolist_to_binary(io_lib:format("~p", [X]))
   end.
 
 -spec resolve_impl_cache(atom(), atom(), atom(), integer()) ->
