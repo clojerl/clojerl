@@ -1656,7 +1656,7 @@
           hierarchy (get options :hierarchy #'global-hierarchy)]
       (check-valid-options options :default :hierarchy)
       `(let [v# (def ~mm-name)]
-         (when-not (and (.hasRoot v#) (instance? clojure.lang.MultiFn (deref v#)))
+         (when-not (and (clojerl.Var/has_root.e v#) (instance? :clojerl.MultiFn (deref v#)))
            (def ~(with-meta mm-name m)
                 (clojerl.MultiFn/create.e ~(name mm-name) ~dispatch-fn ~default ~hierarchy)))))))
 
@@ -3647,10 +3647,12 @@
 (def ^:dynamic ^{:private true} print-initialized false)
 
 ;; TODO: implement multimethods
-#_ ((defmulti print-method (fn [x writer]
-                             (let [t (get (meta x) :type)]
-                               (if (keyword? t) t (class x)))))
-    (defmulti print-dup (fn [x writer] (class x))))
+
+(defmulti print-method (fn [x writer]
+                         (let [t (get (meta x) :type)]
+                           (if (keyword? t) t (class x)))))
+
+(defmulti print-dup (fn [x writer] (class x)))
 
 (defn print-method [x writer]
   (io/format.e writer "~s" (seq [x])))
