@@ -1,13 +1,9 @@
 -module('clojerl.MultiFn').
 -behaviour(gen_server).
 
--include("clojerl.hrl").
-
--behavior('clojerl.Stringable').
-
--export([create/4]).
-
--export(['clojerl.Stringable.str'/1]).
+-export([ get_method/4
+        , add_method/3
+        ]).
 
 %% gen_server callbacks
 -export([ start_link/0
@@ -19,27 +15,32 @@
         , code_change/3
         ]).
 
--type type() :: #?TYPE{data :: binary()}.
-
--record(multifn, { name      :: binary(),
-                   dispatch  :: function(),
-                   default   :: term(),
-                   hierarchy :: term()
+-record(multifn, { id     :: {binary(), any()},
+                   name   :: binary(),
+                   value  :: any(),
+                   method :: any()
                  }).
 
 -type multifn() :: #multifn{}.
 
--spec create(binary(), function(), term(), term()) -> type().
-create(Name, DispatchFn, Default, Hierarchy) ->
-  ok = gen_server:call(?MODULE, {create, Name, DispatchFn, Default, Hierarchy}),
-  #?TYPE{data = Name}.
-
 %%------------------------------------------------------------------------------
-%% Protocols
+%% API
 %%------------------------------------------------------------------------------
 
-'clojerl.Stringable.str'(#?TYPE{data = Name}) ->
-  <<"#<MultiFn ", Name/binary, ">">>.
+-spec get_method(binary(), any(), any(), map()) -> any().
+get_method(Name, Value, Default, _Hierarchy) ->
+  case get(?MODULE, {Name, Value}) of
+    undefined ->
+      case get(?MODULE, {Name, Default}) of
+        undefined -> undefined;
+        Method -> Method#multifn.method
+      end;
+    Method -> Method#multifn.method
+  end.
+
+-spec add_method(binary(), any(), any()) -> any().
+add_method(Name, Value, Method) ->
+  gen_server:call(?MODULE, {add_method, Name, Value, Method}).
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
@@ -52,8 +53,8 @@ init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
   {ok, undefined}.
 
-handle_call({create, Name, DispatchFn, Default, Hierarchy}, _From, State) ->
-  #multifn{} = new(Name, DispatchFn, Default, Hierarchy),
+handle_call({add_method, Name, Value, Method}, _From, State) ->
+  #multifn{} = new_method(Name, Value, Method),
   {reply, ok, State}.
 
 handle_cast(_Msg, State) ->
@@ -72,12 +73,12 @@ code_change(_Msg, _From, State) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec new(binary(), function(), term(), term()) -> multifn().
-new(Name, DispatchFn, Default, Hierarchy) ->
-  MultiFn = #multifn{ name      = Name
-                    , dispatch  = DispatchFn
-                    , default   = Default
-                    , hierarchy = Hierarchy
+-spec new_method(binary(), any(), any()) -> multifn().
+new_method(Name, Value, Method) ->
+  MultiFn = #multifn{ id     = {Name, Value}
+                    , name   = Name
+                    , value  = Value
+                    , method = Method
                     },
   save(?MODULE, MultiFn).
 
@@ -85,3 +86,10 @@ new(Name, DispatchFn, Default, Hierarchy) ->
 save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
+
+-spec get(ets:tid(), term()) -> term().
+get(Table, Id) ->
+  case ets:lookup(Table, Id) of
+    [] -> undefined;
+    [Value] -> Value
+  end.
