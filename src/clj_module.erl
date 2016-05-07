@@ -2,8 +2,7 @@
 
 -compile({no_auto_import, [get/1]}).
 
--export([ init/0
-        , terminate/0
+-export([ with_context/1
 
         , all/0
         , all_forms/0
@@ -33,6 +32,7 @@
                   funs              :: ets:tid(),
                   fake_funs         :: ets:tid(),
                   fake_funs_arities :: ets:tid(),
+                  fake_modules      :: ets:tid(),
                   exports           :: ets:tid(),
                   attrs             :: [erl_parse:abstract_form()],
                   rest              :: [erl_parse:abstract_form()]
@@ -46,12 +46,21 @@
 %% Exported Functions
 %%------------------------------------------------------------------------------
 
+-spec with_context(fun()) -> ok.
+with_context(Fun) ->
+  ok = init(),
+  try
+    Fun()
+  after
+    terminate()
+  end.
+
 -spec init() -> ok.
 init() ->
   case modules_table_id() of
     undefined ->
-      TabId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
-      erlang:put(?MODULE, TabId),
+      ModulesId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
+      modules_table_id(ModulesId),
       ok;
     _ -> ok
   end.
@@ -61,23 +70,17 @@ terminate() ->
   case modules_table_id() of
     undefined -> ok;
     TabId ->
-      lists:foreach(fun delete_fake_module/1, code:all_loaded()),
-      ets:delete(TabId),
+      lists:foreach(fun delete_fake_modules/1, ets:tab2list(TabId)),
+      true = ets:delete(TabId),
       erlang:erase(?MODULE),
       ok
   end.
 
 %% @private
-%% @doc Deletes all generated fake_modules.
--spec delete_fake_module(ets:tid()) -> ok.
-delete_fake_module({Name, ""}) ->
-  case atom_to_list(Name) of
-    "fake_module_" ++ _ ->
-      code:delete(Name),
-      ok;
-    _ -> ok
-  end;
-delete_fake_module(_) ->
+-spec delete_fake_modules(clj_module()) -> ok.
+delete_fake_modules(Module) ->
+  FakeModulesId = Module#module.fake_modules,
+  [code:delete(Name) || {Name} <- ets:tab2list(FakeModulesId)],
   ok.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
@@ -125,9 +128,10 @@ build_fake_fun(Module, Function, Arity) ->
            end,
   code:load_binary(FakeModuleName, "", Binary),
 
+  save(Module#module.fake_modules, {FakeModuleName}),
+
   Fun = erlang:make_fun(FakeModuleName, Function, Arity),
   check_var_val(Function, Arity, Fun).
-
 
 %% @private
 %% @doc Keep all the arities of a Module:Function in an ETS table
@@ -152,7 +156,8 @@ get_fake_fun_arities(Module, Function) ->
   end.
 
 %% @doc Deletes all fake_funs for Module:Function of all arities.
-%%      This is used so that they can be replaced with new ones.
+%%      This is used so that they can be replaced with new ones, when
+%%      redifining a function, for example.
 -spec delete_fake_funs(module(), atom()) -> ok.
 delete_fake_funs(ModuleName, Function) ->
   Module = get(modules_table_id(), ModuleName),
@@ -355,6 +360,10 @@ is_clojure(Name) ->
 modules_table_id() ->
   erlang:get(?MODULE).
 
+-spec modules_table_id(ets:tid()) -> ok.
+modules_table_id(TableId) ->
+  erlang:put(?MODULE, TableId).
+
 -spec get(atom(), module()) -> any().
 get(Table, Id) ->
   get(Table, Id, false).
@@ -417,6 +426,7 @@ new(Forms) when is_list(Forms) ->
                   , funs              = ets:new(funs, TableOpts)
                   , fake_funs         = ets:new(fake_funs, TableOpts)
                   , fake_funs_arities = ets:new(fake_funs_arities, TableOpts)
+                  , fake_modules      = ets:new(fake_modules, TableOpts)
                   , exports           = ets:new(exports, TableOpts)
                   , attrs             = Attrs
                   , rest              = Rest2
