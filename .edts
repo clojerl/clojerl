@@ -1,0 +1,5 @@
+:name "clojerl"
+:node-sname "clojerl-edts"
+:lib-dirs '("src" "test")
+:app-include-dirs '("include")
+;; :project-include-dirs '("test/shared/include")
