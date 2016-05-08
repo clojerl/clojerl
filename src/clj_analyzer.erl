@@ -87,10 +87,11 @@ special_forms() ->
    , <<"deftype*">>   => undefined
    , <<"defrecord*">> => undefined
 
+   , <<"&">>          => undefined
+
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
      %% , <<"new">>
-     %% , <<"&">>
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
