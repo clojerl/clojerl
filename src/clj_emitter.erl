@@ -113,7 +113,6 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
-        clj_module:delete_fake_funs(Module, Name),
         { VarAst
         , add_functions(Module, Name, FnExpr, State)
         };
