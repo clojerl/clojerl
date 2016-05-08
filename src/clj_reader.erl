@@ -735,7 +735,7 @@ register_arg(N, ArgEnv) ->
     undefined ->
       ArgSymbol = gen_arg_sym(N),
       NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
-      put(arg_env, NewArgEnv),
+      erlang:put(arg_env, NewArgEnv),
       ArgSymbol;
     ArgSymbol -> ArgSymbol
   end.
