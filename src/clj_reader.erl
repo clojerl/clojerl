@@ -470,7 +470,17 @@ register_gensym(Symbol) ->
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
   case clj_namespace:find_var(Symbol) of
-    undefined -> Symbol;
+    undefined ->
+      case clj_core:namespace(Symbol) of
+        undefined ->
+          CurrentNs = clj_namespace:current(),
+          NameSym   = clj_namespace:name(CurrentNs),
+          Namespace = clj_core:name(NameSym),
+          Name      = clj_core:name(Symbol),
+          clj_core:symbol(Namespace, Name);
+        _ ->
+          Symbol
+      end;
     Var ->
       Namespace = clj_core:namespace(Var),
       Name      = clj_core:name(Var),
