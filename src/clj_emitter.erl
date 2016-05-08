@@ -107,7 +107,7 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok     = ensure_module(Module, file_from(Var)),
+  ok     = clj_module:ensure_loaded(Module, file_from(Var)),
   VarAst = erl_parse:abstract(Var),
 
   {ValAst, State1} =
@@ -601,13 +601,6 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
     end,
 
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
-
--spec ensure_module(atom(), string()) -> ok.
-ensure_module(Name, Source) ->
-  case clj_module:is_loaded(Name) of
-    true  -> ok;
-    false -> clj_module:load(Name, Source), ok
-  end.
 
 %% Push & pop asts
 

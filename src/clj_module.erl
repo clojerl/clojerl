@@ -7,6 +7,7 @@
         , all/0
         , all_forms/0
         , load/2
+        , ensure_loaded/2
         , is_loaded/1
         , to_forms/1
 
@@ -238,6 +239,13 @@ replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
   [replace_calls(Item, Module, TopFunction) || Item <- Ast];
 replace_calls(Ast, _, _) ->
   Ast.
+
+-spec ensure_loaded(atom(), string()) -> ok.
+ensure_loaded(Name, Source) ->
+  case is_loaded(Name) of
+    true  -> ok;
+    false -> load(Name, Source), ok
+  end.
 
 -spec load(atom(), binary()) -> ok | {error, term()}.
 load(Name, Source) ->
