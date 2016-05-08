@@ -4,15 +4,11 @@
 
 -export([ with_context/1
 
-        , all/0
         , all_forms/0
-        , load/2
         , ensure_loaded/2
         , is_loaded/1
-        , to_forms/1
 
         , fake_fun/3
-        , delete_fake_funs/2
         , replace_calls/3
 
         , add_vars/2
@@ -23,16 +19,13 @@
         , is_clojure/1
         ]).
 
-%% -type var_id()      :: binary().
 -type function_id() :: {atom(), integer()}.
-%% -type export()      :: {atom(), non_neg_integer()}.
 
 -record(module, { name              :: atom(),
                   source = <<"">>   :: binary(),
                   vars              :: ets:tid(),
                   funs              :: ets:tid(),
                   fake_funs         :: ets:tid(),
-                  fake_funs_arities :: ets:tid(),
                   fake_modules      :: ets:tid(),
                   exports           :: ets:tid(),
                   attrs             :: [erl_parse:abstract_form()],
@@ -85,15 +78,20 @@ delete_fake_modules(Module) ->
   ok.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
-%%      A fake fun is generated during compile-time and it provides the
-%%      same functionality as its original. The only difference is that
-%%      all calls to functions in the same module are replaced by a call
-%%      to clj_module:fake_fun/3.
-%%      This is necessary so that macro functions can be used without
-%%      having to generate, compile and load the binary for the partial
-%%      module each time a macro is found.
-%%      A fake module is generated because a previous attempt that used
-%%      erl_eval to generate and execute the fake_fun was too slow.
+%%
+%% A fake fun is generated during compile-time and it provides the
+%% same functionality as its original. The only difference is that
+%% all calls to functions in the same module are replaced by a call
+%% to clj_module:fake_fun/3.
+%%
+%% This is necessary so that macro functions can be used without
+%% having to generate, compile and load the binary for the partial
+%% module each time a macro is found.
+%%
+%% A fake module is generated for each fake fun because a previous
+%% attempt that used erl_eval to generate and execute the fake_fun
+%% was too slow.
+%% @end
 -spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
   Module = get(modules_table_id(), ModuleName, true),
@@ -102,13 +100,13 @@ fake_fun(ModuleName, Function, Arity) ->
     [] ->
       Fun = build_fake_fun(Module, Function, Arity),
       save(Module#module.fake_funs, {FA, Fun}),
-      add_fake_fun_arity(Module, Function, Arity),
       Fun;
     [{_, Fun}] ->
       Fun
   end.
 
 %% @private
+-spec build_fake_fun(clj_module(), atom(), integer()) -> function().
 build_fake_fun(Module, Function, Arity) ->
   {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
 
@@ -134,44 +132,23 @@ build_fake_fun(Module, Function, Arity) ->
   Fun = erlang:make_fun(FakeModuleName, Function, Arity),
   check_var_val(Function, Arity, Fun).
 
-%% @private
-%% @doc Keep all the arities of a Module:Function in an ETS table
-%%      so that when deleting them we don't have to traverse the whole
-%%      #module.fake_funs table.
--spec add_fake_fun_arity(clj_module(), atom(), integer()) -> ok.
-add_fake_fun_arity(Module, Function, Arity) ->
-  case get(Module#module.fake_funs_arities, Function) of
-    undefined ->
-      save(Module#module.fake_funs_arities, {Function, [Arity]});
-    {Function, Arities} ->
-      save(Module#module.fake_funs_arities, {Function, [Arity | Arities]})
-  end.
-
-%% @private
-%% @doc Get all arities for Module:Function.
--spec get_fake_fun_arities(module(), atom()) -> ok.
-get_fake_fun_arities(Module, Function) ->
-  case get(Module#module.fake_funs_arities, Function) of
-    undefined -> [];
-    {Function, Arities} -> Arities
-  end.
-
 %% @doc Deletes all fake_funs for Module:Function of all arities.
-%%      This is used so that they can be replaced with new ones, when
-%%      redifining a function, for example.
--spec delete_fake_funs(module(), atom()) -> ok.
-delete_fake_funs(ModuleName, Function) ->
-  Module = get(modules_table_id(), ModuleName),
-  DeleteFun = fun(Arity) ->
-                  ets:delete(Module#module.fake_funs, {Function, Arity})
-              end,
-  ok = lists:foreach(DeleteFun, get_fake_fun_arities(Module, Function)).
+%%
+%% This is used so that they can be replaced with new ones, when
+%% redifining a function, for example.
+%% @end
+-spec delete_fake_fun(clj_module(), atom(), arity()) -> ok.
+delete_fake_fun(Module, Function, Arity) ->
+  true = ets:delete(Module#module.fake_funs, {Function, Arity}),
+  ok.
 
-%% @doc Checks if the function is actually the one that provides the value
-%%      of a var, Then it checks if the value returned is the var itself and
-%%      if so replaces the returned value for a clojerl.FakeVar, which
-%%      reimplements clojerl.IFn protocol so that the invoke is done using
-%%      the var's corresponding fake fun.
+%% @doc Checks if the function is the one that provides the value of a var.
+%%
+%% Then it checks if the value returned is the var itself and
+%% if so replaces the returned value for a clojerl.FakeVar, which
+%% reimplements clojerl.IFn protocol so that the invoke is done using
+%% the var's corresponding fake fun.
+%% @end
 -spec check_var_val(atom(), integer(), function()) -> function().
 check_var_val(Function, 0, Fun) ->
   FunctionBin = atom_to_binary(Function, utf8),
@@ -188,11 +165,13 @@ check_var_val(Function, 0, Fun) ->
 check_var_val(_Function, _Arity, Fun) ->
   Fun.
 
-%% @doc Processes a function's ast and modifies all calls to functions in the
-%%      function's own module for a call to the fun returned by
+%% @doc Processes a function's ast and modifies all calls to functions
+%%      in the function's own module for a call to the fun returned by
 %%      clj_module:fake_fun/3.
-%%      If the call is a recursive call to the top function then it changes
-%%      the call to a variable built using the value of TopFunction.
+%%
+%% If the call is a recursive call to the top function then it changes
+%% the call to a variable built using the value of TopFunction.
+%% @end
 -spec replace_calls(erl_parse:abstract_form(), module(), atom()) ->
   erl_parse:abstract_form().
 replace_calls( { call, Line
@@ -240,6 +219,7 @@ replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
 replace_calls(Ast, _, _) ->
   Ast.
 
+%% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(atom(), string()) -> ok.
 ensure_loaded(Name, Source) ->
   case is_loaded(Name) of
@@ -247,6 +227,7 @@ ensure_loaded(Name, Source) ->
     false -> load(Name, Source), ok
   end.
 
+%% @private
 -spec load(atom(), binary()) -> ok | {error, term()}.
 load(Name, Source) ->
   case is_loaded(Name) of
@@ -267,15 +248,19 @@ is_loaded(Name) ->
     Id -> ets:member(Id, Name)
   end.
 
+%% @doc Returns a list with all loaded modules.
+%% @private
 -spec all() -> [clj_module()].
 all() -> ets:tab2list(modules_table_id()).
 
 %% @doc Returns a list where each element is a list with the abstract
 %%      forms of all stored modules.
+%% @end
 -spec all_forms() -> [[erl_parse:abstract_form()]].
 all_forms() ->
-  lists:map(fun clj_module:to_forms/1, all()).
+  lists:map(fun to_forms/1, all()).
 
+%% @private
 -spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
 to_forms(#module{} = Module) ->
   #module{ name    = Name
@@ -342,7 +327,10 @@ add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
   add_functions(get(modules_table_id(), ModuleName), Funs);
 add_functions(Module, Funs) ->
   SaveFun = fun(F) ->
-                save(Module#module.funs, {function_id(F), F})
+                FunctionId    = function_id(F),
+                {Name, Arity} = FunctionId,
+                ok = delete_fake_fun(Module, Name, Arity),
+                save(Module#module.funs, {FunctionId, F})
             end,
   lists:foreach(SaveFun, Funs),
   Module.
@@ -433,7 +421,6 @@ new(Forms) when is_list(Forms) ->
                   , vars              = ets:new(var, TableOpts)
                   , funs              = ets:new(funs, TableOpts)
                   , fake_funs         = ets:new(fake_funs, TableOpts)
-                  , fake_funs_arities = ets:new(fake_funs_arities, TableOpts)
                   , fake_modules      = ets:new(fake_modules, TableOpts)
                   , exports           = ets:new(exports, TableOpts)
                   , attrs             = Attrs
