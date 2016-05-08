@@ -656,8 +656,12 @@ read_unmatched_delim(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_char(state()) -> state().
-read_char(#{src := <<"\\"/utf8, _/binary>>} = State) ->
-  {Token, State1} = read_token(consume_char(State)),
+read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
+  {Token, State1} =
+    case is_macro_terminating(NextChar) orelse is_whitespace(NextChar) of
+      true -> {<<NextChar>>, consume_chars(2, State)};
+      false -> read_token(consume_char(State))
+    end,
   Char =
     case Token of
       <<>> -> clj_utils:throw(<<"EOF">>, location(State));
@@ -1092,7 +1096,7 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
 -spec read_token(state()) -> {binary(), state()}.
 read_token(State) ->
   Fun = fun(Char) ->
-            (clj_utils:char_type(Char, <<>>) =/= whitespace)
+            (not is_whitespace(Char))
               andalso (not is_macro_terminating(Char))
         end,
   consume(State, Fun).
@@ -1124,6 +1128,10 @@ is_macro_terminating(Char) ->
   lists:member(Char,
                [$", $;, $@, $^, $`, $~, $(,
                 $), $[, $], ${, $}, $\\ ]).
+
+-spec is_whitespace(char()) -> boolean().
+is_whitespace(Char) ->
+  clj_utils:char_type(Char, <<>>) =:= whitespace.
 
 -spec skip_line(state()) -> state().
 skip_line(State) ->

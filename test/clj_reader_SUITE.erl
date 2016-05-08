@@ -625,12 +625,11 @@ char(_Config) ->
   <<"©"/utf8>> = clj_reader:read(<<"\\u00A9">>),
   <<"ß"/utf8>> = clj_reader:read(<<"\\o337">>),
 
+  <<" "/utf8>> = clj_reader:read(<<"\\ ">>),
+  <<"\""/utf8>> = clj_reader:read(<<"\\\"">>),
+
   ct:comment("Char EOF"),
   ok = try clj_reader:read_all(<<"12 \\">>)
-       catch _:_ -> ok
-       end,
-
-  ok = try clj_reader:read_all(<<"12 \\ ">>)
        catch _:_ -> ok
        end,
 
