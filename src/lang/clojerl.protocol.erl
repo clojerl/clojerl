@@ -39,12 +39,12 @@ maybe_str(X) ->
   {module(), atom()} | undefined.
 resolve_impl_cache(Protocol, Function, Type, Arity) ->
   Key = {resolve_impl, Protocol, Function, Type, Arity},
-  case erlang:get(Key) of
+  case clj_cache:get(Key) of
     undefined ->
       Value = resolve_impl(Protocol, Function, Type, Arity),
-      erlang:put(Key, Value),
+      clj_cache:put(Key, Value),
       Value;
-     Value -> Value
+     {ok, Value} -> Value
   end.
 
 -spec resolve_impl(atom(), atom(), atom(), integer()) -> {module(), atom()} | undefined.
@@ -63,15 +63,15 @@ resolve_impl(Protocol, Function, Type, Arity) ->
 -spec 'extends?'(atom(), atom()) -> boolean().
 'extends?'(Protocol, Type) ->
   Key = {extends, Protocol, Type},
-  case erlang:get(Key) of
+  case clj_cache:get(Key) of
     undefined ->
       Value = (erlang:function_exported(Type, module_info, 1)
                andalso
                lists:keymember([Protocol], 2, Type:module_info(attributes))
               ) orelse code:is_loaded(impl_module(Protocol, Type)) =/= false,
-      erlang:put(Key, Value),
+      clj_cache:put(Key, Value),
       Value;
-    Value -> Value
+    {ok, Value} -> Value
   end.
 
 -spec impl_module(atom(), atom()) -> atom().

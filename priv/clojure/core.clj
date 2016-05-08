@@ -3658,10 +3658,10 @@
 
 (defmulti print-dup (fn [x writer] (class x)))
 
-(defn print-method [x writer]
+#_(defn print-method [x writer]
   (io/format.e writer "~s" (seq [x])))
 
-(defn print-dup [x writer]
+#_(defn print-dup [x writer]
   (io/format.e writer "~s" (seq [x])))
 
 (defn pr-on
@@ -6259,7 +6259,9 @@
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------
 
-(defn prn
+#_(defn prn
   [& xs]
   (io/format.e "~s~n" (seq [(apply str xs)]))
   nil)
+
+(load "core_print")

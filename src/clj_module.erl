@@ -1,5 +1,7 @@
 -module(clj_module).
 
+-behavior(gen_server).
+
 -compile({no_auto_import, [get/1]}).
 
 -export([ with_context/1
@@ -17,6 +19,16 @@
         , add_functions/2
 
         , is_clojure/1
+        ]).
+
+%% gen_server callbacks
+-export([ start_link/0
+        , init/1
+        , handle_call/3
+        , handle_cast/2
+        , handle_info/2
+        , terminate/2
+        , code_change/3
         ]).
 
 -type function_id() :: {atom(), integer()}.
@@ -42,40 +54,17 @@
 
 -spec with_context(fun()) -> ok.
 with_context(Fun) ->
-  ok = init(),
   try
     Fun()
   after
-    terminate()
-  end.
-
--spec init() -> ok.
-init() ->
-  case modules_table_id() of
-    undefined ->
-      ModulesId = ets:new(?MODULE, [set, protected, {keypos, 2}]),
-      modules_table_id(ModulesId),
-      ok;
-    _ -> ok
-  end.
-
--spec terminate() -> ok.
-terminate() ->
-  case modules_table_id() of
-    undefined -> ok;
-    TabId ->
-      lists:foreach(fun delete_fake_modules/1, ets:tab2list(TabId)),
-      true = ets:delete(TabId),
-      erlang:erase(?MODULE),
-      ok
+    cleanup()
   end.
 
 %% @private
--spec delete_fake_modules(clj_module()) -> ok.
-delete_fake_modules(Module) ->
-  FakeModulesId = Module#module.fake_modules,
-  [code:delete(Name) || {Name} <- ets:tab2list(FakeModulesId)],
-  ok.
+-spec cleanup() -> ok.
+cleanup() ->
+  Modules = gen_server:call(?MODULE, cleanup),
+  lists:foreach(fun delete_fake_modules/1, Modules).
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%
@@ -94,7 +83,7 @@ delete_fake_modules(Module) ->
 %% @end
 -spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
-  Module = get(modules_table_id(), ModuleName, true),
+  Module = get(?MODULE, ModuleName, true),
   FA     = {Function, Arity},
   case ets:lookup(Module#module.fake_funs, FA) of
     [] ->
@@ -233,25 +222,26 @@ load(Name, Source) ->
   case is_loaded(Name) of
     true -> ok;
     false ->
-      case code:ensure_loaded(Name) of
-        {module, Name} ->
-          new(clj_utils:code_from_binary(Name));
-        {error, _} ->
-          new(Name, Source)
-      end
+      Module = case code:ensure_loaded(Name) of
+                 {module, Name} ->
+                   new(clj_utils:code_from_binary(Name));
+                 {error, _} ->
+                   new(Name, Source)
+               end,
+      ok = gen_server:call(?MODULE, {load, Module}),
+      Module
   end.
 
 -spec is_loaded(module()) -> boolean().
 is_loaded(Name) ->
-  case modules_table_id() of
-    undefined -> false;
-    Id -> ets:member(Id, Name)
-  end.
+  ets:member(?MODULE, Name).
 
-%% @doc Returns a list with all loaded modules.
+%% @doc Returns a list with all modules that where loaded by the
+%%      current process.
 %% @private
 -spec all() -> [clj_module()].
-all() -> ets:tab2list(modules_table_id()).
+all() ->
+  gen_server:call(?MODULE, all).
 
 %% @doc Returns a list where each element is a list with the abstract
 %%      forms of all stored modules.
@@ -292,7 +282,7 @@ to_forms(#module{} = Module) ->
 
 -spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
-  add_vars(get(modules_table_id(), ModuleName), Vars);
+  add_vars(get(?MODULE, ModuleName), Vars);
 add_vars(Module, Vars) ->
   AddFun = fun(V) ->
                K = clj_core:name(V),
@@ -303,17 +293,17 @@ add_vars(Module, Vars) ->
 
 -spec add_attributes(clj_module(), [erl_parse:abstract_form()]) -> clj_module().
 add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
-  add_attributes(get(modules_table_id(), ModuleName), Attrs);
+  add_attributes(get(?MODULE, ModuleName), Attrs);
 add_attributes(Module, []) ->
   Module;
 add_attributes(Module, Attrs) ->
   Module1 = Module#module{attrs = Attrs ++ Module#module.attrs},
-  save(modules_table_id(), Module1).
+  save(?MODULE, Module1).
 
 -spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
   clj_module().
 add_exports(ModuleName, Exports) when is_atom(ModuleName)  ->
-  add_exports(get(modules_table_id(), ModuleName), Exports);
+  add_exports(get(?MODULE, ModuleName), Exports);
 add_exports(Module, Exports) ->
   AddExport = fun(E) ->
                   save(Module#module.exports, {E})
@@ -324,7 +314,7 @@ add_exports(Module, Exports) ->
 -spec add_functions(module() | clj_module(), [erl_parse:abstract_form()]) ->
   clj_module().
 add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
-  add_functions(get(modules_table_id(), ModuleName), Funs);
+  add_functions(get(?MODULE, ModuleName), Funs);
 add_functions(Module, Funs) ->
   SaveFun = fun(F) ->
                 FunctionId    = function_id(F),
@@ -338,27 +328,78 @@ add_functions(Module, Funs) ->
 -spec is_clojure(module()) -> boolean().
 is_clojure(Name) ->
   Key = {?MODULE, is_clojure, Name},
-  case erlang:get(Key) of
+  case clj_cache:get(Key) of
     undefined ->
       Attrs = Name:module_info(attributes),
       IsClojure = lists:keymember(clojure, 1, Attrs),
-      erlang:put(Key, IsClojure),
+      clj_cache:put(Key, IsClojure),
       IsClojure;
-    Value ->
+    {ok, Value} ->
       Value
   end.
+
+%%------------------------------------------------------------------------------
+%% gen_server callbacks
+%%------------------------------------------------------------------------------
+
+start_link() ->
+  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+init([]) ->
+  ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
+  TabId = ets:new(loaded_modules, [set, protected, {keypos, 1}]),
+  {ok, #{loaded_modules => TabId}}.
+
+handle_call({load, Module}, {Pid, _}, #{loaded_modules := TabId} = State) ->
+  Module = save(?MODULE, Module),
+  case get(TabId, Pid) of
+    undefined ->
+      save(TabId, {Pid, [Module]});
+    {Pid, Modules}  ->
+      save(TabId, {Pid, [Module | Modules]})
+  end,
+
+  {reply, ok, State};
+handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
+  Modules = case get(TabId, Pid) of
+              undefined   -> [];
+              {Pid, Mods} -> Mods
+            end,
+
+  true = ets:delete(TabId, Pid),
+  ok = lists:foreach(fun(M) -> ets:delete(?MODULE, M#module.name) end, Modules),
+
+  {reply, Modules, State};
+handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
+  Modules = case get(TabId, Pid) of
+              undefined   -> [];
+              {Pid, Mods} -> Mods
+            end,
+
+  {reply, Modules, State}.
+
+handle_cast(_Msg, State) ->
+  {ok, State}.
+
+handle_info(_Msg, State) ->
+  {ok, State}.
+
+terminate(_Msg, State) ->
+  {ok, State}.
+
+code_change(_Msg, _From, State) ->
+  {ok, State}.
 
 %%------------------------------------------------------------------------------
 %% Helper Functions
 %%------------------------------------------------------------------------------
 
--spec modules_table_id() -> ets:tid().
-modules_table_id() ->
-  erlang:get(?MODULE).
-
--spec modules_table_id(ets:tid()) -> ok.
-modules_table_id(TableId) ->
-  erlang:put(?MODULE, TableId).
+%% @private
+-spec delete_fake_modules(clj_module()) -> ok.
+delete_fake_modules(Module) ->
+  FakeModulesId = Module#module.fake_modules,
+  [code:delete(Name) || {Name} <- ets:tab2list(FakeModulesId)],
+  ok.
 
 -spec get(atom(), module()) -> any().
 get(Table, Id) ->
@@ -415,7 +456,8 @@ new(Forms) when is_list(Forms) ->
 
   {Source, Attrs} = source_file(RestAttrs1),
 
-  TableOpts = [set, protected, {keypos, 1}],
+  %% Tables need to be public so that other compiler processes can modify them.
+  TableOpts = [set, public, {keypos, 1}],
   Module = #module{ name              = Name
                   , source            = Source
                   , vars              = ets:new(var, TableOpts)
@@ -429,9 +471,7 @@ new(Forms) when is_list(Forms) ->
 
   Module1 = add_functions(Module, Funs),
   Module2 = add_vars(Module1, maps:values(Vars)),
-  Module3 = add_exports(Module2, Exports),
-
-  save(modules_table_id(), Module3).
+  add_exports(Module2, Exports).
 
 -spec is_attribute(erl_parse:abstract_form()) -> boolean.
 is_attribute({attribute, _, _, _}) -> true;

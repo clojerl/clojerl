@@ -13,6 +13,12 @@ init(_Args) ->
   Specs    = [ #{ id    => clj_namespace
                 , start => {clj_namespace, start_link, []}
                 }
+             , #{ id    => clj_module
+                , start => {clj_module, start_link, []}
+                }
+             , #{ id    => clj_cache
+                , start => {clj_cache, start_link, []}
+                }
              , #{ id    => 'clojerl.MultiFn'
                 , start => {'clojerl.MultiFn', start_link, []}
                 }
