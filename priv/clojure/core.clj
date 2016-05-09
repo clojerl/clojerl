@@ -1683,8 +1683,8 @@
   "Removes all of the methods of multimethod."
   {:added "1.2"
    :static true}
-  [^clojure.lang.MultiFn multifn]
-  (clojerl.MultiFn/reset.e multifn))
+  [^Var multifn]
+  (clojerl.MultiFn/remove_all.e (name multifn)))
 
 (defn remove-method
   "Removes the method of multimethod associated with dispatch-value."
@@ -1699,7 +1699,8 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn dispatch-val-x dispatch-val-y]
-  (clojerl.MultiFn/prefer_method.e multifn dispatch-val-x dispatch-val-y))
+  (throw "unimplemented hierarchy")
+  #_(clojerl.MultiFn/prefer_method.e multifn dispatch-val-x dispatch-val-y))
 
 (defn methods
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
@@ -1721,7 +1722,8 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn]
-  (clojerl.MultiFn/get_prefer_table.e multifn))
+  (throw "unimplemented hierarchy")
+  #_(clojerl.MultiFn/get_prefer_table.e multifn))
 
 ;;;;;;;;; var stuff
 
