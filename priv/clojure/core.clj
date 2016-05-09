@@ -1668,7 +1668,12 @@
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
   [multifn dispatch-val & fn-tail]
-  `(clojerl.MultiFn/add_method.e ~(name multifn) ~dispatch-val (fn ~@fn-tail)))
+  (let [fn-name (gensym (str (name multifn) "_method_"))]
+    `(do
+       (defn ~fn-name ~@fn-tail)
+       (clojerl.MultiFn/add_method.e ~(name multifn)
+                                     ~dispatch-val
+                                     (var ~fn-name)))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
