@@ -37,29 +37,138 @@
 
 (def ^:dynamic *verbose-defrecords* false)
 
+(defn write
+  "Wrap io/fwrite.e"
+  [w format & data]
+  (io/fwrite.e w format (clj_core/seq_to_list.e data)))
+
+(defn- print-sequential [begin, print-one, sep, end, sequence, w]
+  (binding [*print-level* (and (not *print-dup*) *print-level* (dec *print-level*))]
+    (if (and *print-level* (neg? *print-level*))
+      (write w "#")
+      (do
+        (write w begin)
+        (when-let [xs (seq sequence)]
+          (if (and (not *print-dup*) *print-length*)
+            (loop [[x & xs] xs
+                   print-length *print-length*]
+              (if (zero? print-length)
+                (write w "...")
+                (do
+                  (print-one x w)
+                  (when xs
+                    (write w sep)
+                    (recur xs (dec print-length))))))
+            (loop [[x & xs] xs]
+              (print-one x w)
+              (when xs
+                (write w sep)
+                (recur xs)))))
+        (write w end)))))
+
 (defn- print-meta [o, w]
   (when-let [m (meta o)]
     (when (and (pos? (count m))
                (or *print-dup*
                    (and *print-meta* *print-readably*)))
-      (io/write.e w "^")
+      (write w "^")
       (if (and (= (count m) 1) (:tag m))
           (pr-on (:tag m) w)
           (pr-on m w))
-      (io/write.e w " "))))
+      (write w " "))))
 
 (defn print-simple [o, ^Writer w]
   (print-meta o w)
-  (io/write.e w (str o)))
+  (write w (str o)))
 
 (defmethod print-method :default [o, w]
-  (if (meta? o)
-    (print-method (vary-meta o #(dissoc % :type)) w)
-    (print-simple o w)))
+  (print-simple o w))
+
+(defmethod print-method :clojerl.Nil [o, w]
+  (write w "nil"))
+
+(defmethod print-dup :clojerl.Nil [o w] (print-method o w))
+
+(defmethod print-method :clojerl.Keyword [o, w]
+  (write w (str o)))
+
+(defmethod print-dup :clojerl.Keyword [o w] (print-method o w))
 
 (defmethod print-method :clojerl.Integer [o, w]
-  (if (meta? o)
-    (print-method (vary-meta o #(dissoc % :type)) w)
-    (print-simple o w)))
+  (write w (str o)))
 
-;;(prn 1)
+(defmethod print-method :clojerl.Float [o, w]
+  (write w (str o)))
+
+(defmethod print-method :clojerl.Boolean [o, w]
+  (write w (str o)))
+
+(defmethod print-dup :clojerl.Boolean [o w] (print-method o w))
+
+(defmethod print-method :clojerl.Symbol [o, w]
+  (print-simple o w))
+
+(defmethod print-dup :clojerl.Symbol [o w] (print-method o w))
+
+(defmethod print-method :clojerl.Var [o, w]
+  (print-simple o w))
+
+(defmethod print-dup :clojerl.Var [o, w]
+  (write w (str "#=(var " (namespace o) "/" (name o) ")")))
+
+(defmethod print-method :clojerl.List [o, ^Writer w]
+  (print-meta o w)
+  (print-sequential "(" pr-on " " ")" o w))
+
+(defmethod print-method :clojerl.erlang.List [o, ^Writer w]
+  (print-meta o w)
+  (print-sequential "(" pr-on " " ")" o w))
+
+(defmethod print-dup :clojerl.List [o w] (print-method o w))
+(defmethod print-dup :clojerl.erlang.List [o w] (print-method o w))
+
+(def ^{:tag String
+       :doc "Returns escape string for char or nil if none"
+       :added "1.0"}
+  char-escape-string
+    {\newline "\\n"
+     \tab  "\\t"
+     \return "\\r"
+     \" "\\\""
+     \\  "\\\\"
+     \formfeed "\\f"
+     \backspace "\\b"})
+
+(defmethod print-method :clojerl.String [^String s, ^Writer w]
+  (if (or *print-dup* *print-readably*)
+    (do (write w \")
+      (dotimes [n (count s)]
+        (let [c (clojerl.String/char_at.e s n)
+              e (char-escape-string c)]
+          (if e (write w e) (write w c))))
+      (write w \"))
+    (write w s))
+  nil)
+
+(defmethod print-dup :clojerl.String [s w] (print-method s w))
+
+(defmethod print-method :clojerl.Vector [v, ^Writer w]
+  (print-meta v w)
+  (print-sequential "[" pr-on " " "]" v w))
+
+(defn- print-map [m print-one w]
+  (print-sequential
+   "{"
+   (fn [e  ^Writer w]
+     (do (print-one (key e) w) (write w \space) (print-one (val e) w)))
+   ", "
+   "}"
+   (seq m) w))
+
+(defmethod print-method :clojerl.Map [m, ^Writer w]
+  (print-meta m w)
+  (print-map m pr-on w))
+
+(defmethod print-method :clojerl.Set [s, ^Writer w]
+  (print-meta s w)
+  (print-sequential "#{" pr-on " " "}" (seq s) w))

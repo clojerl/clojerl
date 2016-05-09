@@ -1659,10 +1659,10 @@
          (when-not (and (clojerl.Var/has_root.e v#)
                         (instance? :clojerl.MultiFn (deref v#)))
            (defn ~(with-meta mm-name m)
-             [& args]
-             (let [val# (apply ~dispatch-fn args)
-                   f    (clojerl.MultiFn/get_method.e ~(name mm-name) val# ~default ~hierarchy)]
-               (apply f args))))))))
+             [& args#]
+             (let [val# (apply ~dispatch-fn args#)
+                   f#    (clojerl.MultiFn/get_method.e ~(name mm-name) val# ~default ~hierarchy)]
+               (apply f# args#))))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
@@ -3411,7 +3411,7 @@
   {:added "1.0"
    :static true}
   ^clojerl.Keyword [^Object x]
-  (if (nil? x) x (clj_core/type.e x)))
+  (clj_core/type.e x))
 
 (defn type
   "Returns the :type metadata of x, or its Class if none"
