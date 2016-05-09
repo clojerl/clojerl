@@ -1662,6 +1662,10 @@
              [& args#]
              (let [val# (apply ~dispatch-fn args#)
                    f#    (clojerl.MultiFn/get_method.e ~(name mm-name) val# ~default ~hierarchy)]
+               (when (nil? f#)
+                 (throw (str "No multimethod defined for dispatch value " val#
+                             " in " '~mm-name
+                             )))
                (apply f# args#))))))))
 
 (defmacro defmethod
