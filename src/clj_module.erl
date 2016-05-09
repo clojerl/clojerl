@@ -126,9 +126,9 @@ build_fake_fun(Module, Function, Arity) ->
 %% This is used so that they can be replaced with new ones, when
 %% redifining a function, for example.
 %% @end
--spec delete_fake_fun(clj_module(), atom(), arity()) -> ok.
-delete_fake_fun(Module, Function, Arity) ->
-  true = ets:delete(Module#module.fake_funs, {Function, Arity}),
+-spec delete_fake_fun(clj_module(), function_id()) -> ok.
+delete_fake_fun(Module, FunctionId) ->
+  true = ets:delete(Module#module.fake_funs, FunctionId),
   ok.
 
 %% @doc Checks if the function is the one that provides the value of a var.
@@ -313,9 +313,8 @@ add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
   add_functions(get(?MODULE, ModuleName), Funs);
 add_functions(Module, Funs) ->
   SaveFun = fun(F) ->
-                FunctionId    = function_id(F),
-                {Name, Arity} = FunctionId,
-                ok = delete_fake_fun(Module, Name, Arity),
+                FunctionId  = function_id(F),
+                ok          = delete_fake_fun(Module, FunctionId),
                 save(Module#module.funs, {FunctionId, F})
             end,
   lists:foreach(SaveFun, Funs),
