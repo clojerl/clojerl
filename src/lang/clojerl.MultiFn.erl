@@ -1,8 +1,12 @@
 -module('clojerl.MultiFn').
 -behaviour(gen_server).
 
--export([ get_method/4
+-export([ get_method/2
+        , get_method/4
+        , get_method_table/1
         , add_method/3
+        , remove_all/1
+        , remove_method/2
         ]).
 
 %% gen_server callbacks
@@ -27,6 +31,10 @@
 %% API
 %%------------------------------------------------------------------------------
 
+-spec get_method(binary(), any()) -> any().
+get_method(Name, Value) ->
+  get_method(Name, Value, default, undefined).
+
 -spec get_method(binary(), any(), any(), map()) -> any().
 get_method(Name, Value, Default, _Hierarchy) ->
   case get(?MODULE, {Name, Value}) of
@@ -38,9 +46,25 @@ get_method(Name, Value, Default, _Hierarchy) ->
     Method -> Method#multifn.method
   end.
 
+-spec get_method_table(binary()) -> any().
+get_method_table(Name) ->
+  MultiFns = ets:match(?MODULE, by_name(Name)),
+  AddMultiFn = fun([_, V, M], Map) ->
+                   maps:put(V, M, Map)
+               end,
+  lists:foldl(AddMultiFn, #{}, MultiFns).
+
 -spec add_method(binary(), any(), any()) -> any().
 add_method(Name, Value, Method) ->
   gen_server:call(?MODULE, {add_method, Name, Value, Method}).
+
+-spec remove_all(binary()) -> boolean().
+remove_all(Name) ->
+  true = gen_server:call(?MODULE, {remove_all, Name}).
+
+-spec remove_method(binary(), any()) -> boolean().
+remove_method(Name, Value) ->
+  gen_server:call(?MODULE, {remove_method, Name, Value}).
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
@@ -55,7 +79,13 @@ init([]) ->
 
 handle_call({add_method, Name, Value, Method}, _From, State) ->
   #multifn{} = new_method(Name, Value, Method),
-  {reply, ok, State}.
+  {reply, ok, State};
+handle_call({remove_all, Name}, _From, State) ->
+  true = ets:match_delete(?MODULE, by_name(Name)),
+  {reply, true, State};
+handle_call({remove_method, Name, Value}, _From, State) ->
+  true = ets:delete(?MODULE, {Name, Value}),
+  {reply, true, State}.
 
 handle_cast(_Msg, State) ->
   {ok, State}.
@@ -93,3 +123,11 @@ get(Table, Id) ->
     [] -> undefined;
     [Value] -> Value
   end.
+
+-spec by_name(binary()) -> multifn().
+by_name(Name) ->
+  #multifn{ id     = {Name, '_'}
+          , name   = '$1'
+          , value  = '$2'
+          , method = '$3'
+          }.
