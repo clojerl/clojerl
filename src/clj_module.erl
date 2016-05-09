@@ -219,18 +219,14 @@ ensure_loaded(Name, Source) ->
 %% @private
 -spec load(atom(), binary()) -> ok | {error, term()}.
 load(Name, Source) ->
-  case is_loaded(Name) of
-    true -> ok;
-    false ->
-      Module = case code:ensure_loaded(Name) of
-                 {module, Name} ->
-                   new(clj_utils:code_from_binary(Name));
-                 {error, _} ->
-                   new(Name, Source)
-               end,
-      ok = gen_server:call(?MODULE, {load, Module}),
-      Module
-  end.
+  Module = case code:ensure_loaded(Name) of
+             {module, Name} ->
+               new(clj_utils:code_from_binary(Name));
+             {error, _} ->
+               new(Name, Source)
+           end,
+  ok = gen_server:call(?MODULE, {load, Module}),
+  Module.
 
 -spec is_loaded(module()) -> boolean().
 is_loaded(Name) ->
