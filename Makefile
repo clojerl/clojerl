@@ -16,7 +16,7 @@ CT_OPTS = -cover ${COVER_SPEC} -erl_args -s ${PROJECT}
 
 COMPILE_FIRST = lang/protocols/*
 
-SHELL_OPTS += -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync
+SHELL_OPTS += -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync
 
 # Generate a list of all modules for the cover.spec
 print-all-modules:
@@ -33,7 +33,7 @@ tests-shell: test-build
 
 repl: SHELL_OPTS += -s clj_repl repl -noshell
 repl:
-	@rlwrap erl -pa ebin -pa deps/*/ebin ${SHELL_OPTS}
+	@rlwrap erl -pa ebin -pa deps/*/ebin -pa priv ${SHELL_OPTS}
 
-shell-no-sync: SHELL_OPTS = -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
+shell-no-sync: SHELL_OPTS = -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
 shell-no-sync: shell;

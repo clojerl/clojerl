@@ -16,9 +16,12 @@
         , find_var/1
         , find_var/2
         , get_mappings/1
+        , get_aliases/1
 
         , refer/3
+        , unmap/2
         , add_alias/3
+        , remove_alias/2
         , mapping/2
         , alias/2
         ]).
@@ -128,6 +131,10 @@ update_var(Namespace, Var) ->
 get_mappings(#namespace{mappings = Mappings}) ->
   maps:from_list(ets:tab2list(Mappings)).
 
+-spec get_aliases(namespace()) -> map().
+get_aliases(#namespace{aliases = Aliases}) ->
+  maps:from_list(ets:tab2list(Aliases)).
+
 -spec refer(namespace(), 'clojerl.Symbol':type(), 'clojerl.Var':type()) ->
   namespace().
 refer(Ns, Sym, Var) ->
@@ -141,6 +148,14 @@ refer(Ns, Sym, Var) ->
 
   gen_server:call(?MODULE, {intern, Ns, Sym, Var}).
 
+-spec unmap(namespace(), 'clojerl.Symbol':type()) -> namespace().
+unmap(Ns, Sym) ->
+  clj_utils:throw_when( not clj_core:'symbol?'(Sym)
+                      , <<"Name for refer var is not a symbol">>
+                      ),
+
+  gen_server:call(?MODULE, {unmap, Ns, Sym}).
+
 -spec add_alias(namespace(), 'clojerl.Symbol':type(), namespace()) ->
   namespace().
 add_alias(Ns, AliasSym, AliasedNs) ->
@@ -149,6 +164,15 @@ add_alias(Ns, AliasSym, AliasedNs) ->
                       ),
 
   gen_server:call(?MODULE, {add_alias, Ns, AliasSym, AliasedNs}).
+
+-spec remove_alias(namespace(), 'clojerl.Symbol':type()) ->
+  namespace().
+remove_alias(Ns, AliasSym) ->
+  clj_utils:throw_when( not clj_core:'symbol?'(AliasSym)
+                      , <<"Name for refer var is not a symbol">>
+                      ),
+
+  gen_server:call(?MODULE, {remove_alias, Ns, AliasSym}).
 
 -spec mapping(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | undefined.
@@ -197,11 +221,23 @@ handle_call( {intern, Ns = #namespace{mappings = Mappings}, Symbol, Var}
            ) ->
   save(Mappings, {clj_core:name(Symbol), Var}),
   {reply, Ns, State};
+handle_call( {unmap, Ns = #namespace{mappings = Mappings}, Symbol}
+           , _From
+           , State
+           ) ->
+  ok = delete(Mappings, clj_core:name(Symbol)),
+  {reply, Ns, State};
 handle_call( {add_alias, Ns = #namespace{aliases = Aliases}, Symbol, AliasedNs}
            , _From
            , State
            ) ->
   save(Aliases, {clj_core:name(Symbol), AliasedNs}),
+  {reply, Ns, State};
+handle_call( {remove_alias, Ns = #namespace{aliases = Aliases}, Symbol}
+           , _From
+           , State
+           ) ->
+  delete(Aliases, clj_core:name(Symbol)),
   {reply, Ns, State};
 handle_call({remove, Name}, _From, State) ->
   Result = ok =:= ets:delete(?MODULE, clj_core:name(Name)),
@@ -249,6 +285,10 @@ get(Table, Id) ->
 save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
+
+-spec delete(ets:tid(), term()) -> ok | {error, term()}.
+delete(Table, Key) ->
+  ets:delete(Table, Key).
 
 -spec load('clojerl.Symbol':type()) -> namespace().
 load(Name) ->

@@ -107,13 +107,12 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok     = ensure_module(Module, file_from(Var)),
+  ok     = clj_module:ensure_loaded(Module, file_from(Var)),
   VarAst = erl_parse:abstract(Var),
 
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
-        clj_module:delete_fake_funs(Module, Name),
         { VarAst
         , add_functions(Module, Name, FnExpr, State)
         };
@@ -488,7 +487,21 @@ ast(#{op := 'catch'} = Expr, State) ->
 
   Ast = {clause, Anno, [ClassNameAst], [], [Body]},
 
-  push_ast(Ast, State2).
+  push_ast(Ast, State2);
+%%------------------------------------------------------------------------------
+%% on_load
+%%------------------------------------------------------------------------------
+ast(#{op := on_load} = Expr, State) ->
+  #{body := BodyExpr} = Expr,
+
+  {Ast, State1} = pop_ast(ast(BodyExpr, State)),
+
+  CurrentNs  = clj_namespace:current(),
+  NameSym    = clj_namespace:name(CurrentNs),
+  ModuleName = binary_to_atom(clj_core:name(NameSym), utf8),
+  clj_module:add_on_load(ModuleName, Ast),
+
+  push_ast(Ast, State1).
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
@@ -601,13 +614,6 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
     end,
 
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
-
--spec ensure_module(atom(), string()) -> ok.
-ensure_module(Name, Source) ->
-  case clj_module:is_loaded(Name) of
-    true  -> ok;
-    false -> clj_module:load(Name, Source), ok
-  end.
 
 %% Push & pop asts
 

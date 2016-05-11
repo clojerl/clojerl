@@ -183,7 +183,7 @@ dynamic_bindings(_Config) ->
   Var    = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
   VarStr = clj_core:str(Var),
 
-  #{} = 'clojerl.Var':get_bindings(),
+  #{} = 'clojerl.Var':get_bindings_map(),
 
   ct:comment("deref'd value should be the root binding"),
   42 = clj_core:deref(Var),
@@ -203,7 +203,17 @@ dynamic_bindings(_Config) ->
 
   85 = clj_core:deref(Var),
 
-  #{VarStr := 85} = 'clojerl.Var':get_bindings(),
+  #{VarStr := 85} = 'clojerl.Var':get_bindings_map(),
+
+  Bindings = 'clojerl.Var':get_bindings(),
+
+  'clojerl.Var':pop_bindings(),
+
+  42 = clj_core:deref(Var),
+
+  'clojerl.Var':reset_bindings(Bindings),
+
+  85 = clj_core:deref(Var),
 
   'clojerl.Var':pop_bindings(),
 

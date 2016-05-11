@@ -1,0 +1,11 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -smp enable -sname factorial -mnesia debug verbose -pa ebin -pa priv
+
+-spec main([]) -> ok.
+main([Path]) ->
+  clojerl:start(),
+  clojerl:ensure_modules(),
+  PathBin = list_to_binary(Path),
+  clj_compiler:compile_file(PathBin, #{verbose => true, time => true}),
+  ok.

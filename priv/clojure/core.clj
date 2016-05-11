@@ -1,3 +1,11 @@
+;   Copyright (c) Rich Hickey. All rights reserved.
+;   The use and distribution terms for this software are covered by the
+;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;   which can be found in the file epl-v10.html at the root of this distribution.
+;   By using this software in any fashion, you are agreeing to be bound by
+;   the terms of this license.
+;   You must not remove this notice, or any other, from this software.
+
 (ns clojure.core)
 
 (def
@@ -231,21 +239,18 @@
               (clj_core/with_meta.e x m)))
 
 (def ^{:private true :dynamic true}
-  assert-valid-fdecl
-  (fn [fdecl]
-    (throw "unimplemented")))
+  assert-valid-fdecl (fn [fdecl]))
 
 (def
   ^{:private true}
   sigs
   (fn [fdecl]
-    (throw "unimplemented")
     (assert-valid-fdecl fdecl)
     (let [asig
           (fn [fdecl]
             (let [arglist (first fdecl)
-                                        ;elide implicit macro args
-                  arglist (if (clj_utils/equals.e '&form (first arglist))
+                  ;elide implicit macro args
+                  arglist (if (clj_core/equiv.e '&form (first arglist))
                             (clj_core/subvec.e arglist 2 (clj_core/count.e arglist))
                             arglist)
                   body (next fdecl)]
@@ -308,6 +313,7 @@
              fdecl (if (map? (last fdecl))
                      (butlast fdecl)
                      fdecl)
+             ;; TODO: Uncomment this and figure out why it is so time consuming
              ;; m     (conj {:arglists (list 'quote (sigs fdecl))} m)
              m     (conj (if (meta name) (meta name) {}) m)]
          (list 'def (with-meta name m)
@@ -373,7 +379,7 @@
   {:added "1.0"
    :static true}
   ([& keyvals]
-   (throw "unsupported")
+   (throw "unsupported sorted-map")
    #_(clojure.lang.PersistentTreeMap/create keyvals)))
 
 (defn sorted-map-by
@@ -384,7 +390,7 @@
   {:added "1.0"
    :static true}
   ([comparator & keyvals]
-   (throw "unsupported")
+   (throw "unsupported sorted-map")
    #_(clojure.lang.PersistentTreeMap/create comparator keyvals)))
 
 (defn sorted-set
@@ -393,7 +399,7 @@
   {:added "1.0"
    :static true}
   ([& keys]
-   (throw "unsupported")
+   (throw "unsupported sorted-set")
    #_(clojure.lang.PersistentTreeSet/create keys)))
 
 (defn sorted-set-by
@@ -403,7 +409,7 @@
   {:added "1.1"
    :static true}
   ([comparator & keys]
-   (throw "unsupported")
+   (throw "unsupported sorted-set")
    #_(clojure.lang.PersistentTreeSet/create comparator keys)))
 
 ;;;;;;;;;;;;;;;;;;;;
@@ -636,37 +642,37 @@
   (list 'clojerl.LazySeq/new.e (list* '^{:once true} fn* [] body)))
 
 (defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(clojure.lang.ChunkBuffer. capacity))
 
 (defn ^:static chunk-append [^clojure.lang.ChunkBuffer b x]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(.add b x))
 
 (defn ^:static ^clojure.lang.IChunk chunk [^clojure.lang.ChunkBuffer b]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(.chunk b))
 
 (defn ^:static  ^clojure.lang.IChunk chunk-first ^clojure.lang.IChunk [^clojure.lang.IChunkedSeq s]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(.chunkedFirst s))
 
 (defn ^:static ^clojure.lang.ISeq chunk-rest ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(.chunkedMore s))
 
 (defn ^:static ^clojure.lang.ISeq chunk-next ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(.chunkedNext s))
 
 (defn ^:static chunk-cons [chunk rest]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(if (clojure.lang.Numbers/isZero (clojure.lang.RT/count chunk))
       rest
       (clojure.lang.ChunkedCons. chunk rest)))
 
 (defn ^:static chunked-seq? [s]
-  (throw "unimplemented")
+  (throw "unimplemented chunked seq")
   #_(instance? clojure.lang.IChunkedSeq s))
 
 (defn concat
@@ -787,9 +793,7 @@
    :inline (fn [x y] `(. clojure.lang.Util compare ~x ~y))
    :added "1.0"}
   [x y]
-  ;; TODO: replace with Erlang comparison operators
-  (throw "unimplemented")
-  #_(. clojure.lang.Util (compare x y)))
+  (clj_utils/compare.e x y))
 
 (defmacro and
   "Evaluates exprs one at a time, from left to right. If a form
@@ -901,14 +905,13 @@
 (defn ^:private nary-inline
   ([op] (nary-inline op op))
   ([op unchecked-op]
-   (throw "unsupported")
    (fn
-     ([x] #_`(. clojure.lang.Numbers (~op ~x)))
-     ([x y] #_`(. clojure.lang.Numbers (~op ~x ~y)))
+     ([x] `(~op ~x))
+     ([x y] `(~op ~x ~y))
      ([x y & more]
-      #_(reduce1
-         (fn [a b] `(. clojure.lang.Numbers (~op ~a ~b)))
-         `(. clojure.lang.Numbers (~op ~x ~y)) more)))))
+      (reduce1
+         (fn [a b] `(~op ~a ~b))
+         `(~op ~x ~y)) more))))
 
 (defn ^:private >1? [n] (erlang/>.e n 1))
 (defn ^:private >0? [n] (erlang/>.e n 0))
@@ -916,7 +919,7 @@
 (defn +'
   "Returns the sum of nums. (+) returns 0. Supports arbitrary precision.
   See also: +"
-  {:inline (nary-inline 'addP)
+  {:inline (nary-inline 'erlang/+.e)
    :inline-arities >1?
    :added "1.0"}
   ([] 0)
@@ -940,7 +943,7 @@
 (defn *'
   "Returns the product of nums. (*) returns 1. Supports arbitrary precision.
   See also: *"
-  {:inline (nary-inline 'multiplyP)
+  {:inline (nary-inline 'erlang/*.e)
    :inline-arities >1?
    :added "1.0"}
   ([] 1)
@@ -976,7 +979,7 @@
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result. Supports arbitrary precision.
   See also: -"
-  {:inline (nary-inline 'minusP)
+  {:inline (nary-inline 'erlang/-.e)
    :inline-arities >0?
    :added "1.0"}
   ([x] (erlang/-.e x))
@@ -1112,7 +1115,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_dec ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_dec x)))
 
 (defn unchecked-dec
@@ -1121,7 +1124,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_dec ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_dec x)))
 
 (defn unchecked-negate-int
@@ -1130,7 +1133,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_negate ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_negate x)))
 
 (defn unchecked-negate
@@ -1139,7 +1142,7 @@
   {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_minus ~x)))
    :added "1.0"}
   [x]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_minus x)))
 
 (defn unchecked-add-int
@@ -1148,7 +1151,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_add ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_add x y)))
 
 (defn unchecked-add
@@ -1157,7 +1160,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_add ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_add x y)))
 
 (defn unchecked-subtract-int
@@ -1166,7 +1169,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_subtract ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_subtract x y)))
 
 (defn unchecked-subtract
@@ -1175,7 +1178,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_minus ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_minus x y)))
 
 (defn unchecked-multiply-int
@@ -1184,7 +1187,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_multiply ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_multiply x y)))
 
 (defn unchecked-multiply
@@ -1193,7 +1196,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_multiply ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_multiply x y)))
 
 (defn unchecked-divide-int
@@ -1202,7 +1205,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_divide ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_divide x y)))
 
 (defn unchecked-remainder-int
@@ -1211,7 +1214,7 @@
   {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_remainder ~x ~y)))
    :added "1.0"}
   [x y]
-  (throw "unsupported")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.Numbers (unchecked_int_remainder x y)))
 
 (defn pos?
@@ -1247,7 +1250,7 @@
   {:added "1.0"
    :static true}
   [num]
-  (throw "unimplemented")
+  (throw "unimplemented ratio")
   #_(. clojure.lang.Numbers (rationalize num)))
 
 ;;Bit ops
@@ -1302,32 +1305,28 @@
   {:added "1.0"
    :static true}
   [x n]
-  (throw "unimplemented")
-  #_(. clojure.lang.Numbers clearBit x n))
+  (erlang/band.e x (erlang/bnot.e (erlang/bsl.e 1 n))))
 
 (defn bit-set
   "Set bit at index n"
   {:added "1.0"
    :static true}
   [x n]
-  (throw "unimplemented")
-  #_(. clojure.lang.Numbers setBit x n))
+  (erlang/bor.e x (erlang/bsl.e 1 n)))
 
 (defn bit-flip
   "Flip bit at index n"
   {:added "1.0"
    :static true}
   [x n]
-  (throw "unimplemented")
-  #_(. clojure.lang.Numbers flipBit x n))
+  (erlang/bxor.e x (erlang/bsl.e 1 n)))
 
 (defn bit-test
   "Test bit at index n"
   {:added "1.0"
    :static true}
   [x n]
-  (throw "unimplemented")
-  #_(. clojure.lang.Numbers testBit x n))
+  (erlang/==.e 0 (erlang/band.e x (erlang/bsl.e 1 n))))
 
 
 (defn bit-shift-left
@@ -1347,8 +1346,7 @@
   {:inline (fn [x n] `(erlang/bsr.e ~x ~n))
    :added "1.6"}
   [x n]
-  (throw "unimplemented")
-  #_(. clojure.lang.Numbers unsignedShiftRight x n))
+  (throw "unsupported unsigned operation"))
 
 (defn integer?
   "Returns true if n is an integer"
@@ -1545,7 +1543,7 @@
   Will release the monitor of x in all circumstances."
   {:added "1.0"}
   [x & body]
-  (throw "unsupported")
+  (throw "unsupported locks")
   #_`(let [lockee# ~x]
      (try
       (monitor-enter lockee#)
@@ -1639,7 +1637,7 @@
   {:arglists '([name docstring? attr-map? dispatch-fn & options])
    :added "1.0"}
   [mm-name & options]
-  #_(let [docstring   (if (string? (first options))
+  (let [docstring   (if (string? (first options))
                       (first options)
                       nil)
         options     (if (string? (first options))
@@ -1666,31 +1664,43 @@
           hierarchy (get options :hierarchy #'global-hierarchy)]
       (check-valid-options options :default :hierarchy)
       `(let [v# (def ~mm-name)]
-         (when-not (and (.hasRoot v#) (instance? clojure.lang.MultiFn (deref v#)))
-           (def ~(with-meta mm-name m)
-                (new clojure.lang.MultiFn ~(name mm-name) ~dispatch-fn ~default ~hierarchy)))))))
+         (when-not (and (clojerl.Var/has_root.e v#)
+                        (instance? :clojerl.MultiFn (deref v#)))
+           (defn ~(with-meta mm-name m)
+             [& args#]
+             (let [val# (apply ~dispatch-fn args#)
+                   f#    (clojerl.MultiFn/get_method.e ~(name mm-name) val# ~default ~hierarchy)]
+               (when (nil? f#)
+                 (throw (str "No multimethod defined for dispatch value " val#
+                             " in " '~mm-name
+                             )))
+               (apply f# args#))))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
   [multifn dispatch-val & fn-tail]
-  #_`(. ~(with-meta multifn {:tag 'clojure.lang.MultiFn}) addMethod ~dispatch-val (fn ~@fn-tail)))
+  (let [fn-name (gensym (str (name multifn) "_method_"))]
+    `(do
+       (defn ~fn-name ~@fn-tail)
+       (erl-on-load*
+        (clojerl.MultiFn/add_method.e ~(name multifn)
+                                      ~dispatch-val
+                                      (var ~fn-name))))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
   {:added "1.2"
    :static true}
-  [^clojure.lang.MultiFn multifn]
-  (throw "unimplemented")
-  #_(.reset multifn))
+  [^Var multifn]
+  (clojerl.MultiFn/remove_all.e (name multifn)))
 
 (defn remove-method
   "Removes the method of multimethod associated with dispatch-value."
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn dispatch-val]
-  (throw "unimplemented")
-  #_(. multifn removeMethod dispatch-val))
+  (clojerl.MultiFn/remove_method.e multifn dispatch-val))
 
 (defn prefer-method
   "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y
@@ -1698,16 +1708,15 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn dispatch-val-x dispatch-val-y]
-  (throw "unimplemented")
-  #_(. multifn preferMethod dispatch-val-x dispatch-val-y))
+  (throw "unimplemented hierarchy")
+  #_(clojerl.MultiFn/prefer_method.e multifn dispatch-val-x dispatch-val-y))
 
 (defn methods
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn]
-  (throw "unimplemented")
-  #_(.getMethodTable multifn))
+  (clojerl.MultiFn/get_method_table.e multifn))
 
 (defn get-method
   "Given a multimethod and a dispatch value, returns the dispatch fn
@@ -1715,16 +1724,15 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn dispatch-val]
-  (throw "unimplemented")
-  #_(.getMethod multifn dispatch-val))
+  (clojerl.MultiFn/get_method.e multifn dispatch-val))
 
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn]
-  (throw "unimplemented")
-  #_(.getPreferTable multifn))
+  (throw "unimplemented hierarchy")
+  #_(clojerl.MultiFn/get_prefer_table.e multifn))
 
 ;;;;;;;;; var stuff
 
@@ -1836,7 +1844,7 @@
   {:added "1.1"
    :static true}
   []
-  (clojerl.Var/get_bindings.e))
+  (clojerl.Var/get_bindings_map.e))
 
 (defmacro binding
   "binding => var-symbol init-expr
@@ -1917,29 +1925,28 @@
   {:private true
    :added "1.3"}
   [f]
-  (throw "unimplemented")
-  #_(let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+  (let [frame (clojerl.Var/get_bindings.e)]
     (fn
       ([]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (clojerl.Var/reset_bindings.e frame)
          (f))
       ([x]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (clojerl.Var/reset_bindings.e frame)
          (f x))
       ([x y]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (clojerl.Var/reset_bindings.e frame)
          (f x y))
       ([x y z]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (clojerl.Var/reset_bindings.e frame)
          (f x y z))
       ([x y z & args]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
+         (clojerl.Var/reset_bindings.e frame)
          (apply f x y z args)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Refs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ^{:private true}
   setup-reference [^clojure.lang.ARef r options]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(let [opts (apply hash-map options)]
     (when (:meta opts)
       (.resetMeta r (:meta opts)))
@@ -1973,7 +1980,7 @@
    :static true
    }
   ([state & options]
-   (throw "unimplemented")
+   (throw "unimplemented agent")
    #_(let [a (new clojure.lang.Agent state)
          opts (apply hash-map options)]
      (setup-reference a options)
@@ -1987,14 +1994,14 @@
   "Sets the ExecutorService to be used by send"
   {:added "1.5"}
   [executor]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(set! clojure.lang.Agent/pooledExecutor executor))
 
 (defn set-agent-send-off-executor!
   "Sets the ExecutorService to be used by send-off"
   {:added "1.5"}
   [executor]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(set! clojure.lang.Agent/soloExecutor executor))
 
 (defn send-via
@@ -2005,7 +2012,7 @@
   (apply action-fn state-of-agent args)"
   {:added "1.5"}
   [executor ^clojure.lang.Agent a f & args]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(.dispatch a (binding [*agent* a] (binding-conveyor-fn f)) args executor))
 
 (defn send
@@ -2017,7 +2024,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.Agent a f & args]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(apply send-via clojure.lang.Agent/pooledExecutor a f args))
 
 (defn send-off
@@ -2029,7 +2036,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.Agent a f & args]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(apply send-via clojure.lang.Agent/soloExecutor a f args))
 
 (defn release-pending-sends
@@ -2042,7 +2049,7 @@
   {:added "1.0"
    :static true}
   []
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(clojure.lang.Agent/releasePendingSends))
 
 (defn add-watch
@@ -2062,7 +2069,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IRef reference key fn]
-  (throw "unimplemented")
+  (throw "unimplemented agent/atom/var/ref")
   #_(.addWatch reference key fn))
 
 (defn remove-watch
@@ -2070,7 +2077,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IRef reference key]
-  (throw "unimplemented")
+  (throw "unimplemented agent/atom/var/ref")
   #_(.removeWatch reference key))
 
 (defn agent-error
@@ -2080,7 +2087,7 @@
   {:added "1.2"
    :static true}
   [^clojure.lang.Agent a]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(.getError a))
 
 (defn restart-agent
@@ -2097,7 +2104,7 @@
    :static true
    }
   [^clojure.lang.Agent a, new-state & options]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(let [opts (apply hash-map options)]
     (.restart a new-state (if (:clear-actions opts) true false))))
 
@@ -2109,7 +2116,7 @@
   {:added "1.2"
    :static true}
   [^clojure.lang.Agent a, handler-fn]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(.setErrorHandler a handler-fn))
 
 (defn error-handler
@@ -2118,7 +2125,7 @@
   {:added "1.2"
    :static true}
   [^clojure.lang.Agent a]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(.getErrorHandler a))
 
 (defn set-error-mode!
@@ -2136,7 +2143,7 @@
   {:added "1.2"
    :static true}
   [^clojure.lang.Agent a, mode-keyword]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(.setErrorMode a mode-keyword))
 
 (defn error-mode
@@ -2144,7 +2151,7 @@
   {:added "1.2"
    :static true}
   [^clojure.lang.Agent a]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(.getErrorMode a))
 
 (defn agent-errors
@@ -2164,7 +2171,7 @@
   {:added "1.0"
    :deprecated "1.2"}
   [^clojure.lang.Agent a]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(restart-agent a (.deref a)))
 
 (defn shutdown-agents
@@ -2174,7 +2181,7 @@
   {:added "1.0"
    :static true}
   []
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(. clojure.lang.Agent shutdown))
 
 (defn ref
@@ -2204,10 +2211,10 @@
    :static true
    }
   ([x]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(new clojure.lang.Ref x))
   ([x & options]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(let [r  ^clojure.lang.Ref (setup-reference (ref x) options)
          opts (apply hash-map options)]
     (when (:max-history opts)
@@ -2218,10 +2225,10 @@
 
 (defn ^:private deref-future
   ([^java.util.concurrent.Future fut]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(.get fut))
   ([^java.util.concurrent.Future fut timeout-ms timeout-val]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(try (.get fut timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
         (catch java.util.concurrent.TimeoutException e
           timeout-val))))
@@ -2245,7 +2252,7 @@
      (throw (str "unimplemented deref for type " (clj_core/type.e ref)))
      #_(deref-future ref)))
   ([ref timeout-ms timeout-val]
-   (throw "unimplemented")
+   (throw "unimplemented timeout for deref")
    #_(if (instance? clojure.lang.IBlockingDeref ref)
        (.deref ^clojure.lang.IBlockingDeref ref timeout-ms timeout-val)
        (deref-future ref timeout-ms timeout-val))))
@@ -2266,7 +2273,7 @@
   {:added "1.0"
    :static true}
   ([x]
-   (throw "unimplemented")
+   (throw "unimplemented atom")
    #_(new clojure.lang.Atom x))
   ([x & options] (setup-reference (atom x) options)))
 
@@ -2278,16 +2285,16 @@
   {:added "1.0"
    :static true}
   ([^clojure.lang.IAtom atom f]
-   (throw "unimplemented")
+   (throw "unimplemented atom")
    #_(.swap atom f))
   ([^clojure.lang.IAtom atom f x]
-   (throw "unimplemented")
+   (throw "unimplemented atom")
    #_(.swap atom f x))
   ([^clojure.lang.IAtom atom f x y]
-   (throw "unimplemented")
+   (throw "unimplemented atom")
    #_(.swap atom f x y))
   ([^clojure.lang.IAtom atom f x y & args]
-   (throw "unimplemented")
+   (throw "unimplemented atom")
    #_(.swap atom f x y args)))
 
 (defn compare-and-set!
@@ -2297,7 +2304,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IAtom atom oldval newval]
-  (throw "unimplemented")
+  (throw "unimplemented atom")
   #_(.compareAndSet atom oldval newval))
 
 (defn reset!
@@ -2306,7 +2313,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IAtom atom newval]
-  (throw "unimplemented")
+  (throw "unimplemented atom")
   #_(.reset atom newval))
 
 (defn set-validator!
@@ -2319,7 +2326,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IRef iref validator-fn]
-  (throw "unimplemented")
+  (throw "unimplemented var/ref/agent/atom")
   #_(. iref (setValidator validator-fn)))
 
 (defn get-validator
@@ -2327,7 +2334,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IRef iref]
-  (throw "unimplemented")
+  (throw "unimplemented var/ref/agent/atom")
   #_(. iref (getValidator)))
 
 (defn alter-meta!
@@ -2339,7 +2346,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IReference iref f & args]
-  (throw "unimplemented")
+  (throw "unimplemented var/ref/agent/atom")
   #_(.alterMeta iref f args))
 
 (defn reset-meta!
@@ -2347,7 +2354,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.IReference iref metadata-map]
-  (throw "unimplemented")
+  (throw "unimplemented var/ref/agent/atom")
   #_(.resetMeta iref metadata-map))
 
 (defn commute
@@ -2369,7 +2376,7 @@
    :static true}
 
   [^clojure.lang.Ref ref fun & args]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(. ref (commute fun args)))
 
 (defn alter
@@ -2382,7 +2389,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.Ref ref fun & args]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(. ref (alter fun args)))
 
 (defn ref-set
@@ -2391,7 +2398,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.Ref ref val]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(. ref (set val)))
 
 (defn ref-history-count
@@ -2407,10 +2414,10 @@
   {:added "1.1"
    :static true}
   ([^clojure.lang.Ref ref]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(.getMinHistory ref))
   ([^clojure.lang.Ref ref n]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(.setMinHistory ref n)))
 
 (defn ref-max-history
@@ -2418,10 +2425,10 @@
   {:added "1.1"
    :static true}
   ([^clojure.lang.Ref ref]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(.getMaxHistory ref))
   ([^clojure.lang.Ref ref n]
-   (throw "unimplemented")
+   (throw "unimplemented ref")
    #_(.setMaxHistory ref n)))
 
 (defn ensure
@@ -2431,7 +2438,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.Ref ref]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(. ref (touch))
   #_(. ref (deref)))
 
@@ -2445,7 +2452,7 @@
   once, but any effects on Refs will be atomic."
   {:added "1.0"}
   [flags-ignored-for-now & body]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_`(. clojure.lang.LockingTransaction
       (runInTransaction (fn [] ~@body))))
 
@@ -2457,7 +2464,7 @@
   exception message."
   {:added "1.0"}
   [& body]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(let [message (when (string? (first body)) (first body))
         body (if message (next body) body)]
     `(if (clojure.lang.LockingTransaction/isRunning)
@@ -2469,7 +2476,7 @@
   {:added "1.7"
    :tag clojure.lang.Volatile}
   [val]
-  (throw "unimplemented")
+  (throw "unimplemented volatile")
   #_(clojure.lang.Volatile. val))
 
 (defn vreset!
@@ -2477,7 +2484,7 @@
    current value. Returns newval."
   {:added "1.7"}
   [^clojure.lang.Volatile vol newval]
-  (throw "unimplemented")
+  (throw "unimplemented volatile")
   #_(.reset vol newval))
 
 (defmacro vswap!
@@ -2486,7 +2493,7 @@
    was swapped in."
   {:added "1.7"}
   [vol f & args]
-  (throw "unimplemented")
+  (throw "unimplemented volatile")
   #_(let [v (with-meta vol {:tag 'clojure.lang.Volatile})]
     `(.reset ~v (~f (.deref ~v) ~@args))))
 
@@ -2494,7 +2501,7 @@
   "Returns true if x is a volatile."
   {:added "1.7"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented volatile")
   #_(instance? clojure.lang.Volatile x))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
@@ -2774,7 +2781,7 @@
   "Wraps x in a way such that a reduce will terminate with the value x"
   {:added "1.5"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented reduced")
   #_(clojure.lang.Reduced. x))
 
 (defn reduced?
@@ -2783,21 +2790,21 @@
    :inline-arities #{1}
    :added "1.5"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented reduced")
   #_(clojure.lang.RT/isReduced x))
 
 (defn ensure-reduced
   "If x is already reduced?, returns it, else returns (reduced x)"
   {:added "1.7"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented reduced")
   #_(if (reduced? x) x (reduced x)))
 
 (defn unreduced
   "If x is reduced?, returns (deref x), else returns x"
   {:added "1.7"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented reduced")
   #_(if (reduced? x) (deref x) x))
 
 (defn take
@@ -3036,7 +3043,7 @@
   {:added "1.0"
    :static true}
   [^java.io.BufferedReader rdr]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_(when-let [line (.readLine rdr)]
     (cons line (lazy-seq (line-seq rdr)))))
 
@@ -3229,7 +3236,7 @@
   {:added "1.0"
    :static true}
   [& agents]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(io! "await in transaction"
     (when *agent*
       (throw (new Exception "Can't await in agent action")))
@@ -3240,7 +3247,7 @@
       (. latch (await)))))
 
 (defn ^:static await1 [^clojure.lang.Agent a]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
   #_(when (pos? (.getQueueCount a))
     (await a))
     a)
@@ -3253,7 +3260,7 @@
   {:added "1.0"
    :static true}
   [timeout-ms & agents]
-  (throw "unimplemented")
+  (throw "unimplemented agent")
     #_(io! "await-for in transaction"
      (when *agent*
        (throw (new Exception "Can't await in agent action")))
@@ -3297,7 +3304,7 @@
   {:added "1.1"
    :static true}
   [^clojure.lang.IEditableCollection coll]
-  (throw "unimplemented")
+  (throw "unimplemented transient")
   #_(.asTransient coll))
 
 (defn persistent!
@@ -3307,7 +3314,7 @@
   {:added "1.1"
    :static true}
   [^clojure.lang.ITransientCollection coll]
-  (throw "unimplemented")
+  (throw "unimplemented transient")
   #_(.persistent coll))
 
 (defn conj!
@@ -3318,7 +3325,7 @@
   ([] (transient []))
   ([coll] coll)
   ([^clojure.lang.ITransientCollection coll x]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(.conj coll x)))
 
 (defn assoc!
@@ -3328,10 +3335,10 @@
   {:added "1.1"
    :static true}
   ([^clojure.lang.ITransientAssociative coll key val]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(.assoc coll key val))
   ([^clojure.lang.ITransientAssociative coll key val & kvs]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(let [ret (.assoc coll key val)]
        (if kvs
          (recur ret (first kvs) (second kvs) (nnext kvs))
@@ -3342,10 +3349,10 @@
   {:added "1.1"
    :static true}
   ([^clojure.lang.ITransientMap map key]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(.without map key))
   ([^clojure.lang.ITransientMap map key & ks]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(let [ret (.without map key)]
        (if ks
          (recur ret (first ks) (next ks))
@@ -3357,7 +3364,7 @@
   {:added "1.1"
    :static true}
   [^clojure.lang.ITransientVector coll]
-  (throw "unimplemented")
+  (throw "unimplemented transient")
   #_(.pop coll))
 
 (defn disj!
@@ -3367,10 +3374,10 @@
    :static true}
   ([set] set)
   ([^clojure.lang.ITransientSet set key]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(. set (disjoin key)))
   ([^clojure.lang.ITransientSet set key & ks]
-   (throw "unimplemented")
+   (throw "unimplemented transient")
    #_(let [ret (. set (disjoin key))]
      (if ks
        (recur ret (first ks) (next ks))
@@ -3396,16 +3403,7 @@
   macro in preference to calling this directly."
   {:added "1.0"}
   [& import-symbols-or-lists]
-  (throw "unsupported")
-  #_(let [specs (map #(if (and (seq? %) (= 'quote (first %))) (second %) %)
-                   import-symbols-or-lists)]
-    `(do ~@(map #(list 'clojure.core/import* %)
-                (reduce1 (fn [v spec]
-                          (if (symbol? spec)
-                            (conj v (name spec))
-                            (let [p (first spec) cs (rest spec)]
-                              (into1 v (map #(str p "." %) cs)))))
-                        [] specs)))))
+  (throw "unsupported import"))
 
 (defn into-array
   "Returns an array with components set to the values in aseq. The array's
@@ -3416,16 +3414,16 @@
   {:added "1.0"
    :static true}
   ([aseq]
-   (throw "unimplemented")
+   (throw "unsupported array")
    #_(clojure.lang.RT/seqToTypedArray (seq aseq)))
   ([type aseq]
-   (throw "unimplemented")
+   (throw "unsupported array")
    #_(clojure.lang.RT/seqToTypedArray type (seq aseq))))
 
 (defn ^{:private true}
   array
   [& items]
-  (throw "unimplemented")
+  (throw "unsupported array")
   #_(into-array items))
 
 (defn class
@@ -3433,7 +3431,7 @@
   {:added "1.0"
    :static true}
   ^clojerl.Keyword [^Object x]
-  (if (nil? x) x (clj_core/type.e x)))
+  (clj_core/type.e x))
 
 (defn type
   "Returns the :type metadata of x, or its Class if none"
@@ -3448,45 +3446,44 @@
    :inline (fn  [x] `(. clojure.lang.Numbers (num ~x)))
    :added "1.0"}
   [x]
-  (throw "unimplemented")
-  #_(. clojure.lang.Numbers (num x)))
+  (if (erlang/is_number.e x)
+    x
+    (throw "Not a number")))
 
 (defn long
   "Coerce to long"
-  {:inline (fn  [x] `(. clojure.lang.RT (longCast ~x)))
+  {:inline (fn  [x] `(erlang/trunc.e ~x))
    :added "1.0"}
-  [^Number x] x)
+  [x]
+  (erlang/trunc.e x))
 
 (defn float
   "Coerce to float"
-  {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedFloatCast 'floatCast) ~x)))
+  {:inline (fn  [x] `(erlang/float.e ~x))
    :added "1.0"}
-  [^Number x]
-  (throw "unimplemented")
-  #_(clojure.lang.RT/floatCast x))
+  [x]
+  (erlang/float.e x))
 
 (defn double
   "Coerce to double"
   {:inline (fn  [x] `(. clojure.lang.RT (doubleCast ~x)))
    :added "1.0"}
   [^Number x]
-  (throw "unimplemented")
-  #_(clojure.lang.RT/doubleCast x))
+  (throw "unsupported double"))
 
 (defn short
   "Coerce to short"
   {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedShortCast 'shortCast) ~x)))
    :added "1.0"}
   [^Number x]
-  (throw "unimplemented")
-  #_(clojure.lang.RT/shortCast x))
+  (throw "unsupported short"))
 
 (defn byte
   "Coerce to byte"
   {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedByteCast 'byteCast) ~x)))
    :added "1.0"}
   [^Number x]
-  (throw "unimplemented")
+  (throw "unimplemented cast to byte")
   #_(clojure.lang.RT/byteCast x))
 
 (defn char
@@ -3494,7 +3491,7 @@
   {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedCharCast 'charCast) ~x)))
    :added "1.1"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented cast to char")
   #_(. clojure.lang.RT (charCast x)))
 
 (defn boolean
@@ -3508,15 +3505,14 @@
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedByteCast ~x)))
    :added "1.3"}
   [^Number x]
-  (throw "unimplemented")
-  #_(clojure.lang.RT/uncheckedByteCast x))
+  (throw "unsupported unchecked math"))
 
 (defn unchecked-short
   "Coerce to short. Subject to rounding or truncation."
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedShortCast ~x)))
    :added "1.3"}
   [^Number x]
-  (throw "unimplemented")
+  (throw "unsupported unchecked math")
   #_(clojure.lang.RT/uncheckedShortCast x))
 
 (defn unchecked-char
@@ -3524,7 +3520,7 @@
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedCharCast ~x)))
    :added "1.3"}
   [x]
-  (throw "unimplemented")
+  (throw "unsupported unchecked math")
   #_(. clojure.lang.RT (uncheckedCharCast x)))
 
 (defn unchecked-int
@@ -3532,7 +3528,7 @@
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedIntCast ~x)))
    :added "1.3"}
   [^Number x]
-  (throw "unimplemented")
+  (throw "unsupported unchecked math")
   #_(clojure.lang.RT/uncheckedIntCast x))
 
 (defn unchecked-long
@@ -3540,7 +3536,7 @@
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedLongCast ~x)))
    :added "1.3"}
   [^Number x]
-  (throw "unimplemented")
+  (throw "unsupported unchecked math")
   #_(clojure.lang.RT/uncheckedLongCast x))
 
 (defn unchecked-float
@@ -3548,7 +3544,7 @@
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedFloatCast ~x)))
    :added "1.3"}
   [^Number x]
-  (throw "unimplemented")
+  (throw "unsupported unchecked math")
   #_(clojure.lang.RT/uncheckedFloatCast x))
 
 (defn unchecked-double
@@ -3556,7 +3552,7 @@
   {:inline (fn  [x] `(. clojure.lang.RT (uncheckedDoubleCast ~x)))
    :added "1.3"}
   [^Number x]
-  (throw "unimplemented")
+  (throw "unsupported unchecked math")
   #_(clojure.lang.RT/uncheckedDoubleCast x))
 
 
@@ -3582,7 +3578,7 @@
   {:added "1.0"
    :static true}
   [n]
-  (throw "unimplemented")
+  (throw "unimplemented ratio")
   #_(instance? clojure.lang.Ratio n))
 
 (defn numerator
@@ -3591,7 +3587,7 @@
    :added "1.2"
    :static true}
   [r]
-  (throw "unimplemented")
+  (throw "unimplemented ratio")
   #_(.numerator ^clojure.lang.Ratio r))
 
 (defn denominator
@@ -3600,7 +3596,7 @@
    :added "1.2"
    :static true}
   [r]
-  (throw "unimplemented")
+  (throw "unimplemented ratio")
   #_(.denominator ^clojure.lang.Ratio r))
 
 (defn decimal?
@@ -3608,8 +3604,7 @@
   {:added "1.0"
    :static true}
   [n]
-  (throw "unimplemented")
-  #_(instance? BigDecimal n))
+  (throw "unsupported bigdecimal"))
 
 (defn float?
   "Returns true if n is a floating point number"
@@ -3623,8 +3618,7 @@
   {:added "1.0"
    :static true}
   [n]
-  (throw "unimplemented")
-  #_(or (integer? n) (ratio? n) (decimal? n)))
+  (throw "unimplemented ratio"))
 
 (defn bigint
   "Coerce to BigInt"
@@ -3632,7 +3626,7 @@
    :static true
    :added "1.3"}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented bigint conversion")
   #_(cond
       (instance? clojure.lang.BigInt x) x
       (instance? BigInteger x) (clojure.lang.BigInt/fromBigInteger x)
@@ -3648,7 +3642,7 @@
    :added "1.0"
    :static true}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented biginteger conversion")
   #_(cond
       (instance? BigInteger x) x
       (instance? clojure.lang.BigInt x) (.toBigInteger ^clojure.lang.BigInt x)
@@ -3664,7 +3658,7 @@
    :added "1.0"
    :static true}
   [x]
-  (throw "unimplemented")
+  (throw "unsupported bigdecimal")
   #_(cond
       (decimal? x) x
       (float? x) (. BigDecimal valueOf (double x))
@@ -3677,15 +3671,17 @@
 (def ^:dynamic ^{:private true} print-initialized false)
 
 ;; TODO: implement multimethods
-#_ ((defmulti print-method (fn [x writer]
-                             (let [t (get (meta x) :type)]
-                               (if (keyword? t) t (class x)))))
-    (defmulti print-dup (fn [x writer] (class x))))
 
-(defn print-method [x writer]
+(defmulti print-method (fn [x writer]
+                         (let [t (get (meta x) :type)]
+                           (if (keyword? t) t (class x)))))
+
+(defmulti print-dup (fn [x writer] (class x)))
+
+#_(defn print-method [x writer]
   (io/format.e writer "~s" (seq [x])))
 
-(defn print-dup [x writer]
+#_(defn print-dup [x writer]
   (io/format.e writer "~s" (seq [x])))
 
 (defn pr-on
@@ -3880,9 +3876,10 @@
   {:added "1.0"}
   [expr]
   `(let [start# (erlang/monotonic_time.e :nano_seconds)
-         ret# ~expr]
+         ret#   ~expr
+         stop#  (erlang/monotonic_time.e :nano_seconds)]
      (prn (str "Elapsed time: "
-               (/ (- (erlang/monotonic_time.e :nano_seconds) start#) 1000000.0)
+               (/ (- stop# start#) 1000000.0)
                " msecs"))
      ret#))
 
@@ -4016,7 +4013,7 @@
   {:added "1.0"
    :static true}
   [form]
-  (clj_analyzer/macroexpand_1.e form))
+  (clj_analyzer/macroexpand_1.e nil form))
 
 (defn macroexpand
   "Repeatedly calls macroexpand-1 on form until it no longer
@@ -4035,7 +4032,7 @@
   {:added "1.0"
    :static true}
   [& keys]
-  (throw "unimplemented")
+  (throw "unimplemented struct")
   #_(. clojure.lang.PersistentStructMap (createSlotMap keys)))
 
 (defmacro defstruct
@@ -4043,7 +4040,7 @@
   {:added "1.0"
    :static true}
   [name & keys]
-  (throw "unimplemented")
+  (throw "unimplemented struct")
   #_`(def ~name (create-struct ~@keys)))
 
 (defn struct-map
@@ -4054,7 +4051,7 @@
   {:added "1.0"
    :static true}
   [s & inits]
-  (throw "unimplemented")
+  (throw "unimplemented struct")
   #_(. clojure.lang.PersistentStructMap (create s inits)))
 
 (defn struct
@@ -4064,7 +4061,7 @@
   {:added "1.0"
    :static true}
   [s & vals]
-  (throw "unimplemented")
+  (throw "unimplemented struct")
   #_(. clojure.lang.PersistentStructMap (construct s vals)))
 
 (defn accessor
@@ -4076,7 +4073,7 @@
   {:added "1.0"
    :static true}
   [s key]
-  (throw "unimplemented")
+  (throw "unimplemented struct")
   #_(. clojure.lang.PersistentStructMap (getAccessor s key)))
 
 (defn load-reader
@@ -4085,7 +4082,7 @@
   {:added "1.0"
    :static true}
   [rdr]
-  (throw "unimplemented")
+  (throw "unimplemented reader")
   #_(. clojure.lang.Compiler (load rdr)))
 
 (defn load-string
@@ -4094,10 +4091,7 @@
   {:added "1.0"
    :static true}
   [s]
-  (throw "unimplemented")
-  #_(let [rdr (-> (java.io.StringReader. s)
-                (clojure.lang.LineNumberingPushbackReader.))]
-    (load-reader rdr)))
+  (clj_compiler/compile.e str))
 
 (defn set?
   "Returns true if x implements IPersistentSet"
@@ -4183,8 +4177,7 @@
   {:added "1.0"
    :static true}
   [ns sym]
-  (throw "unimplemented")
-  #_(.unmap (the-ns ns) sym))
+  (clj_namespace/unmap.e (the-ns ns) sym))
 
 ;(defn export [syms]
 ;  (doseq [sym syms]
@@ -4206,8 +4199,7 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
-  #_(filter-key val (partial instance? Class) (ns-map ns)))
+  (throw "unsupported import"))
 
 (defn ns-interns
   "Returns a map of the intern mappings for the namespace."
@@ -4285,16 +4277,14 @@
   {:added "1.0"
    :static true}
   [ns]
-  (throw "unimplemented")
-  #_(.getAliases (the-ns ns)))
+  (clj_namespace/get_aliases.e (the-ns ns)))
 
 (defn ns-unalias
   "Removes the alias for the symbol from the namespace."
   {:added "1.0"
    :static true}
   [ns sym]
-  (throw "unimplemented")
-  #_(.removeAlias (the-ns ns) sym))
+  (clj_namespace/remove_alias.e (the-ns ns) sym))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
@@ -4701,7 +4691,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_`(let [s# (new java.io.StringWriter)]
      (binding [*out* s#]
        ~@body
@@ -4712,7 +4702,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_`(with-open [s# (-> (java.io.StringReader. ~s) clojure.lang.LineNumberingPushbackReader.)]
      (binding [*in* s#]
        ~@body)))
@@ -4723,7 +4713,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_(with-out-str
     (apply pr xs)))
 
@@ -4733,7 +4723,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_(with-out-str
    (apply prn xs)))
 
@@ -4743,7 +4733,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_(with-out-str
     (apply print xs)))
 
@@ -4753,7 +4743,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented")
+  (throw "unimplemented io")
   #_(with-out-str
     (apply println xs)))
 
@@ -4763,10 +4753,10 @@
    that carries a map of additional data."
   {:added "1.4"}
   ([msg map]
-   (throw "unimplemented")
+   (throw "unimplemented ex-info")
    #_(ExceptionInfo. msg map))
   ([msg map cause]
-   (throw "unimplemented")
+   (throw "unimplemented ex-info")
    #_(ExceptionInfo. msg map cause)))
 
 (defn ex-data
@@ -4774,7 +4764,7 @@
    Otherwise returns nil."
   {:added "1.4"}
   [ex]
-  (throw "unimplemented")
+  (throw "unimplemented ex-info")
   #_(when (instance? IExceptionInfo ex)
     (.getData ^IExceptionInfo ex)))
 
@@ -5112,7 +5102,7 @@
   {:added "1.0"
    :static true}
   [x]
-  (throw "unimplemented")
+  (throw "unimplemented hash")
   #_(. clojure.lang.Util (hasheq x)))
 
 (defn mix-collection-hash
@@ -5125,7 +5115,7 @@
    :static true}
   ^long
   [^long hash-basis ^long count]
-  (throw "unimplemented")
+  (throw "unimplemented hash")
   #_(clojure.lang.Murmur3/mixCollHash hash-basis count))
 
 (defn hash-ordered-coll
@@ -5136,7 +5126,7 @@
    :static true}
   ^long
   [coll]
-  (throw "unimplemented")
+  (throw "unimplemented hash")
   #_(clojure.lang.Murmur3/hashOrdered coll))
 
 (defn hash-unordered-coll
@@ -5149,7 +5139,7 @@
    :static true}
   ^long
   [coll]
-  (throw "unimplemented")
+  (throw "unimplemented hash")
   #_(clojure.lang.Murmur3/hashUnordered coll))
 
 (defn interpose
@@ -5347,7 +5337,7 @@
    :static true}
   ([s] (seque 100 s))
   ([n-or-q s]
-   (throw "unimplemented")
+   (throw "unimplemented queue")
    #_(let [^BlockingQueue q (if (instance? BlockingQueue n-or-q)
                              n-or-q
                              (LinkedBlockingQueue. (int n-or-q)))
@@ -5388,65 +5378,27 @@
   {:added "1.0"
    :static true}
   [x]
-  (throw "unsupported")
-  #_(instance? Class x))
+  (throw "unsupported class"))
 
-#_ ((defn- is-annotation? [c]
-      (and (class? c)
-           (.isAssignableFrom java.lang.annotation.Annotation c)))
+(defn- is-annotation? [c]
+  (throw "unsupported class"))
 
-    (defn- is-runtime-annotation? [^Class c]
-      (boolean
-       (and (is-annotation? c)
-            (when-let [^java.lang.annotation.Retention r
-                       (.getAnnotation c java.lang.annotation.Retention)]
-              (= (.value r) java.lang.annotation.RetentionPolicy/RUNTIME)))))
+(defn- is-runtime-annotation? [^Class c]
+  (throw "unsupported class"))
 
-    (defn- descriptor [^Class c]
-      (clojure.asm.Type/getDescriptor c))
+(defn- descriptor [^Class c]
+  (throw "unsupported class"))
 
-    (declare process-annotation)
-    (defn- add-annotation [^clojure.asm.AnnotationVisitor av name v]
-      (cond
-        (vector? v) (let [avec (.visitArray av name)]
-                      (doseq [vval v]
-                        (add-annotation avec "value" vval))
-                      (.visitEnd avec))
-        (symbol? v) (let [ev (eval v)]
-                      (cond
-                        (instance? java.lang.Enum ev)
-                        (.visitEnum av name (descriptor (class ev)) (str ev))
-                        (class? ev) (.visit av name (clojure.asm.Type/getType ev))
-                        :else (throw (IllegalArgumentException.
-                                      (str "Unsupported annotation value: " v " of class " (class ev))))))
-        (seq? v) (let [[nested nv] v
-                       c (resolve nested)
-                       nav (.visitAnnotation av name (descriptor c))]
-                   (process-annotation nav nv)
-                   (.visitEnd nav))
-        :else (.visit av name v)))
+(declare process-annotation)
+(defn- add-annotation [^clojure.asm.AnnotationVisitor av name v]
+  (throw "unsupported class"))
 
-    (defn- process-annotation [av v]
-      (if (map? v)
-        (doseq [[k v] v]
-          (add-annotation av (name k) v))
-        (add-annotation av "value" v)))
+(defn- process-annotation [av v]
+  (throw "unsupported class"))
 
-    (defn- add-annotations
-      ([visitor m] (add-annotations visitor m nil))
-      ([visitor m i]
-       (doseq [[k v] m]
-         (when (symbol? k)
-           (when-let [c (resolve k)]
-             (when (is-annotation? c)
-                                        ;this is known duck/reflective as no common base of ASM Visitors
-               (let [av (if i
-                          (.visitParameterAnnotation visitor i (descriptor c)
-                                                     (is-runtime-annotation? c))
-                          (.visitAnnotation visitor (descriptor c)
-                                            (is-runtime-annotation? c)))]
-                 (process-annotation av v)
-                 (.visitEnd av)))))))))
+(defn- add-annotations
+  [& _]
+  (throw "unsupported class"))
 
 (defn alter-var-root
   "Atomically alters the root binding of var v by applying f to its
@@ -5454,8 +5406,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.Var v f & args]
-  (throw "unsupported")
-  #_(.alterRoot v f args))
+  (throw "unsupported alter-var-root"))
 
 (defn bound?
   "Returns true if all of the vars provided as arguments have any bound value, root or thread-local.
@@ -5493,23 +5444,14 @@
   {:added "1.0"
    :static true}
   [^Class c]
-  (throw "unsupported")
-  #_(when c
-    (let [i (seq (.getInterfaces c))
-          s (.getSuperclass c)]
-      (if s (cons s i) i))))
+  (throw "unsupported classes and interfaces"))
 
 (defn supers
   "Returns the immediate and indirect superclasses and interfaces of c, if any"
   {:added "1.0"
    :static true}
   [^Class class]
-  (throw "unsupported")
-  #_(loop [ret (set (bases class)) cs ret]
-    (if (seq cs)
-      (let [c (first cs) bs (bases c)]
-        (recur (into1 ret bs) (into1 (disj cs c) bs)))
-      (not-empty ret))))
+  (throw "unsupported classes and interfaces"))
 
 (defn isa?
   "Returns true if (= child parent), or child is directly or indirectly derived from
@@ -5520,12 +5462,8 @@
   {:added "1.0"}
   ([child parent] (isa? global-hierarchy child parent))
   ([h child parent]
-   (throw "unimplemented")
-   #_(or (= child parent)
-       (and (class? parent) (class? child)
-            (. ^Class parent isAssignableFrom child))
+   (or (= child parent)
        (contains? ((:ancestors h) child) parent)
-       (and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
        (and (vector? parent) (vector? child)
             (= (count parent) (count child))
             (loop [ret true i 0]
@@ -5655,20 +5593,7 @@
   the rows in the java.sql.ResultSet rs"
   {:added "1.0"}
   [^java.sql.ResultSet rs]
-  (throw "unsupported")
-  #_(let [rsmeta (. rs (getMetaData))
-          idxs (range 1 (inc (. rsmeta (getColumnCount))))
-          keys (map (comp keyword #(.toLowerCase ^String %))
-                    (map (fn [i] (. rsmeta (getColumnLabel i))) idxs))
-          check-keys
-                (or (apply distinct? keys)
-                    (throw (Exception. "ResultSet must have unique column labels")))
-          row-struct (apply create-struct keys)
-          row-values (fn [] (map (fn [^Integer i] (. rs (getObject i))) idxs))
-          rows (fn thisfn []
-                 (when (. rs (next))
-                   (cons (apply struct row-struct (row-values)) (lazy-seq (thisfn)))))]
-      (rows)))
+  (throw "unsupported sql resultste"))
 
 (defn iterator-seq
   "Returns a seq on a java.util.Iterator. Note that most collections
@@ -5678,7 +5603,7 @@
   {:added "1.0"
    :static true}
   [iter]
-  (throw "unimplemented")
+  (throw "unimplemented iterator")
   #_(clojure.lang.RT/chunkIteratorSeq iter))
 
 (defn enumeration-seq
@@ -5686,7 +5611,7 @@
   {:added "1.0"
    :static true}
   [e]
-  (throw "unimplemented")
+  (throw "unimplemented iterator")
   #_(clojure.lang.EnumerationSeq/create e))
 
 (defn format
@@ -6073,8 +5998,7 @@
   (doseq [path paths]
     (let [path (if (clojerl.String/starts_with.e path "/")
                  path
-                 (throw "unimplemented")
-                 #_(str (root-directory (name *ns*)) "/" path))]
+                 (str (root-directory (ns-name *ns*)) "/" path))]
       (when *loading-verbosely*
         (printf "(clojure.core/load \"~s\")\n" path)
         (flush))
@@ -6257,9 +6181,9 @@
   {:added "1.0"
    :static true}
   ([f]
-   (throw "unimplemented, not needed"))
+   (throw "unimplemented trampoline, not needed"))
   ([f & args]
-   (throw "unimplemented, not needed")))
+   (throw "unimplemented trampoline, not needed")))
 
 (defn intern
   "Finds or creates a var named by the symbol name in the namespace
@@ -6269,12 +6193,12 @@
   {:added "1.0"
    :static true}
   ([ns ^clojure.lang.Symbol name]
-   (throw "unimplemented")
+   (throw "unimplemented intern")
    #_(let [v (clojure.lang.Var/intern (the-ns ns) name)]
      (when (meta name) (.setMeta v (meta name)))
      v))
   ([ns name val]
-   (throw "unimplemented")
+   (throw "unimplemented intern")
    #_(let [v (clojure.lang.Var/intern (the-ns ns) name val)]
      (when (meta name) (.setMeta v (meta name)))
      v)))
@@ -6355,7 +6279,9 @@
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------
 
-(defn prn
+#_(defn prn
   [& xs]
   (io/format.e "~s~n" (seq [(apply str xs)]))
   nil)
+
+(load "core_print")
