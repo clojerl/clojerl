@@ -487,7 +487,21 @@ ast(#{op := 'catch'} = Expr, State) ->
 
   Ast = {clause, Anno, [ClassNameAst], [], [Body]},
 
-  push_ast(Ast, State2).
+  push_ast(Ast, State2);
+%%------------------------------------------------------------------------------
+%% on_load
+%%------------------------------------------------------------------------------
+ast(#{op := on_load} = Expr, State) ->
+  #{body := BodyExpr} = Expr,
+
+  {Ast, State1} = pop_ast(ast(BodyExpr, State)),
+
+  CurrentNs  = clj_namespace:current(),
+  NameSym    = clj_namespace:name(CurrentNs),
+  ModuleName = binary_to_atom(clj_core:name(NameSym), utf8),
+  clj_module:add_on_load(ModuleName, Ast),
+
+  push_ast(Ast, State1).
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions

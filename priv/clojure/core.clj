@@ -1675,9 +1675,10 @@
   (let [fn-name (gensym (str (name multifn) "_method_"))]
     `(do
        (defn ~fn-name ~@fn-tail)
-       (clojerl.MultiFn/add_method.e ~(name multifn)
-                                     ~dispatch-val
-                                     (var ~fn-name)))))
+       (erl-on-load*
+        (clojerl.MultiFn/add_method.e ~(name multifn)
+                                      ~dispatch-val
+                                      (var ~fn-name))))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."

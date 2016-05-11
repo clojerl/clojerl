@@ -17,6 +17,7 @@
         , add_attributes/2
         , add_exports/2
         , add_functions/2
+        , add_on_load/2
 
         , is_clojure/1
         ]).
@@ -34,12 +35,13 @@
 -type function_id() :: {atom(), integer()}.
 
 -record(module, { name              :: atom(),
-                  source = <<"">>   :: binary(),
+                  source = ""       :: string(),
                   vars              :: ets:tid(),
                   funs              :: ets:tid(),
                   fake_funs         :: ets:tid(),
                   fake_modules      :: ets:tid(),
                   exports           :: ets:tid(),
+                  on_load           :: ets:tid(),
                   attrs             :: [erl_parse:abstract_form()],
                   rest              :: [erl_parse:abstract_form()]
                 }).
@@ -47,6 +49,8 @@
 -type clj_module() :: #module{}.
 
 -export_type([clj_module/0]).
+
+-define(ON_LOAD_FUNCTION, '$_clj_on_load').
 
 %%------------------------------------------------------------------------------
 %% Exported Functions
@@ -217,7 +221,7 @@ ensure_loaded(Name, Source) ->
   end.
 
 %% @private
--spec load(atom(), binary()) -> ok | {error, term()}.
+-spec load(atom(), string()) -> ok | {error, term()}.
 load(Name, Source) ->
   Module = case code:ensure_loaded(Name) of
              {module, Name} ->
@@ -254,6 +258,7 @@ to_forms(#module{} = Module) ->
          , vars    = VarsTable
          , funs    = FunsTable
          , exports = ExportsTable
+         , on_load = OnLoadTable
          , attrs   = Attrs
          , rest    = Rest
          } = Module,
@@ -269,12 +274,25 @@ to_forms(#module{} = Module) ->
   ExportAttr  = {attribute, 0, export, Exports},
 
   ClojureAttr = {attribute, 0, clojure, true},
+  OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
 
-  UniqueAttrs = lists:usort([ClojureAttr | Attrs]),
+  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
 
-  Funs         = [X || {_, X} <- ets:tab2list(FunsTable)],
+  OnLoadFun   = on_load_function(OnLoadTable),
+  Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
 
-  [ModuleAttr, FileAttr, VarsAttr, ExportAttr | UniqueAttrs ++ Rest ++ Funs].
+  [ ModuleAttr, FileAttr, VarsAttr, ExportAttr |
+    UniqueAttrs ++ Rest ++ [OnLoadFun | Funs]
+  ].
+
+%% @private
+on_load_function(OnLoadTable) ->
+  Exprs = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
+            []       -> [{atom, 0, ok}];
+            ExprsTmp -> ExprsTmp
+          end,
+  Clause = {clause, 0, [], [], Exprs},
+  {function, 0, ?ON_LOAD_FUNCTION, 0, [Clause]}.
 
 -spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
@@ -318,6 +336,14 @@ add_functions(Module, Funs) ->
                 save(Module#module.funs, {FunctionId, F})
             end,
   lists:foreach(SaveFun, Funs),
+  Module.
+
+-spec add_on_load(module() | clj_module(), erl_parse:abstract_expr()) ->
+  clj_module().
+add_on_load(ModuleName, Expr) when is_atom(ModuleName) ->
+  add_on_load(get(?MODULE, ModuleName), Expr);
+add_on_load(Module, Expr) ->
+  save(Module#module.on_load, {Expr, Expr}),
   Module.
 
 -spec is_clojure(module()) -> boolean().
@@ -415,8 +441,10 @@ save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
 
--spec new(atom(), binary()) -> ok | {error, term()}.
+-spec new(atom(), string()) -> ok | {error, term()}.
 new(Name, Source) when is_atom(Name), is_binary(Source) ->
+  new(Name, binary_to_list(Source));
+new(Name, Source) when is_atom(Name), is_list(Source) ->
   new([ {attribute, 0, module, Name}
       , {attribute, 0, file, {Source, 0}}
       ]
@@ -447,6 +475,7 @@ new(Forms) when is_list(Forms) ->
   {ExportAttrs, RestAttrs1} = lists:partition(is_attribute_fun(export)
                                              , RestAttrs
                                              ),
+
   Exports = flat_exports(ExportAttrs),
 
   {Source, Attrs} = source_file(RestAttrs1),
@@ -460,13 +489,22 @@ new(Forms) when is_list(Forms) ->
                   , fake_funs         = ets:new(fake_funs, TableOpts)
                   , fake_modules      = ets:new(fake_modules, TableOpts)
                   , exports           = ets:new(exports, TableOpts)
+                  , on_load           = ets:new(on_load, TableOpts)
                   , attrs             = Attrs
                   , rest              = Rest2
                   },
 
-  Module1 = add_functions(Module, Funs),
-  Module2 = add_vars(Module1, maps:values(Vars)),
-  add_exports(Module2, Exports).
+  Module = add_functions(Module, Funs),
+  Module = add_vars(Module, maps:values(Vars)),
+
+  %% Remove the on_load function and all its contents.
+  %% IMPORTANT: This means that whenever a namespace is recompiled all
+  %% `on-load*' expressions need to be included in the compilation as
+  %% well or they won't be present in the resulting binary.
+  OnLoadId = {?ON_LOAD_FUNCTION, 0},
+  true     = ets:delete(Module#module.funs, OnLoadId),
+
+  add_exports(Module, Exports).
 
 -spec is_attribute(erl_parse:abstract_form()) -> boolean.
 is_attribute({attribute, _, _, _}) -> true;
