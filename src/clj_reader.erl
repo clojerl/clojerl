@@ -173,12 +173,14 @@ read_number(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_string(state()) -> state().
+%% Found closing double quotes
 read_string(#{ src     := <<"\"", _/binary>>
              , current := String
              } = State0
            ) ->
   State = consume_char(maps:remove(current, State0)),
-  push_form(String, State);
+  push_form(String, remove_scope(State));
+%% Process escaped character
 read_string(#{ src := <<"\\", _/binary>>
              , current := String
              } = State0
@@ -187,15 +189,24 @@ read_string(#{ src := <<"\\", _/binary>>
   State = State00#{current => <<String/binary, EscapedChar/binary>>},
 
   read_string(State);
-read_string(#{src := <<Char/utf8, _/binary>>,
-              current := String} = State0) ->
+%% Append character to current string
+read_string(#{ src     := <<Char/utf8, _/binary>>
+             , current := String} = State0) ->
   State = State0#{current => <<String/binary, Char/utf8>>},
   read_string(consume_char(State));
-read_string(#{src := <<"\"", _/binary>>} = State) ->
-  State1 = consume_char(State),
-  read_string(State1#{current => <<>>});
+%% Start consuming string
+read_string(#{src := <<"\"", _/binary>>, loc := Loc} = State) ->
+  State1 = add_scope(consume_char(State)),
+  read_string(location_started(State1#{current => <<>>}, Loc));
+%% Didn't find closing double quotes
 read_string(#{src := <<>>} = State) ->
-  clj_utils:throw(<<"EOF while reading string">>, location(State)).
+  {Line, Col} = scope_get(loc_started, State),
+  clj_utils:throw( [ <<"Started reading at (">>
+                   , Line, <<":">>, Col
+                   , <<") but found EOF while expecting '\"'">>
+                   ]
+                 , location(State)
+                 ).
 
 -spec escape_char(state()) -> {binary(), state()}.
 escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
@@ -459,7 +470,17 @@ register_gensym(Symbol) ->
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
   case clj_namespace:find_var(Symbol) of
-    undefined -> Symbol;
+    undefined ->
+      case clj_core:namespace(Symbol) of
+        undefined ->
+          CurrentNs = clj_namespace:current(),
+          NameSym   = clj_namespace:name(CurrentNs),
+          Namespace = clj_core:name(NameSym),
+          Name      = clj_core:name(Symbol),
+          clj_core:symbol(Namespace, Name);
+        _ ->
+          Symbol
+      end;
     Var ->
       Namespace = clj_core:namespace(Var),
       Name      = clj_core:name(Var),
@@ -635,8 +656,12 @@ read_unmatched_delim(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_char(state()) -> state().
-read_char(#{src := <<"\\"/utf8, _/binary>>} = State) ->
-  {Token, State1} = read_token(consume_char(State)),
+read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
+  {Token, State1} =
+    case is_macro_terminating(NextChar) orelse is_whitespace(NextChar) of
+      true -> {<<NextChar>>, consume_chars(2, State)};
+      false -> read_token(consume_char(State))
+    end,
   Char =
     case Token of
       <<>> -> clj_utils:throw(<<"EOF">>, location(State));
@@ -724,7 +749,7 @@ register_arg(N, ArgEnv) ->
     undefined ->
       ArgSymbol = gen_arg_sym(N),
       NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
-      put(arg_env, NewArgEnv),
+      erlang:put(arg_env, NewArgEnv),
       ArgSymbol;
     ArgSymbol -> ArgSymbol
   end.
@@ -866,7 +891,7 @@ read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
 read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   {ok, Regex} = re:compile(Current),
-  push_form(Regex, consume_char(State));
+  push_form(Regex, consume_char(maps:remove(current, State)));
 read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   NewState = State#{current => <<Current/binary, Ch/utf8>>},
@@ -1071,7 +1096,7 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
 -spec read_token(state()) -> {binary(), state()}.
 read_token(State) ->
   Fun = fun(Char) ->
-            (clj_utils:char_type(Char, <<>>) =/= whitespace)
+            (not is_whitespace(Char))
               andalso (not is_macro_terminating(Char))
         end,
   consume(State, Fun).
@@ -1103,6 +1128,10 @@ is_macro_terminating(Char) ->
   lists:member(Char,
                [$", $;, $@, $^, $`, $~, $(,
                 $), $[, $], ${, $}, $\\ ]).
+
+-spec is_whitespace(char()) -> boolean().
+is_whitespace(Char) ->
+  clj_utils:char_type(Char, <<>>) =:= whitespace.
 
 -spec skip_line(state()) -> state().
 skip_line(State) ->

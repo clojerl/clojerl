@@ -68,29 +68,32 @@ macroexpand(Env, Form) ->
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
 special_forms() ->
-  #{ <<"def">>        => fun parse_def/2
-   , <<"quote">>      => fun parse_quote/2
-   , <<"fn*">>        => fun parse_fn/2
-   , <<"do">>         => fun parse_do/2
-   , <<"if">>         => fun parse_if/2
-   , <<"let*">>       => fun parse_let/2
-   , <<"loop*">>      => fun parse_loop/2
-   , <<"recur">>      => fun parse_recur/2
-   , <<"throw">>      => fun parse_throw/2
-   , <<"try">>        => fun parse_try/2
-   , <<"catch">>      => undefined
-   , <<"finally">>    => undefined
-   , <<"var">>        => fun parse_var/2
+  #{ <<"def">>          => fun parse_def/2
+   , <<"quote">>        => fun parse_quote/2
+   , <<"fn*">>          => fun parse_fn/2
+   , <<"do">>           => fun parse_do/2
+   , <<"if">>           => fun parse_if/2
+   , <<"let*">>         => fun parse_let/2
+   , <<"loop*">>        => fun parse_loop/2
+   , <<"recur">>        => fun parse_recur/2
+   , <<"throw">>        => fun parse_throw/2
+   , <<"try">>          => fun parse_try/2
+   , <<"catch">>        => undefined
+   , <<"finally">>      => undefined
+   , <<"var">>          => fun parse_var/2
 
-   , <<"letfn*">>     => undefined
-   , <<"case*">>      => undefined
-   , <<"deftype*">>   => undefined
-   , <<"defrecord*">> => undefined
+   , <<"&">>            => undefined
+
+   , <<"erl-on-load*">> => fun parse_on_load/2
+
+   , <<"letfn*">>       => undefined
+   , <<"case*">>        => undefined
+   , <<"deftype*">>     => undefined
+   , <<"defrecord*">>   => undefined
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
      %% , <<"new">>
-     %% , <<"&">>
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
@@ -1213,3 +1216,21 @@ analyze_tuple(Env, Tuple) ->
                },
 
   clj_env:push_expr(Env2, TupleExpr).
+
+%%------------------------------------------------------------------------------
+%% On load
+%%------------------------------------------------------------------------------
+
+-spec parse_on_load(clj_env:env(), any()) ->
+  clj_env:env().
+parse_on_load(Env0, List) ->
+  Body            = clj_core:rest(List),
+  {BodyExpr, Env} = clj_env:pop_expr(analyze_body(Env0, Body)),
+
+  Expr = #{ op    => on_load
+          , env   => ?DEBUG(Env0)
+          , form  => List
+          , body  => BodyExpr
+          },
+
+  clj_env:push_expr(Env, Expr).

@@ -26,6 +26,8 @@
 -export([ push_bindings/1
         , pop_bindings/0
         , get_bindings/0
+        , get_bindings_map/0
+        , reset_bindings/1
         , dynamic_binding/1
         , dynamic_binding/2
         ]).
@@ -91,9 +93,15 @@ push_bindings(BindingsMap) ->
   Bindings      = erlang:get(dynamic_bindings),
   NewBindings   = clj_scope:new(Bindings),
   AddBindingFun = fun(K, Acc) ->
-                      clj_scope:put(Acc, clj_core:str(K), clj_core:get(BindingsMap, K))
+                      clj_scope:put( Acc
+                                   , clj_core:str(K)
+                                   , clj_core:get(BindingsMap, K)
+                                   )
                   end,
-  NewBindings1  = lists:foldl(AddBindingFun, NewBindings, clj_core:keys(BindingsMap)),
+  NewBindings1  = lists:foldl( AddBindingFun
+                             , NewBindings
+                             , clj_core:keys(BindingsMap)
+                             ),
   erlang:put(dynamic_bindings, NewBindings1),
   ok.
 
@@ -104,12 +112,20 @@ pop_bindings() ->
   erlang:put(dynamic_bindings, Parent),
   ok.
 
--spec get_bindings() -> ok.
+-spec get_bindings() -> clj_scope:scope().
 get_bindings() ->
+  erlang:get(dynamic_bindings).
+
+-spec get_bindings_map() -> map().
+get_bindings_map() ->
   case erlang:get(dynamic_bindings) of
     undefined -> #{};
     Bindings  -> clj_scope:to_map(Bindings)
   end.
+
+-spec reset_bindings(clj_scope:scope()) -> ok.
+reset_bindings(Bindings) ->
+  erlang:put(dynamic_bindings, Bindings).
 
 -spec dynamic_binding('clojerl.Var':type()) -> any().
 dynamic_binding(Var) ->

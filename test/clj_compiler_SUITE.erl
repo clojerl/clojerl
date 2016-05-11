@@ -70,10 +70,12 @@ compile_file(_Config) ->
 
 -spec compile_files(config()) -> result().
 compile_files(_Config) ->
-  Opts = #{verbose => true, time => true},
+  Opts     = #{verbose => true, time => true},
+  PrivPath = relative_path(<<"priv">>),
+  true     = code:add_path(binary_to_list(PrivPath)),
 
   ct:comment("Compile all priv/clojure/*.clj files succesfully"),
-  Wildcard1 = relative_path(<<"priv/clojure/*.clj">>),
+  Wildcard1 = relative_path(<<"priv/clojure/core.clj">>),
   Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
   FilesBin1 = lists:map(fun erlang:list_to_binary/1, Files1),
   _ = clj_compiler:compile_files(FilesBin1, Opts),
