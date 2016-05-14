@@ -450,13 +450,24 @@ do(_Config) ->
   #{ op      := 'case'
    , test    := #{op := constant}
    , clauses := []
+   , default := undefined
    } = analyze_one(<<"(case* true)">>),
 
   ct:comment("case with two clauses"),
   #{ op      := 'case'
    , test    := #{op := constant}
    , clauses := [_, _]
+   , default := undefined
    } = analyze_one(<<"(case* true true 1 false 0)">>),
+
+  ct:comment("case with two clauses and default"),
+  #{ op      := 'case'
+   , test    := #{op := constant}
+   , clauses := [_, _]
+   , default := DefaultExpr
+   } = analyze_one(<<"(case* true true 1 false 0 :default)">>),
+
+  true = DefaultExpr =/= undefined,
 
   {comments, ""}.
 
