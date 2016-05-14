@@ -13,6 +13,7 @@
         , fn/1
         , do/1
         , 'if'/1
+        , 'case'/1
         , 'let'/1
         , loop/1
         , invoke/1
@@ -440,6 +441,22 @@ do(_Config) ->
   ElseKeyword = clj_core:keyword(<<"else">>),
   #{op := constant,
     form := ElseKeyword} = Else2,
+
+  {comments, ""}.
+
+-spec 'case'(config()) -> result().
+'case'(_Config) ->
+  ct:comment("case with no clauses"),
+  #{ op      := 'case'
+   , test    := #{op := constant}
+   , clauses := []
+   } = analyze_one(<<"(case* true)">>),
+
+  ct:comment("case with two clauses"),
+  #{ op      := 'case'
+   , test    := #{op := constant}
+   , clauses := [_, _]
+   } = analyze_one(<<"(case* true true 1 false 0)">>),
 
   {comments, ""}.
 

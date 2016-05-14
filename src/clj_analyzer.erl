@@ -76,6 +76,7 @@ special_forms() ->
    , <<"let*">>         => fun parse_let/2
    , <<"loop*">>        => fun parse_loop/2
    , <<"recur">>        => fun parse_recur/2
+   , <<"case*">>        => fun parse_case/2
    , <<"throw">>        => fun parse_throw/2
    , <<"try">>          => fun parse_try/2
    , <<"catch">>        => undefined
@@ -87,7 +88,6 @@ special_forms() ->
    , <<"erl-on-load*">> => fun parse_on_load/2
 
    , <<"letfn*">>       => undefined
-   , <<"case*">>        => undefined
    , <<"deftype*">>     => undefined
    , <<"defrecord*">>   => undefined
 
@@ -654,6 +654,49 @@ parse_recur(Env, List) ->
                },
 
   clj_env:push_expr(Env3, RecurExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse case*
+%%------------------------------------------------------------------------------
+
+-spec parse_case(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_case(Env, List) ->
+  Test             = clj_core:second(List),
+  {TestExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Test)),
+
+  PatternsBodies = clj_core:rest(clj_core:rest(List)),
+
+  { ClausesExprs
+  , Env2
+  } = parse_patters_bodies(Env1, clj_core:seq_to_list(PatternsBodies)),
+
+  CaseExpr = #{ op      => 'case'
+              , env     => ?DEBUG(Env)
+              , form    => List
+              , test    => TestExpr
+              , clauses => ClausesExprs
+              },
+
+  clj_env:push_expr(Env2, CaseExpr).
+
+-spec parse_patters_bodies(clj_env:env(), [any()]) ->
+  {list(), clj_env:env()}.
+parse_patters_bodies(Env1, PatternsBodies) ->
+  parse_patters_bodies(Env1, PatternsBodies, []).
+
+-spec parse_patters_bodies(clj_env:env(), [any()], [any()]) ->
+  {list(), clj_env:env()}.
+parse_patters_bodies(Env, [], PatternBodyPairs) ->
+  { lists:reverse(PatternBodyPairs)
+  , Env
+  };
+parse_patters_bodies(Env, [Pat, Body | Rest], PatternBodyPairs) ->
+  {PatternExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Pat)),
+  {BodyExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Body)),
+  parse_patters_bodies( Env2
+                      , Rest
+                      , [{PatternExpr, BodyExpr} | PatternBodyPairs]
+                      ).
 
 %%------------------------------------------------------------------------------
 %% Parse def
