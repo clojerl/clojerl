@@ -338,6 +338,7 @@ ast(#{op := 'case'} = Expr, State) ->
   #{ form    := Form
    , test    := TestExpr
    , clauses := ClausesExprs
+   , default := DefaultExpr
    } = Expr,
 
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
@@ -350,11 +351,20 @@ ast(#{op := 'case'} = Expr, State) ->
               end,
 
   State2 = lists:foldl(ClauseFun, State1, ClausesExprs),
-  {ClausesAsts, State3} = pop_ast(State2, length(ClausesExprs)),
+  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
+
+  {ClausesAsts, State4} =
+    case DefaultExpr of
+      undefined -> {ClausesAsts0, State3};
+      _ ->
+        {DefaultAst, State3_1} = pop_ast(ast(DefaultExpr, State3)),
+        DefaultClause = {clause, 0, [{var, 0, '_'}], [], [DefaultAst]},
+        {ClausesAsts0 ++ [DefaultClause], State3_1}
+    end,
 
   CaseAst = {'case', anno_from(Form), TestAst, ClausesAsts},
 
-  push_ast(CaseAst, State3);
+  push_ast(CaseAst, State4);
 %%------------------------------------------------------------------------------
 %% let
 %%------------------------------------------------------------------------------

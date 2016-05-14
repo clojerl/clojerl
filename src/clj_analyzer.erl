@@ -664,17 +664,20 @@ parse_case(Env, List) ->
   Test             = clj_core:second(List),
   {TestExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Test)),
 
-  PatternsBodies = clj_core:rest(clj_core:rest(List)),
+  PatternsBodies     = clj_core:rest(clj_core:rest(List)),
+  PatternsBodiesList = clj_core:seq_to_list(PatternsBodies),
 
   { ClausesExprs
+  , DefaultExpr
   , Env2
-  } = parse_patters_bodies(Env1, clj_core:seq_to_list(PatternsBodies)),
+  } = parse_patters_bodies(Env1, PatternsBodiesList),
 
   CaseExpr = #{ op      => 'case'
               , env     => ?DEBUG(Env)
               , form    => List
               , test    => TestExpr
               , clauses => ClausesExprs
+              , default => DefaultExpr
               },
 
   clj_env:push_expr(Env2, CaseExpr).
@@ -685,10 +688,18 @@ parse_patters_bodies(Env1, PatternsBodies) ->
   parse_patters_bodies(Env1, PatternsBodies, []).
 
 -spec parse_patters_bodies(clj_env:env(), [any()], [any()]) ->
-  {list(), clj_env:env()}.
+  {list(), any(), clj_env:env()}.
 parse_patters_bodies(Env, [], PatternBodyPairs) ->
   { lists:reverse(PatternBodyPairs)
+  , undefined
   , Env
+  };
+parse_patters_bodies(Env, [Default], PatternBodyPairs) ->
+  {DefaultExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Default)),
+
+  { lists:reverse(PatternBodyPairs)
+  , DefaultExpr
+  , Env1
   };
 parse_patters_bodies(Env, [Pat, Body | Rest], PatternBodyPairs) ->
   {PatternExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Pat)),
