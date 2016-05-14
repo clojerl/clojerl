@@ -332,6 +332,30 @@ ast(#{op := 'if'} = Expr, State) ->
   Ast = {'case', Anno, Test, [TrueClause, FalseClause]},
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
+%% case
+%%------------------------------------------------------------------------------
+ast(#{op := 'case'} = Expr, State) ->
+  #{ form    := Form
+   , test    := TestExpr
+   , clauses := ClausesExprs
+   } = Expr,
+
+  {TestAst, State1} = pop_ast(ast(TestExpr, State)),
+
+  ClauseFun = fun({PatternExpr, BodyExpr}, StateAcc) ->
+                  {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
+                  {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
+                  ClauseAst = {clause, 0, [Pattern], [], [Body]},
+                  push_ast(ClauseAst, StateAcc2)
+              end,
+
+  State2 = lists:foldl(ClauseFun, State1, ClausesExprs),
+  {ClausesAsts, State3} = pop_ast(State2, length(ClausesExprs)),
+
+  CaseAst = {'case', anno_from(Form), TestAst, ClausesAsts},
+
+  push_ast(CaseAst, State3);
+%%------------------------------------------------------------------------------
 %% let
 %%------------------------------------------------------------------------------
 ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
