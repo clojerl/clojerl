@@ -934,9 +934,11 @@ parse_try(Env, List) ->
 
   IsNotCatchFinally = fun(X) -> not IsCatch(X) andalso not IsFinally(X) end,
 
-  {Body, CatchFinallyTail} = lists:splitwith( IsNotCatchFinally
-                                            , clj_core:seq_to_list(clj_core:rest(List))
-                                            ),
+  { Body
+  , CatchFinallyTail
+  } = lists:splitwith( IsNotCatchFinally
+                     , clj_core:seq_to_list(clj_core:rest(List))
+                     ),
   {Catches, FinallyTail}   = lists:splitwith(IsCatch, CatchFinallyTail),
   {Finallies, Tail}        = lists:splitwith(IsFinally, FinallyTail),
 
