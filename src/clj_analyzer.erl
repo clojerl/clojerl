@@ -1133,6 +1133,12 @@ resolve(Env, Symbol) ->
           %% Let's see how this works out.
           {erl_fun(Env, Symbol), Env};
         Var ->
+          CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
+          clj_utils:throw_when( NsStr =/= CurrentNsName
+                                andalso not 'clojerl.Var':is_public(Var)
+                              , [Var, <<" is not public">>]
+                              , clj_reader:location_meta(Symbol)
+                              ),
           {{var, Var}, Env}
       end;
     {_, _, MappedVar} when MappedVar =/= undefined ->
