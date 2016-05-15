@@ -621,7 +621,7 @@
    (clj_core/invoke.e f (list* x y args)))
   ([f x y z args]
    (clj_core/invoke.e f (list* x y z args)))
-  ([f a b c d args]
+  ([f a b c d & args]
    (clj_core/invoke.e f (cons a (cons b (cons c (cons d (spread args))))))))
 
 (defn vary-meta

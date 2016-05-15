@@ -116,7 +116,7 @@ build_fake_fun(Module, Function, Arity) ->
 
   Binary = case compile:forms(Forms, []) of
              {ok, _, Bin} -> Bin;
-             Error -> throw(Error)
+             Error -> throw({Error, Module#module.name, Function, Arity})
            end,
   code:load_binary(FakeModuleName, "", Binary),
 
@@ -200,12 +200,66 @@ replace_calls( { call, Line
     false ->
       {call, Line, RemoteOriginal, Args1}
   end;
+%% Detect non-remote calls done to other functions in the module, so we
+%% can replace them with fake_funs when necessary.
+replace_calls( {call, Line, {atom, Line2, Function}, Args}
+             , ModuleName
+             , TopFunction) ->
+  Arity = length(Args),
+  Args1 = replace_calls(Args, ModuleName, TopFunction),
+  case find_fun(ModuleName, Function, Arity) of
+    %% Since the module is not loaded just make a remote call.
+    %% This can happen with functions such as clojure.core/in-ns.
+    module_not_loaded ->
+      Remote = {remote, Line,
+                {atom, Line, ModuleName},
+                {atom, Line, Function}
+               },
+
+      {call, Line, Remote, Args1};
+    %% This shouldn't happen, all calls to functions in the module should
+    %% have been resolved by now in the analyzer.
+    undefined ->
+      throw({undef, {ModuleName, Function, Arity}});
+    %% The function is in fact in the module so we need to get the
+    %% fake_fun for it.
+    _F ->
+
+      Remote = {remote, Line,
+                {atom, Line, ?MODULE},
+                {atom, Line, fake_fun}
+               },
+      FunCall = { call, Line, Remote
+                , [ {atom, Line2, ModuleName}
+                  , {atom, Line2, Function}
+                  , {integer, Line2, Arity}
+                  ]
+                },
+      {call, Line, FunCall, Args1}
+  end;
 replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
 replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
   [replace_calls(Item, Module, TopFunction) || Item <- Ast];
 replace_calls(Ast, _, _) ->
   Ast.
+
+%% @private
+%% @doc Find a function that may be loaded in the specified module.
+%%
+%% Returns the abstract form of the function if found, `not_found' if it
+%% is not found and `module_not_loaded' when the module is not loaded.
+-spec find_fun(module(), atom(), non_neg_integer()) ->
+  module_not_loaded | not_found | erl_parse:abstract_form().
+find_fun(ModuleName, Function, Arity) ->
+  case get(?MODULE, ModuleName) of
+    undefined -> module_not_loaded;
+    Module ->
+      case ets:lookup(Module#module.funs, {Function, Arity}) of
+        [] -> not_found;
+        [{_, F}] -> F
+      end
+  end.
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(atom(), string()) -> ok.
@@ -260,6 +314,9 @@ to_forms(#module{} = Module) ->
 
   ModuleAttr  = {attribute, 0, module, Name},
   FileAttr    = {attribute, 0, file, {Source, 0}},
+  %% To avoid conflicts with Clojure functions with the same name
+  %% as some functions in the `erlang' module.
+  CompileAttr = {attribute, 0, compile, [no_auto_import]},
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
   Vars        = maps:from_list(VarsList),
@@ -271,7 +328,7 @@ to_forms(#module{} = Module) ->
   ClojureAttr = {attribute, 0, clojure, true},
   OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
 
-  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
+  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
 
   OnLoadFun   = on_load_function(OnLoadTable),
   Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
