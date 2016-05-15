@@ -7,7 +7,7 @@
                 :c 3)
        z (case* y
                 x 2
-                :default)]
+                #[:default :value])]
   (erlang/display.e x)
   (erlang/display.e y)
   (erlang/display.e z))
