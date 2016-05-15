@@ -701,6 +701,8 @@ get_lexical_rename(BindingExpr, State) ->
   end.
 
 -spec put_lexical_rename(map(), state()) -> state().
+put_lexical_rename(#{shadow := undefined}, State) ->
+  State;
 put_lexical_rename(BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
   #{name := Name} = BindingExpr,
