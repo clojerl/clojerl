@@ -332,6 +332,40 @@ ast(#{op := 'if'} = Expr, State) ->
   Ast = {'case', Anno, Test, [TrueClause, FalseClause]},
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
+%% case
+%%------------------------------------------------------------------------------
+ast(#{op := 'case'} = Expr, State) ->
+  #{ form    := Form
+   , test    := TestExpr
+   , clauses := ClausesExprs
+   , default := DefaultExpr
+   } = Expr,
+
+  {TestAst, State1} = pop_ast(ast(TestExpr, State)),
+
+  ClauseFun = fun({PatternExpr, BodyExpr}, StateAcc) ->
+                  {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
+                  {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
+                  ClauseAst = {clause, 0, [Pattern], [], [Body]},
+                  push_ast(ClauseAst, StateAcc2)
+              end,
+
+  State2 = lists:foldl(ClauseFun, State1, ClausesExprs),
+  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
+
+  {ClausesAsts, State4} =
+    case DefaultExpr of
+      undefined -> {ClausesAsts0, State3};
+      _ ->
+        {DefaultAst, State3_1} = pop_ast(ast(DefaultExpr, State3)),
+        DefaultClause = {clause, 0, [{var, 0, '_'}], [], [DefaultAst]},
+        {ClausesAsts0 ++ [DefaultClause], State3_1}
+    end,
+
+  CaseAst = {'case', anno_from(Form), TestAst, ClausesAsts},
+
+  push_ast(CaseAst, State4);
+%%------------------------------------------------------------------------------
 %% let
 %%------------------------------------------------------------------------------
 ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
