@@ -207,59 +207,23 @@ replace_calls( {call, Line, {atom, Line2, Function}, Args}
              , TopFunction) ->
   Arity = length(Args),
   Args1 = replace_calls(Args, ModuleName, TopFunction),
-  case find_fun(ModuleName, Function, Arity) of
-    %% Since the module is not loaded just make a remote call.
-    %% This can happen with functions such as clojure.core/in-ns.
-    module_not_loaded ->
-      Remote = {remote, Line,
-                {atom, Line, ModuleName},
-                {atom, Line, Function}
-               },
-
-      {call, Line, Remote, Args1};
-    %% This shouldn't happen, all calls to functions in the module should
-    %% have been resolved by now in the analyzer.
-    undefined ->
-      throw({undef, {ModuleName, Function, Arity}});
-    %% The function is in fact in the module so we need to get the
-    %% fake_fun for it.
-    _F ->
-
-      Remote = {remote, Line,
-                {atom, Line, ?MODULE},
-                {atom, Line, fake_fun}
-               },
-      FunCall = { call, Line, Remote
-                , [ {atom, Line2, ModuleName}
-                  , {atom, Line2, Function}
-                  , {integer, Line2, Arity}
-                  ]
-                },
-      {call, Line, FunCall, Args1}
-  end;
+  Remote = {remote, Line,
+            {atom, Line, ?MODULE},
+            {atom, Line, fake_fun}
+           },
+  FunCall = { call, Line, Remote
+            , [ {atom, Line2, ModuleName}
+              , {atom, Line2, Function}
+              , {integer, Line2, Arity}
+              ]
+            },
+  {call, Line, FunCall, Args1};
 replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
 replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
   [replace_calls(Item, Module, TopFunction) || Item <- Ast];
 replace_calls(Ast, _, _) ->
   Ast.
-
-%% @private
-%% @doc Find a function that may be loaded in the specified module.
-%%
-%% Returns the abstract form of the function if found, `not_found' if it
-%% is not found and `module_not_loaded' when the module is not loaded.
--spec find_fun(module(), atom(), non_neg_integer()) ->
-  module_not_loaded | not_found | erl_parse:abstract_form().
-find_fun(ModuleName, Function, Arity) ->
-  case get(?MODULE, ModuleName) of
-    undefined -> module_not_loaded;
-    Module ->
-      case ets:lookup(Module#module.funs, {Function, Arity}) of
-        [] -> not_found;
-        [{_, F}] -> F
-      end
-  end.
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(atom(), string()) -> ok.
