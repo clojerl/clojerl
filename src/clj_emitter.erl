@@ -209,7 +209,7 @@ ast(#{op := invoke} = Expr, State) ->
                           ),
 
   case FExpr of
-    #{op := var, var := Var} ->
+    #{op := var, var := Var, form := Symbol} ->
       VarMeta = clj_core:meta(Var),
       Module  = 'clojerl.Var':module(Var),
 
@@ -217,7 +217,19 @@ ast(#{op := invoke} = Expr, State) ->
               true ->
                 Function = 'clojerl.Var':function(Var),
                 Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-                application_mfa(Module, Function, Args1, Anno);
+                CurrentNs = clj_namespace:current(),
+                NsName    = clj_core:name(clj_namespace:name(CurrentNs)),
+                VarNsName = clj_core:namespace(Var),
+
+                %% When the var's symbol is not namespace qualified and the var's
+                %% namespace is the current namespace, emit a local function
+                %% call, otherwise emit a remote call.
+                case clj_core:namespace(Symbol) of
+                  undefined when NsName =:= VarNsName ->
+                    application_fa(Function, Args1, Anno);
+                  _ ->
+                    application_mfa(Module, Function, Args1, Anno)
+                end;
               false ->
                 ValFunction = 'clojerl.Var':val_function(Var),
                 FunAst      = application_mfa(Module, ValFunction, [], Anno),
@@ -616,6 +628,10 @@ application_mfa(Module, Function, Args, Anno) ->
   , {remote, Anno, {atom, Anno, Module}, {atom, Anno, Function}}
   , Args
   }.
+
+-spec application_fa(atom(), list(), erl_anno:anno()) -> ast().
+application_fa(Function, Args, Anno) ->
+  {call, Anno, {atom, Anno, Function}, Args}.
 
 -spec group_methods([map()]) -> #{integer() => [map()]}.
 group_methods(Methods) ->
