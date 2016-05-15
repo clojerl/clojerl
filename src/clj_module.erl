@@ -200,11 +200,6 @@ replace_calls( { call, Line
     false ->
       {call, Line, RemoteOriginal, Args1}
   end;
-replace_calls( {call, Line, {atom, _, TopFunction}, Args}
-             , Module
-             , TopFunction) ->
-  Args1 = replace_calls(Args, Module, TopFunction),
-  {call, Line, {atom, Line, TopFunction}, Args1};
 replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
 replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
