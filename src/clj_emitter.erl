@@ -60,26 +60,14 @@ ast(#{op := var} = Expr, State) ->
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
-  #{ name := NameSym
-   , form := Form
-   } = Expr,
-  NameBin = case get_lexical_rename(Expr, State) of
-              undefined ->
-                clj_core:str(NameSym);
-              LexicalNameSym ->
-                clj_core:str(LexicalNameSym)
-              end,
+  #{form := Form} = Expr,
+  NameBin = get_lexical_rename(Expr, State),
   Ast     = {var, anno_from(Form), binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
 ast(#{op := local} = Expr, State) ->
   #{name := NameSym} = Expr,
-  NameBin = case get_lexical_rename(Expr, State) of
-              undefined ->
-                clj_core:str(NameSym);
-              LexicalNameSym ->
-                clj_core:str(LexicalNameSym)
-              end,
+  NameBin = get_lexical_rename(Expr, State),
   Ast     = {var, anno_from(NameSym), binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
@@ -690,15 +678,24 @@ add_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
   State#{lexical_renames => clj_scope:parent(Renames)}.
 
--spec get_lexical_rename(map(), state()) -> 'clojerl.Symbol':type() | undefined.
+%% @doc Finds and returns the name of the lexical rename.
+%%
+%% This function always returns something valid because the BindingExpr
+%% is always registered in the lexixal scope, the analyzer makes sure
+%% this happens.
+%% @end
+-spec get_lexical_rename(map(), state()) -> binary().
 get_lexical_rename(BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
-  case shadow_depth(BindingExpr) of
-    0 -> maps:get(name, BindingExpr);
-    _ ->
-      Code = hash_scope(BindingExpr),
-      clj_scope:get(Renames, Code)
-  end.
+
+  RenameSym = case shadow_depth(BindingExpr) of
+                0 -> maps:get(name, BindingExpr);
+                _ ->
+                  Code = hash_scope(BindingExpr),
+                  clj_scope:get(Renames, Code)
+              end,
+
+  clj_core:str(RenameSym).
 
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(#{shadow := undefined}, State) ->
