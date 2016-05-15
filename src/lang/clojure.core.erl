@@ -8,29 +8,51 @@
                                      }
                            }
                         }
-       , <<"in-ns">> => { '7ype', 'clojerl.Var', {<<"clojure.core">>, <<"in-ns">>}
+       , <<"in-ns">> => { '7ype', 'clojerl.Var'
+                        , {<<"clojure.core">>, <<"in-ns">>}
                         , #{meta => #{ 'variadic?'     => true
                                      , max_fixed_arity => 1
                                      , variadic_arity  => undefined
                                      }
                            }
                         }
-       , <<"*ns*">>  => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*ns*">>}, #{}}
+       , <<"*ns*">>  => { '7ype', 'clojerl.Var'
+                        , {<<"clojure.core">>, <<"*ns*">>}
+                        , #{}
+                        }
        , <<"*compile-files*">>  =>
-           {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*compile-files*">>}, #{}}
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*compile-files*">>}
+           , #{}
+           }
 
        , <<"*assert*">> =>
            {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*assert*">>}, #{}}
 
-       , <<"*out*">> => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*out*">>}, #{}}
-       , <<"*in*">>  => {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*in*">>}, #{}}
+       , <<"*out*">> => { '7ype', 'clojerl.Var'
+                        , {<<"clojure.core">>, <<"*out*">>}
+                        , #{}
+                        }
+       , <<"*in*">>  => { '7ype', 'clojerl.Var'
+                        , {<<"clojure.core">>, <<"*in*">>}
+                        , #{}
+                        }
 
        , <<"*print-dup*">> =>
-           {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*print-dup*">>}, #{}}
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*print-dup*">>}
+           , #{}
+           }
        , <<"*flush-on-newline*">> =>
-           {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*flush-on-newline*">>}, #{}}
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*flush-on-newline*">>}
+           , #{}
+           }
        , <<"*print-readably*">> =>
-           {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*print-readably*">>}, #{}}
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*print-readably*">>}
+           , #{}
+           }
        }).
 
 -clojure(true).
@@ -94,10 +116,10 @@ ns__val() ->
 
 '*ns*__val'() ->
   case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*ns*">>) of
-    undefined -> 
+    undefined ->
       ClojureCoreSym = clj_core:symbol(<<"clojure.core">>),
       clj_namespace:find_or_create(ClojureCoreSym);
-    X -> 
+    X ->
       X
   end.
 
