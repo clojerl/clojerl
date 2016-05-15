@@ -934,9 +934,11 @@ parse_try(Env, List) ->
 
   IsNotCatchFinally = fun(X) -> not IsCatch(X) andalso not IsFinally(X) end,
 
-  {Body, CatchFinallyTail} = lists:splitwith( IsNotCatchFinally
-                                            , clj_core:seq_to_list(clj_core:rest(List))
-                                            ),
+  { Body
+  , CatchFinallyTail
+  } = lists:splitwith( IsNotCatchFinally
+                     , clj_core:seq_to_list(clj_core:rest(List))
+                     ),
   {Catches, FinallyTail}   = lists:splitwith(IsCatch, CatchFinallyTail),
   {Finallies, Tail}        = lists:splitwith(IsFinally, FinallyTail),
 
@@ -1131,6 +1133,12 @@ resolve(Env, Symbol) ->
           %% Let's see how this works out.
           {erl_fun(Env, Symbol), Env};
         Var ->
+          CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
+          clj_utils:throw_when( NsStr =/= CurrentNsName
+                                andalso not 'clojerl.Var':is_public(Var)
+                              , [Var, <<" is not public">>]
+                              , clj_reader:location_meta(Symbol)
+                              ),
           {{var, Var}, Env}
       end;
     {_, _, MappedVar} when MappedVar =/= undefined ->

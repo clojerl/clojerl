@@ -116,7 +116,7 @@ build_fake_fun(Module, Function, Arity) ->
 
   Binary = case compile:forms(Forms, []) of
              {ok, _, Bin} -> Bin;
-             Error -> throw(Error)
+             Error -> throw({Error, Module#module.name, Function, Arity})
            end,
   code:load_binary(FakeModuleName, "", Binary),
 
@@ -200,11 +200,24 @@ replace_calls( { call, Line
     false ->
       {call, Line, RemoteOriginal, Args1}
   end;
-replace_calls( {call, Line, {atom, _, TopFunction}, Args}
-             , Module
+%% Detect non-remote calls done to other functions in the module, so we
+%% can replace them with fake_funs when necessary.
+replace_calls( {call, Line, {atom, Line2, Function}, Args}
+             , ModuleName
              , TopFunction) ->
-  Args1 = replace_calls(Args, Module, TopFunction),
-  {call, Line, {atom, Line, TopFunction}, Args1};
+  Arity = length(Args),
+  Args1 = replace_calls(Args, ModuleName, TopFunction),
+  Remote = {remote, Line,
+            {atom, Line, ?MODULE},
+            {atom, Line, fake_fun}
+           },
+  FunCall = { call, Line, Remote
+            , [ {atom, Line2, ModuleName}
+              , {atom, Line2, Function}
+              , {integer, Line2, Arity}
+              ]
+            },
+  {call, Line, FunCall, Args1};
 replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
 replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
@@ -265,6 +278,9 @@ to_forms(#module{} = Module) ->
 
   ModuleAttr  = {attribute, 0, module, Name},
   FileAttr    = {attribute, 0, file, {Source, 0}},
+  %% To avoid conflicts with Clojure functions with the same name
+  %% as some functions in the `erlang' module.
+  CompileAttr = {attribute, 0, compile, [no_auto_import]},
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
   Vars        = maps:from_list(VarsList),
@@ -276,7 +292,7 @@ to_forms(#module{} = Module) ->
   ClojureAttr = {attribute, 0, clojure, true},
   OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
 
-  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
+  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
 
   OnLoadFun   = on_load_function(OnLoadTable),
   Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],

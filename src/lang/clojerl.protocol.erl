@@ -47,7 +47,8 @@ resolve_impl_cache(Protocol, Function, Type, Arity) ->
      {ok, Value} -> Value
   end.
 
--spec resolve_impl(atom(), atom(), atom(), integer()) -> {module(), atom()} | undefined.
+-spec resolve_impl(atom(), atom(), atom(), integer()) ->
+  {module(), atom()} | undefined.
 resolve_impl(Protocol, Function, Type, Arity) ->
   ImplFunction = impl_function(Protocol, Function),
   case erlang:function_exported(Type, ImplFunction, Arity) of

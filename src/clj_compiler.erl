@@ -223,8 +223,8 @@ compile_forms_fun(Opts) ->
 compile_forms([], _) ->
   undefined;
 compile_forms(Forms, Opts) ->
-  %% io:format("==== FORMS ====~n~s~n", [ast_to_string(Forms)]),
-  ErlFlags  = maps:get(erl_flags, Opts),
+  ok       = maybe_output_erl(Forms, Opts),
+  ErlFlags = maps:get(erl_flags, Opts),
 
   case compile:forms(Forms, ErlFlags) of
     {ok, Name, Binary} ->
@@ -234,6 +234,7 @@ compile_forms(Forms, Opts) ->
       BeamFilename = <<NameBin/binary, ".beam">>,
       BeamPath     = filename:join([OutputDir, BeamFilename]),
       ok           = file:write_file(BeamPath, Binary),
+
 
       BeamPathStr = binary_to_list(BeamPath),
       {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
@@ -249,7 +250,7 @@ eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
-  CurrentNsAtom = erlang:binary_to_atom(clj_core:str(CurrentNsSym), utf8),
+  CurrentNsAtom = erlang:binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
   ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom, '_')
                    || Expr <- Expressions],
   {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
@@ -262,4 +263,12 @@ ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).
 when_verbose(#{verbose := true}, Message) ->
   io:format(Message);
 when_verbose(_, _) ->
+  ok.
+
+-spec maybe_output_erl([erl_parse:abstract_form()], options()) ->
+  ok | {error, term()}.
+maybe_output_erl(Forms, #{output_erl := Filename}) ->
+  Source = ast_to_string(Forms),
+  file:write_file(Filename, Source);
+maybe_output_erl(_, _) ->
   ok.
