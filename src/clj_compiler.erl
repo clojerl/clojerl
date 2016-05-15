@@ -249,7 +249,7 @@ eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
-  CurrentNsAtom = erlang:binary_to_atom(clj_core:str(CurrentNsSym), utf8),
+  CurrentNsAtom = erlang:binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
   ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom, '_')
                    || Expr <- Expressions],
   {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
