@@ -141,7 +141,7 @@ seq(Seqable) ->
 
 -spec seq_to_list(any()) -> list().
 seq_to_list(undefined) -> [];
-seq_to_list([]) -> [];
+seq_to_list(List) when is_list(List) -> List;
 seq_to_list(Seqable) ->
   case seq(Seqable) of
     undefined -> seq_to_list(undefined);
