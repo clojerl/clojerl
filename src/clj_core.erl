@@ -103,26 +103,28 @@ count(Seq)       -> 'clojerl.Counted':count(Seq).
 
 -spec nth(any(), integer()) -> integer().
 nth(undefined, _) -> undefined;
+nth([], _) -> undefined;
 nth(Coll, N) ->
   Type = type(Coll),
   case 'extends?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N);
     false ->
       case 'extends?'('clojerl.ISequential', Type) of
-        true  -> lists:nth(N + 1, seq_to_list(Coll));
+        true  -> clj_utils:nth(N + 1, seq_to_list(Coll));
         false -> clj_utils:throw([<<"">>, Type])
       end
   end.
 
 -spec nth(any(), integer(), any()) -> integer().
-nth(undefined, _, _)   -> undefined;
+nth(undefined, _, _) -> undefined;
+nth([], _, _) -> undefined;
 nth(Coll, N, NotFound) ->
   Type = type(Coll),
   case 'extends?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N, NotFound);
     false ->
       case 'extends?'('clojerl.ISequential', Type) of
-        true  -> lists:nth(N + 1, seq_to_list(Coll));
+        true  -> clj_utils:nth(N + 1, seq_to_list(Coll));
         false -> clj_utils:throw([<<"">>, Type])
       end
   end.
