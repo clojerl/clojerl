@@ -388,16 +388,17 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
 
   FixedArity = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
-  OldLoopId = clj_env:get(Env1, loop_id),
+  OldLoopId     = clj_env:get(Env1, loop_id),
+  OldLoopLocals = clj_env:get(Env1, loop_locals),
 
   {BodyExpr, Env2} =
     case AnalyzeBody of
       true ->
-        BodyEnv = clj_env:put_locals(Env1, ParamsExprs),
+        BodyEnv  = clj_env:put_locals(Env1, ParamsExprs),
         BodyEnv1 = clj_env:context(BodyEnv, return),
         BodyEnv2 = clj_env:put(BodyEnv1, loop_id, LoopId),
         BodyEnv3 = clj_env:put(BodyEnv2, loop_locals, length(ParamsExprs)),
-        Body = clj_core:rest(List),
+        Body     = clj_core:rest(List),
         clj_env:pop_expr(analyze_body(BodyEnv3, Body));
       false ->
         {undefined, Env1}
@@ -416,8 +417,9 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                   },
 
   Env3 = clj_env:put(Env2, loop_id, OldLoopId),
-  Env4 = clj_env:remove_locals_scope(Env3),
-  clj_env:push_expr(Env4, FnMethodExpr).
+  Env4 = clj_env:put(Env3, loop_locals, OldLoopLocals),
+  Env5 = clj_env:remove_locals_scope(Env4),
+  clj_env:push_expr(Env5, FnMethodExpr).
 
 -spec analyze_body(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_body(Env, List) ->
@@ -516,8 +518,10 @@ parse_let(Env, Form) ->
 
 -spec parse_loop(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_loop(Env, Form) ->
-  LoopId    = clj_core:gensym(<<"loop_">>),
-  OldLoopId = clj_env:get(Env, loop_id),
+  OldLoopId     = clj_env:get(Env, loop_id),
+  OldLoopLocals = clj_env:get(Env, loop_locals),
+  LoopId        = clj_core:gensym(<<"loop_">>),
+
   Env1 = clj_env:put(Env, loop_id, {loop, LoopId}),
 
   {LoopExprExtra, Env2} = analyze_let(Env1, Form),
@@ -529,7 +533,8 @@ parse_loop(Env, Form) ->
                         LoopExprExtra),
 
   Env3 = clj_env:put(Env2, loop_id, OldLoopId),
-  clj_env:push_expr(Env3, LoopExpr).
+  Env4 = clj_env:put(Env3, loop_locals, OldLoopLocals),
+  clj_env:push_expr(Env4, LoopExpr).
 
 -spec analyze_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_let(Env, Form) ->
