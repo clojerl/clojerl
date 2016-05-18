@@ -31,6 +31,7 @@ coverage-html:
 tests-shell: test-build
 	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS} # -s sync
 
+repl: SHELL_OPTS = -pa priv -name ${PROJECT}-repl@`hostname` -setcookie clojerl -s ${PROJECT}
 repl: SHELL_OPTS += -s clj_repl repl -noshell
 repl:
 	@rlwrap erl -pa ebin -pa deps/*/ebin -pa priv ${SHELL_OPTS}

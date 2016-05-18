@@ -201,6 +201,13 @@
   symbol? (fn ^:static symbol? [x] (instance? :clojerl.Symbol x)))
 
 (def
+  ^{:arglists '([x])
+    :doc "Returns true if x is an Erlang tuple"
+    :added "1.0"
+    :static true}
+  tuple? (fn [x] (erlang/is_tuple.e x)))
+
+(def
   ^{:arglists '([map key val] [map key val & kvs])
     :doc "assoc[iate]. When applied to a map, returns a new map of the
     same (hashed/sorted) type, that contains the mapping of key(s) to
@@ -3068,7 +3075,6 @@
   ([comp coll]
    (if (seq coll)
      (let [a (to-tuple coll)]
-       #_(. java.util.Arrays (sort a comp))
        (lists/sort.e (seq a)))
      ())))
 
@@ -3670,19 +3676,11 @@
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
-;; TODO: implement multimethods
-
 (defmulti print-method (fn [x writer]
                          (let [t (get (meta x) :type)]
                            (if (keyword? t) t (class x)))))
 
 (defmulti print-dup (fn [x writer] (class x)))
-
-#_(defn print-method [x writer]
-  (io/format.e writer "~s" (seq [x])))
-
-#_(defn print-dup [x writer]
-  (io/format.e writer "~s" (seq [x])))
 
 (defn pr-on
   {:private true
@@ -4418,7 +4416,7 @@
                            gmapseq (with-meta gmap {:tag 'clojure.lang.ISeq})
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
-                                      (conj gmap) (conj `(if (seq? ~gmap) (clojure.lang.PersistentHashMap/create (seq ~gmapseq)) ~gmap))
+                                      (conj gmap) (conj `(if (seq? ~gmap) (clojerl.Map/new.e (seq ~gmapseq)) ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
                                            (conj ret (:as b) gmap)
@@ -4791,78 +4789,6 @@
         (do (f) :ok)
         :no-test)))
 
-#_ ((defn re-pattern
-      "Returns an instance of java.util.regex.Pattern, for use, e.g. in
-  re-matcher."
-      {:tag java.util.regex.Pattern
-       :added "1.0"
-       :static true}
-      [s] (if (instance? java.util.regex.Pattern s)
-            s
-            (. java.util.regex.Pattern (compile s))))
-
-    (defn re-matcher
-      "Returns an instance of java.util.regex.Matcher, for use, e.g. in
-  re-find."
-      {:tag java.util.regex.Matcher
-       :added "1.0"
-       :static true}
-      [^java.util.regex.Pattern re s]
-      (. re (matcher s)))
-
-    (defn re-groups
-      "Returns the groups from the most recent match/find. If there are no
-  nested groups, returns a string of the entire match. If there are
-  nested groups, returns a vector of the groups, the first element
-  being the entire match."
-      {:added "1.0"
-       :static true}
-      [^java.util.regex.Matcher m]
-      (let [gc  (. m (groupCount))]
-        (if (zero? gc)
-          (. m (group))
-          (loop [ret [] c 0]
-            (if (<= c gc)
-              (recur (conj ret (. m (group c))) (inc c))
-              ret)))))
-
-    (defn re-seq
-      "Returns a lazy sequence of successive matches of pattern in string,
-  using java.util.regex.Matcher.find(), each such match processed with
-  re-groups."
-      {:added "1.0"
-       :static true}
-      [^java.util.regex.Pattern re s]
-      (let [m (re-matcher re s)]
-        ((fn step []
-           (when (. m (find))
-             (cons (re-groups m) (lazy-seq (step))))))))
-
-    (defn re-matches
-      "Returns the match, if any, of string to pattern, using
-  java.util.regex.Matcher.matches().  Uses re-groups to return the
-  groups."
-      {:added "1.0"
-       :static true}
-      [^java.util.regex.Pattern re s]
-      (let [m (re-matcher re s)]
-        (when (. m (matches))
-          (re-groups m))))
-
-
-    (defn re-find
-      "Returns the next regex match, if any, of string to pattern, using
-  java.util.regex.Matcher.find().  Uses re-groups to return the
-  groups."
-      {:added "1.0"
-       :static true}
-      ([^java.util.regex.Matcher m]
-       (when (. m (find))
-         (re-groups m)))
-      ([^java.util.regex.Pattern re s]
-       (let [m (re-matcher re s)]
-         (re-find m)))))
-
 (defn rand
   "Returns a random floating point number between 0 (inclusive) and
   n (default 1) (exclusive)."
@@ -4943,6 +4869,63 @@
    :static true}
   ([s start] (subs s start (erlang/size.e s)))
   ([s start end] (binary/part.e s start (- end start))))
+
+(defn re-run
+  "Runs the matching of the pattern over the string using the provided
+  options."
+  [re s & opts]
+  (let [opts (clj_core/seq_to_list.e opts)
+        res  (re/run.e s re opts)]
+    (when (and (tuple? res) (= (first res) :match))
+      (vec (second res)))))
+
+(defn re-pattern
+  "Returns a compiled Erlang regular expression by using re:compile/1
+  unless s is already a compiled pattern."
+  {:tag :clojerl.regex.Pattern
+   :added "1.0"
+   :static true}
+  [s]
+  (if (and (tuple? s) (= (first s) :re_pattern))
+    s
+    (second (re/compile.e s))))
+
+(defn re-find
+  "Returns the next regex match, if any, of string to pattern.
+  Uses re-groups to return the groups."
+  {:added "1.0"
+   :static true}
+  [re s]
+  (let [matches (re-run re s #[:capture :all :binary])]
+    (if (= (count matches) 1)
+      (first matches)
+      matches)))
+
+(defn re-seq
+  "Returns a lazy sequence of all matches of pattern in string."
+  {:added "1.0"
+   :static true}
+  [re s]
+  (let [match-data (re-find re s)
+        [idx len]  (first (re-run re s #[:capture :first :index]))
+        match-str  (if (seq? match-data) (first match-data) match-data)
+        len        (if (and (zero? len) (not-empty s)) 1 len)
+        post-match (when idx (subs s (+ idx len)))]
+    (when idx
+      (lazy-seq (cons match-data
+                      (when (seq post-match)
+                        (re-seq re post-match)))))))
+
+(defn re-matches
+  "Returns the result of (re-find re s) if re fully matches s."
+  [re s]
+  (if (string? s)
+    (let [matches (re-find re s)]
+      (when (= (first matches) s)
+        (if (== (count matches) 1)
+          (first matches)
+          matches)))
+    (throw "re-matches must match against a string.")))
 
 (defn max-key
   "Returns the x for which (k x), a number, is greatest."
@@ -6278,10 +6261,5 @@
 
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------
-
-#_(defn prn
-  [& xs]
-  (io/format.e "~s~n" (seq [(apply str xs)]))
-  nil)
 
 (load "core_print")
