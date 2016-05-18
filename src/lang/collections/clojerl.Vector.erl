@@ -38,7 +38,7 @@
 
 -spec new(list()) -> type().
 new(Items) when is_list(Items) ->
-  #?TYPE{data = array:from_list(Items, none)}.
+  #?TYPE{data = array:from_list(Items, undefined)}.
 
 -spec subvec(type(), integer(), integer()) -> type().
 subvec(Vector, Start, End) ->
