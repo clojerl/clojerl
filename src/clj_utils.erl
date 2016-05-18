@@ -22,6 +22,7 @@
         , warn_when/3
 
         , group_by/2
+        , nth/2
 
         , trace_while/4
         , time/1

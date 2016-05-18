@@ -4909,7 +4909,7 @@
   (let [match-data (re-find re s)
         [idx len]  (first (re-run re s #[:capture :first :index]))
         match-str  (if (seq? match-data) (first match-data) match-data)
-        len        (if (and (zero? len) (not-empty s)) 1 len)
+        len        (if (and (zero? len) (not (seq s))) 1 len)
         post-match (when idx (subs s (+ idx len)))]
     (when idx
       (lazy-seq (cons match-data
