@@ -95,7 +95,7 @@ push_bindings(BindingsMap) ->
   AddBindingFun = fun(K, Acc) ->
                       clj_scope:put( Acc
                                    , clj_core:str(K)
-                                   , clj_core:get(BindingsMap, K)
+                                   , {ok, clj_core:get(BindingsMap, K)}
                                    )
                   end,
   NewBindings1  = lists:foldl( AddBindingFun
@@ -120,7 +120,9 @@ get_bindings() ->
 get_bindings_map() ->
   case erlang:get(dynamic_bindings) of
     undefined -> #{};
-    Bindings  -> clj_scope:to_map(Bindings)
+    Bindings  ->
+      UnwrapFun = fun(_, {ok, X}) -> X end,
+      clj_scope:to_map(Bindings, UnwrapFun)
   end.
 
 -spec reset_bindings(clj_scope:scope()) -> ok.
@@ -144,7 +146,7 @@ dynamic_binding(Var, Value) ->
       dynamic_binding(Var, Value);
     Bindings  ->
       Key = clj_core:str(Var),
-      NewBindings = clj_scope:put(Bindings, Key, Value),
+      NewBindings = clj_scope:put(Bindings, Key, {ok, Value}),
       erlang:put(dynamic_bindings, NewBindings),
       Value
   end.
@@ -168,10 +170,7 @@ dynamic_binding(Var, Value) ->
 
   case erlang:function_exported(Module, FunctionVal, 0) of
     true ->
-      case dynamic_binding(Var) of
-        undefined -> Module:FunctionVal();
-        Value     -> Value
-      end;
+      Module:FunctionVal();
     false ->
       throw(<<"Could not dereference ",
               Ns/binary, "/", Name/binary, ". "

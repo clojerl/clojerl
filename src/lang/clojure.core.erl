@@ -119,27 +119,29 @@ ns__val() ->
     undefined ->
       ClojureCoreSym = clj_core:symbol(<<"clojure.core">>),
       clj_namespace:find_or_create(ClojureCoreSym);
-    X ->
-      X
+    {ok, X}   -> X
   end.
 
 '*compile-files*__val'() ->
-  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*compile-files*">>) of
-    undefined -> false;
-    X         -> X
-  end.
+  var_value(<<"#'clojure.core/*compile-files*">>, false).
 
-'*assert*__val'() -> true.
+'*assert*__val'() ->
+  var_value(<<"#'clojure.core/*assert*">>, true).
 
-'*out*__val'() -> standard_io.
+'*out*__val'() ->
+  var_value(<<"#'clojure.core/*out*">>, standard_io).
 
-'*in*__val'() -> standard_io.
+'*in*__val'() ->
+  var_value(<<"#'clojure.core/*in*">>, standard_io).
 
-'*print-dup*__val'() -> false.
+'*print-dup*__val'() ->
+  var_value(<<"#'clojure.core/*print-dup*">>, false).
 
-'*flush-on-newline*__val'() -> true.
+'*flush-on-newline*__val'() ->
+  var_value(<<"#'clojure.core/*flush-on-newline*">>, true).
 
-'*print-readably*__val'() -> true.
+'*print-readably*__val'() ->
+  var_value(<<"#'clojure.core/*print-readably*">>, true).
 
 %% @private
 'maybe-unquote'(MaybeQuotedForm) ->
@@ -151,4 +153,11 @@ ns__val() ->
         true  -> clj_core:second(MaybeQuotedForm);
         false -> MaybeQuotedForm
       end
+  end.
+
+%% @private
+var_value(Name, Default) ->
+  case 'clojerl.Var':dynamic_binding(Name) of
+    undefined -> Default;
+    {ok, X}   -> X
   end.

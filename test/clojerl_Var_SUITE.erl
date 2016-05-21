@@ -50,7 +50,12 @@ init_per_suite(Config) ->
 %%------------------------------------------------------------------------------
 
 -spec 'forty-two__val'() -> any().
-'forty-two__val'() -> 42.
+'forty-two__val'() ->
+  Name = <<"#'clojerl_Var_SUITE/forty-two">>,
+  case 'clojerl.Var':dynamic_binding(Name) of
+    undefined -> 42;
+    {ok, X}   -> X
+  end.
 
 -spec 'forty-two'() -> any().
 'forty-two'() -> 42.
@@ -214,6 +219,14 @@ dynamic_bindings(_Config) ->
   'clojerl.Var':reset_bindings(Bindings),
 
   85 = clj_core:deref(Var),
+
+  'clojerl.Var':pop_bindings(),
+
+  42 = clj_core:deref(Var),
+
+  'clojerl.Var':push_bindings(#{Var => undefined}),
+
+  undefined = clj_core:deref(Var),
 
   'clojerl.Var':pop_bindings(),
 
