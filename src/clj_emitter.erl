@@ -736,8 +736,9 @@ var_val_function(Val, VarAst) ->
   TestAst            = application_mfa('clojerl.Var', dynamic_binding, [VarAst]),
   UndefinedAtom      = {atom, 0, undefined},
   UndefinedClauseAst = {clause, 0, [UndefinedAtom], [], [Val]},
-  XAtom              = {var, 0, x},
-  ValueClauseAst     = {clause, 0, [XAtom], [], [XAtom]},
+  XVar               = {var, 0, x},
+  TupleAst           = {tuple, 0, [{atom, 0, ok}, XVar]},
+  ValueClauseAst     = {clause, 0, [TupleAst], [], [XVar]},
 
   {'case', 0, TestAst, [UndefinedClauseAst, ValueClauseAst]}.
 
