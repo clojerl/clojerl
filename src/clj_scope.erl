@@ -5,7 +5,7 @@
         , parent/1
         , put/3
         , get/2
-        , to_map/1
+        , to_map/2
         , from_map/1
         ]).
 
@@ -35,16 +35,17 @@ put(Scope = #{mappings := Mappings}, Key, Value) ->
 get(Scope, Key) ->
   do_get(Scope, Key).
 
--spec to_map(scope()) -> any().
-to_map(Scope) ->
-  do_to_map(Scope, #{}).
+-spec to_map(scope(), function()) -> any().
+to_map(Scope, Fun) ->
+  do_to_map(Scope, Fun, #{}).
 
 %% @private
--spec do_to_map(scope() | undefined, map()) -> map().
-do_to_map(undefined, Map) ->
+-spec do_to_map(scope() | undefined, function(), map()) -> map().
+do_to_map(undefined, _, Map) ->
   Map;
-do_to_map(#{parent := Parent, mappings := Mappings}, Map) ->
-  do_to_map(Parent, maps:merge(Mappings, Map)).
+do_to_map(#{parent := Parent, mappings := Mappings}, Fun, Map) ->
+  Mappings1 = maps:map(Fun, Mappings),
+  do_to_map(Parent, Fun, maps:merge(Mappings1, Map)).
 
 -spec from_map(map()) -> scope().
 from_map(Map) ->
