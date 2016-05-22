@@ -58,7 +58,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Vector = clj_core:vector([1, 2, 3]),
-  <<"[1, 2, 3]">> = clj_core:str(Vector),
+  <<"[1 2 3]">> = clj_core:str(Vector),
 
   Vector2 = clj_core:vector([]),
   <<"[]">> = clj_core:str(Vector2),

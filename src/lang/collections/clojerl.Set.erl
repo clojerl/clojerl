@@ -119,5 +119,5 @@ new(Values) when is_list(Values) ->
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = MapSet}) ->
   Items = lists:map(fun clj_core:str/1, maps:values(MapSet)),
-  Strs = clj_utils:binary_join(Items, <<", ">>),
+  Strs  = clj_utils:binary_join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.

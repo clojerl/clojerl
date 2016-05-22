@@ -157,7 +157,7 @@ maybe_encode_result(_, X) ->
 
 -spec update_at_line_start(binary(), state()) -> state().
 update_at_line_start(Result, State) ->
-  State#{at_line_start := clj_utils:ends_with(Result, <<"\n">>)}.
+  State#{at_line_start := 'clojerl.String':ends_with(Result, <<"\n">>)}.
 
 -spec get_chars(integer(), state()) -> {binary() | eof, binary()}.
 get_chars(N, #{reader := Reader, buffer := <<>>} = State) ->
