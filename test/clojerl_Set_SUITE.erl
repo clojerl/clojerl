@@ -60,7 +60,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Set = clj_core:hash_set([1, 2, 3, 4]),
-  <<"#{1, 2, 4, 3}">> = clj_core:str(Set),
+  <<"#{1 2 4 3}">> = clj_core:str(Set),
 
   Set2 = clj_core:hash_set([]),
   <<"#{}">> = clj_core:str(Set2),

@@ -336,7 +336,7 @@
   {:tag "clojerl.erlang.Tuple"
    :added "1.0"
    :static true}
-  [coll] (erlang/list_to_tuple.e (seq coll)))
+  [coll] (erlang/list_to_tuple.e (clj_core/seq_to_list.e coll)))
 
 (defn vector
   "Creates a new vector containing the args."
@@ -2851,11 +2851,13 @@
   ([start end] (range start end 1))
   ([start end step]
    (lazy-seq
-    (let [b (chunk-buffer 32)
-          comp (cond (or (zero? step) (= start end)) not=
+    (let [comp (cond (or (zero? step) (= start end)) not=
                      (pos? step) <
                      (neg? step) >)]
-      (loop [i start]
+      (when (comp start end)
+        (cons start
+              (range (+ start step) end)))
+      #_(loop [i start]
         (if (and (< (count b) 32)
                  (comp i end))
           (do
@@ -2939,8 +2941,7 @@
    (sort compare coll))
   ([comp coll]
    (if (seq coll)
-     (let [a (to-tuple coll)]
-       (lists/sort.e (seq a)))
+     (lists/sort.e (clj_core/seq_to_list.e coll))
      ())))
 
 (defn sort-by
@@ -3441,15 +3442,7 @@
    :static true
    :added "1.3"}
   [x]
-  (throw "unimplemented bigint conversion")
-  #_(cond
-      (instance? clojure.lang.BigInt x) x
-      (instance? BigInteger x) (clojure.lang.BigInt/fromBigInteger x)
-      (decimal? x) (bigint (.toBigInteger ^BigDecimal x))
-      (float? x)  (bigint (. BigDecimal valueOf (double x)))
-      (ratio? x) (bigint (.bigIntegerValue ^clojure.lang.Ratio x))
-      (number? x) (clojure.lang.BigInt/valueOf (long x))
-      :else (bigint (BigInteger. x))))
+  (erlang/trunc.e x))
 
 (defn biginteger
   "Coerce to BigInteger"
@@ -3457,15 +3450,7 @@
    :added "1.0"
    :static true}
   [x]
-  (throw "unimplemented biginteger conversion")
-  #_(cond
-      (instance? BigInteger x) x
-      (instance? clojure.lang.BigInt x) (.toBigInteger ^clojure.lang.BigInt x)
-      (decimal? x) (.toBigInteger ^BigDecimal x)
-      (float? x) (.toBigInteger (. BigDecimal valueOf (double x)))
-      (ratio? x) (.bigIntegerValue ^clojure.lang.Ratio x)
-      (number? x) (BigInteger/valueOf (long x))
-      :else (BigInteger. x)))
+  (erlang/trunc.e x))
 
 (defn bigdec
   "Coerce to BigDecimal"
@@ -3473,15 +3458,7 @@
    :added "1.0"
    :static true}
   [x]
-  (throw "unsupported bigdecimal")
-  #_(cond
-      (decimal? x) x
-      (float? x) (. BigDecimal valueOf (double x))
-      (ratio? x) (/ (BigDecimal. (.numerator ^clojure.lang.Ratio x)) (.denominator ^clojure.lang.Ratio x))
-      (instance? clojure.lang.BigInt x) (.toBigDecimal ^clojure.lang.BigInt x)
-      (instance? BigInteger x) (BigDecimal. ^BigInteger x)
-      (number? x) (BigDecimal/valueOf (long x))
-      :else (BigDecimal. x)))
+  (throw "unsupported bigdecimal"))
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
@@ -3645,7 +3622,7 @@
                                   (erlang.io.Closeable/close.e ~(bindings 0)))))
     :else (throw "with-open only allows Symbols in bindings")))
 
-#_(defmacro doto
+(defmacro doto
   "Evaluates x then calls all of the methods and functions with the
   value of x supplied at the front of the given arguments.  The forms
   are evaluated in order.  Returns x.
@@ -3832,55 +3809,6 @@
         form
         (macroexpand ex))))
 
-(defn create-struct
-  "Returns a structure basis object."
-  {:added "1.0"
-   :static true}
-  [& keys]
-  (throw "unimplemented struct")
-  #_(. clojure.lang.PersistentStructMap (createSlotMap keys)))
-
-(defmacro defstruct
-  "Same as (def name (create-struct keys...))"
-  {:added "1.0"
-   :static true}
-  [name & keys]
-  (throw "unimplemented struct")
-  #_`(def ~name (create-struct ~@keys)))
-
-(defn struct-map
-  "Returns a new structmap instance with the keys of the
-  structure-basis. keyvals may contain all, some or none of the basis
-  keys - where values are not supplied they will default to nil.
-  keyvals can also contain keys not in the basis."
-  {:added "1.0"
-   :static true}
-  [s & inits]
-  (throw "unimplemented struct")
-  #_(. clojure.lang.PersistentStructMap (create s inits)))
-
-(defn struct
-  "Returns a new structmap instance with the keys of the
-  structure-basis. vals must be supplied for basis keys in order -
-  where values are not supplied they will default to nil."
-  {:added "1.0"
-   :static true}
-  [s & vals]
-  (throw "unimplemented struct")
-  #_(. clojure.lang.PersistentStructMap (construct s vals)))
-
-(defn accessor
-  "Returns a fn that, given an instance of a structmap with the basis,
-  returns the value at the key.  The key must be in the basis. The
-  returned function should be (slightly) more efficient than using
-  get, but such use of accessors should be limited to known
-  performance-critical areas."
-  {:added "1.0"
-   :static true}
-  [s key]
-  (throw "unimplemented struct")
-  #_(. clojure.lang.PersistentStructMap (getAccessor s key)))
-
 (defn load-reader
   "Sequentially read and evaluate the set of forms contained in the
   stream/file"
@@ -3911,7 +3839,7 @@
   [coll]
   (if (set? coll)
     (with-meta coll nil)
-    (clj_core/hash_set.e coll)))
+    (clj_core/hash_set.e (clj_core/seq_to_list.e coll))))
 
 (defn ^{:private true
         :static true}
@@ -4400,7 +4328,7 @@
   [& colls]
   `(concat ~@(map #(list `lazy-seq %) colls)))
 
-#_(defmacro for
+(defmacro for
   "List comprehension. Takes a vector of one or more
    binding-form/collection-expr pairs, each followed by zero or more
    modifiers, and yields a lazy sequence of evaluations of expr.
@@ -4421,7 +4349,7 @@
                                 (conj (pop groups) (conj (peek groups) [k v]))
                                 (conj groups [k v])))
                             [] (partition 2 seq-exprs)))
-        err (fn [& msg] (throw (IllegalArgumentException. ^String (apply str msg))))
+        err (fn [& msg] (throw (apply str msg)))
         emit-bind (fn emit-bind [[[bind expr & mod-pairs]
                                   & [[_ next-expr] :as next-groups]]]
                     (let [giter (gensym "iter__")
@@ -4469,13 +4397,13 @@
                              (lazy-seq
                                (loop [~gxs ~gxs]
                                  (when-let [~gxs (seq ~gxs)]
-                                   (if (chunked-seq? ~gxs)
+                                   (if false ;; (chunked-seq? ~gxs)
                                      (let [c# (chunk-first ~gxs)
                                            size# (int (count c#))
                                            ~gb (chunk-buffer size#)]
                                        (if (loop [~gi (int 0)]
                                              (if (< ~gi size#)
-                                               (let [~bind (.nth c# ~gi)]
+                                               (let [~bind (clj_core/nth.e c# ~gi)]
                                                  ~(do-cmod mod-pairs))
                                                true))
                                          (chunk-cons
@@ -4892,8 +4820,7 @@
   {:added "1.0"
    :static true}
   [x]
-  (throw "unimplemented hash")
-  #_(. clojure.lang.Util (hasheq x)))
+  (clojerl.IHash/hash.e x))
 
 (defn mix-collection-hash
   "Mix final collection hash for ordered or unordered collections.
@@ -4916,8 +4843,7 @@
    :static true}
   ^long
   [coll]
-  (throw "unimplemented hash")
-  #_(clojure.lang.Murmur3/hashOrdered coll))
+  (clj_murmur3/ordered.e coll))
 
 (defn hash-unordered-coll
   "Returns the hash code, consistent with =, for an external unordered
@@ -4929,8 +4855,7 @@
    :static true}
   ^long
   [coll]
-  (throw "unimplemented hash")
-  #_(clojure.lang.Murmur3/hashUnordered coll))
+  (clj_murmur3/unordered.e coll))
 
 (defn interpose
   "Returns a lazy seq of the elements of coll separated by sep.
@@ -6270,7 +6195,7 @@
 ;; (load "core_proxy")
 (load "core_print")
 ;; (load "genclass")
-;; (load "core_deftype")
+(load "core_deftype")
 ;; (load "core/protocols")
 ;; (load "gvec")
 (load "instant")

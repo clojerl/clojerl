@@ -126,5 +126,5 @@ subvec(Vector, Start, End) ->
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Array}) ->
   Items = lists:map(fun clj_core:str/1, array:to_list(Array)),
-  Strs = clj_utils:binary_join(Items, <<", ">>),
+  Strs = clj_utils:binary_join(Items, <<" ">>),
   <<"[", Strs/binary, "]">>.
