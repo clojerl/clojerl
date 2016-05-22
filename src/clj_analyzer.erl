@@ -998,8 +998,13 @@ parse_catch(Env, List) ->
   Body    = lists:sublist(clj_core:seq_to_list(List), 4, clj_core:count(List)),
 
   clj_utils:throw_when( not is_valid_bind_symbol(ErrName)
-                      , [<<"Bad binding form:">>, ErrName]
+                      , [<<"Bad binding form: ">>, ErrName]
                       , clj_reader:location_meta(ErrName)
+                      ),
+
+  clj_utils:throw_when( not is_valid_error_type(ErrType)
+                      , [<<"Bad error type: ">>, ErrType]
+                      , clj_reader:location_meta(ErrType)
                       ),
 
   Env1 = clj_env:remove(Env, in_try),
@@ -1021,6 +1026,13 @@ parse_catch(Env, List) ->
                },
 
   clj_env:push_expr(Env3, CatchExpr).
+
+-spec is_valid_error_type(any()) -> boolean().
+is_valid_error_type(error) -> true;
+is_valid_error_type(exit)  -> true;
+is_valid_error_type(throw) -> true;
+is_valid_error_type(Form)  ->
+  clj_core:'symbol?'(Form) andalso clj_core:str(Form) =:= <<"_">>.
 
 %%------------------------------------------------------------------------------
 %% Parse var
