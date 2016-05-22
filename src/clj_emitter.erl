@@ -513,7 +513,13 @@ ast(#{op := 'catch'} = Expr, State) ->
    } = Expr,
 
   Anno              = anno_from(Form),
-  ClassAst          = {atom, Anno, ErrType},
+  ClassAst          = case ErrType of
+                        ErrType when is_atom(ErrType) ->
+                          {atom, Anno, ErrType};
+                        ErrType -> % If it's not an atom it's a symbol
+                          ErrTypeBin = clj_core:name(ErrType),
+                          {var, Anno, binary_to_atom(ErrTypeBin, utf8)}
+                      end,
   {NameAst, State1} = pop_ast(ast(Local, State)),
   ClassNameAst      = {tuple, Anno, [ClassAst, NameAst, {var, Anno, '_'}]},
 

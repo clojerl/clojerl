@@ -767,6 +767,40 @@ throw(_Config) ->
    , ret        := #{op := constant, form := 2}
    } = Finally3,
 
+  ct:comment("try, catch with :exit"),
+  #{ op      := 'try'
+   , catches := [Catch4_1]
+   , finally := undefined
+   } = analyze_one(<<"(try 1 (catch :exit e e))">>),
+
+  #{ op    := 'catch'
+   , local := #{op := binding, name := ErrName4_1}
+   , class := exit
+   , body  := #{op := do}
+   } = Catch4_1,
+
+  true = clj_core:equiv(ErrName4_1, clj_core:symbol(<<"e">>)),
+
+  ct:comment("try, catch with _"),
+  #{ op      := 'try'
+   , catches := [Catch5_1]
+   , finally := undefined
+   } = analyze_one(<<"(try 1 (catch _ e e))">>),
+
+  #{ op    := 'catch'
+   , local := #{op := binding, name := ErrName5_1}
+   , class := UnderscoreSym
+   , body  := #{op := do}
+   } = Catch5_1,
+
+  true = clj_core:equiv(ErrName5_1, clj_core:symbol(<<"e">>)),
+  true = clj_core:equiv(UnderscoreSym, clj_core:symbol(<<"_">>)),
+
+  ct:comment("try, catch with invalid value"),
+  ok = try analyze_one(<<"(try 1 (catch bla e e))">>), error
+       catch _ -> ok
+       end,
+
   {comments, ""}.
 
 -spec var(config()) -> result().
