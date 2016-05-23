@@ -37,7 +37,7 @@ get_method(Name, Value) ->
 
 -spec get_method(binary(), any(), any(), map()) -> any().
 get_method(Name, Value, Default, _Hierarchy) ->
-  case get(?MODULE, {Name, Value}) of
+  case get(?MODULE, {Name, clj_utils:strip_meta(Value)}) of
     undefined ->
       case get(?MODULE, {Name, Default}) of
         undefined -> undefined;
@@ -56,7 +56,9 @@ get_method_table(Name) ->
 
 -spec add_method(binary(), any(), any()) -> any().
 add_method(Name, Value, Method) ->
-  gen_server:call(?MODULE, {add_method, Name, Value, Method}).
+  gen_server:call( ?MODULE
+                 , {add_method, Name, clj_utils:strip_meta(Value), Method}
+                 ).
 
 -spec remove_all(binary()) -> boolean().
 remove_all(Name) ->
@@ -88,15 +90,15 @@ handle_call({remove_method, Name, Value}, _From, State) ->
   {reply, true, State}.
 
 handle_cast(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
 handle_info(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
-terminate(_Msg, State) ->
-  {ok, State}.
+terminate(_Reason, _State) ->
+  ok.
 
-code_change(_Msg, _From, State) ->
+code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 %%------------------------------------------------------------------------------
