@@ -217,19 +217,31 @@ dynamic_bindings(_Config) ->
   42 = clj_core:deref(Var),
 
   'clojerl.Var':reset_bindings(Bindings),
-
   85 = clj_core:deref(Var),
-
   'clojerl.Var':pop_bindings(),
 
   42 = clj_core:deref(Var),
 
+  ct:comment("Assign value undefined to a var"),
   'clojerl.Var':push_bindings(#{Var => undefined}),
-
   undefined = clj_core:deref(Var),
-
   'clojerl.Var':pop_bindings(),
 
+  42 = clj_core:deref(Var),
+
+  ct:comment("Nested bindings"),
+  'clojerl.Var':push_bindings(#{Var => 43}),
+  43 = clj_core:deref(Var),
+
+  'clojerl.Var':push_bindings(#{}),
+  43 = clj_core:deref(Var),
+  clj_core:'set!'(Var, 44),
+  44 = clj_core:deref(Var),
+
+  'clojerl.Var':pop_bindings(),
+  44 = clj_core:deref(Var),
+
+  'clojerl.Var':pop_bindings(),
   42 = clj_core:deref(Var),
 
   {comments, ""}.
