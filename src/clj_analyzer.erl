@@ -1048,7 +1048,7 @@ parse_var(Env, List) ->
 
   VarSymbol = clj_core:second(List),
 
-  case resolve(Env, VarSymbol) of
+  case resolve(Env, VarSymbol, false) of
     {{var, Var}, Env1} ->
       VarConstExpr = #{ op   => constant
                       , env  => ?DEBUG(Env)
@@ -1135,6 +1135,13 @@ var_expr(Var, Symbol, _Env) ->
   , clj_env:env()
   }.
 resolve(Env, Symbol) ->
+  resolve(Env, Symbol, true).
+
+-spec resolve(clj_env:env(), 'clojerl.Symbol':env(), boolean()) ->
+  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | undefined
+  , clj_env:env()
+  }.
+resolve(Env, Symbol, CheckPrivate) ->
   CurrentNs = clj_namespace:current(),
   Local     = clj_env:get_local(Env, Symbol),
   NsStr     = clj_core:namespace(Symbol),
@@ -1151,7 +1158,8 @@ resolve(Env, Symbol) ->
           {erl_fun(Env, Symbol), Env};
         Var ->
           CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
-          clj_utils:throw_when( NsStr =/= CurrentNsName
+          clj_utils:throw_when( CheckPrivate
+                                andalso NsStr =/= CurrentNsName
                                 andalso not 'clojerl.Var':is_public(Var)
                               , [Var, <<" is not public">>]
                               , clj_reader:location_meta(Symbol)
