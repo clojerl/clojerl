@@ -3,6 +3,7 @@
   incl_mods,
   [
    'clj_analyzer',
+   'clj_cache',
    'clj_compiler',
    'clj_core',
    'clj_emitter',
@@ -37,6 +38,7 @@
    'clojerl.LazySeq',
    'clojerl.List',
    'clojerl.Map',
+   'clojerl.MultiFn',
    'clojerl.Named',
    'clojerl.Nil',
    'clojerl.Seqable',
