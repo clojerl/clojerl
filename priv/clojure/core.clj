@@ -4920,8 +4920,9 @@
   "Returns the result of (re-find re s) if re fully matches s."
   [re s]
   (if (string? s)
-    (let [matches (re-find re s)]
-      (when (= (first matches) s)
+    (let [matches (re-find re s)
+          matches (if (string? matches) matches (first matches))]
+      (when (= matches s)
         (if (== (count matches) 1)
           (first matches)
           matches)))
