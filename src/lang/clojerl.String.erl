@@ -1,8 +1,9 @@
 -module('clojerl.String').
 
 -behavior('clojerl.Counted').
--behaviour('clojerl.Seqable').
--behaviour('clojerl.Stringable').
+-behavior('clojerl.ISequential').
+-behavior('clojerl.Seqable').
+-behavior('clojerl.Stringable').
 
 -export([ starts_with/2
         , char_at/2
@@ -10,6 +11,7 @@
 
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Seqable.seq'/1]).
+-export(['clojerl.ISequential.noop'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
 -spec starts_with(binary(), binary()) -> boolean().
@@ -31,6 +33,8 @@ char_at(Str, Index) ->
 
 'clojerl.Counted.count'(Str) ->
   erlang:length(unicode:characters_to_list(Str)).
+
+'clojerl.ISequential.noop'(_) -> ok.
 
 'clojerl.Seqable.seq'(<<>>) -> undefined;
 'clojerl.Seqable.seq'(Str) ->
