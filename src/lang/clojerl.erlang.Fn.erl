@@ -12,7 +12,7 @@ prefix(Symbol) ->
   Ns   = clj_core:namespace(Symbol),
   Name = clj_core:name(Symbol),
 
-  PrefixedName   = clj_utils:binary_join([<<"__clj__">>, Name], <<>>),
+  PrefixedName   = <<"__clj__", Name/binary>>,
   PrefixedSymbol = clj_core:symbol(Ns, PrefixedName),
 
   Meta = clj_core:meta(Symbol),
