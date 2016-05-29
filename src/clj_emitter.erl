@@ -461,8 +461,6 @@ ast(#{op := throw} = Expr, State) ->
    } = Expr,
 
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
-  Location    = clj_reader:location_meta(Form),
-  _LocationAst = erl_parse:abstract(Location),
 
   Anno = anno_from(Form),
   Ast  = application_mfa(erlang, throw, [Exception], Anno),

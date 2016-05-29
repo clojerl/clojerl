@@ -4,6 +4,7 @@
 
 -export([ str/1
         , seq/1
+        , count/1
         , complete_coverage/1
         ]).
 
@@ -24,6 +25,14 @@ init_per_suite(Config) ->
 %%------------------------------------------------------------------------------
 %% Test Cases
 %%------------------------------------------------------------------------------
+
+-spec count(config()) -> result().
+count(_Config) ->
+  3 = clj_core:count(<<"abc">>),
+
+  0 = clj_core:count(<<>>),
+
+  {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
@@ -50,5 +59,10 @@ complete_coverage(_Config) ->
   true = 'clojerl.String':starts_with(<<"123456">>, <<"123">>),
 
   false = 'clojerl.String':starts_with(<<"123456">>, <<"a">>),
+
+  <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
+
+
+  ok = 'clojerl.String':'clojerl.ISequential.noop'(ok),
 
   {comments, ""}.

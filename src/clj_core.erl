@@ -125,7 +125,7 @@ nth(Coll, N, NotFound) ->
     false ->
       case 'extends?'('clojerl.ISequential', Type) of
         true  -> clj_utils:nth(N + 1, seq_to_list(Coll));
-        false -> clj_utils:throw([<<"">>, Type])
+        false -> clj_utils:throw([<<"Can't apply nth to type ">>, Type])
       end
   end.
 
