@@ -842,10 +842,9 @@
 
 (defn int
   "Coerce to int"
-  {
-   :inline (fn  [x] `(clj_core/to_int.e ~x))
+  {:inline (fn  [x] `(erlang/trunc.e ~x))
    :added "1.0"}
-  [x] (clj_core/to_int.e x))
+  [x] (erlang/trunc.e x))
 
 (defn nth
   "Returns the value at the index. get returns nil if index out of
@@ -4689,8 +4688,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  (throw "unimplemented io")
-  #_`(let [s# (new java.io.StringWriter)]
+  `(let [s# :standard_io]
      (binding [*out* s#]
        ~@body
        (str s#))))
@@ -4711,8 +4709,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented io")
-  #_(with-out-str
+  (with-out-str
     (apply pr xs)))
 
 (defn prn-str
@@ -4721,8 +4718,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented io")
-  #_(with-out-str
+  (with-out-str
    (apply prn xs)))
 
 (defn print-str
@@ -4731,8 +4727,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented io")
-  #_(with-out-str
+  (with-out-str
     (apply print xs)))
 
 (defn println-str
@@ -4741,8 +4736,7 @@
    :added "1.0"
    :static true}
   [& xs]
-  (throw "unimplemented io")
-  #_(with-out-str
+  (with-out-str
     (apply println xs)))
 
 #_(import clojure.lang.ExceptionInfo clojure.lang.IExceptionInfo)
@@ -6264,3 +6258,21 @@
 ;;------------------------------------------------------------------------------
 
 (load "core_print")
+
+(defmacro simple-benchmark
+  "Runs expr iterations times in the context of a let expression with
+  the given bindings, then prints out the bindings and the expr
+  followed by number of iterations and total time. The optional
+  argument print-fn, defaulting to println, sets function used to
+  print the result. expr's string representation will be produced
+  using pr-str in any case."
+  [bindings expr iterations & {:keys [print-fn] :or {print-fn 'println}}]
+  (let [bs-str   (str bindings)
+        expr-str (str expr)]
+    `(let ~bindings
+       (let [start#   (erlang/monotonic_time.e :nano_seconds)
+             ret#     (dotimes [_# ~iterations] ~expr)
+             end#     (erlang/monotonic_time.e :nano_seconds)
+             elapsed# (/ (- end# start#) 1000000)]
+         (~'println (str ~bs-str ", " ~expr-str ", "
+                      ~iterations " runs, " elapsed# " msecs"))))))
