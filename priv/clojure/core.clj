@@ -909,8 +909,7 @@
 
 ;;math stuff
 (defn ^:private nary-inline
-  ([op] (nary-inline op op))
-  ([op unchecked-op]
+  ([op]
    (fn
      ([x] `(~op ~x))
      ([x y] `(~op ~x ~y))
@@ -937,14 +936,14 @@
 (defn +
   "Returns the sum of nums. (+) returns 0. Does not auto-promote
   longs, will throw on overflow. See also: +'"
-  {:inline (nary-inline 'add 'unchecked_add)
+  {:inline (nary-inline 'add)
    :inline-arities >1?
    :added "1.2"}
   ([] 0)
   ([x] x)
-  ([x y] (+' x y))
+  ([x y] (erlang/+.e x y))
   ([x y & more]
-   (reduce1 + (+ x y) more)))
+   (reduce1 erlang/+.2 (+ x y) more)))
 
 (defn *'
   "Returns the product of nums. (*) returns 1. Supports arbitrary precision.
@@ -961,7 +960,7 @@
 (defn *
   "Returns the product of nums. (*) returns 1. Does not auto-promote
   longs, will throw on overflow. See also: *'"
-  {:inline (nary-inline 'multiply 'unchecked_multiply)
+  {:inline (nary-inline 'multiply)
    :inline-arities >1?
    :added "1.2"}
   ([] 1)
@@ -997,7 +996,7 @@
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result. Does not auto-promote
   longs, will throw on overflow. See also: -'"
-  {:inline (nary-inline 'minus 'unchecked_minus)
+  {:inline (nary-inline 'minus)
    :inline-arities >0?
    :added "1.2"}
   ([x] (-' x))
@@ -1098,130 +1097,6 @@
   {:inline (fn [x] `(dec' ~x))
    :added "1.2"}
   [x] (dec' x))
-
-(defn unchecked-inc-int
-  "Returns a number one greater than x, an int.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_inc ~x)))
-   :added "1.0"}
-  [x]
-  (inc x))
-
-(defn unchecked-inc
-  "Returns a number one greater than x, a long.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_inc ~x)))
-   :added "1.0"}
-  [x]
-  (inc x))
-
-(defn unchecked-dec-int
-  "Returns a number one less than x, an int.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_dec ~x)))
-   :added "1.0"}
-  [x]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_dec x)))
-
-(defn unchecked-dec
-  "Returns a number one less than x, a long.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_dec ~x)))
-   :added "1.0"}
-  [x]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_dec x)))
-
-(defn unchecked-negate-int
-  "Returns the negation of x, an int.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_int_negate ~x)))
-   :added "1.0"}
-  [x]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_negate x)))
-
-(defn unchecked-negate
-  "Returns the negation of x, a long.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x] `(. clojure.lang.Numbers (unchecked_minus ~x)))
-   :added "1.0"}
-  [x]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_minus x)))
-
-(defn unchecked-add-int
-  "Returns the sum of x and y, both int.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_add ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_add x y)))
-
-(defn unchecked-add
-  "Returns the sum of x and y, both long.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_add ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_add x y)))
-
-(defn unchecked-subtract-int
-  "Returns the difference of x and y, both int.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_subtract ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_subtract x y)))
-
-(defn unchecked-subtract
-  "Returns the difference of x and y, both long.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_minus ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_minus x y)))
-
-(defn unchecked-multiply-int
-  "Returns the product of x and y, both int.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_multiply ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_multiply x y)))
-
-(defn unchecked-multiply
-  "Returns the product of x and y, both long.
-  Note - uses a primitive operator subject to overflow."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_multiply ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_multiply x y)))
-
-(defn unchecked-divide-int
-  "Returns the division of x by y, both int.
-  Note - uses a primitive operator subject to truncation."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_divide ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_divide x y)))
-
-(defn unchecked-remainder-int
-  "Returns the remainder of division of x by y, both int.
-  Note - uses a primitive operator subject to truncation."
-  {:inline (fn [x y] `(. clojure.lang.Numbers (unchecked_int_remainder ~x ~y)))
-   :added "1.0"}
-  [x y]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.Numbers (unchecked_int_remainder x y)))
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
@@ -2680,7 +2555,7 @@
        (loop [~i 0]
          (when (< ~i n#)
            ~@body
-           (recur (unchecked-inc ~i)))))))
+           (recur (inc ~i)))))))
 
 (defn map
   "Returns a lazy sequence consisting of the result of applying f to
@@ -3212,7 +3087,7 @@
                            needrec (steppair 0)
                            subform (steppair 1)
                            recform-chunk
-                             `(recur ~seq- ~chunk- ~count- (unchecked-inc ~i-))
+                             `(recur ~seq- ~chunk- ~count- (inc ~i-))
                            steppair-chunk (step recform-chunk (nnext exprs))
                            subform-chunk (steppair-chunk 1)]
                        [true
@@ -3291,7 +3166,7 @@
        (loop [~i 0]
          (when (< ~i n#)
            ~@body
-           (recur (unchecked-inc ~i)))))))
+           (recur (inc ~i)))))))
 
 #_(defn into
   "Returns a new coll consisting of to-coll with all of the items of
@@ -3478,14 +3353,14 @@
 
 (defn short
   "Coerce to short"
-  {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedShortCast 'shortCast) ~x)))
+  {:inline (fn  [x] `(. clojure.lang.RT (~'shortCast ~x)))
    :added "1.0"}
   [^Number x]
   (throw "unsupported short"))
 
 (defn byte
   "Coerce to byte"
-  {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedByteCast 'byteCast) ~x)))
+  {:inline (fn  [x] `(. clojure.lang.RT (~'byteCast ~x)))
    :added "1.0"}
   [^Number x]
   (throw "unimplemented cast to byte")
@@ -3493,7 +3368,7 @@
 
 (defn char
   "Coerce to char"
-  {:inline (fn  [x] `(. clojure.lang.RT (~(if *unchecked-math* 'uncheckedCharCast 'charCast) ~x)))
+  {:inline (fn  [x] `(. clojure.lang.RT (~'charCast ~x)))
    :added "1.1"}
   [x]
   (throw "unimplemented cast to char")
@@ -3504,62 +3379,6 @@
   {:inline (fn  [x] `(clj_core/boolean.e ~x))
    :added "1.0"}
   [x] (clj_core/boolean.e x))
-
-(defn unchecked-byte
-  "Coerce to byte. Subject to rounding or truncation."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedByteCast ~x)))
-   :added "1.3"}
-  [^Number x]
-  (throw "unsupported unchecked math"))
-
-(defn unchecked-short
-  "Coerce to short. Subject to rounding or truncation."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedShortCast ~x)))
-   :added "1.3"}
-  [^Number x]
-  (throw "unsupported unchecked math")
-  #_(clojure.lang.RT/uncheckedShortCast x))
-
-(defn unchecked-char
-  "Coerce to char. Subject to rounding or truncation."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedCharCast ~x)))
-   :added "1.3"}
-  [x]
-  (throw "unsupported unchecked math")
-  #_(. clojure.lang.RT (uncheckedCharCast x)))
-
-(defn unchecked-int
-  "Coerce to int. Subject to rounding or truncation."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedIntCast ~x)))
-   :added "1.3"}
-  [^Number x]
-  (throw "unsupported unchecked math")
-  #_(clojure.lang.RT/uncheckedIntCast x))
-
-(defn unchecked-long
-  "Coerce to long. Subject to rounding or truncation."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedLongCast ~x)))
-   :added "1.3"}
-  [^Number x]
-  (throw "unsupported unchecked math")
-  #_(clojure.lang.RT/uncheckedLongCast x))
-
-(defn unchecked-float
-  "Coerce to float. Subject to rounding."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedFloatCast ~x)))
-   :added "1.3"}
-  [^Number x]
-  (throw "unsupported unchecked math")
-  #_(clojure.lang.RT/uncheckedFloatCast x))
-
-(defn unchecked-double
-  "Coerce to double. Subject to rounding."
-  {:inline (fn  [x] `(. clojure.lang.RT (uncheckedDoubleCast ~x)))
-   :added "1.3"}
-  [^Number x]
-  (throw "unsupported unchecked math")
-  #_(clojure.lang.RT/uncheckedDoubleCast x))
-
 
 (defn number?
   "Returns true if x is a Number"
@@ -4649,12 +4468,12 @@
                                           (= k :when) `(if ~v
                                                          ~(do-cmod etc)
                                                          (recur
-                                                           (unchecked-inc ~gi)))
+                                                           (inc ~gi)))
                                           (keyword? k)
                                             (err "Invalid 'for' keyword " k)
                                           :else
                                             `(do (chunk-append ~gb ~body-expr)
-                                                 (recur (unchecked-inc ~gi)))))]
+                                                 (recur (inc ~gi)))))]
                           `(fn ~giter [~gxs]
                              (lazy-seq
                                (loop [~gxs ~gxs]
@@ -4864,6 +4683,9 @@
   ([s start] (subs s start (erlang/size.e s)))
   ([s start end] (binary/part.e s start (- end start))))
 
+(defn regex? [x]
+  (and (tuple? x) (= (first x) :re_pattern)))
+
 (defn re-run
   "Runs the matching of the pattern over the string using the provided
   options."
@@ -4880,7 +4702,7 @@
    :added "1.0"
    :static true}
   [s]
-  (if (and (tuple? s) (= (first s) :re_pattern))
+  (if (regex? s)
     s
     (second (re/compile.e s))))
 
@@ -5176,7 +4998,7 @@
            (if (< ~idx  (alength a#))
              (do
                (aset ~ret ~idx ~expr)
-               (recur (unchecked-inc ~idx)))
+               (recur (inc ~idx)))
              ~ret))))
 
     (defmacro areduce
@@ -5188,7 +5010,7 @@
       `(let [a# ~a l# (alength a#)]
          (loop  [~idx 0 ~ret ~init]
            (if (< ~idx l#)
-             (recur (unchecked-inc-int ~idx) ~expr)
+             (recur (inc-int ~idx) ~expr)
              ~ret))))
 
     (defn float-array
@@ -5705,7 +5527,7 @@
   "Same as (refer 'clojure.core <filters>)"
   {:added "1.0"}
   [& filters]
-  (apply refer 'clojure.core filters))
+  `(clojure.core/refer '~'clojure.core ~@filters))
 
 (defmacro defonce
   "defs name to have the root value of the expr iff the named var has no root value,
@@ -6267,12 +6089,12 @@
   print the result. expr's string representation will be produced
   using pr-str in any case."
   [bindings expr iterations & {:keys [print-fn] :or {print-fn 'println}}]
-  (let [bs-str   (str bindings)
-        expr-str (str expr)]
+  (let [bs-str   (pr-str bindings)
+        expr-str (pr-str expr)]
     `(let ~bindings
        (let [start#   (erlang/monotonic_time.e :nano_seconds)
              ret#     (dotimes [_# ~iterations] ~expr)
              end#     (erlang/monotonic_time.e :nano_seconds)
              elapsed# (/ (- end# start#) 1000000)]
-         (~'println (str ~bs-str ", " ~expr-str ", "
+         (~'print-fn (str ~bs-str ", " ~expr-str ", "
                       ~iterations " runs, " elapsed# " msecs"))))))
