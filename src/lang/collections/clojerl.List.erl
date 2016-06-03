@@ -5,6 +5,7 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
@@ -19,6 +20,7 @@
         , 'clojerl.IColl.empty'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -61,6 +63,9 @@ new(Items) when is_list(Items) ->
     true  -> clj_core:equiv(X, clj_core:seq(Y));
     false -> false
   end.
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M, data = X}) ->
+  erlang:phash2(X).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

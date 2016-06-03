@@ -88,9 +88,16 @@
 
       lists:all(FunEquiv, maps:keys(X1))
   end;
-'clojerl.IEquiv.equiv'(X, Y) ->
+'clojerl.IEquiv.equiv'(X, Y) when is_map(X) ->
   case clj_core:'map?'(Y) of
-    true  -> clj_core:equiv(Y, X);
+    true  ->
+      Keys = clj_core:keys(Y),
+      Fun = fun(Key) ->
+                maps:is_key(Key, X) andalso
+                  clj_core:equiv(maps:get(Key, X), clj_core:get(Y, Key))
+            end,
+      maps:size(X) == clj_core:count(Y)
+        andalso lists:all(Fun, Keys);
     false -> false
   end.
 

@@ -7,6 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
@@ -24,6 +25,7 @@
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
         ]).
@@ -37,18 +39,27 @@
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
--type type() :: #?TYPE{}.
+-type mappings() :: {map(), map()}.
+-type type()     :: #?TYPE{data :: mappings()}.
 
 -spec new(list()) -> type().
 new(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  #?TYPE{name = ?M, data = maps:from_list(KeyValuePairs)}.
+  Mappings = lists:foldl(fun build_mappings/2, {#{}, #{}}, KeyValuePairs),
+  #?TYPE{name = ?M, data = Mappings}.
 
+%% @private
 -spec build_key_values(list(), list()) -> [{any(), any()}].
 build_key_values(KeyValues, []) ->
   lists:reverse(KeyValues);
 build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
+
+%% @prvivate
+-spec build_mappings({any(), any()}, mappings()) -> mappings().
+build_mappings({K, V}, {Keys, Values}) ->
+  KHash = 'clojerl.IHash':hash(K),
+  {Keys#{KHash => K}, Values#{KHash => V}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -56,71 +67,109 @@ build_key_values(KeyValues, [K, V | Items]) ->
 
 %% clojerl.Associative
 
-'clojerl.Associative.contains_key'(#?TYPE{name = ?M, data = Map}, Key) ->
-  maps:is_key(Key, Map).
+'clojerl.Associative.contains_key'(#?TYPE{name = ?M, data = {Keys, _}}, Key) ->
+  maps:is_key('clojerl.IHash':hash(Key), Keys).
 
-'clojerl.Associative.entry_at'(#?TYPE{name = ?M, data = Map}, Key) ->
-  case maps:is_key(Key, Map) of
+'clojerl.Associative.entry_at'(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
+  Hash = 'clojerl.IHash':hash(Key),
+  case maps:is_key(Hash, Keys) of
     true ->
-      Val = maps:get(Key, Map),
+      Key = maps:get(Hash, Keys),
+      Val = maps:get(Hash, Vals),
       clj_core:vector([Key, Val]);
     false -> undefined
   end.
 
-'clojerl.Associative.assoc'(#?TYPE{name = ?M, data = Map} = M, Key, Value) ->
-  M#?TYPE{data = Map#{Key => Value}}.
+'clojerl.Associative.assoc'(#?TYPE{ name = ?M
+                                  , data = {Keys, Vals}
+                                  } = M
+                           , Key
+                           , Value) ->
+  Hash = 'clojerl.IHash':hash(Key),
+  M#?TYPE{data = {Keys#{Hash => Key}, Vals#{Hash => Value}}}.
 
 %% clojerl.Counted
 
-'clojerl.Counted.count'(#?TYPE{name = ?M, data = Map}) -> maps:size(Map).
+'clojerl.Counted.count'(#?TYPE{name = ?M, data = {Keys, _}}) ->
+  maps:size(Keys).
 
 %% clojerl.IEquiv
 
-'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
+'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = {KeysX, ValsX}}
+                      , #?TYPE{name = ?M, data = {KeysY, ValsY}}
                       ) ->
-  clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+  clj_core:equiv(KeysX, KeysY) andalso clj_core:equiv(ValsX, ValsY);
+'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
   case clj_core:'map?'(Y) of
-    true  -> clj_core:equiv(X, Y);
+    true  ->
+      KeyHashFun = fun(X) -> {X, erlang:phash2(X)} end,
+      KeyHashPairs = lists:map(KeyHashFun, clj_core:keys(Y)),
+      Fun = fun({Key, Hash}) ->
+                maps:is_key(Hash, Keys) andalso
+                  clj_core:equiv(maps:get(Hash, Vals), clj_core:get(Y, Key))
+            end,
+      maps:size(Keys) == clj_core:count(Y)
+        andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
 
 %% clojerl.IFn
 
-'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Map}, [Key]) ->
-  clj_core:get(Map, Key);
-'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Map}, [Key, NotFound]) ->
-  clj_core:get(Map, Key, NotFound);
+'clojerl.IFn.invoke'(#?TYPE{name = ?M} = M, [Key]) ->
+  'clojerl.IFn.invoke'(M, [Key, undefined]);
+'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = {_, Vals}}, [Key, NotFound]) ->
+  Hash = 'clojerl.IHash':hash(Key),
+  maps:get(Hash, Vals, NotFound);
 'clojerl.IFn.invoke'(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
 %% clojerl.IColl
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Map} = HashMap, X) ->
-  HashMap#?TYPE{data = clj_core:conj(Map, X)}.
+'clojerl.IColl.cons'(#?TYPE{name = ?M, data = {Keys, Vals}} = Map, X) ->
+  IsVector = clj_core:'vector?'(X),
+  IsMap    = clj_core:'map?'(X),
+  case clj_core:seq_to_list(X) of
+    [K, V] when IsVector ->
+      Hash = 'clojerl.IHash':hash(K),
+      Map#?TYPE{data = {Keys#{Hash => K}, Vals#{Hash => V}}};
+    KVs when IsMap ->
+      Fun = fun(KV, Acc) ->
+                clj_core:assoc(Acc, clj_core:first(KV), clj_core:second(KV))
+            end,
+      lists:foldl(Fun, Map, KVs);
+    _ ->
+      throw(<<"Can't conj something that is not a key/value pair or "
+              "another map to a map.">>)
+  end.
 
 'clojerl.IColl.empty'(_) -> new([]).
+
+%% clojerl.IHash
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Map}) ->
+  erlang:phash2(Map).
 
 %% clojerl.ILookup
 
 'clojerl.ILookup.get'(#?TYPE{name = ?M} = Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).
 
-'clojerl.ILookup.get'(#?TYPE{name = ?M, data = Map}, Key, NotFound) ->
-  maps:get(Key, Map, NotFound).
+'clojerl.ILookup.get'(#?TYPE{name = ?M, data = {_, Vals}}, Key, NotFound) ->
+  Hash = 'clojerl.IHash':hash(Key),
+  maps:get(Hash, Vals, NotFound).
 
 %% clojerl.IMap
 
-'clojerl.IMap.keys'(#?TYPE{name = ?M, data = Map}) ->
-  maps:keys(Map).
+'clojerl.IMap.keys'(#?TYPE{name = ?M, data = {Keys, _}}) ->
+  maps:values(Keys).
 
-'clojerl.IMap.vals'(#?TYPE{name = ?M, data = Map}) ->
-  maps:values(Map).
+'clojerl.IMap.vals'(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  maps:values(Vals).
 
-'clojerl.IMap.without'(#?TYPE{name = ?M, data = Map} = M, Key) ->
-  M#?TYPE{data = maps:remove(Key, Map)}.
+'clojerl.IMap.without'(#?TYPE{name = ?M, data = {Keys, Vals}} = M, Key) ->
+  Hash = 'clojerl.IHash':hash(Key),
+  M#?TYPE{data = {maps:remove(Hash, Keys), maps:remove(Hash, Vals)}}.
 
 %% clojerl.IMeta
 
@@ -132,24 +181,23 @@ build_key_values(KeyValues, [K, V | Items]) ->
 
 %% clojerl.Seqable
 
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Map}) ->
-  FoldFun = fun(K, V, List) ->
-                [clj_core:vector([K, V]) | List]
+'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
+  FoldFun = fun(Hash, K, List) ->
+                [clj_core:vector([K, maps:get(Hash, Vals)]) | List]
             end,
-  case maps:fold(FoldFun, [], Map) of
+  case maps:fold(FoldFun, [], Keys) of
     [] -> undefined;
     X -> X
   end.
 
 %% clojerl.Stringable
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Map}) ->
-  StrFun = fun(Key) ->
-               KeyStr = clj_core:str(Key),
-               ValStr = clj_core:str(maps:get(Key, Map)),
-
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
+  StrFun = fun(Hash) ->
+               KeyStr = clj_core:str(maps:get(Hash, Keys)),
+               ValStr = clj_core:str(maps:get(Hash, Vals)),
                clj_utils:binary_join([KeyStr, ValStr], <<" ">>)
            end,
-  KeyValueStrs = lists:map(StrFun, maps:keys(Map)),
+  KeyValueStrs = lists:map(StrFun, maps:keys(Keys)),
   Strs = clj_utils:binary_join(KeyValueStrs, <<", ">>),
   <<"{", Strs/binary, "}">>.
