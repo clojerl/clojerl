@@ -1,6 +1,7 @@
 -module('clojerl.String').
 
 -behavior('clojerl.Counted').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
@@ -11,6 +12,7 @@
 
 -export(['clojerl.Counted.count'/1]).
 -export(['clojerl.Seqable.seq'/1]).
+-export(['clojerl.IHash.hash'/1]).
 -export(['clojerl.ISequential.noop'/1]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -33,6 +35,9 @@ char_at(Str, Index) ->
 
 'clojerl.Counted.count'(Str) ->
   erlang:length(unicode:characters_to_list(Str)).
+
+'clojerl.IHash.hash'(Str) ->
+  erlang:phash2(Str).
 
 'clojerl.ISequential.noop'(_) -> ok.
 

@@ -5,6 +5,7 @@
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
@@ -35,6 +36,7 @@
 -export(['clojerl.IDeref.deref'/1]).
 -export(['clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -189,6 +191,9 @@ dynamic_binding(Var, Value) ->
   true;
 'clojerl.IEquiv.equiv'(_, _) ->
   false.
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Data}) ->
+  erlang:phash2(Data).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

@@ -6,6 +6,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.Seqable').
@@ -18,6 +19,7 @@
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -72,6 +74,11 @@ new(Values) when is_list(Values) ->
 'clojerl.IFn.invoke'(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
+
+%% clojerl.IHash
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M, data = MapSet}) ->
+  erlang:phash2(MapSet).
 
 %% clojerl.IMeta
 
