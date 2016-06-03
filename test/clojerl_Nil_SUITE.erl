@@ -3,6 +3,7 @@
 -export([all/0, init_per_suite/1]).
 
 -export([ cons/1
+        , hash/1
         , seq/1
         , str/1
         ]).
@@ -34,6 +35,13 @@ cons(_Config) ->
 
   1    = clj_core:count(OneList),
   true = clj_core:equiv(OneList, [1]),
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  HashNil = 'clojerl.IHash':hash(undefined),
+  true = is_integer(HashNil),
 
   {comments, ""}.
 

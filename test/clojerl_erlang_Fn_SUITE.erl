@@ -3,6 +3,7 @@
 -export([all/0, init_per_suite/1]).
 
 -export([ invoke/1
+        , hash/1
         , str/1
         ]).
 
@@ -23,6 +24,19 @@ init_per_suite(Config) ->
 %%------------------------------------------------------------------------------
 %% Test Cases
 %%------------------------------------------------------------------------------
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  ct:comment("Different instances of the same function are different"),
+  OkFun1 = fun() -> ok end,
+  OkFun2 = fun() -> ok end,
+
+  HashOkFun1 = 'clojerl.IHash':hash(OkFun1),
+  HashOkFun2 = 'clojerl.IHash':hash(OkFun2),
+
+  true = HashOkFun1 =/= HashOkFun2,
+
+  {comments, ""}.
 
 -spec invoke(config()) -> result().
 invoke(_Config) ->

@@ -2,6 +2,7 @@
 
 -export([all/0, init_per_suite/1]).
 
+-export([hash/1]).
 -export([str/1]).
 
 -type config() :: list().
@@ -21,6 +22,15 @@ init_per_suite(Config) ->
 %%------------------------------------------------------------------------------
 %% Test Cases
 %%------------------------------------------------------------------------------
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  ct:comment("Check the hash for true and false are different"),
+  HashTrue  = 'clojerl.IHash':hash(true),
+  HashFalse = 'clojerl.IHash':hash(false),
+  true = HashTrue =/= HashFalse,
+
+  {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
