@@ -128,9 +128,14 @@
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
+(defmethod print-method :clojerl.LazySeq [o, ^Writer w]
+  (print-meta o w)
+  (print-sequential "(" pr-on " " ")" o w))
+
 (defmethod print-dup :clojerl.List [o w] (print-method o w))
 (defmethod print-dup :clojerl.erlang.List [o w] (print-method o w))
 (defmethod print-dup :clojerl.Cons [o w] (print-method o w))
+(defmethod print-dup :clojerl.LazySeq [o w] (print-method o w))
 
 (def ^{:tag String
        :doc "Returns escape string for char or nil if none"
