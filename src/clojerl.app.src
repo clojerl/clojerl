@@ -2,7 +2,7 @@
   application, clojerl,
   [
    {description, "Clojure for the Erlang VM"},
-   {vsn, "0.2.5"},
+   {vsn, "1.7.0"},
    {applications, [kernel, stdlib]},
    {mod, {clojerl, []}},
    {modules, []},

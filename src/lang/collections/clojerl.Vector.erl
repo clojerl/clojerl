@@ -6,6 +6,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Indexed').
 -behavior('clojerl.ISequential').
@@ -21,6 +22,7 @@
         ]).
 -export([ 'clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -81,6 +83,9 @@ subvec(Vector, Start, End) ->
 'clojerl.IFn.invoke'(#?TYPE{name = ?M}, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Array}) ->
+  erlang:phash2(Array).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

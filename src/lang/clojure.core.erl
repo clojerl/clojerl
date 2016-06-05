@@ -28,6 +28,13 @@
 
        , <<"*assert*">> =>
            {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*assert*">>}, #{}}
+       , <<"*read-eval*">> =>
+           {'7ype', 'clojerl.Var', {<<"clojure.core">>, <<"*read-eval*">>}, #{}}
+       , <<"*command-line-args*">> =>
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*command-line-args*">>}
+           , #{}
+           }
 
        , <<"*out*">> => { '7ype', 'clojerl.Var'
                         , {<<"clojure.core">>, <<"*out*">>}
@@ -35,6 +42,10 @@
                         }
        , <<"*in*">>  => { '7ype', 'clojerl.Var'
                         , {<<"clojure.core">>, <<"*in*">>}
+                        , #{}
+                        }
+       , <<"*err*">>  => { '7ype', 'clojerl.Var'
+                        , {<<"clojure.core">>, <<"*err*">>}
                         , #{}
                         }
 
@@ -65,9 +76,12 @@
         , '*compile-files*__val'/0
 
         , '*assert*__val'/0
+        , '*read-eval*__val'/0
+        , '*command-line-args*__val'/0
 
         , '*out*__val'/0
         , '*in*__val'/0
+        , '*err*__val'/0
 
         , '*print-dup*__val'/0
         , '*flush-on-newline*__val'/0
@@ -128,11 +142,20 @@ ns__val() ->
 '*assert*__val'() ->
   var_value(<<"#'clojure.core/*assert*">>, true).
 
+'*read-eval*__val'() ->
+  var_value(<<"#'clojure.core/*read-eval*">>, true).
+
+'*command-line-args*__val'() ->
+  var_value(<<"#'clojure.core/*command-line-args*">>, true).
+
 '*out*__val'() ->
   var_value(<<"#'clojure.core/*out*">>, standard_io).
 
 '*in*__val'() ->
   var_value(<<"#'clojure.core/*in*">>, standard_io).
+
+'*err*__val'() ->
+  var_value(<<"#'clojure.core/*err*">>, standard_io).
 
 '*print-dup*__val'() ->
   var_value(<<"#'clojure.core/*print-dup*">>, false).

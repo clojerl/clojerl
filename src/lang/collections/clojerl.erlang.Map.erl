@@ -7,6 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.Seqable').
@@ -22,6 +23,7 @@
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
         ]).
@@ -116,6 +118,8 @@ remove_meta(K, V, Acc) ->
 'clojerl.IFn.invoke'(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
+
+'clojerl.IHash.hash'(Map) -> erlang:phash2(Map).
 
 'clojerl.ILookup.get'(Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).

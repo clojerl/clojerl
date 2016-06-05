@@ -8,6 +8,7 @@
         , seq/1
         , equiv/1
         , invoke/1
+        , hash/1
         , cons/1
         , associative/1
         , complete_coverage/1
@@ -121,6 +122,22 @@ invoke(_Config) ->
   ct:comment("Invoke a map with three arguments"),
   ok = try clj_core:invoke(Map, [1, 2, 3]), error
        catch _:_ -> ok end,
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  Map1 = #{1 => a, 2 => b},
+  Map1 = #{2 => b, 1 => a},
+  Map2 = #{2 => b, 1 => a, 3 => c},
+  Map3 = #{2.0 => b, 1.0 => a, 3.0 => c},
+
+  Hash1 = 'clojerl.IHash':hash(Map1),
+  Hash2 = 'clojerl.IHash':hash(Map2),
+  Hash3 = 'clojerl.IHash':hash(Map3),
+
+  true = Hash1 =/= Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 
