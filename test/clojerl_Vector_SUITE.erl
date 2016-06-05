@@ -6,6 +6,7 @@
         , count/1
         , str/1
         , is_sequential/1
+        , hash/1
         , invoke/1
         , nth/1
         , seq/1
@@ -68,6 +69,21 @@ str(_Config) ->
 is_sequential(_Config) ->
   Vector = clj_core:vector([1, 2, 3]),
   true = clj_core:'sequential?'(Vector),
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  Vector1 = clj_core:vector([1, 2, 3]),
+  Vector2 = clj_core:vector([1, 3, 2]),
+  Vector3 = clj_core:vector([1.0, 2, 3]),
+
+  Hash1 = 'clojerl.IHash':hash(Vector1),
+  Hash2 = 'clojerl.IHash':hash(Vector2),
+  Hash3 = 'clojerl.IHash':hash(Vector3),
+
+  true = Hash1 =/= Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 

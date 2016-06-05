@@ -7,6 +7,7 @@
         , str/1
         , seq/1
         , equiv/1
+        , hash/1
         , cons/1
         , invoke/1
         , disjoin/1
@@ -91,6 +92,22 @@ equiv(_Config) ->
   false = clj_core:equiv(Set1, whatever),
   false = clj_core:equiv(Set1, 1),
   false = clj_core:equiv(Set1, [1]),
+
+  {comments, ""}.
+
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  List1 = clj_core:hash_set([1, 2, 3]),
+  List2 = clj_core:hash_set([1, 3, 2]),
+  List3 = clj_core:hash_set([1.0, 2, 3]),
+
+  Hash1 = 'clojerl.IHash':hash(List1),
+  Hash2 = 'clojerl.IHash':hash(List2),
+  Hash3 = 'clojerl.IHash':hash(List3),
+
+  true = Hash1 == Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 

@@ -1,11 +1,13 @@
 -module('clojerl.erlang.Tuple').
 
 -behavior('clojerl.Counted').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
 -export(['clojerl.Counted.count'/1]).
+-export(['clojerl.IHash.hash'/1]).
 -export(['clojerl.ISequential.noop'/1]).
 -export(['clojerl.Seqable.seq'/1]).
 -export(['clojerl.Stringable.str'/1]).
@@ -15,6 +17,8 @@
 %%------------------------------------------------------------------------------
 
 'clojerl.Counted.count'(Tuple) -> tuple_size(Tuple).
+
+'clojerl.IHash.hash'(Tuple) -> erlang:phash2(Tuple).
 
 'clojerl.ISequential.noop'(_) -> ok.
 

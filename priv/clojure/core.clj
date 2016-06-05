@@ -4231,10 +4231,12 @@
                    pmap
                    (fn [bvec b v]
                      (let [gmap (gensym "map__")
-                           gmapseq (with-meta gmap {:tag 'clojure.lang.ISeq})
+                           gmapseq (with-meta gmap {:tag 'clojerl.ISeq})
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
-                                      (conj gmap) (conj `(if (seq? ~gmap) (clojerl.Map/new.e (seq ~gmapseq)) ~gmap))
+                                      (conj gmap) (conj `(if (seq? ~gmap)
+                                                           (clojerl.Map/new.e (clj_core/seq_to_list.e ~gmapseq))
+                                                           ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
                                            (conj ret (:as b) gmap)
@@ -6096,5 +6098,5 @@
              ret#     (dotimes [_# ~iterations] ~expr)
              end#     (erlang/monotonic_time.e :nano_seconds)
              elapsed# (/ (- end# start#) 1000000)]
-         (~'print-fn (str ~bs-str ", " ~expr-str ", "
+         (~print-fn (str ~bs-str ", " ~expr-str ", "
                       ~iterations " runs, " elapsed# " msecs"))))))
