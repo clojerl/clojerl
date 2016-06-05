@@ -1617,6 +1617,10 @@
 
 ;;;;;;;;; var stuff
 
+(defn set!
+  [x val]
+  (clj_core/set!.e x val))
+
 (defmacro ^{:private true} assert-args
   [& pairs]
   `(do (when-not ~(first pairs)
@@ -4739,8 +4743,8 @@
   [re s]
   (if (string? s)
     (let [matches (re-find re s)
-          matches (if (string? matches) matches (first matches))]
-      (when (= matches s)
+          match   (if (string? matches) matches (first matches))]
+      (when (= match s)
         (if (== (count matches) 1)
           (first matches)
           matches)))
