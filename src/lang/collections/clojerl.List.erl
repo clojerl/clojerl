@@ -65,7 +65,7 @@ new(Items) when is_list(Items) ->
   end.
 
 'clojerl.IHash.hash'(#?TYPE{name = ?M, data = X}) ->
-  erlang:phash2(X).
+  clj_murmur3:ordered(X).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

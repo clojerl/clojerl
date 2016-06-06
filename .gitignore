@@ -6,3 +6,6 @@ logs/
 clojerl.d
 *.trace
 callgrind.*
+*.so
+*.o
+c_src/*.mk

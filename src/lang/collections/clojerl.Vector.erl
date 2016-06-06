@@ -85,7 +85,7 @@ subvec(Vector, Start, End) ->
   throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
 
 'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Array}) ->
-  erlang:phash2(Array).
+  clj_murmur3:ordered(array:to_list(Array)).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

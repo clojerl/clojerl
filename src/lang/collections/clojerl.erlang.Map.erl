@@ -119,7 +119,8 @@ remove_meta(K, V, Acc) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
-'clojerl.IHash.hash'(Map) -> erlang:phash2(Map).
+'clojerl.IHash.hash'(Map) ->
+  clj_murmur3:unordered(Map).
 
 'clojerl.ILookup.get'(Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).

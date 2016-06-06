@@ -62,8 +62,8 @@ new(Fn) when is_function(Fn) ->
     false -> false
   end.
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M, data = LazySeq}) ->
-  erlang:phash2(LazySeq).
+'clojerl.IHash.hash'(#?TYPE{name = ?M} = LazySeq) ->
+  clj_murmur3:ordered(LazySeq).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

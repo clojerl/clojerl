@@ -33,7 +33,7 @@
 
 'clojerl.Counted.count'(Items) -> length(Items).
 
-'clojerl.IHash.hash'(List) -> erlang:phash2(List).
+'clojerl.IHash.hash'(List) -> clj_murmur3:ordered(List).
 
 'clojerl.Stringable.str'([]) ->
   <<"()">>;
