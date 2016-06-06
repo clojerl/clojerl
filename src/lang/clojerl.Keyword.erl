@@ -48,6 +48,8 @@ find(Namespace, Name) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.IFn
+
 'clojerl.IFn.invoke'(Keyword, [Map]) ->
   clj_core:get(Map, Keyword);
 'clojerl.IFn.invoke'(Keyword, [Map, NotFound]) ->
@@ -60,6 +62,8 @@ find(Namespace, Name) ->
 
 'clojerl.IHash.hash'(Keyword) when is_atom(Keyword) ->
   erlang:phash2(Keyword).
+
+%% clojerl.Named
 
 'clojerl.Named.name'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
@@ -74,6 +78,8 @@ find(Namespace, Name) ->
     [_] -> undefined;
     [Namespace, _] -> Namespace
   end.
+
+%% clojerl.Stringable
 
 'clojerl.Stringable.str'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),

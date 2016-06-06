@@ -18,7 +18,7 @@
 
 'clojerl.Counted.count'(Tuple) -> tuple_size(Tuple).
 
-'clojerl.IHash.hash'(Tuple) -> erlang:phash2(Tuple).
+'clojerl.IHash.hash'(Tuple) -> clj_murmur3:ordered(Tuple).
 
 'clojerl.ISequential.noop'(_) -> ok.
 

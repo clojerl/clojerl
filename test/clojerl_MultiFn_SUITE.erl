@@ -78,11 +78,11 @@ get_method(_Config) ->
   vector_method = 'clojerl.MultiFn':get_method(<<"test-method">>, Vector),
   vector_method = 'clojerl.MultiFn':get_method(<<"test-method">>, VectorMeta),
 
-  ct:comment("When elements differ in metadata the method won't be found"),
-  false = vector_method =:= 'clojerl.MultiFn':get_method( <<"test-method">>
+  ct:comment("When elements differ in metadata the method should be found"),
+  true = vector_method =:= 'clojerl.MultiFn':get_method( <<"test-method">>
                                                         , Vector2
                                                         ),
-  false = vector_method =:= 'clojerl.MultiFn':get_method( <<"test-method">>
+  true = vector_method =:= 'clojerl.MultiFn':get_method( <<"test-method">>
                                                         , VectorMeta2
                                                         ),
 

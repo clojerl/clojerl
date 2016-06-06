@@ -58,7 +58,7 @@ new(First, More) ->
   end.
 
 'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Cons}) ->
-  erlang:phash2(Cons).
+  clj_murmur3:ordered(Cons).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

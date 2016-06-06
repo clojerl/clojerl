@@ -80,7 +80,7 @@ new(Values) when is_list(Values) ->
 %% clojerl.IHash
 
 'clojerl.IHash.hash'(#?TYPE{name = ?M, data = MapSet}) ->
-  erlang:phash2(MapSet).
+  clj_murmur3:unordered(maps:values(MapSet)).
 
 %% clojerl.IMeta
 

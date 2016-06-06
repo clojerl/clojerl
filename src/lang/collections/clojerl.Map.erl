@@ -147,8 +147,8 @@ build_mappings({K, V}, {Keys, Values}) ->
 
 %% clojerl.IHash
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Map}) ->
-  erlang:phash2(Map).
+'clojerl.IHash.hash'(#?TYPE{name = ?M} = Map) ->
+  clj_murmur3:unordered(Map).
 
 %% clojerl.ILookup
 
