@@ -29,7 +29,7 @@ coverage-html:
 	@find . -name "cover.html" | sort -r | head -1 | xargs open
 
 tests-shell: test-build
-	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS} # -s sync
+	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}
 
 repl: SHELL_OPTS = -pa priv -name ${PROJECT}-repl@`hostname` -setcookie clojerl -s ${PROJECT}
 repl: SHELL_OPTS += -s clj_repl repl -noshell

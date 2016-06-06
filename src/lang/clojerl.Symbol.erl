@@ -3,6 +3,7 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
@@ -13,6 +14,7 @@
         , 'clojerl.Named.namespace'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -57,3 +59,6 @@ new(Namespace, Name) when is_binary(Namespace) orelse Namespace == undefined,
   true;
 'clojerl.IEquiv.equiv'(_, _) ->
   false.
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Data}) ->
+  erlang:phash2(Data).

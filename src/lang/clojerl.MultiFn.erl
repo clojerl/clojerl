@@ -27,6 +27,8 @@
 
 -type multifn() :: #multifn{}.
 
+-define(METHODS, ?MODULE).
+
 %%------------------------------------------------------------------------------
 %% API
 %%------------------------------------------------------------------------------
@@ -37,9 +39,9 @@ get_method(Name, Value) ->
 
 -spec get_method(binary(), any(), any(), map()) -> any().
 get_method(Name, Value, Default, _Hierarchy) ->
-  case get(?MODULE, {Name, clj_utils:strip_meta(Value)}) of
+  case get(?MODULE, {Name, 'clojerl.IHash':hash(Value)}) of
     undefined ->
-      case get(?MODULE, {Name, Default}) of
+      case get(?MODULE, {Name, 'clojerl.IHash':hash(Default)}) of
         undefined -> undefined;
         Method -> Method#multifn.method
       end;
@@ -57,7 +59,7 @@ get_method_table(Name) ->
 -spec add_method(binary(), any(), any()) -> any().
 add_method(Name, Value, Method) ->
   gen_server:call( ?MODULE
-                 , {add_method, Name, clj_utils:strip_meta(Value), Method}
+                 , {add_method, Name, Value, 'clojerl.IHash':hash(Value), Method}
                  ).
 
 -spec remove_all(binary()) -> boolean().
@@ -66,7 +68,7 @@ remove_all(Name) ->
 
 -spec remove_method(binary(), any()) -> boolean().
 remove_method(Name, Value) ->
-  gen_server:call(?MODULE, {remove_method, Name, Value}).
+  gen_server:call(?MODULE, {remove_method, Name, 'clojerl.IHash':hash(Value)}).
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
@@ -76,17 +78,17 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-  ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
+  ets:new(?METHODS, [named_table, set, protected, {keypos, 2}]),
   {ok, undefined}.
 
-handle_call({add_method, Name, Value, Method}, _From, State) ->
-  #multifn{} = new_method(Name, Value, Method),
+handle_call({add_method, Name, Value, Hash, Method}, _From, State) ->
+  #multifn{} = new_method(Name, Value, Hash, Method),
   {reply, ok, State};
 handle_call({remove_all, Name}, _From, State) ->
-  true = ets:match_delete(?MODULE, by_name(Name)),
+  true = ets:match_delete(?METHODS, by_name(Name)),
   {reply, true, State};
-handle_call({remove_method, Name, Value}, _From, State) ->
-  true = ets:delete(?MODULE, {Name, Value}),
+handle_call({remove_method, Name, Hash}, _From, State) ->
+  true = ets:delete(?METHODS, {Name, Hash}),
   {reply, true, State}.
 
 handle_cast(_Msg, State) ->
@@ -105,14 +107,14 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec new_method(binary(), any(), any()) -> multifn().
-new_method(Name, Value, Method) ->
-  MultiFn = #multifn{ id     = {Name, Value}
+-spec new_method(binary(), any(), integer(), any()) -> multifn().
+new_method(Name, Value, Hash, Method) ->
+  MultiFn = #multifn{ id     = {Name, Hash}
                     , name   = Name
                     , value  = Value
                     , method = Method
                     },
-  save(?MODULE, MultiFn).
+  save(?METHODS, MultiFn).
 
 -spec save(ets:tid(), term()) -> term().
 save(Table, Value) ->

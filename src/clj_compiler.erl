@@ -235,7 +235,6 @@ compile_forms(Forms, Opts) ->
       BeamPath     = filename:join([OutputDir, BeamFilename]),
       ok           = file:write_file(BeamPath, Binary),
 
-
       BeamPathStr = binary_to_list(BeamPath),
       {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
       Name;

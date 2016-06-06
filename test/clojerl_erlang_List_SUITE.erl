@@ -6,6 +6,7 @@
         , count/1
         , str/1
         , is_sequential/1
+        , hash/1
         , seq/1
         , equiv/1
         , cons/1
@@ -65,6 +66,21 @@ str(_Config) ->
 is_sequential(_Config) ->
   List = [1, 2, 3],
   true = clj_core:'sequential?'(List),
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  List1 = [1, 2, 3],
+  List2 = [1, 3, 2],
+  List3 = [1.0, 2, 3],
+
+  Hash1 = 'clojerl.IHash':hash(List1),
+  Hash2 = 'clojerl.IHash':hash(List2),
+  Hash3 = 'clojerl.IHash':hash(List3),
+
+  true = Hash1 =/= Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 

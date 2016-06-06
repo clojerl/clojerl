@@ -362,7 +362,7 @@ get(X, Key) ->
   end.
 
 -spec get(any(), any(), any()) -> any().
-get(undefined, _Key, _NotFound) -> undefined;
+get(undefined, _Key, NotFound) -> NotFound;
 get(X, Key, NotFound) ->
   case 'set?'(X) of
     true  ->
