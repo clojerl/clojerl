@@ -86,6 +86,11 @@ get_method(_Config) ->
                                                         , VectorMeta2
                                                         ),
 
+  ct:comment("Some other dispatch value will return the default implementation"),
+  default_method =
+    'clojerl.MultiFn':get_method(<<"test-method">>, hello, default, undefined),
+
+
   ct:comment("Try to get a non-existent method"),
   undefined = 'clojerl.MultiFn':get_method( <<"doesn't-exists">>, whatever),
 
@@ -98,10 +103,12 @@ get_method_table(_Config) ->
   HelloSym    = clj_core:symbol(<<"hello">>),
   Vector      = clj_core:vector([default, HelloSym]),
 
-  #{ default  := default_method
-   , HelloSym := symbol_method
-   , Vector   := vector_method
-   } = MethodTable,
+  ExpectedTable = #{ default  => default_method
+                   , HelloSym => symbol_method
+                   , Vector   => vector_method
+                   },
+
+  true = clj_core:equiv(ExpectedTable, MethodTable),
 
   3 = maps:size(MethodTable),
 
