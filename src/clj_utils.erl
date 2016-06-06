@@ -10,8 +10,6 @@
         , parse_symbol/1
         , desugar_meta/1
 
-        , strip_meta/1
-
         , binary_append/2
         , binary_join/2
         , ends_with/2
@@ -157,14 +155,6 @@ desugar_meta(Meta) ->
     _ ->
       throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
-
--spec strip_meta(any()) -> any().
-strip_meta({?TYPE, Type, Data, undefined}) ->
-  {?TYPE, Type, Data, undefined};
-strip_meta({?TYPE, Type, Data, Map = #{}}) ->
-  {?TYPE, Type, Data, maps:remove(meta, Map)};
-strip_meta(X) ->
-  X.
 
 -spec binary_append([binary()], binary()) -> binary().
 binary_append(X, Y) when is_binary(X), is_binary(Y) ->
