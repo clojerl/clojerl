@@ -3,6 +3,7 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
@@ -14,6 +15,7 @@
 -export([ 'clojerl.IColl.cons'/2
         , 'clojerl.IColl.empty'/1
         ]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.ISeq.first'/1
         , 'clojerl.ISeq.more'/1
         , 'clojerl.ISeq.next'/1
@@ -30,6 +32,8 @@
 %%------------------------------------------------------------------------------
 
 'clojerl.Counted.count'(Items) -> length(Items).
+
+'clojerl.IHash.hash'(List) -> clj_murmur3:ordered(List).
 
 'clojerl.Stringable.str'([]) ->
   <<"()">>;

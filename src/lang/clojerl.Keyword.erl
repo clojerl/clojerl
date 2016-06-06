@@ -1,6 +1,7 @@
 -module('clojerl.Keyword').
 
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
@@ -11,6 +12,7 @@
         ]).
 
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
@@ -46,6 +48,8 @@ find(Namespace, Name) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.IFn
+
 'clojerl.IFn.invoke'(Keyword, [Map]) ->
   clj_core:get(Map, Keyword);
 'clojerl.IFn.invoke'(Keyword, [Map, NotFound]) ->
@@ -53,6 +57,13 @@ find(Namespace, Name) ->
 'clojerl.IFn.invoke'(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>).
+
+%% clojerl.IHash
+
+'clojerl.IHash.hash'(Keyword) when is_atom(Keyword) ->
+  erlang:phash2(Keyword).
+
+%% clojerl.Named
 
 'clojerl.Named.name'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
@@ -67,6 +78,8 @@ find(Namespace, Name) ->
     [_] -> undefined;
     [Namespace, _] -> Namespace
   end.
+
+%% clojerl.Stringable
 
 'clojerl.Stringable.str'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),

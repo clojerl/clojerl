@@ -8,6 +8,7 @@
         , seq/1
         , equiv/1
         , invoke/1
+        , hash/1
         , cons/1
         , associative/1
         , complete_coverage/1
@@ -86,9 +87,13 @@ equiv(_Config) ->
   Map2 = #{Symbol => 4, 1 => 2},
   true = clj_core:equiv(Map1, Map2),
 
-  ct:comment("Check that maps with the same elements are not equivalent"),
+  ct:comment("Check that maps with the same number of keys are not equivalent"),
   Map3 = #{5 => 6, 3 => 4},
   false = clj_core:equiv(Map1, Map3),
+
+  ct:comment("Check that maps with different number of keys are not equivalent"),
+  Map4 = #{5 => 6, 3 => 4, 7 => 8},
+  false = clj_core:equiv(Map1, Map4),
 
   ct:comment("A clojerl.erlang.Map and an clojerl.Map"),
   true = clj_core:equiv(Map1, clj_core:hash_map([1, 2, Symbol, 4])),
@@ -117,6 +122,22 @@ invoke(_Config) ->
   ct:comment("Invoke a map with three arguments"),
   ok = try clj_core:invoke(Map, [1, 2, 3]), error
        catch _:_ -> ok end,
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  Map1 = #{1 => a, 2 => b},
+  Map1 = #{2 => b, 1 => a},
+  Map2 = #{2 => b, 1 => a, 3 => c},
+  Map3 = #{2.0 => b, 1.0 => a, 3.0 => c},
+
+  Hash1 = 'clojerl.IHash':hash(Map1),
+  Hash2 = 'clojerl.IHash':hash(Map2),
+  Hash3 = 'clojerl.IHash':hash(Map3),
+
+  true = Hash1 =/= Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 

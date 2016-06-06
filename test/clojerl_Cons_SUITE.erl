@@ -6,6 +6,7 @@
         , count/1
         , str/1
         , is_sequential/1
+        , hash/1
         , seq/1
         , equiv/1
         , cons/1
@@ -58,6 +59,21 @@ str(_Config) ->
 is_sequential(_Config) ->
   Cons = range(1, 3),
   true = clj_core:'sequential?'(Cons),
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  Cons1 = range(1, 4),
+  Cons2 = range(1, 3),
+  Cons3 = range(1.0, 3.0),
+
+  Hash1 = 'clojerl.IHash':hash(Cons1),
+  Hash2 = 'clojerl.IHash':hash(Cons2),
+  Hash3 = 'clojerl.IHash':hash(Cons3),
+
+  true = Hash1 =/= Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 

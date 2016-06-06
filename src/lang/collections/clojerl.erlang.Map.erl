@@ -7,6 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.Seqable').
@@ -22,6 +23,7 @@
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
 -export(['clojerl.IFn.invoke'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.ILookup.get'/2
         , 'clojerl.ILookup.get'/3
         ]).
@@ -88,9 +90,16 @@
 
       lists:all(FunEquiv, maps:keys(X1))
   end;
-'clojerl.IEquiv.equiv'(X, Y) ->
+'clojerl.IEquiv.equiv'(X, Y) when is_map(X) ->
   case clj_core:'map?'(Y) of
-    true  -> clj_core:equiv(Y, X);
+    true  ->
+      Keys = clj_core:keys(Y),
+      Fun = fun(Key) ->
+                maps:is_key(Key, X) andalso
+                  clj_core:equiv(maps:get(Key, X), clj_core:get(Y, Key))
+            end,
+      maps:size(X) == clj_core:count(Y)
+        andalso lists:all(Fun, Keys);
     false -> false
   end.
 
@@ -109,6 +118,9 @@ remove_meta(K, V, Acc) ->
 'clojerl.IFn.invoke'(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
+
+'clojerl.IHash.hash'(Map) ->
+  clj_murmur3:unordered(Map).
 
 'clojerl.ILookup.get'(Map, Key) ->
   'clojerl.ILookup.get'(Map, Key, undefined).

@@ -5,6 +5,7 @@
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
@@ -18,6 +19,7 @@
         , 'clojerl.IColl.empty'/1
         ]).
 -export(['clojerl.IEquiv.equiv'/2]).
+-export(['clojerl.IHash.hash'/1]).
 -export([ 'clojerl.IMeta.meta'/1
         , 'clojerl.IMeta.with_meta'/2
         ]).
@@ -59,6 +61,9 @@ new(Fn) when is_function(Fn) ->
     true  -> clj_core:equiv(clj_core:seq_to_list(LazySeq), clj_core:seq(Y));
     false -> false
   end.
+
+'clojerl.IHash.hash'(#?TYPE{name = ?M} = LazySeq) ->
+  clj_murmur3:ordered(LazySeq).
 
 'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).

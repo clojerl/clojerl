@@ -3,6 +3,7 @@
 -export([all/0, init_per_suite/1]).
 
 -export([ count/1
+        , hash/1
         , seq/1
         , is_sequential/1
         , str/1
@@ -31,6 +32,17 @@ init_per_suite(Config) ->
 count(_Config) ->
   3 = clj_core:count({1, 2, 3}),
   0 = clj_core:count({}),
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  Hash1 = 'clojerl.IHash':hash({1, 2, 3}),
+  Hash2 = 'clojerl.IHash':hash({1, 3, 2}),
+  Hash3 = 'clojerl.IHash':hash({1, 3, 2.0}),
+
+  true = Hash1 =/= Hash2,
+  true = Hash2 =/= Hash3,
 
   {comments, ""}.
 
