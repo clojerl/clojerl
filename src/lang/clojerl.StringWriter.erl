@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behaviour('clojerl.Closable').
+-behaviour('clojerl.Closeable').
 -behaviour('clojerl.Stringable').
 -behaviour('clojerl.IWriter').
 
@@ -12,7 +12,7 @@
         , loop/1
         ]).
 
--export(['clojerl.Closable.close'/1]).
+-export(['clojerl.Closeable.close'/1]).
 -export(['clojerl.Stringable.str'/1]).
 -export([ 'clojerl.IWriter.write'/2
         , 'clojerl.IWriter.write'/3
@@ -32,7 +32,7 @@ new(Str) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Closable.close'(#?TYPE{name = ?M, data = Pid}) ->
+'clojerl.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
   Ref = make_ref(),
   Pid ! {self(), Ref, close},
   receive
