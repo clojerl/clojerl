@@ -4,6 +4,7 @@
 -behavior('clojerl.IHash').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
+-behaviour('clojerl.IWriter').
 
 -export([ new/1
         , new/2
@@ -17,6 +18,9 @@
         , 'clojerl.Named.namespace'/1
         ]).
 -export(['clojerl.Stringable.str'/1]).
+-export([ 'clojerl.IWriter.write'/2
+        , 'clojerl.IWriter.write'/3
+        ]).
 
 -type type() :: atom().
 
@@ -84,3 +88,20 @@ find(Namespace, Name) ->
 'clojerl.Stringable.str'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
   <<":", KeywordBin/binary>>.
+
+%% clojerl.IWriter
+
+'clojerl.IWriter.write'(Name, Str) when is_atom(Name) ->
+  'clojerl.IWriter.write'(Name, Str, []).
+
+'clojerl.IWriter.write'(IO, Format, Values)
+  when IO =:= standard_io; IO =:= standard_error ->
+  ok = io:fwrite(IO, Format, clj_core:seq_to_list(Values)),
+  IO;
+'clojerl.IWriter.write'(Name, Str, Values) when is_atom(Name) ->
+  case erlang:whereis(Name) of
+    undefined ->
+      error(<<"Invalid process name">>);
+    _ ->
+      io:fwrite(Name, Str, clj_core:seq_to_list(Values))
+  end.
