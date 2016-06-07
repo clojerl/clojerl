@@ -3657,7 +3657,7 @@
                               (try
                                 (with-open ~(subvec bindings 2) ~@body)
                                 (finally
-                                  (. ~(bindings 0) close))))
+                                  (clojerl.Closeable/close.e ~(bindings 0)))))
     :else (throw "with-open only allows Symbols in bindings")))
 
 #_(defmacro doto
@@ -4513,7 +4513,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  `(let [s# :standard_io]
+  `(with-open [s# (clojerl.StringWriter/new.e)]
      (binding [*out* s#]
        ~@body
        (str s#))))
