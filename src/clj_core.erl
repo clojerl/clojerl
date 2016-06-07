@@ -51,6 +51,8 @@ type(X) when is_tuple(X)    -> 'clojerl.erlang.Tuple';
 type(X) when is_function(X) -> 'clojerl.erlang.Fn';
 type(undefined)             -> 'clojerl.Nil';
 type(X) when is_atom(X)     -> 'clojerl.Keyword';
+type(X) when is_port(X)     -> 'clojerl.erlang.Port';
+type(X) when is_pid(X)      -> 'clojerl.erlang.Process';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec load(binary()) -> undefined.

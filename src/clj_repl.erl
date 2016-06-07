@@ -11,7 +11,7 @@ repl(Env) ->
   ok = clojerl:ensure_modules(),
   'clojerl.Var':push_bindings(#{}),
   UserSym = clj_core:symbol(<<"$user">>),
-  clj_namespace:find_or_create(UserSym),
+  clj_compiler:eval([clj_core:symbol(<<"ns">>), UserSym], Env),
   loop(Env).
 
 -spec loop(clj_env:env()) -> clj_env:env().
