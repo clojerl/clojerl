@@ -179,7 +179,7 @@ subvec(_Config) ->
 
   ct:comment("Get subvec from 1 to 4, 0-based indexes"),
   TwoToFive = 'clojerl.Vector':subvec(OneToTen, 1, 4),
-  [2, 3, 4, 5] = clj_core:seq_to_list(TwoToFive),
+  [2, 3, 4] = clj_core:seq_to_list(TwoToFive),
 
   {comments, ""}.
 
