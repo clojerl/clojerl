@@ -115,9 +115,7 @@ ns__val() ->
                       , clj_reader:location_meta(Name)
                       ),
 
-  NsVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*ns*">>),
-  Ns = clj_namespace:find_or_create(Name),
-  clj_core:'set!'(NsVar, Ns),
+  clj_namespace:find_or_create(Name),
   undefined.
 
 'in-ns__val'() ->
