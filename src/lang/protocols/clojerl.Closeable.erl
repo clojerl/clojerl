@@ -1,10 +1,10 @@
--module('clojerl.Closable').
+-module('clojerl.Closeable').
 
 -export([close/1]).
 
 -type type() :: any().
 
--callback 'clojerl.Closable.close'(C :: type()) -> undefined.
+-callback 'clojerl.Closeable.close'(C :: type()) -> undefined.
 
 -spec close(type()) -> undefined.
 close(X) ->
