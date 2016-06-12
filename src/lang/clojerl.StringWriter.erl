@@ -99,7 +99,7 @@ reply(From, ReplyAs, Reply) ->
   From ! {io_reply, ReplyAs, Reply}.
 
 request({put_chars, Encoding, Chars}, Str) ->
-  EncodedChars = unicode:characters_to_list(Chars,Encoding),
+  EncodedChars = unicode:characters_to_list(Chars, Encoding),
   CharsBin = unicode:characters_to_binary(EncodedChars),
   {ok, <<Str/binary, CharsBin/binary>>};
 request({put_chars, Encoding, Module, Function, Args}, State) ->
@@ -108,9 +108,5 @@ request({put_chars, Encoding, Module, Function, Args}, State) ->
   catch
     _:_ -> {error, {error,Function}, State}
   end;
-request({put_chars, Chars}, State) ->
-  request({put_chars, unicode, Chars}, State);
-request({put_chars, M, F, As}, State) ->
-  request({put_chars, unicode, M, F, As}, State);
 request(_Other, State) ->
   {{error, request}, State}.
