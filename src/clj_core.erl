@@ -41,18 +41,19 @@
 
 -spec type(any()) -> atom().
 type(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
-type(X) when is_binary(X)   -> 'clojerl.String';
-type(X) when is_integer(X)  -> 'clojerl.Integer';
-type(X) when is_float(X)    -> 'clojerl.Float';
-type(X) when is_boolean(X)  -> 'clojerl.Boolean';
-type(X) when is_list(X)     -> 'clojerl.erlang.List';
-type(X) when is_map(X)      -> 'clojerl.erlang.Map';
-type(X) when is_tuple(X)    -> 'clojerl.erlang.Tuple';
-type(X) when is_function(X) -> 'clojerl.erlang.Fn';
-type(undefined)             -> 'clojerl.Nil';
-type(X) when is_atom(X)     -> 'clojerl.Keyword';
-type(X) when is_port(X)     -> 'clojerl.erlang.Port';
-type(X) when is_pid(X)      -> 'clojerl.erlang.Process';
+type(X) when is_binary(X)    -> 'clojerl.String';
+type(X) when is_integer(X)   -> 'clojerl.Integer';
+type(X) when is_float(X)     -> 'clojerl.Float';
+type(X) when is_boolean(X)   -> 'clojerl.Boolean';
+type(X) when is_list(X)      -> 'clojerl.erlang.List';
+type(X) when is_map(X)       -> 'clojerl.erlang.Map';
+type(X) when is_tuple(X)     -> 'clojerl.erlang.Tuple';
+type(X) when is_function(X)  -> 'clojerl.erlang.Fn';
+type(undefined)              -> 'clojerl.Nil';
+type(X) when is_atom(X)      -> 'clojerl.Keyword';
+type(X) when is_port(X)      -> 'clojerl.erlang.Port';
+type(X) when is_pid(X)       -> 'clojerl.erlang.Process';
+type(X) when is_reference(X) -> 'clojerl.erlang.Reference';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec load(binary()) -> undefined.
