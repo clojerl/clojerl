@@ -165,19 +165,21 @@
     :static true}
   meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
 
-#_(def
-    ^{:arglists '([x])
-      :doc "Return true if x is a Character"
-      :added "1.0"
-      :static true}
-    char? (fn ^:static char? [x] (extends? Character x)))
-
 (def
   ^{:arglists '([x])
     :doc "Return true if x is a String"
     :added "1.0"
     :static true}
-  string? (fn ^:static string? [x] (instance? :clojerl.String x)))
+  string? (fn ^:static string? [x] (erlang/is_binary.e x)))
+
+(def
+  ^{:arglists '([x])
+    :doc "Return true if x is a Character"
+    :added "1.0"
+    :static true}
+  char? (fn ^:static char? [x]
+          (erlang/and.e (erlang/is_binary.e x)
+                        (erlang/=:=.e 1 (erlang/size.e x)))))
 
 (def
   ^{:arglists '([x])
@@ -1419,19 +1421,6 @@
   [^clojure.lang.Named x]
   (clj_core/namespace.e x))
 
-(defmacro locking
-  "Executes exprs in an implicit do, while holding the monitor of x.
-  Will release the monitor of x in all circumstances."
-  {:added "1.0"}
-  [x & body]
-  (throw "unsupported locks")
-  #_`(let [lockee# ~x]
-     (try
-      (monitor-enter lockee#)
-      ~@body
-      (finally
-       (monitor-exit lockee#)))))
-
 (defmacro ..
   "form => fieldName-symbol or (instanceMethodName-symbol args*)
   Expands into a member access (.) of the first member on the first
@@ -1589,8 +1578,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn dispatch-val-x dispatch-val-y]
-  (throw "unimplemented hierarchy")
-  #_(clojerl.MultiFn/prefer_method.e multifn dispatch-val-x dispatch-val-y))
+  (throw "unimplemented hierarchy"))
 
 (defn methods
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
@@ -1612,8 +1600,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn]
-  (throw "unimplemented hierarchy")
-  #_(clojerl.MultiFn/get_prefer_table.e multifn))
+  (throw "unimplemented hierarchy"))
 
 ;;;;;;;;; var stuff
 

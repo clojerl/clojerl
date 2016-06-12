@@ -33,21 +33,15 @@ new(Str) ->
 %%------------------------------------------------------------------------------
 
 'clojerl.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
-  Ref = make_ref(),
-  Pid ! {self(), Ref, close},
-  receive
-    {Ref, ok} -> undefined
-  after
-    1000 -> error(<<"Couldn't close clojerl.StringWriter">>)
+  case send_command(Pid, close) of
+    {error, _} -> error(<<"Couldn't close clojerl.StringWriter">>);
+    _          -> undefined
   end.
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Pid}) ->
-  Ref = make_ref(),
-  Pid ! {self(), Ref, str},
-  receive
-    {Ref, Str} -> Str
-  after
-    1000 -> error(<<"Couldn't get string from clojerl.StringWriter">>)
+  case send_command(Pid, str) of
+    {error, _} -> error(<<"Couldn't get string from clojerl.StringWriter">>);
+    Str        -> Str
   end.
 
 'clojerl.IWriter.write'(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
@@ -64,6 +58,22 @@ new(Str) ->
 %% Implementation of a subset of the io protocol in order to only support
 %% writing operations.
 %%------------------------------------------------------------------------------
+
+-spec send_command(pid(), any()) -> any().
+send_command(Pid, Cmd) ->
+  Ref = erlang:monitor(process, Pid),
+  Pid ! {self(), Ref, Cmd},
+  receive
+    {Ref, Result} ->
+      erlang:demonitor(Ref, [flush]),
+      Result;
+    {'DOWN', Ref, _, _, _} ->
+      receive
+        {'EXIT', Pid, _What} -> true
+      after 0 -> true
+      end,
+      {error, terminated}
+  end.
 
 start_link(Str) ->
   spawn_link(?MODULE,init,[Str]).
