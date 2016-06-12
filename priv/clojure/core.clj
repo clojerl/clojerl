@@ -2914,18 +2914,18 @@
   rdr must implement java.io.BufferedReader."
   {:added "1.0"
    :static true}
-  [^java.io.BufferedReader rdr]
-  (throw "unimplemented io")
-  #_(when-let [line (.readLine rdr)]
-    (cons line (lazy-seq (line-seq rdr)))))
+  [rdr]
+  (let [line (clojerl.IReader/read_line.e rdr)]
+    (when (not= line :eof)
+      (cons line (lazy-seq (line-seq rdr))))))
 
 (defn comparator
   "Returns an implementation of java.util.Comparator based upon pred."
   {:added "1.0"
    :static true}
   [pred]
-    (fn [x y]
-      (cond (pred x y) -1 (pred y x) 1 :else 0)))
+  (fn [x y]
+    (cond (pred x y) -1 (pred y x) 1 :else 0)))
 
 (defn sort
   "Returns a sorted sequence of the items in coll. If no comparator is
@@ -4510,8 +4510,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  (throw "unimplemented io")
-  #_`(with-open [s# (-> (java.io.StringReader. ~s) clojure.lang.LineNumberingPushbackReader.)]
+  `(with-open [s# (clojerl.StringReader/new ~s)]
      (binding [*in* s#]
        ~@body)))
 
