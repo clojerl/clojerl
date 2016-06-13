@@ -2916,7 +2916,7 @@
    :static true}
   [rdr]
   (let [line (clojerl.IReader/read_line.e rdr)]
-    (when (not= line :eof)
+    (when (string? line)
       (cons line (lazy-seq (line-seq rdr))))))
 
 (defn comparator
@@ -3592,14 +3592,12 @@
   ([opts stream]
    (. clojure.lang.LispReader (read stream opts))))
 
-#_(defn read-line
+(defn read-line
   "Reads the next line from stream that is the current value of *in* ."
   {:added "1.0"
    :static true}
   []
-  (if (instance? clojure.lang.LineNumberingPushbackReader *in*)
-    (.readLine ^clojure.lang.LineNumberingPushbackReader *in*)
-    (.readLine ^java.io.BufferedReader *in*)))
+  (clojerl.IReader/read_line.e *in*))
 
 #_(defn read-string
   "Reads one object from the string s. Optionally include reader
@@ -4510,7 +4508,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  `(with-open [s# (clojerl.StringReader/new ~s)]
+  `(with-open [s# (clojerl.StringReader/new.e ~s)]
      (binding [*in* s#]
        ~@body)))
 
