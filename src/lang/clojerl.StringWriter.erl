@@ -68,10 +68,6 @@ send_command(Pid, Cmd) ->
       erlang:demonitor(Ref, [flush]),
       Result;
     {'DOWN', Ref, _, _, _} ->
-      receive
-        {'EXIT', Pid, _What} -> true
-      after 0 -> true
-      end,
       {error, terminated}
   end.
 
@@ -106,7 +102,7 @@ request({put_chars, Encoding, Module, Function, Args}, State) ->
   try
     request({put_chars, Encoding, apply(Module, Function, Args)}, State)
   catch
-    _:_ -> {error, {error,Function}, State}
+    _:_ -> {{error, Function}, State}
   end;
 request(_Other, State) ->
   {{error, request}, State}.
