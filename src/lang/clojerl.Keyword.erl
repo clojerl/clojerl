@@ -5,6 +5,7 @@
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 -behaviour('clojerl.IWriter').
+-behaviour('clojerl.IReader').
 
 -export([ new/1
         , new/2
@@ -14,13 +15,18 @@
 
 -export(['clojerl.IFn.invoke'/2]).
 -export(['clojerl.IHash.hash'/1]).
+-export([ 'clojerl.IReader.read'/1
+        , 'clojerl.IReader.read'/2
+        , 'clojerl.IReader.read_line'/1
+        , 'clojerl.IReader.skip'/2
+        ]).
+-export([ 'clojerl.IWriter.write'/2
+        , 'clojerl.IWriter.write'/3
+        ]).
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
         ]).
 -export(['clojerl.Stringable.str'/1]).
--export([ 'clojerl.IWriter.write'/2
-        , 'clojerl.IWriter.write'/3
-        ]).
 
 -type type() :: atom().
 
@@ -88,6 +94,22 @@ find(Namespace, Name) ->
 'clojerl.Stringable.str'(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
   <<":", KeywordBin/binary>>.
+
+%% clojerl.IReader
+
+'clojerl.IReader.read'(IO) ->
+  'clojerl.IReader.read'(IO, 1).
+
+'clojerl.IReader.read'(IO, Length)
+  when IO =:= standard_io; IO =:= standard_error ->
+  list_to_binary(io:get_chars(IO, "", Length)).
+
+'clojerl.IReader.read_line'(IO)
+  when IO =:= standard_io; IO =:= standard_error ->
+  io:request(IO, {get_line, unicode, ""}).
+
+'clojerl.IReader.skip'(_IO, _Length) ->
+  error(<<"unsupported operation: skip">>).
 
 %% clojerl.IWriter
 
