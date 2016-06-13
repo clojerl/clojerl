@@ -14,12 +14,12 @@
         ]).
 
 -export(['clojerl.Closeable.close'/1]).
--export(['clojerl.Stringable.str'/1]).
 -export([ 'clojerl.IReader.read'/1
         , 'clojerl.IReader.read'/2
         , 'clojerl.IReader.read_line'/1
         , 'clojerl.IReader.skip'/2
         ]).
+-export(['clojerl.Stringable.str'/1]).
 
 -type type() :: #?TYPE{data :: pid()}.
 
