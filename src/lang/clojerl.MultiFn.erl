@@ -58,8 +58,9 @@ get_method_table(Name) ->
 
 -spec add_method(binary(), any(), any()) -> any().
 add_method(Name, Value, Method) ->
+  Hash = 'clojerl.IHash':hash(Value),
   gen_server:call( ?MODULE
-                 , {add_method, Name, Value, 'clojerl.IHash':hash(Value), Method}
+                 , {add_method, Name, Value, Hash, Method}
                  ).
 
 -spec remove_all(binary()) -> boolean().
