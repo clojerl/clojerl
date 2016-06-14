@@ -72,7 +72,7 @@ send_command(Pid, Cmd) ->
   end.
 
 start_link(Str) ->
-  spawn_link(?MODULE,init,[Str]).
+  spawn_link(?MODULE, init, [Str]).
 
 init(Str) -> ?MODULE:loop(Str).
 
