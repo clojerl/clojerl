@@ -102,28 +102,32 @@ find(Namespace, Name) ->
 
 'clojerl.IReader.read'(IO, Length)
   when IO =:= standard_io; IO =:= standard_error ->
-  list_to_binary(io:get_chars(IO, "", Length));
+  maybe_binary(io:get_chars(IO, "", Length));
 'clojerl.IReader.read'(Name, Length) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
     _ ->
-      list_to_binary(io:get_chars(Name, "", Length))
+      maybe_binary(io:get_chars(Name, "", Length))
   end.
 
 'clojerl.IReader.read_line'(IO)
   when IO =:= standard_io; IO =:= standard_error ->
-  list_to_binary(io:request(IO, {get_line, unicode, ""}));
+  maybe_binary(io:request(IO, {get_line, unicode, ""}));
 'clojerl.IReader.read_line'(Name) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
     _ ->
-      list_to_binary(io:request(Name, {get_line, unicode, ""}))
+      maybe_binary(io:request(Name, {get_line, unicode, ""}))
   end.
 
 'clojerl.IReader.skip'(_IO, _Length) ->
   error(<<"unsupported operation: skip">>).
+
+-spec maybe_binary(eof | string()) -> eof | binary().
+maybe_binary(eof) -> eof;
+maybe_binary(List) when is_list(List) -> list_to_binary(List).
 
 %% clojerl.IWriter
 
