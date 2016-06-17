@@ -8,6 +8,7 @@
         , read/1
         , read_line/1
         , skip/1
+        , unread/1
         , close/1
         , complete_coverage/1
         ]).
@@ -107,6 +108,35 @@ skip(_Config) ->
   eof          = 'clojerl.IReader':skip(Reader, 1),
 
   undefined = 'clojerl.Closeable':close(Reader),
+
+  {comments, ""}.
+
+-spec unread(config()) -> result().
+unread(_Config) ->
+  Reader = 'clojerl.StringReader':new(<<"hello">>),
+
+  <<"h">> = 'clojerl.IReader':read(Reader),
+  Reader  = 'clojerl.IReader':unread(Reader, <<"h">>),
+  <<"h">> = 'clojerl.IReader':read(Reader),
+  <<"e">> = 'clojerl.IReader':read(Reader),
+  <<"l">> = 'clojerl.IReader':read(Reader),
+  <<"l">> = 'clojerl.IReader':read(Reader),
+  <<"o">> = 'clojerl.IReader':read(Reader),
+  eof     = 'clojerl.IReader':read(Reader),
+
+  undefined = 'clojerl.Closeable':close(Reader),
+
+  Reader2 = 'clojerl.StringReader':new(<<"hello world!">>),
+
+  <<"he">>      = 'clojerl.IReader':read(Reader2, 2),
+  <<"llo">>     = 'clojerl.IReader':read(Reader2, 3),
+  Reader2       = 'clojerl.IReader':unread(Reader2, <<"llo">>),
+  <<"llo">>     = 'clojerl.IReader':read(Reader2, 3),
+  <<" ">>       = 'clojerl.IReader':read(Reader2),
+  <<"world!">>  = 'clojerl.IReader':read(Reader2, 7),
+  eof           = 'clojerl.IReader':read(Reader2),
+
+  undefined = 'clojerl.Closeable':close(Reader2),
 
   {comments, ""}.
 

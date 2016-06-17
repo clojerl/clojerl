@@ -19,6 +19,7 @@
         , 'clojerl.IReader.read'/2
         , 'clojerl.IReader.read_line'/1
         , 'clojerl.IReader.skip'/2
+        , 'clojerl.IReader.unread'/2
         ]).
 -export([ 'clojerl.IWriter.write'/2
         , 'clojerl.IWriter.write'/3
@@ -124,6 +125,10 @@ find(Namespace, Name) ->
 
 'clojerl.IReader.skip'(_IO, _Length) ->
   error(<<"unsupported operation: skip">>).
+
+'clojerl.IReader.unread'(_IO, _Ch) ->
+  TypeName = atom_to_binary(?MODULE, utf8),
+  error(<<"Unsupported operation: unread for ", TypeName/binary>>).
 
 -spec maybe_binary(eof | string()) -> eof | binary().
 maybe_binary(eof) -> eof;

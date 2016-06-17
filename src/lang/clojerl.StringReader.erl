@@ -18,6 +18,7 @@
         , 'clojerl.IReader.read'/2
         , 'clojerl.IReader.read_line'/1
         , 'clojerl.IReader.skip'/2
+        , 'clojerl.IReader.unread'/2
         ]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -53,6 +54,10 @@ new(Str) when is_binary(Str) ->
 'clojerl.IReader.skip'(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
 
+'clojerl.IReader.unread'(#?TYPE{name = ?M, data = Pid} = SR, Str) ->
+  ok = send_command(Pid, {unread, Str}),
+  SR.
+
 %%------------------------------------------------------------------------------
 %% IO server
 %%
@@ -85,6 +90,9 @@ loop(Str) ->
       ?MODULE:loop(NewStr);
     {From, Ref, close} ->
       From ! {Ref, ok};
+    {From, Ref, {unread, UnreadStr}} ->
+      From ! {Ref, ok},
+      ?MODULE:loop(<<UnreadStr/binary, Str/binary>>);
     _Unknown ->
       ?MODULE:loop(Str)
   end.
