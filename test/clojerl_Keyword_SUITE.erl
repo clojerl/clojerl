@@ -86,7 +86,17 @@ read(_Config) ->
   <<"a">>        = 'clojerl.IReader':read(io_loop),
   <<"aaaaa">>    = 'clojerl.IReader':read(io_loop, 5),
   <<"get_line">> = 'clojerl.IReader':read_line(io_loop),
+  eof            = 'clojerl.IReader':read(io_loop, 42),
   erlang:unregister(io_loop),
+
+  ct:comment("Using standard_io maps sends requests to the group_leader"),
+  GroupLeader = erlang:group_leader(),
+  erlang:group_leader(Pid, self()),
+  <<"a">>        = 'clojerl.IReader':read(standard_io),
+  <<"aaaaa">>    = 'clojerl.IReader':read(standard_io, 5),
+  <<"get_line">> = 'clojerl.IReader':read_line(standard_io),
+  eof            = 'clojerl.IReader':read(standard_io, 42),
+  erlang:group_leader(GroupLeader, self()),
 
   ct:comment("Read from a non-existing named process"),
   ok = try 'clojerl.IReader':read(io_loop), error
@@ -99,6 +109,11 @@ read(_Config) ->
 
   ct:comment("Unsupported skip"),
   ok = try 'clojerl.IReader':skip(io_loop, 1), error
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Unsupported unread"),
+  ok = try 'clojerl.IReader':unread(io_loop, <<"hey">>), error
        catch _:_ -> ok
        end,
 
@@ -161,6 +176,8 @@ fake_io_loop() ->
   end.
 
 -spec fake_reply(tuple()) -> binary().
+fake_reply({get_chars, _, _, 42}) ->
+  eof;
 fake_reply({get_chars, _, _, N}) ->
   lists:flatten(repeat("a", N));
 fake_reply({get_line, _, _}) ->

@@ -1,6 +1,6 @@
 -module('clojerl.IReader').
 
--export([read/1, read/2, read_line/1, skip/2]).
+-export([read/1, read/2, read_line/1, skip/2, unread/2]).
 
 -type type() :: any().
 
@@ -15,6 +15,9 @@
 
 -callback 'clojerl.IReader.skip'(A :: type(), L :: integer()) ->
   integer() | eof.
+
+-callback 'clojerl.IReader.unread'(A :: type(), C :: binary()) ->
+  type().
 
 -spec read(type()) -> binary() | eof.
 read(Reader) ->
@@ -31,3 +34,7 @@ read_line(Reader) ->
 -spec skip(type(), integer()) -> integer() | eof.
 skip(Reader, N) ->
   'clojerl.protocol':resolve(?MODULE, skip, [Reader, N]).
+
+-spec unread(type(), binary()) -> type().
+unread(Reader, Ch) ->
+  'clojerl.protocol':resolve(?MODULE, unread, [Reader, Ch]).

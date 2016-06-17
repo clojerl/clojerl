@@ -14,6 +14,7 @@
         , 'clojerl.IReader.read'/2
         , 'clojerl.IReader.read_line'/1
         , 'clojerl.IReader.skip'/2
+        , 'clojerl.IReader.unread'/2
         ]).
 -export([ 'clojerl.IWriter.write'/2
         , 'clojerl.IWriter.write'/3
@@ -56,6 +57,10 @@ open(Path, Modes) ->
 
 'clojerl.IReader.skip'(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
+
+'clojerl.IReader.unread'(#?TYPE{name = ?M}, _Ch) ->
+  TypeName = atom_to_binary(?MODULE, utf8),
+  error(<<"Unsupported operation: unread for ", TypeName/binary>>).
 
 'clojerl.IWriter.write'(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
   ok = io:put_chars(Pid, Str),
