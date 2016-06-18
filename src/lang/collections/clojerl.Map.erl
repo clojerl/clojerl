@@ -14,7 +14,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([new/1, to_erl_map/1]).
 -export([ 'clojerl.Associative.contains_key'/2
         , 'clojerl.Associative.entry_at'/2
         , 'clojerl.Associative.assoc'/3
@@ -47,6 +47,13 @@ new(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
   Mappings = lists:foldl(fun build_mappings/2, {#{}, #{}}, KeyValuePairs),
   #?TYPE{name = ?M, data = Mappings}.
+
+-spec to_erl_map(type()) -> map().
+to_erl_map(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
+  ErlMapFun = fun({Hash, Key}, MapAcc) ->
+                  MapAcc#{Key => maps:get(Hash, Vals)}
+              end,
+  lists:foldl(ErlMapFun, #{}, maps:to_list(Keys)).
 
 %% @private
 -spec build_key_values(list(), list()) -> [{any(), any()}].
@@ -102,7 +109,7 @@ build_mappings({K, V}, {Keys, Values}) ->
 'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
   case clj_core:'map?'(Y) of
     true  ->
-      KeyHashFun = fun(X) -> {X, erlang:phash2(X)} end,
+      KeyHashFun = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
       KeyHashPairs = lists:map(KeyHashFun, clj_core:keys(Y)),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso

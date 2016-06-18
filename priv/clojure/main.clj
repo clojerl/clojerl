@@ -32,10 +32,10 @@
   (info x :line "?"))
 
 (defn module [x]
-  (first x))
+  (erlang/atom_to_binary.e (first x) :utf8))
 
 (defn function [x]
-  (second x))
+  (erlang/atom_to_binary.e (second x) :utf8))
 
 (defn stack-element-str
   "Returns a (possibly unmunged) string representation of a StackTraceElement"
@@ -47,7 +47,7 @@
                                   (= file "NO_SOURCE_FILE")))]
     (str (if clojure-fn?
            (demunge (module el))
-           (str (module el) "." (function el)))
+           (str (module el) "/" (function el)))
          " (" (filename el) ":" (line-number el) ")")))
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
 
@@ -128,7 +128,7 @@
   [request-prompt request-exit]
   (or ({:line-start request-prompt :stream-end request-exit}
        (skip-whitespace *in*))
-      (let [input (clj_reader/read.e "" {:io_reader *in*})]
+      (let [input (read)]
         (skip-if-eol *in*)
         input)))
 
@@ -221,7 +221,7 @@ by default when a new command-line REPL is started."} repl-requires
             (let [read-eval *read-eval*
                   input (with-read-known (read request-prompt request-exit))]
              (or (#{request-prompt request-exit} input)
-                 (let [value (binding [*read-eval* read-eval] (eval input))]
+                 (let [value (first (binding [*read-eval* read-eval] (eval input)))]
                    (print value)
                    (set! *3 *2)
                    (set! *2 *1)
@@ -265,12 +265,12 @@ by default when a new command-line REPL is started."} repl-requires
   [str]
   (let [eof (erlang/make_ref.e)
         reader (clojerl.StringReader/new.e str)]
-      (loop [input (with-read-known (clj_reader/read.e reader false eof))]
+      (loop [input (with-read-known (read reader false eof))]
         (when-not (= input eof)
           (let [value (eval input)]
             (when-not (nil? value)
               (prn value))
-            (recur (with-read-known (clj_reader/read.e reader false eof))))))))
+            (recur (with-read-known (read reader false eof))))))))
 
 (defn- init-dispatch
   "Returns the handler associated with an init opt"

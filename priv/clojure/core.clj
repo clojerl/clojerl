@@ -3563,7 +3563,7 @@
   (binding [*print-readably* nil]
     (apply prn more)))
 
-#_(defn read
+(defn read
   "Reads the next object from stream, which must be an instance of
   java.io.PushbackReader or some derivee.  stream defaults to the
   current value of *in*.
@@ -3586,11 +3586,11 @@
   ([stream]
    (read stream true nil))
   ([stream eof-error? eof-value]
-   (read stream eof-error? eof-value false))
-  ([stream eof-error? eof-value recursive?]
-   (. clojure.lang.LispReader (read stream (boolean eof-error?) eof-value recursive?)))
-  ([opts stream]
-   (. clojure.lang.LispReader (read stream opts))))
+   (clj_reader/read.e ""
+                      (clojerl.Map/to_erl_map.e
+                       {:io_reader  stream
+                        :eof-error? (boolean eof-error?)
+                        :eof-value  eof-value}))))
 
 (defn read-line
   "Reads the next line from stream that is the current value of *in* ."
@@ -3599,7 +3599,7 @@
   []
   (clojerl.IReader/read_line.e *in*))
 
-#_(defn read-string
+(defn read-string
   "Reads one object from the string s. Optionally include reader
   options, as specified in read.
 
@@ -3609,8 +3609,8 @@
   For data structure interop use clojure.edn/read-string"
   {:added "1.0"
    :static true}
-  ([s] (clojure.lang.RT/readString s))
-  ([opts s] (clojure.lang.RT/readString s opts)))
+  ([s] (clj_reader/read.e s))
+  ([opts s] (clj_reader/read.e s opts)))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
