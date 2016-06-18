@@ -854,9 +854,9 @@ discard(_Config) ->
   true = clj_core:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
   false = clj_core:equiv(ReaderCond, ReaderCondSpliceVector),
 
-  ct:comment("EOF while reading character"),
+  ct:comment("EOF while reading cond"),
   ok = try clj_reader:read(<<"#?">>, AllowOpts)
-       catch _:<<"?:1:3: EOF while reading character">> -> ok
+       catch _:<<"?:1:3: EOF while reading cond">> -> ok
        end,
 
   ct:comment("Reader conditional not allowed"),
