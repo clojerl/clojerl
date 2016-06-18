@@ -63,11 +63,11 @@ location_meta(X) ->
     false -> undefined
   end.
 
--spec read(binary()) -> {any(), binary()} | eof.
+-spec read(binary()) -> any().
 read(Src) ->
   read(Src, #{}).
 
--spec read(binary(), opts()) -> {any(), binary()} | eof.
+-spec read(binary(), opts()) -> any().
 read(Src, Opts) ->
   read(Src, Opts, clj_env:default()).
 
@@ -114,8 +114,6 @@ new_state(Src, Env, Opts) ->
 %%      reader is used.
 %% @private
 -spec ensure_read(state()) -> any().
-ensure_read(#{src := <<>>, forms := []} = State) ->
-  clj_utils:throw(<<"EOF">>, location(State));
 ensure_read(#{forms := [Form]}) ->
   Form;
 ensure_read(State) ->
@@ -911,11 +909,10 @@ read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
 read_regex(#{src := <<>>} = State) ->
   case check_reader(State) of
     {ok, NewState}  ->
-      read_string(NewState);
+      read_regex(NewState);
     eof ->
-      clj_utils:throw(<<"EOF">>, location(State))
+      clj_utils:throw(<<"EOF while reading regex">>, location(State))
   end.
-
 
 %%------------------------------------------------------------------------------
 %% #_ discard
@@ -924,7 +921,7 @@ read_regex(#{src := <<>>} = State) ->
 -spec read_discard(state()) -> state().
 read_discard(State) ->
   {_, NewState} = pop_form(read_one(State)),
-  %% There could be no next forms so don't throw if there isn't
+  %% Can't call read_one here because is might not be a top level form.
   NewState.
 
 %%------------------------------------------------------------------------------
@@ -937,7 +934,7 @@ read_cond(#{src := <<>>} = State) ->
     {ok, NewState} ->
       read_cond(NewState);
     eof ->
-      clj_utils:throw(<<"EOF while reading character">>, location(State))
+      clj_utils:throw(<<"EOF while reading cond">>, location(State))
   end;
 read_cond(#{src := Src, opts := Opts} = State) ->
   ReadCondOpt = maps:get(read_cond, Opts, undefined),
@@ -1133,7 +1130,7 @@ read_token(State) ->
 read_until(Delim, #{src := <<>>} = State) ->
   case check_reader(State) of
     {ok, NewState} ->
-      read_cond(NewState);
+      read_until(Delim, NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
       LineBin = integer_to_binary(Line),
@@ -1223,7 +1220,8 @@ check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)
   when Reader =/= undefined ->
   case 'clojerl.IReader':read(Reader) of
     eof -> eof;
-    Ch -> {ok, State#{src := Ch}}
+    Ch ->
+      {ok, State#{src := Ch}}
   end;
 check_reader(#{src := <<>>}) ->
   eof.
