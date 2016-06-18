@@ -5837,12 +5837,10 @@
   If any levels do not exist, hash-maps will be created."
   {:added "1.0"
    :static true}
-  [m ks v]
-  (let [k  (first ks)
-        ks (rest ks)]
-    (if ks
-      (assoc m k (assoc-in (get m k) ks v))
-      (assoc m k v))))
+  [m [k & ks] v]
+  (if ks
+    (assoc m k (assoc-in (get m k) ks v))
+    (assoc m k v)))
 
 (defn update-in
   "'Updates' a value in a nested associative structure, where ks is a
@@ -5852,12 +5850,10 @@
   created."
   {:added "1.0"
    :static true}
-  ([m ks f & args]
-   (let [k  (first ks)
-         ks (rest ks)]
-     (if ks
-       (assoc m k (apply update-in (get m k) ks f args))
-       (assoc m k (apply f (get m k) args))))))
+  ([m [k & ks] f & args]
+   (if ks
+     (assoc m k (apply update-in (get m k) ks f args))
+     (assoc m k (apply f (get m k) args)))))
 
 (defn update
   "'Updates' a value in an associative structure, where k is a
@@ -5908,7 +5904,8 @@
   "Returns true if x implements Fn, i.e. is an object created via fn."
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.erlang.Fn x))
+  [x] (erlang/is_function.e x))
+
 
 (defn associative?
  "Returns true if coll implements Associative"
@@ -5971,9 +5968,12 @@
   {:added "1.0"
    :static true}
   ([f]
-   (throw "unimplemented trampoline, not needed"))
+     (let [ret (f)]
+       (if (fn? ret)
+         (recur ret)
+         ret)))
   ([f & args]
-   (throw "unimplemented trampoline, not needed")))
+     (trampoline #(apply f args))))
 
 (defn intern
   "Finds or creates a var named by the symbol name in the namespace
@@ -6066,10 +6066,231 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; var documentation ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;------------------------------------------------------------------------------
-;;------------------------------------------------------------------------------
+;;(alter-meta! #'*agent* assoc :added "1.0")
+;;(alter-meta! #'in-ns assoc :added "1.0")
+;;(alter-meta! #'load-file assoc :added "1.0")
+
+(defmacro add-doc-and-meta {:private true} [name docstring meta]
+  nil
+  #_`(alter-meta! (var ~name) merge (assoc ~meta :doc ~docstring)))
+
+(add-doc-and-meta *file*
+  "The path of the file being evaluated, as a String.
+
+  When there is no file, e.g. in the REPL, the value is not defined."
+  {:added "1.0"})
+
+(add-doc-and-meta *command-line-args*
+  "A sequence of the supplied command line arguments, or nil if
+  none were supplied"
+  {:added "1.0"})
+
+(add-doc-and-meta *warn-on-reflection*
+  "When set to true, the compiler will emit warnings when reflection is
+  needed to resolve Java method calls or field accesses.
+
+  Defaults to false."
+  {:added "1.0"})
+
+(add-doc-and-meta *compile-path*
+  "Specifies the directory where 'compile' will write out .class
+  files. This directory must be in the classpath for 'compile' to
+  work.
+
+  Defaults to \"classes\""
+  {:added "1.0"})
+
+(add-doc-and-meta *compile-files*
+  "Set to true when compiling files, false otherwise."
+  {:added "1.0"})
+
+(add-doc-and-meta *unchecked-math*
+  "While bound to true, compilations of +, -, *, inc, dec and the
+  coercions will be done without overflow checks. While bound
+  to :warn-on-boxed, same behavior as true, and a warning is emitted
+  when compilation uses boxed math. Default: false."
+  {:added "1.3"})
+
+(add-doc-and-meta *compiler-options*
+  "A map of keys to options.
+  Note, when binding dynamically make sure to merge with previous value.
+  Supported options:
+  :elide-meta - a collection of metadata keys to elide during compilation.
+  :disable-locals-clearing - set to true to disable clearing, useful for using a debugger
+  Alpha, subject to change."
+  {:added "1.4"})
+
+(add-doc-and-meta *ns*
+  "A clojure.lang.Namespace object representing the current namespace."
+  {:added "1.0"})
+
+(add-doc-and-meta *in*
+  "A java.io.Reader object representing standard input for read operations.
+
+  Defaults to System/in, wrapped in a LineNumberingPushbackReader"
+  {:added "1.0"})
+
+(add-doc-and-meta *out*
+  "A java.io.Writer object representing standard output for print operations.
+
+  Defaults to System/out, wrapped in an OutputStreamWriter"
+  {:added "1.0"})
+
+(add-doc-and-meta *err*
+  "A java.io.Writer object representing standard error for print operations.
+
+  Defaults to System/err, wrapped in a PrintWriter"
+  {:added "1.0"})
+
+(add-doc-and-meta *flush-on-newline*
+  "When set to true, output will be flushed whenever a newline is printed.
+
+  Defaults to true."
+  {:added "1.0"})
+
+(add-doc-and-meta *print-meta*
+  "If set to logical true, when printing an object, its metadata will also
+  be printed in a form that can be read back by the reader.
+
+  Defaults to false."
+  {:added "1.0"})
+
+(add-doc-and-meta *print-dup*
+  "When set to logical true, objects will be printed in a way that preserves
+  their type when read in later.
+
+  Defaults to false."
+  {:added "1.0"})
+
+(add-doc-and-meta *print-readably*
+  "When set to logical false, strings and characters will be printed with
+  non-alphanumeric characters converted to the appropriate escape sequences.
+
+  Defaults to true"
+  {:added "1.0"})
+
+(add-doc-and-meta *read-eval*
+ "Defaults to true (or value specified by system property, see below)
+  ***This setting implies that the full power of the reader is in play,
+  including syntax that can cause code to execute. It should never be
+  used with untrusted sources. See also: clojure.edn/read.***
+
+  When set to logical false in the thread-local binding,
+  the eval reader (#=) and record/type literal syntax are disabled in read/load.
+  Example (will fail): (binding [*read-eval* false] (read-string \"#=(* 2 21)\"))
+
+  The default binding can be controlled by the system property
+  'clojure.read.eval' System properties can be set on the command line
+  like this:
+
+  java -Dclojure.read.eval=false ...
+
+  The system property can also be set to 'unknown' via
+  -Dclojure.read.eval=unknown, in which case the default binding
+  is :unknown and all reads will fail in contexts where *read-eval*
+  has not been explicitly bound to either true or false. This setting
+  can be a useful diagnostic tool to ensure that all of your reads
+  occur in considered contexts. You can also accomplish this in a
+  particular scope by binding *read-eval* to :unknown
+  "
+  {:added "1.0"})
+
+(defmacro letfn
+  "fnspec ==> (fname [params*] exprs) or (fname ([params*] exprs)+)
+
+  Takes a vector of function specs and a body, and generates a set of
+  bindings of functions to their names. All of the names are available
+  in all of the definitions of the functions, as well as the body."
+  {:added "1.0", :forms '[(letfn [fnspecs*] exprs*)],
+   :special-form true, :url nil}
+  [fnspecs & body]
+  `(letfn* ~(vec (interleave (map first fnspecs)
+                             (map #(cons `fn %) fnspecs)))
+           ~@body))
+
+(defn fnil
+  "Takes a function f, and returns a function that calls f, replacing
+  a nil first argument to f with the supplied value x. Higher arity
+  versions can replace arguments in the second and third
+  positions (y, z). Note that the function f can take any number of
+  arguments, not just the one(s) being nil-patched."
+  {:added "1.2"
+   :static true}
+  ([f x]
+   (fn
+     ([a] (f (if (nil? a) x a)))
+     ([a b] (f (if (nil? a) x a) b))
+     ([a b c] (f (if (nil? a) x a) b c))
+     ([a b c & ds] (apply f (if (nil? a) x a) b c ds))))
+  ([f x y]
+   (fn
+     ([a b] (f (if (nil? a) x a) (if (nil? b) y b)))
+     ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) c))
+     ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) c ds))))
+  ([f x y z]
+   (fn
+     ([a b] (f (if (nil? a) x a) (if (nil? b) y b)))
+     ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c)))
+     ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c) ds)))))
+
+;;;;;;; case ;;;;;;;;;;;;;
+
+(defmacro case
+  "Takes an expression, and a set of clauses.
+
+  Each clause can take the form of either:
+
+  test-constant result-expr
+
+  (test-constant1 ... test-constantN)  result-expr
+
+  The test-constants are not evaluated. They must be compile-time
+  literals, and need not be quoted.  If the expression is equal to a
+  test-constant, the corresponding result-expr is returned. A single
+  default expression can follow the clauses, and its value will be
+  returned if no clause matches. If no default expression is provided
+  and no clause matches, an IllegalArgumentException is thrown.
+
+  Unlike cond and condp, case does a constant-time dispatch, the
+  clauses are not considered sequentially.  All manner of constant
+  expressions are acceptable in case, including numbers, strings,
+  symbols, keywords, and (Clojure) composites thereof. Note that since
+  lists are used to group multiple constants that map to the same
+  expression, a vector can be used to match a list if needed. The
+  test-constants need not be all of the same type."
+  {:added "1.2"}
+
+  [e & clauses]
+  `(case* e ~@clauses))
+
+;; redefine reduce with internal-reduce
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (load "core_print")
+
+#_(defn reduce
+  "f should be a function of 2 arguments. If val is not supplied,
+  returns the result of applying f to the first 2 items in coll, then
+  applying f to that result and the 3rd item, etc. If coll contains no
+  items, f must accept no arguments as well, and reduce returns the
+  result of calling f with no arguments.  If coll has only 1 item, it
+  is returned and f is not called.  If val is supplied, returns the
+  result of applying f to val and the first item in coll, then
+  applying f to that result and the 2nd item, etc. If coll contains no
+  items, returns val and f is not called."
+  {:added "1.0"}
+  ([f coll]
+     (if (instance? clojure.lang.IReduce coll)
+       (.reduce ^clojure.lang.IReduce coll f)
+       (clojure.core.protocols/coll-reduce coll f)))
+  ([f val coll]
+     (if (instance? clojure.lang.IReduceInit coll)
+       (.reduce ^clojure.lang.IReduceInit coll f val)
+       (clojure.core.protocols/coll-reduce coll f val))))
+
+;;------------------------------------------------------------------------------
+;;------------------------------------------------------------------------------
 
 (defmacro simple-benchmark
   "Runs expr iterations times in the context of a let expression with
