@@ -26,18 +26,6 @@
                   , bindings      => clj_scope:scope()
                   }.
 
--spec new_state(binary(), any(), opts(), boolean()) -> state().
-new_state(Src, Env, Opts, ReadAll) ->
-  #{ src           => Src
-   , opts          => Opts
-   , forms         => []
-   , pending_forms => []
-   , env           => Env
-   , all           => ReadAll
-   , loc           => {1, 1}
-   , bindings      => clj_scope:new()
-   }.
-
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
 
 -spec read_fold(read_fold_fun(), binary(), opts()) -> clj_env:env().
@@ -47,12 +35,12 @@ read_fold(Fun, Src, Opts) ->
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
 read_fold(Fun, Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts, false),
+  State = new_state(Src, Env, Opts),
   read_fold_loop(Fun, State).
 
 -spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
 read_fold_loop(Fun, State) ->
-  case dispatch(State) of
+  case read_one(State, false) of
     %% Only finish when there is no more source to consume
     #{src := <<>>, forms := [], env := Env} ->
       Env;
@@ -86,19 +74,8 @@ read(Src, Opts) ->
 %%      or throws if there is no form to read.
 -spec read(binary(), opts(), clj_env:env()) -> any().
 read(Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts, false),
-  ensure_read(dispatch(State)).
-
-%% @doc Makes sure a single form is read unless we reach
-%%      the enf of file.
-%% @private
--spec ensure_read(state()) -> any().
-ensure_read(#{src := <<>>, forms := []} = State) ->
-  clj_utils:throw(<<"EOF">>, location(State));
-ensure_read(#{forms := [Form]}) ->
-  Form;
-ensure_read(State) ->
-  ensure_read(dispatch(State)).
+  State = new_state(Src, Env, Opts),
+  ensure_read(State).
 
 %% @doc Read all forms.
 -spec read_all(state()) -> [any()].
@@ -111,17 +88,44 @@ read_all(Src, Opts) ->
 
 -spec read_all(state(), opts(), clj_env:env()) -> [any()].
 read_all(Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts, true),
-  #{forms := Forms} = dispatch(State),
+  State = new_state(Src, Env, Opts),
+  #{forms := Forms} = do_read_all(State),
   lists:reverse(Forms).
 
--spec dispatch(state()) -> state().
-dispatch(#{src := <<>>} = State) ->
+%%------------------------------------------------------------------------------
+%% Internal functions
+%%------------------------------------------------------------------------------
+
+%% @private
+-spec new_state(binary(), any(), opts()) -> state().
+new_state(Src, Env, Opts) ->
+  #{ src           => Src
+   , opts          => Opts
+   , forms         => []
+   , pending_forms => []
+   , env           => Env
+   , loc           => {1, 1}
+   , bindings      => clj_scope:new()
+   }.
+
+%% @doc Makes sure a single form is read unless we reach
+%%      the enf of file. It handles the case were an ignore
+%%      reader is used.
+%% @private
+-spec ensure_read(state()) -> any().
+ensure_read(#{src := <<>>, forms := []} = State) ->
+  clj_utils:throw(<<"EOF">>, location(State));
+ensure_read(#{forms := [Form]}) ->
+  Form;
+ensure_read(State) ->
+  ensure_read(read_one(State, true)).
+
+%% @private
+-spec do_read_all(state()) -> state().
+do_read_all(#{src := <<>>} = State) ->
   State;
-dispatch(#{all := true} = State) ->
-  dispatch(read_one(State, false));
-dispatch(State) ->
-  read_one(State, false).
+do_read_all(State) ->
+  do_read_all(read_one(State, false)).
 
 -spec read_one(state()) -> state().
 read_one(State) ->
@@ -664,7 +668,6 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
     end,
   Char =
     case Token of
-      <<>> -> clj_utils:throw(<<"EOF">>, location(State));
       Ch when size(Ch) == 1 -> Ch;
       <<"newline">> -> $\n;
       <<"space">> -> $ ;
