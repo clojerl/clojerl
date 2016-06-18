@@ -58,7 +58,7 @@ new(Reader) ->
 'clojerl.IReader.unread'(#?TYPE{name = ?M, data = Pid} = Reader, Str) ->
   case send_command(Pid, {unread, Str}) of
     {error, _} -> error(<<"Couldn't close clojerl.StringReader">>);
-    _ -> Reader
+    ok -> Reader
   end.
 
 %%------------------------------------------------------------------------------
@@ -105,9 +105,9 @@ loop(State) ->
     {From, Ref, close} ->
       From ! {Ref, ok};
     {From, Ref, {unread, Str}} ->
-      Result = unread(State, Str),
-      From ! {Ref, Result},
-      ?MODULE:loop(State);
+      NewState = unread(State, Str),
+      From ! {Ref, ok},
+      ?MODULE:loop(NewState);
     _Unknown ->
       ?MODULE:loop(State)
   end.
