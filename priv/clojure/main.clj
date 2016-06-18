@@ -67,6 +67,7 @@
              ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
              *command-line-args* *command-line-args*
              *assert* *assert*
+             *in* (erlang.io.PushbackReader/new.e *in*)
              *1 nil
              *2 nil
              *3 nil
@@ -163,7 +164,7 @@ by default when a new command-line REPL is started."} repl-requires
   writes to *out*, and prints exception summaries to *err*. If you use the
   default :read hook, *in* must either be an instance of
   LineNumberingPushbackReader or duplicate its behavior of both supporting
-  .unread and collapsing CR, LF, and CRLF into a single \\newline. Options
+  unread and collapsing CR, LF, and CRLF into a single \\newline. Options
   are sequential keyword-value pairs. Available options and their defaults:
 
      - :init, function of no arguments, initialization hook called with
