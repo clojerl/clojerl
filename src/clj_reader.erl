@@ -13,6 +13,7 @@
                  , features     => 'clojerl.Set':type()
                  , data_readers => #{binary() => function()}
                  , file         => file:filename_all()
+                 , io_reader    => 'clojerl.IReader':type()
                  }.
 
 -export_type([location/0, opts/0]).
@@ -134,12 +135,17 @@ read_one(State) ->
 -spec read_one(state(), boolean()) -> state().
 read_one(#{pending_forms := [Form | PendingForms]} = State, _ThrowEof) ->
   push_form(Form, State#{pending_forms => PendingForms});
-read_one(#{src := <<>>} = State, true = _ThrowEof) ->
+read_one(#{src := <<>>} = State, ThrowEof) ->
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
-  clj_utils:throw(<<"EOF">>, location(State));
-read_one(#{src := <<>>} = State, false = _ThrowEof) ->
-  State;
+  case check_reader(State) of
+    {ok, NewState} ->
+      read_one(NewState, ThrowEof);
+    eof when ThrowEof ->
+      clj_utils:throw(<<"EOF">>, location(State));
+    eof ->
+      State
+  end;
 read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
   case clj_utils:char_type(First, Rest) of
     whitespace      -> read_one(consume_char(State), ThrowEof);
@@ -204,13 +210,18 @@ read_string(#{src := <<"\"", _/binary>>, loc := Loc} = State) ->
   read_string(location_started(State1#{current => <<>>}, Loc));
 %% Didn't find closing double quotes
 read_string(#{src := <<>>} = State) ->
-  {Line, Col} = scope_get(loc_started, State),
-  clj_utils:throw( [ <<"Started reading at (">>
-                   , Line, <<":">>, Col
-                   , <<") but found EOF while expecting '\"'">>
-                   ]
-                 , location(State)
-                 ).
+  case check_reader(State) of
+    {ok, NewState}  ->
+      read_string(NewState);
+    eof ->
+      {Line, Col} = scope_get(loc_started, State),
+      clj_utils:throw( [ <<"Started reading at (">>
+                       , Line, <<":">>, Col
+                       , <<") but found EOF while expecting '\"'">>
+                       ]
+                     , location(State)
+                     )
+  end.
 
 -spec escape_char(state()) -> {binary(), state()}.
 escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
@@ -885,8 +896,6 @@ read_tuple(#{forms := Forms, loc := Loc} = State0) ->
 %%------------------------------------------------------------------------------
 
 -spec read_regex(state()) -> state().
-read_regex(#{src := <<>>} = State) ->
-  clj_utils:throw(<<"EOF">>, location(State));
 read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   NewState = State#{current => <<Current/binary, "\\", Ch/utf8>>},
@@ -898,7 +907,15 @@ read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
 read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
   NewState = State#{current => <<Current/binary, Ch/utf8>>},
-  read_regex(consume_char(NewState)).
+  read_regex(consume_char(NewState));
+read_regex(#{src := <<>>} = State) ->
+  case check_reader(State) of
+    {ok, NewState}  ->
+      read_string(NewState);
+    eof ->
+      clj_utils:throw(<<"EOF">>, location(State))
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% #_ discard
@@ -916,7 +933,12 @@ read_discard(State) ->
 
 -spec read_cond(state()) -> state().
 read_cond(#{src := <<>>} = State) ->
-  clj_utils:throw(<<"EOF while reading character">>, location(State));
+  case check_reader(State) of
+    {ok, NewState} ->
+      read_cond(NewState);
+    eof ->
+      clj_utils:throw(<<"EOF while reading character">>, location(State))
+  end;
 read_cond(#{src := Src, opts := Opts} = State) ->
   ReadCondOpt = maps:get(read_cond, Opts, undefined),
   case lists:member(ReadCondOpt, [allow, preserve]) of
@@ -1071,8 +1093,11 @@ consume_chars(N, State) when N > 0 ->
 consume(State, TypesOrPred) ->
   do_consume(State, <<>>, TypesOrPred).
 
-do_consume(State = #{src := <<>>}, Acc, _) ->
-  {Acc, State};
+do_consume(State = #{src := <<>>}, Acc, Types) ->
+  case check_reader(State) of
+    {ok, NewState} -> do_consume(NewState, Acc, Types);
+    eof -> {Acc, State}
+  end;
 do_consume( State = #{src := <<X/utf8, _/binary>>}
           , Acc
           , Pred
@@ -1106,15 +1131,22 @@ read_token(State) ->
 
 -spec read_until(char(), state()) -> state().
 read_until(Delim, #{src := <<>>} = State) ->
-  {Line, Col} = scope_get(loc_started, State),
-  LineBin = integer_to_binary(Line),
-  ColBin = integer_to_binary(Col),
-  clj_utils:throw( [ <<"Started reading at (">>
-                   , LineBin, <<":">>, ColBin
-                   , <<") but found EOF while expecting '", Delim/utf8, "'">>
-                   ]
-                 , location(State)
-                 );
+  case check_reader(State) of
+    {ok, NewState} ->
+      read_cond(NewState);
+    eof ->
+      {Line, Col} = scope_get(loc_started, State),
+      LineBin = integer_to_binary(Line),
+      ColBin = integer_to_binary(Col),
+      clj_utils:throw( [ <<"Started reading at (">>
+                       , LineBin, <<":">>, ColBin
+                       , <<") but found EOF while expecting '">>
+                       , <<Delim/utf8>>
+                       , <<"'">>
+                       ]
+                     , location(State)
+                     )
+  end;
 read_until(Delim, #{src := <<Delim/utf8, _/binary>>} = State) ->
   consume_char(scope_put(read_delim, false, State));
 read_until(Delim, #{src := <<X/utf8, _/binary>>} = State) ->
@@ -1185,3 +1217,13 @@ file_location_meta(State) ->
     true  -> #{loc => Loc, file => maps:get(file, Opts)};
     false -> #{loc => Loc}
   end.
+
+-spec check_reader(state()) -> {ok, state()} | eof.
+check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)
+  when Reader =/= undefined ->
+  case 'clojerl.IReader':read(Reader) of
+    eof -> eof;
+    Ch -> {ok, State#{src := Ch}}
+  end;
+check_reader(#{src := <<>>}) ->
+  eof.
