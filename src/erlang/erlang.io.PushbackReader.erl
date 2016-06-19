@@ -6,7 +6,7 @@
 -behaviour('clojerl.Stringable').
 -behaviour('clojerl.IReader').
 
--export([new/1]).
+-export([new/1, at_line_start/1]).
 -export([ start_link/1
         , init/1
         , loop/1
@@ -28,13 +28,20 @@
 new(Reader) ->
   #?TYPE{data = start_link(Reader)}.
 
+-spec at_line_start('clojerl.IReader':type()) -> type().
+at_line_start(#?TYPE{name = ?M, data = Pid}) ->
+  case send_command(Pid, at_line_start) of
+    {error, _} -> error(<<"Can't determine if at line start">>);
+    Result     -> Result
+  end.
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
 'clojerl.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
-    {error, _} -> error(<<"Couldn't close clojerl.StringReader">>);
+    {error, _} -> error(<<"Couldn't close clojerl.PushbackReader">>);
     _          -> undefined
   end.
 
@@ -90,8 +97,9 @@ start_link(Reader) ->
 
 -spec init('clojerl.IReader':type()) -> no_return().
 init(Reader) ->
-  State = #{ reader => Reader
-           , buffer => <<>>
+  State = #{ reader        => Reader
+           , buffer        => <<>>
+           , at_line_start => true
            },
   ?MODULE:loop(State).
 
@@ -108,6 +116,10 @@ loop(State) ->
       NewState = unread(State, Str),
       From ! {Ref, ok},
       ?MODULE:loop(NewState);
+    {From, Ref, at_line_start} ->
+      #{at_line_start := AtLineStart} = State,
+      From ! {Ref, AtLineStart},
+      ?MODULE:loop(State);
     _Unknown ->
       ?MODULE:loop(State)
   end.
@@ -126,9 +138,15 @@ request(_Other, State) ->
 
 -spec maybe_encode_result(atom(), {term(), state()}) -> {term(), state()}.
 maybe_encode_result(Encoding, {Result, NewState}) when is_binary(Result) ->
-  {unicode:characters_to_binary(Result, unicode, Encoding), NewState};
+  { unicode:characters_to_binary(Result, unicode, Encoding)
+  , update_at_line_start(Result, NewState)
+  };
 maybe_encode_result(_, X) ->
   X.
+
+-spec update_at_line_start(binary(), state()) -> state().
+update_at_line_start(Result, State) ->
+  State#{at_line_start := clj_utils:ends_with(Result, <<"\n">>)}.
 
 -spec get_chars(integer(), state()) -> {binary() | eof, binary()}.
 get_chars(N, #{reader := Reader, buffer := <<>>} = State) ->
