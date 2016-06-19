@@ -41,8 +41,11 @@ at_line_start(#?TYPE{name = ?M, data = Pid}) ->
 
 'clojerl.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
-    {error, _} -> error(<<"Couldn't close clojerl.PushbackReader">>);
-    _          -> undefined
+    {error, _} ->
+      TypeName = atom_to_binary(?MODULE, utf8),
+      error(<<"Couldn't close ", TypeName/binary>>);
+    _ ->
+      undefined
   end.
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Pid}) ->
@@ -64,8 +67,11 @@ at_line_start(#?TYPE{name = ?M, data = Pid}) ->
 
 'clojerl.IReader.unread'(#?TYPE{name = ?M, data = Pid} = Reader, Str) ->
   case send_command(Pid, {unread, Str}) of
-    {error, _} -> error(<<"Couldn't close clojerl.StringReader">>);
-    ok -> Reader
+    {error, _} ->
+      TypeName = atom_to_binary(?MODULE, utf8),
+      error(<<"Couldn't unread to ", TypeName/binary>>);
+    ok ->
+      Reader
   end.
 
 %%------------------------------------------------------------------------------
@@ -75,8 +81,9 @@ at_line_start(#?TYPE{name = ?M, data = Pid}) ->
 %% writing operations.
 %%------------------------------------------------------------------------------
 
--type state() :: #{ reader => 'clojerl.IReader':type()
-                  , buffer => binary()
+-type state() :: #{ reader        => 'clojerl.IReader':type()
+                  , buffer        => binary()
+                  , at_line_start => boolean()
                   }.
 
 -spec send_command(pid(), any()) -> any().
@@ -111,10 +118,14 @@ loop(State) ->
       reply(From, ReplyAs, Reply),
       ?MODULE:loop(NewState);
     {From, Ref, close} ->
-      From ! {Ref, ok};
+      #{reader := Reader} = State,
+      Result = try 'clojerl.Closeable':close(Reader)
+               catch error:Error -> {error, Error}
+               end,
+      From ! {Ref, Result};
     {From, Ref, {unread, Str}} ->
-      NewState = unread(State, Str),
-      From ! {Ref, ok},
+      {Result, NewState} = unread(State, Str),
+      From ! {Ref, Result},
       ?MODULE:loop(NewState);
     {From, Ref, at_line_start} ->
       #{at_line_start := AtLineStart} = State,
@@ -153,8 +164,6 @@ get_chars(N, #{reader := Reader, buffer := <<>>} = State) ->
   {'clojerl.IReader':read(Reader, N), State};
 get_chars(1, #{buffer := <<Ch/utf8, Str/binary>>} = State) ->
   {<<Ch/utf8>>, State#{buffer => Str}};
-get_chars(1, #{reader := Reader} = State) ->
-  {'clojerl.IReader':read(Reader, 1), State};
 get_chars(N, State) ->
   do_get_chars(N, State, <<>>).
 
@@ -165,8 +174,8 @@ do_get_chars(N, #{buffer := <<Ch/utf8, Rest/binary>>} = State, Result) ->
   do_get_chars(N - 1, State#{buffer := Rest}, <<Result/binary, Ch/utf8>>);
 do_get_chars(N, #{reader := Reader} = State, Result) ->
   case 'clojerl.IReader':read(Reader, N) of
-    eof when Result =:= <<>> ->
-      {eof, State};
+    eof ->
+      {Result, State};
     Str ->
       {<<Result/binary, Str/binary>>, State}
   end.
@@ -217,4 +226,9 @@ skip( {cont, Length, #{buffer := <<_/utf8, RestStr/binary>>} = State}
 
 -spec unread(state(), binary()) -> ok.
 unread(State = #{buffer := Buffer}, Str) ->
-  State#{buffer := <<Str/binary, Buffer/binary>>}.
+  try
+    {ok, State#{buffer := <<Str/binary, Buffer/binary>>}}
+  catch
+    _:Reason ->
+      {{error, Reason}, State}
+  end.
