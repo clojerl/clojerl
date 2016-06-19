@@ -65,10 +65,8 @@
    'clojerl.Var',
    'clojerl.Vector',
    'clojure.core',
-   'cover_report',
    'erlang.io.File',
    'erlang.io.PushbackReader'
-
   ]
 }.
 %% Export coverage data for jenkins.
