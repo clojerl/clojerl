@@ -7,7 +7,7 @@
 -behaviour('clojerl.IWriter').
 -behaviour('clojerl.Stringable').
 
--export([open/2]).
+-export([open/1, open/2]).
 
 -export(['clojerl.Closeable.close'/1]).
 -export([ 'clojerl.IReader.read'/1
@@ -22,6 +22,10 @@
 -export(['clojerl.Stringable.str'/1]).
 
 -type type() :: #?TYPE{data :: pid()}.
+
+-spec open(binary()) -> type().
+open(Path) ->
+  open(Path, [read]).
 
 -spec open(binary(), [atom()]) -> type().
 open(Path, Modes) ->
@@ -55,8 +59,9 @@ open(Path, Modes) ->
     Str -> list_to_binary(Str)
   end.
 
-'clojerl.IReader.skip'(#?TYPE{name = ?M, data = Pid}, Length) ->
-  io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
+'clojerl.IReader.skip'(#?TYPE{name = ?M}, _Length) ->
+  TypeName = atom_to_binary(?MODULE, utf8),
+  error(<<"Unsupported operation: skip for ", TypeName/binary>>).
 
 'clojerl.IReader.unread'(#?TYPE{name = ?M}, _Ch) ->
   TypeName = atom_to_binary(?MODULE, utf8),
@@ -71,4 +76,5 @@ open(Path, Modes) ->
   SW.
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Pid}) ->
-  clj_core:str(Pid).
+  <<"<", PidBin/binary>> = list_to_binary(erlang:pid_to_list(Pid)),
+  <<"#<erlang.io.File ", PidBin/binary>>.
