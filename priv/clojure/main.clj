@@ -49,6 +49,7 @@
            (demunge (module el))
            (str (module el) "/" (function el)))
          " (" (filename el) ":" (line-number el) ")")))
+
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
 
 
@@ -94,7 +95,7 @@
      :else (do (clojerl.IReader/unread.e s c) :body))))
 
 (defn whitespace? [x]
- (or (= " " x) (= x "\n") (= x "\r") (= x "\t")))
+  (or (= " " x) (= x "\n") (= x "\r") (= x "\t")))
 
 (defn skip-whitespace
   "Skips whitespace characters on stream s. Returns :line-start, :stream-end,
@@ -129,7 +130,6 @@
   (or ({:line-start request-prompt :stream-end request-exit}
        (skip-whitespace *in*))
       (let [input (read)]
-        (skip-if-eol *in*)
         input)))
 
 (defn repl-exception
@@ -205,7 +205,9 @@ by default when a new command-line REPL is started."} repl-requires
   [& options]
   (let [{:keys [init need-prompt prompt flush read eval print caught]
          :or {init        #()
-              need-prompt #(identity true)
+              need-prompt #(if (instance? :erlang.io.PushbackReader *in*)
+                             (erlang.io.PushbackReader/at_line_start.e *in*)
+                             true)
               prompt      repl-prompt
               flush       flush
               read        repl-read
@@ -239,11 +241,11 @@ by default when a new command-line REPL is started."} repl-requires
      (flush)
      (loop []
        (when-not
-       	 (try (identical? (read-eval-print) request-exit)
-	  (catch _ e
-	   (caught e)
-	   (set! *e e)
-	   nil))
+           (try (identical? (read-eval-print) request-exit)
+                (catch _ e
+                  (caught e)
+                  (set! *e e)
+                  nil))
          (when (need-prompt)
            (prompt)
            (flush))
