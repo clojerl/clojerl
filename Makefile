@@ -20,14 +20,11 @@ COMPILE_FIRST = lang/protocols/*
 SHELL_OPTS += -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync
 
 # Generate a list of all modules for the cover.spec
-print-all-modules:
-	@find src -type f -name "*.erl" | xargs basename -s .erl | sort | sed -e "s/\(.*\)/'\1',/"
+generate-spec:
+	@bin/generate-spec test/clojerl.spec.in test/clojerl.spec
 
 coverage-results:
 	@erl -noshell -pa ebin -eval 'cover_report:report(), halt(0).' -env COVER_SPEC '${COVER_SPEC}'
-
-coverage-html:
-	@find . -name "cover.html" | sort -r | head -1 | xargs open
 
 tests-shell: test-build
 	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}

@@ -1,0 +1,26 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -smp enable -sname clojerl -pa ebin -pa priv
+
+-spec main([string()]) -> ok.
+main([Template, Target]) ->
+  {ok, TemplateBin} = file:read_file(Template),
+  Modules = [M || M <- all_modules(), not lists:member(M, exclusions())],
+  Output = binary:replace(TemplateBin, <<"{{MODULES}}">>, csv(Modules)),
+  ok = filelib:ensure_dir(Target),
+  file:write_file(Target, Output).
+
+-spec all_modules() -> [module()].
+all_modules() ->
+  [ erlang:list_to_atom(filename:basename(F, ".erl"))
+    || F <- filelib:wildcard("src/**/*.erl")
+  ].
+
+-spec csv([module()]) -> binary().
+csv(Modules) ->
+  ModulesStrs = [io_lib:format("~p", [M]) || M <- lists:sort(Modules)],
+  list_to_binary("\n" ++ string:join(ModulesStrs, ",\n") ++ "\n").
+
+-spec exclusions() -> [module()].
+exclusions() ->
+  [cover_report].
