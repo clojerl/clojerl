@@ -40,7 +40,7 @@
 (defn write
   "Wrap io/fwrite.e"
   [w format & data]
-  (io/fwrite.e w format (clj_core/seq_to_list.e data)))
+  (erlang.io.IWriter/write.e w format (clj_core/seq_to_list.e data)))
 
 (defn- print-sequential [begin, print-one, sep, end, sequence, w]
   (binding [*print-level* (and (not *print-dup*) *print-level* (dec *print-level*))]

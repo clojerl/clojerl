@@ -87,15 +87,19 @@ cleanup() ->
 %% @end
 -spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
-  Module = get(?MODULE, ModuleName, true),
-  FA     = {Function, Arity},
-  case ets:lookup(Module#module.fake_funs, FA) of
-    [] ->
-      Fun = build_fake_fun(Module, Function, Arity),
+  case get(?MODULE, ModuleName) of
+    undefined ->
+      fun ModuleName:Function/Arity;
+    Module ->
+      FA     = {Function, Arity},
+      case ets:lookup(Module#module.fake_funs, FA) of
+        [] ->
+          Fun = build_fake_fun(Module, Function, Arity),
       save(Module#module.fake_funs, {FA, Fun}),
-      Fun;
-    [{_, Fun}] ->
-      Fun
+          Fun;
+        [{_, Fun}] ->
+          Fun
+      end
   end.
 
 %% @private

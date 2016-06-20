@@ -86,7 +86,7 @@ get_method(_Config) ->
                                                         , VectorMeta2
                                                         ),
 
-  ct:comment("Some other dispatch value will return the default implementation"),
+  ct:comment("Some other value will return the default implementation"),
   default_method =
     'clojerl.MultiFn':get_method(<<"test-method">>, hello, default, undefined),
 

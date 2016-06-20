@@ -201,4 +201,6 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
+  #{a := b, 2 := 3} = 'clojerl.Map':to_erl_map(NotEmptyMap),
+
   {comments, ""}.
