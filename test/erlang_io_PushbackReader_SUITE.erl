@@ -47,7 +47,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.PushbackReader \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -56,17 +56,17 @@ read(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':new(File),
 
-  <<"Hello">> = 'clojerl.IReader':read(Reader, 5),
-  Reader      = 'clojerl.IReader':unread(Reader, <<"Hello">>),
-  <<"H">>     = 'clojerl.IReader':read(Reader),
-  <<"ello ">> = 'clojerl.IReader':read(Reader, 5),
-  <<"world">> = 'clojerl.IReader':read(Reader, 5),
-  <<"!\n">>   = 'clojerl.IReader':read(Reader, 2),
-  Reader      = 'clojerl.IReader':unread(Reader, <<"yeah">>),
-  <<"yeah">>  = 'clojerl.IReader':read(Reader, 10),
-  eof         = 'clojerl.IReader':read(Reader),
+  <<"Hello">> = 'erlang.io.IReader':read(Reader, 5),
+  Reader      = 'erlang.io.IReader':unread(Reader, <<"Hello">>),
+  <<"H">>     = 'erlang.io.IReader':read(Reader),
+  <<"ello ">> = 'erlang.io.IReader':read(Reader, 5),
+  <<"world">> = 'erlang.io.IReader':read(Reader, 5),
+  <<"!\n">>   = 'erlang.io.IReader':read(Reader, 2),
+  Reader      = 'erlang.io.IReader':unread(Reader, <<"yeah">>),
+  <<"yeah">>  = 'erlang.io.IReader':read(Reader, 10),
+  eof         = 'erlang.io.IReader':read(Reader),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -75,35 +75,35 @@ read_line(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':new(File),
 
-  <<"Hello world!\n">> = 'clojerl.IReader':read_line(Reader),
-  Reader = 'clojerl.IReader':unread(Reader, <<"hello\r">>),
-  <<"hello">> = 'clojerl.IReader':read_line(Reader),
-  Reader = 'clojerl.IReader':unread(Reader, <<"hello\r\n">>),
-  <<"hello">> = 'clojerl.IReader':read_line(Reader),
-  Reader = 'clojerl.IReader':unread(Reader, <<"hello\n">>),
-  <<"hello">> = 'clojerl.IReader':read_line(Reader),
+  <<"Hello world!\n">> = 'erlang.io.IReader':read_line(Reader),
+  Reader = 'erlang.io.IReader':unread(Reader, <<"hello\r">>),
+  <<"hello">> = 'erlang.io.IReader':read_line(Reader),
+  Reader = 'erlang.io.IReader':unread(Reader, <<"hello\r\n">>),
+  <<"hello">> = 'erlang.io.IReader':read_line(Reader),
+  Reader = 'erlang.io.IReader':unread(Reader, <<"hello\n">>),
+  <<"hello">> = 'erlang.io.IReader':read_line(Reader),
 
-  eof = 'clojerl.IReader':read_line(Reader),
+  eof = 'erlang.io.IReader':read_line(Reader),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
 -spec skip(config()) -> result().
 skip(_Config) ->
-  StrReader = 'clojerl.StringReader':new(<<"Hello world!\n">>),
+  StrReader = 'erlang.io.StringReader':new(<<"Hello world!\n">>),
   Reader    = 'erlang.io.PushbackReader':new(StrReader),
 
-  6            = 'clojerl.IReader':skip(Reader, 6), %% Skipped "Hello "
-  <<"world!">> = 'clojerl.IReader':read_line(Reader),
-  Reader       = 'clojerl.IReader':unread(Reader, <<"world!">>),
-  3            = 'clojerl.IReader':skip(Reader, 3), %% Skipped "wor"
-  <<"ld">>     = 'clojerl.IReader':read(Reader, 2),
-  eof          = 'clojerl.IReader':skip(Reader, 3), %% Skipped "!\n"
-  eof          = 'clojerl.IReader':read_line(Reader),
-  eof          = 'clojerl.IReader':skip(Reader, 1),
+  6            = 'erlang.io.IReader':skip(Reader, 6), %% Skipped "Hello "
+  <<"world!">> = 'erlang.io.IReader':read_line(Reader),
+  Reader       = 'erlang.io.IReader':unread(Reader, <<"world!">>),
+  3            = 'erlang.io.IReader':skip(Reader, 3), %% Skipped "wor"
+  <<"ld">>     = 'erlang.io.IReader':read(Reader, 2),
+  eof          = 'erlang.io.IReader':skip(Reader, 3), %% Skipped "!\n"
+  eof          = 'erlang.io.IReader':read_line(Reader),
+  eof          = 'erlang.io.IReader':skip(Reader, 1),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -112,19 +112,19 @@ unread(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':new(File),
 
-  <<"Hello">> = 'clojerl.IReader':read(Reader, 5),
-  <<" ">>     = 'clojerl.IReader':read(Reader),
-  Reader      = 'clojerl.IReader':unread(Reader, <<"_ _">>),
-  <<"_ _">>   = 'clojerl.IReader':read(Reader, 3),
-  <<"world">> = 'clojerl.IReader':read(Reader, 5),
-  <<"!\n">>   = 'clojerl.IReader':read(Reader, 2),
-  eof         = 'clojerl.IReader':read(Reader),
+  <<"Hello">> = 'erlang.io.IReader':read(Reader, 5),
+  <<" ">>     = 'erlang.io.IReader':read(Reader),
+  Reader      = 'erlang.io.IReader':unread(Reader, <<"_ _">>),
+  <<"_ _">>   = 'erlang.io.IReader':read(Reader, 3),
+  <<"world">> = 'erlang.io.IReader':read(Reader, 5),
+  <<"!\n">>   = 'erlang.io.IReader':read(Reader, 2),
+  eof         = 'erlang.io.IReader':read(Reader),
 
-  ok = try 'clojerl.IReader':unread(Reader, something), error
+  ok = try 'erlang.io.IReader':unread(Reader, something), error
        catch _:_ -> ok
        end,
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -134,14 +134,14 @@ at_line_start(_Config) ->
   Reader = 'erlang.io.PushbackReader':new(File),
 
   true         = 'erlang.io.PushbackReader':at_line_start(Reader),
-  <<"Hello ">> = 'clojerl.IReader':read(Reader, 6),
+  <<"Hello ">> = 'erlang.io.IReader':read(Reader, 6),
   false        = 'erlang.io.PushbackReader':at_line_start(Reader),
-  <<"world">>  = 'clojerl.IReader':read(Reader, 5),
-  <<"!\n">>    = 'clojerl.IReader':read(Reader, 2),
+  <<"world">>  = 'erlang.io.IReader':read(Reader, 5),
+  <<"!\n">>    = 'erlang.io.IReader':read(Reader, 2),
   true         = 'erlang.io.PushbackReader':at_line_start(Reader),
-  eof          = 'clojerl.IReader':read(Reader),
+  eof          = 'erlang.io.IReader':read(Reader),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   ct:comment("At line start fails"),
   FakePid = spawn_link(fun fake_loop/0),
@@ -157,9 +157,9 @@ close(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':new(File),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
-  ok = try undefined = 'clojerl.Closeable':close(Reader), error
+  ok = try undefined = 'erlang.io.Closeable':close(Reader), error
        catch _:_ -> ok
        end,
 
@@ -177,7 +177,7 @@ complete_coverage(_Config) ->
   ct:comment("Send an unexpected io_request"),
   {error, request} = io:request(Pid, {io_request, self(), ref, unexpected}),
 
-  undefined = 'clojerl.Closeable':close(Reader),
+  undefined = 'erlang.io.Closeable':close(Reader),
 
   ct:comment("Generate error when closing a PushbackReader that wraps a file"),
   File1   = 'erlang.io.File':open(<<"tmp">>),
@@ -185,7 +185,7 @@ complete_coverage(_Config) ->
   meck:new(file, [passthrough, unstick]),
   try
     meck:expect(file, close, fun(_) -> {error, fake} end),
-    ok = try 'clojerl.Closeable':close(Reader1), error
+    ok = try 'erlang.io.Closeable':close(Reader1), error
          catch _:_ -> ok
          end
   after

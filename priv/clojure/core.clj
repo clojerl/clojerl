@@ -2915,7 +2915,7 @@
   {:added "1.0"
    :static true}
   [rdr]
-  (let [line (clojerl.IReader/read_line.e rdr)]
+  (let [line (erlang.io.IReader/read_line.e rdr)]
     (when (string? line)
       (cons line (lazy-seq (line-seq rdr))))))
 
@@ -3597,7 +3597,7 @@
   {:added "1.0"
    :static true}
   []
-  (clojerl.IReader/read_line.e *in*))
+  (erlang.io.IReader/read_line.e *in*))
 
 (defn read-string
   "Reads one object from the string s. Optionally include reader
@@ -3642,7 +3642,7 @@
                               (try
                                 (with-open ~(subvec bindings 2) ~@body)
                                 (finally
-                                  (clojerl.Closeable/close.e ~(bindings 0)))))
+                                  (erlang.io.Closeable/close.e ~(bindings 0)))))
     :else (throw "with-open only allows Symbols in bindings")))
 
 #_(defmacro doto

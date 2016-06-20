@@ -1,4 +1,4 @@
--module(clojerl_StringWriter_SUITE).
+-module(erlang_io_StringWriter_SUITE).
 
 -include("clojerl.hrl").
 
@@ -30,41 +30,41 @@ init_per_suite(Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Writer = 'clojerl.StringWriter':new(<<"hello">>),
+  Writer = 'erlang.io.StringWriter':new(<<"hello">>),
 
   <<"hello">> = clj_core:str(Writer),
-  Writer = 'clojerl.IWriter':write(Writer, <<" world!">>),
+  Writer = 'erlang.io.IWriter':write(Writer, <<" world!">>),
   <<"hello world!">> = clj_core:str(Writer),
 
-  undefined = 'clojerl.Closeable':close(Writer),
+  undefined = 'erlang.io.Closeable':close(Writer),
 
   {comments, ""}.
 
 -spec write(config()) -> result().
 write(_Config) ->
-  Writer = 'clojerl.StringWriter':new(),
+  Writer = 'erlang.io.StringWriter':new(),
 
-  Writer = 'clojerl.IWriter':write(Writer, <<"hello">>),
-  Writer = 'clojerl.IWriter':write(Writer, <<" ">>),
-  Writer = 'clojerl.IWriter':write(Writer, <<"world!">>),
+  Writer = 'erlang.io.IWriter':write(Writer, <<"hello">>),
+  Writer = 'erlang.io.IWriter':write(Writer, <<" ">>),
+  Writer = 'erlang.io.IWriter':write(Writer, <<"world!">>),
 
   <<"hello world!">> = clj_core:str(Writer),
 
-  Writer = 'clojerl.IWriter':write(Writer, <<"~s!">>, [<<" Yeah">>]),
+  Writer = 'erlang.io.IWriter':write(Writer, <<"~s!">>, [<<" Yeah">>]),
 
   <<"hello world! Yeah!">> = clj_core:str(Writer),
 
-  undefined = 'clojerl.Closeable':close(Writer),
+  undefined = 'erlang.io.Closeable':close(Writer),
 
   {comments, ""}.
 
 -spec close(config()) -> result().
 close(_Config) ->
-  Writer = 'clojerl.StringWriter':new(<<"hello\nworld!\n">>),
+  Writer = 'erlang.io.StringWriter':new(<<"hello\nworld!\n">>),
 
-  undefined = 'clojerl.Closeable':close(Writer),
+  undefined = 'erlang.io.Closeable':close(Writer),
 
-  ok = try undefined = 'clojerl.Closeable':close(Writer), error
+  ok = try undefined = 'erlang.io.Closeable':close(Writer), error
        catch _:_ -> ok
        end,
 
@@ -72,7 +72,7 @@ close(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  Writer = 'clojerl.StringWriter':new(<<"hello\nworld!\n">>),
+  Writer = 'erlang.io.StringWriter':new(<<"hello\nworld!\n">>),
   Pid    = Writer#?TYPE.data,
 
   ct:comment("Send an unexpected message"),
@@ -85,7 +85,7 @@ complete_coverage(_Config) ->
   Request = {put_chars, unicode, io, format, ["~s", []]},
   {error, format} = io:request(Pid, Request),
 
-  undefined = 'clojerl.Closeable':close(Writer),
+  undefined = 'erlang.io.Closeable':close(Writer),
 
   ok = try clj_core:str(Writer), error
        catch _:_ -> ok
