@@ -102,7 +102,7 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
-  clj_utils:time("Finished compiling", fun compile/3, [Src, Opts, Env]).
+  clj_utils:time("Total", fun compile/3, [Src, Opts, Env]).
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts, Env) when is_binary(Src) ->
@@ -165,12 +165,33 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts),
+  Env      = clj_env:put(Env0, clj_flags, CljFlags),
+  EmitEval = case Opts0 of
+               #{time := true} ->
+                 fun() ->
+                     clj_utils:time( "Read, Analyze & Emit"
+                                   , fun clj_reader:read_fold/4
+                                   , [ fun emit_eval_form/2
+                                     , Src
+                                     , RdrOpts
+                                     , Env
+                                     ]
+                                   )
+                 end;
+               _ ->
+                 fun () ->
+                     clj_reader:read_fold( fun emit_eval_form/2
+                                         , Src
+                                         , RdrOpts
+                                         , Env
+                                         )
+                 end
+             end,
 
   CompileFun =
     fun() ->
         try
-          Env  = clj_env:put(Env0, clj_flags, CljFlags),
-          Env1 = clj_reader:read_fold(fun emit_eval_form/2, Src, RdrOpts, Env),
+          Env1 = EmitEval(),
           {_, Env2} = clj_emitter:remove_state(Env1),
 
           %% Compile all modules
@@ -216,7 +237,14 @@ emit_eval_form(Form, Env) ->
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
-  fun(Forms) -> compile_forms(Forms, Opts) end.
+  case Opts of
+    #{time := true} ->
+      fun(Forms) ->
+          clj_utils:time("Compile Forms", fun compile_forms/2, [Forms, Opts])
+      end;
+    _ ->
+      fun(Forms) -> compile_forms(Forms, Opts) end
+  end.
 
 -spec compile_forms([erl_parse:abstract_form()], options()) ->
   atom() | undefined.
