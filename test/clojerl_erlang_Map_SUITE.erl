@@ -87,11 +87,11 @@ equiv(_Config) ->
   Map2 = #{Symbol => 4, 1 => 2},
   true = clj_core:equiv(Map1, Map2),
 
-  ct:comment("Check that maps with the same number of keys are not equivalent"),
+  ct:comment("Check maps with the same number of keys are not equivalent"),
   Map3 = #{5 => 6, 3 => 4},
   false = clj_core:equiv(Map1, Map3),
 
-  ct:comment("Check that maps with different number of keys are not equivalent"),
+  ct:comment("Check maps with different number of keys are not equivalent"),
   Map4 = #{5 => 6, 3 => 4, 7 => 8},
   false = clj_core:equiv(Map1, Map4),
 
