@@ -48,7 +48,7 @@ subvec(Vector, Start, End) ->
     fun(Index, Subvec) ->
         'clojerl.IColl.cons'(Subvec, 'clojerl.Indexed.nth'(Vector, Index))
     end,
-  lists:foldl(AddItemAtFun, new([]), lists:seq(Start, End)).
+  lists:foldl(AddItemAtFun, new([]), lists:seq(Start, End - 1)).
 
 %%------------------------------------------------------------------------------
 %% Protocols

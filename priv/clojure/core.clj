@@ -165,19 +165,21 @@
     :static true}
   meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
 
-#_(def
-    ^{:arglists '([x])
-      :doc "Return true if x is a Character"
-      :added "1.0"
-      :static true}
-    char? (fn ^:static char? [x] (extends? Character x)))
-
 (def
   ^{:arglists '([x])
     :doc "Return true if x is a String"
     :added "1.0"
     :static true}
-  string? (fn ^:static string? [x] (instance? :clojerl.String x)))
+  string? (fn ^:static string? [x] (erlang/is_binary.e x)))
+
+(def
+  ^{:arglists '([x])
+    :doc "Return true if x is a Character"
+    :added "1.0"
+    :static true}
+  char? (fn ^:static char? [x]
+          (erlang/and.e (erlang/is_binary.e x)
+                        (erlang/=:=.e 1 (erlang/size.e x)))))
 
 (def
   ^{:arglists '([x])
@@ -1419,19 +1421,6 @@
   [^clojure.lang.Named x]
   (clj_core/namespace.e x))
 
-(defmacro locking
-  "Executes exprs in an implicit do, while holding the monitor of x.
-  Will release the monitor of x in all circumstances."
-  {:added "1.0"}
-  [x & body]
-  (throw "unsupported locks")
-  #_`(let [lockee# ~x]
-     (try
-      (monitor-enter lockee#)
-      ~@body
-      (finally
-       (monitor-exit lockee#)))))
-
 (defmacro ..
   "form => fieldName-symbol or (instanceMethodName-symbol args*)
   Expands into a member access (.) of the first member on the first
@@ -1589,8 +1578,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn dispatch-val-x dispatch-val-y]
-  (throw "unimplemented hierarchy")
-  #_(clojerl.MultiFn/prefer_method.e multifn dispatch-val-x dispatch-val-y))
+  (throw "unimplemented hierarchy"))
 
 (defn methods
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
@@ -1612,8 +1600,7 @@
   {:added "1.0"
    :static true}
   [^clojure.lang.MultiFn multifn]
-  (throw "unimplemented hierarchy")
-  #_(clojerl.MultiFn/get_prefer_table.e multifn))
+  (throw "unimplemented hierarchy"))
 
 ;;;;;;;;; var stuff
 
@@ -1804,7 +1791,7 @@
   nil if no var with that name."
   {:added "1.0"
    :static true}
-  [sym] (clojerl.Var/find.e sym))
+  [sym] (clj_namespace/find_var.e sym))
 
 (defn binding-conveyor-fn
   {:private true
@@ -2927,18 +2914,18 @@
   rdr must implement java.io.BufferedReader."
   {:added "1.0"
    :static true}
-  [^java.io.BufferedReader rdr]
-  (throw "unimplemented io")
-  #_(when-let [line (.readLine rdr)]
-    (cons line (lazy-seq (line-seq rdr)))))
+  [rdr]
+  (let [line (erlang.io.IReader/read_line.e rdr)]
+    (when (string? line)
+      (cons line (lazy-seq (line-seq rdr))))))
 
 (defn comparator
   "Returns an implementation of java.util.Comparator based upon pred."
   {:added "1.0"
    :static true}
   [pred]
-    (fn [x y]
-      (cond (pred x y) -1 (pred y x) 1 :else 0)))
+  (fn [x y]
+    (cond (pred x y) -1 (pred y x) 1 :else 0)))
 
 (defn sort
   "Returns a sorted sequence of the items in coll. If no comparator is
@@ -3576,7 +3563,7 @@
   (binding [*print-readably* nil]
     (apply prn more)))
 
-#_(defn read
+(defn read
   "Reads the next object from stream, which must be an instance of
   java.io.PushbackReader or some derivee.  stream defaults to the
   current value of *in*.
@@ -3599,22 +3586,20 @@
   ([stream]
    (read stream true nil))
   ([stream eof-error? eof-value]
-   (read stream eof-error? eof-value false))
-  ([stream eof-error? eof-value recursive?]
-   (. clojure.lang.LispReader (read stream (boolean eof-error?) eof-value recursive?)))
-  ([opts stream]
-   (. clojure.lang.LispReader (read stream opts))))
+   (clj_reader/read.e ""
+                      (clojerl.Map/to_erl_map.e
+                       {:io_reader  stream
+                        :eof-error? (boolean eof-error?)
+                        :eof-value  eof-value}))))
 
-#_(defn read-line
+(defn read-line
   "Reads the next line from stream that is the current value of *in* ."
   {:added "1.0"
    :static true}
   []
-  (if (instance? clojure.lang.LineNumberingPushbackReader *in*)
-    (.readLine ^clojure.lang.LineNumberingPushbackReader *in*)
-    (.readLine ^java.io.BufferedReader *in*)))
+  (erlang.io.IReader/read_line.e *in*))
 
-#_(defn read-string
+(defn read-string
   "Reads one object from the string s. Optionally include reader
   options, as specified in read.
 
@@ -3624,8 +3609,8 @@
   For data structure interop use clojure.edn/read-string"
   {:added "1.0"
    :static true}
-  ([s] (clojure.lang.RT/readString s))
-  ([opts s] (clojure.lang.RT/readString s opts)))
+  ([s] (clj_reader/read.e s))
+  ([opts s] (clj_reader/read.e s opts)))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
@@ -3657,7 +3642,7 @@
                               (try
                                 (with-open ~(subvec bindings 2) ~@body)
                                 (finally
-                                  (. ~(bindings 0) close))))
+                                  (erlang.io.Closeable/close.e ~(bindings 0)))))
     :else (throw "with-open only allows Symbols in bindings")))
 
 #_(defmacro doto
@@ -4513,7 +4498,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  `(let [s# :standard_io]
+  `(with-open [s# (erlang.io.StringWriter/new.e)]
      (binding [*out* s#]
        ~@body
        (str s#))))
@@ -4523,8 +4508,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  (throw "unimplemented io")
-  #_`(with-open [s# (-> (java.io.StringReader. ~s) clojure.lang.LineNumberingPushbackReader.)]
+  `(with-open [s# (erlang.io.StringReader/new.e ~s)]
      (binding [*in* s#]
        ~@body)))
 
@@ -4821,7 +4805,7 @@
   once, but any effects on Refs will be atomic."
   {:added "1.0"}
   [& exprs]
-  `(sync nil ~@exprs))
+  #_`(sync nil ~@exprs))
 
 #_ ((defmacro with-precision
       "Sets the precision and rounding mode to be used for BigDecimal operations.
@@ -5853,12 +5837,10 @@
   If any levels do not exist, hash-maps will be created."
   {:added "1.0"
    :static true}
-  [m ks v]
-  (let [k  (first ks)
-        ks (rest ks)]
-    (if ks
-      (assoc m k (assoc-in (get m k) ks v))
-      (assoc m k v))))
+  [m [k & ks] v]
+  (if ks
+    (assoc m k (assoc-in (get m k) ks v))
+    (assoc m k v)))
 
 (defn update-in
   "'Updates' a value in a nested associative structure, where ks is a
@@ -5868,12 +5850,10 @@
   created."
   {:added "1.0"
    :static true}
-  ([m ks f & args]
-   (let [k  (first ks)
-         ks (rest ks)]
-     (if ks
-       (assoc m k (apply update-in (get m k) ks f args))
-       (assoc m k (apply f (get m k) args))))))
+  ([m [k & ks] f & args]
+   (if ks
+     (assoc m k (apply update-in (get m k) ks f args))
+     (assoc m k (apply f (get m k) args)))))
 
 (defn update
   "'Updates' a value in an associative structure, where k is a
@@ -5924,7 +5904,8 @@
   "Returns true if x implements Fn, i.e. is an object created via fn."
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.erlang.Fn x))
+  [x] (erlang/is_function.e x))
+
 
 (defn associative?
  "Returns true if coll implements Associative"
@@ -5987,9 +5968,12 @@
   {:added "1.0"
    :static true}
   ([f]
-   (throw "unimplemented trampoline, not needed"))
+     (let [ret (f)]
+       (if (fn? ret)
+         (recur ret)
+         ret)))
   ([f & args]
-   (throw "unimplemented trampoline, not needed")))
+     (trampoline #(apply f args))))
 
 (defn intern
   "Finds or creates a var named by the symbol name in the namespace
@@ -6082,10 +6066,374 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; var documentation ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;------------------------------------------------------------------------------
-;;------------------------------------------------------------------------------
+;;(alter-meta! #'*agent* assoc :added "1.0")
+;;(alter-meta! #'in-ns assoc :added "1.0")
+;;(alter-meta! #'load-file assoc :added "1.0")
 
+(defmacro add-doc-and-meta {:private true} [name docstring meta]
+  nil
+  #_`(alter-meta! (var ~name) merge (assoc ~meta :doc ~docstring)))
+
+(add-doc-and-meta *file*
+  "The path of the file being evaluated, as a String.
+
+  When there is no file, e.g. in the REPL, the value is not defined."
+  {:added "1.0"})
+
+(add-doc-and-meta *command-line-args*
+  "A sequence of the supplied command line arguments, or nil if
+  none were supplied"
+  {:added "1.0"})
+
+(add-doc-and-meta *warn-on-reflection*
+  "When set to true, the compiler will emit warnings when reflection is
+  needed to resolve Java method calls or field accesses.
+
+  Defaults to false."
+  {:added "1.0"})
+
+(add-doc-and-meta *compile-path*
+  "Specifies the directory where 'compile' will write out .class
+  files. This directory must be in the classpath for 'compile' to
+  work.
+
+  Defaults to \"classes\""
+  {:added "1.0"})
+
+(add-doc-and-meta *compile-files*
+  "Set to true when compiling files, false otherwise."
+  {:added "1.0"})
+
+(add-doc-and-meta *unchecked-math*
+  "While bound to true, compilations of +, -, *, inc, dec and the
+  coercions will be done without overflow checks. While bound
+  to :warn-on-boxed, same behavior as true, and a warning is emitted
+  when compilation uses boxed math. Default: false."
+  {:added "1.3"})
+
+(add-doc-and-meta *compiler-options*
+  "A map of keys to options.
+  Note, when binding dynamically make sure to merge with previous value.
+  Supported options:
+  :elide-meta - a collection of metadata keys to elide during compilation.
+  :disable-locals-clearing - set to true to disable clearing, useful for using a debugger
+  Alpha, subject to change."
+  {:added "1.4"})
+
+(add-doc-and-meta *ns*
+  "A clojure.lang.Namespace object representing the current namespace."
+  {:added "1.0"})
+
+(add-doc-and-meta *in*
+  "A java.io.Reader object representing standard input for read operations.
+
+  Defaults to System/in, wrapped in a LineNumberingPushbackReader"
+  {:added "1.0"})
+
+(add-doc-and-meta *out*
+  "A java.io.Writer object representing standard output for print operations.
+
+  Defaults to System/out, wrapped in an OutputStreamWriter"
+  {:added "1.0"})
+
+(add-doc-and-meta *err*
+  "A java.io.Writer object representing standard error for print operations.
+
+  Defaults to System/err, wrapped in a PrintWriter"
+  {:added "1.0"})
+
+(add-doc-and-meta *flush-on-newline*
+  "When set to true, output will be flushed whenever a newline is printed.
+
+  Defaults to true."
+  {:added "1.0"})
+
+(add-doc-and-meta *print-meta*
+  "If set to logical true, when printing an object, its metadata will also
+  be printed in a form that can be read back by the reader.
+
+  Defaults to false."
+  {:added "1.0"})
+
+(add-doc-and-meta *print-dup*
+  "When set to logical true, objects will be printed in a way that preserves
+  their type when read in later.
+
+  Defaults to false."
+  {:added "1.0"})
+
+(add-doc-and-meta *print-readably*
+  "When set to logical false, strings and characters will be printed with
+  non-alphanumeric characters converted to the appropriate escape sequences.
+
+  Defaults to true"
+  {:added "1.0"})
+
+(add-doc-and-meta *read-eval*
+ "Defaults to true (or value specified by system property, see below)
+  ***This setting implies that the full power of the reader is in play,
+  including syntax that can cause code to execute. It should never be
+  used with untrusted sources. See also: clojure.edn/read.***
+
+  When set to logical false in the thread-local binding,
+  the eval reader (#=) and record/type literal syntax are disabled in read/load.
+  Example (will fail): (binding [*read-eval* false] (read-string \"#=(* 2 21)\"))
+
+  The default binding can be controlled by the system property
+  'clojure.read.eval' System properties can be set on the command line
+  like this:
+
+  java -Dclojure.read.eval=false ...
+
+  The system property can also be set to 'unknown' via
+  -Dclojure.read.eval=unknown, in which case the default binding
+  is :unknown and all reads will fail in contexts where *read-eval*
+  has not been explicitly bound to either true or false. This setting
+  can be a useful diagnostic tool to ensure that all of your reads
+  occur in considered contexts. You can also accomplish this in a
+  particular scope by binding *read-eval* to :unknown
+  "
+  {:added "1.0"})
+
+(defmacro letfn
+  "fnspec ==> (fname [params*] exprs) or (fname ([params*] exprs)+)
+
+  Takes a vector of function specs and a body, and generates a set of
+  bindings of functions to their names. All of the names are available
+  in all of the definitions of the functions, as well as the body."
+  {:added "1.0", :forms '[(letfn [fnspecs*] exprs*)],
+   :special-form true, :url nil}
+  [fnspecs & body]
+  `(letfn* ~(vec (interleave (map first fnspecs)
+                             (map #(cons `fn %) fnspecs)))
+           ~@body))
+
+(defn fnil
+  "Takes a function f, and returns a function that calls f, replacing
+  a nil first argument to f with the supplied value x. Higher arity
+  versions can replace arguments in the second and third
+  positions (y, z). Note that the function f can take any number of
+  arguments, not just the one(s) being nil-patched."
+  {:added "1.2"
+   :static true}
+  ([f x]
+   (fn
+     ([a] (f (if (nil? a) x a)))
+     ([a b] (f (if (nil? a) x a) b))
+     ([a b c] (f (if (nil? a) x a) b c))
+     ([a b c & ds] (apply f (if (nil? a) x a) b c ds))))
+  ([f x y]
+   (fn
+     ([a b] (f (if (nil? a) x a) (if (nil? b) y b)))
+     ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) c))
+     ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) c ds))))
+  ([f x y z]
+   (fn
+     ([a b] (f (if (nil? a) x a) (if (nil? b) y b)))
+     ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c)))
+     ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c) ds)))))
+
+;;;;;;; case ;;;;;;;;;;;;;
+
+(defmacro case
+  "Takes an expression, and a set of clauses.
+
+  Each clause can take the form of either:
+
+  test-constant result-expr
+
+  (test-constant1 ... test-constantN)  result-expr
+
+  The test-constants are not evaluated. They must be compile-time
+  literals, and need not be quoted.  If the expression is equal to a
+  test-constant, the corresponding result-expr is returned. A single
+  default expression can follow the clauses, and its value will be
+  returned if no clause matches. If no default expression is provided
+  and no clause matches, an IllegalArgumentException is thrown.
+
+  Unlike cond and condp, case does a constant-time dispatch, the
+  clauses are not considered sequentially.  All manner of constant
+  expressions are acceptable in case, including numbers, strings,
+  symbols, keywords, and (Clojure) composites thereof. Note that since
+  lists are used to group multiple constants that map to the same
+  expression, a vector can be used to match a list if needed. The
+  test-constants need not be all of the same type."
+  {:added "1.2"}
+
+  [e & clauses]
+  `(case* ~e ~@clauses))
+
+;; redefine reduce with internal-reduce
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;(load "core_proxy")
 (load "core_print")
+;;(load "genclass")
+;;(load "core_deftype")
+;;(load "core/protocols")
+;;(load "gvec")
+;;(load "instant")
+;;(load "uuid")
+
+#_(defn reduce
+  "f should be a function of 2 arguments. If val is not supplied,
+  returns the result of applying f to the first 2 items in coll, then
+  applying f to that result and the 3rd item, etc. If coll contains no
+  items, f must accept no arguments as well, and reduce returns the
+  result of calling f with no arguments.  If coll has only 1 item, it
+  is returned and f is not called.  If val is supplied, returns the
+  result of applying f to val and the first item in coll, then
+  applying f to that result and the 2nd item, etc. If coll contains no
+  items, returns val and f is not called."
+  {:added "1.0"}
+  ([f coll]
+     (if (instance? clojure.lang.IReduce coll)
+       (.reduce ^clojure.lang.IReduce coll f)
+       (clojure.core.protocols/coll-reduce coll f)))
+  ([f val coll]
+     (if (instance? clojure.lang.IReduceInit coll)
+       (.reduce ^clojure.lang.IReduceInit coll f val)
+       (clojure.core.protocols/coll-reduce coll f val))))
+
+(def reduce reduce1)
+
+#_(extend-protocol clojure.core.protocols/IKVReduce
+ nil
+ (kv-reduce
+  [_ f init]
+  init)
+
+ ;;slow path default
+ clojure.lang.IPersistentMap
+ (kv-reduce
+  [amap f init]
+  (reduce (fn [ret [k v]] (f ret k v)) init amap))
+
+ clojure.lang.IKVReduce
+ (kv-reduce
+  [amap f init]
+  (.kvreduce amap f init)))
+
+#_(defn reduce-kv
+  "Reduces an associative collection. f should be a function of 3
+  arguments. Returns the result of applying f to init, the first key
+  and the first value in coll, then applying f to that result and the
+  2nd key and value, etc. If coll contains no entries, returns init
+  and f is not called. Note that reduce-kv is supported on vectors,
+  where the keys will be the ordinals."
+  {:added "1.4"}
+  ([f init coll]
+     (clojure.core.protocols/kv-reduce coll f init)))
+
+(defn completing
+  "Takes a reducing function f of 2 args and returns a fn suitable for
+  transduce by adding an arity-1 signature that calls cf (default -
+  identity) on the result argument."
+  {:added "1.7"}
+  ([f] (completing f identity))
+  ([f cf]
+     (fn
+       ([] (f))
+       ([x] (cf x))
+       ([x y] (f x y)))))
+
+#_(defn transduce
+  "reduce with a transformation of f (xf). If init is not
+  supplied, (f) will be called to produce it. f should be a reducing
+  step function that accepts both 1 and 2 arguments, if it accepts
+  only 2 you can add the arity-1 with 'completing'. Returns the result
+  of applying (the transformed) xf to init and the first item in coll,
+  then applying xf to that result and the 2nd item, etc. If coll
+  contains no items, returns init and f is not called. Note that
+  certain transforms may inject or skip items."  {:added "1.7"}
+  ([xform f coll] (transduce xform f (f) coll))
+  ([xform f init coll]
+     (let [f (xform f)
+           ret (if (instance? :clojure.lang.IReduceInit coll)
+                 (clojure.lang.IReduceInit/reduce coll f init)
+                 (clojure.core.protocols/coll-reduce coll f init))]
+       (f ret))))
+
+(defn into
+  "Returns a new coll consisting of to-coll with all of the items of
+  from-coll conjoined. A transducer may be supplied."
+  {:added "1.0"
+   :static true}
+  ([to from]
+   (reduce conj to from))
+  ([to xform from]
+   #_(transduce xform conj to from)))
+
+(defn mapv
+  "Returns a vector consisting of the result of applying f to the
+  set of first items of each coll, followed by applying f to the set
+  of second items in each coll, until any one of the colls is
+  exhausted.  Any remaining items in other colls are ignored. Function
+  f should accept number-of-colls arguments."
+  {:added "1.4"
+   :static true}
+  ([f coll]
+   (reduce (fn [v o] (conj v (f o))) [] coll))
+  ([f c1 c2]
+     (into [] (map f c1 c2)))
+  ([f c1 c2 c3]
+     (into [] (map f c1 c2 c3)))
+  ([f c1 c2 c3 & colls]
+     (into [] (apply map f c1 c2 c3 colls))))
+
+(defn filterv
+  "Returns a vector of the items in coll for which
+  (pred item) returns true. pred must be free of side-effects."
+  {:added "1.4"
+   :static true}
+  [pred coll]
+  (reduce (fn [v o] (if (pred o) (conj v o) v))
+          []
+          coll))
+
+#_(require '[clojure.erlang.io :as io])
+
+#_(defn- normalize-slurp-opts
+  [opts]
+  (if (string? (first opts))
+    (do
+      (println "WARNING: (slurp f enc) is deprecated, use (slurp f :encoding enc).")
+      [:encoding (first opts)])
+    opts))
+
+#_(defn slurp
+  "Opens a reader on f and reads all its contents, returning a string.
+  See clojure.java.io/reader for a complete list of supported arguments."
+  {:added "1.0"}
+  ([f & opts]
+     (let [opts (normalize-slurp-opts opts)]
+       (with-open [r (apply io/reader f opts)]
+         (io/read-file r)))))
+
+#_(defn spit
+  "Opposite of slurp.  Opens f with writer, writes content, then
+  closes f. Options passed to clojure.java.io/writer."
+  {:added "1.2"}
+  [f content & options]
+  (with-open [^java.io.Writer w (apply io/writer f options)]
+    (.write w (str content))))
+
+(defn group-by
+  "Returns a map of the elements of coll keyed by the result of
+  f on each element. The value at each key will be a vector of the
+  corresponding elements, in the order they appeared in coll."
+  {:added "1.2"
+   :static true}
+  [f coll]
+  (reduce1
+   (fn [ret x]
+     (let [k (f x)]
+       (assoc ret k (conj (get ret k []) x))))
+   {} coll))
+
+;;------------------------------------------------------------------------------
+;;------------------------------------------------------------------------------
 
 (defmacro simple-benchmark
   "Runs expr iterations times in the context of a let expression with
