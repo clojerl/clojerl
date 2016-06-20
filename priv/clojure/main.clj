@@ -88,11 +88,11 @@
   its behavior of both supporting .unread and collapsing all of CR, LF, and
   CRLF to a single \\newline."
   [s]
-  (let [c (clojerl.IReader/read.e s)]
+  (let [c (erlang.io.IReader/read.e s)]
     (cond
      (= c \newline) :line-start
      (= c :eof) :stream-end
-     :else (do (clojerl.IReader/unread.e s c) :body))))
+     :else (do (erlang.io.IReader/unread.e s c) :body))))
 
 (defn whitespace? [x]
   (or (= " " x) (= x "\n") (= x "\r") (= x "\t")))
@@ -107,13 +107,13 @@
   supporting .unread and collapsing all of CR, LF, and CRLF to a single
   \\newline."
   [s]
-  (loop [c (clojerl.IReader/read.e s)]
+  (loop [c (erlang.io.IReader/read.e s)]
     (cond
      (= c \newline) :line-start
      (= c :eof) :stream-end
-     (= c \;) (do (clojerl.IReader/read_line.e s) :line-start)
-     (or (whitespace? c) (= c \,)) (recur (clojerl.IReader/read.e s))
-     :else (do (clojerl.IReader/unread.e s c) :body))))
+     (= c \;) (do (erlang.io.IReader/read_line.e s) :line-start)
+     (or (whitespace? c) (= c \,)) (recur (erlang.io.IReader/read.e s))
+     :else (do (erlang.io.IReader/unread.e s c) :body))))
 
 (defn repl-read
   "Default :read hook for repl. Reads from *in* which must either be an

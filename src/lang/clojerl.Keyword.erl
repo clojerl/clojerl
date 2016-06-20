@@ -4,8 +4,8 @@
 -behavior('clojerl.IHash').
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
--behaviour('clojerl.IWriter').
--behaviour('clojerl.IReader').
+-behaviour('erlang.io.IWriter').
+-behaviour('erlang.io.IReader').
 
 -export([ new/1
         , new/2
@@ -15,14 +15,14 @@
 
 -export(['clojerl.IFn.invoke'/2]).
 -export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.IReader.read'/1
-        , 'clojerl.IReader.read'/2
-        , 'clojerl.IReader.read_line'/1
-        , 'clojerl.IReader.skip'/2
-        , 'clojerl.IReader.unread'/2
+-export([ 'erlang.io.IReader.read'/1
+        , 'erlang.io.IReader.read'/2
+        , 'erlang.io.IReader.read_line'/1
+        , 'erlang.io.IReader.skip'/2
+        , 'erlang.io.IReader.unread'/2
         ]).
--export([ 'clojerl.IWriter.write'/2
-        , 'clojerl.IWriter.write'/3
+-export([ 'erlang.io.IWriter.write'/2
+        , 'erlang.io.IWriter.write'/3
         ]).
 -export([ 'clojerl.Named.name'/1
         , 'clojerl.Named.namespace'/1
@@ -96,15 +96,15 @@ find(Namespace, Name) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
   <<":", KeywordBin/binary>>.
 
-%% clojerl.IReader
+%% erlang.io.IReader
 
-'clojerl.IReader.read'(IO) ->
-  'clojerl.IReader.read'(IO, 1).
+'erlang.io.IReader.read'(IO) ->
+  'erlang.io.IReader.read'(IO, 1).
 
-'clojerl.IReader.read'(IO, Length)
+'erlang.io.IReader.read'(IO, Length)
   when IO =:= standard_io; IO =:= standard_error ->
   maybe_binary(io:get_chars(IO, "", Length));
-'clojerl.IReader.read'(Name, Length) ->
+'erlang.io.IReader.read'(Name, Length) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
@@ -112,10 +112,10 @@ find(Namespace, Name) ->
       maybe_binary(io:get_chars(Name, "", Length))
   end.
 
-'clojerl.IReader.read_line'(IO)
+'erlang.io.IReader.read_line'(IO)
   when IO =:= standard_io; IO =:= standard_error ->
   maybe_binary(io:request(IO, {get_line, unicode, ""}));
-'clojerl.IReader.read_line'(Name) ->
+'erlang.io.IReader.read_line'(Name) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
@@ -123,10 +123,10 @@ find(Namespace, Name) ->
       maybe_binary(io:request(Name, {get_line, unicode, ""}))
   end.
 
-'clojerl.IReader.skip'(_IO, _Length) ->
+'erlang.io.IReader.skip'(_IO, _Length) ->
   error(<<"unsupported operation: skip">>).
 
-'clojerl.IReader.unread'(_IO, _Ch) ->
+'erlang.io.IReader.unread'(_IO, _Ch) ->
   TypeName = atom_to_binary(?MODULE, utf8),
   error(<<"Unsupported operation: unread for ", TypeName/binary>>).
 
@@ -134,16 +134,16 @@ find(Namespace, Name) ->
 maybe_binary(eof) -> eof;
 maybe_binary(List) when is_list(List) -> list_to_binary(List).
 
-%% clojerl.IWriter
+%% erlang.io.IWriter
 
-'clojerl.IWriter.write'(Name, Str) when is_atom(Name) ->
-  'clojerl.IWriter.write'(Name, Str, []).
+'erlang.io.IWriter.write'(Name, Str) when is_atom(Name) ->
+  'erlang.io.IWriter.write'(Name, Str, []).
 
-'clojerl.IWriter.write'(IO, Format, Values)
+'erlang.io.IWriter.write'(IO, Format, Values)
   when IO =:= standard_io; IO =:= standard_error ->
   ok = io:fwrite(IO, Format, clj_core:seq_to_list(Values)),
   IO;
-'clojerl.IWriter.write'(Name, Str, Values) when is_atom(Name) ->
+'erlang.io.IWriter.write'(Name, Str, Values) when is_atom(Name) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);

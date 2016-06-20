@@ -1,10 +1,10 @@
--module('clojerl.StringReader').
+-module('erlang.io.StringReader').
 
 -include("clojerl.hrl").
 
--behaviour('clojerl.Closeable').
+-behaviour('erlang.io.Closeable').
 -behaviour('clojerl.Stringable').
--behaviour('clojerl.IReader').
+-behaviour('erlang.io.IReader').
 
 -export([new/1]).
 -export([ start_link/1
@@ -13,12 +13,12 @@
         , skip/3
         ]).
 
--export(['clojerl.Closeable.close'/1]).
--export([ 'clojerl.IReader.read'/1
-        , 'clojerl.IReader.read'/2
-        , 'clojerl.IReader.read_line'/1
-        , 'clojerl.IReader.skip'/2
-        , 'clojerl.IReader.unread'/2
+-export(['erlang.io.Closeable.close'/1]).
+-export([ 'erlang.io.IReader.read'/1
+        , 'erlang.io.IReader.read'/2
+        , 'erlang.io.IReader.read_line'/1
+        , 'erlang.io.IReader.skip'/2
+        , 'erlang.io.IReader.unread'/2
         ]).
 -export(['clojerl.Stringable.str'/1]).
 
@@ -32,29 +32,29 @@ new(Str) when is_binary(Str) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
+'erlang.io.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
-    {error, _} -> error(<<"Couldn't close clojerl.StringReader">>);
+    {error, _} -> error(<<"Couldn't close erlang.io.StringReader">>);
     _          -> undefined
   end.
 
 'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Pid}) ->
   <<_/utf8, PidStr/binary>> = erlang:list_to_binary(erlang:pid_to_list(Pid)),
-  <<"#<clojerl.StringReader ", PidStr/binary>>.
+  <<"#<erlang.io.StringReader ", PidStr/binary>>.
 
-'clojerl.IReader.read'(#?TYPE{name = ?M, data = Pid}) ->
+'erlang.io.IReader.read'(#?TYPE{name = ?M, data = Pid}) ->
   io:get_chars(Pid, "", 1).
 
-'clojerl.IReader.read'(#?TYPE{name = ?M, data = Pid}, Length) ->
+'erlang.io.IReader.read'(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:get_chars(Pid, "", Length).
 
-'clojerl.IReader.read_line'(#?TYPE{name = ?M, data = Pid}) ->
+'erlang.io.IReader.read_line'(#?TYPE{name = ?M, data = Pid}) ->
   io:request(Pid, {get_line, unicode, ""}).
 
-'clojerl.IReader.skip'(#?TYPE{name = ?M, data = Pid}, Length) ->
+'erlang.io.IReader.skip'(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
 
-'clojerl.IReader.unread'(#?TYPE{name = ?M, data = Pid} = SR, Str) ->
+'erlang.io.IReader.unread'(#?TYPE{name = ?M, data = Pid} = SR, Str) ->
   ok = send_command(Pid, {unread, Str}),
   SR.
 

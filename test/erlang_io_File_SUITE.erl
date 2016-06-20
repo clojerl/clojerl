@@ -44,7 +44,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.File \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  undefined = 'clojerl.Closeable':close(File),
+  undefined = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -52,17 +52,17 @@ str(_Config) ->
 read(_Config) ->
   File = 'erlang.io.File':open(<<"tmp">>, [read]),
 
-  <<"H">>      = 'clojerl.IReader':read(File),
-  <<"e">>      = 'clojerl.IReader':read(File),
-  <<"l">>      = 'clojerl.IReader':read(File),
-  <<"l">>      = 'clojerl.IReader':read(File),
-  <<"o">>      = 'clojerl.IReader':read(File),
-  <<" world">> = 'clojerl.IReader':read(File, 6),
-  <<"!\n">>    = 'clojerl.IReader':read(File, 2),
-  <<"How are you?\r\n">> = 'clojerl.IReader':read(File, 14),
-  eof     = 'clojerl.IReader':read(File),
+  <<"H">>      = 'erlang.io.IReader':read(File),
+  <<"e">>      = 'erlang.io.IReader':read(File),
+  <<"l">>      = 'erlang.io.IReader':read(File),
+  <<"l">>      = 'erlang.io.IReader':read(File),
+  <<"o">>      = 'erlang.io.IReader':read(File),
+  <<" world">> = 'erlang.io.IReader':read(File, 6),
+  <<"!\n">>    = 'erlang.io.IReader':read(File, 2),
+  <<"How are you?\r\n">> = 'erlang.io.IReader':read(File, 14),
+  eof     = 'erlang.io.IReader':read(File),
 
-  undefined = 'clojerl.Closeable':close(File),
+  undefined = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -70,11 +70,11 @@ read(_Config) ->
 read_line(_Config) ->
   File = 'erlang.io.File':open(<<"tmp">>, [read]),
 
-  <<"Hello world!\n">>   = 'clojerl.IReader':read_line(File),
-  <<"How are you?\n">> = 'clojerl.IReader':read_line(File),
-  eof                    = 'clojerl.IReader':read_line(File),
+  <<"Hello world!\n">>   = 'erlang.io.IReader':read_line(File),
+  <<"How are you?\n">> = 'erlang.io.IReader':read_line(File),
+  eof                    = 'erlang.io.IReader':read_line(File),
 
-  undefined = 'clojerl.Closeable':close(File),
+  undefined = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -84,13 +84,13 @@ write(_Config) ->
 
   File = 'erlang.io.File':open(Filename, [append]),
 
-  File = 'clojerl.IWriter':write(File, <<"hello">>),
-  File = 'clojerl.IWriter':write(File, <<" ">>),
-  File = 'clojerl.IWriter':write(File, <<"world!">>),
+  File = 'erlang.io.IWriter':write(File, <<"hello">>),
+  File = 'erlang.io.IWriter':write(File, <<" ">>),
+  File = 'erlang.io.IWriter':write(File, <<"world!">>),
 
-  File = 'clojerl.IWriter':write(File, <<"~s!">>, [<<" Yeah">>]),
+  File = 'erlang.io.IWriter':write(File, <<"~s!">>, [<<" Yeah">>]),
 
-  undefined = 'clojerl.Closeable':close(File),
+  undefined = 'erlang.io.Closeable':close(File),
 
   {ok, <<"hello world! Yeah!">>} = file:read_file(<<"tmp-write">>),
 
@@ -102,10 +102,10 @@ write(_Config) ->
 close(_Config) ->
   ct:comment("Open an existing file and close it"),
   File = 'erlang.io.File':open(<<"tmp">>),
-  undefined = 'clojerl.Closeable':close(File),
+  undefined = 'erlang.io.Closeable':close(File),
 
   ct:comment("Closing it again shouldn't be a problem"),
-  undefined = 'clojerl.Closeable':close(File),
+  undefined = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -114,12 +114,12 @@ complete_coverage(_Config) ->
   File = 'erlang.io.File':open(<<"tmp">>),
 
   ct:comment("Skip is unsupported"),
-  ok = try 'clojerl.IReader':skip(File, 10), error
+  ok = try 'erlang.io.IReader':skip(File, 10), error
        catch _:_ -> ok
        end,
 
   ct:comment("Unread is unsupported"),
-  ok = try 'clojerl.IReader':unread(File, <<>>), error
+  ok = try 'erlang.io.IReader':unread(File, <<>>), error
        catch _:_ -> ok
        end,
 
@@ -131,7 +131,7 @@ complete_coverage(_Config) ->
   meck:new(file, [passthrough, unstick]),
   try
     meck:expect(file, close, fun(_) -> {error, fake} end),
-    ok = try 'clojerl.Closeable':close(File), error
+    ok = try 'erlang.io.Closeable':close(File), error
          catch _:_ -> ok
          end
   after

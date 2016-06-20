@@ -13,7 +13,7 @@
                  , features     => 'clojerl.Set':type()
                  , data_readers => #{binary() => function()}
                  , file         => file:filename_all()
-                 , io_reader    => 'clojerl.IReader':type()
+                 , io_reader    => 'erlang.io.IReader':type()
                  }.
 
 -export_type([location/0, opts/0]).
@@ -1218,7 +1218,7 @@ file_location_meta(State) ->
 -spec check_reader(state()) -> {ok, state()} | eof.
 check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)
   when Reader =/= undefined ->
-  case 'clojerl.IReader':read(Reader) of
+  case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
     Ch ->
       {ok, State#{src := Ch}}

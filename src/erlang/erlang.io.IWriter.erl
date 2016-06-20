@@ -1,13 +1,13 @@
--module('clojerl.IWriter').
+-module('erlang.io.IWriter').
 
 -export([write/2, write/3]).
 
 -type type() :: any().
 
--callback 'clojerl.IWriter.write'(A :: type(), K :: binary()) ->
+-callback 'erlang.io.IWriter.write'(A :: type(), K :: binary()) ->
   type().
 
--callback 'clojerl.IWriter.write'(A :: type(), K :: binary(), L :: list()) ->
+-callback 'erlang.io.IWriter.write'(A :: type(), K :: binary(), L :: list()) ->
   type().
 
 -spec write(type(), binary()) -> type().

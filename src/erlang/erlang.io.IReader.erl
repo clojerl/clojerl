@@ -1,22 +1,22 @@
--module('clojerl.IReader').
+-module('erlang.io.IReader').
 
 -export([read/1, read/2, read_line/1, skip/2, unread/2]).
 
 -type type() :: any().
 
--callback 'clojerl.IReader.read'(A :: type()) ->
+-callback 'erlang.io.IReader.read'(A :: type()) ->
   binary() | eof.
 
--callback 'clojerl.IReader.read'(A :: type(), L :: integer()) ->
+-callback 'erlang.io.IReader.read'(A :: type(), L :: integer()) ->
   binary() | eof.
 
--callback 'clojerl.IReader.read_line'(A :: type()) ->
+-callback 'erlang.io.IReader.read_line'(A :: type()) ->
   binary() | eof.
 
--callback 'clojerl.IReader.skip'(A :: type(), L :: integer()) ->
+-callback 'erlang.io.IReader.skip'(A :: type(), L :: integer()) ->
   integer() | eof.
 
--callback 'clojerl.IReader.unread'(A :: type(), C :: binary()) ->
+-callback 'erlang.io.IReader.unread'(A :: type(), C :: binary()) ->
   type().
 
 -spec read(type()) -> binary() | eof.
