@@ -39,7 +39,7 @@ all() ->
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) ->
-  application:ensure_all_started(clojerl),
+  clojerl:start(),
   Config.
 
 -spec init_per_testcase(_, config()) -> config().
