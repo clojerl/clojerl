@@ -1791,7 +1791,7 @@
   nil if no var with that name."
   {:added "1.0"
    :static true}
-  [sym] (clojerl.Var/find.e sym))
+  [sym] (clj_namespace/find_var.e sym))
 
 (defn binding-conveyor-fn
   {:private true
@@ -4498,7 +4498,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  `(with-open [s# (clojerl.StringWriter/new.e)]
+  `(with-open [s# (erlang.io.StringWriter/new.e)]
      (binding [*out* s#]
        ~@body
        (str s#))))
@@ -4508,7 +4508,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  `(with-open [s# (clojerl.StringReader/new.e ~s)]
+  `(with-open [s# (erlang.io.StringReader/new.e ~s)]
      (binding [*in* s#]
        ~@body)))
 
@@ -4805,7 +4805,7 @@
   once, but any effects on Refs will be atomic."
   {:added "1.0"}
   [& exprs]
-  `(sync nil ~@exprs))
+  #_`(sync nil ~@exprs))
 
 #_ ((defmacro with-precision
       "Sets the precision and rounding mode to be used for BigDecimal operations.
@@ -6261,13 +6261,20 @@
   {:added "1.2"}
 
   [e & clauses]
-  `(case* e ~@clauses))
+  `(case* ~e ~@clauses))
 
 ;; redefine reduce with internal-reduce
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;(load "core_proxy")
 (load "core_print")
+;;(load "genclass")
+;;(load "core_deftype")
+;;(load "core/protocols")
+;;(load "gvec")
+;;(load "instant")
+;;(load "uuid")
 
 #_(defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -6288,6 +6295,142 @@
      (if (instance? clojure.lang.IReduceInit coll)
        (.reduce ^clojure.lang.IReduceInit coll f val)
        (clojure.core.protocols/coll-reduce coll f val))))
+
+(def reduce reduce1)
+
+#_(extend-protocol clojure.core.protocols/IKVReduce
+ nil
+ (kv-reduce
+  [_ f init]
+  init)
+
+ ;;slow path default
+ clojure.lang.IPersistentMap
+ (kv-reduce
+  [amap f init]
+  (reduce (fn [ret [k v]] (f ret k v)) init amap))
+
+ clojure.lang.IKVReduce
+ (kv-reduce
+  [amap f init]
+  (.kvreduce amap f init)))
+
+#_(defn reduce-kv
+  "Reduces an associative collection. f should be a function of 3
+  arguments. Returns the result of applying f to init, the first key
+  and the first value in coll, then applying f to that result and the
+  2nd key and value, etc. If coll contains no entries, returns init
+  and f is not called. Note that reduce-kv is supported on vectors,
+  where the keys will be the ordinals."
+  {:added "1.4"}
+  ([f init coll]
+     (clojure.core.protocols/kv-reduce coll f init)))
+
+(defn completing
+  "Takes a reducing function f of 2 args and returns a fn suitable for
+  transduce by adding an arity-1 signature that calls cf (default -
+  identity) on the result argument."
+  {:added "1.7"}
+  ([f] (completing f identity))
+  ([f cf]
+     (fn
+       ([] (f))
+       ([x] (cf x))
+       ([x y] (f x y)))))
+
+#_(defn transduce
+  "reduce with a transformation of f (xf). If init is not
+  supplied, (f) will be called to produce it. f should be a reducing
+  step function that accepts both 1 and 2 arguments, if it accepts
+  only 2 you can add the arity-1 with 'completing'. Returns the result
+  of applying (the transformed) xf to init and the first item in coll,
+  then applying xf to that result and the 2nd item, etc. If coll
+  contains no items, returns init and f is not called. Note that
+  certain transforms may inject or skip items."  {:added "1.7"}
+  ([xform f coll] (transduce xform f (f) coll))
+  ([xform f init coll]
+     (let [f (xform f)
+           ret (if (instance? :clojure.lang.IReduceInit coll)
+                 (clojure.lang.IReduceInit/reduce coll f init)
+                 (clojure.core.protocols/coll-reduce coll f init))]
+       (f ret))))
+
+(defn into
+  "Returns a new coll consisting of to-coll with all of the items of
+  from-coll conjoined. A transducer may be supplied."
+  {:added "1.0"
+   :static true}
+  ([to from]
+   (reduce conj to from))
+  ([to xform from]
+   #_(transduce xform conj to from)))
+
+(defn mapv
+  "Returns a vector consisting of the result of applying f to the
+  set of first items of each coll, followed by applying f to the set
+  of second items in each coll, until any one of the colls is
+  exhausted.  Any remaining items in other colls are ignored. Function
+  f should accept number-of-colls arguments."
+  {:added "1.4"
+   :static true}
+  ([f coll]
+   (reduce (fn [v o] (conj v (f o))) [] coll))
+  ([f c1 c2]
+     (into [] (map f c1 c2)))
+  ([f c1 c2 c3]
+     (into [] (map f c1 c2 c3)))
+  ([f c1 c2 c3 & colls]
+     (into [] (apply map f c1 c2 c3 colls))))
+
+(defn filterv
+  "Returns a vector of the items in coll for which
+  (pred item) returns true. pred must be free of side-effects."
+  {:added "1.4"
+   :static true}
+  [pred coll]
+  (reduce (fn [v o] (if (pred o) (conj v o) v))
+          []
+          coll))
+
+#_(require '[clojure.erlang.io :as io])
+
+#_(defn- normalize-slurp-opts
+  [opts]
+  (if (string? (first opts))
+    (do
+      (println "WARNING: (slurp f enc) is deprecated, use (slurp f :encoding enc).")
+      [:encoding (first opts)])
+    opts))
+
+#_(defn slurp
+  "Opens a reader on f and reads all its contents, returning a string.
+  See clojure.java.io/reader for a complete list of supported arguments."
+  {:added "1.0"}
+  ([f & opts]
+     (let [opts (normalize-slurp-opts opts)]
+       (with-open [r (apply io/reader f opts)]
+         (io/read-file r)))))
+
+#_(defn spit
+  "Opposite of slurp.  Opens f with writer, writes content, then
+  closes f. Options passed to clojure.java.io/writer."
+  {:added "1.2"}
+  [f content & options]
+  (with-open [^java.io.Writer w (apply io/writer f options)]
+    (.write w (str content))))
+
+(defn group-by
+  "Returns a map of the elements of coll keyed by the result of
+  f on each element. The value at each key will be a vector of the
+  corresponding elements, in the order they appeared in coll."
+  {:added "1.2"
+   :static true}
+  [f coll]
+  (reduce1
+   (fn [ret x]
+     (let [k (f x)]
+       (assoc ret k (conj (get ret k []) x))))
+   {} coll))
 
 ;;------------------------------------------------------------------------------
 ;;------------------------------------------------------------------------------
