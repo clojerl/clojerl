@@ -41,7 +41,9 @@
                   (recur (erlang.io.IWriter/write.e b \0))
                   (str b)))))
 
-(def parse-timestamp
+(def timestamp-regex #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?")
+
+(defn parse-timestamp
      "Parse a string containing an RFC3339-like like timestamp.
 
 The function new-instant is called with the following arguments.
@@ -92,26 +94,25 @@ Though time-offset is syntactically optional, a missing time-offset
 will be treated as if the time-offset zero (+00:00) had been
 specified.
 "
-     (let [timestamp #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?"]
 
-       (fn [new-instant cs]
-         (if-let [[_ years months days hours minutes seconds fraction
-                   offset-sign offset-hours offset-minutes]
-                  (re-matches timestamp cs)]
-           (new-instant
-            (parse-int years)
-            (if-not months   1 (parse-int months))
-            (if-not days     1 (parse-int days))
-            (if-not hours    0 (parse-int hours))
-            (if-not minutes  0 (parse-int minutes))
-            (if-not seconds  0 (parse-int seconds))
-            (if-not fraction 0 (parse-int (zero-fill-right fraction 9)))
-            (cond (= "-" offset-sign) -1
-                  (= "+" offset-sign)  1
-                  :else                0)
-            (if-not offset-hours   0 (parse-int offset-hours))
-            (if-not offset-minutes 0 (parse-int offset-minutes)))
-           (fail (str "Unrecognized date/time syntax: " cs))))))
+  [new-instant cs]
+  (if-let [[_ years months days hours minutes seconds fraction
+            offset-sign offset-hours offset-minutes]
+           (re-matches timestamp-regex cs)]
+    (new-instant
+     (parse-int years)
+     (if-not months   1 (parse-int months))
+     (if-not days     1 (parse-int days))
+     (if-not hours    0 (parse-int hours))
+     (if-not minutes  0 (parse-int minutes))
+     (if-not seconds  0 (parse-int seconds))
+     (if-not fraction 0 (parse-int (zero-fill-right fraction 9)))
+     (cond (= "-" offset-sign) -1
+           (= "+" offset-sign)  1
+           :else                0)
+     (if-not offset-hours   0 (parse-int offset-hours))
+     (if-not offset-minutes 0 (parse-int offset-minutes)))
+    (fail (str "Unrecognized date/time syntax: " cs))))
 
 
 ;;; ------------------------------------------------------------------------
@@ -236,8 +237,9 @@ milliseconds since the epoch, UTC."
   #[#[years months days]
     #[hours minutes seconds]])
 
-(def read-instant-date
+(defn read-instant-date
   "To read an instant as a java.util.Date, bind *data-readers* to a map with
 this var as the value for the 'inst key. The timezone offset will be used
-to convert into UTC."
-  (partial parse-timestamp (validated construct-date)))
+  to convert into UTC."
+  [date]
+  (parse-timestamp (validated construct-date) date))
