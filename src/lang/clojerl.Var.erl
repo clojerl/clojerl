@@ -203,16 +203,14 @@ dynamic_binding(Var, Value) ->
                          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IFn.invoke'(#?TYPE{name =?M} = Var, Args) ->
-  Module = module(Var),
+'clojerl.IFn.invoke'(#?TYPE{name = ?M} = Var, Args) ->
+  Module   = module(Var),
   Function = function(Var),
-
-  Args1 = case clj_core:seq(Args) of
-            undefined -> [];
-            Seq       -> Seq
-          end,
-
-  Args2 = process_args(Var, Args1, fun clj_core:seq/1),
+  Args1    = case clj_core:seq(Args) of
+               undefined -> [];
+               Seq       -> Seq
+             end,
+  Args2    = process_args(Var, Args1, fun clj_core:seq/1),
 
   erlang:apply(Module, Function, Args2).
 
