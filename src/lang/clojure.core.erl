@@ -64,6 +64,21 @@
            , {<<"clojure.core">>, <<"*print-readably*">>}
            , #{}
            }
+       , <<"*data-readers*">> =>
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*data-readers*">>}
+           , #{}
+           }
+       , <<"default-data-readers">> =>
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"default-data-readers">>}
+           , #{}
+           }
+       , <<"*default-data-reader-fn*">> =>
+           { '7ype', 'clojerl.Var'
+           , {<<"clojure.core">>, <<"*default-data-reader-fn*">>}
+           , #{}
+           }
        }).
 
 -clojure(true).
@@ -86,6 +101,10 @@
         , '*print-dup*__val'/0
         , '*flush-on-newline*__val'/0
         , '*print-readably*__val'/0
+
+        , '*data-readers*__val'/0
+        , 'default-data-readers__val'/0
+        , '*default-data-reader-fn*__val'/0
         ]).
 
 ns(_Form, _Env, Name, _References) ->
@@ -163,6 +182,14 @@ ns__val() ->
 
 '*print-readably*__val'() ->
   var_value(<<"#'clojure.core/*print-readably*">>, true).
+
+'*data-readers*__val'() ->
+  var_value(<<"#'clojure.core/*data-readers*">>, #{}).
+
+'default-data-readers__val'() -> undefined.
+
+'*default-data-reader-fn*__val'() ->
+  var_value(<<"#'clojure.core/*default-data-reader-fn*">>, undefined).
 
 %% @private
 'maybe-unquote'(MaybeQuotedForm) ->

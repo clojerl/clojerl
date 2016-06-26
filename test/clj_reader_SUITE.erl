@@ -45,7 +45,7 @@ all() ->
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) ->
-  application:ensure_all_started(clojerl),
+  clojerl:start(),
   Config.
 
 %%------------------------------------------------------------------------------
@@ -927,10 +927,48 @@ tuple(_Config) ->
   {comments, ""}.
 
 tagged(_Config) ->
+  DefaultDataReadersVar = 'clojerl.Var':new( <<"clojure.core">>
+                                           , <<"default-data-readers">>
+                                           ),
+
+  IdFun              = fun(X) -> X end,
+  DefaultDataReaders = clj_core:hash_map(
+                         [ clj_core:symbol(<<"inst">>), IdFun
+                         , clj_core:symbol(<<"uuid">>), IdFun
+                         ]
+                        ),
+
+  meck:new('clojure.core', [passthrough]),
+  meck:expect( 'clojure.core'
+             , 'clojerl.Var':val_function(DefaultDataReadersVar)
+             , fun() -> DefaultDataReaders end
+             ),
+
   ct:comment("Use default readers"),
   <<"2016">> = clj_reader:read(<<"#inst \"2016\"">>),
   <<"de305d54-75b4-431b-adb2-eb6b9e546014">> =
     clj_reader:read(<<"#uuid \"de305d54-75b4-431b-adb2-eb6b9e546014\"">>),
+
+  ct:comment("Use *default-data-reader-fn*"),
+  DefaultReaderFunVar = 'clojerl.Var':new( <<"clojure.core">>
+                                          , <<"*default-data-reader-fn*">>
+                                          ),
+  DefaultReaderFun = fun(_) -> default end,
+  ok  = 'clojerl.Var':push_bindings(#{DefaultReaderFunVar => DefaultReaderFun}),
+  default = clj_reader:read(<<"#whatever :tag">>),
+  default = clj_reader:read(<<"#we use">>),
+  ok  = 'clojerl.Var':pop_bindings(),
+
+  ct:comment("Provide additional reader"),
+  DataReadersVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*data-readers*">>),
+  DataReaders    = clj_core:hash_map([ clj_core:symbol(<<"bla">>)
+                                     , fun(_) -> bla end
+                                     ]
+                                    ),
+
+  ok  = 'clojerl.Var':push_bindings(#{DataReadersVar => DataReaders}),
+  bla = clj_reader:read(<<"#bla 1">>),
+  ok  = 'clojerl.Var':pop_bindings(),
 
   ct:comment("Don't provide a symbol"),
   ok = try clj_reader:read(<<"#1">>), error
@@ -940,9 +978,6 @@ tagged(_Config) ->
   ok = try clj_reader:read(<<"#bla 1">>), error
        catch _:<<"?:1:2: No reader function for tag bla">> -> ok end,
 
-  ct:comment("Provide additional reader"),
-  DataReaders = #{<<"bla">> => fun(_) -> bla end},
-  Opts = #{data_readers => DataReaders},
-  bla = clj_reader:read(<<"#bla 1">>, Opts),
+  meck:unload('clojure.core'),
 
   {comments, ""}.

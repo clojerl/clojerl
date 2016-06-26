@@ -6273,8 +6273,8 @@
 ;;(load "core_deftype")
 ;;(load "core/protocols")
 ;;(load "gvec")
-;;(load "instant")
-;;(load "uuid")
+(load "instant")
+(load "uuid")
 
 #_(defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
