@@ -20,7 +20,6 @@ clojerl,
 'clojerl.Boolean',
 'clojerl.Cons',
 'clojerl.Counted',
-'clojerl.FakeVar',
 'clojerl.Float',
 'clojerl.IColl',
 'clojerl.IDeref',
@@ -66,7 +65,8 @@ clojerl_sup,
 'erlang.io.IWriter',
 'erlang.io.PushbackReader',
 'erlang.io.StringReader',
-'erlang.io.StringWriter'
+'erlang.io.StringWriter',
+'erlang.util.UUID'
 ]
 }.
 %% Export coverage data for jenkins.

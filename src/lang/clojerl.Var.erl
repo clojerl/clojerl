@@ -168,21 +168,26 @@ dynamic_binding(Var, Value) ->
 'clojerl.Named.namespace'(#?TYPE{name = ?M, data = {Namespace, _}}) ->
   Namespace.
 
-'clojerl.Stringable.str'(#?TYPE{data = {Ns, Name}}) ->
+'clojerl.Stringable.str'(#?TYPE{name = ?M, data = {Ns, Name}}) ->
   <<"#'", Ns/binary, "/", Name/binary>>.
 
-'clojerl.IDeref.deref'(#?TYPE{data = {Ns, Name}} = Var) ->
-  Module = module(Var),
+'clojerl.IDeref.deref'(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
+  Module      = module(Var),
   FunctionVal = val_function(Var),
 
-  case erlang:function_exported(Module, FunctionVal, 0) of
-    true ->
-      Module:FunctionVal();
-    false ->
-      throw(<<"Could not dereference ",
-              Ns/binary, "/", Name/binary, ". "
-              "There is no Erlang function "
-              "to back it up.">>)
+  try
+    %% Make the call in case the module is not loaded and handle the case
+    %% when it doesn't even exist gracefully.
+    Module:FunctionVal()
+  catch
+    Type:undef ->
+      case erlang:function_exported(Module, FunctionVal, 0) of
+        false -> throw(<<"Could not dereference ",
+                         Ns/binary, "/", Name/binary, ". "
+                         "There is no Erlang function "
+                         "to back it up.">>);
+        true  -> erlang:raise(Type, undef, erlang:get_stacktrace())
+      end
   end.
 
 'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
@@ -211,8 +216,9 @@ dynamic_binding(Var, Value) ->
                Seq       -> Seq
              end,
   Args2    = process_args(Var, Args1, fun clj_core:seq/1),
+  Fun      = clj_module:fake_fun(Module, Function, length(Args2)),
 
-  erlang:apply(Module, Function, Args2).
+  erlang:apply(Fun, Args2).
 
 -spec process_args(type(), [any()], function()) -> [any()].
 process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
