@@ -346,8 +346,7 @@ build_fake_fun(Module, Function, Arity) ->
 
   save(Module#module.fake_modules, {FakeModuleName}),
 
-  Fun = erlang:make_fun(FakeModuleName, Function, Arity),
-  check_var_val(Function, Arity, Fun).
+  erlang:make_fun(FakeModuleName, Function, Arity).
 
 %% @doc Deletes all fake_funs for Module:Function of all arities.
 %%
@@ -358,29 +357,6 @@ build_fake_fun(Module, Function, Arity) ->
 delete_fake_fun(Module, FunctionId) ->
   true = ets:delete(Module#module.fake_funs, FunctionId),
   ok.
-
-%% @doc Checks if the function is the one that provides the value of a var.
-%%
-%% Then it checks if the value returned is the var itself and
-%% if so replaces the returned value for a clojerl.FakeVar, which
-%% reimplements clojerl.IFn protocol so that the invoke is done using
-%% the var's corresponding fake fun.
-%% @end
--spec check_var_val(atom(), integer(), function()) -> function().
-check_var_val(Function, 0, Fun) ->
-  FunctionBin = atom_to_binary(Function, utf8),
-  case clj_utils:ends_with(FunctionBin, <<"__val">>) of
-    true ->
-      Value = Fun(),
-      FakeValFun = fun() -> 'clojerl.FakeVar':new(Value) end,
-      case clj_core:'var?'(Value) of
-        true  -> FakeValFun;
-        false -> Fun
-      end;
-    false -> Fun
-  end;
-check_var_val(_Function, _Arity, Fun) ->
-  Fun.
 
 %% @private
 -spec delete_fake_modules(clj_module()) -> ok.
