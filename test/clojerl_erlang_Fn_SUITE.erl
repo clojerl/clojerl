@@ -18,7 +18,7 @@ all() ->
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) ->
-  application:ensure_all_started(clojerl),
+  ok = clojerl:start(),
   Config.
 
 %%------------------------------------------------------------------------------
