@@ -4597,7 +4597,7 @@
   n (default 1) (exclusive)."
   {:added "1.0"
    :static true}
-  ([] (random/uniform.e))
+  ([] (rand/uniform.e))
   ([n] (* n (rand))))
 
 (defn rand-int
@@ -6267,12 +6267,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;(load "core_proxy")
+;; (load "core_proxy")
 (load "core_print")
-;;(load "genclass")
-;;(load "core_deftype")
-;;(load "core/protocols")
-;;(load "gvec")
+;; (load "genclass")
+;; (load "core_deftype")
+;; (load "core/protocols")
+;; (load "gvec")
 (load "instant")
 (load "uuid")
 
