@@ -1,5 +1,6 @@
 :name "clojerl"
-:node-sname "clojerl-edts"
+:node-name "clojerl-edts"
 :lib-dirs '("src" "test")
 :app-include-dirs '("include")
+:erlang-cookie "clojerl"
 ;; :project-include-dirs '("test/shared/include")
