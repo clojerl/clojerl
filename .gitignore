@@ -9,3 +9,4 @@ callgrind.*
 *.so
 *.o
 c_src/*.mk
+*.plt
