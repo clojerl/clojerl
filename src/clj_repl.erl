@@ -7,8 +7,7 @@ repl() -> repl(clj_env:default()).
 
 -spec repl(clj_env:env()) -> clj_env:env().
 repl(Env) ->
-  {ok, []} = application:ensure_all_started(clojerl),
-  ok = clojerl:ensure_modules(),
+  ok = clojerl:start(),
   'clojerl.Var':push_bindings(#{}),
   UserSym = clj_core:symbol(<<"$user">>),
   clj_compiler:eval([clj_core:symbol(<<"ns">>), UserSym], Env),
