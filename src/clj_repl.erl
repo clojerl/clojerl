@@ -7,8 +7,7 @@ repl() -> repl(clj_env:default()).
 
 -spec repl(clj_env:env()) -> clj_env:env().
 repl(Env) ->
-  {ok, []} = application:ensure_all_started(clojerl),
-  ok = clojerl:ensure_modules(),
+  ok = clojerl:start(),
   'clojerl.Var':push_bindings(#{}),
   UserSym = clj_core:symbol(<<"$user">>),
   clj_compiler:eval([clj_core:symbol(<<"ns">>), UserSym], Env),
@@ -23,7 +22,10 @@ loop(Env) ->
     PromptBin    = <<CurrentNsBin/binary, "=> ">>,
 
     %% Read
-    Input    = io:get_line(binary_to_list(PromptBin)),
+    Input    = case io:get_line(binary_to_list(PromptBin)) of
+                 eof -> quit();
+                 Inp -> Inp
+               end,
     InputBin = list_to_binary(Input),
 
     {Output, Env1} =
@@ -57,3 +59,8 @@ skip_whitespace(<<Ch/utf8, Rest/binary>> = Input) ->
     whitespace -> skip_whitespace(Rest);
     _ -> Input
   end.
+
+-spec quit() -> no_return.
+quit() ->
+  io:format("~nBye!~n"),
+  erlang:halt(0).

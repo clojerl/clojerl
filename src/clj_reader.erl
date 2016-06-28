@@ -7,24 +7,40 @@
         , location_meta/1
         ]).
 
--type location() :: {non_neg_integer(), non_neg_integer()}.
+-type location() :: #{ loc  => {non_neg_integer(), non_neg_integer()}
+                     , file => binary()
+                     }.
 
 -type opts() :: #{ read_cond    => allow | preserve
+                   %% When the value is `allow' then reader conditional will be
+                   %% processed. If it is `preserve' then a ReaderConditional
+                   %% value will be returned.
                  , features     => 'clojerl.Set':type()
-                 , data_readers => #{binary() => function()}
+                   %% Set of features available when processing a reader
+                   %% conditional.
                  , file         => file:filename_all()
+                   %% Source file being read.
                  , io_reader    => 'erlang.io.IReader':type()
+                   %% IReader that should be used when there are no more
+                   %% characters to be read from the binary.
                  }.
 
 -export_type([location/0, opts/0]).
 
 -type state() :: #{ src           => binary()
+                    %% A binary the represents Clojure source code
                   , opts          => opts()
+                    %% The options map supplied to the reader.
                   , forms         => [any()]
+                    %% List of forms read (in reverse order).
                   , pending_forms => [any()]
+                    %% Pending forms to be processed. Used by reader cond.
                   , env           => clj_env:env()
+                    %% The current Clojure environment.
                   , loc           => location()
+                    %% Current line and column location.
                   , bindings      => clj_scope:scope()
+                    %% Current bindings.
                   }.
 
 -type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
@@ -1022,7 +1038,7 @@ match_feature(_, _, State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_tagged(state()) -> state().
-read_tagged(#{opts := Opts} = State) ->
+read_tagged(State) ->
   {Symbol, State1} = pop_form(read_one(State)),
 
   clj_utils:throw_when( not clj_core:'symbol?'(Symbol)
@@ -1030,34 +1046,47 @@ read_tagged(#{opts := Opts} = State) ->
                       , location(State)
                       ),
 
-  DataReaders    = clj_core:get(Opts, 'data_readers'),
-  AllDataReaders = clj_core:merge([default_data_readers(), DataReaders]),
-  SymbolName     = clj_core:str(Symbol),
-  ReadFun        = clj_core:get(AllDataReaders, SymbolName, undefined),
+  DataReadersVar        = 'clojerl.Var':new( <<"clojure.core">>
+                                           , <<"*data-readers*">>
+                                           ),
+  DefaultDataReadersVar = 'clojerl.Var':new( <<"clojure.core">>
+                                           , <<"default-data-readers">>
+                                           ),
+  DefaultReaderFunVar   = 'clojerl.Var':new( <<"clojure.core">>
+                                           , <<"*default-data-reader-fn*">>
+                                           ),
 
-  clj_utils:throw_when( ReadFun == undefined
-                      , [<<"No reader function for tag ">>, Symbol]
+  DataReaders = clj_core:deref(DataReadersVar),
+  Reader0     = clj_core:get(DataReaders, Symbol, undefined),
+
+  DefaultDataReaders = clj_core:deref(DefaultDataReadersVar),
+  Reader1 = case
+              Reader0 =/= undefined
+              orelse clj_core:get(DefaultDataReaders, Symbol, undefined)
+            of
+              true -> Reader0;
+              DefaultDataReader -> DefaultDataReader
+            end,
+
+  Reader2 = case
+              Reader1 =/= undefined
+              orelse clj_core:deref(DefaultReaderFunVar)
+            of
+              true -> Reader1;
+              DefaultReaderFun -> DefaultReaderFun
+            end,
+
+  clj_utils:throw_when( Reader2 =:= undefined
+                      , [ <<"No reader function for tag ">>
+                        , Symbol
+                        ]
                       , location(State)
                       ),
 
   {Form, State2} = pop_form(read_one(State1)),
-  ReadForm       = clj_core:invoke(ReadFun, [Form]),
+  ReadForm       = clj_core:invoke(Reader2, [Form]),
 
   push_form(ReadForm, State2).
-
--spec default_data_readers() -> map().
-default_data_readers() ->
-  #{ <<"inst">> => fun read_instant_date/1
-   , <<"uuid">> => fun default_uuid_reader/1
-   }.
-
--spec read_instant_date(binary()) -> any().
-read_instant_date(Date) ->
-  Date.
-
--spec default_uuid_reader(binary()) -> any().
-default_uuid_reader(UUID) ->
-  UUID.
 
 %%------------------------------------------------------------------------------
 %% Utility functions

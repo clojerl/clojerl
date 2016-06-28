@@ -295,16 +295,14 @@ load(Name) ->
   NameStr = clj_core:name(Name),
   Module  = binary_to_atom(NameStr, utf8),
 
-  _ = code:ensure_loaded(Module),
-
-  Vars = case erlang:function_exported(Module, module_info, 1) of
-           true ->
+  Vars = case code:ensure_loaded(Module) of
+           {module, _} ->
              Attrs = Module:module_info(attributes),
              case lists:keyfind(vars, 1, Attrs) of
                {vars, [VarsMap]} -> maps:values(VarsMap);
                false             -> undefined
              end;
-           false -> undefined
+           {error, _} -> undefined
          end,
 
   case Vars of

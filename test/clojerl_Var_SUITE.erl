@@ -7,6 +7,7 @@
         , 'forty-two'/1
         , 'forty-two'/2
         , 'forty-three'/2
+        , 'forty-four__val'/0
         ]).
 
 -export([ deref/1
@@ -72,6 +73,10 @@ init_per_suite(Config) ->
 'forty-three'(X, XS) ->
   [43, X, XS].
 
+-spec 'forty-four__val'() -> any().
+'forty-four__val'() ->
+  unexisting:function().
+
 -spec deref(config()) -> result().
 deref(_Config) ->
   Ns   = <<"clojerl_Var_SUITE">>,
@@ -84,6 +89,13 @@ deref(_Config) ->
   Name2 = <<"forty-three">>,
   Var1  = 'clojerl.Var':new(Ns, Name2),
   ok = try clj_core:deref(Var1), error
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Try to deref an existing var"),
+  Name3 = <<"forty-four">>,
+  Var2  = 'clojerl.Var':new(Ns, Name3),
+  ok = try clj_core:deref(Var2), error
        catch _:_ -> ok
        end,
 
@@ -262,5 +274,9 @@ complete_coverage(_Config) ->
   false = 'clojerl.Var':has_root(Var),
 
   42    = 'clojerl.Var':get(Var),
+
+  Hash  = 'clojerl.IHash':hash(Var),
+  Hash  = 'clojerl.IHash':hash(Var),
+  true  = erlang:is_integer(Hash),
 
   {comments, ""}.

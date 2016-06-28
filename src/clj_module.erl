@@ -11,7 +11,7 @@
         , is_loaded/1
 
         , fake_fun/3
-        , replace_calls/3
+        , replace_calls/2
 
         , add_vars/2
         , add_attributes/2
@@ -64,11 +64,22 @@ with_context(Fun) ->
     cleanup()
   end.
 
-%% @private
--spec cleanup() -> ok.
-cleanup() ->
-  Modules = gen_server:call(?MODULE, cleanup),
-  lists:foreach(fun delete_fake_modules/1, Modules).
+%% @doc Returns a list where each element is a list with the abstract
+%%      forms of all stored modules.
+%% @end
+-spec all_forms() -> [[erl_parse:abstract_form()]].
+all_forms() ->
+  All = gen_server:call(?MODULE, all),
+  lists:map(fun to_forms/1, All).
+
+
+%% @doc Makes sure the clj_module is loaded.
+-spec ensure_loaded(atom(), string()) -> ok.
+ensure_loaded(Name, Source) ->
+  case is_loaded(Name) of
+    true  -> ok;
+    false -> load(Name, Source), ok
+  end.
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%
@@ -102,74 +113,11 @@ fake_fun(ModuleName, Function, Arity) ->
       end
   end.
 
-%% @private
--spec build_fake_fun(clj_module(), atom(), integer()) -> function().
-build_fake_fun(Module, Function, Arity) ->
-  {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
-
-  {function, _, _, _, Clauses} =
-    replace_calls(FunctionAst, Module#module.name, Function),
-  Int = erlang:unique_integer([positive]),
-  FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
-
-  ModuleAst  = {attribute, 0, module, FakeModuleName},
-  ExportAst  = {attribute, 0, export, [{Function, Arity}]},
-  ClojureAst = {attribute, 0, clojure, true},
-  FunAst     = {function, 0, Function, Arity, Clauses},
-  Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
-
-  Binary = case compile:forms(Forms, []) of
-             {ok, _, Bin} -> Bin;
-             Error -> throw({Error, Module#module.name, Function, Arity})
-           end,
-  code:load_binary(FakeModuleName, "", Binary),
-
-  save(Module#module.fake_modules, {FakeModuleName}),
-
-  Fun = erlang:make_fun(FakeModuleName, Function, Arity),
-  check_var_val(Function, Arity, Fun).
-
-%% @doc Deletes all fake_funs for Module:Function of all arities.
-%%
-%% This is used so that they can be replaced with new ones, when
-%% redifining a function, for example.
-%% @end
--spec delete_fake_fun(clj_module(), function_id()) -> ok.
-delete_fake_fun(Module, FunctionId) ->
-  true = ets:delete(Module#module.fake_funs, FunctionId),
-  ok.
-
-%% @doc Checks if the function is the one that provides the value of a var.
-%%
-%% Then it checks if the value returned is the var itself and
-%% if so replaces the returned value for a clojerl.FakeVar, which
-%% reimplements clojerl.IFn protocol so that the invoke is done using
-%% the var's corresponding fake fun.
-%% @end
--spec check_var_val(atom(), integer(), function()) -> function().
-check_var_val(Function, 0, Fun) ->
-  FunctionBin = atom_to_binary(Function, utf8),
-  case clj_utils:ends_with(FunctionBin, <<"__val">>) of
-    true ->
-      Value = Fun(),
-      FakeValFun = fun() -> 'clojerl.FakeVar':new(Value) end,
-      case clj_core:'var?'(Value) of
-        true  -> FakeValFun;
-        false -> Fun
-      end;
-    false -> Fun
-  end;
-check_var_val(_Function, _Arity, Fun) ->
-  Fun.
-
 %% @doc Processes a function's ast and modifies all calls to functions
 %%      in the function's own module for a call to the fun returned by
 %%      clj_module:fake_fun/3.
-%%
-%% If the call is a recursive call to the top function then it changes
-%% the call to a variable built using the value of TopFunction.
 %% @end
--spec replace_calls(erl_parse:abstract_form(), module(), atom()) ->
+-spec replace_calls(erl_parse:abstract_form(), module()) ->
   erl_parse:abstract_form().
 replace_calls( { call, Line
                , { remote, _
@@ -178,11 +126,8 @@ replace_calls( { call, Line
                  } = RemoteOriginal
                , Args
                }
-             , CurrentModule
-             , TopFunction) when CurrentModule =:= Module;
-                                 CurrentModule =:= '_' ->
-
-  Args1 = replace_calls(Args, CurrentModule, TopFunction),
+             , CurrentModule) ->
+  Args1 = replace_calls(Args, CurrentModule),
   Arity = length(Args),
   %% Only replace the call if the module is loaded. If it is not, then the
   %% replacement is happening for the evaluation of an expression where the
@@ -206,11 +151,9 @@ replace_calls( { call, Line
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
-replace_calls( {call, Line, {atom, Line2, Function}, Args}
-             , ModuleName
-             , TopFunction) ->
+replace_calls({call, Line, {atom, Line2, Function}, Args}, ModuleName) ->
   Arity = length(Args),
-  Args1 = replace_calls(Args, ModuleName, TopFunction),
+  Args1 = replace_calls(Args, ModuleName),
   Remote = {remote, Line,
             {atom, Line, ?MODULE},
             {atom, Line, fake_fun}
@@ -222,97 +165,12 @@ replace_calls( {call, Line, {atom, Line2, Function}, Args}
               ]
             },
   {call, Line, FunCall, Args1};
-replace_calls(Ast, Module, TopFunction) when is_tuple(Ast) ->
-  list_to_tuple(replace_calls(tuple_to_list(Ast), Module, TopFunction));
-replace_calls(Ast, Module, TopFunction) when is_list(Ast) ->
-  [replace_calls(Item, Module, TopFunction) || Item <- Ast];
-replace_calls(Ast, _, _) ->
+replace_calls(Ast, Module) when is_tuple(Ast) ->
+  list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
+replace_calls(Ast, Module) when is_list(Ast) ->
+  [replace_calls(Item, Module) || Item <- Ast];
+replace_calls(Ast, _) ->
   Ast.
-
-%% @doc Makes sure the clj_module is loaded.
--spec ensure_loaded(atom(), string()) -> ok.
-ensure_loaded(Name, Source) ->
-  case is_loaded(Name) of
-    true  -> ok;
-    false -> load(Name, Source), ok
-  end.
-
-%% @private
--spec load(atom(), string()) -> ok | {error, term()}.
-load(Name, Source) ->
-  Module = case code:ensure_loaded(Name) of
-             {module, Name} ->
-               new(clj_utils:code_from_binary(Name));
-             {error, _} ->
-               new(Name, Source)
-           end,
-  ok = gen_server:call(?MODULE, {load, Module}),
-  Module.
-
--spec is_loaded(module()) -> boolean().
-is_loaded(Name) ->
-  ets:member(?MODULE, Name).
-
-%% @doc Returns a list with all modules that where loaded by the
-%%      current process.
-%% @private
--spec all() -> [clj_module()].
-all() ->
-  gen_server:call(?MODULE, all).
-
-%% @doc Returns a list where each element is a list with the abstract
-%%      forms of all stored modules.
-%% @end
--spec all_forms() -> [[erl_parse:abstract_form()]].
-all_forms() ->
-  lists:map(fun to_forms/1, all()).
-
-%% @private
--spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
-to_forms(#module{} = Module) ->
-  #module{ name    = Name
-         , source  = Source
-         , vars    = VarsTable
-         , funs    = FunsTable
-         , exports = ExportsTable
-         , on_load = OnLoadTable
-         , attrs   = Attrs
-         , rest    = Rest
-         } = Module,
-
-  ModuleAttr  = {attribute, 0, module, Name},
-  FileAttr    = {attribute, 0, file, {Source, 0}},
-  %% To avoid conflicts with Clojure functions with the same name
-  %% as some functions in the `erlang' module.
-  CompileAttr = {attribute, 0, compile, [no_auto_import]},
-
-  VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
-  Vars        = maps:from_list(VarsList),
-  VarsAttr    = {attribute, 0, vars, Vars},
-
-  Exports     = [X || {X} <- ets:tab2list(ExportsTable)],
-  ExportAttr  = {attribute, 0, export, Exports},
-
-  ClojureAttr = {attribute, 0, clojure, true},
-  OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
-
-  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
-
-  OnLoadFun   = on_load_function(OnLoadTable),
-  Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
-
-  [ ModuleAttr, FileAttr, VarsAttr, ExportAttr |
-    UniqueAttrs ++ Rest ++ [OnLoadFun | Funs]
-  ].
-
-%% @private
-on_load_function(OnLoadTable) ->
-  Exprs = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
-            []       -> [{atom, 0, ok}];
-            ExprsTmp -> ExprsTmp
-          end,
-  Clause = {clause, 0, [], [], Exprs},
-  {function, 0, ?ON_LOAD_FUNCTION, 0, [Clause]}.
 
 -spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
@@ -408,7 +266,7 @@ handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
             end,
 
   true = ets:delete(TabId, Pid),
-  ok = lists:foreach(fun(M) -> ets:delete(?MODULE, M#module.name) end, Modules),
+  ok   = lists:foreach(fun(M) -> ets:delete(?MODULE, M#module.name) end, Modules),
 
   {reply, Modules, State};
 handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
@@ -436,11 +294,123 @@ code_change(_Msg, _From, State) ->
 %%------------------------------------------------------------------------------
 
 %% @private
+-spec cleanup() -> ok.
+cleanup() ->
+  Modules = gen_server:call(?MODULE, cleanup),
+  lists:foreach(fun delete_fake_modules/1, Modules).
+
+%% @private
+%% @doc
+%% Loads the module `Name' into memory. This function assumes it is not
+%% loaded already, so this check should be done before calling it.
+%% The value of `Source' is used to set the `file' attribute of the module
+%% if the module's binary is not found, which is interpreted as if the
+%% module is new.
+%% @end
+-spec load(atom(), string()) -> ok | {error, term()}.
+load(Name, Source) ->
+  Module = case code:ensure_loaded(Name) of
+             {module, Name} ->
+               new(clj_utils:code_from_binary(Name));
+             {error, _} ->
+               new(Name, Source)
+           end,
+  ok = gen_server:call(?MODULE, {load, Module}),
+  Module.
+
+-spec is_loaded(module()) -> boolean().
+is_loaded(Name) ->
+  ets:member(?MODULE, Name).
+
+%% @private
+-spec build_fake_fun(clj_module(), atom(), integer()) -> function().
+build_fake_fun(Module, Function, Arity) ->
+  {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
+
+  {function, _, _, _, Clauses} =
+    replace_calls(FunctionAst, Module#module.name),
+  Int = erlang:unique_integer([positive]),
+  FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
+
+  ModuleAst  = {attribute, 0, module, FakeModuleName},
+  ExportAst  = {attribute, 0, export, [{Function, Arity}]},
+  ClojureAst = {attribute, 0, clojure, true},
+  FunAst     = {function, 0, Function, Arity, Clauses},
+  Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
+
+  Binary = case compile:forms(Forms, []) of
+             {ok, _, Bin} -> Bin;
+             Error -> throw({Error, Module#module.name, Function, Arity})
+           end,
+  code:load_binary(FakeModuleName, "", Binary),
+
+  save(Module#module.fake_modules, {FakeModuleName}),
+
+  erlang:make_fun(FakeModuleName, Function, Arity).
+
+%% @doc Deletes all fake_funs for Module:Function of all arities.
+%%
+%% This is used so that they can be replaced with new ones, when
+%% redifining a function, for example.
+%% @end
+-spec delete_fake_fun(clj_module(), function_id()) -> ok.
+delete_fake_fun(Module, FunctionId) ->
+  true = ets:delete(Module#module.fake_funs, FunctionId),
+  ok.
+
+%% @private
 -spec delete_fake_modules(clj_module()) -> ok.
 delete_fake_modules(Module) ->
   FakeModulesId = Module#module.fake_modules,
   [code:delete(Name) || {Name} <- ets:tab2list(FakeModulesId)],
   ok.
+
+%% @private
+-spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
+to_forms(#module{} = Module) ->
+  #module{ name    = Name
+         , source  = Source
+         , vars    = VarsTable
+         , funs    = FunsTable
+         , exports = ExportsTable
+         , on_load = OnLoadTable
+         , attrs   = Attrs
+         , rest    = Rest
+         } = Module,
+
+  ModuleAttr  = {attribute, 0, module, Name},
+  FileAttr    = {attribute, 0, file, {Source, 0}},
+  %% To avoid conflicts with Clojure functions with the same name
+  %% as some functions in the `erlang' module.
+  CompileAttr = {attribute, 0, compile, [no_auto_import]},
+
+  VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
+  Vars        = maps:from_list(VarsList),
+  VarsAttr    = {attribute, 0, vars, Vars},
+
+  Exports     = [X || {X} <- ets:tab2list(ExportsTable)],
+  ExportAttr  = {attribute, 0, export, Exports},
+
+  ClojureAttr = {attribute, 0, clojure, true},
+  OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
+
+  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
+
+  OnLoadFun   = on_load_function(OnLoadTable),
+  Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
+
+  [ ModuleAttr, FileAttr, VarsAttr, ExportAttr |
+    UniqueAttrs ++ Rest ++ [OnLoadFun | Funs]
+  ].
+
+%% @private
+on_load_function(OnLoadTable) ->
+  Exprs = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
+            []       -> [{atom, 0, ok}];
+            ExprsTmp -> ExprsTmp
+          end,
+  Clause = {clause, 0, [], [], Exprs},
+  {function, 0, ?ON_LOAD_FUNCTION, 0, [Clause]}.
 
 -spec get(atom(), module()) -> any().
 get(Table, Id) ->
