@@ -7,7 +7,9 @@
         , location_meta/1
         ]).
 
--type location() :: {non_neg_integer(), non_neg_integer()}.
+-type location() :: #{ loc  => {non_neg_integer(), non_neg_integer()}
+                     , file => binary()
+                     }.
 
 -type opts() :: #{ read_cond    => allow | preserve
                    %% When the value is `allow' then reader conditional will be

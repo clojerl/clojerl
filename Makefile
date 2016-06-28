@@ -16,7 +16,7 @@ include erlang.mk
 CT_OPTS = -cover ${COVER_SPEC} -erl_args -s ${PROJECT}
 
 COMPILE_FIRST = erlang/erlang.io.I* lang/protocols/*
-
+DIALYZER_OPTS += -I include
 SHELL_OPTS += -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync
 
 # Generate a list of all modules for the cover.spec
