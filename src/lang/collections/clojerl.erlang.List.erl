@@ -10,72 +10,72 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export(['clojerl.Counted.count'/1]).
--export(['clojerl.IEquiv.equiv'/2]).
--export([ 'clojerl.IColl.cons'/2
-        , 'clojerl.IColl.empty'/1
+-export([count/1]).
+-export([equiv/2]).
+-export([ cons/2
+        , empty/1
         ]).
--export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.ISeq.first'/1
-        , 'clojerl.ISeq.more'/1
-        , 'clojerl.ISeq.next'/1
+-export([hash/1]).
+-export([ first/1
+        , more/1
+        , next/1
         ]).
--export(['clojerl.ISequential.noop'/1]).
--export([ 'clojerl.IStack.peek'/1
-        , 'clojerl.IStack.pop'/1
+-export([noop/1]).
+-export([ peek/1
+        , pop/1
         ]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([seq/1]).
+-export([str/1]).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(Items) -> length(Items).
+count(Items) -> length(Items).
 
-'clojerl.IHash.hash'(List) -> clj_murmur3:ordered(List).
+hash(List) -> clj_murmur3:ordered(List).
 
-'clojerl.Stringable.str'([]) ->
+str([]) ->
   <<"()">>;
-'clojerl.Stringable.str'(Items) when is_list(Items) ->
+str(Items) when is_list(Items) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
-'clojerl.Seqable.seq'([]) -> undefined;
-'clojerl.Seqable.seq'(List) -> List.
+seq([]) -> undefined;
+seq(List) -> List.
 
-'clojerl.ISeq.first'([]) -> undefined;
-'clojerl.ISeq.first'([First | _]) -> First.
+first([]) -> undefined;
+first([First | _]) -> First.
 
-'clojerl.ISeq.more'([]) -> [];
-'clojerl.ISeq.more'([_ | Rest]) -> Rest.
+more([]) -> [];
+more([_ | Rest]) -> Rest.
 
-'clojerl.ISeq.next'([]) -> undefined;
-'clojerl.ISeq.next'([_ | []]) -> undefined;
-'clojerl.ISeq.next'([_ | Rest]) -> Rest.
+next([]) -> undefined;
+next([_ | []]) -> undefined;
+next([_ | Rest]) -> Rest.
 
-'clojerl.ISequential.noop'(_) -> ok.
+noop(_) -> ok.
 
-'clojerl.IStack.peek'([]) -> undefined;
-'clojerl.IStack.peek'([X | _]) -> X.
+peek([]) -> undefined;
+peek([X | _]) -> X.
 
-'clojerl.IStack.pop'([]) -> [];
-'clojerl.IStack.pop'([_ | Rest]) -> Rest.
+pop([]) -> [];
+pop([_ | Rest]) -> Rest.
 
-'clojerl.IColl.cons'([], X) ->
+cons([], X) ->
   [X];
-'clojerl.IColl.cons'(Items, X) ->
+cons(Items, X) ->
   [X | Items].
 
-'clojerl.IColl.empty'(_) -> [].
+empty(_) -> [].
 
-'clojerl.IEquiv.equiv'(X, Y) when is_list(X), is_list(Y) ->
+equiv(X, Y) when is_list(X), is_list(Y) ->
   case length(X) == length(Y) of
     true  -> do_equiv(X, Y);
     false -> false
   end;
-'clojerl.IEquiv.equiv'(X, Y) ->
+equiv(X, Y) ->
   case clj_core:'sequential?'(Y) of
     true  -> clj_core:equiv(Y, X);
     false -> false

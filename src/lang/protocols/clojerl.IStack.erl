@@ -4,8 +4,8 @@
 
 -type type() :: any().
 
--callback 'clojerl.IStack.peek'(Stack :: type()) -> any().
--callback 'clojerl.IStack.pop'(Stack :: type()) -> any().
+-callback peek(Stack :: type()) -> any().
+-callback pop(Stack :: type()) -> any().
 
 -spec peek(type()) -> any().
 peek(Stack) ->

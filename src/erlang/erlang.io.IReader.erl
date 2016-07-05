@@ -4,20 +4,15 @@
 
 -type type() :: any().
 
--callback 'erlang.io.IReader.read'(A :: type()) ->
-  binary() | eof.
+-callback read(A :: type()) -> binary() | eof.
 
--callback 'erlang.io.IReader.read'(A :: type(), L :: integer()) ->
-  binary() | eof.
+-callback read(A :: type(), L :: integer()) -> binary() | eof.
 
--callback 'erlang.io.IReader.read_line'(A :: type()) ->
-  binary() | eof.
+-callback read_line(A :: type()) -> binary() | eof.
 
--callback 'erlang.io.IReader.skip'(A :: type(), L :: integer()) ->
-  integer() | eof.
+-callback skip(A :: type(), L :: integer()) -> integer() | eof.
 
--callback 'erlang.io.IReader.unread'(A :: type(), C :: binary()) ->
-  type().
+-callback unread(A :: type(), C :: binary()) -> type().
 
 -spec read(type()) -> binary() | eof.
 read(Reader) ->

@@ -4,9 +4,9 @@
 
 -type type() :: any().
 
--callback 'clojerl.ISet.disjoin'(type(), any()) -> type().
--callback 'clojerl.ISet.contains'(type(), any()) -> boolean().
--callback 'clojerl.ISet.get'(type(), any()) -> any().
+-callback disjoin(type(), any()) -> type().
+-callback contains(type(), any()) -> boolean().
+-callback get(type(), any()) -> any().
 
 -spec disjoin(type(), any()) -> type().
 disjoin(Coll, Item) ->

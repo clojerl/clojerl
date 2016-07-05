@@ -203,7 +203,7 @@ stack(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.Vector':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.Vector':noop(ok),
 
   NotEmptyVector = clj_core:vector([a, b, 2, 3]),
   EmptyVector    = clj_core:empty(NotEmptyVector),

@@ -13,22 +13,22 @@
 -behavior('clojerl.Stringable').
 
 -export([new/1]).
--export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IColl.cons'/2
-        , 'clojerl.IColl.empty'/1
+-export([count/1]).
+-export([ cons/2
+        , empty/1
         ]).
--export(['clojerl.IEquiv.equiv'/2]).
--export(['clojerl.IFn.invoke'/2]).
--export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
+-export([equiv/2]).
+-export([invoke/2]).
+-export([hash/1]).
+-export([ meta/1
+        , with_meta/2
         ]).
--export([ 'clojerl.ISet.disjoin'/2
-        , 'clojerl.ISet.contains'/2
-        , 'clojerl.ISet.get'/2
+-export([ disjoin/2
+        , contains/2
+        , get/2
         ]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([seq/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{}.
 
@@ -43,64 +43,64 @@ new(Values) when is_list(Values) ->
 
 %% clojerl.Counted
 
-'clojerl.Counted.count'(#?TYPE{name = ?M, data = MapSet}) -> maps:size(MapSet).
+count(#?TYPE{name = ?M, data = MapSet}) -> maps:size(MapSet).
 
 %% clojerl.IColl
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = MapSet} = Set, X) ->
+cons(#?TYPE{name = ?M, data = MapSet} = Set, X) ->
   Hash = 'clojerl.IHash':hash(X),
   case maps:is_key(Hash, MapSet) of
     true  -> Set;
     false -> Set#?TYPE{data = MapSet#{Hash => X}}
   end.
 
-'clojerl.IColl.empty'(_) -> new([]).
+empty(_) -> new([]).
 
 %% clojerl.IEquiv
 
-'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+equiv( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(_, _) ->
+equiv(_, _) ->
   false.
 
 %% clojerl.IFn
 
-'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
+invoke(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
   case maps:is_key(Hash, MapSet) of
     true  -> Item;
     false -> undefined
   end;
-'clojerl.IFn.invoke'(_, Args) ->
+invoke(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
 
 %% clojerl.IHash
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M, data = MapSet}) ->
+hash(#?TYPE{name = ?M, data = MapSet}) ->
   clj_murmur3:unordered(maps:values(MapSet)).
 
 %% clojerl.IMeta
 
-'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
+meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
+with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
   Set#?TYPE{info = Info#{meta => Metadata}}.
 
 %% clojerl.ISet
 
-'clojerl.ISet.disjoin'(#?TYPE{name = ?M, data = MapSet} = Set, Value) ->
+disjoin(#?TYPE{name = ?M, data = MapSet} = Set, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   Set#?TYPE{name = ?M, data = maps:remove(Hash, MapSet)}.
 
-'clojerl.ISet.contains'(#?TYPE{name = ?M, data = MapSet}, Value) ->
+contains(#?TYPE{name = ?M, data = MapSet}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   maps:is_key(Hash, MapSet).
 
-'clojerl.ISet.get'(#?TYPE{name = ?M, data = MapSet}, Value) ->
+get(#?TYPE{name = ?M, data = MapSet}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   case maps:is_key(Hash, MapSet) of
     true  -> maps:get(Hash, MapSet);
@@ -109,7 +109,7 @@ new(Values) when is_list(Values) ->
 
 %% clojerl.Seqable
 
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = MapSet}) ->
+seq(#?TYPE{name = ?M, data = MapSet}) ->
   case maps:size(MapSet) of
     0 -> undefined;
     _ -> maps:values(MapSet)
@@ -117,7 +117,7 @@ new(Values) when is_list(Values) ->
 
 %% clojerl.Stringable
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = MapSet}) ->
+str(#?TYPE{name = ?M, data = MapSet}) ->
   Items = lists:map(fun clj_core:str/1, maps:values(MapSet)),
   Strs  = clj_utils:binary_join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.
