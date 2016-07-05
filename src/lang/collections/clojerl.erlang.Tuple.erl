@@ -6,26 +6,26 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export(['clojerl.Counted.count'/1]).
--export(['clojerl.IHash.hash'/1]).
--export(['clojerl.ISequential.noop'/1]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([count/1]).
+-export([hash/1]).
+-export([noop/1]).
+-export([seq/1]).
+-export([str/1]).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(Tuple) -> tuple_size(Tuple).
+count(Tuple) -> tuple_size(Tuple).
 
-'clojerl.IHash.hash'(Tuple) -> clj_murmur3:ordered(Tuple).
+hash(Tuple) -> clj_murmur3:ordered(Tuple).
 
-'clojerl.ISequential.noop'(_) -> ok.
+noop(_) -> ok.
 
-'clojerl.Seqable.seq'({}) -> undefined;
-'clojerl.Seqable.seq'(Tuple) -> tuple_to_list(Tuple).
+seq({}) -> undefined;
+seq(Tuple) -> tuple_to_list(Tuple).
 
-'clojerl.Stringable.str'(Tuple) when is_tuple(Tuple) ->
+str(Tuple) when is_tuple(Tuple) ->
   Items = tuple_to_list(Tuple),
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs = clj_utils:binary_join(ItemsStrs, <<", ">>),

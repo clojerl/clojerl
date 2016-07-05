@@ -1552,7 +1552,7 @@
   [multifn dispatch-val & fn-tail]
   (let [fn-name (symbol (str (name multifn) "_method_" dispatch-val))]
     `(do
-       (defn ~fn-name ~@fn-tail)
+       (defn- ~fn-name ~@fn-tail)
        (erl-on-load*
         (clojerl.MultiFn/add_method.e ~(name multifn)
                                       ~dispatch-val

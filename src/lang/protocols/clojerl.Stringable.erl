@@ -4,7 +4,7 @@
 
 -type type() :: binary().
 
--callback 'clojerl.Stringable.str'(any()) -> type().
+-callback str(any()) -> type().
 
 -spec str(any()) -> type().
 str(X) -> 'clojerl.protocol':resolve(?MODULE, str, [X]).

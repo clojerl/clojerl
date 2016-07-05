@@ -4,7 +4,7 @@
 
 -type type() :: list().
 
--callback 'clojerl.Seqable.seq'(Seqable :: any()) -> type().
+-callback seq(Seqable :: any()) -> type().
 
 -spec seq(any()) -> type().
 seq(Seqable) ->

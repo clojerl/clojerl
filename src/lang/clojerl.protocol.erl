@@ -6,15 +6,15 @@
         ]).
 
 -spec resolve(atom(), atom(), list()) -> any().
-resolve(Protocol, FunctionName, Args = [Head | _]) ->
+resolve(Protocol, Function, Args = [Head | _]) ->
   Type = clj_core:type(Head),
 
-  case resolve_impl_cache(Protocol, FunctionName, Type, length(Args)) of
-    {Module, Function} ->
-      apply(Module, Function, Args);
-    undefined ->
+  try
+    apply(Type, Function, Args)
+  catch
+    _:undef ->
       TypeBin = atom_to_binary(Type, utf8),
-      FunctionBin = atom_to_binary(FunctionName, utf8),
+      FunctionBin = atom_to_binary(Function, utf8),
       ProtocolBin = atom_to_binary(Protocol, utf8),
       Value = maybe_str(Head),
       ArgsStr = maybe_str(lists:map(fun maybe_str/1, Args)),
@@ -33,32 +33,6 @@ maybe_str(X) ->
   case 'extends?'('clojerl.Stringable', clj_core:type(X)) of
     true -> clj_core:str(X);
     false -> iolist_to_binary(io_lib:format("~p", [X]))
-  end.
-
--spec resolve_impl_cache(atom(), atom(), atom(), integer()) ->
-  {module(), atom()} | undefined.
-resolve_impl_cache(Protocol, Function, Type, Arity) ->
-  Key = {resolve_impl, Protocol, Function, Type, Arity},
-  case clj_cache:get(Key) of
-    undefined ->
-      Value = resolve_impl(Protocol, Function, Type, Arity),
-      clj_cache:put(Key, Value),
-      Value;
-     {ok, Value} -> Value
-  end.
-
--spec resolve_impl(atom(), atom(), atom(), integer()) ->
-  {module(), atom()} | undefined.
-resolve_impl(Protocol, Function, Type, Arity) ->
-  ImplFunction = impl_function(Protocol, Function),
-  case erlang:function_exported(Type, ImplFunction, Arity) of
-    true  -> {Type, ImplFunction};
-    false ->
-      ImplModule = impl_module(Protocol, Type),
-      case erlang:function_exported(ImplModule, Function, Arity) of
-        true  -> {ImplModule, Function};
-        false -> undefined
-      end
   end.
 
 -spec 'extends?'(atom(), atom()) -> boolean().
@@ -81,10 +55,3 @@ impl_module(Protocol, Type) when is_atom(Protocol),
   TypeBin = atom_to_binary(Type, utf8),
   ProtocolBin = atom_to_binary(Protocol, utf8),
   binary_to_atom(<<TypeBin/binary, ".", ProtocolBin/binary>>, utf8).
-
--spec impl_function(atom(), atom()) -> atom().
-impl_function(Protocol, Function) when is_atom(Protocol),
-                                       is_atom(Function) ->
-  ProtocolBin = atom_to_binary(Protocol, utf8),
-  FunctionBin = atom_to_binary(Function, utf8),
-  binary_to_atom(<<ProtocolBin/binary, ".", FunctionBin/binary>>, utf8).

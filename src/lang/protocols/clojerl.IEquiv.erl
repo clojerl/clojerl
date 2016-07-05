@@ -4,7 +4,7 @@
 
 -type type() :: any().
 
--callback 'clojerl.IEquiv.equiv'(type(), type()) -> boolean().
+-callback equiv(type(), type()) -> boolean().
 
 -spec equiv(type(), type()) -> type().
 equiv(X, Y) ->

@@ -4,9 +4,9 @@
 
 -type type() :: any().
 
--callback 'clojerl.IMap.keys'(IMap :: type()) -> list().
--callback 'clojerl.IMap.vals'(IMap :: type()) -> list().
--callback 'clojerl.IMap.without'(IMap :: type(), Key :: any()) -> type().
+-callback keys(IMap :: type()) -> list().
+-callback vals(IMap :: type()) -> list().
+-callback without(IMap :: type(), Key :: any()) -> type().
 
 -spec keys(type()) -> list().
 keys(Map) ->

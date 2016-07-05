@@ -76,7 +76,7 @@ complete_coverage(_Config) ->
 
   <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
 
-  ok = 'clojerl.String':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.String':noop(ok),
 
   true = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
 

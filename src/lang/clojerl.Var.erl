@@ -33,17 +33,17 @@
         , dynamic_binding/2
         ]).
 
--export(['clojerl.IDeref.deref'/1]).
--export(['clojerl.IEquiv.equiv'/2]).
--export(['clojerl.IFn.invoke'/2]).
--export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
+-export([deref/1]).
+-export([equiv/2]).
+-export([invoke/2]).
+-export([hash/1]).
+-export([ meta/1
+        , with_meta/2
         ]).
--export([ 'clojerl.Named.name'/1
-        , 'clojerl.Named.namespace'/1
+-export([ name/1
+        , namespace/1
         ]).
--export(['clojerl.Stringable.str'/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{data :: {binary(), binary()}}.
 
@@ -76,7 +76,7 @@ has_root(#?TYPE{name = ?M}) ->
   false.
 
 -spec get(type()) -> boolean().
-get(Var) -> 'clojerl.IDeref.deref'(Var).
+get(Var) -> deref(Var).
 
 -spec module(type()) -> atom().
 module(#?TYPE{name = ?M, data = {Ns, _}}) ->
@@ -162,16 +162,16 @@ dynamic_binding(Var, Value) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Named.name'(#?TYPE{name = ?M, data = {_, Name}}) ->
+name(#?TYPE{name = ?M, data = {_, Name}}) ->
   Name.
 
-'clojerl.Named.namespace'(#?TYPE{name = ?M, data = {Namespace, _}}) ->
+namespace(#?TYPE{name = ?M, data = {Namespace, _}}) ->
   Namespace.
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = {Ns, Name}}) ->
+str(#?TYPE{name = ?M, data = {Ns, Name}}) ->
   <<"#'", Ns/binary, "/", Name/binary>>.
 
-'clojerl.IDeref.deref'(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
+deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
   Module      = module(Var),
   FunctionVal = val_function(Var),
 
@@ -190,25 +190,25 @@ dynamic_binding(Var, Value) ->
       end
   end.
 
-'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+equiv( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = X}
                       ) ->
   true;
-'clojerl.IEquiv.equiv'(_, _) ->
+equiv(_, _) ->
   false.
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Data}) ->
+hash(#?TYPE{name = ?M, data = Data}) ->
   erlang:phash2(Data).
 
-'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
+meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'( #?TYPE{name = ?M, info = Info} = Keyword
+with_meta( #?TYPE{name = ?M, info = Info} = Keyword
                          , Metadata
                          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.IFn.invoke'(#?TYPE{name = ?M} = Var, Args) ->
+invoke(#?TYPE{name = ?M} = Var, Args) ->
   Module   = module(Var),
   Function = function(Var),
   Args1    = case clj_core:seq(Args) of
@@ -222,7 +222,7 @@ dynamic_binding(Var, Value) ->
 
 -spec process_args(type(), [any()], function()) -> [any()].
 process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
-  Meta = case 'clojerl.IMeta.meta'(Var) of
+  Meta = case meta(Var) of
            undefined -> #{};
            M -> M
          end,

@@ -12,11 +12,11 @@
         , char_at/2
         ]).
 
--export(['clojerl.Counted.count'/1]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.IHash.hash'/1]).
--export(['clojerl.ISequential.noop'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([count/1]).
+-export([seq/1]).
+-export([hash/1]).
+-export([noop/1]).
+-export([str/1]).
 
 -spec starts_with(binary(), binary()) -> boolean().
 starts_with(Str, Prefix) ->
@@ -47,19 +47,18 @@ char_at(Str, Index) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(Str) ->
+count(Str) ->
   erlang:length(unicode:characters_to_list(Str)).
 
-'clojerl.IHash.hash'(Str) ->
+hash(Str) ->
   erlang:phash2(Str).
 
-'clojerl.ISequential.noop'(_) -> ok.
+noop(_) -> ok.
 
-'clojerl.Seqable.seq'(<<>>) -> undefined;
-'clojerl.Seqable.seq'(Str) ->
-  to_seq(Str, []).
+seq(<<>>) -> undefined;
+seq(Str)  -> to_seq(Str, []).
 
-'clojerl.Stringable.str'(Str) -> Str.
+str(Str) -> Str.
 
 %%------------------------------------------------------------------------------
 %% Helper functions

@@ -132,7 +132,7 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.Cons':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.Cons':noop(ok),
 
   Cons = range(2, 2),
   []   = clj_core:empty(Cons),

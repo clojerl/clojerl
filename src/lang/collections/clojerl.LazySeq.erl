@@ -14,22 +14,22 @@
 
 -export([new/1]).
 
--export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IColl.cons'/2
-        , 'clojerl.IColl.empty'/1
+-export([count/1]).
+-export([ cons/2
+        , empty/1
         ]).
--export(['clojerl.IEquiv.equiv'/2]).
--export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
+-export([equiv/2]).
+-export([hash/1]).
+-export([ meta/1
+        , with_meta/2
         ]).
--export([ 'clojerl.ISeq.first'/1
-        , 'clojerl.ISeq.next'/1
-        , 'clojerl.ISeq.more'/1
+-export([ first/1
+        , next/1
+        , more/1
         ]).
--export(['clojerl.ISequential.noop'/1]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([noop/1]).
+-export([seq/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{}.
 
@@ -41,63 +41,70 @@ new(Fn) when is_function(Fn) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(#?TYPE{name = ?M, data = Fn}) ->
+count(#?TYPE{name = ?M, data = Fn}) ->
   case clj_core:invoke(Fn, []) of
     undefined -> 0;
     Seq       -> clj_core:count(Seq)
   end.
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M} = LazySeq, X) ->
+cons(#?TYPE{name = ?M} = LazySeq, X) ->
   'clojerl.Cons':new(X, LazySeq).
 
-'clojerl.IColl.empty'(_) -> [].
+empty(_) -> [].
 
-'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+equiv( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M} = LazySeq, Y) ->
+equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_core:'sequential?'(Y) of
     true  -> clj_core:equiv(clj_core:seq_to_list(LazySeq), clj_core:seq(Y));
     false -> false
   end.
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M} = LazySeq) ->
+hash(#?TYPE{name = ?M} = LazySeq) ->
   clj_murmur3:ordered(LazySeq).
 
-'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
+meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
+with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.ISeq.first'(#?TYPE{name = ?M, data = Fn}) ->
-  Seq = clj_core:invoke(Fn, []),
-  clj_core:first(Seq).
-
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = Fn}) ->
+first(#?TYPE{name = ?M, data = Fn}) ->
   case clj_core:invoke(Fn, []) of
-    undefined -> [];
+    undefined -> undefined;
+    #?TYPE{name = ?M} = LazySeq -> first(LazySeq);
+    Seq -> clj_core:first(Seq)
+  end.
+
+next(#?TYPE{name = ?M, data = Fn}) ->
+  case clj_core:invoke(Fn, []) of
+    undefined -> undefined;
+    #?TYPE{name = ?M} = LazySeq -> next(LazySeq);
     Seq -> clj_core:next(Seq)
   end.
 
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = Fn}) ->
-  Seq = clj_core:invoke(Fn, []),
-  clj_core:rest(Seq).
+more(#?TYPE{name = ?M, data = Fn}) ->
+  case clj_core:invoke(Fn, []) of
+    undefined -> [];
+    #?TYPE{name = ?M} = LazySeq -> more(LazySeq);
+    Seq -> clj_core:rest(Seq)
+  end.
 
-'clojerl.ISequential.noop'(_) -> ok.
+noop(_) -> ok.
 
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Fn}) ->
+seq(#?TYPE{name = ?M, data = Fn}) ->
   case clj_core:invoke(Fn, []) of
     undefined ->
       undefined;
     #?TYPE{name = ?M} = LazySeq ->
-      'clojerl.Seqable.seq'(LazySeq);
+      seq(LazySeq);
     Seq ->
-      Seq
+      clj_core:seq(Seq)
   end.
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Fn}) ->
+str(#?TYPE{name = ?M, data = Fn}) ->
   {uniq, Uniq} = erlang:fun_info(Fn, uniq),
   UniqBin = clj_core:str(Uniq),
   <<"#<clojerl.LazySeq@", UniqBin/binary, ">">>.
