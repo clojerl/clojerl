@@ -87,8 +87,8 @@ special_forms() ->
 
    , <<"erl-on-load*">> => fun parse_on_load/2
 
+   , <<"deftype*">>     => fun parse_deftype/2
    , <<"letfn*">>       => undefined
-   , <<"deftype*">>     => undefined
    , <<"defrecord*">>   => undefined
 
      %% , <<"monitor-enter">>
@@ -311,7 +311,6 @@ parse_fn(Env, List) ->
       false ->
         {MethodsExprs, Env2}
     end,
-
 
   FnExpr = #{ op              => fn
             , env             => ?DEBUG(Env)
@@ -893,6 +892,57 @@ lookup_var(VarSymbol, false) ->
       Symbol = clj_core:symbol(NsStr, NameStr),
       clj_namespace:find_var(Symbol)
   end.
+
+%%------------------------------------------------------------------------------
+%% Parse def
+%%------------------------------------------------------------------------------
+
+-spec parse_deftype(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_deftype(Env, Form) ->
+  [ _ % deftype*
+  , Name
+  , Classname
+  , Fields
+  , _ % interfaces
+  , Interfaces
+  | Methods
+  ] = clj_core:seq_to_list(Form),
+
+  DefnSymbol  = clj_core:symbol(<<"defn">>),
+  FieldsList  = clj_core:seq_to_list(Fields),
+  FieldsFun   = fun(FieldName) ->
+                    #{ env   => ?DEBUG(Env)
+                     , form  => FieldName
+                     , name  => FieldName
+                     , local => field
+                     , op    => binding
+                     }
+                end,
+  Env1        = clj_env:add_locals_scope(Env),
+  FieldsExprs = lists:map(FieldsFun, FieldsList),
+  Env2        = clj_env:put_locals(Env1, FieldsExprs),
+  Env3        = lists:foldl( fun (Method, EnvAcc) ->
+                                 Method1 = clj_core:cons(DefnSymbol, Method),
+                                 analyze_form(EnvAcc, Method1)
+                             end
+                           , Env2
+                           , Methods
+                           ),
+
+  {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
+
+  DeftypeExpr = #{ op        => deftype
+                 , env       => ?DEBUG(Env)
+                 , form      => Form
+                 , name      => Name
+                 , classname => Classname
+                 , fields    => FieldsExprs
+                 , methods   => MethodsExprs
+                 , protocols => Interfaces
+                 },
+
+  Env5 = clj_env:remove_locals_scope(Env4),
+  clj_env:push_expr(Env5, DeftypeExpr).
 
 %%------------------------------------------------------------------------------
 %% Parse throw

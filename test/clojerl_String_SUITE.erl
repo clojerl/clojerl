@@ -60,8 +60,24 @@ complete_coverage(_Config) ->
 
   false = 'clojerl.String':starts_with(<<"123456">>, <<"a">>),
 
+  true = 'clojerl.String':ends_with(<<>>, <<>>),
+  true = 'clojerl.String':ends_with(<<"123456">>, <<"6">>),
+  true = 'clojerl.String':ends_with(<<"123456">>, <<"56">>),
+  true = 'clojerl.String':ends_with(<<"123456">>, <<"456">>),
+
+  false = 'clojerl.String':ends_with(<<"123456">>, <<"789">>),
+  false = 'clojerl.String':ends_with(<<"123456">>, <<"1234567">>),
+
+  true = 'clojerl.String':contains(<<"123456">>, <<"234">>),
+  true = 'clojerl.String':contains(<<"123456">>, <<"456">>),
+
+  false = 'clojerl.String':contains(<<"123456">>, <<"354">>),
+  false = 'clojerl.String':contains(<<"123456">>, <<"abc">>),
+
   <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
 
-  ok = 'clojerl.String':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.String':noop(ok),
+
+  true = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
 
   {comments, ""}.

@@ -4,11 +4,8 @@
 
 -type type() :: any().
 
--callback 'erlang.io.IWriter.write'(A :: type(), K :: binary()) ->
-  type().
-
--callback 'erlang.io.IWriter.write'(A :: type(), K :: binary(), L :: list()) ->
-  type().
+-callback write(A :: type(), K :: binary()) -> type().
+-callback write(A :: type(), K :: binary(), L :: list()) -> type().
 
 -spec write(type(), binary()) -> type().
 write(Writer, Str) ->

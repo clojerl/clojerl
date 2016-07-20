@@ -4,10 +4,8 @@
 
 -type type() :: any().
 
--callback 'clojerl.Indexed.nth'(A :: type(), K :: any()) -> any().
-
--callback 'clojerl.Indexed.nth'(A :: type(), K :: any(), NotFound :: any()) ->
-  any().
+-callback nth(A :: type(), K :: any()) -> any().
+-callback nth(A :: type(), K :: any(), NotFound :: any()) -> any().
 
 -spec nth(type(), integer()) -> any().
 nth(Coll, N) ->

@@ -75,6 +75,6 @@ str(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.erlang.Tuple':'clojerl.ISequential.noop'({}),
+  ok = 'clojerl.erlang.Tuple':noop({}),
 
   {comments, ""}.

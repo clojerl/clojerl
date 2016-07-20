@@ -30,9 +30,17 @@ tests-shell: test-build
 	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}
 
 repl: SHELL_OPTS = -pa priv -name ${PROJECT}-repl@`hostname` -setcookie clojerl -s ${PROJECT}
-repl: SHELL_OPTS += -s clj_repl repl -noshell
-repl:
+repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell
+repl: priv/clojure/core.clj priv/clojure/main.clj
 	@rlwrap erl -pa ebin -pa deps/*/ebin -pa priv ${SHELL_OPTS}
 
 shell-no-sync: SHELL_OPTS = -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
 shell-no-sync: shell;
+
+# Clojure files compilation
+
+CLOJURE_FILES=$(wildcard priv/clojure/**)
+
+$(CLOJURE_FILES:%=%): all
+	@echo "${@}"
+	bin/compile ${@}

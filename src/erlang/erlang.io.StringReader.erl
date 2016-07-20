@@ -13,14 +13,14 @@
         , skip/3
         ]).
 
--export(['erlang.io.Closeable.close'/1]).
--export([ 'erlang.io.IReader.read'/1
-        , 'erlang.io.IReader.read'/2
-        , 'erlang.io.IReader.read_line'/1
-        , 'erlang.io.IReader.skip'/2
-        , 'erlang.io.IReader.unread'/2
+-export([close/1]).
+-export([  read/1
+        ,  read/2
+        ,  read_line/1
+        ,  skip/2
+        ,  unread/2
         ]).
--export(['clojerl.Stringable.str'/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{data :: pid()}.
 
@@ -32,29 +32,29 @@ new(Str) when is_binary(Str) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'erlang.io.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
+close(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
     {error, _} -> error(<<"Couldn't close erlang.io.StringReader">>);
     _          -> undefined
   end.
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Pid}) ->
+str(#?TYPE{name = ?M, data = Pid}) ->
   <<_/utf8, PidStr/binary>> = erlang:list_to_binary(erlang:pid_to_list(Pid)),
   <<"#<erlang.io.StringReader ", PidStr/binary>>.
 
-'erlang.io.IReader.read'(#?TYPE{name = ?M, data = Pid}) ->
+read(#?TYPE{name = ?M, data = Pid}) ->
   io:get_chars(Pid, "", 1).
 
-'erlang.io.IReader.read'(#?TYPE{name = ?M, data = Pid}, Length) ->
+read(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:get_chars(Pid, "", Length).
 
-'erlang.io.IReader.read_line'(#?TYPE{name = ?M, data = Pid}) ->
+read_line(#?TYPE{name = ?M, data = Pid}) ->
   io:request(Pid, {get_line, unicode, ""}).
 
-'erlang.io.IReader.skip'(#?TYPE{name = ?M, data = Pid}, Length) ->
+skip(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
 
-'erlang.io.IReader.unread'(#?TYPE{name = ?M, data = Pid} = SR, Str) ->
+unread(#?TYPE{name = ?M, data = Pid} = SR, Str) ->
   ok = send_command(Pid, {unread, Str}),
   SR.
 

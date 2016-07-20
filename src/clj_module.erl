@@ -530,7 +530,7 @@ flat_exports(ExportAttrs) ->
   {binary(), [erl_parse:abstract_form()]}.
 source_file(Attrs) ->
   case lists:partition(is_attribute_fun(file), Attrs) of
-    {[], Attrs} -> Attrs;
+    {[], Attrs} -> {"", Attrs};
     {[FileAttr], RestAttrs} ->
       {attribute, _, file, {Source, _}} = FileAttr,
       {Source, RestAttrs}

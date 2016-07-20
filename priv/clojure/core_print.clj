@@ -182,3 +182,7 @@
 (defmethod print-method :clojerl.Set [s, ^Writer w]
   (print-meta s w)
   (print-sequential "#{" pr-on " " "}" (seq s) w))
+
+(defmethod print-method :clojerl.erlang.Tuple [s, ^Writer w]
+  (print-meta s w)
+  (print-sequential "#[" pr-on " " "]" (seq s) w))

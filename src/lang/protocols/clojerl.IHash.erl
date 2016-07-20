@@ -4,7 +4,7 @@
 
 -type type() ::  any().
 
--callback 'clojerl.IHash.hash'(any()) -> integer().
+-callback hash(any()) -> integer().
 
 -spec hash(type()) -> any().
 hash(X) ->

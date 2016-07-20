@@ -58,7 +58,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Vector = clj_core:vector([1, 2, 3]),
-  <<"[1, 2, 3]">> = clj_core:str(Vector),
+  <<"[1 2 3]">> = clj_core:str(Vector),
 
   Vector2 = clj_core:vector([]),
   <<"[]">> = clj_core:str(Vector2),
@@ -203,7 +203,7 @@ stack(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.Vector':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.Vector':noop(ok),
 
   NotEmptyVector = clj_core:vector([a, b, 2, 3]),
   EmptyVector    = clj_core:empty(NotEmptyVector),

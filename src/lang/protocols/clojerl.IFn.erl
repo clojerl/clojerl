@@ -4,7 +4,7 @@
 
 -type type() ::  any().
 
--callback 'clojerl.IFn.invoke'(type(), any()) -> any().
+-callback invoke(type(), any()) -> any().
 
 -spec invoke(type(), any()) -> any().
 invoke(Fn, Args) ->

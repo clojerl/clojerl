@@ -4,7 +4,7 @@
 
 -type type() :: any().
 
--callback 'erlang.io.Closeable.close'(C :: type()) -> undefined.
+-callback close(C :: type()) -> undefined.
 
 -spec close(type()) -> undefined.
 close(X) ->

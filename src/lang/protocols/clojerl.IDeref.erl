@@ -4,7 +4,7 @@
 
 -type type() ::  any().
 
--callback 'clojerl.IDeref.deref'(any()) -> any().
+-callback deref(any()) -> any().
 
 -spec deref(type()) -> any().
 deref(Ref) ->

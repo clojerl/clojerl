@@ -87,22 +87,28 @@ hash(_Config) ->
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  LazySeq3 = range(1, 3),
-  1 = clj_core:first(LazySeq3),
-  2 = clj_core:first(clj_core:next(LazySeq3)),
-  3 = clj_core:first(clj_core:next(clj_core:next(LazySeq3))),
+  LazySeq = range(1, 3),
+  1 = clj_core:first(LazySeq),
+  2 = clj_core:first(clj_core:next(LazySeq)),
+  3 = clj_core:first(clj_core:next(clj_core:next(LazySeq))),
 
   LazySeq1 = range(1, 1),
   1 = clj_core:first(LazySeq1),
-  true = undefined =/= clj_core:next(LazySeq1),
+  undefined = clj_core:next(LazySeq1),
   [] = clj_core:seq_to_list(clj_core:rest(LazySeq1)),
   undefined = clj_core:seq(clj_core:rest(LazySeq1)),
 
   LazySeq0  = range(1, 0),
   undefined = clj_core:first(LazySeq0),
-  true      = undefined =/= clj_core:next(LazySeq0),
+  undefined = clj_core:next(LazySeq0),
   true      = undefined =/= clj_core:rest(LazySeq0),
   undefined = clj_core:seq(clj_core:rest(LazySeq0)),
+
+  LazySeqBis = 'clojerl.LazySeq':new(fun() -> range(1, 3) end),
+  1 = clj_core:first(LazySeqBis),
+  2 = clj_core:first(clj_core:rest(LazySeqBis)),
+  3 = clj_core:first(clj_core:next(clj_core:next(LazySeqBis))),
+  [1, 2, 3] = clj_core:seq_to_list(clj_core:seq(LazySeqBis)),
 
   {comments, ""}.
 
@@ -147,7 +153,7 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.LazySeq':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.LazySeq':noop(ok),
 
   LazySeq   = range(2, 2),
   EmptyList = clj_core:empty(LazySeq),
