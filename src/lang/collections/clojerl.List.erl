@@ -15,25 +15,25 @@
 
 -export([new/1]).
 
--export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IColl.cons'/2
-        , 'clojerl.IColl.empty'/1
+-export([count/1]).
+-export([ cons/2
+        , empty/1
         ]).
--export(['clojerl.IEquiv.equiv'/2]).
--export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
+-export([equiv/2]).
+-export([hash/1]).
+-export([ meta/1
+        , with_meta/2
         ]).
--export([ 'clojerl.ISeq.first'/1
-        , 'clojerl.ISeq.next'/1
-        , 'clojerl.ISeq.more'/1
+-export([ first/1
+        , next/1
+        , more/1
         ]).
--export(['clojerl.ISequential.noop'/1]).
--export([ 'clojerl.IStack.peek'/1
-        , 'clojerl.IStack.pop'/1
+-export([noop/1]).
+-export([ peek/1
+        , pop/1
         ]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([seq/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{}.
 
@@ -45,62 +45,62 @@ new(Items) when is_list(Items) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(#?TYPE{name = ?M, data = Items}) -> length(Items).
+count(#?TYPE{name = ?M, data = Items}) -> length(Items).
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = []} = List, X) ->
+cons(#?TYPE{name = ?M, data = []} = List, X) ->
   List#?TYPE{data = [X]};
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Items} = List, X) ->
+cons(#?TYPE{name = ?M, data = Items} = List, X) ->
   List#?TYPE{data = [X | Items]}.
 
-'clojerl.IColl.empty'(_) -> new([]).
+empty(_) -> new([]).
 
-'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+equiv( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   clj_core:equiv(X, Y);
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+equiv(#?TYPE{name = ?M, data = X}, Y) ->
   case clj_core:'sequential?'(Y) of
     true  -> clj_core:equiv(X, clj_core:seq(Y));
     false -> false
   end.
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M, data = X}) ->
+hash(#?TYPE{name = ?M, data = X}) ->
   clj_murmur3:ordered(X).
 
-'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
+meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
+with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.ISeq.first'(#?TYPE{name = ?M, data = []}) -> undefined;
-'clojerl.ISeq.first'(#?TYPE{name = ?M, data = [First | _]}) -> First.
+first(#?TYPE{name = ?M, data = []}) -> undefined;
+first(#?TYPE{name = ?M, data = [First | _]}) -> First.
 
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = []}) -> undefined;
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = [_ | []]}) -> undefined;
-'clojerl.ISeq.next'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
+next(#?TYPE{name = ?M, data = []}) -> undefined;
+next(#?TYPE{name = ?M, data = [_ | []]}) -> undefined;
+next(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{name = ?M, data = Rest}.
 
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = []}) -> undefined;
-'clojerl.ISeq.more'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
+more(#?TYPE{name = ?M, data = []}) -> undefined;
+more(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
 
-'clojerl.ISequential.noop'(_) -> ok.
+noop(_) -> ok.
 
-'clojerl.IStack.peek'(#?TYPE{name = ?M, data = List}) ->
+peek(#?TYPE{name = ?M, data = List}) ->
   clj_core:peek(List).
 
-'clojerl.IStack.pop'(#?TYPE{name = ?M, data = []} = List) ->
+pop(#?TYPE{name = ?M, data = []} = List) ->
   List;
-'clojerl.IStack.pop'(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
+pop(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
 
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = []}) -> undefined;
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Seq}) -> Seq.
+seq(#?TYPE{name = ?M, data = []}) -> undefined;
+seq(#?TYPE{name = ?M, data = Seq}) -> Seq.
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = []}) ->
+str(#?TYPE{name = ?M, data = []}) ->
   <<"()">>;
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Items}) ->
+str(#?TYPE{name = ?M, data = Items}) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.

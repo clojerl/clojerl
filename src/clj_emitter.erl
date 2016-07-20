@@ -123,6 +123,19 @@ ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
 
   push_ast(VarAst, State1);
 %%------------------------------------------------------------------------------
+%% deftype
+%%------------------------------------------------------------------------------
+ast(#{op := deftype} = Expr, State) ->
+  #{ classname := Classname
+   , name      := Name
+   } = Expr,
+
+  Module = erlang:binary_to_atom(clj_core:str(Classname), utf8),
+  ok     = clj_module:ensure_loaded(Module, file_from(Name)),
+  Ast    = erl_parse:abstract(Name, line_from(Name)),
+
+  push_ast(Ast, State);
+%%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
@@ -765,7 +778,7 @@ file_from(Form) ->
     false -> <<>>;
     true  ->
       case clj_core:meta(Form) of
-        undefined -> 0;
+        undefined -> <<>>;
         Map ->
           clj_core:get(Map, file, <<>>)
       end

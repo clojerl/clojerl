@@ -42,8 +42,8 @@
   {:added "1.3"}
   [el]
   (let [file (filename el)
-        clojure-fn? (and file (or (clj_utils/ends_with.e file ".clj")
-                                  (clj_utils/ends_with.e file ".cljc")
+        clojure-fn? (and file (or (clojerl.String/ends_with.e file ".clj")
+                                  (clojerl.String/ends_with.e file ".cljc")
                                   (= file "NO_SOURCE_FILE")))]
     (str (if clojure-fn?
            (demunge (module el))
@@ -143,14 +143,14 @@
   (let [tr (erlang/get_stacktrace.e)
         el (when-not (zero? (count tr)) (nth tr 0))]
     (binding [*out* *err*]
-      (println (str ex " \n" tr " \n"
-                    (if el (stack-element-str el) "[trace missing]"))))))
+      (prn ex)
+      (doall (map #(-> % stack-element-str println) tr)))))
 
 (def ^{:doc "A sequence of lib specs that are applied to `require`
 by default when a new command-line REPL is started."} repl-requires
   '[[clojure.repl :refer (source apropos dir pst doc find-doc)]
-    [clojure.java.javadoc :refer (javadoc)]
-    [clojure.pprint :refer (pp pprint)]])
+    #_[clojure.java.javadoc :refer (javadoc)]
+    #_[clojure.pprint :refer (pp pprint)]])
 
 (defmacro with-read-known
   "Evaluates body with *read-eval* set to a \"known\" value,
@@ -285,7 +285,7 @@ by default when a new command-line REPL is started."} repl-requires
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
   [args inits]
-  (in-ns 'user)
+  (ns '$user)
   (set! *command-line-args* args)
   (doseq [[opt arg] inits]
     ((init-dispatch opt) arg)))

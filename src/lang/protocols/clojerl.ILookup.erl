@@ -5,8 +5,8 @@
 -type type() ::  any().
 -export_type([type/0]).
 
--callback 'clojerl.ILookup.get'(any(), any()) -> any().
--callback 'clojerl.ILookup.get'(any(), any(), any()) -> any().
+-callback get(any(), any()) -> any().
+-callback get(any(), any(), any()) -> any().
 
 -spec get(any(), any()) -> any().
 get(X, Key) ->

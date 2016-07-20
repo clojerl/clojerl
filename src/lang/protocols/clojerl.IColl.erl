@@ -4,8 +4,8 @@
 
 -type type() :: any().
 
--callback 'clojerl.IColl.cons'(IColl :: type(), Item :: any()) -> type().
--callback 'clojerl.IColl.empty'(IColl :: type()) -> any().
+-callback 'cons'(IColl :: type(), Item :: any()) -> type().
+-callback empty(IColl :: type()) -> any().
 
 -spec cons(type(), any()) -> type().
 cons(Coll, Item) ->

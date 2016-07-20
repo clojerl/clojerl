@@ -280,13 +280,7 @@ eval_expressions(Expressions) ->
   CurrentNsAtom = erlang:binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
   ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom)
                    || Expr <- Expressions],
-  {Values, _}   = try erl_eval:expr_list(ReplacedExprs, [])
-                  catch Type:Reason ->
-                      io:format( "Exception while evaluating: ~s~n"
-                               , [ast_to_string(Expressions)]
-                               ),
-                      erlang:raise(Type, Reason, erlang:get_stacktrace())
-                  end,
+  {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
   Values.
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().

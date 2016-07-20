@@ -16,25 +16,25 @@
 
 -export([new/1, subvec/3]).
 
--export(['clojerl.Counted.count'/1]).
--export([ 'clojerl.IColl.cons'/2
-        , 'clojerl.IColl.empty'/1
+-export([count/1]).
+-export([ cons/2
+        , empty/1
         ]).
--export([ 'clojerl.IEquiv.equiv'/2]).
--export(['clojerl.IFn.invoke'/2]).
--export(['clojerl.IHash.hash'/1]).
--export([ 'clojerl.IMeta.meta'/1
-        , 'clojerl.IMeta.with_meta'/2
+-export([equiv/2]).
+-export([invoke/2]).
+-export([hash/1]).
+-export([ meta/1
+        , with_meta/2
         ]).
--export(['clojerl.ISequential.noop'/1]).
--export([ 'clojerl.Indexed.nth'/2
-        , 'clojerl.Indexed.nth'/3
+-export([noop/1]).
+-export([ nth/2
+        , nth/3
         ]).
--export([ 'clojerl.IStack.peek'/1
-        , 'clojerl.IStack.pop'/1
+-export([ peek/1
+        , pop/1
         ]).
--export(['clojerl.Seqable.seq'/1]).
--export(['clojerl.Stringable.str'/1]).
+-export([seq/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{}.
 
@@ -46,7 +46,7 @@ new(Items) when is_list(Items) ->
 subvec(Vector, Start, End) ->
   AddItemAtFun =
     fun(Index, Subvec) ->
-        'clojerl.IColl.cons'(Subvec, 'clojerl.Indexed.nth'(Vector, Index))
+        cons(Subvec, nth(Vector, Index))
     end,
   lists:foldl(AddItemAtFun, new([]), lists:seq(Start, End - 1)).
 
@@ -54,15 +54,15 @@ subvec(Vector, Start, End) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Counted.count'(#?TYPE{name = ?M, data = Array}) -> array:size(Array).
+count(#?TYPE{name = ?M, data = Array}) -> array:size(Array).
 
-'clojerl.IColl.cons'(#?TYPE{name = ?M, data = Array} = Vector, X) ->
+cons(#?TYPE{name = ?M, data = Array} = Vector, X) ->
   NewArray = array:set(array:size(Array), X, Array),
   Vector#?TYPE{data = NewArray}.
 
-'clojerl.IColl.empty'(_) -> new([]).
+empty(_) -> new([]).
 
-'clojerl.IEquiv.equiv'( #?TYPE{name = ?M, data = X}
+equiv( #?TYPE{name = ?M, data = X}
                       , #?TYPE{name = ?M, data = Y}
                       ) ->
   case array:size(X) == array:size(Y) of
@@ -72,45 +72,45 @@ subvec(Vector, Start, End) ->
       clj_core:equiv(X1, Y1);
     false -> false
   end;
-'clojerl.IEquiv.equiv'(#?TYPE{name = ?M, data = X}, Y) ->
+equiv(#?TYPE{name = ?M, data = X}, Y) ->
   case clj_core:'sequential?'(Y) of
     true  -> clj_core:equiv(array:to_list(X), clj_core:seq(Y));
     false -> false
   end.
 
-'clojerl.IFn.invoke'(#?TYPE{name = ?M, data = Array}, [Index]) ->
+invoke(#?TYPE{name = ?M, data = Array}, [Index]) ->
   array:get(Index, Array);
-'clojerl.IFn.invoke'(#?TYPE{name = ?M}, Args) ->
+invoke(#?TYPE{name = ?M}, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
 
-'clojerl.IHash.hash'(#?TYPE{name = ?M, data = Array}) ->
+hash(#?TYPE{name = ?M, data = Array}) ->
   clj_murmur3:ordered(array:to_list(Array)).
 
-'clojerl.IMeta.meta'(#?TYPE{name = ?M, info = Info}) ->
+meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
-'clojerl.IMeta.with_meta'(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
+with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
 
-'clojerl.ISequential.noop'(_) -> ok.
+noop(_) -> ok.
 
-'clojerl.Indexed.nth'(#?TYPE{name = ?M, data = Array}, N) ->
+nth(#?TYPE{name = ?M, data = Array}, N) ->
   array:get(N, Array).
 
-'clojerl.Indexed.nth'(#?TYPE{name = ?M, data = Array}, N, NotFound) ->
+nth(#?TYPE{name = ?M, data = Array}, N, NotFound) ->
   case N > array:size(Array) of
     true  -> NotFound;
     false -> array:get(N, Array)
   end.
 
-'clojerl.IStack.peek'(#?TYPE{name = ?M, data = Array}) ->
+peek(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
     0    -> undefined;
     Size -> array:get(Size - 1, Array)
   end.
 
-'clojerl.IStack.pop'(#?TYPE{name = ?M, data = Array} = Vector) ->
+pop(#?TYPE{name = ?M, data = Array} = Vector) ->
   case array:size(Array) of
     0    -> clj_utils:throw(<<"Can't pop empty vector">>);
     Size ->
@@ -118,13 +118,13 @@ subvec(Vector, Start, End) ->
       Vector#?TYPE{data = NewArray}
   end.
 
-'clojerl.Seqable.seq'(#?TYPE{name = ?M, data = Array}) ->
+seq(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
     0 -> undefined;
     _ -> array:to_list(Array)
   end.
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Array}) ->
+str(#?TYPE{name = ?M, data = Array}) ->
   Items = lists:map(fun clj_core:str/1, array:to_list(Array)),
-  Strs = clj_utils:binary_join(Items, <<", ">>),
+  Strs = clj_utils:binary_join(Items, <<" ">>),
   <<"[", Strs/binary, "]">>.

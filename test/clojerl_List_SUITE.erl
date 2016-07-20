@@ -161,7 +161,7 @@ stack(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.List':'clojerl.ISequential.noop'(ok),
+  ok = 'clojerl.List':noop(ok),
 
   NotEmptyList = clj_core:list([a, b, 2, 3]),
   EmptyList    = clj_core:empty(NotEmptyList),

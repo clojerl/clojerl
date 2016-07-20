@@ -12,7 +12,6 @@
 
         , binary_append/2
         , binary_join/2
-        , ends_with/2
         , compare/2
 
         , error/1
@@ -168,14 +167,6 @@ binary_join([S], _) when is_binary(S) ->
 binary_join([H | T], Sep) ->
   B = << <<Sep/binary, X/binary>> || X <- T >>,
   <<H/binary, B/binary>>.
-
--spec ends_with(binary(), binary()) -> ok.
-ends_with(Str, Ends) when size(Ends) > size(Str)->
-  false;
-ends_with(Str, Ends) ->
-  StrSize = byte_size(Str),
-  EndsSize = byte_size(Ends),
-  Ends == binary:part(Str, {StrSize, - EndsSize}).
 
 -spec compare(any(), any()) -> integer().
 compare(X, Y) ->

@@ -12,10 +12,10 @@
         , loop/1
         ]).
 
--export(['erlang.io.Closeable.close'/1]).
--export(['clojerl.Stringable.str'/1]).
--export([ 'erlang.io.IWriter.write'/2
-        , 'erlang.io.IWriter.write'/3
+-export([close/1]).
+-export([str/1]).
+-export([ write/2
+        , write/3
         ]).
 
 -type type() :: #?TYPE{data :: pid()}.
@@ -32,23 +32,23 @@ new(Str) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'erlang.io.Closeable.close'(#?TYPE{name = ?M, data = Pid}) ->
+close(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
     {error, _} -> error(<<"Couldn't close erlang.io.StringWriter">>);
     _          -> undefined
   end.
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = Pid}) ->
+str(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, str) of
     {error, _} -> error(<<"Couldn't get string from erlang.io.StringWriter">>);
     Str        -> Str
   end.
 
-'erlang.io.IWriter.write'(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
+write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
   ok = io:put_chars(Pid, Str),
   SW.
 
-'erlang.io.IWriter.write'(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
+write(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
   ok = io:fwrite(Pid, Format, clj_core:seq_to_list(Values)),
   SW.
 

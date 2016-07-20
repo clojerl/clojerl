@@ -6,7 +6,7 @@
 
 -export([new/1]).
 
--export(['clojerl.Stringable.str'/1]).
+-export([str/1]).
 
 -type type() :: #?TYPE{data :: binary()}.
 
@@ -32,4 +32,4 @@ is_uuid(MaybeUUID) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-'clojerl.Stringable.str'(#?TYPE{name = ?M, data = UUID}) -> UUID.
+str(#?TYPE{name = ?M, data = UUID}) -> UUID.

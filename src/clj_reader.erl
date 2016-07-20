@@ -468,7 +468,7 @@ flatten_map(MapSeq, Vector) ->
 syntax_quote_symbol(Symbol) ->
   NamespaceStr = clj_core:namespace(Symbol),
   NameStr = clj_core:name(Symbol),
-  IsGenSym = clj_utils:ends_with(NameStr, <<"#">>),
+  IsGenSym = 'clojerl.String':ends_with(NameStr, <<"#">>),
   case {NamespaceStr, IsGenSym} of
     {undefined, true} ->
       register_gensym(Symbol);
@@ -800,6 +800,13 @@ gen_arg_sym(N) ->
 %%------------------------------------------------------------------------------
 
 -spec read_dispatch(state()) -> state().
+read_dispatch(#{src := <<"#">>} = State) ->
+  case check_reader(State#{src := <<>>}) of
+    {ok, NewState = #{src := NewSrc}}  ->
+      read_dispatch(NewState#{src := <<"#", NewSrc/binary>>});
+    eof ->
+      clj_utils:throw(<<"EOF while reading dispatch">>, location(State))
+  end;
 read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
   <<Ch/utf8, _/binary>> = Src,
   NewState = consume_chars(2, State),

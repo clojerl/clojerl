@@ -4,9 +4,9 @@
 
 -type type() :: any().
 
--callback 'clojerl.ISeq.first'(ISeq :: type()) -> any().
--callback 'clojerl.ISeq.next'(ISeq :: type()) -> type().
--callback 'clojerl.ISeq.more'(ISeq :: type()) -> type().
+-callback first(ISeq :: type()) -> any().
+-callback next(ISeq :: type()) -> type().
+-callback more(ISeq :: type()) -> type().
 
 -spec first(type()) -> any().
 first(Seq) ->
