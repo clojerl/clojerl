@@ -222,34 +222,34 @@ by default when a new command-line REPL is started."} repl-requires
           (try
             (let [read-eval *read-eval*
                   input (with-read-known (read request-prompt request-exit))]
-             (or (#{request-prompt request-exit} input)
-                 (let [value (first (binding [*read-eval* read-eval] (eval input)))]
-                   (print value)
-                   (set! *3 *2)
-                   (set! *2 *1)
-                   (set! *1 value))))
-           (catch _ e
-             (caught e)
-             (set! *e e))))]
+              (or (#{request-prompt request-exit} input)
+                  (let [value (first (binding [*read-eval* read-eval] (eval input)))]
+                    (print value)
+                    (set! *3 *2)
+                    (set! *2 *1)
+                    (set! *1 value))))
+            (catch _ e
+              (caught e)
+              (set! *e e))))]
     (with-bindings
-     (try
-      (init)
-      (catch _ e
-        (caught e)
-        (set! *e e)))
-     (prompt)
-     (flush)
-     (loop []
-       (when-not
-           (try (identical? (read-eval-print) request-exit)
-                (catch _ e
-                  (caught e)
-                  (set! *e e)
-                  nil))
-         (when (need-prompt)
-           (prompt)
-           (flush))
-         (recur))))))
+      (try
+        (init)
+        (catch _ e
+          (caught e)
+          (set! *e e)))
+      (prompt)
+      (flush)
+      (loop []
+        (when-not
+            (try (identical? (read-eval-print) request-exit)
+                 (catch _ e
+                   (caught e)
+                   (set! *e e)
+                   nil))
+          (when (need-prompt)
+            (prompt)
+            (flush))
+          (recur))))))
 
 (defn load-script
   "Loads Clojure source from a file or resource given its path. Paths
