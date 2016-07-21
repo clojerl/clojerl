@@ -12,10 +12,16 @@ resolve(Protocol, Function, Args = [Head | _]) ->
   try
     apply(Type, Function, Args)
   catch
-    _:undef ->
+    Error:undef ->
+      maybe_protocol_undef(Protocol, Type, Function, Args, Error)
+  end.
+
+maybe_protocol_undef(Proto, Type, Function, Args = [Head | _], Error) ->
+  case erlang:function_exported(Type, Function, length(Args)) of
+    false ->
       TypeBin = atom_to_binary(Type, utf8),
       FunctionBin = atom_to_binary(Function, utf8),
-      ProtocolBin = atom_to_binary(Protocol, utf8),
+      ProtocolBin = atom_to_binary(Proto, utf8),
       Value = maybe_str(Head),
       ArgsStr = maybe_str(lists:map(fun maybe_str/1, Args)),
       error(<<"Type '", TypeBin/binary, "'"
@@ -25,7 +31,9 @@ resolve(Protocol, Function, Args = [Head | _]) ->
               ProtocolBin/binary, "' ",
               "(value = ", Value/binary, ", args = ",
               ArgsStr/binary,
-              ")">>)
+              ")">>);
+    true ->
+      erlang:raise(Error, undef, erlang:get_stacktrace())
   end.
 
 -spec maybe_str(term()) -> binary().
