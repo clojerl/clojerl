@@ -2,11 +2,13 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.Associative').
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Indexed').
 -behavior('clojerl.ISequential').
@@ -15,7 +17,10 @@
 -behavior('clojerl.Stringable').
 
 -export([new/1, subvec/3]).
-
+-export([ contains_key/2
+        , entry_at/2
+        , assoc/3
+        ]).
 -export([count/1]).
 -export([ cons/2
         , empty/1
@@ -23,6 +28,9 @@
 -export([equiv/2]).
 -export([invoke/2]).
 -export([hash/1]).
+-export([ get/2
+        , get/3
+        ]).
 -export([ meta/1
         , with_meta/2
         ]).
@@ -53,6 +61,20 @@ subvec(Vector, Start, End) ->
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
+
+%% clojerl.Associative
+
+contains_key(#?TYPE{name = ?M, data = Array}, Index) ->
+  Index < array:size(Array).
+
+entry_at(#?TYPE{name = ?M, data = Array}, Index) ->
+  array:get(Index, Array).
+
+assoc(#?TYPE{ name = ?M, data = Array} = Vector, Index, Value) ->
+  case  Index =< array:size(Array) of
+    true  -> Vector#?TYPE{data = array:set(Index, Value, Array)};
+    false -> error(<<"Index out of bounds">>)
+  end.
 
 count(#?TYPE{name = ?M, data = Array}) -> array:size(Array).
 
@@ -86,6 +108,19 @@ invoke(#?TYPE{name = ?M}, Args) ->
 
 hash(#?TYPE{name = ?M, data = Array}) ->
   clj_murmur3:ordered(array:to_list(Array)).
+
+%% clojerl.ILookup
+
+get(#?TYPE{name = ?M} = Vector, Index) ->
+  get(Vector, Index, undefined).
+
+get(#?TYPE{name = ?M, data = Array}, Index, NotFound) ->
+  case Index < array:size(Array) of
+    true  -> array:get(Index, Array);
+    false -> NotFound
+  end.
+
+%% clojerl.IMeta
 
 meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
