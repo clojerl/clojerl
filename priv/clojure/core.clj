@@ -1287,7 +1287,7 @@
   more efficient than, last. If the collection is empty, returns nil."
   {:added "1.0"
    :static true}
-  [coll] (erlang/peek.e coll))
+  [coll] (clj_core/peek.e coll))
 
 (defn pop
   "For a list or queue, returns a new list/queue without the first
@@ -1296,7 +1296,7 @@
   as next/butlast."
   {:added "1.0"
    :static true}
-  [coll] (erlang/pop.e coll))
+  [coll] (clj_core/pop.e coll))
 
 ;;map stuff
 
@@ -5505,7 +5505,9 @@
   {:tag String}
   [lib]
   (str "/"
-       (binary/replace.e (name lib) "." "/" (seq [:global]))))
+       (-> (name lib)
+           (binary/replace.e "." "/" (clj_core/seq_to_list.e [:global]))
+           (binary/replace.e "-" "_" (clj_core/seq_to_list.e [:global])))))
 
 (defn- index-of [s x]
   (let [matches (binary/matches.e s x)]

@@ -239,7 +239,7 @@ Design notes for clojure.string:
   "True if s starts with substr."
   {:added "1.8"}
   [s substr]
-  (clj_utils/starts_with.e (str s) substr))
+  (clojerl.String/starts_with.e (str s) substr))
 
 (defn ^String escape
   "Return a new string, using cmap to escape each character ch
