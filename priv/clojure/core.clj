@@ -3039,7 +3039,8 @@
   "Evaluates the form data structure (not text!) and returns the result."
   {:added "1.0"
    :static true}
-  [form] (clj_compiler/eval.e form))
+  [form]
+  (first (clj_compiler/eval.e form)))
 
 (defmacro doseq
   "Repeatedly executes body (presumably for side-effects) with
@@ -4607,6 +4608,8 @@
 (defn re-run
   "Runs the matching of the pattern over the string using the provided
   options."
+  {:added "1.0"
+   :static true}
   [re s & opts]
   (let [opts (clj_core/seq_to_list.e opts)
         res  (re/run.e s re opts)]
@@ -4652,6 +4655,8 @@
 
 (defn re-matches
   "Returns the result of (re-find re s) if re fully matches s."
+  {:added "1.0"
+   :static true}
   [re s]
   (if (string? s)
     (let [matches (re-find re s)
@@ -5711,6 +5716,8 @@
   "Loads Clojure code from resources in the code path. A path is interpreted
   as code path-relative if it begins with a slash or relative to the root
   directory for the current namespace otherwise."
+  {:redef true
+   :added "1.0"}
   [& paths]
   (doseq [path paths]
     (let [path (if (clojerl.String/starts_with.e path "/")
@@ -6369,6 +6376,7 @@
   argument print-fn, defaulting to println, sets function used to
   print the result. expr's string representation will be produced
   using pr-str in any case."
+  {:added "1.0"}
   [bindings expr iterations & {:keys [print-fn] :or {print-fn 'println}}]
   (let [bs-str   (pr-str bindings)
         expr-str (pr-str expr)]

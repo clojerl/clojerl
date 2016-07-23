@@ -37,7 +37,7 @@
 
 (def ^:dynamic *verbose-defrecords* false)
 
-(defn write
+(defn- write
   "Wrap io/fwrite.e"
   [w format & data]
   (erlang.io.IWriter/write.e w format (clj_core/seq_to_list.e data)))
