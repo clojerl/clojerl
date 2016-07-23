@@ -66,10 +66,11 @@ eof(_Config) ->
   {comments, ""}.
 
 number(_Config) ->
-  0 = clj_reader:read(<<"0">>),
+  0   = clj_reader:read(<<"0">>),
   0.0 = clj_reader:read(<<"0.0">>),
 
-  1 = clj_reader:read(<<"1">>),
+  1   = clj_reader:read(<<"1">>),
+  -1  = clj_reader:read(<<"-1">>),
   1.0 = clj_reader:read(<<"1.0">>),
   1.0 = clj_reader:read(<<"10E-1">>),
   1.0 = clj_reader:read(<<"10.0e-1">>),

@@ -173,7 +173,8 @@ read_one(#{src := <<>>} = State, ThrowEof) ->
       State
   end;
 read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
-  case clj_utils:char_type(First, Rest) of
+  Second = peek_src(State#{src := Rest}),
+  case clj_utils:char_type(First, Second) of
     whitespace      -> read_one(consume_char(State), ThrowEof);
     number          -> read_number(State);
     string          -> read_string(State);
@@ -1262,6 +1263,19 @@ file_location_meta(State) ->
     true  -> #{loc => Loc, file => maps:get(file, Opts)};
     false -> #{loc => Loc}
   end.
+
+-spec peek_src(state()) -> binary().
+peek_src(#{src := <<First/utf8, _/binary>>}) ->
+  First;
+peek_src(#{src := <<>>, opts := #{io_reader := Reader}}) ->
+  case 'erlang.io.IReader':read(Reader) of
+    eof -> <<>>;
+    Ch  ->
+      'erlang.io.IReader':unread(Reader, Ch),
+      Ch
+  end;
+peek_src(_State) ->
+  <<>>.
 
 -spec check_reader(state()) -> {ok, state()} | eof.
 check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)
