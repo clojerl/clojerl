@@ -223,7 +223,7 @@ by default when a new command-line REPL is started."} repl-requires
             (let [read-eval *read-eval*
                   input (with-read-known (read request-prompt request-exit))]
               (or (#{request-prompt request-exit} input)
-                  (let [value (first (binding [*read-eval* read-eval] (eval input)))]
+                  (let [value (binding [*read-eval* read-eval] (eval input))]
                     (print value)
                     (set! *3 *2)
                     (set! *2 *1)
