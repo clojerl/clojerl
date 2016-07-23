@@ -90,13 +90,17 @@ ast(#{op := do} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% def
 %%------------------------------------------------------------------------------
-ast(#{op := def, var := Var, init := InitExpr} = _Expr, State) ->
+ast(#{op := def} = Expr, State) ->
+  #{ var  := Var
+   , init := InitExpr
+   , meta := _MetaExpr
+   } = Expr,
   Module  = 'clojerl.Var':module(Var),
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok     = clj_module:ensure_loaded(Module, file_from(Var)),
-  VarAst = erl_parse:abstract(Var),
+  ok      = clj_module:ensure_loaded(Module, file_from(Var)),
+  VarAst  = erl_parse:abstract(Var),
 
   {ValAst, State1} =
     case InitExpr of
