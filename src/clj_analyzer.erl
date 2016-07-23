@@ -1286,6 +1286,28 @@ erl_fun_arity(Name) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% Helper for wrappping expressions with a with-meta if they have any metadata
+%%------------------------------------------------------------------------------
+
+-spec wrapping_meta(clj_env:env(), map()) -> clj_env:env().
+wrapping_meta(Env, #{form := Form} = Expr) ->
+  Meta = clj_reader:remove_location(clj_core:meta(Form)),
+  case {Meta, clj_core:'meta?'(Form)} of
+    {Meta, true} when Meta =/= undefined ->
+      {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
+
+      WithMetaExpr = #{ op   => 'with-meta'
+                      , env  => ?DEBUG(Env)
+                      , form => Form
+                      , meta => MetaExpr
+                      , expr => Expr
+                      },
+      clj_env:push_expr(Env1, WithMetaExpr);
+    _ ->
+      clj_env:push_expr(Env, Expr)
+  end.
+
+%%------------------------------------------------------------------------------
 %% Analyze vector
 %%------------------------------------------------------------------------------
 
@@ -1303,7 +1325,7 @@ analyze_vector(Env, Vector) ->
                 , items => ItemsExpr
                 },
 
-  clj_env:push_expr(Env2, VectorExpr).
+  wrapping_meta(Env2, VectorExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze map
@@ -1329,7 +1351,7 @@ analyze_map(Env, Map) ->
              , vals => ValsExpr
              },
 
-  clj_env:push_expr(Env4, MapExpr).
+  wrapping_meta(Env4, MapExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze set
@@ -1350,7 +1372,7 @@ analyze_set(Env, Set) ->
              , items => ItemsExpr
              },
 
-  clj_env:push_expr(Env2, SetExpr).
+  wrapping_meta(Env2, SetExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze tuple

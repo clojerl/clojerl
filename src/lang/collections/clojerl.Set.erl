@@ -69,10 +69,7 @@ equiv(_, _) ->
 
 invoke(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
-  case maps:is_key(Hash, MapSet) of
-    true  -> Item;
-    false -> undefined
-  end;
+  maps:get(Hash, MapSet, undefined);
 invoke(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).

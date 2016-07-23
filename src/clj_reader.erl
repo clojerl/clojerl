@@ -5,6 +5,7 @@
         , read/1, read/2, read/3
         , read_all/1, read_all/2, read_all/3
         , location_meta/1
+        , remove_location/1
         ]).
 
 -type location() :: #{ loc  => {non_neg_integer(), non_neg_integer()}
@@ -77,6 +78,17 @@ location_meta(X) ->
        , file => clj_core:get(Meta, file, undefined)
        };
     false -> undefined
+  end.
+
+-spec remove_location(any()) -> location().
+remove_location(undefined) ->
+  undefined;
+remove_location(Meta) ->
+  Meta1 = clj_core:dissoc(Meta, file),
+  Meta2 = clj_core:dissoc(Meta1, loc),
+  case clj_core:'empty?'(Meta2) of
+    true  -> undefined;
+    false -> Meta2
   end.
 
 -spec read(binary()) -> any().
