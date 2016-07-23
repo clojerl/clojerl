@@ -256,6 +256,20 @@ ast(#{op := invoke} = Expr, State) ->
       push_ast(Ast, State2)
   end;
 %%------------------------------------------------------------------------------
+%% with-meta
+%%------------------------------------------------------------------------------
+ast(#{op := 'with-meta'} = WithMetaExpr, State) ->
+  #{ meta := Meta
+   , expr := Expr
+   } = WithMetaExpr,
+
+  {MetaAst, State1} = pop_ast(ast(Meta, State)),
+  {ExprAst, State2} = pop_ast(ast(Expr, State1)),
+
+  Ast = application_mfa(clj_core, with_meta, [ExprAst, MetaAst]),
+
+  push_ast(Ast, State2);
+%%------------------------------------------------------------------------------
 %% Literal data structures
 %%------------------------------------------------------------------------------
 ast(#{op := vector} = Expr, State) ->
