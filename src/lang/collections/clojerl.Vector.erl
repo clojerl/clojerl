@@ -85,8 +85,8 @@ cons(#?TYPE{name = ?M, data = Array} = Vector, X) ->
 empty(_) -> new([]).
 
 equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
-                      ) ->
+     , #?TYPE{name = ?M, data = Y}
+     ) ->
   case array:size(X) == array:size(Y) of
     true ->
       X1 = array:to_list(X),
@@ -96,7 +96,7 @@ equiv( #?TYPE{name = ?M, data = X}
   end;
 equiv(#?TYPE{name = ?M, data = X}, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(array:to_list(X), clj_core:seq(Y));
+    true  -> clj_core:equiv(array:to_list(X), Y);
     false -> false
   end.
 
