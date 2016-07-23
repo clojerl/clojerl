@@ -143,8 +143,8 @@ def(_Config) ->
   ct:comment("Not a dynamic var but its name suggest otherwise"),
   _ = analyze_one(<<"(def *x* 1)">>),
 
-  #{op := def,
-    doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
+  #{op := def, name := NameSymbol} = analyze_one(<<"(def x \"doc string\" 1)">>),
+  <<"doc string">> = clj_core:get(clj_core:meta(NameSymbol), doc),
 
   [_, #{op := def}] = analyze_all(<<"(def x 1) (def y clojure.core/x)">>),
 
