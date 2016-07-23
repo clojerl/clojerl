@@ -114,7 +114,7 @@ char_type(X, _)
 char_type(X, _)
   when X >= $0, X =< $9 ->
   number;
-char_type(X, <<Y, _/binary>>)
+char_type(X, Y)
   when (X == $+ orelse X == $-),
        Y >= $0, Y =< $9 ->
   number;
