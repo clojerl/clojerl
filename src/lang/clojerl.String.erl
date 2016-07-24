@@ -48,7 +48,10 @@ char_at(Str, Index) ->
 %%------------------------------------------------------------------------------
 
 count(Str) ->
-  erlang:length(unicode:characters_to_list(Str)).
+  case unicode:characters_to_list(Str) of
+    {error, _, _} -> erlang:size(Str);
+    List -> erlang:length(List)
+  end.
 
 hash(Str) ->
   erlang:phash2(Str).
