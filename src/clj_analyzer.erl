@@ -719,8 +719,22 @@ parse_patters_bodies(Env, [Pat, Body | Rest], PatternBodyPairs) ->
 
 -spec parse_def(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_def(Env, List) ->
-  Docstring = validate_def_args(List),
-  VarSymbol = clj_core:second(List),
+  Docstring    = validate_def_args(List),
+  VarSymbol0   = clj_core:second(List),
+  SymbolMeta0  = clj_core:meta(VarSymbol0),
+  ArgLists     = clj_core:get(SymbolMeta0, arglist),
+  ArgListsMap  = case ArgLists of
+                   undefined -> #{};
+                   ArgLists -> #{argslists => clj_core:second(ArgLists)}
+                 end,
+  DocstringMap = case Docstring of
+                   undefined -> #{};
+                   Docstring -> #{doc => Docstring}
+                 end,
+
+  SymbolMeta   = clj_core:merge([ArgListsMap, DocstringMap, SymbolMeta0]),
+  VarSymbol    = clj_core:with_meta(VarSymbol0, SymbolMeta),
+
   case lookup_var(VarSymbol) of
     undefined ->
       clj_utils:throw( [ <<"Can't refer to qualified var that doesn't exist: ">>
@@ -728,8 +742,8 @@ parse_def(Env, List) ->
                        ]
                      , clj_reader:location_meta(VarSymbol)
                      );
-    Var ->
-      VarNsSym     = clj_core:symbol(clj_core:namespace(Var)),
+    Var0 ->
+      VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
       CurrentNs    = clj_namespace:current(),
       CurrentNsSym = clj_namespace:name(CurrentNs),
       clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
@@ -738,13 +752,17 @@ parse_def(Env, List) ->
                           , clj_reader:location_meta(List)
                           ),
 
-      Var1Meta   = clj_core:meta(Var),
-      SymbolMeta = clj_core:meta(VarSymbol),
-      MetaMaps   = [#{}, Var1Meta, SymbolMeta],
-      Var1       = clj_core:with_meta(Var, clj_core:merge(MetaMaps)),
+      VarMeta       = clj_core:merge([ clj_core:meta(Var0)
+                                     , SymbolMeta
+                                     , case ArgLists of
+                                         undefined -> undefined;
+                                         ArgLists  -> #{argslists => ArgLists}
+                                       end
+                                     ]),
+      Var           = clj_core:with_meta(Var0, VarMeta),
 
-      IsDynamic = 'clojerl.Var':is_dynamic(Var1),
-      NameBin   = clj_core:name(VarSymbol),
+      IsDynamic     = 'clojerl.Var':is_dynamic(Var),
+      NameBin       = clj_core:name(VarSymbol),
 
       NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
       clj_utils:warn_when( not NoWarnDynamic
@@ -758,7 +776,7 @@ parse_def(Env, List) ->
                          , clj_reader:location_meta(VarSymbol)
                          ),
 
-      clj_namespace:update_var(Var1),
+      clj_namespace:update_var(Var),
       Count = clj_core:count(List),
       Init  = case Docstring of
                 undefined when Count =:= 3 -> clj_core:third(List);
@@ -769,21 +787,23 @@ parse_def(Env, List) ->
       ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
       {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
 
-      Var2 = var_fn_info(Var1, InitExpr),
-      clj_namespace:update_var(Var2),
+      Var1 = var_fn_info(Var, InitExpr),
+      clj_namespace:update_var(Var1),
+
+      {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, VarMeta)),
 
       DefExpr = #{ op      => def
                  , env     => ?DEBUG(Env)
                  , form    => List
                  , name    => VarSymbol
-                 , var     => Var2
-                 , doc     => Docstring
+                 , var     => Var1
                  , init    => InitExpr
+                 , meta    => MetaExpr
                  , dynamic => IsDynamic
                  },
 
-      Env2 = restore_def_name(Env1, Env),
-      clj_env:push_expr(Env2, DefExpr)
+      Env3 = restore_def_name(Env2, Env),
+      clj_env:push_expr(Env3, DefExpr)
   end.
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
@@ -813,9 +833,9 @@ var_fn_info(Var, #{op := fn} = Expr) ->
   %% Add information about the associated function
   %% to the var's metadata.
   RemoveKeys = [op, env, methods, form, once, local],
-  ExprInfo = maps:without(RemoveKeys, Expr),
-  VarMeta = clj_core:meta(Var),
-  VarMeta1 = clj_core:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
+  ExprInfo   = maps:without(RemoveKeys, Expr),
+  VarMeta    = clj_core:meta(Var),
+  VarMeta1   = clj_core:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
   clj_core:with_meta(Var, VarMeta1);
 var_fn_info(Var, _) ->
   Var.
@@ -1266,6 +1286,28 @@ erl_fun_arity(Name) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% Helper for wrappping expressions with a with-meta if they have any metadata
+%%------------------------------------------------------------------------------
+
+-spec wrapping_meta(clj_env:env(), map()) -> clj_env:env().
+wrapping_meta(Env, #{form := Form} = Expr) ->
+  Meta = clj_reader:remove_location(clj_core:meta(Form)),
+  case {Meta, clj_core:'meta?'(Form)} of
+    {Meta, true} when Meta =/= undefined ->
+      {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
+
+      WithMetaExpr = #{ op   => 'with-meta'
+                      , env  => ?DEBUG(Env)
+                      , form => Form
+                      , meta => MetaExpr
+                      , expr => Expr
+                      },
+      clj_env:push_expr(Env1, WithMetaExpr);
+    _ ->
+      clj_env:push_expr(Env, Expr)
+  end.
+
+%%------------------------------------------------------------------------------
 %% Analyze vector
 %%------------------------------------------------------------------------------
 
@@ -1283,7 +1325,7 @@ analyze_vector(Env, Vector) ->
                 , items => ItemsExpr
                 },
 
-  clj_env:push_expr(Env2, VectorExpr).
+  wrapping_meta(Env2, VectorExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze map
@@ -1309,7 +1351,7 @@ analyze_map(Env, Map) ->
              , vals => ValsExpr
              },
 
-  clj_env:push_expr(Env4, MapExpr).
+  wrapping_meta(Env4, MapExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze set
@@ -1330,7 +1372,7 @@ analyze_set(Env, Set) ->
              , items => ItemsExpr
              },
 
-  clj_env:push_expr(Env2, SetExpr).
+  wrapping_meta(Env2, SetExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze tuple

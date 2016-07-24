@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behaviour('clojerl.Stringable').
+-behavior('clojerl.Stringable').
 
 -export([new/1]).
 

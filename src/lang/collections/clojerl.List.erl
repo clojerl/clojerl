@@ -55,12 +55,12 @@ cons(#?TYPE{name = ?M, data = Items} = List, X) ->
 empty(_) -> new([]).
 
 equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
-                      ) ->
+     , #?TYPE{name = ?M, data = Y}
+     ) ->
   clj_core:equiv(X, Y);
 equiv(#?TYPE{name = ?M, data = X}, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(X, clj_core:seq(Y));
+    true  -> clj_core:equiv(X, Y);
     false -> false
   end.
 

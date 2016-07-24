@@ -66,10 +66,11 @@ eof(_Config) ->
   {comments, ""}.
 
 number(_Config) ->
-  0 = clj_reader:read(<<"0">>),
+  0   = clj_reader:read(<<"0">>),
   0.0 = clj_reader:read(<<"0.0">>),
 
-  1 = clj_reader:read(<<"1">>),
+  1   = clj_reader:read(<<"1">>),
+  -1  = clj_reader:read(<<"-1">>),
   1.0 = clj_reader:read(<<"1.0">>),
   1.0 = clj_reader:read(<<"10E-1">>),
   1.0 = clj_reader:read(<<"10.0e-1">>),
@@ -763,7 +764,7 @@ var(_Config) ->
   {comments, ""}.
 
 regex(_Config) ->
-  {ok, Regex} = re:compile(<<".?el\\.lo">>),
+  Regex = 'erlang.util.Regex':new(<<".?el\\.lo">>),
   Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
 
   ct:comment("EOF: unterminated regex"),

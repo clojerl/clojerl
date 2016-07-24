@@ -39,7 +39,7 @@ shell-no-sync: shell;
 
 # Clojure files compilation
 
-CLOJURE_FILES=$(wildcard priv/clojure/**)
+CLOJURE_FILES=$(wildcard priv/clojure/*.clj)
 
 $(CLOJURE_FILES:%=%): all
 	@echo "${@}"

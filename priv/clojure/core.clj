@@ -1287,7 +1287,7 @@
   more efficient than, last. If the collection is empty, returns nil."
   {:added "1.0"
    :static true}
-  [coll] (erlang/peek.e coll))
+  [coll] (clj_core/peek.e coll))
 
 (defn pop
   "For a list or queue, returns a new list/queue without the first
@@ -1296,7 +1296,7 @@
   as next/butlast."
   {:added "1.0"
    :static true}
-  [coll] (erlang/pop.e coll))
+  [coll] (clj_core/pop.e coll))
 
 ;;map stuff
 
@@ -3039,7 +3039,8 @@
   "Evaluates the form data structure (not text!) and returns the result."
   {:added "1.0"
    :static true}
-  [form] (clj_compiler/eval.e form))
+  [form]
+  (first (clj_compiler/eval.e form)))
 
 (defmacro doseq
   "Repeatedly executes body (presumably for side-effects) with
@@ -4598,31 +4599,33 @@
   at end (defaults to length of string), exclusive."
   {:added "1.0"
    :static true}
-  ([s start] (subs s start (erlang/size.e s)))
+  ([s start] (subs s start (count s)))
   ([s start end] (binary/part.e s start (- end start))))
 
 (defn regex? [x]
-  (and (tuple? x) (= (first x) :re_pattern)))
+  (clj_core/regex?.e x))
 
 (defn re-run
   "Runs the matching of the pattern over the string using the provided
   options."
+  {:added "1.0"
+   :static true}
   [re s & opts]
   (let [opts (clj_core/seq_to_list.e opts)
-        res  (re/run.e s re opts)]
+        res  (erlang.util.Regex/run.e re s opts)]
     (when (and (tuple? res) (= (first res) :match))
       (vec (second res)))))
 
 (defn re-pattern
-  "Returns a compiled Erlang regular expression by using re:compile/1
-  unless s is already a compiled pattern."
-  {:tag :clojerl.regex.Pattern
+  "Returns a compiled Erlang regular expression unless s is already a
+  compiled pattern."
+  {:tag :erlang.util.Regex
    :added "1.0"
    :static true}
   [s]
   (if (regex? s)
     s
-    (second (re/compile.e s))))
+    (erlang.util.Regex/new.e s)))
 
 (defn re-find
   "Returns the next regex match, if any, of string to pattern.
@@ -4652,6 +4655,8 @@
 
 (defn re-matches
   "Returns the result of (re-find re s) if re fully matches s."
+  {:added "1.0"
+   :static true}
   [re s]
   (if (string? s)
     (let [matches (re-find re s)
@@ -5505,7 +5510,9 @@
   {:tag String}
   [lib]
   (str "/"
-       (binary/replace.e (name lib) "." "/" (seq [:global]))))
+       (-> (name lib)
+           (binary/replace.e "." "/" (clj_core/seq_to_list.e [:global]))
+           (binary/replace.e "-" "_" (clj_core/seq_to_list.e [:global])))))
 
 (defn- index-of [s x]
   (let [matches (binary/matches.e s x)]
@@ -5709,6 +5716,8 @@
   "Loads Clojure code from resources in the code path. A path is interpreted
   as code path-relative if it begins with a slash or relative to the root
   directory for the current namespace otherwise."
+  {:redef true
+   :added "1.0"}
   [& paths]
   (doseq [path paths]
     (let [path (if (clojerl.String/starts_with.e path "/")
@@ -6367,6 +6376,7 @@
   argument print-fn, defaulting to println, sets function used to
   print the result. expr's string representation will be produced
   using pr-str in any case."
+  {:added "1.0"}
   [bindings expr iterations & {:keys [print-fn] :or {print-fn 'println}}]
   (let [bs-str   (pr-str bindings)
         expr-str (pr-str expr)]
