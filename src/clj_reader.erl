@@ -8,8 +8,9 @@
         , remove_location/1
         ]).
 
--type location() :: #{ loc  => {non_neg_integer(), non_neg_integer()}
-                     , file => binary()
+-type location() :: #{ line   => non_neg_integer()
+                     , column => non_neg_integer()
+                     , file   => binary()
                      }.
 
 -type opts() :: #{ read_cond    => allow | preserve
@@ -38,7 +39,7 @@
                     %% Pending forms to be processed. Used by reader cond.
                   , env           => clj_env:env()
                     %% The current Clojure environment.
-                  , loc           => location()
+                  , loc           => {non_neg_integer(), non_neg_integer()}
                     %% Current line and column location.
                   , bindings      => clj_scope:scope()
                     %% Current bindings.
@@ -74,21 +75,23 @@ location_meta(X) ->
   case clj_core:'meta?'(X) of
     true  ->
       Meta = clj_core:meta(X),
-      #{ loc  => clj_core:get(Meta, loc, undefined)
-       , file => clj_core:get(Meta, file, undefined)
+      #{ line   => clj_core:get(Meta, line, undefined)
+       , column => clj_core:get(Meta, column, undefined)
+       , file   => clj_core:get(Meta, file, undefined)
        };
     false -> undefined
   end.
 
--spec remove_location(any()) -> location().
+-spec remove_location(any()) -> any().
 remove_location(undefined) ->
   undefined;
 remove_location(Meta) ->
   Meta1 = clj_core:dissoc(Meta, file),
-  Meta2 = clj_core:dissoc(Meta1, loc),
-  case clj_core:'empty?'(Meta2) of
+  Meta2 = clj_core:dissoc(Meta1, line),
+  Meta3 = clj_core:dissoc(Meta2, column),
+  case clj_core:'empty?'(Meta3) of
     true  -> undefined;
-    false -> Meta2
+    false -> Meta3
   end.
 
 -spec read(binary()) -> any().
@@ -1117,13 +1120,19 @@ read_tagged(State) ->
 %% Utility functions
 %%------------------------------------------------------------------------------
 
--spec location(state()) -> state().
+-spec location(state()) -> location().
 location(#{opts := Opts} = State) ->
-  #{ loc  => maps:get(loc, State, undefined)
-   , file => maps:get(file, Opts, undefined)
+  {Line, Col} = case maps:get(loc, State, undefined) of
+                  undefined -> {undefined, undefined};
+                  Loc       -> Loc
+                end,
+  #{ line   => Line
+   , column => Col
+   , file   => maps:get(file, Opts, undefined)
    }.
 
--spec location_started(state(), location()) -> state().
+-spec location_started(state(), {non_neg_integer(), non_neg_integer()}) ->
+  state().
 location_started(State, Loc) ->
   scope_put(loc_started, Loc, State).
 
@@ -1261,12 +1270,17 @@ remove_scope(#{bindings := Bindings} = State) ->
 
 -spec file_location_meta(state()) -> map().
 file_location_meta(State) ->
-  Loc  = maps:get(loc, State),
+  {Line, Col} = maps:get(loc, State),
   Opts = maps:get(opts, State),
 
   case maps:is_key(file, Opts) of
-    true  -> #{loc => Loc, file => maps:get(file, Opts)};
-    false -> #{loc => Loc}
+    true  -> #{ line   => Line
+              , column => Col
+              , file   => maps:get(file, Opts)
+              };
+    false -> #{ line   => Line
+              , column => Col
+              }
   end.
 
 -spec peek_src(state()) -> binary().
