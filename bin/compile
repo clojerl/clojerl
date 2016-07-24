@@ -2,9 +2,13 @@
 %% -*- erlang -*-
 %%! -smp enable -sname clojerl -pa ebin -pa priv -setcookie clojerl
 
--spec main([]) -> ok.
-main([Path]) ->
+-spec main([string()]) -> ok.
+main(Paths) ->
   clojerl:start(),
-  PathBin = list_to_binary(Path),
-  clj_compiler:compile_file(PathBin, #{verbose => true, time => true}),
+  lists:foreach(fun(X) -> compile_file(X) end, Paths),
   ok.
+
+-spec compile_file(string()) -> term().
+compile_file(Path) ->
+  PathBin = list_to_binary(Path),
+  clj_compiler:compile_file(PathBin, #{verbose => true, time => true}).

@@ -14,6 +14,7 @@
         , cons/1
         , subvec/1
         , stack/1
+        , associative/1
         , complete_coverage/1
         ]).
 
@@ -201,6 +202,40 @@ stack(_Config) ->
 
   {comments, ""}.
 
+-spec associative(config()) -> result().
+associative(_Config) ->
+  EmptyVector = clj_core:vector([]),
+
+  OneVector  = clj_core:assoc(EmptyVector, 0, a),
+  TwoVector  = clj_core:assoc(OneVector, 1, b),
+  OneVector2 = clj_core:assoc(TwoVector, 0, c),
+
+  [a]    = clj_core:seq_to_list(OneVector),
+  [a, b] = clj_core:seq_to_list(TwoVector),
+  [c, b] = clj_core:seq_to_list(OneVector2),
+
+  ok = try clj_core:assoc(EmptyVector, 2, a), error
+       catch error:_ -> ok
+       end,
+
+  ok = try clj_core:assoc(OneVector, 2, a), error
+       catch error:_ -> ok
+       end,
+
+  a = clj_core:find(TwoVector, 0),
+  b = clj_core:find(TwoVector, 1),
+
+  undefined = clj_core:find(TwoVector, 3),
+
+  true = clj_core:'contains?'(OneVector, 0),
+  true = clj_core:'contains?'(TwoVector, 1),
+
+  false = clj_core:'contains?'(EmptyVector, 1),
+  false = clj_core:'contains?'(OneVector, 1),
+  false = clj_core:'contains?'(TwoVector, 2),
+
+  {comments, ""}.
+
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   ok = 'clojerl.Vector':noop(ok),
@@ -211,5 +246,12 @@ complete_coverage(_Config) ->
 
   VectorMeta  = clj_core:with_meta(clj_core:vector([1, 2, 3]), #{a => 1}),
   #{a := 1} = clj_core:meta(VectorMeta),
+
+  a = clj_core:get(NotEmptyVector, 0),
+  b = clj_core:get(NotEmptyVector, 1),
+  2 = clj_core:get(NotEmptyVector, 2),
+  3 = clj_core:get(NotEmptyVector, 3),
+  undefined = clj_core:get(NotEmptyVector, 4),
+  bla = clj_core:get(NotEmptyVector, 43, bla),
 
   {comments, ""}.

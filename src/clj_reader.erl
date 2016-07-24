@@ -5,6 +5,7 @@
         , read/1, read/2, read/3
         , read_all/1, read_all/2, read_all/3
         , location_meta/1
+        , remove_location/1
         ]).
 
 -type location() :: #{ loc  => {non_neg_integer(), non_neg_integer()}
@@ -77,6 +78,17 @@ location_meta(X) ->
        , file => clj_core:get(Meta, file, undefined)
        };
     false -> undefined
+  end.
+
+-spec remove_location(any()) -> location().
+remove_location(undefined) ->
+  undefined;
+remove_location(Meta) ->
+  Meta1 = clj_core:dissoc(Meta, file),
+  Meta2 = clj_core:dissoc(Meta1, loc),
+  case clj_core:'empty?'(Meta2) of
+    true  -> undefined;
+    false -> Meta2
   end.
 
 -spec read(binary()) -> any().
@@ -161,7 +173,8 @@ read_one(#{src := <<>>} = State, ThrowEof) ->
       State
   end;
 read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
-  case clj_utils:char_type(First, Rest) of
+  Second = peek_src(State#{src := Rest}),
+  case clj_utils:char_type(First, Second) of
     whitespace      -> read_one(consume_char(State), ThrowEof);
     number          -> read_number(State);
     string          -> read_string(State);
@@ -238,8 +251,13 @@ read_string(#{src := <<>>} = State) ->
   end.
 
 -spec escape_char(state()) -> {binary(), state()}.
-escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
-  CharType = clj_utils:char_type(Char, Rest),
+escape_char(State = #{src := <<>>}) ->
+  case check_reader(State) of
+    eof -> clj_utils:throw(<<"EOF while escaping char">>, location(State));
+    {ok, NewState} -> escape_char(NewState)
+  end;
+escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
+  CharType = clj_utils:char_type(Char, peek_src(State)),
   case Char of
     $t  -> {<<"\t">>, consume_char(State)};
     $r  -> {<<"\r">>, consume_char(State)};
@@ -923,7 +941,7 @@ read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
   read_regex(consume_chars(2, NewState));
 read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  {ok, Regex} = re:compile(Current),
+  Regex = 'erlang.util.Regex':new(Current),
   push_form(Regex, consume_char(maps:remove(current, State)));
 read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
@@ -1250,6 +1268,19 @@ file_location_meta(State) ->
     true  -> #{loc => Loc, file => maps:get(file, Opts)};
     false -> #{loc => Loc}
   end.
+
+-spec peek_src(state()) -> binary().
+peek_src(#{src := <<First/utf8, _/binary>>}) ->
+  First;
+peek_src(#{src := <<>>, opts := #{io_reader := Reader}}) ->
+  case 'erlang.io.IReader':read(Reader) of
+    eof -> <<>>;
+    Ch  ->
+      'erlang.io.IReader':unread(Reader, Ch),
+      Ch
+  end;
+peek_src(_State) ->
+  <<>>.
 
 -spec check_reader(state()) -> {ok, state()} | eof.
 check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)

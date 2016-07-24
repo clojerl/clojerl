@@ -143,8 +143,8 @@ def(_Config) ->
   ct:comment("Not a dynamic var but its name suggest otherwise"),
   _ = analyze_one(<<"(def *x* 1)">>),
 
-  #{op := def,
-    doc := <<"doc string">>} = analyze_one(<<"(def x \"doc string\" 1)">>),
+  #{op := def, name := NameSymbol} = analyze_one(<<"(def x \"doc string\" 1)">>),
+  <<"doc string">> = clj_core:get(clj_core:meta(NameSymbol), doc),
 
   [_, #{op := def}] = analyze_all(<<"(def x 1) (def y clojure.core/x)">>),
 
@@ -654,11 +654,19 @@ symbol(_Config) ->
 vector(_Config) ->
   #{op := vector} = analyze_one(<<"[\"hello\" :x 1]">>),
 
+  #{ op   := 'with-meta'
+   , expr := #{op := vector}
+   } = analyze_one(<<"^{:meta 'data'} [\"hello\" :x 1]">>),
+
   {comments, ""}.
 
 -spec 'map'(config()) -> result().
 map(_Config) ->
   #{op := map} = analyze_one(<<"{:name 1 :lastname 2}">>),
+
+  #{ op   := 'with-meta'
+   , expr := #{op := map}
+   } = analyze_one(<<"^{:meta 'data'} {:name 1 :lastname 2}">>),
 
   {comments, ""}.
 
@@ -667,6 +675,10 @@ set(_Config) ->
   #{ op    := set
    , items := [_, _]
    } = analyze_one(<<"#{:name :lastname}">>),
+
+  #{ op   := 'with-meta'
+   , expr := #{op := set}
+   } = analyze_one(<<"^{:meta 'data'} #{:name :lastname}">>),
 
   {comments, ""}.
 

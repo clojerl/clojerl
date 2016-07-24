@@ -71,7 +71,7 @@ cons(Items, X) ->
 empty(_) -> [].
 
 equiv(X, Y) when is_list(X), is_list(Y) ->
-  case length(X) == length(Y) of
+  case length(X) =:= length(Y) of
     true  -> do_equiv(X, Y);
     false -> false
   end;

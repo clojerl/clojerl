@@ -24,14 +24,16 @@ maybe_protocol_undef(Proto, Type, Function, Args = [Head | _], Error) ->
       ProtocolBin = atom_to_binary(Proto, utf8),
       Value = maybe_str(Head),
       ArgsStr = maybe_str(lists:map(fun maybe_str/1, Args)),
-      error(<<"Type '", TypeBin/binary, "'"
-              " has no implementation for function '",
-              FunctionBin/binary,
-              "' in protocol '",
-              ProtocolBin/binary, "' ",
-              "(value = ", Value/binary, ", args = ",
-              ArgsStr/binary,
-              ")">>);
+      erlang:raise( error
+                  , <<"Type '", TypeBin/binary, "'"
+                      " has no implementation for function '",
+                      FunctionBin/binary,
+                      "' in protocol '",
+                      ProtocolBin/binary, "' ",
+                      "(value = ", Value/binary, ", args = ",
+                      ArgsStr/binary, ")">>
+                  , erlang:get_stacktrace()
+                  );
     true ->
       erlang:raise(Error, undef, erlang:get_stacktrace())
   end.
