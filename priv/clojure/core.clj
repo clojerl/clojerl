@@ -4599,11 +4599,11 @@
   at end (defaults to length of string), exclusive."
   {:added "1.0"
    :static true}
-  ([s start] (subs s start (erlang/size.e s)))
+  ([s start] (subs s start (count s)))
   ([s start end] (binary/part.e s start (- end start))))
 
 (defn regex? [x]
-  (and (tuple? x) (= (first x) :re_pattern)))
+  (clj_core/regex?.e x))
 
 (defn re-run
   "Runs the matching of the pattern over the string using the provided
@@ -4612,20 +4612,20 @@
    :static true}
   [re s & opts]
   (let [opts (clj_core/seq_to_list.e opts)
-        res  (re/run.e s re opts)]
+        res  (erlang.util.Regex/run.e re s opts)]
     (when (and (tuple? res) (= (first res) :match))
       (vec (second res)))))
 
 (defn re-pattern
-  "Returns a compiled Erlang regular expression by using re:compile/1
-  unless s is already a compiled pattern."
-  {:tag :clojerl.regex.Pattern
+  "Returns a compiled Erlang regular expression unless s is already a
+  compiled pattern."
+  {:tag :erlang.util.Regex
    :added "1.0"
    :static true}
   [s]
   (if (regex? s)
     s
-    (second (re/compile.e s))))
+    (erlang.util.Regex/new.e s)))
 
 (defn re-find
   "Returns the next regex match, if any, of string to pattern.

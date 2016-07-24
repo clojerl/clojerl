@@ -316,7 +316,7 @@ keyword(Namespace, Name) ->
 'boolean?'(X) -> type(X) == 'clojerl.Boolean'.
 
 -spec 'regex?'(any()) -> boolean().
-'regex?'(X) -> type(X) == re_pattern.
+'regex?'(X) -> type(X) == 'erlang.util.Regex'.
 
 -spec 'var?'(any()) -> boolean().
 'var?'(X) ->
