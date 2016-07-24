@@ -764,7 +764,7 @@ var(_Config) ->
   {comments, ""}.
 
 regex(_Config) ->
-  {ok, Regex} = re:compile(<<".?el\\.lo">>),
+  Regex = 'erlang.util.Regex':new(<<".?el\\.lo">>),
   Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
 
   ct:comment("EOF: unterminated regex"),

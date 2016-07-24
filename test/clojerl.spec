@@ -65,6 +65,7 @@ clojerl_sup,
 'erlang.io.PushbackReader',
 'erlang.io.StringReader',
 'erlang.io.StringWriter',
+'erlang.util.Regex',
 'erlang.util.UUID'
 ]
 }.

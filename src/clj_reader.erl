@@ -941,7 +941,7 @@ read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
   read_regex(consume_chars(2, NewState));
 read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  {ok, Regex} = re:compile(Current),
+  Regex = 'erlang.util.Regex':new(Current),
   push_form(Regex, consume_char(maps:remove(current, State)));
 read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
