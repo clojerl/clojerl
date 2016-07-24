@@ -251,8 +251,13 @@ read_string(#{src := <<>>} = State) ->
   end.
 
 -spec escape_char(state()) -> {binary(), state()}.
-escape_char(State = #{src := <<Char/utf8, Rest/binary>>}) ->
-  CharType = clj_utils:char_type(Char, Rest),
+escape_char(State = #{src := <<>>}) ->
+  case check_reader(State) of
+    eof -> clj_utils:throw(<<"EOF while escaping char">>, location(State));
+    {ok, NewState} -> escape_char(NewState)
+  end;
+escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
+  CharType = clj_utils:char_type(Char, peek_src(State)),
   case Char of
     $t  -> {<<"\t">>, consume_char(State)};
     $r  -> {<<"\r">>, consume_char(State)};
