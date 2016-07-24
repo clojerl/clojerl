@@ -631,7 +631,7 @@
   {:added "1.1"}
   [name & body]
   (when *load-tests*
-    (let [test-var-name (symbol (str  name "__:test"))]
+    (let [test-var-name (symbol (str (ns-name *ns*)) (str name "__test"))]
       `(do
          (def ~(vary-meta name assoc :test test-var-name)
            (fn [] (test-var (var ~name))))
@@ -642,11 +642,11 @@
   {:added "1.1"}
   [name & body]
   (when *load-tests*
-    (let [test-var-name (symbol (str name "__:private-test"))]
+    (let [test-var-name (symbol (str name "__private-test"))]
       `(do
          (def ~(vary-meta name assoc :test test-var-name :private true)
            (fn [] (test-var (var ~name))))
-         (defn ~test-var-name [] ~@body)))))
+         (defn- ~test-var-name [] ~@body)))))
 
 
 (defmacro set-test
@@ -721,7 +721,7 @@
       (try (t)
            (catch _ e
              (do-report {:type :error, :message "Uncaught exception, not in assertion."
-                      :expected nil, :actual e})))
+                         :expected nil, :actual e})))
       (do-report {:type :end-test-var, :var v}))))
 
 (defn test-vars
@@ -733,10 +733,10 @@
     (let [once-fixture-fn (join-fixtures (::once-fixtures (meta ns)))
           each-fixture-fn (join-fixtures (::each-fixtures (meta ns)))]
       (once-fixture-fn
-       (fn bbla []
+       (fn []
          (doseq [v vars]
            (when (:test (meta v))
-             (each-fixture-fn (fn call-test-var [] (test-var v))))))))))
+             (each-fixture-fn (fn [] (test-var v))))))))))
 
 (defn test-all-vars
   "Calls test-vars on every var interned in the namespace, with fixtures."
