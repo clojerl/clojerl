@@ -722,10 +722,10 @@ parse_def(Env, List) ->
   Docstring    = validate_def_args(List),
   VarSymbol0   = clj_core:second(List),
   SymbolMeta0  = clj_core:meta(VarSymbol0),
-  ArgLists     = clj_core:get(SymbolMeta0, arglist),
+  ArgLists     = clj_core:get(SymbolMeta0, arglists),
   ArgListsMap  = case ArgLists of
                    undefined -> #{};
-                   ArgLists -> #{argslists => clj_core:second(ArgLists)}
+                   ArgLists -> #{arglists => clj_core:second(ArgLists)}
                  end,
   DocstringMap = case Docstring of
                    undefined -> #{};
@@ -758,10 +758,7 @@ parse_def(Env, List) ->
                                      , #{ ns   => VarNsSym
                                         , name => clj_core:symbol(NameBin)
                                         }
-                                     , case ArgLists of
-                                         undefined -> undefined;
-                                         ArgLists  -> #{argslists => ArgLists}
-                                       end
+                                     , ArgListsMap
                                      ]),
       Var           = clj_core:with_meta(Var0, VarMeta),
 
