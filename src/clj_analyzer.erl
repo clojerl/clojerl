@@ -752,8 +752,12 @@ parse_def(Env, List) ->
                           , clj_reader:location_meta(List)
                           ),
 
+      NameBin       = clj_core:name(VarSymbol),
       VarMeta       = clj_core:merge([ clj_core:meta(Var0)
                                      , SymbolMeta
+                                     , #{ ns   => VarNsSym
+                                        , name => clj_core:symbol(NameBin)
+                                        }
                                      , case ArgLists of
                                          undefined -> undefined;
                                          ArgLists  -> #{argslists => ArgLists}
@@ -762,7 +766,6 @@ parse_def(Env, List) ->
       Var           = clj_core:with_meta(Var0, VarMeta),
 
       IsDynamic     = 'clojerl.Var':is_dynamic(Var),
-      NameBin       = clj_core:name(VarSymbol),
 
       NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
       clj_utils:warn_when( not NoWarnDynamic
