@@ -322,8 +322,7 @@
              fdecl (if (map? (last fdecl))
                      (butlast fdecl)
                      fdecl)
-             ;; TODO: Uncomment this and figure out why it is so time consuming
-             ;; m     (conj {:arglists (list 'quote (sigs fdecl))} m)
+             m     (conj {:arglists (list 'quote (sigs fdecl))} m)
              m     (conj (if (meta name) (meta name) {}) m)]
          (list 'def (with-meta name m)
                (cons 'clojure.core/fn ;; can't use syntax-quote here yet because
