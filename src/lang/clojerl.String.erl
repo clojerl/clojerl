@@ -49,7 +49,7 @@ char_at(Str, Index) ->
 
 count(Str) ->
   case unicode:characters_to_list(Str) of
-    {error, _, _} -> erlang:size(Str);
+    {error, _, _} -> error(<<"Invalid unicode binary string">>);
     List -> erlang:length(List)
   end.
 
