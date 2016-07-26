@@ -104,32 +104,32 @@ resolve_file(FilePath) ->
 count(undefined) -> 0;
 count(Seq)       -> 'clojerl.Counted':count(Seq).
 
--spec nth(any(), integer()) -> integer().
+-spec nth(any(), integer()) -> any().
 nth(undefined, _) -> undefined;
 nth([], _) -> undefined;
 nth(Coll, N) ->
   Type = type(Coll),
   case 'extends?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N);
-    false ->
-      case 'extends?'('clojerl.ISequential', Type) of
-        true  -> clj_utils:nth(N + 1, seq_to_list(Coll));
-        false -> clj_utils:throw([<<"">>, Type])
-      end
+    false -> nth_from(Coll, N, undefined)
   end.
 
--spec nth(any(), integer(), any()) -> integer().
-nth(undefined, _, _) -> undefined;
-nth([], _, _) -> undefined;
+-spec nth(any(), integer(), any()) -> any().
+nth(undefined, _, NotFound) -> NotFound;
+nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
   Type = type(Coll),
   case 'extends?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N, NotFound);
-    false ->
-      case 'extends?'('clojerl.ISequential', Type) of
-        true  -> clj_utils:nth(N + 1, seq_to_list(Coll));
-        false -> clj_utils:throw([<<"Can't apply nth to type ">>, Type])
-      end
+    false -> nth_from(Coll, N, NotFound)
+  end.
+
+-spec nth_from(any(), integer(), any()) -> any().
+nth_from(Coll, N, NotFound) ->
+  Type = type(Coll),
+  case 'extends?'('clojerl.ISequential', Type) of
+    true  -> clj_utils:nth(N + 1, seq_to_list(Coll), NotFound);
+    false -> clj_utils:throw([<<"Can't apply nth to type ">>, Type])
   end.
 
 -spec 'empty?'(any()) -> integer().
