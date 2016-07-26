@@ -1,6 +1,6 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -smp enable -sname clojerl -pa ebin -pa priv -setcookie clojerl
+%%! -smp enable -pa ebin -pa priv
 
 -spec main([string()]) -> ok.
 main(Paths) ->

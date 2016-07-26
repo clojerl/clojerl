@@ -24,6 +24,7 @@
 
         , group_by/2
         , nth/2
+        , nth/3
 
         , trace_while/4
         , time/1
