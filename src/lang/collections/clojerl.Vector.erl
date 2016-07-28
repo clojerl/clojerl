@@ -161,5 +161,5 @@ seq(#?TYPE{name = ?M, data = Array}) ->
 
 str(#?TYPE{name = ?M, data = Array}) ->
   Items = lists:map(fun clj_core:str/1, array:to_list(Array)),
-  Strs = clj_utils:binary_join(Items, <<" ">>),
+  Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"[", Strs/binary, "]">>.

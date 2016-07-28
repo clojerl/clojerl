@@ -203,8 +203,8 @@ str(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
   StrFun = fun(Hash) ->
                KeyStr = clj_core:str(maps:get(Hash, Keys)),
                ValStr = clj_core:str(maps:get(Hash, Vals)),
-               clj_utils:binary_join([KeyStr, ValStr], <<" ">>)
+               'clojerl.String':join([KeyStr, ValStr], <<" ">>)
            end,
   KeyValueStrs = lists:map(StrFun, maps:keys(Keys)),
-  Strs = clj_utils:binary_join(KeyValueStrs, <<", ">>),
+  Strs = 'clojerl.String':join(KeyValueStrs, <<", ">>),
   <<"{", Strs/binary, "}">>.

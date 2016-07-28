@@ -1279,7 +1279,7 @@ erl_fun_arity(Name) ->
         {nomatch, _} ->
           {Name, undefined};
         _ ->
-          NameParts = clj_utils:binary_join(lists:droplast(Parts), <<".">>),
+          NameParts = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
           Arity = binary_to_integer(Last),
           {iolist_to_binary(NameParts), Arity}
       end

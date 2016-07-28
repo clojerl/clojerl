@@ -123,7 +123,7 @@ Design notes for clojure.string:
   ([coll]
    (apply str coll))
   ([separator coll]
-   (clj_utils/binary_join.e (clj_core/seq_to_list.e coll) separator)))
+   (clojerl.String/join.e (clj_core/seq_to_list.e coll) separator)))
 
 (defn ^String upper-case
   "Converts string to all upper-case."
