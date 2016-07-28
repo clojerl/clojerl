@@ -39,7 +39,7 @@ str([]) ->
   <<"()">>;
 str(Items) when is_list(Items) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
-  Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
+  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
 seq([]) -> undefined;

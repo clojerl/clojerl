@@ -26,7 +26,7 @@ seq({}) -> undefined;
 seq(Tuple) -> tuple_to_list(Tuple).
 
 str(Tuple) when is_tuple(Tuple) ->
-  Items = tuple_to_list(Tuple),
+  Items     = tuple_to_list(Tuple),
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
-  Strs = clj_utils:binary_join(ItemsStrs, <<", ">>),
+  Strs      = 'clojerl.String':join(ItemsStrs, <<", ">>),
   <<"#[", Strs/binary, "]">>.

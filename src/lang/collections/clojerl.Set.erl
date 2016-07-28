@@ -116,5 +116,5 @@ seq(#?TYPE{name = ?M, data = MapSet}) ->
 
 str(#?TYPE{name = ?M, data = MapSet}) ->
   Items = lists:map(fun clj_core:str/1, maps:values(MapSet)),
-  Strs  = clj_utils:binary_join(Items, <<" ">>),
+  Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.

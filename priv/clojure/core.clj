@@ -528,7 +528,7 @@
   (^:clojerl.String [x & ys]
                     ((fn [acc more]
                        (if more
-                         (recur (clj_utils/binary_append.e acc (str (first more)))
+                         (recur (clojerl.String/append.e acc (str (first more)))
                                 (next more))
                          acc))
                      (clj_core/str.e x) ys)))
