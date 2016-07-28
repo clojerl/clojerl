@@ -1291,9 +1291,8 @@ erl_fun_arity(Name) ->
 
 -spec wrapping_meta(clj_env:env(), map()) -> clj_env:env().
 wrapping_meta(Env, #{form := Form} = Expr) ->
-  Meta = clj_reader:remove_location(clj_core:meta(Form)),
-  case {Meta, clj_core:'meta?'(Form)} of
-    {Meta, true} when Meta =/= undefined ->
+  case clj_reader:remove_location(clj_core:meta(Form)) of
+    Meta when Meta =/= undefined andalso Meta =/= #{} ->
       {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
 
       WithMetaExpr = #{ op   => 'with-meta'

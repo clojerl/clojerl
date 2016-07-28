@@ -8,7 +8,7 @@ SVG_FILE="$TRACE_FILE_SORTED.svg"
 
 echo "Running eflame..."
 
-PID=`erl -pa ebin -pa deps/*/ebin -s clojerl -noshell -eval "eflame:apply(normal_with_children, \"$TRACE_FILE\", clj_compiler, compile_file, [<<\"priv/clojure/core.clj\">>]), io:format(\"~p~n\", [self()]), erlang:halt(0)."`
+PID=`erl -pa ebin -pa deps/*/ebin -s clojerl -noshell -eval "eflame:apply(normal_with_children, \"$TRACE_FILE\", clj_compiler, compile_file, [<<\"$FILE\">>]), io:format(\"~p~n\", [self()]), erlang:halt(0)."`
 
 echo "PID: $PID"
 
