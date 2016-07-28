@@ -127,17 +127,17 @@ replace_calls( { call, Line
                , Args
                }
              , CurrentModule) ->
-  Args1 = replace_calls(Args, CurrentModule),
-  Arity = length(Args),
   %% Only replace the call if the module is loaded. If it is not, then the
   %% replacement is happening for the evaluation of an expression where the
   %% called function hasn't been declared in the same evaluation.
   case is_loaded(Module) of
     true  ->
-      Remote = {remote, Line,
-                {atom, Line, ?MODULE},
-                {atom, Line, fake_fun}
-               },
+      Args1   = replace_calls(Args, CurrentModule),
+      Arity   = length(Args),
+      Remote  = {remote, Line,
+                 {atom, Line, ?MODULE},
+                 {atom, Line, fake_fun}
+                },
 
       FunCall = { call, Line, Remote
                 , [ {atom, Line, Module}
@@ -147,17 +147,19 @@ replace_calls( { call, Line
                 },
       {call, Line, FunCall, Args1};
     false ->
+      Args1 = replace_calls(Args, CurrentModule),
       {call, Line, RemoteOriginal, Args1}
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
 replace_calls({call, Line, {atom, Line2, Function}, Args}, ModuleName) ->
-  Arity = length(Args),
-  Args1 = replace_calls(Args, ModuleName),
-  Remote = {remote, Line,
-            {atom, Line, ?MODULE},
-            {atom, Line, fake_fun}
-           },
+  Arity   = length(Args),
+  Args1   = replace_calls(Args, ModuleName),
+  Remote  = {remote, Line,
+             {atom, Line, ?MODULE},
+             {atom, Line, fake_fun}
+            },
+
   FunCall = { call, Line, Remote
             , [ {atom, Line2, ModuleName}
               , {atom, Line2, Function}
@@ -338,7 +340,7 @@ build_fake_fun(Module, Function, Arity) ->
   FunAst     = {function, 0, Function, Arity, Clauses},
   Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
 
-  Binary = case compile:forms(Forms, []) of
+  Binary = case compile:forms(Forms, [binary]) of
              {ok, _, Bin} -> Bin;
              Error -> throw({Error, Module#module.name, Function, Arity})
            end,
