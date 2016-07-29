@@ -45,9 +45,8 @@
         clojure-fn? (and file (or (clojerl.String/ends_with.e file ".clj")
                                   (clojerl.String/ends_with.e file ".cljc")
                                   (= file "NO_SOURCE_FILE")))]
-    (str (if clojure-fn?
-           (demunge (module el))
-           (str (module el) "/" (function el)))
+    (str (if clojure-fn? (demunge (module el)) (module el))
+         "/" (function el)
          " (" (filename el) ":" (line-number el) ")")))
 
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
@@ -140,10 +139,9 @@
 (defn repl-caught
   "Default :caught hook for repl"
   [ex]
-  (let [tr (erlang/get_stacktrace.e)
-        el (when-not (zero? (count tr)) (nth tr 0))]
+  (let [tr (erlang/get_stacktrace.e)]
     (binding [*out* *err*]
-      (prn ex)
+      (println "Error:" ex)
       (doall (map #(-> % stack-element-str println) tr)))))
 
 (def ^{:doc "A sequence of lib specs that are applied to `require`
