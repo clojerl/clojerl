@@ -180,5 +180,5 @@
        ~(emit-deftype* name gname (vec hinted-fields) (vec interfaces) methods opts)
        #_(import ~classname)
        ~(build-positional-factory gname classname fields)
-       ;; Types are not reified so we just return the symbol
+       ;; Types are not reified so we just return the symbol.
        '~classname)))
