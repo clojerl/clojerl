@@ -179,5 +179,6 @@
     `(let []
        ~(emit-deftype* name gname (vec hinted-fields) (vec interfaces) methods opts)
        #_(import ~classname)
-       #_~(build-positional-factory gname classname fields)
-       #_~classname)))
+       ~(build-positional-factory gname classname fields)
+       ;; Types are not reified so we just return the symbol
+       '~classname)))
