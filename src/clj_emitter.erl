@@ -1,10 +1,12 @@
 -module(clj_emitter).
 
+-include("clojerl.hrl").
+
 -export([ emit/1
         , remove_state/1
         ]).
 
--type ast() :: erl_parse:abstract_form().
+-type ast()   :: erl_parse:abstract_form().
 
 -type state() :: #{ asts            => [ast()]
                   , lexical_renames => clj_scope:scope()
@@ -127,7 +129,7 @@ ast(#{op := def} = Expr, State) ->
 
   push_ast(VarAst, State1);
 %%------------------------------------------------------------------------------
-%% deftype
+%% new
 %%------------------------------------------------------------------------------
 ast(#{op := new} = Expr, State) ->
   #{ typename := Typename
@@ -138,26 +140,33 @@ ast(#{op := new} = Expr, State) ->
                               , length(ArgsExprs)
                               ),
 
-  Ast = application_mfa(symbol_to_keyword(Typename), '__new__', ArgsAsts),
+  Ast = application_mfa(sym_to_kw(Typename), '__new__', ArgsAsts),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% deftype
 %%------------------------------------------------------------------------------
-ast(#{op := deftype} = Expr, State) ->
+ast(#{op := deftype} = Expr, State0) ->
   #{ typename  := Typename
    , name      := Name
-   , protocols := Protocols
+   , fields    := FieldsExprs
    , methods   := MethodsExprs
+   , protocols := Protocols
    } = Expr,
 
-  Module = symbol_to_keyword(Typename),
-  ok     = clj_module:ensure_loaded(Module, file_from(Name)),
+  Module         = sym_to_kw(Typename),
+  ok             = clj_module:ensure_loaded(Module, file_from(Name)),
 
-  ProtocolsNames = lists:map( fun symbol_to_keyword/1
-                            , clj_core:seq_to_list(Protocols)
-                            ),
+  ProtocolsNames = lists:map(fun sym_to_kw/1, clj_core:seq_to_list(Protocols)),
   Attributes     = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
+
+  {FieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
+                               , length(FieldsExprs)
+                               ),
+  Functions           = [constructor_function(Module, FieldsAsts)],
+
+  clj_module:add_exports(Module, [{?CONSTRUCTOR, length(FieldsAsts)}]),
   clj_module:add_attributes(Module, Attributes),
+  clj_module:add_functions(Module, Functions),
 
   %% We discard the asts since they should all be defns and these will be
   %% added to the module in the #{op := def} clause.
@@ -621,6 +630,19 @@ do_list_ast([], Tail) ->
 do_list_ast([H | Hs], Tail) ->
   {cons, 0, H, do_list_ast(Hs, Tail)}.
 
+-spec constructor_function(atom(), [ast()]) -> ast().
+constructor_function(Typename, FieldsAsts) ->
+  TupleItemsAst = [ {atom,  0, ?TYPE}
+                  , {atom,  0, Typename}
+                  , {tuple, 0, FieldsAsts}
+                  , {atom,  0, undefined}
+                  ],
+  TupleAst      = {tuple, 0, TupleItemsAst},
+  BodyAst       = [TupleAst],
+  ClausesAsts   = [{clause, 0, FieldsAsts, [], BodyAst}],
+
+  function_form(?CONSTRUCTOR, ClausesAsts).
+
 -spec function_form(atom(), [ast()]) -> ast().
 function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
   {clause, _, Args, _, _} = Clause,
@@ -844,6 +866,5 @@ anno_from(Form) ->
       end
   end.
 
--spec symbol_to_keyword('clojerl.Symbol':type()) -> atom().
-symbol_to_keyword(Symbol) ->
-  binary_to_atom(clj_core:str(Symbol), utf8).
+-spec sym_to_kw('clojerl.Symbol':type()) -> atom().
+sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).

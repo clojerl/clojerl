@@ -3262,10 +3262,7 @@
   {:added "1.0"
    :static true}
   [to from]
-  (reduce1 conj to from)
-  #_(if (instance? clojure.lang.IEditableCollection to)
-    (persistent! (reduce1 conj! (transient to) from))
-    (reduce1 conj to from)))
+  (reduce1 conj to from))
 
 (defmacro import
   "import-list => (package-symbol class-name-symbols*)
@@ -3275,7 +3272,15 @@
   macro in preference to calling this directly."
   {:added "1.0"}
   [& import-symbols-or-lists]
-  (throw "unsupported import"))
+  (let [specs (map #(if (and (seq? %) (= 'quote (first %))) (second %) %)
+                   import-symbols-or-lists)]
+    `(do ~@(map #(list 'clojure.core/import* %)
+                (reduce1 (fn [v spec]
+                           (if (symbol? spec)
+                             (conj v (name spec))
+                             (let [p (first spec) cs (rest spec)]
+                               (into1 v (map #(str p "." %) cs)))))
+                         [] specs)))))
 
 (defn into-array
   "Returns an array with components set to the values in aseq. The array's
