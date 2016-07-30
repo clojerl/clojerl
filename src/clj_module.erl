@@ -191,8 +191,9 @@ add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
 add_attributes(Module, []) ->
   Module;
 add_attributes(Module, Attrs) ->
-  Module1 = Module#module{attrs = Attrs ++ Module#module.attrs},
-  save(?MODULE, Module1).
+  AddAttr = fun(E) -> save(Module#module.attrs, {E}) end,
+  ok = lists:foreach(AddAttr, Attrs),
+  Module.
 
 -spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
   clj_module().
@@ -376,7 +377,7 @@ to_forms(#module{} = Module) ->
          , funs    = FunsTable
          , exports = ExportsTable
          , on_load = OnLoadTable
-         , attrs   = Attrs
+         , attrs   = AttrsTable
          , rest    = Rest
          } = Module,
 
@@ -396,6 +397,7 @@ to_forms(#module{} = Module) ->
   ClojureAttr = {attribute, 0, clojure, true},
   OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
 
+  Attrs       = [X || {X} <- ets:tab2list(AttrsTable)],
   UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
 
   OnLoadFun   = on_load_function(OnLoadTable),
@@ -482,12 +484,13 @@ new(Forms) when is_list(Forms) ->
                   , fake_modules      = ets:new(fake_modules, TableOpts)
                   , exports           = ets:new(exports, TableOpts)
                   , on_load           = ets:new(on_load, TableOpts)
-                  , attrs             = Attrs
+                  , attrs             = ets:new(attributes, TableOpts)
                   , rest              = Rest2
                   },
 
   Module = add_functions(Module, Funs),
   Module = add_vars(Module, maps:values(Vars)),
+  Module = add_attributes(Module, Attrs),
 
   %% Remove the on_load function and all its contents.
   %% IMPORTANT: This means that whenever a namespace is recompiled all

@@ -87,13 +87,13 @@ special_forms() ->
 
    , <<"erl-on-load*">> => fun parse_on_load/2
 
+   , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"letfn*">>       => undefined
    , <<"defrecord*">>   => undefined
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
-     %% , <<"new">>
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
@@ -914,21 +914,41 @@ lookup_var(VarSymbol, false) ->
   end.
 
 %%------------------------------------------------------------------------------
-%% Parse def
+%% Parse new
+%%------------------------------------------------------------------------------
+
+-spec parse_new(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_new(Env, Form) ->
+  [_, Typename | Args] = clj_core:seq_to_list(Form),
+
+  {ArgsExprs, Env1} =
+    clj_env:last_exprs(analyze_forms(Env, Args), length(Args)),
+
+  NewExpr = #{ op       => new
+             , env      => ?DEBUG(Env)
+             , form     => Form
+             , typename => Typename
+             , args     => ArgsExprs
+             },
+
+  clj_env:push_expr(Env1, NewExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse deftype
 %%------------------------------------------------------------------------------
 
 -spec parse_deftype(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_deftype(Env, Form) ->
   [ _ % deftype*
   , Name
-  , Classname
+  , Typename
   , Fields
-  , _ % interfaces
+  , _ % :implements
   , Interfaces
   | Methods
   ] = clj_core:seq_to_list(Form),
 
-  DefnSymbol  = clj_core:symbol(<<"defn">>),
+  DefnSymbol  = clj_core:symbol(<<"clojure.core">>, <<"defn">>),
   FieldsList  = clj_core:seq_to_list(Fields),
   FieldsFun   = fun(FieldName) ->
                     #{ env   => ?DEBUG(Env)
@@ -941,13 +961,21 @@ parse_deftype(Env, Form) ->
   Env1        = clj_env:add_locals_scope(Env),
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
-  Env3        = lists:foldl( fun (Method, EnvAcc) ->
-                                 Method1 = clj_core:cons(DefnSymbol, Method),
-                                 analyze_form(EnvAcc, Method1)
-                             end
-                           , Env2
-                           , Methods
-                           ),
+  %% Analyze all method bodies as if they were in the type's module
+  CurrentNs   = clj_namespace:current(),
+  Env3        = try
+                  clj_namespace:find_or_create(Typename),
+                  lists:foldl( fun (Method, EnvAcc) ->
+                                   Method1 = clj_core:cons(DefnSymbol, Method),
+                                   analyze_form(EnvAcc, Method1)
+                               end
+                             , Env2
+                             , Methods
+                             )
+                after
+                  %% Make sure we are back at the original namespace
+                  clj_namespace:current(CurrentNs)
+                end,
 
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
 
@@ -955,7 +983,7 @@ parse_deftype(Env, Form) ->
                  , env       => ?DEBUG(Env)
                  , form      => Form
                  , name      => Name
-                 , classname => Classname
+                 , typename  => Typename
                  , fields    => FieldsExprs
                  , methods   => MethodsExprs
                  , protocols => Interfaces

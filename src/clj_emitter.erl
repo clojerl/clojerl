@@ -129,16 +129,45 @@ ast(#{op := def} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% deftype
 %%------------------------------------------------------------------------------
-ast(#{op := deftype} = Expr, State) ->
-  #{ classname := Classname
-   , name      := Name
+ast(#{op := new} = Expr, State) ->
+  #{ typename := Typename
+   , args     := ArgsExprs
    } = Expr,
 
-  Module = erlang:binary_to_atom(clj_core:str(Classname), utf8),
-  ok     = clj_module:ensure_loaded(Module, file_from(Name)),
-  Ast    = erl_parse:abstract(Name, line_from(Name)),
+  {ArgsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
+                              , length(ArgsExprs)
+                              ),
 
-  push_ast(Ast, State);
+  Ast = application_mfa(symbol_to_keyword(Typename), '__new__', ArgsAsts),
+  push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
+%% deftype
+%%------------------------------------------------------------------------------
+ast(#{op := deftype} = Expr, State) ->
+  #{ typename  := Typename
+   , name      := Name
+   , protocols := Protocols
+   , methods   := MethodsExprs
+   } = Expr,
+
+  Module = symbol_to_keyword(Typename),
+  ok     = clj_module:ensure_loaded(Module, file_from(Name)),
+
+  ProtocolsNames = lists:map( fun symbol_to_keyword/1
+                            , clj_core:seq_to_list(Protocols)
+                            ),
+  Attributes     = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
+  clj_module:add_attributes(Module, Attributes),
+
+  %% We discard the asts since they should all be defns and these will be
+  %% added to the module in the #{op := def} clause.
+  {_, State1} = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
+                       , length(MethodsExprs)
+                       ),
+
+  Ast = erl_parse:abstract(Name, line_from(Name)),
+
+  push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -814,3 +843,7 @@ anno_from(Form) ->
           erl_anno:new(LineCol)
       end
   end.
+
+-spec symbol_to_keyword('clojerl.Symbol':type()) -> atom().
+symbol_to_keyword(Symbol) ->
+  binary_to_atom(clj_core:str(Symbol), utf8).
