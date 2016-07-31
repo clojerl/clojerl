@@ -238,7 +238,7 @@ associative(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.Vector':noop(ok),
+  undefined = 'clojerl.Vector':'_'(),
 
   NotEmptyVector = clj_core:vector([a, b, 2, 3]),
   EmptyVector    = clj_core:empty(NotEmptyVector),

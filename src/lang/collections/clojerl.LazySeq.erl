@@ -27,7 +27,7 @@
         , next/1
         , more/1
         ]).
--export([noop/1]).
+-export(['_'/0]).
 -export([seq/1]).
 -export([str/1]).
 
@@ -92,7 +92,7 @@ more(#?TYPE{name = ?M, data = Fn}) ->
     Seq -> clj_core:rest(Seq)
   end.
 
-noop(_) -> ok.
+'_'() -> undefined.
 
 seq(#?TYPE{name = ?M, data = Fn}) ->
   case clj_core:invoke(Fn, []) of

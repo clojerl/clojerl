@@ -17,7 +17,7 @@
 -export([count/1]).
 -export([seq/1]).
 -export([hash/1]).
--export([noop/1]).
+-export(['_'/0]).
 -export([str/1]).
 
 -spec starts_with(binary(), binary()) -> boolean().
@@ -71,7 +71,7 @@ count(Str) ->
 hash(Str) ->
   erlang:phash2(Str).
 
-noop(_) -> ok.
+'_'() -> undefined.
 
 seq(<<>>) -> undefined;
 seq(Str)  -> to_seq(Str, []).
