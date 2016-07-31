@@ -1095,9 +1095,9 @@
 (defn dec
   "Returns a number one less than num. Does not auto-promote
   longs, will throw on overflow. See also: dec'"
-  {:inline (fn [x] `(dec' ~x))
+  {:inline (fn [x] `(erlang/-.e ~x 1))
    :added "1.2"}
-  [x] (dec' x))
+  [x] (erlang/-.e x 1))
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
