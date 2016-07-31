@@ -3508,7 +3508,7 @@
   {:added "1.0"
    :static true}
   []
-  (io/nl.e *out*))
+  (io/nl.e *out*) nil)
 
 (defn flush
   "Flushes the output stream that is the current value of
@@ -3516,7 +3516,7 @@
   {:added "1.0"
    :static true}
   []
-  (io/put_chars.e *out* ""))
+  (io/put_chars.e *out* "") nil)
 
 (defn prn
   "Same as pr followed by (newline). Observes *flush-on-newline*"
