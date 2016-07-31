@@ -1,7 +1,7 @@
 # Clojure files compilation
 
 CLJ_SRC ?= priv
-CLJ_EXCLUDE=${CLJ_SRC}/clojure/core_print.clj ${CLJ_SRC}/clojure/core_deftype.clj
+#CLJ_EXCLUDE=${CLJ_SRC}/clojure/core_print.clj ${CLJ_SRC}/clojure/core_deftype.clj
 CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
 
 define clj_to_beam

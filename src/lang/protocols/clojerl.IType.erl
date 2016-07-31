@@ -1,3 +1,3 @@
 -module('clojerl.IType').
 
--callback '_'() -> any().
+-callback '_'() -> undefined.

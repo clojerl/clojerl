@@ -53,14 +53,6 @@ compile_file(_Config) ->
   _Env = clj_compiler:compile_file(SimplePath, Opts),
   check_var_value(<<"examples.simple">>, <<"x">>, 1),
 
-  ct:comment("Try to compile an invalid file"),
-  ErrorPath = relative_path(<<"priv/examples/error.clj">>),
-  ok = try
-         clj_compiler:compile_file(ErrorPath, Opts), error
-       catch
-         _:<<"error.clj:", _/binary>> -> ok
-       end,
-
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath = relative_path(<<"priv/examples/abcdef_42.clj">>),
   ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
@@ -82,7 +74,7 @@ compile_files(_Config) ->
 
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath  = relative_path(<<"priv/examples/simple.clj">>),
-  Simple2Path = relative_path(<<"priv/examples/simple-2.clj">>),
+  Simple2Path = relative_path(<<"priv/examples/simple_2.clj">>),
   _ = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),

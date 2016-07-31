@@ -8,7 +8,7 @@
 
 -export([count/1]).
 -export([hash/1]).
--export([noop/1]).
+-export(['_'/0]).
 -export([seq/1]).
 -export([str/1]).
 
@@ -20,7 +20,7 @@ count(Tuple) -> tuple_size(Tuple).
 
 hash(Tuple) -> clj_murmur3:ordered(Tuple).
 
-noop(_) -> ok.
+'_'() -> undefined.
 
 seq({}) -> undefined;
 seq(Tuple) -> tuple_to_list(Tuple).
