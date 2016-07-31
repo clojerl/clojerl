@@ -151,15 +151,15 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     (when-let [filepath (:file (meta v))]
       (when-let [filepath (find-file-in-code-path filepath)]
         (with-open [rdr (erlang.io.File/open.e filepath)]
-          (dotimes [_x (dec (first (:loc (meta v))))]
+          (dotimes [_x (dec (:line (meta v)))]
             (erlang.io.IReader/read_line.e rdr))
           (let [text      (erlang.io.StringWriter/new.e "")
-                pbr       rdr ;; TODO: this is originally a proxy wriing to rdr
+                pbr       rdr ;; TODO: this was originally a proxy writing to rdr
                 read-opts (if (clojerl.String/ends_with.e filepath "cljc")
                             {:read-cond :allow} {})]
             (if (= :unknown *read-eval*)
               (throw "Unable to read source while *read-eval* is :unknown.")
-              (read read-opts (erlang.io.PushbackReader/new.e rdr)))
+              (read (erlang.io.PushbackReader/new.e rdr) #_read-opts))
             (str text)))))))
 
 (defmacro source
