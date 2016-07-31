@@ -84,7 +84,7 @@
                   ~@field-args
                   ~@(for [i (range 0 (count over))]
                       (list `nth 'overage i)))
-             (throw (+ ~arg-count (count ~'overage))))
+             (throw (str "Arity exception: " (+ ~arg-count (count ~'overage)) (name '~fn-name))))
           `(new ~classname ~@field-args)))))
 
 (defn- validate-fields
@@ -106,7 +106,8 @@
   [tagname cname fields interfaces methods opts]
   (let [current-ns (ns-name *ns*)
         classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
-        interfaces (conj interfaces 'clojure.lang.IType)]
+        interfaces (conj interfaces 'clojerl.IType)
+        methods (conj methods '(_ [] ))]
     `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~fields
        :implements ~interfaces
        ~@(mapcat identity opts)
