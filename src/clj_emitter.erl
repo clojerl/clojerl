@@ -183,6 +183,7 @@ ast(#{op := deftype} = Expr, State0) ->
 ast(#{op := fn} = Expr, State) ->
   #{ methods := Methods
    , form    := Form
+   , local   := #{name := NameSym}
    } = Expr,
 
   State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
@@ -194,7 +195,6 @@ ast(#{op := fn} = Expr, State) ->
   ListArgAst  = {var, Anno, binary_to_atom(ListArgName, utf8)},
   CaseAst     = {'case', Anno, ListArgAst, ClausesAsts},
 
-  #{name := NameSym} = maps:get(local, Expr, undefined),
   Name         = clj_core:name(NameSym),
   NameAtom     = binary_to_atom(Name, utf8),
   FunClauseAst = {clause, Anno, [ListArgAst], [], [CaseAst]},
