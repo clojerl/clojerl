@@ -107,7 +107,7 @@
   (let [current-ns (ns-name *ns*)
         classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
         interfaces (conj interfaces 'clojerl.IType)
-        methods (conj methods '(_ [] ))]
+        methods (conj methods '(_ [_]))]
     `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~fields
        :implements ~interfaces
        ~@(mapcat identity opts)

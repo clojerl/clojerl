@@ -156,27 +156,48 @@ ast(#{op := deftype} = Expr, State0) ->
   Module         = sym_to_kw(Typename),
   ok             = clj_module:ensure_loaded(Module, file_from(Name)),
 
+  %% Attributes
   ProtocolsNames = lists:map(fun sym_to_kw/1, clj_core:seq_to_list(Protocols)),
-  Attributes     = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
+  Attributes = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
 
-  {FieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
-                               , length(FieldsExprs)
-                               ),
-  Functions           = [constructor_function(Module, FieldsAsts)],
+  %% Functions
+  {FieldsAsts, State}     = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
+                                   , length(FieldsExprs)
+                                   ),
+  {FunctionsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
+                                   , length(MethodsExprs)
+                                   ),
+  TypeTupleAst   = type_tuple(Module, FieldsAsts, match),
+  FunctionsAsts1 = lists:map( fun(F) ->
+                                  expand_first_argument(F, TypeTupleAst)
+                              end
+                            , FunctionsAsts
+                            ),
 
-  clj_module:add_exports(Module, [{?CONSTRUCTOR, length(FieldsAsts)}]),
+  Functions = [constructor_function(Module, FieldsAsts) | FunctionsAsts1],
+
+  %% Exports
+  Exports   = [ {?CONSTRUCTOR, length(FieldsAsts)}
+                | lists:map(fun function_signature/1, FunctionsAsts1)
+              ],
+
+  clj_module:add_exports(Module, Exports),
   clj_module:add_attributes(Module, Attributes),
   clj_module:add_functions(Module, Functions),
-
-  %% We discard the asts since they should all be defns and these will be
-  %% added to the module in the #{op := def} clause.
-  {_, State1} = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
-                       , length(MethodsExprs)
-                       ),
 
   Ast = erl_parse:abstract(Name, line_from(Name)),
 
   push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
+%% methods
+%%------------------------------------------------------------------------------
+ast(#{op := method} = Expr, State0) ->
+  #{name := Name} = Expr,
+
+  {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
+  FunAst = function_form(sym_to_kw(Name), [ClauseAst]),
+
+  push_ast(FunAst, State1);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -516,7 +537,7 @@ ast(#{op := recur} = Expr, State) ->
           loop ->
             NameAst = {var, Anno, LoopIdAtom},
             {call, Anno, NameAst, Args};
-          var ->
+          LoopType when LoopType =:= var orelse LoopType =:= function ->
             NameAst = {atom, Anno, LoopIdAtom},
             {call, Anno, NameAst, Args}
         end,
@@ -630,23 +651,52 @@ do_list_ast([], Tail) ->
 do_list_ast([H | Hs], Tail) ->
   {cons, 0, H, do_list_ast(Hs, Tail)}.
 
+-spec expand_first_argument(ast(), ast()) -> ast().
+expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
+                     , TypeTupleAst
+                     ) ->
+  {clause, _, [FirstAst | RestAsts], _, _} = ClauseAst,
+
+  NewFirstAst  = {match, 0, FirstAst, TypeTupleAst},
+  NewClauseAst = erlang:setelement(3, ClauseAst, [NewFirstAst | RestAsts]),
+
+  erlang:setelement(5, Function, [NewClauseAst]).
+
 -spec constructor_function(atom(), [ast()]) -> ast().
 constructor_function(Typename, FieldsAsts) ->
-  TupleItemsAst = [ {atom,  0, ?TYPE}
-                  , {atom,  0, Typename}
-                  , {tuple, 0, FieldsAsts}
-                  , {atom,  0, undefined}
-                  ],
-  TupleAst      = {tuple, 0, TupleItemsAst},
+  TupleAst      = type_tuple(Typename, FieldsAsts, create),
   BodyAst       = [TupleAst],
   ClausesAsts   = [{clause, 0, FieldsAsts, [], BodyAst}],
 
   function_form(?CONSTRUCTOR, ClausesAsts).
 
+-spec type_tuple(atom(), [ast()], create | match) -> ast().
+type_tuple(Typename, FieldsAsts, TupleType) ->
+  {MapField, Info} = case TupleType of
+                       create ->
+                         {map_field_assoc, {atom, 0, undefined}};
+                       match  ->
+                         {map_field_exact, {var, 0, '_'}}
+                     end,
+
+  MapAssocs     = [ {MapField, 0, {atom, 0, FieldName}, FieldAst}
+                    || {var, _, FieldName} = FieldAst <- FieldsAsts
+                  ],
+  TupleItemsAst = [ {atom,  0, ?TYPE}
+                  , {atom,  0, Typename}
+                  , {map,   0, MapAssocs}
+                  , Info
+                  ],
+  {tuple, 0, TupleItemsAst}.
+
 -spec function_form(atom(), [ast()]) -> ast().
 function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
   {clause, _, Args, _, _} = Clause,
   {function, 0, Name, length(Args), Clauses}.
+
+-spec function_signature(ast()) -> {atom(), arity()}.
+function_signature({function, _, Name, Arity, _}) ->
+  {Name, Arity}.
 
 -spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
 method_to_function_clause(MethodExpr, State) ->
@@ -661,8 +711,10 @@ method_to_case_clause(MethodExpr, State) ->
 method_to_clause(MethodExpr, State0, ClauseFor) ->
   #{ params      := ParamsExprs
    , body        := BodyExpr
-   , 'variadic?' := IsVariadic
    } = MethodExpr,
+
+  %% Get this value this way since it might not be there
+  IsVariadic = maps:get('variadic?', MethodExpr, false),
 
   State00 = add_lexical_renames_scope(State0),
   State = lists:foldl(fun put_lexical_rename/2, State00, ParamsExprs),
