@@ -34,7 +34,7 @@
 -export([ meta/1
         , with_meta/2
         ]).
--export(['_'/0]).
+-export(['_'/1]).
 -export([ nth/2
         , nth/3
         ]).
@@ -128,7 +128,7 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
 
-'_'() -> undefined.
+'_'(_) -> undefined.
 
 nth(#?TYPE{name = ?M, data = Array}, N) ->
   array:get(N, Array).

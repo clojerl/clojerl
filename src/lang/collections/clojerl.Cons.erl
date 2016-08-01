@@ -26,7 +26,7 @@
         , next/1
         , more/1
         ]).
--export(['_'/0]).
+-export(['_'/1]).
 -export([seq/1]).
 -export([str/1]).
 
@@ -74,7 +74,7 @@ next(#?TYPE{name = ?M, data = {_, More}}) -> clj_core:seq(More).
 more(#?TYPE{name = ?M, data = {_, undefined}}) -> [];
 more(#?TYPE{name = ?M, data = {_, More}}) -> More.
 
-'_'() -> undefined.
+'_'(_) -> undefined.
 
 seq(#?TYPE{name = ?M} = Cons) -> Cons.
 

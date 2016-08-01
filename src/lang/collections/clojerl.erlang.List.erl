@@ -20,7 +20,7 @@
         , more/1
         , next/1
         ]).
--export(['_'/0]).
+-export(['_'/1]).
 -export([ peek/1
         , pop/1
         ]).
@@ -55,7 +55,7 @@ next([]) -> undefined;
 next([_ | []]) -> undefined;
 next([_ | Rest]) -> Rest.
 
-'_'() -> undefined.
+'_'(_) -> undefined.
 
 peek([]) -> undefined;
 peek([X | _]) -> X.

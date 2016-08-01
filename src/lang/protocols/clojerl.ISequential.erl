@@ -1,3 +1,3 @@
 -module('clojerl.ISequential').
 
--callback '_'() -> undefined.
+-callback '_'(any()) -> undefined.

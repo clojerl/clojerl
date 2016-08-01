@@ -84,7 +84,7 @@ complete_coverage(_Config) ->
 
   <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
 
-  undefined = 'clojerl.String':'_'(),
+  undefined = 'clojerl.String':'_'(undefined),
 
   true = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
 
