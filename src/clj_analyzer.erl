@@ -948,7 +948,6 @@ parse_deftype(Env, Form) ->
   | Methods
   ] = clj_core:seq_to_list(Form),
 
-  DefnSymbol  = clj_core:symbol(<<"clojure.core">>, <<"defn">>),
   FieldsList  = clj_core:seq_to_list(Fields),
   FieldsFun   = fun(FieldName) ->
                     #{ env   => ?DEBUG(Env)
@@ -958,25 +957,14 @@ parse_deftype(Env, Form) ->
                      , op    => binding
                      }
                 end,
+  %% The analyzer adds the fields to the local scope of the methods,
+  %% but it is the emitter who will need to pattern match the first argument
+  %% so that they are actually available.
   Env1        = clj_env:add_locals_scope(Env),
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
-  %% Analyze all method bodies as if they were in the type's module
-  CurrentNs   = clj_namespace:current(),
-  Env3        = try
-                  clj_namespace:find_or_create(Typename),
-                  lists:foldl( fun (Method, EnvAcc) ->
-                                   Method1 = clj_core:cons(DefnSymbol, Method),
-                                   analyze_form(EnvAcc, Method1)
-                               end
-                             , Env2
-                             , Methods
-                             )
-                after
-                  %% Make sure we are back at the original namespace
-                  clj_namespace:current(CurrentNs)
-                end,
 
+  Env3        = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
 
   DeftypeExpr = #{ op        => deftype
@@ -991,6 +979,48 @@ parse_deftype(Env, Form) ->
 
   Env5 = clj_env:remove_locals_scope(Env4),
   clj_env:push_expr(Env5, DeftypeExpr).
+
+-spec analyze_deftype_method('clojerl.List':type(), clj_env:env()) ->
+  clj_env:env().
+analyze_deftype_method(Form, Env) ->
+  [MethodName, Args | _Body] = clj_core:seq_to_list(Form),
+
+  clj_utils:throw_when( not clj_core:'symbol?'(MethodName)
+                      , [ <<"Method method must be a symbol, had: ">>
+                        , clj_core:type(MethodName)
+                        ]
+                      , clj_reader:location_meta(MethodName)
+                      ),
+
+  clj_utils:throw_when( not clj_core:'vector?'(Args)
+                      , [ <<"Parameter listing should be a vector, had: ">>
+                        , clj_core:type(Args)
+                        ]
+                      , clj_reader:location_meta(Args)
+                      ),
+
+  clj_utils:throw_when( clj_core:count(Args) < 1
+                      , [ <<"Must supply at least one argument for 'this' in: ">>
+                        , MethodName
+                        ]
+                      , clj_reader:location_meta(MethodName)
+                      ),
+
+  LoopId = {function, MethodName},
+  {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( Env
+                                                         , clj_core:rest(Form)
+                                                         , LoopId
+                                                         , true
+                                                         )),
+
+  MethodExpr1 = maps:merge( maps:remove('variadic?', MethodExpr)
+                          , #{ op   => method
+                             , form => Form
+                             , name => MethodName
+                             }
+                          ),
+
+  clj_env:push_expr(Env1, MethodExpr1).
 
 %%------------------------------------------------------------------------------
 %% Parse throw
