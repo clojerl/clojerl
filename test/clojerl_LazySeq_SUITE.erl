@@ -153,7 +153,7 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.LazySeq':'_'(),
+  undefined = 'clojerl.LazySeq':'_'(undefined),
 
   LazySeq   = range(2, 2),
   EmptyList = clj_core:empty(LazySeq),

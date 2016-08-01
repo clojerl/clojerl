@@ -75,6 +75,6 @@ str(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.erlang.Tuple':'_'(),
+  undefined = 'clojerl.erlang.Tuple':'_'(undefined),
 
   {comments, ""}.

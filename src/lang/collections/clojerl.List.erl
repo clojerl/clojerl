@@ -28,7 +28,7 @@
         , next/1
         , more/1
         ]).
--export(['_'/0]).
+-export(['_'/1]).
 -export([ peek/1
         , pop/1
         ]).
@@ -85,7 +85,7 @@ more(#?TYPE{name = ?M, data = []}) -> undefined;
 more(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
 
-'_'() -> undefined.
+'_'(_) -> undefined.
 
 peek(#?TYPE{name = ?M, data = List}) ->
   clj_core:peek(List).

@@ -161,7 +161,7 @@ stack(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.List':'_'(),
+  undefined = 'clojerl.List':'_'(undefined),
 
   NotEmptyList = clj_core:list([a, b, 2, 3]),
   EmptyList    = clj_core:empty(NotEmptyList),
