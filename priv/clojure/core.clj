@@ -1299,6 +1299,12 @@
 
 ;;map stuff
 
+(defn map-entry?
+  "Return true if x is a map entry"
+  {:added "1.8"}
+  [x]
+  (and (vector? x) (= 2 (count x))))
+
 (defn contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like

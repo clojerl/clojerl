@@ -161,25 +161,46 @@ ast(#{op := deftype} = Expr, State0) ->
   Attributes = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
 
   %% Functions
-  {FieldsAsts, State}     = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
+  {AllFieldsAsts, State}  = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
                                    , length(FieldsExprs)
                                    ),
   {FunctionsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
                                    , length(MethodsExprs)
                                    ),
-  TypeTupleAst   = type_tuple(Module, FieldsAsts, match),
+  TypeTupleAst   = type_tuple(Module, AllFieldsAsts, [], match),
   FunctionsAsts1 = lists:map( fun(F) ->
                                   expand_first_argument(F, TypeTupleAst)
                               end
                             , FunctionsAsts
                             ),
 
-  Functions = [constructor_function(Module, FieldsAsts) | FunctionsAsts1],
+  %% Predicate function to check if a field is one of the hidden record fields.
+  IsRecordFld = fun({var, _, FieldName}) ->
+                    not (FieldName =:= '__meta' orelse FieldName =:= '__extmap')
+                  end,
+  {FieldsAsts, HiddenFieldsAsts} = lists:partition(IsRecordFld, AllFieldsAsts),
+
+  Constructor = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
+  ExportCtor  = {?CONSTRUCTOR, length(FieldsAsts)},
+  %% When there are hidden fields we also want to create a constructor function
+  %% that includes them.
+  Functions   = case HiddenFieldsAsts of
+                  [] -> [Constructor | FunctionsAsts1];
+                  _  -> [ Constructor
+                        , constructor_function(Module, AllFieldsAsts, [])
+                        | FunctionsAsts1
+                        ]
+                end,
 
   %% Exports
-  Exports   = [ {?CONSTRUCTOR, length(FieldsAsts)}
-                | lists:map(fun function_signature/1, FunctionsAsts1)
-              ],
+  ExportsFuns = lists:map(fun function_signature/1, FunctionsAsts1),
+  Exports     = case HiddenFieldsAsts of
+                  [] -> [ExportCtor | ExportsFuns];
+                  _  -> [ ExportCtor
+                        , {?CONSTRUCTOR, length(AllFieldsAsts)}
+                        | ExportsFuns
+                        ]
+                end,
 
   clj_module:add_exports(Module, Exports),
   clj_module:add_attributes(Module, Attributes),
@@ -662,25 +683,42 @@ expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
 
   erlang:setelement(5, Function, [NewClauseAst]).
 
--spec constructor_function(atom(), [ast()]) -> ast().
-constructor_function(Typename, FieldsAsts) ->
-  TupleAst      = type_tuple(Typename, FieldsAsts, create),
+%% @doc Builds a constructor function for the specified type.
+%%
+%% The constructor will take AllFields -- HiddenFields as arguments.
+%% Hidden fields will be assigned the value `undefined'.
+-spec constructor_function(atom(), [ast()], [ast()]) -> ast().
+constructor_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
+  FieldsAsts    = AllFieldsAsts -- HiddenFieldsAsts,
+  TupleAst      = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
   BodyAst       = [TupleAst],
   ClausesAsts   = [{clause, 0, FieldsAsts, [], BodyAst}],
 
   function_form(?CONSTRUCTOR, ClausesAsts).
 
--spec type_tuple(atom(), [ast()], create | match) -> ast().
-type_tuple(Typename, FieldsAsts, TupleType) ->
-  {MapField, Info} = case TupleType of
-                       create ->
-                         {map_field_assoc, {atom, 0, undefined}};
-                       match  ->
-                         {map_field_exact, {var, 0, '_'}}
-                     end,
+%% @doc Builds a tuple abstract form tagged with atom ?TYPE which is used
+%%      to build Clojerl data types.
+-spec type_tuple(atom(), [ast()], [ast()], create | match) -> ast().
+type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
+  {MapField, Info} =
+    case TupleType of
+      create ->
+        {map_field_assoc, {atom, 0, undefined}};
+      match  ->
+        {map_field_exact, {var, 0, '_'}}
+    end,
 
-  MapAssocs     = [ {MapField, 0, {atom, 0, FieldName}, FieldAst}
-                    || {var, _, FieldName} = FieldAst <- FieldsAsts
+  MapAssocs     = [ { MapField
+                    , 0
+                    , {atom, 0, FieldName}
+                    , case lists:member(FieldAst, HiddenFieldsAsts) of
+                        true when TupleType =:= create ->
+                          {atom, 0, undefined};
+                        _ ->
+                          FieldAst
+                      end
+                    }
+                    || {var, _, FieldName} = FieldAst <- AllFieldsAsts
                   ],
   TupleItemsAst = [ {atom,  0, ?TYPE}
                   , {atom,  0, Typename}
