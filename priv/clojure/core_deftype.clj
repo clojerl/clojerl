@@ -60,6 +60,102 @@
       (throw (apply print-str "Unsupported option(s) -" bad-opts)))
     [interfaces methods opts]))
 
+(defn- imap-cons
+  [this o]
+  (cond
+   (map-entry? o)
+     (assoc this (first o) (second o))
+   (vector? o)
+     (assoc this (nth o 0) (nth o 1))
+   :else (loop [this this
+                o o]
+      (if (seq o)
+        (let [pair (first o)]
+          (recur (assoc this (first pair) (second pair)) (rest o)))
+        this))))
+
+(defn- emit-defrecord
+  "Do not use this directly - use defrecord"
+  {:added "1.2"}
+  [tagname cname fields interfaces methods opts]
+  (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
+        interfaces (vec interfaces)
+        interface-set (set (map resolve interfaces))
+        methodname-set (set (map first methods))
+        hinted-fields fields
+        fields (vec (map #(with-meta % nil) fields))
+        base-fields fields
+        fields (conj fields '__meta '__extmap)
+        type-hash (hash classname)]
+    (let [gs (gensym)
+          irecord (fn [[i m]]
+                    [(conj i 'clojerl.IRecord)
+                     (conj m '(_ [_]))])
+          eqhash (fn [[i m]]
+                   [(conj i 'clojerl.IHash)
+                    (conj m
+                          `(~'hash [this#] 1))])
+          iobj (fn [[i m]]
+                 [(conj i 'clojerl.IMeta)
+                  (conj m
+                        `(~'meta [this#] ~'__meta)
+                        `(~'with_meta [this# ~gs] (new ~classname ~@(replace {'__meta gs} fields))))])
+          ilookup (fn [[i m]]
+                    [(conj i 'clojerl.ILookup)
+                     (conj m
+                           `(~'get [this# k#] (get this# k# nil))
+                           `(~'get [this# k# else#]
+                             (case k# ~@(mapcat (fn [fld] [(keyword fld) fld])
+                                                base-fields)
+                                   (get ~'__extmap k# else#))))])
+          imap (fn [[i m]]
+                 [(conj i
+                        'clojerl.Counted 'clojerl.IColl 'clojerl.IEquiv
+                        'clojerl.Associative 'clojerl.Seqable 'clojerl.IMap)
+                  (conj m
+                        `(~'count [this#] (+ ~(count base-fields) (count ~'__extmap)))
+                        `(~'empty [this#] (throw (str "Can't create empty: " ~(str classname))))
+                        `(~'cons [this# e#] ((var imap-cons) this# e#))
+                        `(~'equiv [this# ~gs]
+                          (boolean
+                           (or (identical? this# ~gs)
+                               (when (identical? (class this#) (class ~gs))
+                                 (let [~gs ~(with-meta gs {:tag classname})]
+                                   (and  ~@(map (fn [fld] `(= ~fld (. ~gs ~(symbol (str "-" fld))))) base-fields)
+                                         (= ~'__extmap (. ~gs ~'__extmap))))))))
+                        `(~'contains_key [this# k#] (not (identical? this# (get this# k# this#))))
+                        `(~'entry_at [this# k#] (let [v# (get this# k# this#)]
+                                                  (when-not (identical? this# v#)
+                                                    [k# v#])))
+                        `(~'assoc [this# k# ~gs]
+                          (condp identical? k#
+                            ~@(mapcat (fn [fld]
+                                        [(keyword fld) (list* `new classname (replace {fld gs} fields))])
+                                      base-fields)
+                            (new ~classname ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
+                        `(~'seq [this#] (seq (concat [~@(map #(vector (keyword %) %) base-fields)]
+                                                     ~'__extmap)))
+                        `(~'keys [this#] (map first (seq this#)))
+                        `(~'vals [this#] (map second (seq this#)))
+                        `(~'without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                                 (dissoc (with-meta (into {} this#) ~'__meta) k#)
+                                                 (new ~classname ~@(remove #{'__extmap} fields)
+                                                      (not-empty (dissoc ~'__extmap k#))))))])
+          istr (fn [[i m]]
+                 [(conj i 'clojerl.Stringable)
+                  (conj m
+                        `(~'str [this#]
+                          (str "#"
+                               ~(str classname)
+                               (merge ~'__extmap
+                                      (hash-map ~@(mapcat (juxt keyword identity)
+                                                          base-fields))))))])]
+      (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap istr)]
+        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~(conj hinted-fields '__meta '__extmap)
+           :implements ~(vec i)
+           ~@(mapcat identity opts)
+           ~@m)))))
+
 (defn- build-positional-factory
   "Used to build a positional factory for a given type/record.  Because of the
   limitation of 20 arguments to Clojure functions, this factory needs to be
@@ -101,12 +197,113 @@
                   *ns* "." name " had: "
                   (apply str (interpose ", " non-syms)))))))
 
+(defmacro defrecord
+  "(defrecord name [fields*]  options* specs*)
+
+  Options are expressed as sequential keywords and arguments (in any order).
+
+  Supported options:
+  :load-ns - if true, importing the record class will cause the
+             namespace in which the record was defined to be loaded.
+             Defaults to false.
+
+  Each spec consists of a protocol or interface name followed by zero
+  or more method bodies:
+
+  protocol-or-interface-or-Object
+  (methodName [args*] body)*
+
+  Dynamically generates compiled bytecode for class with the given
+  name, in a package with the same name as the current namespace, the
+  given fields, and, optionally, methods for protocols and/or
+  interfaces.
+
+  The class will have the (immutable) fields named by
+  fields, which can have type hints. Protocols/interfaces and methods
+  are optional. The only methods that can be supplied are those
+  declared in the protocols/interfaces.  Note that method bodies are
+  not closures, the local environment includes only the named fields,
+  and those fields can be accessed directly.
+
+  Method definitions take the form:
+
+  (methodname [args*] body)
+
+  The argument and return types can be hinted on the arg and
+  methodname symbols. If not supplied, they will be inferred, so type
+  hints should be reserved for disambiguation.
+
+  Methods should be supplied for all methods of the desired
+  protocol(s) and interface(s). You can also define overrides for
+  methods of Object. Note that a parameter must be supplied to
+  correspond to the target object ('this' in Java parlance). Thus
+  methods for interfaces will take one more argument than do the
+  interface declarations. Note also that recur calls to the method
+  head should *not* pass the target object, it will be supplied
+  automatically and can not be substituted.
+
+  In the method bodies, the (unqualified) name can be used to name the
+  class (for calls to new, instance? etc).
+
+  The class will have implementations of several (clojure.lang)
+  interfaces generated automatically: IObj (metadata support) and
+  IPersistentMap, and all of their superinterfaces.
+
+  In addition, defrecord will define type-and-value-based =,
+  and will defined Java .hashCode and .equals consistent with the
+  contract for java.util.Map.
+
+  When AOT compiling, generates compiled bytecode for a class with the
+  given name (a symbol), prepends the current ns as the package, and
+  writes the .class file to the *compile-path* directory.
+
+  Two constructors will be defined, one taking the designated fields
+  followed by a metadata map (nil for none) and an extension field
+  map (nil for none), and one taking only the fields (using nil for
+  meta and extension fields). Note that the field names __meta
+  and __extmap are currently reserved and should not be used when
+  defining your own records.
+
+  Given (defrecord TypeName ...), two factory functions will be
+  defined: ->TypeName, taking positional parameters for the fields,
+  and map->TypeName, taking a map of keywords to field values."
+  {:added "1.2"
+   :arglists '([name [& fields] & opts+specs])}
+
+  [name fields & opts+specs]
+  (validate-fields fields name)
+  (let [gname name
+        [interfaces methods opts] (parse-opts+specs opts+specs)
+        ns-part (namespace-munge *ns*)
+        classname (symbol (str ns-part "." gname))
+        hinted-fields fields
+        fields (vec (map #(with-meta % nil) fields))]
+    `(let []
+       (declare ~(symbol (str  '-> gname)))
+       (declare ~(symbol (str 'map-> gname)))
+       ~(emit-defrecord name gname (vec hinted-fields) (vec interfaces) methods opts)
+       #_(import ~classname)
+       ~(build-positional-factory gname classname fields)
+       (defn ~(symbol (str 'map-> gname))
+         ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
+         ([m#] #_(~(symbol (str classname "/create"))
+                (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
+       '~classname)))
+
+(defn record?
+  "Returns true if x is a record"
+  {:added "1.6"
+   :static true}
+  [x]
+  (instance? :clojerl.IRecord x))
+
 (defn- emit-deftype*
   "Do not use this directly - use deftype"
   [tagname cname fields interfaces methods opts]
   (let [current-ns (ns-name *ns*)
         classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
         interfaces (conj interfaces 'clojerl.IType)
+        ;; Dummy method for clojerl.IType
         methods (conj methods '(_ [_]))]
     `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~fields
        :implements ~interfaces

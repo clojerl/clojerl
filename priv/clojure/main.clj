@@ -37,6 +37,11 @@
 (defn function [x]
   (erlang/atom_to_binary.e (second x) :utf8))
 
+(defn arg-count [x]
+  (let [maybe-arg-count (nth x 2)]
+    (when (list? maybe-arg-count)
+      (count maybe-arg-count))))
+
 (defn stack-element-str
   "Returns a (possibly unmunged) string representation of a StackTraceElement"
   {:added "1.3"}
@@ -47,6 +52,7 @@
                                   (= file "NO_SOURCE_FILE")))]
     (str (if clojure-fn? (demunge (module el)) (module el))
          "/" (function el)
+         (when-let [arg-count (arg-count el)] (str " " arg-count))
          " (" (filename el) ":" (line-number el) ")")))
 
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
