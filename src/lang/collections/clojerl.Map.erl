@@ -81,9 +81,9 @@ entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
   Hash = 'clojerl.IHash':hash(Key),
   case maps:is_key(Hash, Keys) of
     true ->
-      Key = maps:get(Hash, Keys),
-      Val = maps:get(Hash, Vals),
-      clj_core:vector([Key, Val]);
+      KeyFound = maps:get(Hash, Keys),
+      Val      = maps:get(Hash, Vals),
+      clj_core:vector([KeyFound, Val]);
     false -> undefined
   end.
 
@@ -133,6 +133,8 @@ invoke(_, Args) ->
 
 %% clojerl.IColl
 
+cons(#?TYPE{name = ?M} = Map, undefined) ->
+  Map;
 cons(#?TYPE{name = ?M, data = {Keys, Vals}} = Map, X) ->
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
