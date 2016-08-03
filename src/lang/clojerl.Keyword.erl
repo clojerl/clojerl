@@ -32,12 +32,18 @@
 -type type() :: atom().
 
 -spec new(binary()) -> type().
-new(Name) ->
-  binary_to_atom(Name, utf8).
+new(Name) when is_binary(Name) ->
+  binary_to_atom(Name, utf8);
+new(Name) when is_atom(Name) ->
+  Name;
+new(Symbol) ->
+  binary_to_atom(clj_core:str(Symbol), utf8).
 
 -spec new(binary(), binary()) -> type().
-new(Namespace, Name) ->
-  binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8).
+new(Namespace, Name) when is_binary(Namespace) andalso is_binary(Name) ->
+  binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8);
+new(undefined, Name) ->
+  new(Name).
 
 -spec find(binary()) -> type().
 find(Name) ->
