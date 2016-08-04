@@ -654,7 +654,7 @@ symbol(_Config) ->
 vector(_Config) ->
   #{op := vector} = analyze_one(<<"[\"hello\" :x 1]">>),
 
-  #{ op   := 'with-meta'
+  #{ op   := with_meta
    , expr := #{op := vector}
    } = analyze_one(<<"^{:meta 'data'} [\"hello\" :x 1]">>),
 
@@ -664,7 +664,7 @@ vector(_Config) ->
 map(_Config) ->
   #{op := map} = analyze_one(<<"{:name 1 :lastname 2}">>),
 
-  #{ op   := 'with-meta'
+  #{ op   := with_meta
    , expr := #{op := map}
    } = analyze_one(<<"^{:meta 'data'} {:name 1 :lastname 2}">>),
 
@@ -676,7 +676,7 @@ set(_Config) ->
    , items := [_, _]
    } = analyze_one(<<"#{:name :lastname}">>),
 
-  #{ op   := 'with-meta'
+  #{ op   := with_meta
    , expr := #{op := set}
    } = analyze_one(<<"^{:meta 'data'} #{:name :lastname}">>),
 
