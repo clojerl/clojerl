@@ -183,28 +183,34 @@ ast(#{op := deftype} = Expr, State0) ->
                   end,
   {FieldsAsts, HiddenFieldsAsts} = lists:partition(IsRecordFld, AllFieldsAsts),
 
-  CtorAst      = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
-  CtorExport  = {?CONSTRUCTOR, length(FieldsAsts)},
-
   %% Generate accessor functions for all fields.
   AccessorsAsts = lists:map( fun(F) -> accessor_function(Module, F) end
                            , AllFieldsAsts
                            ),
 
-  %% When there are hidden fields we also want to create a constructor function
-  %% that includes them.
+  %% Create a constructor that doesn't include the hidded fields.
+  CtorAst   = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
+  %% When there are hidden fields we assume  it is a record, so we also want
+  %% to create:
+  %%   - a constructor function that includes the hidden fields.
+  %%   - a create/1 function that takes a map.
   CtorsAsts = case HiddenFieldsAsts of
                 [] -> [CtorAst];
                 _  -> [ CtorAst
                       , constructor_function(Module, AllFieldsAsts, [])
+                      , create_function(Module, AllFieldsAsts, HiddenFieldsAsts)
                       ]
               end,
 
   %% Exports
   MethodsExports = lists:map(fun function_signature/1, MethodsAsts1),
+  CtorExport     = {?CONSTRUCTOR, length(FieldsAsts)},
   CtorsExports   = case HiddenFieldsAsts of
                      [] -> [CtorExport];
-                     _  -> [CtorExport, {?CONSTRUCTOR, length(AllFieldsAsts)}]
+                     _  -> [ CtorExport
+                           , {?CONSTRUCTOR, length(AllFieldsAsts)}
+                           , {create, 1}
+                           ]
                    end,
   AccessorsExports = lists:map( fun({var, _, FName}) ->
                                     {field_fun_name(FName), 1}
@@ -685,6 +691,10 @@ do_list_ast([], Tail) ->
 do_list_ast([H | Hs], Tail) ->
   {cons, 0, H, do_list_ast(Hs, Tail)}.
 
+%% @doc Replaces the first argument of a function with a pattern match.
+%%
+%% This function is used for deftype methods so that the fields are available
+%% in the scope of the body of each method.
 -spec expand_first_argument(ast(), ast()) -> ast().
 expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
                      , TypeTupleAst
@@ -720,6 +730,58 @@ accessor_function(Typename, {var, _, FieldName} = FieldAst) ->
   AccessorName = field_fun_name(FieldName),
   function_form(AccessorName, ClausesAsts).
 
+-spec create_function(atom(), [ast()], [ast()]) -> ast().
+create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
+  MapVarAst    = {var, 0, map},
+  GetAstFun    = fun(FName) ->
+                     ArgsAst = [ MapVarAst
+                               , {atom, 0, FName}
+                               ],
+                     application_mfa(clj_core, get, ArgsAst)
+                 end,
+
+  DissocFoldFun = fun({var, _, FName} = FieldAst, MapAst) ->
+                      case lists:member(FieldAst, HiddenFieldsAsts) of
+                        true  -> MapAst;
+                        false ->
+                          FAtom = {atom, 0, FName},
+                          application_mfa(clj_core, dissoc, [MapAst, FAtom])
+                      end
+                  end,
+
+  %% Coerce argument into a clojerl.Map
+  EmptyMapAst   = erl_parse:abstract('clojerl.Map':new([])),
+  ArgsListAst   = list_ast([EmptyMapAst, MapVarAst]),
+  MergeCallAst  = application_mfa(clj_core, merge, [ArgsListAst]),
+
+  ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
+
+  FieldsMapAst = { map
+                 , 0
+                 ,  [ { map_field_assoc
+                      , 0
+                      , {atom, 0, FieldName}
+                      , case lists:member(FieldAst, HiddenFieldsAsts) of
+                          true when FieldName =:= '__extmap' ->
+                            ExtMapAst;
+                          true ->
+                            {atom, 0, undefined};
+                          false ->
+                            GetAstFun(FieldName)
+                        end
+                      }
+                      || {var, _, FieldName} = FieldAst <- AllFieldsAsts
+                    ]
+                 },
+  InfoAst      = {atom, 0, undefined},
+  TupleAst     = type_tuple_ast(Typename, FieldsMapAst, InfoAst),
+
+  BodyAst      = [TupleAst],
+
+  ClausesAsts  = [{clause, 0, [MapVarAst], [], BodyAst}],
+
+  function_form(create, ClausesAsts).
+
 -spec field_fun_name(atom()) -> atom().
 field_fun_name(FieldName) when is_atom(FieldName) ->
   list_to_atom("-" ++ atom_to_list(FieldName)).
@@ -728,7 +790,7 @@ field_fun_name(FieldName) when is_atom(FieldName) ->
 %%      to build Clojerl data types.
 -spec type_tuple(atom(), [ast()], [ast()], create | match) -> ast().
 type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
-  {MapField, Info} =
+  {MapFieldType, InfoAst} =
     case TupleType of
       create ->
         {map_field_assoc, {atom, 0, undefined}};
@@ -736,7 +798,7 @@ type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
         {map_field_exact, {var, 0, '_'}}
     end,
 
-  MapAssocs     = [ { MapField
+  MapAssocsAsts = [ { MapFieldType
                     , 0
                     , {atom, 0, FieldName}
                     , case lists:member(FieldAst, HiddenFieldsAsts) of
@@ -748,12 +810,19 @@ type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
                     }
                     || {var, _, FieldName} = FieldAst <- AllFieldsAsts
                   ],
-  TupleItemsAst = [ {atom,  0, ?TYPE}
-                  , {atom,  0, Typename}
-                  , {map,   0, MapAssocs}
-                  , Info
-                  ],
-  {tuple, 0, TupleItemsAst}.
+  MapAst        = {map, 0, MapAssocsAsts},
+  type_tuple_ast(Typename, MapAst, InfoAst).
+
+-spec type_tuple_ast(atom(), ast(), ast()) -> ast().
+type_tuple_ast(Typename, DataAst, InfoAst) ->
+  { tuple
+  , 0
+  , [ {atom,  0, ?TYPE}
+    , {atom,  0, Typename}
+    , DataAst
+    , InfoAst
+    ]
+  }.
 
 -spec function_form(atom(), [ast()]) -> ast().
 function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
