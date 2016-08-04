@@ -121,8 +121,8 @@
                            (or (identical? this# ~gs)
                                (when (identical? (class this#) (class ~gs))
                                  (let [~gs ~(with-meta gs {:tag classname})]
-                                   (and  ~@(map (fn [fld] `(= ~fld (. ~gs ~(symbol (str "-" fld))))) base-fields)
-                                         (= ~'__extmap (. ~gs ~'__extmap))))))))
+                                   (and  ~@(map (fn [fld] `(= ~fld (~(symbol (str classname) (str "-" fld ".e")) ~gs))) base-fields)
+                                         (= ~'__extmap (~(symbol (str classname) "-__extmap.e") ~gs))))))))
                         `(~'contains_key [this# k#] (not (identical? this# (get this# k# this#))))
                         `(~'entry_at [this# k#] (let [v# (get this# k# this#)]
                                                   (when-not (identical? this# v#)
@@ -286,8 +286,8 @@
        ~(build-positional-factory gname classname fields)
        (defn ~(symbol (str 'map-> gname))
          ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
-         ([m#] #_(~(symbol (str classname "/create"))
-                (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
+         ([m#] (~(symbol (str classname) "create.e")
+                (if (map? m#) m# (into {} m#)))))
        '~classname)))
 
 (defn record?

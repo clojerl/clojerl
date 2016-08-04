@@ -158,21 +158,24 @@ ast(#{op := deftype} = Expr, State0) ->
 
   %% Attributes
   ProtocolsNames = lists:map(fun sym_to_kw/1, clj_core:seq_to_list(Protocols)),
-  Attributes = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
+  Attributes     = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
 
   %% Functions
-  {AllFieldsAsts, State}  = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
+  {AllFieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
                                    , length(FieldsExprs)
                                    ),
-  {FunctionsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
-                                   , length(MethodsExprs)
-                                   ),
-  TypeTupleAst   = type_tuple(Module, AllFieldsAsts, [], match),
-  FunctionsAsts1 = lists:map( fun(F) ->
-                                  expand_first_argument(F, TypeTupleAst)
-                              end
-                            , FunctionsAsts
-                            ),
+  {MethodsAsts, State1}  = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
+                                  , length(MethodsExprs)
+                                  ),
+
+  %% Expand the first argument to pattern match on all fields so that they are
+  %% available in the functions scope.
+  TypeTupleAst = type_tuple(Module, AllFieldsAsts, [], match),
+  MethodsAsts1 = lists:map( fun(F) ->
+                                expand_first_argument(F, TypeTupleAst)
+                            end
+                          , MethodsAsts
+                          ),
 
   %% Predicate function to check if a field is one of the hidden record fields.
   IsRecordFld = fun({var, _, FieldName}) ->
@@ -180,30 +183,40 @@ ast(#{op := deftype} = Expr, State0) ->
                   end,
   {FieldsAsts, HiddenFieldsAsts} = lists:partition(IsRecordFld, AllFieldsAsts),
 
-  Constructor = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
-  ExportCtor  = {?CONSTRUCTOR, length(FieldsAsts)},
+  CtorAst      = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
+  CtorExport  = {?CONSTRUCTOR, length(FieldsAsts)},
+
+  %% Generate accessor functions for all fields.
+  AccessorsAsts = lists:map( fun(F) -> accessor_function(Module, F) end
+                           , AllFieldsAsts
+                           ),
+
   %% When there are hidden fields we also want to create a constructor function
   %% that includes them.
-  Functions   = case HiddenFieldsAsts of
-                  [] -> [Constructor | FunctionsAsts1];
-                  _  -> [ Constructor
-                        , constructor_function(Module, AllFieldsAsts, [])
-                        | FunctionsAsts1
-                        ]
-                end,
+  CtorsAsts = case HiddenFieldsAsts of
+                [] -> [CtorAst];
+                _  -> [ CtorAst
+                      , constructor_function(Module, AllFieldsAsts, [])
+                      ]
+              end,
 
   %% Exports
-  ExportsFuns = lists:map(fun function_signature/1, FunctionsAsts1),
-  Exports     = case HiddenFieldsAsts of
-                  [] -> [ExportCtor | ExportsFuns];
-                  _  -> [ ExportCtor
-                        , {?CONSTRUCTOR, length(AllFieldsAsts)}
-                        | ExportsFuns
-                        ]
-                end,
+  MethodsExports = lists:map(fun function_signature/1, MethodsAsts1),
+  CtorsExports   = case HiddenFieldsAsts of
+                     [] -> [CtorExport];
+                     _  -> [CtorExport, {?CONSTRUCTOR, length(AllFieldsAsts)}]
+                   end,
+  AccessorsExports = lists:map( fun({var, _, FName}) ->
+                                    {field_fun_name(FName), 1}
+                                end
+                              , AllFieldsAsts
+                              ),
 
-  clj_module:add_exports(Module, Exports),
+  Exports   = MethodsExports ++ CtorsExports ++ AccessorsExports,
+  Functions = CtorsAsts ++ AccessorsAsts ++ MethodsAsts1,
+
   clj_module:add_attributes(Module, Attributes),
+  clj_module:add_exports(Module, Exports),
   clj_module:add_functions(Module, Functions),
 
   Ast = erl_parse:abstract(Name, line_from(Name)),
@@ -689,12 +702,27 @@ expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
 %% Hidden fields will be assigned the value `undefined'.
 -spec constructor_function(atom(), [ast()], [ast()]) -> ast().
 constructor_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
-  FieldsAsts    = AllFieldsAsts -- HiddenFieldsAsts,
-  TupleAst      = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
-  BodyAst       = [TupleAst],
-  ClausesAsts   = [{clause, 0, FieldsAsts, [], BodyAst}],
+  FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
+  TupleAst    = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
+  BodyAst     = [TupleAst],
+  ClausesAsts = [{clause, 0, FieldsAsts, [], BodyAst}],
 
   function_form(?CONSTRUCTOR, ClausesAsts).
+
+%% @doc Builds an accessor function for the specified type and field.
+%%
+%% The accessor function generated has a '-' as a prefix.
+-spec accessor_function(atom(), ast()) -> ast().
+accessor_function(Typename, {var, _, FieldName} = FieldAst) ->
+  TupleAst     = type_tuple(Typename, [FieldAst], [], match),
+  BodyAst      = [FieldAst],
+  ClausesAsts  = [{clause, 0, [TupleAst], [], BodyAst}],
+  AccessorName = field_fun_name(FieldName),
+  function_form(AccessorName, ClausesAsts).
+
+-spec field_fun_name(atom()) -> atom().
+field_fun_name(FieldName) when is_atom(FieldName) ->
+  list_to_atom("-" ++ atom_to_list(FieldName)).
 
 %% @doc Builds a tuple abstract form tagged with atom ?TYPE which is used
 %%      to build Clojerl data types.
