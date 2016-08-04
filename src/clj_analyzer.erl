@@ -1353,7 +1353,7 @@ wrapping_meta(Env, #{form := Form} = Expr) ->
     Meta when Meta =/= undefined andalso Meta =/= #{} ->
       {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
 
-      WithMetaExpr = #{ op   => 'with-meta'
+      WithMetaExpr = #{ op   => with_meta
                       , env  => ?DEBUG(Env)
                       , form => Form
                       , meta => MetaExpr

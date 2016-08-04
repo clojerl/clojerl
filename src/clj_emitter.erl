@@ -140,7 +140,7 @@ ast(#{op := new} = Expr, State) ->
                               , length(ArgsExprs)
                               ),
 
-  Ast = application_mfa(sym_to_kw(Typename), '__new__', ArgsAsts),
+  Ast = application_mfa(sym_to_kw(Typename), ?CONSTRUCTOR, ArgsAsts),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% deftype
@@ -338,7 +338,7 @@ ast(#{op := invoke} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% with-meta
 %%------------------------------------------------------------------------------
-ast(#{op := 'with-meta'} = WithMetaExpr, State) ->
+ast(#{op := with_meta} = WithMetaExpr, State) ->
   #{ meta := Meta
    , expr := Expr
    } = WithMetaExpr,
