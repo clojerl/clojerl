@@ -53,7 +53,9 @@ find(Name) ->
     _:_ -> undefined
   end.
 
--spec find(binary(), binary()) -> type().
+-spec find(binary() | undefined, binary()) -> type().
+find(undefined, Name) ->
+  find(Name);
 find(Namespace, Name) ->
   try
     binary_to_existing_atom(<<Namespace/binary, "/", Name/binary>>, utf8)
