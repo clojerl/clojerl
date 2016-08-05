@@ -29,6 +29,7 @@
          merge/1,
          'contains?'/2,
          boolean/1,
+         byte/1, short/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
          subvec/3,
@@ -416,6 +417,14 @@ merge([First, Second | Rest]) ->
 boolean(undefined) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
+
+-spec byte(any()) -> boolean().
+byte(X) when is_number(X), 0 =< X, X =< 256 ->
+  erlang:trunc(X).
+
+-spec short(any()) -> boolean().
+short(X) when is_number(X), 0 =< X, X < 32768 ->
+  erlang:trunc(X).
 
 -spec str(any()) -> any().
 str(X) ->

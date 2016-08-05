@@ -24,5 +24,3 @@
     (are [result lookup] (= result (find-keyword this-ns lookup))
       ::foo "foo"
       nil (str absent-keyword-sym))))
-
-(clojure.test/run-tests)
