@@ -12,10 +12,8 @@
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->
-  case clj_env:pop_expr(analyze_form(Env0, Form)) of
-    {undefined, Env} -> Env;
-    {Expr, Env} -> clj_env:push_expr(Env, Expr#{top_level => true})
-  end.
+  {Expr, Env} =  clj_env:pop_expr(analyze_form(Env0, Form)),
+  clj_env:push_expr(Env, Expr#{top_level => true}).
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -974,7 +972,7 @@ parse_deftype(Env, Form) ->
                  , typename  => Typename
                  , fields    => FieldsExprs
                  , methods   => MethodsExprs
-                 , protocols => Interfaces
+                 , protocols => clj_core:seq_to_list(Interfaces)
                  },
 
   Env5 = clj_env:remove_locals_scope(Env4),

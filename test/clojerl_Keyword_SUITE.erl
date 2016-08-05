@@ -155,6 +155,7 @@ complete_coverage(_Config) ->
   ct:comment("Find existing leywords"),
   undefined = 'clojerl.Keyword':find(<<"123456">>),
   undefined = 'clojerl.Keyword':find(<<"123456">>, <<"123456">>),
+  undefined = 'clojerl.Keyword':find(undefined, <<"123456">>),
 
   ct:comment("Use all new clauses"),
   hello = 'clojerl.Keyword':new(hello),

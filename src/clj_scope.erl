@@ -7,7 +7,6 @@
         , put/3
         , update/3
         , to_map/2
-        , from_map/1
         ]).
 
 -type scope() :: #{ parent   => scope() | undefined
@@ -51,13 +50,6 @@ do_to_map(undefined, _, Map) ->
 do_to_map(#{parent := Parent, mappings := Mappings}, Fun, Map) ->
   Mappings1 = maps:map(Fun, Mappings),
   do_to_map(Parent, Fun, maps:merge(Mappings1, Map)).
-
--spec from_map(map()) -> scope().
-from_map(Map) ->
-  PutFun = fun(K, V, ScopeAcc) ->
-               put(ScopeAcc, K, V)
-           end,
-  maps:fold(PutFun, new(), Map).
 
 %% @private
 -spec do_get(scope() | undefined, any()) -> any().
