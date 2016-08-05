@@ -329,14 +329,6 @@
                      ;; we haven't defined all the necessary functions
                      (clojerl.List/new.e (seq fdecl)))))))
 
-(defn to-tuple
-  "Returns a tuple of Objects containing the contents of coll, which
-  can be any Collection.  Maps to erlang:list_to_tuple/2."
-  {:tag "clojerl.erlang.Tuple"
-   :added "1.0"
-   :static true}
-  [coll] (erlang/list_to_tuple.e (clj_core/seq_to_list.e coll)))
-
 (defn vector
   "Creates a new vector containing the args."
   {:added "1.0"
@@ -3297,17 +3289,14 @@
   {:added "1.0"
    :static true}
   ([aseq]
-   (throw "unsupported array")
-   #_(clojure.lang.RT/seqToTypedArray (seq aseq)))
+   (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1))
   ([type aseq]
-   (throw "unsupported array")
-   #_(clojure.lang.RT/seqToTypedArray type (seq aseq))))
+   (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1)))
 
 (defn ^{:private true}
   array
   [& items]
-  (throw "unsupported array")
-  #_(into-array items))
+  (into-array items))
 
 (defn class
   "Returns the Class of x"
@@ -3349,25 +3338,24 @@
 
 (defn double
   "Coerce to double"
-  {:inline (fn  [x] `(. clojure.lang.RT (doubleCast ~x)))
+  {:inline (fn  [x] `(erlang/float.e ~x))
    :added "1.0"}
   [^Number x]
-  (throw "unsupported double"))
+  (erlang/float.e x))
 
 (defn short
   "Coerce to short"
-  {:inline (fn  [x] `(. clojure.lang.RT (~'shortCast ~x)))
+  {:inline (fn  [x] `(clj_core/short.e x))
    :added "1.0"}
   [^Number x]
-  (throw "unsupported short"))
+  (clj_core/short.e x))
 
 (defn byte
   "Coerce to byte"
-  {:inline (fn  [x] `(. clojure.lang.RT (~'byteCast ~x)))
+  {:inline (fn  [x] `(clj_core/byte.e x))
    :added "1.0"}
   [^Number x]
-  (throw "unimplemented cast to byte")
-  #_(clojure.lang.RT/byteCast x))
+  (clj_core/byte.e x))
 
 (defn char
   "Coerce to char"
@@ -3426,13 +3414,6 @@
   (throw "unimplemented ratio")
   #_(.denominator ^clojure.lang.Ratio r))
 
-(defn decimal?
-  "Returns true if n is a BigDecimal"
-  {:added "1.0"
-   :static true}
-  [n]
-  (throw "unsupported bigdecimal"))
-
 (defn float?
   "Returns true if n is a floating point number"
   {:added "1.0"
@@ -3462,14 +3443,6 @@
    :static true}
   [x]
   (erlang/trunc.e x))
-
-(defn bigdec
-  "Coerce to BigDecimal"
-  {:tag BigDecimal
-   :added "1.0"
-   :static true}
-  [x]
-  (throw "unsupported bigdecimal"))
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
