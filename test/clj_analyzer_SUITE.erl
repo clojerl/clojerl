@@ -26,6 +26,9 @@
         , 'try'/1
         , var/1
         , erl_fun/1
+        , new/1
+        , deftype/1
+        , on_load/1
         ]).
 
 -type config() :: list().
@@ -88,6 +91,12 @@ constants(_Config) ->
    , form := HelloKeyword
    } = analyze_one(<<":hello">>),
 
+  ct:comment("Empty list"),
+  #{ op   := constant
+   , form := EmptyList
+   } = analyze_one(<<"()">>),
+  0 = clj_core:count(EmptyList),
+
   {comments, ""}.
 
 -spec ns(config()) -> result().
@@ -140,6 +149,12 @@ def(_Config) ->
   %%          ok
   %%      end,
 
+  ct:comment("Var without unbound root value"),
+  #{ op   := def
+   , var  := _Var
+   , init := #{op := constant, form := unbound}
+   }  = analyze_one(<<"(def x)">>),
+
   ct:comment("Not a dynamic var but its name suggest otherwise"),
   _ = analyze_one(<<"(def *x* 1)">>),
 
@@ -179,6 +194,13 @@ def(_Config) ->
   #{ dynamic := true
    , macro   := true
    } = clj_core:meta(VarWithDynamicMacro),
+
+  ct:comment("Vars keep the arglists"),
+  #{ op  := def
+   , var := VarWithArgLists
+   } = analyze_one(<<"(def ^{:arglists []} *x* 1)">>),
+  #{arglists := EmptyVector} = clj_core:meta(VarWithArgLists),
+  0 = clj_core:count(EmptyVector),
 
   {comments, ""}.
 
@@ -828,7 +850,6 @@ var(_Config) ->
 
   {comments, ""}.
 
-
 -spec erl_fun(config()) -> result().
 erl_fun(_Config) ->
   ct:comment("Erlang fun without arity"),
@@ -867,6 +888,64 @@ erl_fun(_Config) ->
    , function := 'is_atom'
    , arity    := undefined
    } = analyze_one(<<"erlang/is_atom.e">>),
+
+  {comments, ""}.
+
+-spec new(config()) -> result().
+new(_Config) ->
+  ct:comment("Use new with no args"),
+  #{ op       := new
+   , typename := StringSymbol
+   , args     := []
+   } = analyze_one(<<"(new clojerl.String)">>),
+  true                 = clj_core:'symbol?'(StringSymbol),
+  <<"clojerl.String">> = clj_core:str(StringSymbol),
+
+  ct:comment("Use new with 1 arg"),
+  #{ op       := new
+   , typename := StringSymbol
+   , args     := [#{op := constant, form := <<"hello">>}]
+   } = analyze_one(<<"(new clojerl.String \"hello\")">>),
+  true                 = clj_core:'symbol?'(StringSymbol),
+  <<"clojerl.String">> = clj_core:str(StringSymbol),
+
+  {comments, ""}.
+
+-spec deftype(config()) -> result().
+deftype(_Config) ->
+  ct:comment("Simple deftype*"),
+  #{ op        := deftype
+   , name      := NameSymbol
+   , typename  := TypenameSymbol
+   , fields    := [_, _]
+   , protocols := []
+   , methods   := []
+   } = analyze_one(<<"(deftype* MyType ns.MyType [a b] :implements [])">>),
+  true            = clj_core:'symbol?'(NameSymbol),
+  <<"MyType">>    = clj_core:str(NameSymbol),
+  true            = clj_core:'symbol?'(TypenameSymbol),
+  <<"ns.MyType">> = clj_core:str(TypenameSymbol),
+
+  ct:comment("deftype* with an interface and a method"),
+  #{ op        := deftype
+   , name      := NameSymbol
+   , typename  := TypenameSymbol
+   , fields    := [_, _, _]
+   , protocols := [_]
+   , methods   := [#{op := method}]
+   } = analyze_one(<<"(deftype* MyType ns.MyType [a b c] "
+                     " :implements [clojerl.String]"
+                     " (str [x] nil)"
+                     ")">>),
+
+  {comments, ""}.
+
+-spec on_load(config()) -> result().
+on_load(_Config) ->
+  ct:comment("erl-on-load*"),
+  #{ op   := on_load
+   , body := #{op := do, ret := #{op := constant, form := 1}}
+   } = analyze_one(<<"(erl-on-load* 1)">>),
 
   {comments, ""}.
 
