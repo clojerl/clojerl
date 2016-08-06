@@ -1,5 +1,7 @@
 -module(clojerl_Cons_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ new/1
@@ -146,4 +148,4 @@ complete_coverage(_Config) ->
 range(Start, End) when Start > End ->
   undefined;
 range(Start, End) ->
-  'clojerl.Cons':new(Start, range(Start + 1, End)).
+  'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End)).

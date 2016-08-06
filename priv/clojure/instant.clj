@@ -36,7 +36,7 @@
 (defn- zero-fill-right [^String s width]
   (cond (= width (count s)) s
         (< width (count s)) (subs s 0 width)
-        :else (loop [b (erlang.io.StringWriter/new.e s)]
+        :else (loop [b (new erlang.io.StringWriter s)]
                 (if (< (count b) width)
                   (recur (erlang.io.IWriter/write.e b \0))
                   (str b)))))

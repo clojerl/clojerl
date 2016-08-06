@@ -1,5 +1,7 @@
 -module(clojerl_Var_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ 'forty-two__val'/0
@@ -82,19 +84,19 @@ deref(_Config) ->
   Ns   = <<"clojerl_Var_SUITE">>,
   Name = <<"forty-two">>,
 
-  Var  = 'clojerl.Var':new(Ns, Name),
+  Var  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name),
   42 = clj_core:deref(Var),
 
   ct:comment("Try to deref an unexisting var"),
   Name2 = <<"forty-three">>,
-  Var1  = 'clojerl.Var':new(Ns, Name2),
+  Var1  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name2),
   ok = try clj_core:deref(Var1), error
        catch _:_ -> ok
        end,
 
   ct:comment("Try to deref an existing var"),
   Name3 = <<"forty-four">>,
-  Var2  = 'clojerl.Var':new(Ns, Name3),
+  Var2  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name3),
   ok = try clj_core:deref(Var2), error
        catch _:_ -> ok
        end,
@@ -107,13 +109,13 @@ equiv(_Config) ->
   Name = <<"forty-two">>,
 
   ct:comment("Check that vars with the same name are equivalent"),
-  Var1 = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
-  Var2 = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{b => 2}),
+  Var1 = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name), #{a => 1}),
+  Var2 = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name), #{b => 2}),
   true  = clj_core:equiv(Var1, Var2),
 
   ct:comment("Check that vars with the same elements are not equivalent"),
   Name2 = <<"whatever">>,
-  Var3 = clj_core:with_meta('clojerl.Var':new(Ns, Name2), #{c => 3}),
+  Var3 = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name2), #{c => 3}),
   false = clj_core:equiv(Var1, Var3),
 
   ct:comment("A clojerl.Var and something else"),
@@ -129,7 +131,7 @@ invoke(_Config) ->
   Name42 = <<"forty-two">>,
   Name43 = <<"forty-three">>,
 
-  Var42  = 'clojerl.Var':new(Ns, Name42),
+  Var42  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name42),
   42 = clj_core:invoke(Var42, []),
   45 = clj_core:invoke(Var42, [3]),
 
@@ -150,7 +152,7 @@ invoke(_Config) ->
 
   'forty-two' = 'clojerl.Var':function(Var42Variadic),
 
-  Var43  = 'clojerl.Var':new(Ns, Name43),
+  Var43  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name43),
   Meta43 = #{ 'variadic?'     => true
             , max_fixed_arity => undefined
             , variadic_arity  => 1
@@ -167,7 +169,7 @@ meta(_Config) ->
   Ns   = <<"clojerl_Var_SUITE">>,
   Name = <<"forty-two">>,
 
-  Var = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  Var = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name), #{a => 1}),
   #{a := 1} = clj_core:meta(Var),
 
   {comments, ""}.
@@ -176,7 +178,7 @@ meta(_Config) ->
 name(_Config) ->
   Ns   = <<"clojerl_Var_SUITE">>,
   Name = <<"forty-two">>,
-  Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  Var  = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name), #{a => 1}),
 
   <<"clojerl_Var_SUITE">> = clj_core:namespace(Var),
   <<"forty-two">> = clj_core:name(Var),
@@ -187,7 +189,7 @@ name(_Config) ->
 str(_Config) ->
   Ns   = <<"clojerl_Var_SUITE">>,
   Name = <<"forty-two">>,
-  Var  = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  Var  = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name), #{a => 1}),
 
   <<"#'clojerl_Var_SUITE/forty-two">> = clj_core:str(Var),
 
@@ -197,7 +199,7 @@ str(_Config) ->
 dynamic_bindings(_Config) ->
   Ns     = <<"clojerl_Var_SUITE">>,
   Name   = <<"forty-two">>,
-  Var    = clj_core:with_meta('clojerl.Var':new(Ns, Name), #{a => 1}),
+  Var    = clj_core:with_meta('clojerl.Var':?CONSTRUCTOR(Ns, Name), #{a => 1}),
   VarStr = clj_core:str(Var),
 
   #{} = 'clojerl.Var':get_bindings_map(),
@@ -262,7 +264,7 @@ dynamic_bindings(_Config) ->
 complete_coverage(_Config) ->
   Ns     = <<"clojerl_Var_SUITE">>,
   Name   = <<"forty-two">>,
-  Var    = 'clojerl.Var':new(Ns, Name),
+  Var    = 'clojerl.Var':?CONSTRUCTOR(Ns, Name),
 
   VarPrivate = clj_core:with_meta(Var, #{private => true}),
   VarRoot    = clj_core:with_meta(Var, #{has_root => true}),

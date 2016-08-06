@@ -8,7 +8,7 @@
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
--export([new/1, new/2]).
+-export([?CONSTRUCTOR/1, ?CONSTRUCTOR/2]).
 
 -export([ name/1
         , namespace/1
@@ -22,13 +22,14 @@
 
 -type type() :: #?TYPE{data :: {undefined | binary(), binary()}}.
 
--spec new(binary()) -> type().
-new(Name) when is_binary(Name) ->
-  new(undefined, Name).
+-spec ?CONSTRUCTOR(binary()) -> type().
+?CONSTRUCTOR(Name) when is_binary(Name) ->
+  ?CONSTRUCTOR(undefined, Name).
 
--spec new(binary() | undefined, binary()) -> type().
-new(Namespace, Name) when is_binary(Namespace) orelse Namespace == undefined,
-                          is_binary(Name) ->
+-spec ?CONSTRUCTOR(binary() | undefined, binary()) -> type().
+?CONSTRUCTOR(Namespace, Name)
+  when is_binary(Namespace) orelse Namespace == undefined,
+       is_binary(Name) ->
   #?TYPE{data = {Namespace, Name}}.
 
 %%------------------------------------------------------------------------------

@@ -73,7 +73,7 @@
              ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
              *command-line-args* *command-line-args*
              *assert* *assert*
-             *in* (erlang.io.PushbackReader/new.e *in*)
+             *in* (new ~'erlang.io.PushbackReader *in*)
              *1 nil
              *2 nil
              *3 nil
@@ -270,7 +270,7 @@ by default when a new command-line REPL is started."} repl-requires
   "Evals expressions in str, prints each non-nil result using prn"
   [str]
   (let [eof (erlang/make_ref.e)
-        reader (clojerl.StringReader/new.e str)]
+        reader (new clojerl.StringReader str)]
       (loop [input (with-read-known (read reader false eof))]
         (when-not (= input eof)
           (let [value (eval input)]

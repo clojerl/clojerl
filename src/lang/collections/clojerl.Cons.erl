@@ -11,7 +11,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/2]).
+-export([?CONSTRUCTOR/2]).
 
 -export([count/1]).
 -export([ cons/2
@@ -32,8 +32,8 @@
 
 -type type() :: #?TYPE{}.
 
--spec new(any(), any()) -> type().
-new(First, More) ->
+-spec ?CONSTRUCTOR(any(), any()) -> type().
+?CONSTRUCTOR(First, More) ->
   #?TYPE{data = {First, More}}.
 
 %%------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ new(First, More) ->
 count(#?TYPE{name = ?M, data = {_, More}}) ->
   1 + clj_core:count(More).
 
-cons(#?TYPE{name = ?M} = Cons, X) -> new(X, Cons).
+cons(#?TYPE{name = ?M} = Cons, X) -> ?CONSTRUCTOR(X, Cons).
 
 empty(_) -> [].
 

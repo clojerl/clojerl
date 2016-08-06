@@ -16,7 +16,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1, subvec/3]).
+-export([?CONSTRUCTOR/1, subvec/3]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -46,8 +46,8 @@
 
 -type type() :: #?TYPE{}.
 
--spec new(list()) -> type().
-new(Items) when is_list(Items) ->
+-spec ?CONSTRUCTOR(list()) -> type().
+?CONSTRUCTOR(Items) when is_list(Items) ->
   #?TYPE{data = array:from_list(Items, undefined)}.
 
 -spec subvec(type(), integer(), integer()) -> type().
@@ -56,7 +56,7 @@ subvec(Vector, Start, End) ->
     fun(Index, Subvec) ->
         cons(Subvec, nth(Vector, Index))
     end,
-  lists:foldl(AddItemAtFun, new([]), lists:seq(Start, End - 1)).
+  lists:foldl(AddItemAtFun, ?CONSTRUCTOR([]), lists:seq(Start, End - 1)).
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -82,7 +82,7 @@ cons(#?TYPE{name = ?M, data = Array} = Vector, X) ->
   NewArray = array:set(array:size(Array), X, Array),
   Vector#?TYPE{data = NewArray}.
 
-empty(_) -> new([]).
+empty(_) -> ?CONSTRUCTOR([]).
 
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}

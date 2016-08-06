@@ -6,7 +6,7 @@
 -behaviour('clojerl.Stringable').
 -behaviour('erlang.io.IReader').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 -export([ start_link/1
         , init/1
         , loop/1
@@ -24,8 +24,8 @@
 
 -type type() :: #?TYPE{data :: pid()}.
 
--spec new(binary()) -> type().
-new(Str) when is_binary(Str) ->
+-spec ?CONSTRUCTOR(binary()) -> type().
+?CONSTRUCTOR(Str) when is_binary(Str) ->
   #?TYPE{data = start_link(Str)}.
 
 %%------------------------------------------------------------------------------

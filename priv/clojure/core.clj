@@ -12,7 +12,7 @@
   ^{:arglists '([& items])
     :doc "Creates a new list containing the items."
     :added "1.0"}
-  list (fn* [& items] (clojerl.List/new.e items)))
+  list (fn* [& items] (new clojerl.List items)))
 
 (def
   ^{:arglists '([x seq])
@@ -36,7 +36,7 @@
   ^{:macro true
     :added "1.0"}
   fn (fn* fn [&form _&env & decl]
-         (let [x (cons 'fn* (clojerl.List/new.e decl))]
+         (let [x (cons 'fn* (new clojerl.List decl))]
            (clj_core/with_meta.e x (clj_core/meta.e &form)))))
 
 (def
@@ -327,7 +327,7 @@
          (list 'def (with-meta name m)
                (cons 'clojure.core/fn ;; can't use syntax-quote here yet because
                      ;; we haven't defined all the necessary functions
-                     (clojerl.List/new.e (seq fdecl)))))))
+                     (new clojerl.List (seq fdecl)))))))
 
 (defn vector
   "Creates a new vector containing the args."
@@ -569,10 +569,10 @@
    :added "1.0"
    :static true}
   ([name] (cond (keyword? name) name
-                (symbol? name) (clojerl.Keyword/new.e (clj_core/namespace.e name)
+                (symbol? name) (new clojerl.Keyword (clj_core/namespace.e name)
                                                       (clj_core/name.e name))
-                (string? name) (clojerl.Keyword/new.e name)))
-  ([ns name] (clojerl.Keyword/new.e ns name)))
+                (string? name) (new clojerl.Keyword name)))
+  ([ns name] (new clojerl.Keyword ns name)))
 
 (defn find-keyword
   "Returns a Keyword with the given namespace and name if one already
@@ -639,7 +639,7 @@
   seq calls. See also - realized?"
   {:added "1.0"}
   [& body]
-  (list 'clojerl.LazySeq/new.e (list* '^{:once true} fn* [] body)))
+  (list 'new 'clojerl.LazySeq (list* '^{:once true} fn* [] body)))
 
 (defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
   (throw "unimplemented chunked seq")
@@ -705,7 +705,7 @@
   calls. See also - realized?"
   {:added "1.0"}
   [& body]
-    (list 'clojerl.Delay/new.e (list* `^{:once true} fn* [] body)))
+    (list 'new 'clojerl.Delay (list* `^{:once true} fn* [] body)))
 
 (defn delay?
   "returns true if x is a Delay created with delay"
@@ -4136,7 +4136,7 @@
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
                                       (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (clojerl.Map/new.e (clj_core/seq_to_list.e ~gmapseq))
+                                                           (new clojerl.Map (clj_core/seq_to_list.e ~gmapseq))
                                                            ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
@@ -4410,7 +4410,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  `(with-open [s# (erlang.io.StringWriter/new.e)]
+  `(with-open [s# (new ~'erlang.io.StringWriter)]
      (binding [*out* s#]
        ~@body
        (str s#))))
@@ -4420,7 +4420,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  `(with-open [s# (erlang.io.StringReader/new.e ~s)]
+  `(with-open [s# (new ~'erlang.io.StringReader ~s)]
      (binding [*in* s#]
        ~@body)))
 
@@ -4608,7 +4608,7 @@
   [s]
   (if (regex? s)
     s
-    (erlang.util.Regex/new.e s)))
+    (new erlang.util.Regex s)))
 
 (defn re-find
   "Returns the next regex match, if any, of string to pattern.
