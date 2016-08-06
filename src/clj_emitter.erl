@@ -227,6 +227,9 @@ ast(#{op := deftype} = Expr, State0) ->
 
   Ast = erl_parse:abstract(Name, line_from(Name)),
 
+  CompileOpts = #{erl_flags => [binary]},
+  clj_compiler:compile_forms(clj_module:get_forms(Module), CompileOpts),
+
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% methods

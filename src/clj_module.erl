@@ -7,6 +7,7 @@
 -export([ with_context/1
 
         , all_forms/0
+        , get_forms/1
         , ensure_loaded/2
         , is_loaded/1
 
@@ -36,11 +37,24 @@
 
 -record(module, { name              :: atom(),
                   source = ""       :: string(),
+                  %% ETS table where var are kept. The key is the var's
+                  %% name as a binary.
                   vars              :: ets:tid(),
+                  %% ETS table where functions are kept. The key is the
+                  %% function's name and arity.
                   funs              :: ets:tid(),
+                  %% ETS table where fake functions are kept. The key is the
+                  %% funs value (i.e. Module:Function/Arity).
                   fake_funs         :: ets:tid(),
+                  %% ETS table where fake modules are kept. The key is the
+                  %% modules name.
                   fake_modules      :: ets:tid(),
+                  %% ETS table where function exports are kept. The key is the
+                  %% function's name and arity.
                   exports           :: ets:tid(),
+                  %% ETS table where expressions that will be included in the
+                  %% on_load function are kept. The key is the expression
+                  %% itself.
                   on_load           :: ets:tid(),
                   attrs             :: [erl_parse:abstract_form()],
                   rest              :: [erl_parse:abstract_form()]
@@ -72,6 +86,9 @@ all_forms() ->
   All = gen_server:call(?MODULE, all),
   lists:map(fun to_forms/1, All).
 
+-spec get_forms(atom()) -> [erl_parse:abstract_form()].
+get_forms(ModuleName) when is_atom(ModuleName) ->
+  to_forms(get(?MODULE, ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(atom(), string()) -> ok.
@@ -341,11 +358,8 @@ build_fake_fun(Module, Function, Arity) ->
   FunAst     = {function, 0, Function, Arity, Clauses},
   Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
 
-  Binary = case compile:forms(Forms, [binary]) of
-             {ok, _, Bin} -> Bin;
-             Error -> throw({Error, Module#module.name, Function, Arity})
-           end,
-  code:load_binary(FakeModuleName, "", Binary),
+  CompileOpts = #{erl_flags => [binary]},
+  clj_compiler:compile_forms(Forms, CompileOpts),
 
   save(Module#module.fake_modules, {FakeModuleName}),
 

@@ -87,11 +87,7 @@ entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
     false -> undefined
   end.
 
-assoc(#?TYPE{ name = ?M
-                                  , data = {Keys, Vals}
-                                  } = M
-                           , Key
-                           , Value) ->
+assoc(#?TYPE{name = ?M, data = {Keys, Vals}} = M, Key, Value) ->
   Hash = 'clojerl.IHash':hash(Key),
   M#?TYPE{data = {Keys#{Hash => Key}, Vals#{Hash => Value}}}.
 
@@ -103,14 +99,16 @@ count(#?TYPE{name = ?M, data = {Keys, _}}) ->
 %% clojerl.IEquiv
 
 equiv( #?TYPE{name = ?M, data = {KeysX, ValsX}}
-                      , #?TYPE{name = ?M, data = {KeysY, ValsY}}
-                      ) ->
+     , #?TYPE{name = ?M, data = {KeysY, ValsY}}
+     ) ->
   clj_core:equiv(KeysX, KeysY) andalso clj_core:equiv(ValsX, ValsY);
 equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
   case clj_core:'map?'(Y) of
     true  ->
-      KeyHashFun = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
-      KeyHashPairs = lists:map(KeyHashFun, clj_core:keys(Y)),
+      KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
+      KeyHashPairs = lists:map( KeyHashFun
+                              , clj_core:seq_to_list(clj_core:keys(Y))
+                              ),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso
                   clj_core:equiv(maps:get(Hash, Vals), clj_core:get(Y, Key))
