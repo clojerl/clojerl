@@ -14,7 +14,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1, to_erl_map/1]).
+-export([?CONSTRUCTOR/1, to_erl_map/1]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -42,8 +42,8 @@
 -type mappings() :: {map(), map()}.
 -type type()     :: #?TYPE{data :: mappings()}.
 
--spec new(list()) -> type().
-new(KeyValues) when is_list(KeyValues) ->
+-spec ?CONSTRUCTOR(list()) -> type().
+?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
   Mappings = lists:foldl(fun build_mappings/2, {#{}, #{}}, KeyValuePairs),
   #?TYPE{name = ?M, data = Mappings}.
@@ -150,7 +150,7 @@ cons(#?TYPE{name = ?M, data = {Keys, Vals}} = Map, X) ->
               "another map to a map.">>)
   end.
 
-empty(_) -> new([]).
+empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IHash
 

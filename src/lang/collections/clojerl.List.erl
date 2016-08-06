@@ -13,7 +13,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 
 -export([count/1]).
 -export([ cons/2
@@ -37,8 +37,8 @@
 
 -type type() :: #?TYPE{}.
 
--spec new(list()) -> type().
-new(Items) when is_list(Items) ->
+-spec ?CONSTRUCTOR(list()) -> type().
+?CONSTRUCTOR(Items) when is_list(Items) ->
   #?TYPE{data = Items}.
 
 %%------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ cons(#?TYPE{name = ?M, data = []} = List, X) ->
 cons(#?TYPE{name = ?M, data = Items} = List, X) ->
   List#?TYPE{data = [X | Items]}.
 
-empty(_) -> new([]).
+empty(_) -> ?CONSTRUCTOR([]).
 
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}

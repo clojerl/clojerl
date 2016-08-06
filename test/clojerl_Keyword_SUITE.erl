@@ -1,5 +1,7 @@
 -module(clojerl_Keyword_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ hash/1
@@ -158,9 +160,11 @@ complete_coverage(_Config) ->
   undefined = 'clojerl.Keyword':find(undefined, <<"123456">>),
 
   ct:comment("Use all new clauses"),
-  hello = 'clojerl.Keyword':new(hello),
-  hello = 'clojerl.Keyword':new(clj_core:symbol(<<"hello">>)),
-  hello = 'clojerl.Keyword':new(undefined, clj_core:symbol(<<"hello">>)),
+  hello = 'clojerl.Keyword':?CONSTRUCTOR(hello),
+  hello = 'clojerl.Keyword':?CONSTRUCTOR(clj_core:symbol(<<"hello">>)),
+  hello = 'clojerl.Keyword':?CONSTRUCTOR( undefined
+                                        , clj_core:symbol(<<"hello">>)
+                                        ),
 
   {comments, ""}.
 

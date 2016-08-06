@@ -550,7 +550,7 @@ flat_exports(ExportAttrs) ->
 source_file(Attrs) ->
   case lists:partition(is_attribute_fun(file), Attrs) of
     {[], Attrs} -> {"", Attrs};
-    {[FileAttr], RestAttrs} ->
+    {[FileAttr | _], RestAttrs} ->
       {attribute, _, file, {Source, _}} = FileAttr,
       {Source, RestAttrs}
   end.

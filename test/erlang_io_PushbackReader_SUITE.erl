@@ -41,7 +41,7 @@ end_per_suite(Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   Str   = clj_core:str(Reader),
   Regex = <<"#<erlang.io.PushbackReader \\d+\\.\\d+\\.\\d+>">>,
@@ -54,7 +54,7 @@ str(_Config) ->
 -spec read(config()) -> result().
 read(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   <<"Hello">> = 'erlang.io.IReader':read(Reader, 5),
   Reader      = 'erlang.io.IReader':unread(Reader, <<"Hello">>),
@@ -73,7 +73,7 @@ read(_Config) ->
 -spec read_line(config()) -> result().
 read_line(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   <<"Hello world!\n">> = 'erlang.io.IReader':read_line(Reader),
   Reader = 'erlang.io.IReader':unread(Reader, <<"hello\r">>),
@@ -91,8 +91,8 @@ read_line(_Config) ->
 
 -spec skip(config()) -> result().
 skip(_Config) ->
-  StrReader = 'erlang.io.StringReader':new(<<"Hello world!\n">>),
-  Reader    = 'erlang.io.PushbackReader':new(StrReader),
+  StrReader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"Hello world!\n">>),
+  Reader    = 'erlang.io.PushbackReader':?CONSTRUCTOR(StrReader),
 
   6            = 'erlang.io.IReader':skip(Reader, 6), %% Skipped "Hello "
   <<"world!">> = 'erlang.io.IReader':read_line(Reader),
@@ -110,7 +110,7 @@ skip(_Config) ->
 -spec unread(config()) -> result().
 unread(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   <<"Hello">> = 'erlang.io.IReader':read(Reader, 5),
   <<" ">>     = 'erlang.io.IReader':read(Reader),
@@ -131,7 +131,7 @@ unread(_Config) ->
 -spec at_line_start(config()) -> result().
 at_line_start(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   true         = 'erlang.io.PushbackReader':at_line_start(Reader),
   <<"Hello ">> = 'erlang.io.IReader':read(Reader, 6),
@@ -155,7 +155,7 @@ at_line_start(_Config) ->
 -spec close(config()) -> result().
 close(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   undefined = 'erlang.io.Closeable':close(Reader),
 
@@ -168,7 +168,7 @@ close(_Config) ->
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
-  Reader = 'erlang.io.PushbackReader':new(File),
+  Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
   Pid    = Reader#?TYPE.data,
 
   ct:comment("Send an unexpected message"),
@@ -181,7 +181,7 @@ complete_coverage(_Config) ->
 
   ct:comment("Generate error when closing a PushbackReader that wraps a file"),
   File1   = 'erlang.io.File':open(<<"tmp">>),
-  Reader1 = 'erlang.io.PushbackReader':new(File1),
+  Reader1 = 'erlang.io.PushbackReader':?CONSTRUCTOR(File1),
   meck:new(file, [passthrough, unstick]),
   try
     meck:expect(file, close, fun(_) -> {error, fake} end),

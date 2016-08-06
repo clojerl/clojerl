@@ -243,19 +243,19 @@ namespace(X) ->
 
 -spec symbol(binary()) -> 'clojerl.Symbol':type().
 symbol(Name) ->
-  'clojerl.Symbol':new(Name).
+  'clojerl.Symbol':?CONSTRUCTOR(Name).
 
 -spec symbol(binary(), binary()) -> 'clojerl.Symbol':type().
 symbol(Namespace, Name) ->
-  'clojerl.Symbol':new(Namespace, Name).
+  'clojerl.Symbol':?CONSTRUCTOR(Namespace, Name).
 
 -spec keyword(binary()) -> 'clojerl.Keyword':type().
 keyword(Name) ->
-  'clojerl.Keyword':new(Name).
+  'clojerl.Keyword':?CONSTRUCTOR(Name).
 
 -spec keyword(binary(), binary()) -> 'clojerl.Keyword':type().
 keyword(Namespace, Name) ->
-  'clojerl.Keyword':new(Namespace, Name).
+  'clojerl.Keyword':?CONSTRUCTOR(Namespace, Name).
 
 -spec 'extends?'(atom(), atom()) -> boolean().
 'extends?'(Protocol, Type) ->
@@ -432,11 +432,11 @@ str(X) ->
 
 -spec 'list'(list()) -> 'clojerl.List':type().
 list(Items) ->
-  'clojerl.List':new(Items).
+  'clojerl.List':?CONSTRUCTOR(Items).
 
 -spec vector(list()) -> 'clojerl.Vector':type().
 vector(Items) when is_list(Items) ->
-  'clojerl.Vector':new(Items);
+  'clojerl.Vector':?CONSTRUCTOR(Items);
 vector(Items) ->
   vector(seq_to_list(Items)).
 
@@ -456,15 +456,15 @@ subvec(Vector, Start, End) ->
 -spec hash_map(list()) -> 'clojerl.Map':type().
 hash_map(Items) ->
   case count(Items) of
-    0 -> 'clojerl.Map':new([]);
-    _ -> 'clojerl.Map':new(seq(Items))
+    0 -> 'clojerl.Map':?CONSTRUCTOR([]);
+    _ -> 'clojerl.Map':?CONSTRUCTOR(seq(Items))
   end.
 
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
   case count(Items) of
-    0 -> 'clojerl.Set':new([]);
-    _ -> 'clojerl.Set':new(seq(Items))
+    0 -> 'clojerl.Set':?CONSTRUCTOR([]);
+    _ -> 'clojerl.Set':?CONSTRUCTOR(seq(Items))
   end.
 
 -spec keys('clojerl.IMap':type()) -> list().

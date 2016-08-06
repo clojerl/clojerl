@@ -10,7 +10,7 @@
 
 (defn- default-uuid-reader [form]
   {:pre [(string? form)]}
-  (erlang.util.UUID/new.e form))
+  (new erlang.util.UUID form))
 
 (defmethod print-method :erlang.util.UUID [uuid ^java.io.Writer w]
   (erlang.io.IWriter/write.e w (str "#uuid \"" (str uuid) "\"")))

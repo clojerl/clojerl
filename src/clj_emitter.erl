@@ -384,7 +384,11 @@ ast(#{op := vector} = Expr, State) ->
                            ),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa('clojerl.Vector', new, [ListItems], anno_from(Form)),
+  Ast = application_mfa( 'clojerl.Vector'
+                       , ?CONSTRUCTOR
+                       , [ListItems]
+                       , anno_from(Form)
+                       ),
   push_ast(Ast, State1);
 ast(#{op := map} = Expr, State) ->
   #{ keys := KeysExprs
@@ -408,7 +412,11 @@ ast(#{op := map} = Expr, State) ->
   Items = PairUp(Keys, Vals, []),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa('clojerl.Map', new, [ListItems], anno_from(Form)),
+  Ast = application_mfa( 'clojerl.Map'
+                       , ?CONSTRUCTOR
+                       , [ListItems]
+                       , anno_from(Form)
+                       ),
   push_ast(Ast, State2);
 ast(#{op := set} = Expr, State) ->
   #{ items := ItemsExprs
@@ -420,7 +428,11 @@ ast(#{op := set} = Expr, State) ->
                            ),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa('clojerl.Set', new, [ListItems], anno_from(Form)),
+  Ast = application_mfa( 'clojerl.Set'
+                       , ?CONSTRUCTOR
+                       , [ListItems]
+                       , anno_from(Form)
+                       ),
   push_ast(Ast, State1);
 ast(#{op := tuple} = Expr, State) ->
   #{ items := ItemsExprs
@@ -753,7 +765,7 @@ create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
                   end,
 
   %% Coerce argument into a clojerl.Map
-  EmptyMapAst   = erl_parse:abstract('clojerl.Map':new([])),
+  EmptyMapAst   = erl_parse:abstract('clojerl.Map':?CONSTRUCTOR([])),
   ArgsListAst   = list_ast([EmptyMapAst, MapVarAst]),
   MergeCallAst  = application_mfa(clj_core, merge, [ArgsListAst]),
 

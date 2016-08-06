@@ -12,7 +12,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 -export([count/1]).
 -export([ cons/2
         , empty/1
@@ -32,8 +32,8 @@
 
 -type type() :: #?TYPE{}.
 
--spec new(list()) -> type().
-new(Values) when is_list(Values) ->
+-spec ?CONSTRUCTOR(list()) -> type().
+?CONSTRUCTOR(Values) when is_list(Values) ->
   KVs = lists:map(fun(X) -> {'clojerl.IHash':hash(X), X} end, Values),
   #?TYPE{data = maps:from_list(KVs)}.
 
@@ -54,7 +54,7 @@ cons(#?TYPE{name = ?M, data = MapSet} = Set, X) ->
     false -> Set#?TYPE{data = MapSet#{Hash => X}}
   end.
 
-empty(_) -> new([]).
+empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IEquiv
 

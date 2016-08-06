@@ -33,26 +33,32 @@ end_per_suite(Config) ->
 str(_Config) ->
   UUIDStr = <<"01234567-ABCD-ABCD-ABCD-0123456789AB">>,
 
-  UUID    = 'erlang.util.UUID':new(UUIDStr),
+  UUID    = 'erlang.util.UUID':?CONSTRUCTOR(UUIDStr),
   UUIDStr = clj_core:str(UUID),
 
   ct:comment("Invalid UUIDs"),
   ok = try
-         'erlang.util.UUID':new(<<"01234567-ABCD-ABCD-ABCD-0123456789ABZ">>),
+         'erlang.util.UUID':?CONSTRUCTOR(
+                               <<"01234567-ABCD-ABCD-ABCD-0123456789ABZ">>
+                              ),
          error
        catch _:_ ->
            ok
        end,
 
   ok = try
-         'erlang.util.UUID':new(<<"01234567-ABCD-ABCD-ABCD-012345678,AB">>),
+         'erlang.util.UUID':?CONSTRUCTOR(
+                               <<"01234567-ABCD-ABCD-ABCD-012345678,AB">>
+                              ),
          error
        catch _:_ ->
            ok
        end,
 
   ok = try
-         'erlang.util.UUID':new(<<"0123456-ABCD-ABCD-ABCD-0123456789AB">>),
+         'erlang.util.UUID':?CONSTRUCTOR(
+                               <<"0123456-ABCD-ABCD-ABCD-0123456789AB">>
+                              ),
          error
        catch _:_ ->
            ok

@@ -33,7 +33,7 @@ init_per_suite(Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello">>),
 
   Str   = clj_core:str(Reader),
   Regex = <<"#<erlang.io.StringReader \\d+\\.\\d+\\.\\d+>">>,
@@ -45,7 +45,7 @@ str(_Config) ->
 
 -spec read(config()) -> result().
 read(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello">>),
 
   <<"h">> = 'erlang.io.IReader':read(Reader),
   <<"e">> = 'erlang.io.IReader':read(Reader),
@@ -57,7 +57,7 @@ read(_Config) ->
 
   undefined = 'erlang.io.Closeable':close(Reader),
 
-  Reader2 = 'erlang.io.StringReader':new(<<"hello world!">>),
+  Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello world!">>),
 
   <<"he">>      = 'erlang.io.IReader':read(Reader2, 2),
   <<"llo">>     = 'erlang.io.IReader':read(Reader2, 3),
@@ -71,7 +71,7 @@ read(_Config) ->
 
 -spec read_line(config()) -> result().
 read_line(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello\nworld!\n">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\nworld!\n">>),
 
   <<"hello">>  = 'erlang.io.IReader':read_line(Reader),
   <<"world!">> = 'erlang.io.IReader':read_line(Reader),
@@ -79,7 +79,7 @@ read_line(_Config) ->
 
   undefined = 'erlang.io.Closeable':close(Reader),
 
-  Reader2 = 'erlang.io.StringReader':new(<<"hello\rworld!\rHello.">>),
+  Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\rworld!\rHello.">>),
 
   <<"hello">>  = 'erlang.io.IReader':read_line(Reader2),
   <<"world!">> = 'erlang.io.IReader':read_line(Reader2),
@@ -88,7 +88,7 @@ read_line(_Config) ->
 
   undefined = 'erlang.io.Closeable':close(Reader2),
 
-  Reader3 = 'erlang.io.StringReader':new(<<"hello\r\nworld!\r\n">>),
+  Reader3 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\r\nworld!\r\n">>),
 
   <<"hello">>  = 'erlang.io.IReader':read_line(Reader3),
   <<"world!">> = 'erlang.io.IReader':read_line(Reader3),
@@ -100,7 +100,7 @@ read_line(_Config) ->
 
 -spec skip(config()) -> result().
 skip(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello\nworld!\n">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\nworld!\n">>),
 
   6            = 'erlang.io.IReader':skip(Reader, 6),
   <<"world!">> = 'erlang.io.IReader':read_line(Reader),
@@ -113,7 +113,7 @@ skip(_Config) ->
 
 -spec unread(config()) -> result().
 unread(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello">>),
 
   <<"h">> = 'erlang.io.IReader':read(Reader),
   Reader  = 'erlang.io.IReader':unread(Reader, <<"h">>),
@@ -126,7 +126,7 @@ unread(_Config) ->
 
   undefined = 'erlang.io.Closeable':close(Reader),
 
-  Reader2 = 'erlang.io.StringReader':new(<<"hello world!">>),
+  Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello world!">>),
 
   <<"he">>      = 'erlang.io.IReader':read(Reader2, 2),
   <<"llo">>     = 'erlang.io.IReader':read(Reader2, 3),
@@ -142,7 +142,7 @@ unread(_Config) ->
 
 -spec close(config()) -> result().
 close(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello\nworld!\n">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\nworld!\n">>),
 
   undefined = 'erlang.io.Closeable':close(Reader),
 
@@ -154,7 +154,7 @@ close(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  Reader = 'erlang.io.StringReader':new(<<"hello\nworld!\n">>),
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\nworld!\n">>),
   Pid    = Reader#?TYPE.data,
 
   ct:comment("Send an unexpected message"),

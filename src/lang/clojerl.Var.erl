@@ -10,7 +10,7 @@
 -behavior('clojerl.Named').
 -behavior('clojerl.Stringable').
 
--export([ new/2
+-export([ ?CONSTRUCTOR/2
         , is_dynamic/1
         , is_macro/1
         , is_public/1
@@ -47,8 +47,8 @@
 
 -type type() :: #?TYPE{data :: {binary(), binary()}}.
 
--spec new(binary(), binary()) -> type().
-new(Ns, Name) ->
+-spec ?CONSTRUCTOR(binary(), binary()) -> type().
+?CONSTRUCTOR(Ns, Name) ->
   #?TYPE{data = {Ns, Name}}.
 
 -spec is_dynamic(type()) -> boolean().

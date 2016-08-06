@@ -30,7 +30,7 @@ init_per_suite(Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Writer = 'erlang.io.StringWriter':new(<<"hello">>),
+  Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello">>),
 
   <<"hello">> = clj_core:str(Writer),
   Writer = 'erlang.io.IWriter':write(Writer, <<" world!">>),
@@ -42,7 +42,7 @@ str(_Config) ->
 
 -spec write(config()) -> result().
 write(_Config) ->
-  Writer = 'erlang.io.StringWriter':new(),
+  Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(),
 
   Writer = 'erlang.io.IWriter':write(Writer, <<"hello">>),
   Writer = 'erlang.io.IWriter':write(Writer, <<" ">>),
@@ -60,7 +60,7 @@ write(_Config) ->
 
 -spec close(config()) -> result().
 close(_Config) ->
-  Writer = 'erlang.io.StringWriter':new(<<"hello\nworld!\n">>),
+  Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello\nworld!\n">>),
 
   undefined = 'erlang.io.Closeable':close(Writer),
 
@@ -72,7 +72,7 @@ close(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  Writer = 'erlang.io.StringWriter':new(<<"hello\nworld!\n">>),
+  Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello\nworld!\n">>),
   Pid    = Writer#?TYPE.data,
 
   ct:comment("Send an unexpected message"),

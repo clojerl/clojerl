@@ -1,6 +1,8 @@
 -module(clj_namespace).
 -behaviour(gen_server).
 
+-include("clojerl.hrl").
+
 -export([ current/0
         , current/1
 
@@ -46,12 +48,12 @@
 
 -spec current() -> namespace().
 current() ->
-  NsVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*ns*">>),
+  NsVar = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"*ns*">>),
   clj_core:deref(NsVar).
 
 -spec current(namespace()) -> namespace().
 current(#namespace{} = Ns) ->
-  NsVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*ns*">>),
+  NsVar = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"*ns*">>),
   clj_core:'set!'(NsVar, Ns),
   Ns.
 
@@ -115,7 +117,7 @@ intern(Namespace = #namespace{name = NsName}, Symbol) ->
                       ),
 
   SymName = clj_core:name(Symbol),
-  Var     = 'clojerl.Var':new(clj_core:name(NsName), SymName),
+  Var     = 'clojerl.Var':?CONSTRUCTOR(clj_core:name(NsName), SymName),
   gen_server:call(?MODULE, {intern, Namespace, Symbol, Var}).
 
 -spec update_var('clojerl.Var':type()) -> namespace().

@@ -33,7 +33,7 @@ end_per_suite(Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Regex = 'erlang.util.Regex':new(<<"abcd">>),
+  Regex = 'erlang.util.Regex':?CONSTRUCTOR(<<"abcd">>),
   <<"#\"abcd\"">> = clj_core:str(Regex),
 
   Result = {match, [<<"abcd">>]},
@@ -46,9 +46,9 @@ str(_Config) ->
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  Regex1 = 'erlang.util.Regex':new(<<"abcd">>),
-  Regex2 = 'erlang.util.Regex':new(<<"abcd">>),
-  Regex3 = 'erlang.util.Regex':new(<<"abcd.">>),
+  Regex1 = 'erlang.util.Regex':?CONSTRUCTOR(<<"abcd">>),
+  Regex2 = 'erlang.util.Regex':?CONSTRUCTOR(<<"abcd">>),
+  Regex3 = 'erlang.util.Regex':?CONSTRUCTOR(<<"abcd.">>),
 
   true  = 'clojerl.IHash':hash(Regex1) == 'clojerl.IHash':hash(Regex2),
   false = 'clojerl.IHash':hash(Regex3) == 'clojerl.IHash':hash(Regex2),

@@ -1,5 +1,7 @@
 -module(clj_reader_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export(
@@ -543,7 +545,7 @@ vector(_Config) ->
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Vector"),
-  Vector = 'clojerl.Vector':new([HelloWorldKeyword, HelloWorldSymbol]),
+  Vector = 'clojerl.Vector':?CONSTRUCTOR([HelloWorldKeyword, HelloWorldSymbol]),
   true = clj_core:equiv( clj_reader:read(<<"[:hello-world hello-world]">>)
                        , Vector
                        ),
@@ -560,8 +562,12 @@ map(_Config) ->
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Map"),
-  Map = 'clojerl.Map':new([HelloWorldKeyword, HelloWorldSymbol,
-                           HelloWorldSymbol, HelloWorldKeyword]),
+  Map = 'clojerl.Map':?CONSTRUCTOR([ HelloWorldKeyword
+                                   , HelloWorldSymbol
+                                   , HelloWorldSymbol
+                                   , HelloWorldKeyword
+                                   ]
+                                  ),
   MapResult = clj_reader:read(<<"{:hello-world hello-world,"
                                 " hello-world :hello-world}">>),
   true = clj_core:equiv(Map, MapResult),
@@ -583,7 +589,7 @@ set(_Config) ->
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Set"),
-  Set = 'clojerl.Set':new([HelloWorldKeyword, HelloWorldSymbol]),
+  Set = 'clojerl.Set':?CONSTRUCTOR([HelloWorldKeyword, HelloWorldSymbol]),
   SetResult = clj_reader:read(<<"#{:hello-world hello-world}">>),
   true = clj_core:equiv(Set, SetResult),
 
@@ -764,7 +770,7 @@ var(_Config) ->
   {comments, ""}.
 
 regex(_Config) ->
-  Regex = 'erlang.util.Regex':new(<<".?el\\.lo">>),
+  Regex = 'erlang.util.Regex':?CONSTRUCTOR(<<".?el\\.lo">>),
   Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
 
   ct:comment("EOF: unterminated regex"),
@@ -838,17 +844,17 @@ discard(_Config) ->
   ct:comment("Preserve read"),
   PreserveOpts = #{read_cond => preserve},
   ReaderCond   =
-    'clojerl.reader.ReaderConditional':new( clj_reader:read(<<"(1 2)">>)
-                                          , false
-                                          ),
+    'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
+                                          clj_reader:read(<<"(1 2)">>), false
+                                         ),
   [ReaderCondCheck, HelloKeyword] =
     clj_reader:read_all(<<"#?(1 2) :hello">>, PreserveOpts),
   true = clj_core:equiv(ReaderCond, ReaderCondCheck),
 
   ReaderCondSplice =
-    'clojerl.reader.ReaderConditional':new( clj_reader:read(<<"(1 2)">>)
-                                          , true
-                                          ),
+    'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
+                                          clj_reader:read(<<"(1 2)">>), true
+                                         ),
   ReaderCondSpliceVector = clj_core:vector([ReaderCondSplice, HelloKeyword]),
   ReaderCondSpliceVectorCheck =
     clj_reader:read(<<"[#?@(1 2) :hello]">>, PreserveOpts),
@@ -928,9 +934,9 @@ tuple(_Config) ->
   {comments, ""}.
 
 tagged(_Config) ->
-  DefaultDataReadersVar = 'clojerl.Var':new( <<"clojure.core">>
-                                           , <<"default-data-readers">>
-                                           ),
+  DefaultDataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                                                    , <<"default-data-readers">>
+                                                    ),
 
   IdFun              = fun(X) -> X end,
   DefaultDataReaders = clj_core:hash_map(
@@ -951,9 +957,10 @@ tagged(_Config) ->
     clj_reader:read(<<"#uuid \"de305d54-75b4-431b-adb2-eb6b9e546014\"">>),
 
   ct:comment("Use *default-data-reader-fn*"),
-  DefaultReaderFunVar = 'clojerl.Var':new( <<"clojure.core">>
-                                          , <<"*default-data-reader-fn*">>
-                                          ),
+  DefaultReaderFunVar =
+    'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                              , <<"*default-data-reader-fn*">>
+                              ),
   DefaultReaderFun = fun(_) -> default end,
   ok  = 'clojerl.Var':push_bindings(#{DefaultReaderFunVar => DefaultReaderFun}),
   default = clj_reader:read(<<"#whatever :tag">>),
@@ -961,7 +968,9 @@ tagged(_Config) ->
   ok  = 'clojerl.Var':pop_bindings(),
 
   ct:comment("Provide additional reader"),
-  DataReadersVar = 'clojerl.Var':new(<<"clojure.core">>, <<"*data-readers*">>),
+  DataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                                             , <<"*data-readers*">>
+                                             ),
   DataReaders    = clj_core:hash_map([ clj_core:symbol(<<"bla">>)
                                      , fun(_) -> bla end
                                      ]

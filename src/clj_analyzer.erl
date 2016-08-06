@@ -217,9 +217,9 @@ parse_fn(Env, List) ->
                   true  ->
                     DefVarNs    = clj_namespace:current(),
                     DefVarNsSym = clj_namespace:name(DefVarNs),
-                    'clojerl.Var':new( clj_core:name(DefVarNsSym)
-                                     , clj_core:name(DefNameSym)
-                                     );
+                    'clojerl.Var':?CONSTRUCTOR( clj_core:name(DefVarNsSym)
+                                              , clj_core:name(DefNameSym)
+                                              );
                   false -> undefined
                 end,
 

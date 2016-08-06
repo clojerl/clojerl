@@ -12,7 +12,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 
 -export([count/1]).
 -export([ cons/2
@@ -33,8 +33,8 @@
 
 -type type() :: #?TYPE{}.
 
--spec new(function()) -> type().
-new(Fn) when is_function(Fn) ->
+-spec ?CONSTRUCTOR(function()) -> type().
+?CONSTRUCTOR(Fn) when is_function(Fn) ->
   #?TYPE{data = Fn}.
 
 %%------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ count(#?TYPE{name = ?M, data = Fn}) ->
   end.
 
 cons(#?TYPE{name = ?M} = LazySeq, X) ->
-  'clojerl.Cons':new(X, LazySeq).
+  'clojerl.Cons':?CONSTRUCTOR(X, LazySeq).
 
 empty(_) -> [].
 
