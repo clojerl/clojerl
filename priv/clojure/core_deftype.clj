@@ -282,7 +282,7 @@
        (declare ~(symbol (str  '-> gname)))
        (declare ~(symbol (str 'map-> gname)))
        ~(emit-defrecord name gname (vec hinted-fields) (vec interfaces) methods opts)
-       #_(import ~classname)
+       (import ~classname)
        ~(build-positional-factory gname classname fields)
        (defn ~(symbol (str 'map-> gname))
          ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
@@ -376,7 +376,7 @@
         [field-args over] (split-at 20 fields)]
     `(let []
        ~(emit-deftype* name gname (vec hinted-fields) (vec interfaces) methods opts)
-       #_(import ~classname)
+       (import ~classname)
        ~(build-positional-factory gname classname fields)
        ;; Types are not reified so we just return the symbol.
        '~classname)))

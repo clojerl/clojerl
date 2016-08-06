@@ -898,17 +898,17 @@ erl_fun(_Config) ->
 -spec new(config()) -> result().
 new(_Config) ->
   ct:comment("Use new with no args"),
-  #{ op       := new
-   , typename := StringSymbol
-   , args     := []
+  #{ op   := new
+   , type := #{op := type, type := StringSymbol}
+   , args := []
    } = analyze_one(<<"(new clojerl.String)">>),
   true                 = clj_core:'symbol?'(StringSymbol),
   <<"clojerl.String">> = clj_core:str(StringSymbol),
 
   ct:comment("Use new with 1 arg"),
-  #{ op       := new
-   , typename := StringSymbol
-   , args     := [#{op := constant, form := <<"hello">>}]
+  #{ op   := new
+   , type := #{op := type, type := StringSymbol}
+   , args := [#{op := constant, form := <<"hello">>}]
    } = analyze_one(<<"(new clojerl.String \"hello\")">>),
   true                 = clj_core:'symbol?'(StringSymbol),
   <<"clojerl.String">> = clj_core:str(StringSymbol),
@@ -920,20 +920,20 @@ deftype(_Config) ->
   ct:comment("Simple deftype*"),
   #{ op        := deftype
    , name      := NameSymbol
-   , typename  := TypenameSymbol
+   , type      := TypeSymbol
    , fields    := [_, _]
    , protocols := []
    , methods   := []
    } = analyze_one(<<"(deftype* MyType ns.MyType [a b] :implements [])">>),
   true            = clj_core:'symbol?'(NameSymbol),
   <<"MyType">>    = clj_core:str(NameSymbol),
-  true            = clj_core:'symbol?'(TypenameSymbol),
-  <<"ns.MyType">> = clj_core:str(TypenameSymbol),
+  true            = clj_core:'symbol?'(TypeSymbol),
+  <<"ns.MyType">> = clj_core:str(TypeSymbol),
 
   ct:comment("deftype* with an interface and a method"),
   #{ op        := deftype
    , name      := NameSymbol
-   , typename  := TypenameSymbol
+   , type      := TypeSymbol
    , fields    := [_, _, _]
    , protocols := [_]
    , methods   := [#{op := method}]

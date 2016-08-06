@@ -85,10 +85,10 @@ special_forms() ->
 
    , <<"erl-on-load*">> => fun parse_on_load/2
 
+   , <<"import*">>      => fun parse_import/2
    , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"letfn*">>       => undefined
-   , <<"defrecord*">>   => undefined
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
@@ -912,24 +912,48 @@ lookup_var(VarSymbol, false) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% Parse import
+%%------------------------------------------------------------------------------
+
+-spec parse_import(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_import(Env, Form) ->
+  ArgCount = clj_core:count(Form) - 1,
+  clj_utils:throw_when( ArgCount > 1
+                      , [ <<"Wrong number of args to import*, had: ">>
+                        , ArgCount
+                        ]
+                      , clj_reader:location_meta(Form)
+                      ),
+
+  NewExpr = #{ op       => import
+             , env      => ?DEBUG(Env)
+             , form     => Form
+             , typename => clj_core:second(Form)
+             },
+
+  clj_env:push_expr(Env, NewExpr).
+
+%%------------------------------------------------------------------------------
 %% Parse new
 %%------------------------------------------------------------------------------
 
 -spec parse_new(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_new(Env, Form) ->
-  [_, Typename | Args] = clj_core:seq_to_list(Form),
+  [_, Type | Args] = clj_core:seq_to_list(Form),
 
-  {ArgsExprs, Env1} =
-    clj_env:last_exprs(analyze_forms(Env, Args), length(Args)),
+  {TypeExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Type)),
 
-  NewExpr = #{ op       => new
-             , env      => ?DEBUG(Env)
-             , form     => Form
-             , typename => Typename
-             , args     => ArgsExprs
+  {ArgsExprs, Env2} =
+    clj_env:last_exprs(analyze_forms(Env1, Args), length(Args)),
+
+  NewExpr = #{ op   => new
+             , env  => ?DEBUG(Env)
+             , form => Form
+             , type => TypeExpr
+             , args => ArgsExprs
              },
 
-  clj_env:push_expr(Env1, NewExpr).
+  clj_env:push_expr(Env2, NewExpr).
 
 %%------------------------------------------------------------------------------
 %% Parse deftype
@@ -939,7 +963,7 @@ parse_new(Env, Form) ->
 parse_deftype(Env, Form) ->
   [ _ % deftype*
   , Name
-  , Typename
+  , TypeSym
   , Fields
   , _ % :implements
   , Interfaces
@@ -969,7 +993,7 @@ parse_deftype(Env, Form) ->
                  , env       => ?DEBUG(Env)
                  , form      => Form
                  , name      => Name
-                 , typename  => Typename
+                 , type      => TypeSym
                  , fields    => FieldsExprs
                  , methods   => MethodsExprs
                  , protocols => clj_core:seq_to_list(Interfaces)
@@ -1221,9 +1245,8 @@ analyze_invoke(Env, Form) ->
 analyze_symbol(Env, Symbol) ->
   case resolve(Env, Symbol) of
     {undefined, _} ->
-      Str = clj_core:str(Symbol),
       clj_utils:throw([ <<"Unable to resolve symbol '">>
-                      , Str
+                      , Symbol
                       , <<"' in this context">>
                       ]
                      , clj_reader:location_meta(Symbol)
@@ -1241,7 +1264,10 @@ analyze_symbol(Env, Symbol) ->
       clj_env:push_expr(Env1, FunExpr);
     {{var, Var}, Env1} ->
       VarExpr = var_expr(Var, Symbol, Env1),
-      clj_env:push_expr(Env1, VarExpr)
+      clj_env:push_expr(Env1, VarExpr);
+    {{type, Type}, Env1} ->
+      TypeExpr = type_expr(Type, Symbol, Env1),
+      clj_env:push_expr(Env1, TypeExpr)
   end.
 
 -spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
@@ -1252,6 +1278,18 @@ var_expr(Var, Symbol, _Env) ->
   , form => Symbol
   , name => Symbol
   , var  => Var
+  }.
+
+-spec type_expr('clojerl.Symbol':type()
+               , 'clojerl.Symbol':type()
+               , clj_env:env()
+               ) ->
+  map().
+type_expr(Type, Symbol, _Env) ->
+ #{ op   => type
+  , env  => ?DEBUG(Env)
+  , form => Symbol
+  , type => Type
   }.
 
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
@@ -1271,12 +1309,12 @@ resolve(Env, Symbol, CheckPrivate) ->
   CurrentNs = clj_namespace:current(),
   Local     = clj_env:get_local(Env, Symbol),
   NsStr     = clj_core:namespace(Symbol),
-  MappedVar = clj_namespace:mapping(CurrentNs, Symbol),
+  MappedVal = clj_namespace:mapping(CurrentNs, Symbol),
 
-  case {Local, NsStr, MappedVar} of
-    {Local, _, _} when Local =/= undefined ->
+  if
+    Local =/= undefined ->
       {{local, Local}, Env};
-    {_, NsStr, _} when NsStr =/= undefined ->
+    NsStr =/= undefined ->
       case clj_namespace:find_var(Symbol) of
         undefined ->
           %% If there is no var then assume it's a Module:Function pair.
@@ -1292,10 +1330,16 @@ resolve(Env, Symbol, CheckPrivate) ->
                               ),
           {{var, Var}, Env}
       end;
-    {_, _, MappedVar} when MappedVar =/= undefined ->
-      {{var, MappedVar}, Env};
-    _ ->
-      {undefined, Env}
+    MappedVal =/= undefined ->
+      case clj_core:'var?'(MappedVal) of
+        true  -> {{var, MappedVal}, Env};
+        false -> {{type, MappedVal}, Env}
+      end;
+    true ->
+      case is_maybe_type(Symbol) of
+        true  -> {{type, Symbol}, Env};
+        false -> {undefined, Env}
+      end
   end.
 
 -spec erl_fun(clj_env:env(), 'clojerl.Symbol':type()) -> erl_fun().
@@ -1339,6 +1383,17 @@ erl_fun_arity(Name) ->
           Arity = binary_to_integer(Last),
           {iolist_to_binary(NameParts), Arity}
       end
+  end.
+
+-spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
+is_maybe_type(Symbol) ->
+  case clj_core:namespace(Symbol) of
+    undefined ->
+      Name = clj_core:name(Symbol),
+      Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
+      match =:= re:run(Name, Re, [global, {capture, none}]);
+    _ ->
+      false
   end.
 
 %%------------------------------------------------------------------------------
