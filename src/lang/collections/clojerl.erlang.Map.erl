@@ -142,10 +142,10 @@ str(Map) when is_map(Map) ->
                KeyStr = clj_core:str(Key),
                ValStr = clj_core:str(maps:get(Key, Map)),
 
-               clj_utils:binary_join([KeyStr, ValStr], <<" ">>)
+               'clojerl.String':join([KeyStr, ValStr], <<" ">>)
            end,
   KeyValueStrs = lists:map(StrFun, maps:keys(Map)),
-  Strs = clj_utils:binary_join(KeyValueStrs, <<", ">>),
+  Strs = 'clojerl.String':join(KeyValueStrs, <<", ">>),
   <<"{", Strs/binary, "}">>.
 
 seq(Map) when is_map(Map) ->

@@ -5,14 +5,14 @@
 -behavior('clojerl.IHash').
 -behavior('clojerl.Stringable').
 
--export([new/1, run/3]).
+-export([?CONSTRUCTOR/1, run/3]).
 -export([hash/1]).
 -export([str/1]).
 
 -type type() :: #?TYPE{data :: {binary(), tuple()}}.
 
--spec new(binary()) -> type().
-new(Pattern) when is_binary(Pattern) ->
+-spec ?CONSTRUCTOR(binary()) -> type().
+?CONSTRUCTOR(Pattern) when is_binary(Pattern) ->
   {ok, Regex} = re:compile(Pattern),
   #?TYPE{data = {Pattern, Regex}}.
 

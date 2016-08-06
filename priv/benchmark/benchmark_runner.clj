@@ -1,4 +1,4 @@
-(ns benckmark.benckmark-runner
+(ns benchmark.benchmark-runner
   (:refer-clojure :exclude [println]))
 
 (def n 10000)

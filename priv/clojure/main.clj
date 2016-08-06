@@ -37,6 +37,11 @@
 (defn function [x]
   (erlang/atom_to_binary.e (second x) :utf8))
 
+(defn arg-count [x]
+  (let [maybe-arg-count (nth x 2)]
+    (when (list? maybe-arg-count)
+      (count maybe-arg-count))))
+
 (defn stack-element-str
   "Returns a (possibly unmunged) string representation of a StackTraceElement"
   {:added "1.3"}
@@ -45,9 +50,9 @@
         clojure-fn? (and file (or (clojerl.String/ends_with.e file ".clj")
                                   (clojerl.String/ends_with.e file ".cljc")
                                   (= file "NO_SOURCE_FILE")))]
-    (str (if clojure-fn?
-           (demunge (module el))
-           (str (module el) "/" (function el)))
+    (str (if clojure-fn? (demunge (module el)) (module el))
+         "/" (function el)
+         (when-let [arg-count (arg-count el)] (str " " arg-count))
          " (" (filename el) ":" (line-number el) ")")))
 
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
@@ -68,7 +73,7 @@
              ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
              *command-line-args* *command-line-args*
              *assert* *assert*
-             *in* (erlang.io.PushbackReader/new.e *in*)
+             *in* (new ~'erlang.io.PushbackReader *in*)
              *1 nil
              *2 nil
              *3 nil
@@ -140,10 +145,9 @@
 (defn repl-caught
   "Default :caught hook for repl"
   [ex]
-  (let [tr (erlang/get_stacktrace.e)
-        el (when-not (zero? (count tr)) (nth tr 0))]
+  (let [tr (erlang/get_stacktrace.e)]
     (binding [*out* *err*]
-      (prn ex)
+      (println "Error:" ex)
       (doall (map #(-> % stack-element-str println) tr)))))
 
 (def ^{:doc "A sequence of lib specs that are applied to `require`
@@ -266,7 +270,7 @@ by default when a new command-line REPL is started."} repl-requires
   "Evals expressions in str, prints each non-nil result using prn"
   [str]
   (let [eof (erlang/make_ref.e)
-        reader (clojerl.StringReader/new.e str)]
+        reader (new clojerl.StringReader str)]
       (loop [input (with-read-known (read reader false eof))]
         (when-not (= input eof)
           (let [value (eval input)]

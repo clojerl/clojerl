@@ -6,7 +6,7 @@
 -behaviour('clojerl.Stringable').
 -behaviour('erlang.io.IReader').
 
--export([new/1, at_line_start/1]).
+-export([?CONSTRUCTOR/1, at_line_start/1]).
 -export([ start_link/1
         , init/1
         , loop/1
@@ -24,8 +24,8 @@
 
 -type type() :: #?TYPE{data :: pid()}.
 
--spec new('erlang.io.IReader':type()) -> type().
-new(Reader) ->
+-spec ?CONSTRUCTOR('erlang.io.IReader':type()) -> type().
+?CONSTRUCTOR(Reader) ->
   #?TYPE{data = start_link(Reader)}.
 
 -spec at_line_start('erlang.io.IReader':type()) -> type().

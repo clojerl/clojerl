@@ -12,6 +12,7 @@ dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.5
 dep_meck        = git https://github.com/eproxus/meck          0.8.4
 
 include erlang.mk
+include clojure.mk
 
 CT_OPTS = -cover ${COVER_SPEC} -erl_args -s ${PROJECT}
 
@@ -31,16 +32,8 @@ tests-shell: test-build
 
 repl: SHELL_OPTS = -pa priv -name ${PROJECT}-repl@`hostname` -setcookie clojerl -s ${PROJECT}
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell
-repl: priv/clojure/core.clj priv/clojure/main.clj
+repl: clojure.core clojure.main
 	@rlwrap erl -pa ebin -pa deps/*/ebin -pa priv ${SHELL_OPTS}
 
 shell-no-sync: SHELL_OPTS = -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
 shell-no-sync: shell;
-
-# Clojure files compilation
-
-CLOJURE_FILES=$(wildcard priv/clojure/*.clj)
-
-$(CLOJURE_FILES:%=%): all
-	@echo "${@}"
-	bin/compile ${@}

@@ -12,10 +12,8 @@
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->
-  case clj_env:pop_expr(analyze_form(Env0, Form)) of
-    {undefined, Env} -> Env;
-    {Expr, Env} -> clj_env:push_expr(Env, Expr#{top_level => true})
-  end.
+  {Expr, Env} =  clj_env:pop_expr(analyze_form(Env0, Form)),
+  clj_env:push_expr(Env, Expr#{top_level => true}).
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -87,13 +85,13 @@ special_forms() ->
 
    , <<"erl-on-load*">> => fun parse_on_load/2
 
+   , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"letfn*">>       => undefined
    , <<"defrecord*">>   => undefined
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
-     %% , <<"new">>
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
@@ -219,9 +217,9 @@ parse_fn(Env, List) ->
                   true  ->
                     DefVarNs    = clj_namespace:current(),
                     DefVarNsSym = clj_namespace:name(DefVarNs),
-                    'clojerl.Var':new( clj_core:name(DefVarNsSym)
-                                     , clj_core:name(DefNameSym)
-                                     );
+                    'clojerl.Var':?CONSTRUCTOR( clj_core:name(DefVarNsSym)
+                                              , clj_core:name(DefNameSym)
+                                              );
                   false -> undefined
                 end,
 
@@ -914,21 +912,40 @@ lookup_var(VarSymbol, false) ->
   end.
 
 %%------------------------------------------------------------------------------
-%% Parse def
+%% Parse new
+%%------------------------------------------------------------------------------
+
+-spec parse_new(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_new(Env, Form) ->
+  [_, Typename | Args] = clj_core:seq_to_list(Form),
+
+  {ArgsExprs, Env1} =
+    clj_env:last_exprs(analyze_forms(Env, Args), length(Args)),
+
+  NewExpr = #{ op       => new
+             , env      => ?DEBUG(Env)
+             , form     => Form
+             , typename => Typename
+             , args     => ArgsExprs
+             },
+
+  clj_env:push_expr(Env1, NewExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse deftype
 %%------------------------------------------------------------------------------
 
 -spec parse_deftype(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_deftype(Env, Form) ->
   [ _ % deftype*
   , Name
-  , Classname
+  , Typename
   , Fields
-  , _ % interfaces
+  , _ % :implements
   , Interfaces
   | Methods
   ] = clj_core:seq_to_list(Form),
 
-  DefnSymbol  = clj_core:symbol(<<"defn">>),
   FieldsList  = clj_core:seq_to_list(Fields),
   FieldsFun   = fun(FieldName) ->
                     #{ env   => ?DEBUG(Env)
@@ -938,31 +955,70 @@ parse_deftype(Env, Form) ->
                      , op    => binding
                      }
                 end,
+  %% The analyzer adds the fields to the local scope of the methods,
+  %% but it is the emitter who will need to pattern match the first argument
+  %% so that they are actually available.
   Env1        = clj_env:add_locals_scope(Env),
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
-  Env3        = lists:foldl( fun (Method, EnvAcc) ->
-                                 Method1 = clj_core:cons(DefnSymbol, Method),
-                                 analyze_form(EnvAcc, Method1)
-                             end
-                           , Env2
-                           , Methods
-                           ),
 
+  Env3        = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
 
   DeftypeExpr = #{ op        => deftype
                  , env       => ?DEBUG(Env)
                  , form      => Form
                  , name      => Name
-                 , classname => Classname
+                 , typename  => Typename
                  , fields    => FieldsExprs
                  , methods   => MethodsExprs
-                 , protocols => Interfaces
+                 , protocols => clj_core:seq_to_list(Interfaces)
                  },
 
   Env5 = clj_env:remove_locals_scope(Env4),
   clj_env:push_expr(Env5, DeftypeExpr).
+
+-spec analyze_deftype_method('clojerl.List':type(), clj_env:env()) ->
+  clj_env:env().
+analyze_deftype_method(Form, Env) ->
+  [MethodName, Args | _Body] = clj_core:seq_to_list(Form),
+
+  clj_utils:throw_when( not clj_core:'symbol?'(MethodName)
+                      , [ <<"Method method must be a symbol, had: ">>
+                        , clj_core:type(MethodName)
+                        ]
+                      , clj_reader:location_meta(MethodName)
+                      ),
+
+  clj_utils:throw_when( not clj_core:'vector?'(Args)
+                      , [ <<"Parameter listing should be a vector, had: ">>
+                        , clj_core:type(Args)
+                        ]
+                      , clj_reader:location_meta(Args)
+                      ),
+
+  clj_utils:throw_when( clj_core:count(Args) < 1
+                      , [ <<"Must supply at least one argument for 'this' in: ">>
+                        , MethodName
+                        ]
+                      , clj_reader:location_meta(MethodName)
+                      ),
+
+  LoopId = {function, MethodName},
+  {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( Env
+                                                         , clj_core:rest(Form)
+                                                         , LoopId
+                                                         , true
+                                                         )),
+
+  MethodExpr1 = maps:merge( maps:remove('variadic?', MethodExpr)
+                          , #{ op   => method
+                             , form => Form
+                             , name => MethodName
+                             }
+                          ),
+
+  clj_env:push_expr(Env1, MethodExpr1).
 
 %%------------------------------------------------------------------------------
 %% Parse throw
@@ -1279,7 +1335,7 @@ erl_fun_arity(Name) ->
         {nomatch, _} ->
           {Name, undefined};
         _ ->
-          NameParts = clj_utils:binary_join(lists:droplast(Parts), <<".">>),
+          NameParts = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
           Arity = binary_to_integer(Last),
           {iolist_to_binary(NameParts), Arity}
       end
@@ -1291,12 +1347,11 @@ erl_fun_arity(Name) ->
 
 -spec wrapping_meta(clj_env:env(), map()) -> clj_env:env().
 wrapping_meta(Env, #{form := Form} = Expr) ->
-  Meta = clj_reader:remove_location(clj_core:meta(Form)),
-  case {Meta, clj_core:'meta?'(Form)} of
-    {Meta, true} when Meta =/= undefined ->
+  case clj_reader:remove_location(clj_core:meta(Form)) of
+    Meta when Meta =/= undefined andalso Meta =/= #{} ->
       {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
 
-      WithMetaExpr = #{ op   => 'with-meta'
+      WithMetaExpr = #{ op   => with_meta
                       , env  => ?DEBUG(Env)
                       , form => Form
                       , meta => MetaExpr

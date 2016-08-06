@@ -8,7 +8,7 @@
 
 -export([count/1]).
 -export([hash/1]).
--export([noop/1]).
+-export(['_'/1]).
 -export([seq/1]).
 -export([str/1]).
 
@@ -20,13 +20,13 @@ count(Tuple) -> tuple_size(Tuple).
 
 hash(Tuple) -> clj_murmur3:ordered(Tuple).
 
-noop(_) -> ok.
+'_'(_) -> undefined.
 
 seq({}) -> undefined;
 seq(Tuple) -> tuple_to_list(Tuple).
 
 str(Tuple) when is_tuple(Tuple) ->
-  Items = tuple_to_list(Tuple),
+  Items     = tuple_to_list(Tuple),
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
-  Strs = clj_utils:binary_join(ItemsStrs, <<", ">>),
+  Strs      = 'clojerl.String':join(ItemsStrs, <<", ">>),
   <<"#[", Strs/binary, "]">>.

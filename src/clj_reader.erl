@@ -1,5 +1,7 @@
 -module(clj_reader).
 
+-include("clojerl.hrl").
+
 -export([ read_fold/3
         , read_fold/4
         , read/1, read/2, read/3
@@ -944,7 +946,7 @@ read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
   read_regex(consume_chars(2, NewState));
 read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
-  Regex = 'erlang.util.Regex':new(Current),
+  Regex = 'erlang.util.Regex':?CONSTRUCTOR(Current),
   push_form(Regex, consume_char(maps:remove(current, State)));
 read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
   Current = maps:get(current, State, <<>>),
@@ -1024,7 +1026,7 @@ read_cond(#{src := Src, opts := Opts} = State) ->
   end.
 
 reader_conditional(List, IsSplicing) ->
-  'clojerl.reader.ReaderConditional':new(List, IsSplicing).
+  'clojerl.reader.ReaderConditional':?CONSTRUCTOR(List, IsSplicing).
 
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
   Features = maps:get(features, Opts, clj_core:hash_set([])),
@@ -1074,15 +1076,16 @@ read_tagged(State) ->
                       , location(State)
                       ),
 
-  DataReadersVar        = 'clojerl.Var':new( <<"clojure.core">>
-                                           , <<"*data-readers*">>
-                                           ),
-  DefaultDataReadersVar = 'clojerl.Var':new( <<"clojure.core">>
-                                           , <<"default-data-readers">>
-                                           ),
-  DefaultReaderFunVar   = 'clojerl.Var':new( <<"clojure.core">>
-                                           , <<"*default-data-reader-fn*">>
-                                           ),
+  DataReadersVar        = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                                                    , <<"*data-readers*">>
+                                                    ),
+  DefaultDataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                                                    , <<"default-data-readers">>
+                                                    ),
+  DefaultReaderFunVar   =
+    'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                              , <<"*default-data-reader-fn*">>
+                              ),
 
   DataReaders = clj_core:deref(DataReadersVar),
   Reader0     = clj_core:get(DataReaders, Symbol, undefined),

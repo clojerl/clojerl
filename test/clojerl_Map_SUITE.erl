@@ -156,6 +156,12 @@ cons(_Config) ->
   3    = clj_core:count(ThreeMap),
   true = clj_core:equiv(ThreeMap, #{1 => 2, 3 => 4, 5 => 6}),
 
+  ct:comment("Conj a map to nil"),
+  EmptyMap = clj_core:conj(EmptyMap, undefined),
+  OneMap   = clj_core:conj(OneMap, undefined),
+  TwoMap   = clj_core:conj(TwoMap, undefined),
+  ThreeMap = clj_core:conj(ThreeMap, undefined),
+
   ct:comment("Conj something that is not a key-value pair to an empty map"),
   ok = try clj_core:conj(EmptyMap, clj_core:vector([1])), error
        catch _:_ -> ok end,
@@ -163,6 +169,7 @@ cons(_Config) ->
   {comments, ""}.
 
 -spec associative(config()) -> result().
+
 associative(_Config) ->
   EmptyMap = clj_core:hash_map([]),
   false    = clj_core:'contains?'(EmptyMap, 1),
@@ -182,6 +189,18 @@ associative(_Config) ->
 
   TwoMap = clj_core:dissoc(TwoMap, 3),
   OneMap = clj_core:dissoc(TwoMap, 2),
+
+  ct:comment("Use symbols with different metadata as keys"),
+  HelloSym1 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{a => 1}),
+  HelloSym2 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{b => 2}),
+  HelloMap  = clj_core:assoc(EmptyMap, HelloSym1, a),
+  HelloPair = clj_core:find(HelloMap, HelloSym2),
+  true      = clj_core:equiv(HelloPair, clj_core:vector([HelloSym1, a])),
+  true      = clj_core:'contains?'(HelloMap, HelloSym2),
+
+  ct:comment("The new key with different metadata replaces the old one"),
+  HelloMap2 = clj_core:assoc(HelloMap, HelloSym2, a),
+  HelloSym2 = clj_core:first(clj_core:find(HelloMap2, HelloSym2)),
 
   {comments, ""}.
 

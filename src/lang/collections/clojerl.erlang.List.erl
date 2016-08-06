@@ -20,7 +20,7 @@
         , more/1
         , next/1
         ]).
--export([noop/1]).
+-export(['_'/1]).
 -export([ peek/1
         , pop/1
         ]).
@@ -39,7 +39,7 @@ str([]) ->
   <<"()">>;
 str(Items) when is_list(Items) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
-  Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
+  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
 seq([]) -> undefined;
@@ -55,7 +55,7 @@ next([]) -> undefined;
 next([_ | []]) -> undefined;
 next([_ | Rest]) -> Rest.
 
-noop(_) -> ok.
+'_'(_) -> undefined.
 
 peek([]) -> undefined;
 peek([X | _]) -> X.

@@ -6,7 +6,7 @@
 -behaviour('clojerl.Stringable').
 -behaviour('erlang.io.IWriter').
 
--export([new/0, new/1]).
+-export([?CONSTRUCTOR/0, ?CONSTRUCTOR/1]).
 -export([ start_link/1
         , init/1
         , loop/1
@@ -20,12 +20,12 @@
 
 -type type() :: #?TYPE{data :: pid()}.
 
--spec new() -> type().
-new() ->
-  new(<<>>).
+-spec ?CONSTRUCTOR() -> type().
+?CONSTRUCTOR() ->
+  ?CONSTRUCTOR(<<>>).
 
--spec new(binary()) -> type().
-new(Str) ->
+-spec ?CONSTRUCTOR(binary()) -> type().
+?CONSTRUCTOR(Str) ->
   #?TYPE{data = start_link(Str)}.
 
 %%------------------------------------------------------------------------------

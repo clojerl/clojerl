@@ -1,5 +1,7 @@
 -module('clojerl.Keyword').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.Named').
@@ -7,8 +9,8 @@
 -behaviour('erlang.io.IWriter').
 -behaviour('erlang.io.IReader').
 
--export([ new/1
-        , new/2
+-export([ ?CONSTRUCTOR/1
+        , ?CONSTRUCTOR/2
         , find/1
         , find/2
         ]).
@@ -31,13 +33,20 @@
 
 -type type() :: atom().
 
--spec new(binary()) -> type().
-new(Name) ->
-  binary_to_atom(Name, utf8).
+-spec ?CONSTRUCTOR(binary()) -> type().
+?CONSTRUCTOR(Name) when is_binary(Name) ->
+  binary_to_atom(Name, utf8);
+?CONSTRUCTOR(Name) when is_atom(Name) ->
+  Name;
+?CONSTRUCTOR(Symbol) ->
+  binary_to_atom(clj_core:str(Symbol), utf8).
 
--spec new(binary(), binary()) -> type().
-new(Namespace, Name) ->
-  binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8).
+-spec ?CONSTRUCTOR(binary(), binary()) -> type().
+?CONSTRUCTOR(Namespace, Name)
+  when is_binary(Namespace) andalso is_binary(Name) ->
+  binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8);
+?CONSTRUCTOR(undefined, Name) ->
+  ?CONSTRUCTOR(Name).
 
 -spec find(binary()) -> type().
 find(Name) ->
@@ -47,7 +56,9 @@ find(Name) ->
     _:_ -> undefined
   end.
 
--spec find(binary(), binary()) -> type().
+-spec find(binary() | undefined, binary()) -> type().
+find(undefined, Name) ->
+  find(Name);
 find(Namespace, Name) ->
   try
     binary_to_existing_atom(<<Namespace/binary, "/", Name/binary>>, utf8)

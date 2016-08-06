@@ -4,7 +4,7 @@
 
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 
 -export([str/1]).
 
@@ -17,8 +17,8 @@
                     "[a-fA-F0-9]{12}$"
        ).
 
--spec new(binary()) -> type().
-new(UUID) when is_binary(UUID) ->
+-spec ?CONSTRUCTOR(binary()) -> type().
+?CONSTRUCTOR(UUID) when is_binary(UUID) ->
   case is_uuid(UUID) of
     false -> error(<<"Invalid UUID: ", UUID/binary>>);
     true  -> #?TYPE{data = UUID}
