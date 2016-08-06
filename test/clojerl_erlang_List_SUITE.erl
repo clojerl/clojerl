@@ -169,7 +169,7 @@ stack(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.erlang.List':noop(ok),
+  undefined = 'clojerl.erlang.List':'_'(undefined),
 
   NotEmptyList = [a, b, 2, 3],
   EmptyList    = clj_core:empty(NotEmptyList),

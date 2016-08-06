@@ -1,5 +1,7 @@
 -module(clojerl_LazySeq_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ new/1
@@ -104,7 +106,7 @@ seq(_Config) ->
   true      = undefined =/= clj_core:rest(LazySeq0),
   undefined = clj_core:seq(clj_core:rest(LazySeq0)),
 
-  LazySeqBis = 'clojerl.LazySeq':new(fun() -> range(1, 3) end),
+  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> range(1, 3) end),
   1 = clj_core:first(LazySeqBis),
   2 = clj_core:first(clj_core:rest(LazySeqBis)),
   3 = clj_core:first(clj_core:next(clj_core:next(LazySeqBis))),
@@ -153,7 +155,7 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ok = 'clojerl.LazySeq':noop(ok),
+  undefined = 'clojerl.LazySeq':'_'(undefined),
 
   LazySeq   = range(2, 2),
   EmptyList = clj_core:empty(LazySeq),
@@ -168,8 +170,8 @@ complete_coverage(_Config) ->
 range(Start, End) ->
   Fun = fun
           () when Start =< End ->
-            'clojerl.Cons':new(Start, range(Start + 1, End));
+            'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End));
           () when Start > End ->
             undefined
         end,
-  'clojerl.LazySeq':new(Fun).
+  'clojerl.LazySeq':?CONSTRUCTOR(Fun).

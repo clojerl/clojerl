@@ -7,6 +7,7 @@
 -export([ with_context/1
 
         , all_forms/0
+        , get_forms/1
         , ensure_loaded/2
         , is_loaded/1
 
@@ -36,11 +37,24 @@
 
 -record(module, { name              :: atom(),
                   source = ""       :: string(),
+                  %% ETS table where var are kept. The key is the var's
+                  %% name as a binary.
                   vars              :: ets:tid(),
+                  %% ETS table where functions are kept. The key is the
+                  %% function's name and arity.
                   funs              :: ets:tid(),
+                  %% ETS table where fake functions are kept. The key is the
+                  %% funs value (i.e. Module:Function/Arity).
                   fake_funs         :: ets:tid(),
+                  %% ETS table where fake modules are kept. The key is the
+                  %% modules name.
                   fake_modules      :: ets:tid(),
+                  %% ETS table where function exports are kept. The key is the
+                  %% function's name and arity.
                   exports           :: ets:tid(),
+                  %% ETS table where expressions that will be included in the
+                  %% on_load function are kept. The key is the expression
+                  %% itself.
                   on_load           :: ets:tid(),
                   attrs             :: [erl_parse:abstract_form()],
                   rest              :: [erl_parse:abstract_form()]
@@ -72,6 +86,9 @@ all_forms() ->
   All = gen_server:call(?MODULE, all),
   lists:map(fun to_forms/1, All).
 
+-spec get_forms(atom()) -> [erl_parse:abstract_form()].
+get_forms(ModuleName) when is_atom(ModuleName) ->
+  to_forms(get(?MODULE, ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(atom(), string()) -> ok.
@@ -127,17 +144,17 @@ replace_calls( { call, Line
                , Args
                }
              , CurrentModule) ->
-  Args1 = replace_calls(Args, CurrentModule),
-  Arity = length(Args),
   %% Only replace the call if the module is loaded. If it is not, then the
   %% replacement is happening for the evaluation of an expression where the
   %% called function hasn't been declared in the same evaluation.
   case is_loaded(Module) of
     true  ->
-      Remote = {remote, Line,
-                {atom, Line, ?MODULE},
-                {atom, Line, fake_fun}
-               },
+      Args1   = replace_calls(Args, CurrentModule),
+      Arity   = length(Args),
+      Remote  = {remote, Line,
+                 {atom, Line, ?MODULE},
+                 {atom, Line, fake_fun}
+                },
 
       FunCall = { call, Line, Remote
                 , [ {atom, Line, Module}
@@ -147,17 +164,19 @@ replace_calls( { call, Line
                 },
       {call, Line, FunCall, Args1};
     false ->
+      Args1 = replace_calls(Args, CurrentModule),
       {call, Line, RemoteOriginal, Args1}
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
 replace_calls({call, Line, {atom, Line2, Function}, Args}, ModuleName) ->
-  Arity = length(Args),
-  Args1 = replace_calls(Args, ModuleName),
-  Remote = {remote, Line,
-            {atom, Line, ?MODULE},
-            {atom, Line, fake_fun}
-           },
+  Arity   = length(Args),
+  Args1   = replace_calls(Args, ModuleName),
+  Remote  = {remote, Line,
+             {atom, Line, ?MODULE},
+             {atom, Line, fake_fun}
+            },
+
   FunCall = { call, Line, Remote
             , [ {atom, Line2, ModuleName}
               , {atom, Line2, Function}
@@ -189,8 +208,9 @@ add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
 add_attributes(Module, []) ->
   Module;
 add_attributes(Module, Attrs) ->
-  Module1 = Module#module{attrs = Attrs ++ Module#module.attrs},
-  save(?MODULE, Module1).
+  AddAttr = fun(E) -> save(Module#module.attrs, {E}) end,
+  ok = lists:foreach(AddAttr, Attrs),
+  Module.
 
 -spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
   clj_module().
@@ -338,11 +358,8 @@ build_fake_fun(Module, Function, Arity) ->
   FunAst     = {function, 0, Function, Arity, Clauses},
   Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
 
-  Binary = case compile:forms(Forms, []) of
-             {ok, _, Bin} -> Bin;
-             Error -> throw({Error, Module#module.name, Function, Arity})
-           end,
-  code:load_binary(FakeModuleName, "", Binary),
+  CompileOpts = #{erl_flags => [binary]},
+  clj_compiler:compile_forms(Forms, CompileOpts),
 
   save(Module#module.fake_modules, {FakeModuleName}),
 
@@ -374,7 +391,7 @@ to_forms(#module{} = Module) ->
          , funs    = FunsTable
          , exports = ExportsTable
          , on_load = OnLoadTable
-         , attrs   = Attrs
+         , attrs   = AttrsTable
          , rest    = Rest
          } = Module,
 
@@ -394,6 +411,7 @@ to_forms(#module{} = Module) ->
   ClojureAttr = {attribute, 0, clojure, true},
   OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
 
+  Attrs       = [X || {X} <- ets:tab2list(AttrsTable)],
   UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
 
   OnLoadFun   = on_load_function(OnLoadTable),
@@ -480,12 +498,13 @@ new(Forms) when is_list(Forms) ->
                   , fake_modules      = ets:new(fake_modules, TableOpts)
                   , exports           = ets:new(exports, TableOpts)
                   , on_load           = ets:new(on_load, TableOpts)
-                  , attrs             = Attrs
+                  , attrs             = ets:new(attributes, TableOpts)
                   , rest              = Rest2
                   },
 
   Module = add_functions(Module, Funs),
   Module = add_vars(Module, maps:values(Vars)),
+  Module = add_attributes(Module, Attrs),
 
   %% Remove the on_load function and all its contents.
   %% IMPORTANT: This means that whenever a namespace is recompiled all
@@ -531,7 +550,7 @@ flat_exports(ExportAttrs) ->
 source_file(Attrs) ->
   case lists:partition(is_attribute_fun(file), Attrs) of
     {[], Attrs} -> {"", Attrs};
-    {[FileAttr], RestAttrs} ->
+    {[FileAttr | _], RestAttrs} ->
       {attribute, _, file, {Source, _}} = FileAttr,
       {Source, RestAttrs}
   end.

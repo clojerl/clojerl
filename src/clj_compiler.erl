@@ -9,7 +9,8 @@
          compile/2,
          eval/1,
          eval/2,
-         eval/3
+         eval/3,
+         compile_forms/2
         ]).
 
 -export([ no_warn_dynamic_var_name/1
@@ -252,12 +253,12 @@ compile_forms([], _) ->
   undefined;
 compile_forms(Forms, Opts) ->
   ok       = maybe_output_erl(Forms, Opts),
-  ErlFlags = maps:get(erl_flags, Opts),
+  ErlFlags = maps:get(erl_flags, Opts, []),
 
   case compile:forms(Forms, ErlFlags) of
     {ok, Name, Binary} ->
       %% io:format("Compiled ~p with ~p forms~n", [Name, length(Forms)]),
-      OutputDir    = maps:get(output_dir, Opts),
+      OutputDir    = maps:get(output_dir, Opts, "ebin"),
       NameBin      = atom_to_binary(Name, utf8),
       BeamFilename = <<NameBin/binary, ".beam">>,
       BeamPath     = filename:join([OutputDir, BeamFilename]),

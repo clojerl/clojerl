@@ -1,4 +1,4 @@
-(ns example.case)
+(ns examples.case)
 
 (let* [x :b
        y (case* x

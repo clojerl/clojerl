@@ -13,7 +13,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 
 -export([count/1]).
 -export([ cons/2
@@ -28,7 +28,7 @@
         , next/1
         , more/1
         ]).
--export([noop/1]).
+-export(['_'/1]).
 -export([ peek/1
         , pop/1
         ]).
@@ -37,8 +37,8 @@
 
 -type type() :: #?TYPE{}.
 
--spec new(list()) -> type().
-new(Items) when is_list(Items) ->
+-spec ?CONSTRUCTOR(list()) -> type().
+?CONSTRUCTOR(Items) when is_list(Items) ->
   #?TYPE{data = Items}.
 
 %%------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ cons(#?TYPE{name = ?M, data = []} = List, X) ->
 cons(#?TYPE{name = ?M, data = Items} = List, X) ->
   List#?TYPE{data = [X | Items]}.
 
-empty(_) -> new([]).
+empty(_) -> ?CONSTRUCTOR([]).
 
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}
@@ -85,7 +85,7 @@ more(#?TYPE{name = ?M, data = []}) -> undefined;
 more(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
 
-noop(_) -> ok.
+'_'(_) -> undefined.
 
 peek(#?TYPE{name = ?M, data = List}) ->
   clj_core:peek(List).
@@ -102,5 +102,5 @@ str(#?TYPE{name = ?M, data = []}) ->
   <<"()">>;
 str(#?TYPE{name = ?M, data = Items}) ->
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
-  Strs = clj_utils:binary_join(ItemsStrs, <<" ">>),
+  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.

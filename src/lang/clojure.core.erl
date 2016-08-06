@@ -1,5 +1,7 @@
 -module('clojure.core').
 
+-include("clojerl.hrl").
+
 -vars(#{ <<"ns">>    => { '7ype', 'clojerl.Var', {<<"clojure.core">>, <<"ns">>}
                         , #{meta => #{ macro           => true
                                      , 'variadic?'     => true
@@ -118,7 +120,7 @@ ns(_Form, _Env, Name, _References) ->
   clj_core:list([InNsSym, clj_core:list([QuoteSym, Name])]).
 
 ns__val() ->
-  Var  = 'clojerl.Var':new(<<"clojure.core">>, <<"ns">>),
+  Var  = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"ns">>),
   Meta = #{ macro           => true
           , 'variadic?'     => true
           , max_fixed_arity => undefined
@@ -138,7 +140,7 @@ ns__val() ->
   undefined.
 
 'in-ns__val'() ->
-  Var = 'clojerl.Var':new(<<"clojure.core">>, <<"in-ns">>),
+  Var = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"in-ns">>),
   Meta = #{ 'variadic?'     => true
           , max_fixed_arity => 1
           , variadic_arity  => undefined

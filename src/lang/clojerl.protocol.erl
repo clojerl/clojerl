@@ -1,8 +1,7 @@
 -module('clojerl.protocol').
 
--export([
-         resolve/3,
-         'extends?'/2
+-export([ resolve/3
+        , 'extends?'/2
         ]).
 
 -spec resolve(atom(), atom(), list()) -> any().
@@ -50,18 +49,10 @@ maybe_str(X) ->
   Key = {extends, Protocol, Type},
   case clj_cache:get(Key) of
     undefined ->
-      Value = (erlang:function_exported(Type, module_info, 1)
-               andalso
-               lists:keymember([Protocol], 2, Type:module_info(attributes))
-              ) orelse code:is_loaded(impl_module(Protocol, Type)) =/= false,
+      Value = ( erlang:function_exported(Type, module_info, 1) andalso
+                lists:keymember([Protocol], 2, Type:module_info(attributes))
+              ),
       clj_cache:put(Key, Value),
       Value;
     {ok, Value} -> Value
   end.
-
--spec impl_module(atom(), atom()) -> atom().
-impl_module(Protocol, Type) when is_atom(Protocol),
-                                 is_atom(Type) ->
-  TypeBin = atom_to_binary(Type, utf8),
-  ProtocolBin = atom_to_binary(Protocol, utf8),
-  binary_to_atom(<<TypeBin/binary, ".", ProtocolBin/binary>>, utf8).

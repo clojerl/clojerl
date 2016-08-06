@@ -10,8 +10,6 @@
         , parse_symbol/1
         , desugar_meta/1
 
-        , binary_append/2
-        , binary_join/2
         , compare/2
 
         , error/1
@@ -155,19 +153,6 @@ desugar_meta(Meta) ->
     _ ->
       throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
-
--spec binary_append([binary()], binary()) -> binary().
-binary_append(X, Y) when is_binary(X), is_binary(Y) ->
-  <<X/binary, Y/binary>>.
-
--spec binary_join([binary()], binary()) -> binary().
-binary_join([], _) ->
-  <<>>;
-binary_join([S], _) when is_binary(S) ->
-  S;
-binary_join([H | T], Sep) ->
-  B = << <<Sep/binary, X/binary>> || X <- T >>,
-  <<H/binary, B/binary>>.
 
 -spec compare(any(), any()) -> integer().
 compare(X, Y) ->

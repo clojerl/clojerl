@@ -12,7 +12,7 @@
   ^{:arglists '([& items])
     :doc "Creates a new list containing the items."
     :added "1.0"}
-  list (fn* [& items] (clojerl.List/new.e items)))
+  list (fn* [& items] (new clojerl.List items)))
 
 (def
   ^{:arglists '([x seq])
@@ -36,7 +36,7 @@
   ^{:macro true
     :added "1.0"}
   fn (fn* fn [&form _&env & decl]
-         (let [x (cons 'fn* (clojerl.List/new.e decl))]
+         (let [x (cons 'fn* (new clojerl.List decl))]
            (clj_core/with_meta.e x (clj_core/meta.e &form)))))
 
 (def
@@ -327,15 +327,7 @@
          (list 'def (with-meta name m)
                (cons 'clojure.core/fn ;; can't use syntax-quote here yet because
                      ;; we haven't defined all the necessary functions
-                     (clojerl.List/new.e (seq fdecl)))))))
-
-(defn to-tuple
-  "Returns a tuple of Objects containing the contents of coll, which
-  can be any Collection.  Maps to erlang:list_to_tuple/2."
-  {:tag "clojerl.erlang.Tuple"
-   :added "1.0"
-   :static true}
-  [coll] (erlang/list_to_tuple.e (clj_core/seq_to_list.e coll)))
+                     (new clojerl.List (seq fdecl)))))))
 
 (defn vector
   "Creates a new vector containing the args."
@@ -528,7 +520,7 @@
   (^:clojerl.String [x & ys]
                     ((fn [acc more]
                        (if more
-                         (recur (clj_utils/binary_append.e acc (str (first more)))
+                         (recur (clojerl.String/append.e acc (str (first more)))
                                 (next more))
                          acc))
                      (clj_core/str.e x) ys)))
@@ -577,10 +569,10 @@
    :added "1.0"
    :static true}
   ([name] (cond (keyword? name) name
-                (symbol? name) (clojerl.Keyword/new.e (clj_core/namespace.e name)
+                (symbol? name) (new clojerl.Keyword (clj_core/namespace.e name)
                                                       (clj_core/name.e name))
-                (string? name) (clojerl.Keyword/new.e name)))
-  ([ns name] (clojerl.Keyword/new.e ns name)))
+                (string? name) (new clojerl.Keyword name)))
+  ([ns name] (new clojerl.Keyword ns name)))
 
 (defn find-keyword
   "Returns a Keyword with the given namespace and name if one already
@@ -647,7 +639,7 @@
   seq calls. See also - realized?"
   {:added "1.0"}
   [& body]
-  (list 'clojerl.LazySeq/new.e (list* '^{:once true} fn* [] body)))
+  (list 'new 'clojerl.LazySeq (list* '^{:once true} fn* [] body)))
 
 (defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
   (throw "unimplemented chunked seq")
@@ -713,7 +705,7 @@
   calls. See also - realized?"
   {:added "1.0"}
   [& body]
-    (list 'clojerl.Delay/new.e (list* `^{:once true} fn* [] body)))
+    (list 'new 'clojerl.Delay (list* `^{:once true} fn* [] body)))
 
 (defn delay?
   "returns true if x is a Delay created with delay"
@@ -1095,9 +1087,9 @@
 (defn dec
   "Returns a number one less than num. Does not auto-promote
   longs, will throw on overflow. See also: dec'"
-  {:inline (fn [x] `(dec' ~x))
+  {:inline (fn [x] `(erlang/-.e ~x 1))
    :added "1.2"}
-  [x] (dec' x))
+  [x] (erlang/-.e x 1))
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
@@ -1298,6 +1290,12 @@
   [coll] (clj_core/pop.e coll))
 
 ;;map stuff
+
+(defn map-entry?
+  "Return true if x is a map entry"
+  {:added "1.8"}
+  [x]
+  (and (vector? x) (= 2 (count x))))
 
 (defn contains?
   "Returns true if key is present in the given collection, otherwise
@@ -3262,10 +3260,7 @@
   {:added "1.0"
    :static true}
   [to from]
-  (reduce1 conj to from)
-  #_(if (instance? clojure.lang.IEditableCollection to)
-    (persistent! (reduce1 conj! (transient to) from))
-    (reduce1 conj to from)))
+  (reduce1 conj to from))
 
 (defmacro import
   "import-list => (package-symbol class-name-symbols*)
@@ -3275,7 +3270,15 @@
   macro in preference to calling this directly."
   {:added "1.0"}
   [& import-symbols-or-lists]
-  (throw "unsupported import"))
+  (let [specs (map #(if (and (seq? %) (= 'quote (first %))) (second %) %)
+                   import-symbols-or-lists)]
+    `(do ~@(map #(list 'clojure.core/import* %)
+                (reduce1 (fn [v spec]
+                           (if (symbol? spec)
+                             (conj v (name spec))
+                             (let [p (first spec) cs (rest spec)]
+                               (into1 v (map #(str p "." %) cs)))))
+                         [] specs)))))
 
 (defn into-array
   "Returns an array with components set to the values in aseq. The array's
@@ -3286,17 +3289,14 @@
   {:added "1.0"
    :static true}
   ([aseq]
-   (throw "unsupported array")
-   #_(clojure.lang.RT/seqToTypedArray (seq aseq)))
+   (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1))
   ([type aseq]
-   (throw "unsupported array")
-   #_(clojure.lang.RT/seqToTypedArray type (seq aseq))))
+   (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1)))
 
 (defn ^{:private true}
   array
   [& items]
-  (throw "unsupported array")
-  #_(into-array items))
+  (into-array items))
 
 (defn class
   "Returns the Class of x"
@@ -3338,25 +3338,24 @@
 
 (defn double
   "Coerce to double"
-  {:inline (fn  [x] `(. clojure.lang.RT (doubleCast ~x)))
+  {:inline (fn  [x] `(erlang/float.e ~x))
    :added "1.0"}
   [^Number x]
-  (throw "unsupported double"))
+  (erlang/float.e x))
 
 (defn short
   "Coerce to short"
-  {:inline (fn  [x] `(. clojure.lang.RT (~'shortCast ~x)))
+  {:inline (fn  [x] `(clj_core/short.e x))
    :added "1.0"}
   [^Number x]
-  (throw "unsupported short"))
+  (clj_core/short.e x))
 
 (defn byte
   "Coerce to byte"
-  {:inline (fn  [x] `(. clojure.lang.RT (~'byteCast ~x)))
+  {:inline (fn  [x] `(clj_core/byte.e x))
    :added "1.0"}
   [^Number x]
-  (throw "unimplemented cast to byte")
-  #_(clojure.lang.RT/byteCast x))
+  (clj_core/byte.e x))
 
 (defn char
   "Coerce to char"
@@ -3415,13 +3414,6 @@
   (throw "unimplemented ratio")
   #_(.denominator ^clojure.lang.Ratio r))
 
-(defn decimal?
-  "Returns true if n is a BigDecimal"
-  {:added "1.0"
-   :static true}
-  [n]
-  (throw "unsupported bigdecimal"))
-
 (defn float?
   "Returns true if n is a floating point number"
   {:added "1.0"
@@ -3451,14 +3443,6 @@
    :static true}
   [x]
   (erlang/trunc.e x))
-
-(defn bigdec
-  "Coerce to BigDecimal"
-  {:tag BigDecimal
-   :added "1.0"
-   :static true}
-  [x]
-  (throw "unsupported bigdecimal"))
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
@@ -3503,7 +3487,7 @@
   {:added "1.0"
    :static true}
   []
-  (io/nl.e *out*))
+  (io/nl.e *out*) nil)
 
 (defn flush
   "Flushes the output stream that is the current value of
@@ -3511,7 +3495,7 @@
   {:added "1.0"
    :static true}
   []
-  (io/put_chars.e *out* ""))
+  (io/put_chars.e *out* "") nil)
 
 (defn prn
   "Same as pr followed by (newline). Observes *flush-on-newline*"
@@ -4152,7 +4136,7 @@
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
                                       (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (clojerl.Map/new.e (clj_core/seq_to_list.e ~gmapseq))
+                                                           (new clojerl.Map (clj_core/seq_to_list.e ~gmapseq))
                                                            ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
@@ -4426,7 +4410,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  `(with-open [s# (erlang.io.StringWriter/new.e)]
+  `(with-open [s# (new ~'erlang.io.StringWriter)]
      (binding [*out* s#]
        ~@body
        (str s#))))
@@ -4436,7 +4420,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  `(with-open [s# (erlang.io.StringReader/new.e ~s)]
+  `(with-open [s# (new ~'erlang.io.StringReader ~s)]
      (binding [*in* s#]
        ~@body)))
 
@@ -4624,7 +4608,7 @@
   [s]
   (if (regex? s)
     s
-    (erlang.util.Regex/new.e s)))
+    (new erlang.util.Regex s)))
 
 (defn re-find
   "Returns the next regex match, if any, of string to pattern.

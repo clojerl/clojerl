@@ -4,13 +4,13 @@
 
 -behavior('clojerl.IEquiv').
 
--export([new/2]).
+-export([?CONSTRUCTOR/2]).
 -export([equiv/2]).
 
 -type type() :: #?TYPE{}.
 
--spec new('clojerl.List':type(), boolean()) -> type().
-new(List, IsSplicing) ->
+-spec ?CONSTRUCTOR('clojerl.List':type(), boolean()) -> type().
+?CONSTRUCTOR(List, IsSplicing) ->
   #?TYPE{data = {List, IsSplicing}}.
 
 equiv( #?TYPE{name = ?M, data = {X1, Y}}

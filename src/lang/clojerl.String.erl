@@ -9,13 +9,15 @@
 -export([ starts_with/2
         , ends_with/2
         , contains/2
+        , append/2
+        , join/2
         , char_at/2
         ]).
 
 -export([count/1]).
 -export([seq/1]).
 -export([hash/1]).
--export([noop/1]).
+-export(['_'/1]).
 -export([str/1]).
 
 -spec starts_with(binary(), binary()) -> boolean().
@@ -38,6 +40,19 @@ ends_with(Str, Ends) ->
 contains(Subject, Pattern) ->
   [] =/= binary:matches(Subject, Pattern).
 
+-spec append([binary()], binary()) -> binary().
+append(X, Y) when is_binary(X), is_binary(Y) ->
+  <<X/binary, Y/binary>>.
+
+-spec join([binary()], binary()) -> binary().
+join([], _) ->
+  <<>>;
+join([S], _) when is_binary(S) ->
+  S;
+join([H | T], Sep) ->
+  B = << <<Sep/binary, X/binary>> || X <- T >>,
+  <<H/binary, B/binary>>.
+
 -spec char_at(binary(), non_neg_integer()) -> binary().
 char_at(Str, Index) ->
   Ch = binary:at(Str, Index),
@@ -56,7 +71,7 @@ count(Str) ->
 hash(Str) ->
   erlang:phash2(Str).
 
-noop(_) -> ok.
+'_'(_) -> undefined.
 
 seq(<<>>) -> undefined;
 seq(Str)  -> to_seq(Str, []).

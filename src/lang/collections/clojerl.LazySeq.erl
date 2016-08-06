@@ -12,7 +12,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([new/1]).
+-export([?CONSTRUCTOR/1]).
 
 -export([count/1]).
 -export([ cons/2
@@ -27,14 +27,14 @@
         , next/1
         , more/1
         ]).
--export([noop/1]).
+-export(['_'/1]).
 -export([seq/1]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
 
--spec new(function()) -> type().
-new(Fn) when is_function(Fn) ->
+-spec ?CONSTRUCTOR(function()) -> type().
+?CONSTRUCTOR(Fn) when is_function(Fn) ->
   #?TYPE{data = Fn}.
 
 %%------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ count(#?TYPE{name = ?M, data = Fn}) ->
   end.
 
 cons(#?TYPE{name = ?M} = LazySeq, X) ->
-  'clojerl.Cons':new(X, LazySeq).
+  'clojerl.Cons':?CONSTRUCTOR(X, LazySeq).
 
 empty(_) -> [].
 
@@ -92,7 +92,7 @@ more(#?TYPE{name = ?M, data = Fn}) ->
     Seq -> clj_core:rest(Seq)
   end.
 
-noop(_) -> ok.
+'_'(_) -> undefined.
 
 seq(#?TYPE{name = ?M, data = Fn}) ->
   case clj_core:invoke(Fn, []) of
