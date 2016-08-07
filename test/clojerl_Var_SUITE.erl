@@ -25,7 +25,7 @@
 -type config() :: list().
 -type result() :: {comments, string()}.
 
--vars(#{<<"forty-two">> => { '7ype'
+-vars(#{<<"forty-two">> => { ?TYPE
                            , 'clojerl.Var'
                            , {<<"clojerl_Var_SUITE">>, <<"forty-two">>}
                            , #{}
