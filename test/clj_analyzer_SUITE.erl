@@ -28,6 +28,7 @@
         , 'try'/1
         , var/1
         , erl_fun/1
+        , import/1
         , new/1
         , deftype/1
         , on_load/1
@@ -205,6 +206,12 @@ def(_Config) ->
    } = analyze_one(<<"(def ^{:arglists []} *x* 1)">>),
   #{arglists := EmptyVector} = clj_core:meta(VarWithArgLists),
   0 = clj_core:count(EmptyVector),
+
+  ct:comment("Nested defs"),
+  #{ op   := def
+   , var  := _
+   , init := #{op := def}
+   }  = analyze_one(<<"(def x (def y 1))">>),
 
   {comments, ""}.
 
@@ -892,6 +899,19 @@ erl_fun(_Config) ->
    , function := 'is_atom'
    , arity    := undefined
    } = analyze_one(<<"erlang/is_atom.e">>),
+
+  {comments, ""}.
+
+-spec import(config()) -> result().
+import(_Config) ->
+  ct:comment("import* clojerl.String"),
+  #{ op       := import
+   , typename := <<"clojerl.String">>
+   } = analyze_one(<<"(import* \"clojerl.String\")">>),
+
+  ct:comment("Don't provide a binary to import*"),
+  ok = try analyze_one(<<"(import* clojerl.String)">>), error
+       catch _:_ -> ok end,
 
   {comments, ""}.
 

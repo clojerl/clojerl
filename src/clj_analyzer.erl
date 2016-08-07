@@ -925,10 +925,16 @@ parse_import(Env, Form) ->
                       , clj_reader:location_meta(Form)
                       ),
 
+  TypeName = clj_core:second(Form),
+  clj_utils:throw_when( not is_binary(TypeName)
+                      , <<"Argument to import* must be a string">>
+                      , clj_reader:location_meta(Form)
+                      ),
+
   NewExpr = #{ op       => import
              , env      => ?DEBUG(Env)
              , form     => Form
-             , typename => clj_core:second(Form)
+             , typename => TypeName
              },
 
   clj_env:push_expr(Env, NewExpr).

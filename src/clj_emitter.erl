@@ -14,12 +14,9 @@
 
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
-  case clj_env:pop_expr(Env0) of
-    {undefined, _} -> Env0;
-    {Expr, Env} ->
-      State = clj_env:get(Env, emitter, initial_state()),
-      clj_env:put(Env, emitter, ast(Expr, State))
-  end.
+  {Expr, Env} = clj_env:pop_expr(Env0),
+  State       = clj_env:get(Env, emitter, initial_state()),
+  clj_env:put(Env, emitter, ast(Expr, State)).
 
 -spec remove_state(clj_env:env()) ->
   { [erl_parse:abstract_expr()]
@@ -1065,14 +1062,10 @@ line_from(Form) ->
 
 -spec file_from(any()) -> binary().
 file_from(Form) ->
-  case clj_core:'meta?'(Form) of
-    false -> <<>>;
-    true  ->
-      case clj_core:meta(Form) of
-        undefined -> <<>>;
-        Map ->
-          clj_core:get(Map, file, <<>>)
-      end
+  case clj_core:meta(Form) of
+    undefined -> <<>>;
+    Map ->
+      clj_core:get(Map, file, <<>>)
   end.
 
 -spec anno_from(any()) -> erl_anno:anno().
