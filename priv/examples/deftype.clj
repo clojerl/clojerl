@@ -7,7 +7,7 @@
   (str [_]
     (str "#SomeType[value1 = " value1 ", value2 = " value2 "]")))
 
-(let [x (new examples.deftype.SomeType 1 2)]
+(let [x (new SomeType 1 2)]
   (prn x)
   (prn (clojerl.IHash/hash.e x)))
 
@@ -15,7 +15,7 @@
   clojerl.IHash
   (hash [this] (+ x y)))
 
-(let [x (new examples.deftype.SomeRecord 1 2)]
+(let [x (new SomeRecord 1 2)]
   (prn x)
   (prn (clojerl.IHash/hash.e x))
   (prn (:x x))

@@ -14,12 +14,9 @@
 
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
-  case clj_env:pop_expr(Env0) of
-    {undefined, _} -> Env0;
-    {Expr, Env} ->
-      State = clj_env:get(Env, emitter, initial_state()),
-      clj_env:put(Env, emitter, ast(Expr, State))
-  end.
+  {Expr, Env} = clj_env:pop_expr(Env0),
+  State       = clj_env:get(Env, emitter, initial_state()),
+  clj_env:put(Env, emitter, ast(Expr, State)).
 
 -spec remove_state(clj_env:env()) ->
   { [erl_parse:abstract_expr()]
@@ -129,31 +126,51 @@ ast(#{op := def} = Expr, State) ->
 
   push_ast(VarAst, State1);
 %%------------------------------------------------------------------------------
+%% import
+%%------------------------------------------------------------------------------
+ast(#{op := import} = Expr, State) ->
+  #{ typename := Typename
+   , form     := Form
+   } = Expr,
+
+  Type = binary_to_atom(Typename, utf8),
+
+  clj_utils:throw_when( {module, Type} =/= code:ensure_loaded(Type)
+                      , [<<"Type '">>, Type, <<"' could not be loaded.">>]
+                      , clj_reader:location_meta(Form)
+                      ),
+
+  TypenameAst = erl_parse:abstract(Typename),
+  ImportAst   = application_mfa(clj_namespace, import_type, [TypenameAst]),
+
+  push_ast(ImportAst, State);
+%%------------------------------------------------------------------------------
 %% new
 %%------------------------------------------------------------------------------
 ast(#{op := new} = Expr, State) ->
-  #{ typename := Typename
-   , args     := ArgsExprs
+  #{ type := #{op := type, type := TypeSym}
+   , args := ArgsExprs
    } = Expr,
 
   {ArgsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
                               , length(ArgsExprs)
                               ),
 
-  Ast = application_mfa(sym_to_kw(Typename), ?CONSTRUCTOR, ArgsAsts),
+  TypeModule = sym_to_kw(TypeSym),
+  Ast = application_mfa(TypeModule, ?CONSTRUCTOR, ArgsAsts),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% deftype
 %%------------------------------------------------------------------------------
 ast(#{op := deftype} = Expr, State0) ->
-  #{ typename  := Typename
+  #{ type      := TypeSym
    , name      := Name
    , fields    := FieldsExprs
    , methods   := MethodsExprs
    , protocols := Protocols
    } = Expr,
 
-  Module         = sym_to_kw(Typename),
+  Module         = sym_to_kw(TypeSym),
   ok             = clj_module:ensure_loaded(Module, file_from(Name)),
 
   %% Attributes
@@ -227,7 +244,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   Ast = erl_parse:abstract(Name, line_from(Name)),
 
-  CompileOpts = #{erl_flags => [binary]},
+  CompileOpts = #{erl_flags => [binary, debug_info]},
   clj_compiler:compile_forms(clj_module:get_forms(Module), CompileOpts),
 
   push_ast(Ast, State1);
@@ -1045,14 +1062,10 @@ line_from(Form) ->
 
 -spec file_from(any()) -> binary().
 file_from(Form) ->
-  case clj_core:'meta?'(Form) of
-    false -> <<>>;
-    true  ->
-      case clj_core:meta(Form) of
-        undefined -> <<>>;
-        Map ->
-          clj_core:get(Map, file, <<>>)
-      end
+  case clj_core:meta(Form) of
+    undefined -> <<>>;
+    Map ->
+      clj_core:get(Map, file, <<>>)
   end.
 
 -spec anno_from(any()) -> erl_anno:anno().

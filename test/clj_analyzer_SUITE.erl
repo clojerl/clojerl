@@ -28,6 +28,7 @@
         , 'try'/1
         , var/1
         , erl_fun/1
+        , import/1
         , new/1
         , deftype/1
         , on_load/1
@@ -205,6 +206,12 @@ def(_Config) ->
    } = analyze_one(<<"(def ^{:arglists []} *x* 1)">>),
   #{arglists := EmptyVector} = clj_core:meta(VarWithArgLists),
   0 = clj_core:count(EmptyVector),
+
+  ct:comment("Nested defs"),
+  #{ op   := def
+   , var  := _
+   , init := #{op := def}
+   }  = analyze_one(<<"(def x (def y 1))">>),
 
   {comments, ""}.
 
@@ -895,20 +902,33 @@ erl_fun(_Config) ->
 
   {comments, ""}.
 
+-spec import(config()) -> result().
+import(_Config) ->
+  ct:comment("import* clojerl.String"),
+  #{ op       := import
+   , typename := <<"clojerl.String">>
+   } = analyze_one(<<"(import* \"clojerl.String\")">>),
+
+  ct:comment("Don't provide a binary to import*"),
+  ok = try analyze_one(<<"(import* clojerl.String)">>), error
+       catch _:_ -> ok end,
+
+  {comments, ""}.
+
 -spec new(config()) -> result().
 new(_Config) ->
   ct:comment("Use new with no args"),
-  #{ op       := new
-   , typename := StringSymbol
-   , args     := []
+  #{ op   := new
+   , type := #{op := type, type := StringSymbol}
+   , args := []
    } = analyze_one(<<"(new clojerl.String)">>),
   true                 = clj_core:'symbol?'(StringSymbol),
   <<"clojerl.String">> = clj_core:str(StringSymbol),
 
   ct:comment("Use new with 1 arg"),
-  #{ op       := new
-   , typename := StringSymbol
-   , args     := [#{op := constant, form := <<"hello">>}]
+  #{ op   := new
+   , type := #{op := type, type := StringSymbol}
+   , args := [#{op := constant, form := <<"hello">>}]
    } = analyze_one(<<"(new clojerl.String \"hello\")">>),
   true                 = clj_core:'symbol?'(StringSymbol),
   <<"clojerl.String">> = clj_core:str(StringSymbol),
@@ -920,20 +940,20 @@ deftype(_Config) ->
   ct:comment("Simple deftype*"),
   #{ op        := deftype
    , name      := NameSymbol
-   , typename  := TypenameSymbol
+   , type      := TypeSymbol
    , fields    := [_, _]
    , protocols := []
    , methods   := []
    } = analyze_one(<<"(deftype* MyType ns.MyType [a b] :implements [])">>),
   true            = clj_core:'symbol?'(NameSymbol),
   <<"MyType">>    = clj_core:str(NameSymbol),
-  true            = clj_core:'symbol?'(TypenameSymbol),
-  <<"ns.MyType">> = clj_core:str(TypenameSymbol),
+  true            = clj_core:'symbol?'(TypeSymbol),
+  <<"ns.MyType">> = clj_core:str(TypeSymbol),
 
   ct:comment("deftype* with an interface and a method"),
   #{ op        := deftype
    , name      := NameSymbol
-   , typename  := TypenameSymbol
+   , type      := TypeSymbol
    , fields    := [_, _, _]
    , protocols := [_]
    , methods   := [#{op := method}]
