@@ -4136,7 +4136,7 @@
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
                                       (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (new clojerl.Map (clj_core/seq_to_list.e ~gmapseq))
+                                                           (new ~'clojerl.Map (clj_core/seq_to_list.e ~gmapseq))
                                                            ~gmap))
                                       ((fn [ret]
                                          (if (:as b)

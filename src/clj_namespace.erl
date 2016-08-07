@@ -21,6 +21,7 @@
         , get_aliases/1
 
         , refer/3
+        , import_type/1
         , unmap/2
         , add_alias/3
         , remove_alias/2
@@ -149,6 +150,14 @@ refer(Ns, Sym, Var) ->
                       ),
 
   gen_server:call(?MODULE, {intern, Ns, Sym, Var}).
+
+-spec import_type(binary()) -> namespace().
+import_type(TypeName) ->
+  SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
+  Sym     = clj_core:symbol(SymName),
+  TypeSym = clj_core:symbol(TypeName),
+
+  gen_server:call(?MODULE, {intern, current(), Sym, TypeSym}).
 
 -spec unmap(namespace(), 'clojerl.Symbol':type()) -> namespace().
 unmap(Ns, Sym) ->
