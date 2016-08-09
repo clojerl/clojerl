@@ -42,6 +42,7 @@ default_options() ->
                     , report_warnings
                     , nowarn_unused_vars
                     , nowarn_shadow_vars
+                    , nowarn_unused_record
                     ]
    , clj_flags   => []
    , reader_opts => #{}
