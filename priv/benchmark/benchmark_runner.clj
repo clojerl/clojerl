@@ -12,9 +12,9 @@
 
 (println ";;; instance?")
 (simple-benchmark [coll []] (instance? :clojerl.Vector coll) n)
-(println ";;; extends?")
-(simple-benchmark [coll (list 1 2 3)] (extends? :clojerl.ISeq coll) n)
-(simple-benchmark [coll [1 2 3]] (extends? :clojerl.ISeq coll) n)
+(println ";;; satisfies?")
+(simple-benchmark [coll (list 1 2 3)] (satisfies? :clojerl.ISeq coll) n)
+(simple-benchmark [coll [1 2 3]] (satisfies? :clojerl.ISeq coll) n)
 (println)
 
 (println ";;; string ops")

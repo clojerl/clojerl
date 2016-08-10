@@ -152,10 +152,10 @@ def(_Config) ->
   %%          ok
   %%      end,
 
-  ct:comment("Var without unbound root value"),
+  ct:comment("Var without a bound root value"),
   #{ op   := def
    , var  := _Var
-   , init := #{op := constant, form := unbound}
+   , init := #{op := constant, form := ?UNBOUND}
    }  = analyze_one(<<"(def x)">>),
 
   ct:comment("Not a dynamic var but its name suggest otherwise"),

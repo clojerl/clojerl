@@ -14,6 +14,7 @@
         , is_dynamic/1
         , is_macro/1
         , is_public/1
+        , is_bound/1
         , has_root/1
         , get/1
         ]).
@@ -68,6 +69,13 @@ is_public(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
   not maps:get(private, Meta, false);
 is_public(#?TYPE{name = ?M}) ->
   true.
+
+-spec is_bound(type()) -> boolean().
+is_bound(#?TYPE{name = ?M} = Var) ->
+  case deref(Var) of
+    ?UNBOUND -> false;
+    _ -> true
+  end.
 
 -spec has_root(type()) -> boolean().
 has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->

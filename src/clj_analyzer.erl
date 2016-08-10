@@ -779,7 +779,7 @@ parse_def(Env, List) ->
       Init  = case Docstring of
                 undefined when Count =:= 3 -> clj_core:third(List);
                 _ when Count =:= 4 -> clj_core:fourth(List);
-                _ -> unbound %% TODO: Create type clojerl.Unbound
+                _ -> ?UNBOUND
               end,
 
       ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),

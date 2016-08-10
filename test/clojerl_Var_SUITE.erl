@@ -10,6 +10,7 @@
         , 'forty-two'/2
         , 'forty-three'/2
         , 'forty-four__val'/0
+        , 'forty-five__val'/0
         ]).
 
 -export([ deref/1
@@ -78,6 +79,9 @@ init_per_suite(Config) ->
 -spec 'forty-four__val'() -> any().
 'forty-four__val'() ->
   unexisting:function().
+
+-spec 'forty-five__val'() -> any().
+'forty-five__val'() -> ?UNBOUND.
 
 -spec deref(config()) -> result().
 deref(_Config) ->
@@ -280,5 +284,11 @@ complete_coverage(_Config) ->
   Hash  = 'clojerl.IHash':hash(Var),
   Hash  = 'clojerl.IHash':hash(Var),
   true  = erlang:is_integer(Hash),
+
+  VarFortyTwo  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name),
+  VarFortyFive = 'clojerl.Var':?CONSTRUCTOR(Ns, <<"forty-five">>),
+
+  true  = 'clojerl.Var':is_bound(VarFortyTwo),
+  false = 'clojerl.Var':is_bound(VarFortyFive),
 
   {comments, ""}.

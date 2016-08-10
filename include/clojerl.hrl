@@ -2,6 +2,7 @@
 -define(TYPE, '7ype').
 -define(M, ?MODULE).
 -define(CONSTRUCTOR, '__new__').
+-define(UNBOUND, '__unbound__').
 
 -record(?TYPE, { name = ?M  :: atom()
                , data       :: any()

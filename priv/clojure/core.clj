@@ -130,26 +130,32 @@
   seq (fn ^:static seq [coll] (clj_core/seq.e coll)))
 
 (def
-  ^{:arglists '([p x])
+  ^{:arglists '([protocol atype])
     :doc "Evaluates x and tests if it extends the protocol
     p. Returns true or false"
     :added "1.0"}
-  extends? (fn extends? [p x]
-             (clj_core/extends?.e p (clj_core/type.e x))))
+  extends? (fn extends? [protocol atype]
+             (clj_core/extends?.e protocol atype)))
 
 (def
-  ^{:arglists '([t x])
-    :doc "Evaluates x and tests if it is of type t.
-    Returns true or false"
+  ^{:arglists '([protocol x])
+    :doc "Returns true if x satisfies the protocol"
+    :added "1.2"}
+  satisfies? (fn satisfies? [protocol x]
+               (clj_core/extends?.e protocol (clj_core/type.e x))))
+
+(def
+  ^{:arglists '([atype x])
+    :doc "Returns true if x's type is atype"
     :added "1.0"}
-  instance? (fn instance? [t x] (erlang/==.e t (clj_core/type.e x))))
+  instance? (fn instance? [atype x] (erlang/==.e atype (clj_core/type.e x))))
 
 (def
   ^{:arglists '([x])
     :doc "Return true if x implements ISeq"
     :added "1.0"
     :static true}
-  seq? (fn ^:static seq? [x] (extends? :clojerl.ISeq x)))
+  seq? (fn ^:static seq? [x] (satisfies? :clojerl.ISeq x)))
 
 (def
   ^{:arglists '([x])
@@ -163,7 +169,7 @@
     :doc "Return true if x implements IMeta"
     :added "1.0"
     :static true}
-  meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
+  meta? (fn ^:static meta? [x] (satisfies? :clojerl.IMeta x)))
 
 (def
   ^{:arglists '([x])
@@ -186,7 +192,7 @@
     :doc "Return true if x implements IMap"
     :added "1.0"
     :static true}
-  map? (fn ^:static map? [x] (extends? :clojerl.IMap x)))
+  map? (fn ^:static map? [x] (satisfies? :clojerl.IMap x)))
 
 (def
   ^{:arglists '([x])
@@ -348,7 +354,7 @@
    :static true}
   ([coll]
    (if (vector? coll)
-     (if (extends? :clojerl.IMeta coll)
+     (if (satisfies? :clojerl.IMeta coll)
        (with-meta coll nil)
        (clj_core/vector.e coll))
      (clj_core/vector.e coll))))
@@ -2116,7 +2122,7 @@
   {:added "1.0"
    :static true}
   ([ref]
-   (if (extends? :clojerl.IDeref ref)
+   (if (satisfies? :clojerl.IDeref ref)
      (clj_core/deref.e ref)
      (throw (str "unimplemented deref for type " (clj_core/type.e ref)))
      #_(deref-future ref)))
@@ -3814,7 +3820,7 @@
   "Returns true if x implements IPersistentSet"
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.ISet x))
+  [x] (satisfies? :clojerl.ISet x))
 
 (defn set
   "Returns a set of the distinct elements of coll."
@@ -3954,7 +3960,7 @@
         to-do (if (= :all (:refer fs))
                 (keys nspublics)
                 (or (:refer fs) (:only fs) (keys nspublics)))]
-    (when (and to-do (not (extends? :clojerl.ISequential to-do)))
+    (when (and to-do (not (satisfies? :clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
     ;; keys in maps are strings to avoid be able to use the underlying map
     ;; implementation. We convert all to-do's to strings since some filters
@@ -4885,7 +4891,7 @@
   {:added "1.0"
    :static true}
   [coll]
-  (when (extends? :clojerl.IColl coll)
+  (when (satisfies? :clojerl.IColl coll)
     (clj_core/empty.e coll)))
 
 #_ ((defmacro amap
@@ -5224,13 +5230,13 @@
   {:added "1.0"}
   ([tag parent]
    (assert (namespace parent))
-   (assert (or (class? tag) (and (extends? :clojerl.Named tag) (namespace tag))))
+   (assert (or (class? tag) (and (satisfies? :clojerl.Named tag) (namespace tag))))
 
    (alter-var-root #'global-hierarchy derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
-   (assert (or (class? tag) (extends? :clojerl.Named tag)))
-   (assert (extends? :clojerl.Named parent))
+   (assert (or (class? tag) (satisfies? :clojerl.Named tag)))
+   (assert (satisfies? :clojerl.Named parent))
 
    (let [tp (:parents h)
          td (:descendants h)
@@ -5801,7 +5807,7 @@
   "Returns true if x implements IPersistentCollection"
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.IColl x))
+  [x] (satisfies? :clojerl.IColl x))
 
 (defn list?
   "Returns true if x implements IPersistentList"
@@ -5815,7 +5821,7 @@
   (e.g. sets and maps) implement IFn"
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.IFn x))
+  [x] (satisfies? :clojerl.IFn x))
 
 (defn fn?
   "Returns true if x implements Fn, i.e. is an object created via fn."
@@ -5828,31 +5834,31 @@
  "Returns true if coll implements Associative"
  {:added "1.0"
   :static true}
-  [coll] (extends? :clojerl.Associative coll))
+  [coll] (satisfies? :clojerl.Associative coll))
 
 (defn sequential?
  "Returns true if coll implements Sequential"
  {:added "1.0"
   :static true}
-  [coll] (extends? :clojerl.ISequential coll))
+  [coll] (satisfies? :clojerl.ISequential coll))
 
 (defn sorted?
  "Returns true if coll implements Sorted"
  {:added "1.0"
    :static true}
-  [coll] (extends? :clojerl.Sorted coll))
+  [coll] (satisfies? :clojerl.Sorted coll))
 
 (defn counted?
  "Returns true if coll implements count in constant time"
  {:added "1.0"
    :static true}
-  [coll] (extends? :clojerl.Counted coll))
+  [coll] (satisfies? :clojerl.Counted coll))
 
 (defn reversible?
  "Returns true if coll implements Reversible"
  {:added "1.0"
    :static true}
-  [coll] (extends? :clojerl.Reversible coll))
+  [coll] (satisfies? :clojerl.Reversible coll))
 
 (def ^:dynamic
  ^{:doc "bound in a repl thread to the most recent value printed"
