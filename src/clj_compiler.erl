@@ -257,16 +257,9 @@ compile_forms(Forms, Opts) ->
   ErlFlags = maps:get(erl_flags, Opts, []),
 
   case compile:forms(Forms, ErlFlags) of
-    {ok, Name, Binary} ->
-      %% io:format("Compiled ~p with ~p forms~n", [Name, length(Forms)]),
-      OutputDir    = maps:get(output_dir, Opts, "ebin"),
-      NameBin      = atom_to_binary(Name, utf8),
-      BeamFilename = <<NameBin/binary, ".beam">>,
-      BeamPath     = filename:join([OutputDir, BeamFilename]),
-      ok           = file:write_file(BeamPath, Binary),
-
-      BeamPathStr = binary_to_list(BeamPath),
-      {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
+    {ok, Name, BeamBinary} ->
+      BeamPath = maybe_output_beam(Name, BeamBinary, Opts),
+      {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
       Name;
     Error ->
       error(Error)
@@ -301,3 +294,12 @@ maybe_output_erl(Forms, #{output_erl := Filename}) ->
   file:write_file(Filename, Source);
 maybe_output_erl(_, _) ->
   ok.
+
+-spec maybe_output_beam(atom(), binary(), options()) -> string().
+maybe_output_beam(Name, BeamBinary, #{output_dir := OutputDir}) ->
+  NameBin      = atom_to_binary(Name, utf8),
+  BeamFilename = <<NameBin/binary, ".beam">>,
+  BeamPath     = filename:join([OutputDir, BeamFilename]),
+  ok           = file:write_file(BeamPath, BeamBinary),
+  binary_to_list(BeamPath);
+maybe_output_beam(_, _, _) -> "".
