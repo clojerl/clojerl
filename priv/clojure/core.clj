@@ -3286,12 +3286,8 @@
                                (into1 v (map #(str p "." %) cs)))))
                          [] specs)))))
 
-(defn into-array
-  "Returns an array with components set to the values in aseq. The array's
-  component type is type if provided, or the type of the first value in
-  aseq if present, or Object. All values in aseq must be compatible with
-  the component type. Class objects for the primitive types can be obtained
-  using, e.g., Integer/TYPE."
+(defn into-tuple
+  "Returns a tuple with components set to the values in aseq."
   {:added "1.0"
    :static true}
   ([aseq]
@@ -3299,10 +3295,10 @@
   ([type aseq]
    (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1)))
 
-(defn ^{:private true}
-  array
+(defn tuple
+  "Returns a tuple with items."
   [& items]
-  (into-array items))
+  (into-tuple items))
 
 (defn class
   "Returns the Class of x"
