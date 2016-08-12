@@ -3,6 +3,7 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.Named').
@@ -10,13 +11,14 @@
 
 -export([?CONSTRUCTOR/1, ?CONSTRUCTOR/2]).
 
--export([ name/1
-        , namespace/1
-        ]).
 -export([equiv/2]).
+-export([invoke/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
+        ]).
+-export([ name/1
+        , namespace/1
         ]).
 -export([str/1]).
 
@@ -35,6 +37,18 @@
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
+
+%% clojerl.IFn
+
+invoke(#?TYPE{name = ?M} = Symbol, [Map]) ->
+  clj_core:get(Map, Symbol);
+invoke(#?TYPE{name = ?M} = Symbol, [Map, NotFound]) ->
+  clj_core:get(Map, Symbol, NotFound);
+invoke(_, Args) ->
+  CountBin = integer_to_binary(length(Args)),
+  throw(<<"Wrong number of args for symbol, got: ", CountBin/binary>>).
+
+%% clojerl.Stringable
 
 str(#?TYPE{name = ?M, data = {undefined, Name}}) ->
   Name;
