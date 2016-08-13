@@ -270,7 +270,7 @@ by default when a new command-line REPL is started."} repl-requires
   "Evals expressions in str, prints each non-nil result using prn"
   [str]
   (let [eof (erlang/make_ref.e)
-        reader (new clojerl.StringReader str)]
+        reader (new erlang.io.StringReader str)]
       (loop [input (with-read-known (read reader false eof))]
         (when-not (= input eof)
           (let [value (eval input)]
