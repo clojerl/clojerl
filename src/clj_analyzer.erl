@@ -988,13 +988,18 @@ parse_deftype(Env, Form) ->
                 end,
   %% The analyzer adds the fields to the local scope of the methods,
   %% but it is the emitter who will need to pattern match the first argument
-  %% so that they are actually available.
+  %% so that they are actually available in the methods' body.
   Env1        = clj_env:add_locals_scope(Env),
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
   Env3        = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
+
+  IntfsList   = clj_core:seq_to_list(Interfaces),
+  {InterfacesExprs, Env5} = clj_env:last_exprs( analyze_forms(Env4, IntfsList)
+                                              , length(IntfsList)
+                                              ),
 
   DeftypeExpr = #{ op        => deftype
                  , env       => ?DEBUG(Env)
@@ -1003,11 +1008,11 @@ parse_deftype(Env, Form) ->
                  , type      => TypeSym
                  , fields    => FieldsExprs
                  , methods   => MethodsExprs
-                 , protocols => clj_core:seq_to_list(Interfaces)
+                 , protocols => InterfacesExprs
                  },
 
-  Env5 = clj_env:remove_locals_scope(Env4),
-  clj_env:push_expr(Env5, DeftypeExpr).
+  Env6 = clj_env:remove_locals_scope(Env5),
+  clj_env:push_expr(Env6, DeftypeExpr).
 
 -spec analyze_deftype_method('clojerl.List':type(), clj_env:env()) ->
   clj_env:env().
@@ -1424,7 +1429,13 @@ is_maybe_type(Symbol) ->
     undefined ->
       Name = clj_core:name(Symbol),
       Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
-      match =:= re:run(Name, Re, [global, {capture, none}]);
+      case re:run(Name, Re, [global, {capture, none}]) of
+        match ->
+          Module = binary_to_atom(Name, utf8),
+          {module, Module} =:= code:ensure_loaded(Module);
+        _ ->
+          false
+      end;
     _ ->
       false
   end.

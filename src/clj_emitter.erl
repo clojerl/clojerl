@@ -167,15 +167,16 @@ ast(#{op := deftype} = Expr, State0) ->
    , name      := Name
    , fields    := FieldsExprs
    , methods   := MethodsExprs
-   , protocols := Protocols
+   , protocols := ProtocolsExprs
    } = Expr,
 
   Module         = sym_to_kw(TypeSym),
   ok             = clj_module:ensure_loaded(Module, file_from(Name)),
 
   %% Attributes
-  ProtocolsNames = lists:map(fun sym_to_kw/1, Protocols),
-  Attributes     = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
+  Attributes     = [ {attribute, 0, behavior, sym_to_kw(ProtocolName)}
+                     || #{type := ProtocolName} <- ProtocolsExprs
+                   ],
 
   %% Functions
   {AllFieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
