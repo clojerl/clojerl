@@ -88,6 +88,7 @@ special_forms() ->
    , <<"import*">>      => fun parse_import/2
    , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
+   , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"letfn*">>       => undefined
 
      %% , <<"monitor-enter">>
@@ -1014,7 +1015,7 @@ analyze_deftype_method(Form, Env) ->
   [MethodName, Args | _Body] = clj_core:seq_to_list(Form),
 
   clj_utils:throw_when( not clj_core:'symbol?'(MethodName)
-                      , [ <<"Method method must be a symbol, had: ">>
+                      , [ <<"Method name must be a symbol, had: ">>
                         , clj_core:type(MethodName)
                         ]
                       , clj_reader:location_meta(MethodName)
@@ -1049,6 +1050,32 @@ analyze_deftype_method(Form, Env) ->
                           ),
 
   clj_env:push_expr(Env1, MethodExpr1).
+
+%%------------------------------------------------------------------------------
+%% Parse defprotocol
+%%------------------------------------------------------------------------------
+
+-spec parse_defprotocol(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_defprotocol(Env, List) ->
+  [ _ % defprotocol*
+  , Name
+  | MethodsSigs
+  ] = clj_core:seq_to_list(List),
+
+  clj_utils:throw_when( not clj_core:'symbol?'(Name)
+                      , [ <<"Protocol name should be a symbol, had: ">>
+                        , clj_core:type(Name)
+                        ]
+                      , clj_reader:location_meta(Name)
+                      ),
+
+  ProtocolExpr = #{ op           => defprotocol
+                  , env          => ?DEBUG(Env)
+                  , name         => Name
+                  , methods_sigs => MethodsSigs
+                  },
+
+  clj_env:push_expr(Env, ProtocolExpr).
 
 %%------------------------------------------------------------------------------
 %% Parse throw

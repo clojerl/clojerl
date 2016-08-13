@@ -242,10 +242,10 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Module, Exports),
   clj_module:add_functions(Module, Functions),
 
-  Ast = erl_parse:abstract(Name, line_from(Name)),
-
-  CompileOpts = #{erl_flags => [binary, debug_info]},
+  CompileOpts = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
   clj_compiler:compile_forms(clj_module:get_forms(Module), CompileOpts),
+
+  Ast = erl_parse:abstract(Name, line_from(Name)),
 
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -258,6 +258,42 @@ ast(#{op := method} = Expr, State0) ->
   FunAst = function_form(sym_to_kw(Name), [ClauseAst]),
 
   push_ast(FunAst, State1);
+%%------------------------------------------------------------------------------
+%% defprotocol
+%%------------------------------------------------------------------------------
+ast(#{op := defprotocol} = Expr, State) ->
+  #{ name         := NameSym
+   , methods_sigs := MethodsSigs
+   } = Expr,
+
+  Module = sym_to_kw(NameSym),
+  ok     = clj_module:ensure_loaded(Module, file_from(NameSym)),
+
+  TermType = {type, 0, term, []},
+  CallbackAttrFun = fun(Sig) ->
+                        MethodNameSym = clj_core:first(Sig),
+                        Arity         = clj_core:second(Sig),
+                        ArgsTypes     = lists:duplicate(Arity, TermType),
+                        { attribute
+                        , 0
+                        , callback
+                        , { {sym_to_kw(MethodNameSym), Arity}
+                          , [{ type
+                             , 0
+                             , 'fun'
+                             , [ {type, 0, product, ArgsTypes}
+                               , TermType
+                               ]
+                             }
+                            ]
+                          }
+                        }
+                    end,
+  Attributes = lists:map(CallbackAttrFun, MethodsSigs),
+  clj_module:add_attributes(Module, Attributes),
+
+  Ast = erl_parse:abstract(NameSym, line_from(NameSym)),
+  push_ast(Ast, State);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
