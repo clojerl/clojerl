@@ -21,6 +21,7 @@
         , add_on_load/2
 
         , is_clojure/1
+        , is_protocol/1
         ]).
 
 %% gen_server callbacks
@@ -253,6 +254,19 @@ is_clojure(Name) ->
       IsClojure = lists:keymember(clojure, 1, Attrs),
       clj_cache:put(Key, IsClojure),
       IsClojure;
+    {ok, Value} ->
+      Value
+  end.
+
+-spec is_protocol(module()) -> boolean().
+is_protocol(Name) ->
+  Key = {?MODULE, is_protocol, Name},
+  case clj_cache:get(Key) of
+    undefined ->
+      Attrs = Name:module_info(attributes),
+      IsProtocol = lists:keymember(protocol, 1, Attrs),
+      clj_cache:put(Key, IsProtocol),
+      IsProtocol;
     {ok, Value} ->
       Value
   end.

@@ -388,9 +388,7 @@
 (defn- protocol?
   [maybe-p]
   (and (clj_module/is_clojure.e maybe-p)
-       (->> (erlang/apply.e maybe-p :module_info :attributes)
-            (filter #(= (first %) :protocol))
-            seq)))
+       (clj_module/is_protocol.e maybe-p)))
 
 (defn- implements? [protocol atype]
   (extends? protocol atype))

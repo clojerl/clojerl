@@ -145,6 +145,16 @@ ast(#{op := import} = Expr, State) ->
 
   push_ast(ImportAst, State);
 %%------------------------------------------------------------------------------
+%% type
+%%------------------------------------------------------------------------------
+ast(#{op := type} = Expr, State) ->
+  #{type := TypeSym} = Expr,
+
+  TypeModule = sym_to_kw(TypeSym),
+  Ast        = {atom, anno_from(TypeSym), TypeModule},
+
+  push_ast(Ast, State);
+%%------------------------------------------------------------------------------
 %% new
 %%------------------------------------------------------------------------------
 ast(#{op := new} = Expr, State) ->
@@ -290,8 +300,10 @@ ast(#{op := defprotocol} = Expr, State) ->
                           }
                         }
                     end,
-  Attributes = lists:map(CallbackAttrFun, MethodsSigs),
-  clj_module:add_attributes(Module, Attributes),
+
+  ProtocolAttr = {attribute, 0, protocol, true},
+  Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
+  clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
 
   Ast = erl_parse:abstract(NameSym, line_from(NameSym)),
   push_ast(Ast, State);
@@ -738,7 +750,12 @@ ast(#{op := on_load} = Expr, State) ->
   ModuleName = binary_to_atom(clj_core:name(NameSym), utf8),
   clj_module:add_on_load(ModuleName, Ast),
 
-  push_ast(Ast, State1).
+  push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
+%% Unknown op
+%%------------------------------------------------------------------------------
+ast(#{op := Unknown}, _State) ->
+  error({unknown_op, Unknown}).
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions

@@ -472,8 +472,8 @@ keys(Map) ->
   'clojerl.IMap':keys(Map).
 
 -spec vals('clojerl.IMap':type()) -> list().
-vals(Map) ->
-  'clojerl.IMap':vals(Map).
+vals(undefined) -> undefined;
+vals(Map) -> 'clojerl.IMap':vals(Map).
 
 -spec 'even?'(integer()) -> boolean().
 'even?'(X) ->
