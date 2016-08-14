@@ -31,6 +31,7 @@
         , import/1
         , new/1
         , deftype/1
+        , defprotocol/1
         , on_load/1
         ]).
 
@@ -961,6 +962,28 @@ deftype(_Config) ->
                      " :implements [clojerl.String]"
                      " (str [x] nil)"
                      ")">>),
+
+  {comments, ""}.
+
+-spec defprotocol(config()) -> result().
+defprotocol(_Config) ->
+  ct:comment("Simple defprotocol*"),
+  #{ op           := defprotocol
+   , name         := NameSymbol
+   , methods_sigs := EmptyMethodsSigs
+   } = analyze_one(<<"(defprotocol* some-ns.MyProtocol)">>),
+  true = clj_core:'symbol?'(NameSymbol),
+  <<"some-ns.MyProtocol">> = clj_core:str(NameSymbol),
+  0 = clj_core:count(EmptyMethodsSigs),
+
+  ct:comment("defprotocol* with signatures"),
+  #{ op           := defprotocol
+   , name         := NameSymbol
+   , methods_sigs := MethodsSigs
+   } = analyze_one(<<"(defprotocol* some-ns.MyProtocol"
+                     "  [f1 1] [f2 4] [f2 2])">>),
+  3 = clj_core:count(MethodsSigs),
+
 
   {comments, ""}.
 

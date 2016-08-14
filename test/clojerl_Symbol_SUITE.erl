@@ -3,6 +3,8 @@
 -export([all/0, init_per_suite/1]).
 
 -export([ equiv/1
+        , hash/1
+        , invoke/1
         , meta/1
         , name/1
         , str/1
@@ -41,6 +43,36 @@ equiv(_Config) ->
   ct:comment("A clojerl.Symbol and something else"),
   false = clj_core:equiv(Symbol1, whatever),
   false = clj_core:equiv(Symbol1, #{}),
+
+  {comments, ""}.
+
+-spec hash(config()) -> result().
+hash(_Config) ->
+  HelloSymbol = clj_core:symbol(<<"hello">>),
+  Hash1 = 'clojerl.IHash':hash(HelloSymbol),
+  Hash1 = 'clojerl.IHash':hash(HelloSymbol),
+
+  WorldSymbol = clj_core:symbol(<<"world">>),
+  Hash2 = 'clojerl.IHash':hash(WorldSymbol),
+
+  true = Hash1 =/= Hash2,
+
+  {comments, ""}.
+
+-spec invoke(config()) -> result().
+invoke(_Config) ->
+  HelloSymbol = clj_core:symbol(<<"hello">>),
+  world = clj_core:invoke(HelloSymbol, [#{HelloSymbol => world}]),
+
+  undefined = clj_core:invoke(HelloSymbol, [#{bla => ble}]),
+  not_found = clj_core:invoke(HelloSymbol, [#{bla => ble}, not_found]),
+
+  ok = try
+         clj_core:invoke(HelloSymbol, [#{bla => ble}, not_found, extra]),
+         error
+       catch _:_ ->
+           ok
+       end,
 
   {comments, ""}.
 
