@@ -993,6 +993,19 @@ parse_deftype(Env, Form) ->
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
+  %% HACK: we need the module to be available so we emit the type, but
+  %% remove all protocols and methods.
+  DeftypeDummyExpr = #{ op        => deftype
+                      , env       => ?DEBUG(Env)
+                      , form      => Form
+                      , name      => Name
+                      , type      => TypeSym
+                      , fields    => FieldsExprs
+                      , protocols => []
+                      , methods   => []
+                      },
+  _ = clj_emitter:emit(clj_env:push_expr(Env2, DeftypeDummyExpr)),
+
   Env3        = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
 
@@ -1007,8 +1020,8 @@ parse_deftype(Env, Form) ->
                  , name      => Name
                  , type      => TypeSym
                  , fields    => FieldsExprs
-                 , methods   => MethodsExprs
                  , protocols => InterfacesExprs
+                 , methods   => MethodsExprs
                  },
 
   Env6 = clj_env:remove_locals_scope(Env5),

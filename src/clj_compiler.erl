@@ -197,7 +197,6 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
           {_, Env2} = clj_emitter:remove_state(Env1),
 
           %% Compile all modules
-          ensure_output_dir(Opts),
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
           Env3 = clj_env:remove(Env2, clj_flags),
@@ -222,11 +221,11 @@ check_flag(Flag, Env) ->
   end.
 
 -spec ensure_output_dir(options()) -> ok.
-ensure_output_dir(Opts) ->
-  OutputDir = maps:get(output_dir, Opts),
-  ok = filelib:ensure_dir(OutputDir),
-  true = filelib:is_dir(OutputDir) orelse file:make_dir(OutputDir) =:= ok,
+ensure_output_dir(#{output_dir := OutputDir}) ->
+  ok   = filelib:ensure_dir(filename:join([OutputDir, "dummy"])),
   true = code:add_path(OutputDir),
+  ok;
+ensure_output_dir(_) ->
   ok.
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
@@ -296,7 +295,8 @@ maybe_output_erl(_, _) ->
   ok.
 
 -spec maybe_output_beam(atom(), binary(), options()) -> string().
-maybe_output_beam(Name, BeamBinary, #{output_dir := OutputDir}) ->
+maybe_output_beam(Name, BeamBinary, #{output_dir := OutputDir} = Opts) ->
+  ensure_output_dir(Opts),
   NameBin      = atom_to_binary(Name, utf8),
   BeamFilename = <<NameBin/binary, ".beam">>,
   BeamPath     = filename:join([OutputDir, BeamFilename]),

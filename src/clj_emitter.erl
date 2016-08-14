@@ -243,8 +243,8 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Module, Exports),
   clj_module:add_functions(Module, Functions),
 
-  CompileOpts = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
-  clj_compiler:compile_forms(clj_module:get_forms(Module), CompileOpts),
+  Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
+  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
 
   Ast = erl_parse:abstract(Name, line_from(Name)),
 
