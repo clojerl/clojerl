@@ -182,11 +182,13 @@ str(#?TYPE{name = ?M, data = {Ns, Name}}) ->
 deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
   Module      = module(Var),
   FunctionVal = val_function(Var),
+  %% HACK
+  Fun         = clj_module:fake_fun(Module, FunctionVal, 0),
 
   try
     %% Make the call in case the module is not loaded and handle the case
     %% when it doesn't even exist gracefully.
-    Module:FunctionVal()
+    Fun()
   catch
     Type:undef ->
       case erlang:function_exported(Module, FunctionVal, 0) of
@@ -224,6 +226,7 @@ invoke(#?TYPE{name = ?M} = Var, Args) ->
                Seq       -> Seq
              end,
   Args2    = process_args(Var, Args1, fun clj_core:seq/1),
+  %% HACK
   Fun      = clj_module:fake_fun(Module, Function, length(Args2)),
 
   erlang:apply(Fun, Args2).

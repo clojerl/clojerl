@@ -79,8 +79,7 @@ find_var(Symbol) ->
 -spec find_var(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | undefined.
 find_var(DefaultNs, Symbol) ->
-  NsStr = clj_core:namespace(Symbol),
-  Ns = case NsStr of
+  Ns = case clj_core:namespace(Symbol) of
          undefined -> DefaultNs;
          NsStr     ->
            NsSym = clj_core:symbol(NsStr),

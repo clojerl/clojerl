@@ -23,3 +23,7 @@
   (prn (merge x {:y 1984 :z :keyword}))
   (prn (merge {:y 1984 :z :keyword} x))
   (prn (= {:x 1 :y 2} x)))
+
+(defprotocol SomeProtocol
+  (function-one [this] [this a])
+  (function-two [this a b c]))

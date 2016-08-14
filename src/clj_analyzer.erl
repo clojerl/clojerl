@@ -734,76 +734,76 @@ parse_def(Env, List) ->
   SymbolMeta   = clj_core:merge([ArgListsMap, DocstringMap, SymbolMeta0]),
   VarSymbol    = clj_core:with_meta(VarSymbol0, SymbolMeta),
 
-  case lookup_var(VarSymbol) of
-    undefined ->
-      clj_utils:throw( [ <<"Can't refer to qualified var that doesn't exist: ">>
+  Var0 = lookup_var(VarSymbol),
+
+  clj_utils:throw_when( Var0 =:= undefined
+                      ,[ <<"Can't refer to qualified var that doesn't exist: ">>
                        , VarSymbol
                        ]
+                      , clj_reader:location_meta(VarSymbol)
+                      ),
+
+  VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
+  CurrentNs    = clj_namespace:current(),
+  CurrentNsSym = clj_namespace:name(CurrentNs),
+  clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
+                        andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
+                      , <<"Can't create defs outside of current ns">>
+                      , clj_reader:location_meta(List)
+                      ),
+
+  NameBin       = clj_core:name(VarSymbol),
+  VarMeta       = clj_core:merge([ clj_core:meta(Var0)
+                                 , SymbolMeta
+                                 , #{ ns   => VarNsSym
+                                    , name => clj_core:symbol(NameBin)
+                                    }
+                                 , ArgListsMap
+                                 ]),
+  Var           = clj_core:with_meta(Var0, VarMeta),
+
+  IsDynamic     = 'clojerl.Var':is_dynamic(Var),
+
+  NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
+  clj_utils:warn_when( not NoWarnDynamic
+                       andalso not IsDynamic
+                       andalso nomatch =/= re:run(NameBin, "\\*.+\\*")
+                     , [ <<"Var ">>
+                       , NameBin
+                       , <<" is not dynamic but its name"
+                           " suggests otherwise.~n">>
+                       ]
                      , clj_reader:location_meta(VarSymbol)
-                     );
-    Var0 ->
-      VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
-      CurrentNs    = clj_namespace:current(),
-      CurrentNsSym = clj_namespace:name(CurrentNs),
-      clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
-                            andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
-                          , <<"Can't create defs outside of current ns">>
-                          , clj_reader:location_meta(List)
-                          ),
+                     ),
 
-      NameBin       = clj_core:name(VarSymbol),
-      VarMeta       = clj_core:merge([ clj_core:meta(Var0)
-                                     , SymbolMeta
-                                     , #{ ns   => VarNsSym
-                                        , name => clj_core:symbol(NameBin)
-                                        }
-                                     , ArgListsMap
-                                     ]),
-      Var           = clj_core:with_meta(Var0, VarMeta),
+  clj_namespace:update_var(Var),
+  Count = clj_core:count(List),
+  Init  = case Docstring of
+            undefined when Count =:= 3 -> clj_core:third(List);
+            _ when Count =:= 4 -> clj_core:fourth(List);
+            _ -> ?UNBOUND
+          end,
 
-      IsDynamic     = 'clojerl.Var':is_dynamic(Var),
+  ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
+  {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
 
-      NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
-      clj_utils:warn_when( not NoWarnDynamic
-                           andalso not IsDynamic
-                           andalso nomatch =/= re:run(NameBin, "\\*.+\\*")
-                         , [ <<"Var ">>
-                           , NameBin
-                           , <<" is not dynamic but its name"
-                               " suggests otherwise.~n">>
-                           ]
-                         , clj_reader:location_meta(VarSymbol)
-                         ),
+  Var1 = var_fn_info(Var, InitExpr),
+  clj_namespace:update_var(Var1),
 
-      clj_namespace:update_var(Var),
-      Count = clj_core:count(List),
-      Init  = case Docstring of
-                undefined when Count =:= 3 -> clj_core:third(List);
-                _ when Count =:= 4 -> clj_core:fourth(List);
-                _ -> ?UNBOUND
-              end,
+  {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, VarMeta)),
 
-      ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
-      {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
+  DefExpr = #{ op      => def
+             , env     => ?DEBUG(Env)
+             , form    => List
+             , name    => VarSymbol
+             , var     => Var1
+             , init    => InitExpr
+             , meta    => MetaExpr
+             , dynamic => IsDynamic
+             },
 
-      Var1 = var_fn_info(Var, InitExpr),
-      clj_namespace:update_var(Var1),
-
-      {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, VarMeta)),
-
-      DefExpr = #{ op      => def
-                 , env     => ?DEBUG(Env)
-                 , form    => List
-                 , name    => VarSymbol
-                 , var     => Var1
-                 , init    => InitExpr
-                 , meta    => MetaExpr
-                 , dynamic => IsDynamic
-                 },
-
-      Env3 = restore_def_name(Env2, Env),
-      clj_env:push_expr(Env3, DefExpr)
-  end.
+  Env3 = restore_def_name(Env2, Env),
+  clj_env:push_expr(Env3, DefExpr).
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 add_def_name(Env, NameSym) ->
