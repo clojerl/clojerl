@@ -45,7 +45,7 @@ Design notes for clojure.string:
   "Returns s with its characters reversed."
   {:added "1.2"}
   [^CharSequence s]
-  (-> s
+  (-> (when s (str s))
       unicode/characters_to_list.1
       lists/reverse.1
       erlang/list_to_binary.1))
@@ -56,8 +56,28 @@ Design notes for clojure.string:
    necessary escaping of special characters in the replacement."
   {:added "1.5"}
   [^CharSequence replacement]
-  (throw "unimplemented")
-  #_(Matcher/quoteReplacement (.toString ^CharSequence replacement)))
+  (erlang.util.Regex/quote.e (when replacement (str replacement))))
+
+(defn- replace-by
+  [s re f]
+  (let [buffer (new erlang.io.StringWriter "")
+        opts (clj_core/seq_to_list.e [:global #[:capture :first :index]])
+        append erlang.io.StringWriter/write.2
+        length (count s)
+        match-result (erlang.util.Regex/run.e re s opts)]
+    (loop [index 0
+           [[i len :as m] & ms] (->> (when (not= match-result :nomatch)
+                                       match-result)
+                                     second
+                                     (map first))]
+      (if m
+        (do
+          (append buffer (subs s index i))
+          (append buffer (f (subs s i (+ i len))))
+          (recur (+ i len) ms))
+        (do
+          (append buffer (subs s index length))
+          (str buffer))))))
 
 (defn ^String replace
   "Replaces all instance of match with replacement in s.
@@ -85,7 +105,41 @@ Design notes for clojure.string:
    -> \"lmostAay igPay atinLay\""
   {:added "1.2"}
   [s match replacement]
-  (binary/replace.e s match replacement (clj_core/seq_to_list.e [:global])))
+  (let [s (when s (str s))
+        replace erlang.util.Regex/replace.4
+        opts (clj_core/seq_to_list.e [:global])]
+    (cond
+      (string? match) (replace match s (str replacement) opts)
+      (regex? match) (if (or (string? replacement)
+                             (instance? :erlang.io.StringWriter replacement))
+                       (replace match s (str replacement) opts)
+                       (replace-by s match replacement))
+      :else (throw (str "Invalid match arg: " match)))))
+
+(defn- replace-first-by
+  [s re f]
+  (let [buffer (new erlang.io.StringWriter "")
+        opts (clj_core/seq_to_list.e [#[:capture :first :index]])
+        append erlang.io.StringWriter/write.2
+        length (count s)
+        match-result (erlang.util.Regex/run.e re s opts)
+        [i len] (when (not= match-result :nomatch)
+                  (-> match-result second first))]
+    (if i
+      (do
+        (append buffer (subs s 0 i))
+        (append buffer (f (subs s i (+ i len))))
+        (append buffer (subs s (+ i len) length))
+        (str buffer))
+      s)))
+
+(defn- replace-first-str
+  [s match replace]
+  (let [s (str s)
+        i (clojerl.String/index_of.e s match)]
+    (if (= -1 i)
+      s
+      (str (subs s 0 i) replace (subs s (+ i (count match)))))))
 
 (defn ^String replace-first
   "Replaces the first instance of match with replacement in s.
@@ -114,7 +168,18 @@ Design notes for clojure.string:
    -> \"first swap two words\""
   {:added "1.2"}
   [s match replacement]
-  (binary/replace.e s match replacement))
+  (let [s (when s (str s))
+        replace erlang.util.Regex/replace.4
+        opts (clj_core/seq_to_list.e [])]
+    (cond
+      (string? match)
+      (replace-first-str s (str match) (str replacement))
+      (regex? match)
+      (if (or (string? replacement)
+              (instance? :erlang.io.StringWriter replacement))
+        (replace match s (str replacement) opts)
+        (replace-first-by s match replacement))
+      :else (throw (str "Invalid match arg: " match)))))
 
 (defn ^String join
   "Returns a string of all elements in coll, as returned by (seq coll),
@@ -129,22 +194,20 @@ Design notes for clojure.string:
   "Converts string to all upper-case."
   {:added "1.2"}
   [^CharSequence s]
-  (throw "unimplemented upper/lower case")
-  #_(-> s str to-upper))
+  (clojerl.String/to_upper.e s))
 
 (defn ^String lower-case
   "Converts string to all lower-case."
   {:added "1.2"}
   [^CharSequence s]
-  (throw "unimplemented upper/lower case")
-  #_(-> s toString toLowerCase))
+  (clojerl.String/to_lower.e s))
 
 (defn ^String capitalize
   "Converts first character of the string to upper-case, all other
   characters to lower-case."
   {:added "1.2"}
   [^CharSequence s]
-  (let [s (str s)]
+  (let [s (when s (str s))]
     (if (< (count s) 2)
       (upper-case s)
       (str (upper-case (subs s 0 1))
@@ -155,91 +218,97 @@ Design notes for clojure.string:
   the maximum number of splits. Not lazy. Returns vector of the splits."
   {:added "1.2"}
   ([s re]
-   (binary/split.e s re))
+   (erlang.util.Regex/split.e re
+                              (when s (str s))
+                              (clj_core/seq_to_list.e [])))
   ([s re limit]
-   (binary/split.e s re (clj_core/seq_to_list.e [:global]))))
+   (erlang.util.Regex/split.e re
+                              (when s (str s))
+                              (clj_core/seq_to_list.e [:global #[:match_limit limit]]))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."
   {:added "1.2"}
   [s]
-  (split s #"\r?\n"))
+  (vec (split s #"\r?\n")))
 
 (defn ^String trim
   "Removes whitespace from both ends of string."
   {:added "1.2"}
-  [^CharSequence s]
-  (throw "unimplemented trim")
-  #_(let [len (.length s)]
+  [s]
+  (let [s (when s (str s))
+        len (when s (count s))]
     (loop [rindex len]
       (if (zero? rindex)
         ""
-        (if (Character/isWhitespace (.charAt s (dec rindex)))
+        (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s (dec rindex)))
           (recur (dec rindex))
           ;; there is at least one non-whitespace char in the string,
           ;; so no need to check for lindex reaching len.
           (loop [lindex 0]
-            (if (Character/isWhitespace (.charAt s lindex))
+            (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s lindex))
               (recur (inc lindex))
-              (.. s (subSequence lindex rindex) toString))))))))
+              (subs s lindex rindex))))))))
 
 (defn ^String triml
   "Removes whitespace from the left side of string."
   {:added "1.2"}
   [^CharSequence s]
-  (throw "unimplemented trim")
-  #_(let [len (.length s)]
+  (let [s (when s (str s))
+        len (when s (count s))]
     (loop [index 0]
       (if (= len index)
         ""
-        (if (Character/isWhitespace (.charAt s index))
-          (recur (unchecked-inc index))
-          (.. s (subSequence index len) toString))))))
+        (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s index))
+          (recur (inc index))
+          (subs s index len))))))
 
 (defn ^String trimr
   "Removes whitespace from the right side of string."
   {:added "1.2"}
   [^CharSequence s]
-  (throw "unimplemented trim")
-  #_(loop [index (.length s)]
-    (if (zero? index)
-      ""
-      (if (Character/isWhitespace (.charAt s (unchecked-dec index)))
-        (recur (unchecked-dec index))
-        (.. s (subSequence 0 index) toString)))))
+  (let [s (when s (str s))]
+    (loop [index (when s (count s))]
+      (if (zero? index)
+        ""
+        (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s (dec index)))
+          (recur (dec index))
+          (subs s 0 index))))))
 
 (defn ^String trim-newline
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
   {:added "1.2"}
   [^CharSequence s]
-  (throw "unimplemented trim")
-  #_(loop [index (.length s)]
-    (if (zero? index)
-      ""
-      (let [ch (.charAt s (dec index))]
-        (if (or (= ch \newline) (= ch \return))
-          (recur (dec index))
-          (.. s (subSequence 0 index) toString))))))
+  (let [s (when s (str s))]
+    (loop [index (when s (count s))]
+      (if (zero? index)
+        ""
+        (let [ch (clojerl.String/char_at.e s (dec index))]
+          (if (or (= ch \newline) (= ch \return))
+            (recur (dec index))
+            (subs (str s) 0 index)))))))
 
 (defn blank?
   "True if s is nil, empty, or contains only whitespace."
   {:added "1.2"}
   [s]
-  (if s
-    (loop [index (int 0)]
-      (if (= (erlang/size.e s) index)
-        true
-        (if (= :whitespace (clj_utils/char_type.e (binary/at.e s index)))
-          (recur (inc index))
-          false)))
-    true))
+  (let [s (when s (str s))
+        len (count s)]
+    (if s
+      (loop [index (int 0)]
+        (if (= len index)
+          true
+          (if (= :whitespace (clj_utils/char_type.e (binary/at.e s index)))
+            (recur (inc index))
+            false)))
+      true)))
 
 (defn starts-with?
   "True if s starts with substr."
   {:added "1.8"}
   [s substr]
-  (clojerl.String/starts_with.e (str s) substr))
+  (clojerl.String/starts_with.e (when s (str s)) substr))
 
 (defn ^String escape
   "Return a new string, using cmap to escape each character ch
@@ -248,68 +317,58 @@ Design notes for clojure.string:
    If (cmap ch) is nil, append ch to the new string.
    If (cmap ch) is non-nil, append (str (cmap ch)) instead."
   {:added "1.2"}
-  [^CharSequence s cmap]
-  (throw "unimplemented escape")
-  #_(loop [index (int 0)
-         buffer (StringBuilder. (.length s))]
-    (if (= (.length s) index)
-      (.toString buffer)
-      (let [ch (.charAt s index)]
-        (if-let [replacement (cmap ch)]
-          (.append buffer replacement)
-          (.append buffer ch))
-        (recur (inc index) buffer)))))
-#_ ((defn index-of
-      "Return index of value (string or char) in s, optionally searching
+  [s cmap]
+  (let [s (when s (str s))
+        length (count s)
+        append erlang.io.StringWriter/write.2]
+    (loop [index 0
+           buffer (new erlang.io.StringWriter)]
+      (if (= length index)
+        (str buffer)
+        (let [ch (clojerl.String/char_at.e s index)]
+          (if-let [replacement (cmap ch)]
+            (append buffer replacement)
+            (append buffer ch))
+          (recur (inc index) buffer))))))
+
+(defn index-of
+  "Return index of value (string or char) in s, optionally searching
   forward from from-index or nil if not found."
-      {:added "1.8"}
-      ([^CharSequence s value]
-       (let [result ^long
-             (if (instance? Character value)
-               (.indexOf (.toString s) ^int (.charValue ^Character value))
-               (.indexOf (.toString s) ^String value))]
-         (if (= result -1)
-           nil
-           result)))
-      ([^CharSequence s value ^long from-index]
-       (let [result ^long
-             (if (instance? Character value)
-               (.indexOf (.toString s) ^int (.charValue ^Character value) (unchecked-int from-index))
-               (.indexOf (.toString s) ^String value (unchecked-int from-index)))]
-         (if (= result -1)
-           nil
-           result))))
+  {:added "1.8"}
+  ([s value]
+   (let [result (clojerl.String/index_of.e (str s) value)]
+     (if (= result -1)
+       nil
+       result)))
+  ([s value from-index]
+   (let [result (clojerl.String/index_of.e (str s) value from-index)]
+     (if (= result -1)
+       nil
+       result))))
 
-    (defn last-index-of
-      "Return last index of value (string or char) in s, optionally
+(defn last-index-of
+  "Return last index of value (string or char) in s, optionally
   searching backward from from-index or nil if not found."
-      {:added "1.8"}
-      ([^CharSequence s value]
-       (let [result ^long
-             (if (instance? Character value)
-               (.lastIndexOf (.toString s) ^int (.charValue ^Character value))
-               (.lastIndexOf (.toString s) ^String value))]
-         (if (= result -1)
-           nil
-           result)))
-      ([^CharSequence s value ^long from-index]
-       (let [result ^long
-             (if (instance? Character value)
-               (.lastIndexOf (.toString s) ^int (.charValue ^Character value) (unchecked-int from-index))
-               (.lastIndexOf (.toString s) ^String value (unchecked-int from-index)))]
-         (if (= result -1)
-           nil
-           result))))
+  {:added "1.8"}
+  ([^CharSequence s value]
+   (let [result (clojerl.String/last_index_of.e (str s) value)]
+     (if (= result -1)
+       nil
+       result)))
+  ([^CharSequence s value ^long from-index]
+   (let [result (clojerl.String/last_index_of.e (str s) value from-index)]
+     (if (= result -1)
+       nil
+       result))))
 
-    (defn ends-with?
-      "True if s ends with substr."
-      {:added "1.8"}
-      [^CharSequence s ^String substr]
-      (.endsWith (.toString s) substr))
+(defn ends-with?
+  "True if s ends with substr."
+  {:added "1.8"}
+  [^CharSequence s ^String substr]
+  (clojerl.String/ends_with.e (str s) substr))
 
-    (defn includes?
-      "True if s includes substr."
-      {:added "1.8"}
-      [^CharSequence s ^CharSequence substr]
-      (.contains (.toString s) substr))
-    )
+(defn includes?
+  "True if s includes substr."
+  {:added "1.8"}
+  [^CharSequence s ^CharSequence substr]
+  (clojerl.String/contains.e (str s) substr))
