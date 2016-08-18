@@ -194,13 +194,13 @@ Design notes for clojure.string:
   "Converts string to all upper-case."
   {:added "1.2"}
   [^CharSequence s]
-  (clojerl.String/to_upper.e s))
+  (clojerl.String/to_upper.e (when s (str s))))
 
 (defn ^String lower-case
   "Converts string to all lower-case."
   {:added "1.2"}
   [^CharSequence s]
-  (clojerl.String/to_lower.e s))
+  (clojerl.String/to_lower.e (when s (str s))))
 
 (defn ^String capitalize
   "Converts first character of the string to upper-case, all other

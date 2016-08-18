@@ -2,9 +2,16 @@
 
 -export([all/0, init_per_suite/1]).
 
--export([ str/1
-        , seq/1
+-export([ append/1
         , count/1
+        , index_of/1
+        , is_whitespace/1
+        , last_index_of/1
+        , join/1
+        , to_lower/1
+        , to_upper/1
+        , seq/1
+        , str/1
         , complete_coverage/1
         ]).
 
@@ -26,6 +33,13 @@ init_per_suite(Config) ->
 %% Test Cases
 %%------------------------------------------------------------------------------
 
+-spec append(config()) -> result().
+append(_Config) ->
+  <<"ab">> = 'clojerl.String':append(<<"a">>, <<"b">>),
+  <<"hello world">> = 'clojerl.String':append(<<"hello ">>, <<"world">>),
+
+  {comments, ""}.
+
 -spec count(config()) -> result().
 count(_Config) ->
   3 = clj_core:count(<<"abc">>),
@@ -40,6 +54,60 @@ count(_Config) ->
   ok = try clj_core:count(InvalidBinary), error
        catch _:_ -> ok
        end,
+
+  {comments, ""}.
+
+-spec is_whitespace(config()) -> result().
+is_whitespace(_Config) ->
+  true = 'clojerl.String':is_whitespace(<<" ">>),
+  true = 'clojerl.String':is_whitespace(<<"\t">>),
+  true = 'clojerl.String':is_whitespace(<<"\n">>),
+  true = 'clojerl.String':is_whitespace(<<"\r">>),
+
+  false = 'clojerl.String':is_whitespace(<<"a">>),
+  false = 'clojerl.String':is_whitespace(<<"A">>),
+  false = 'clojerl.String':is_whitespace(<<"B">>),
+  false = 'clojerl.String':is_whitespace(<<"b">>),
+
+  {comments, ""}.
+
+-spec index_of(config()) -> result().
+index_of(_Config) ->
+  1  = 'clojerl.String':index_of(<<"hello">>, <<"e">>),
+  2  = 'clojerl.String':index_of(<<"hello">>, <<"l">>),
+  -1 = 'clojerl.String':index_of(<<"hello">>, <<"f">>),
+  -1 = 'clojerl.String':index_of(<<>>, <<"f">>),
+
+  {comments, ""}.
+
+-spec last_index_of(config()) -> result().
+last_index_of(_Config) ->
+  7  = 'clojerl.String':last_index_of(<<"hello world">>, <<"o">>),
+  3  = 'clojerl.String':last_index_of(<<"hello">>, <<"l">>),
+  -1 = 'clojerl.String':last_index_of(<<"hello">>, <<"f">>),
+  -1 = 'clojerl.String':last_index_of(<<>>, <<"f">>),
+
+  {comments, ""}.
+
+-spec join(config()) -> result().
+join(_Config) ->
+  <<"1 and 2 and 3">> = 'clojerl.String':join([1, 2, 3], <<" and ">>),
+  <<"42">> = 'clojerl.String':join([42], <<" and ">>),
+  <<>> = 'clojerl.String':join([], <<" and ">>),
+
+  {comments, ""}.
+
+-spec to_lower(config()) -> result().
+to_lower(_Config) ->
+  <<"foo faa">> = 'clojerl.String':to_lower(<<"fOO FaA">>),
+  <<"hello world!">> = 'clojerl.String':to_lower(<<"Hello WoRld!">>),
+
+  {comments, ""}.
+
+-spec to_upper(config()) -> result().
+to_upper(_Config) ->
+  <<"FOO FAA">> = 'clojerl.String':to_upper(<<"fOO FaA">>),
+  <<"HELLO WORLD!">> = 'clojerl.String':to_upper(<<"Hello WoRld!">>),
 
   {comments, ""}.
 
