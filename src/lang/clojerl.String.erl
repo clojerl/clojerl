@@ -86,8 +86,8 @@ last_index_of(Str, Value, FromIndex) ->
 -spec join([binary()], binary()) -> binary().
 join([], _) ->
   <<>>;
-join([S], _) when is_binary(S) ->
-  S;
+join([S], _) ->
+  clj_core:str(S);
 join([H | T], Sep) ->
   B = << <<Sep/binary, (clj_core:str(X))/binary>> || X <- T >>,
   HStr = clj_core:str(H),
@@ -99,16 +99,12 @@ char_at(Str, Index) ->
   <<Ch>>.
 
 -spec to_upper(binary()) -> binary().
-to_upper(undefined) ->
-  error(<<"Invalid string">>);
-to_upper(Str) ->
-  list_to_binary(string:to_upper(binary_to_list(clj_core:str(Str)))).
+to_upper(Str) when is_binary(Str) ->
+  list_to_binary(string:to_upper(binary_to_list(Str))).
 
 -spec to_lower(binary()) -> binary().
-to_lower(undefined) ->
-  error(<<"Invalid string">>);
-to_lower(Str) ->
-  list_to_binary(string:to_lower(binary_to_list(clj_core:str(Str)))).
+to_lower(Str) when is_binary(Str) ->
+  list_to_binary(string:to_lower(binary_to_list(Str))).
 
 -spec is_whitespace(binary()) -> boolean().
 is_whitespace(Str) ->
