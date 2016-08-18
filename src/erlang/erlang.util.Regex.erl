@@ -28,7 +28,7 @@ run(#?TYPE{name = ?M, data = {_, Regex}}, Str, Opts) ->
 
 -spec replace(type(), binary(), binary(), [term()]) -> binary().
 replace(Regex, Str, Replacement, Opts) when is_binary(Regex) ->
-  erlang:iolist_to_binary(re:replace(Str, Regex, Replacement, Opts));
+  replace(?CONSTRUCTOR(Regex), Str, Replacement, Opts);
 replace(#?TYPE{name = ?M, data = {_, Regex}}, Str, Replacement, Opts) ->
   erlang:iolist_to_binary(re:replace(Str, Regex, Replacement, Opts)).
 
@@ -38,7 +38,7 @@ quote(Regex) when is_binary(Regex) ->
 
 -spec split(type(), binary(), [term()]) -> binary().
 split(Regex, Str, Opts) when is_binary(Regex) ->
-  re:split(Str, Regex, Opts);
+  split(?CONSTRUCTOR(Regex), Str, Opts);
 split(#?TYPE{name = ?M, data = {_, Regex}}, Str, Opts) ->
   re:split(Str, Regex, Opts).
 
