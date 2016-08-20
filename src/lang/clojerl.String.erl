@@ -6,7 +6,8 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([ starts_with/2
+-export([ substring/3
+        , starts_with/2
         , ends_with/2
         , contains/2
         , append/2
@@ -25,6 +26,20 @@
 -export([hash/1]).
 -export(['_'/1]).
 -export([str/1]).
+
+-spec substring(binary(), integer(), integer()) -> binary().
+substring(Str, Start, End) when is_binary(Str), Start =< End, Start >= 0 ->
+  do_substring(Str, Start, End, 0, <<>>).
+
+-spec do_substring(binary(), integer(), integer(), integer(), integer()) -> binary().
+do_substring(_Str, _Start, End, End, Acc) ->
+  Acc;
+do_substring(<<>>, _Start, _End, _Index, Acc) ->
+  Acc;
+do_substring(<<Ch/utf8, Str/binary>>, Start, End, Index, Acc) when Index >= Start ->
+  do_substring(Str, Start, End, Index + 1, <<Acc/binary, Ch/utf8>>);
+do_substring(<<_/utf8, Str/binary>>, Start, End, Index, Acc) ->
+  do_substring(Str, Start, End, Index + 1, Acc).
 
 -spec starts_with(binary(), binary()) -> boolean().
 starts_with(Str, Prefix) ->
