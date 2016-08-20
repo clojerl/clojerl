@@ -4583,7 +4583,7 @@
   {:added "1.0"
    :static true}
   ([s start] (subs s start (count s)))
-  ([s start end] (binary/part.e s start (- end start))))
+  ([s start end] (clojerl.String/substring.e s start end)))
 
 (defn regex? [x]
   (clj_core/regex?.e x))
