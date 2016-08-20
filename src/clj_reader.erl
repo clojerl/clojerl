@@ -717,7 +717,7 @@ read_unmatched_delim(State) ->
 read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
   {Token, State1} =
     case is_macro_terminating(NextChar) orelse is_whitespace(NextChar) of
-      true -> {<<NextChar>>, consume_chars(2, State)};
+      true -> {<<NextChar/utf8>>, consume_chars(2, State)};
       false -> read_token(consume_char(State))
     end,
   Char =
