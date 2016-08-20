@@ -61,6 +61,6 @@ do_quote(<<Ch/utf8, Rest/binary>>, Acc) ->
   NewCh = case Ch of
             $$  -> <<"\\$">>;
             $\\ -> <<"\\\\">>;
-            _   -> <<Ch>>
+            _   -> <<Ch/utf8>>
           end,
   do_quote(Rest, <<Acc/binary, NewCh/binary>>).

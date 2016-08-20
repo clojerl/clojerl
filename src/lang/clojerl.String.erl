@@ -94,9 +94,10 @@ join([H | T], Sep) ->
   <<HStr/binary, B/binary>>.
 
 -spec char_at(binary(), non_neg_integer()) -> binary().
-char_at(Str, Index) ->
-  Ch = binary:at(Str, Index),
-  <<Ch>>.
+char_at(<<Ch/utf8, _/binary>>, 0) ->
+  <<Ch/utf8>>;
+char_at(<<_/utf8, Str/binary>>, Index) when Index >= 0->
+  char_at(Str, Index - 1).
 
 -spec to_upper(binary()) -> binary().
 to_upper(Str) when is_binary(Str) ->
@@ -108,8 +109,8 @@ to_lower(Str) when is_binary(Str) ->
 
 -spec is_whitespace(binary()) -> boolean().
 is_whitespace(Str) ->
-  Regex = <<"[\\s\\x0B\\x1C\\x1D\\x1E\\x1F]">>,
-  match =:= re:run(Str, Regex, [{capture, none}]).
+  Regex = <<"[\\s\\t\\x0B\\x1C\\x1D\\x1E\\x1F\\x{2000}\\x{2002}]">>,
+  match =:= re:run(Str, Regex, [{capture, none}, unicode]).
 
 %%------------------------------------------------------------------------------
 %% Protocols
