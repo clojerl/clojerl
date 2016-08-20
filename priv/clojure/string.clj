@@ -172,7 +172,8 @@ Design notes for clojure.string:
         replace erlang.util.Regex/replace.4
         opts (clj_core/seq_to_list.e [])]
     (cond
-      (string? match)
+      (or (string? match)
+          (instance? :erlang.io.StringWriter match))
       (replace-first-str s (str match) (str replacement))
       (regex? match)
       (if (or (string? replacement)
@@ -218,13 +219,13 @@ Design notes for clojure.string:
   the maximum number of splits. Not lazy. Returns vector of the splits."
   {:added "1.2"}
   ([s re]
-   (erlang.util.Regex/split.e re
-                              (when s (str s))
-                              (clj_core/seq_to_list.e [])))
+   (vec (erlang.util.Regex/split.e re
+                                  (when s (str s))
+                                  (clj_core/seq_to_list.e []))))
   ([s re limit]
-   (erlang.util.Regex/split.e re
-                              (when s (str s))
-                              (clj_core/seq_to_list.e [:global #[:match_limit limit]]))))
+   (vec (erlang.util.Regex/split.e re
+                                   (when s (str s))
+                                   (clj_core/seq_to_list.e [:global #[:match_limit limit]])))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."
