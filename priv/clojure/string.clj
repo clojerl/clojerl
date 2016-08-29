@@ -63,13 +63,14 @@ Design notes for clojure.string:
   (with-open [buffer (new erlang.io.StringWriter)]
     (let [append erlang.io.StringWriter/write.2
           length (count s)
-          matches (re-run re s :global #[:capture :first :index])]
+          matches (re-run re s :global #[:capture :all :index])]
       (loop [index 0
-             [[i len :as m] & ms] (->> matches (map first))]
+             [[[i len] :as m] & ms] matches]
         (if m
-          (do
+          (let [m (map (fn [[i len]] (subs s i (+ i len))) m)
+                m (if (= (count m) 1) (first m) m)]
             (append buffer (subs s index i))
-            (append buffer (f (subs s i (+ i len))))
+            (append buffer (f m))
             (recur (+ i len) ms))
           (do
             (append buffer (subs s index length))
