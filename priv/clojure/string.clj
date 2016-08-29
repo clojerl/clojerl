@@ -60,24 +60,20 @@ Design notes for clojure.string:
 
 (defn- replace-by
   [s re f]
-  (let [buffer (new erlang.io.StringWriter "")
-        opts (clj_core/seq_to_list.e [:global #[:capture :first :index]])
-        append erlang.io.StringWriter/write.2
-        length (count s)
-        match-result (erlang.util.Regex/run.e re s opts)]
-    (loop [index 0
-           [[i len :as m] & ms] (->> (when (not= match-result :nomatch)
-                                       match-result)
-                                     second
-                                     (map first))]
-      (if m
-        (do
-          (append buffer (subs s index i))
-          (append buffer (f (subs s i (+ i len))))
-          (recur (+ i len) ms))
-        (do
-          (append buffer (subs s index length))
-          (str buffer))))))
+  (with-open [buffer (new erlang.io.StringWriter)]
+    (let [append erlang.io.StringWriter/write.2
+          length (count s)
+          matches (re-run re s :global #[:capture :first :index])]
+      (loop [index 0
+             [[i len :as m] & ms] (->> matches (map first))]
+        (if m
+          (do
+            (append buffer (subs s index i))
+            (append buffer (f (subs s i (+ i len))))
+            (recur (+ i len) ms))
+          (do
+            (append buffer (subs s index length))
+            (str buffer)))))))
 
 (defn ^String replace
   "Replaces all instance of match with replacement in s.
@@ -118,20 +114,19 @@ Design notes for clojure.string:
 
 (defn- replace-first-by
   [s re f]
-  (let [buffer (new erlang.io.StringWriter "")
-        opts (clj_core/seq_to_list.e [#[:capture :first :index]])
-        append erlang.io.StringWriter/write.2
-        length (count s)
-        match-result (erlang.util.Regex/run.e re s opts)
-        [i len] (when (not= match-result :nomatch)
-                  (-> match-result second first))]
-    (if i
-      (do
-        (append buffer (subs s 0 i))
-        (append buffer (f (subs s i (+ i len))))
-        (append buffer (subs s (+ i len) length))
-        (str buffer))
-      s)))
+  (with-open [buffer (new erlang.io.StringWriter)]
+    (let [append erlang.io.StringWriter/write.2
+          length (count s)
+          [[i len] :as matches] (re-run re s #[:capture :all :index])
+          matches (map (fn [[i len]] (subs s i (+ i len))) matches)
+          matches (if (= (count matches) 1) (first matches) matches)]
+      (if i
+        (do
+          (append buffer (subs s 0 i))
+          (append buffer (f matches))
+          (append buffer (subs s (+ i len) length))
+          (str buffer))
+        s))))
 
 (defn- replace-first-str
   [s match replace]
@@ -322,15 +317,16 @@ Design notes for clojure.string:
   (let [s (when s (str s))
         length (count s)
         append erlang.io.StringWriter/write.2]
-    (loop [index 0
-           buffer (new erlang.io.StringWriter)]
-      (if (= length index)
-        (str buffer)
-        (let [ch (clojerl.String/char_at.e s index)]
-          (if-let [replacement (cmap ch)]
-            (append buffer replacement)
-            (append buffer ch))
-          (recur (inc index) buffer))))))
+    (with-open [buffer (new erlang.io.StringWriter)]
+      (loop [index 0
+             buffer buffer]
+        (if (= length index)
+          (str buffer)
+          (let [ch (clojerl.String/char_at.e s index)]
+            (if-let [replacement (cmap ch)]
+              (append buffer replacement)
+              (append buffer ch))
+            (recur (inc index) buffer)))))))
 
 (defn index-of
   "Return index of value (string or char) in s, optionally searching
