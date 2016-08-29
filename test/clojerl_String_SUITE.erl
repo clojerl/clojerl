@@ -12,6 +12,7 @@
         , to_upper/1
         , seq/1
         , str/1
+        , substring/1
         , complete_coverage/1
         ]).
 
@@ -124,6 +125,21 @@ seq(_Config) ->
   [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_core:seq(<<"hello">>),
 
   undefined = clj_core:seq(<<>>),
+
+  {comments, ""}.
+
+-spec substring(config()) -> result().
+substring(_Config) ->
+  <<"h">>   = 'clojerl.String':substring(<<"hello">>, 0, 1),
+  <<"hel">> = 'clojerl.String':substring(<<"hello">>, 0, 3),
+  <<"l">>   = 'clojerl.String':substring(<<"hello">>, 3, 4),
+  <<"">>    = 'clojerl.String':substring(<<"hello">>, 4, 4),
+  <<"o">>   = 'clojerl.String':substring(<<"hello">>, 4, 5),
+  <<>>      = 'clojerl.String':substring(<<>>, 0, 1),
+
+  ok = try 'clojerl.String':substring(<<>>, 5, 4), error
+       catch _:_ -> ok
+       end,
 
   {comments, ""}.
 
