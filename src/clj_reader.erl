@@ -292,9 +292,15 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
   end.
 
 -spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
-                      {binary(), state()}.
+  {binary(), state()}.
 unicode_char(State, Base, Length, IsExact) ->
-  {Number, State1} = consume(State, [number, symbol]),
+  NumberBaseFun = fun
+                    (C) when C >= $0, C =< $9 -> C - $0 + 1  =< Base;
+                    (C) when C >= $a, C =< $z -> C - $a + 11 =< Base;
+                    (C) when C >= $A, C =< $Z -> C - $A + 11 =< Base;
+                    (_) -> false
+                  end,
+  {Number, State1} = consume(State, NumberBaseFun, Length),
   Size = case IsExact of
            true -> size(Number);
            false -> Length
@@ -711,7 +717,7 @@ read_unmatched_delim(State) ->
 read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
   {Token, State1} =
     case is_macro_terminating(NextChar) orelse is_whitespace(NextChar) of
-      true -> {<<NextChar>>, consume_chars(2, State)};
+      true -> {<<NextChar/utf8>>, consume_chars(2, State)};
       false -> read_token(consume_char(State))
     end,
   Char =
@@ -1154,32 +1160,47 @@ consume_chars(N, State) when N > 0 ->
 -spec consume(state(), [clj_utils:char_type()] | fun()) ->
   {binary(), state()}.
 consume(State, TypesOrPred) ->
-  do_consume(State, <<>>, TypesOrPred).
+  consume(State, TypesOrPred, -1).
 
-do_consume(State = #{src := <<>>}, Acc, Types) ->
+-spec consume(state(), [clj_utils:char_type()] | fun(), integer()) ->
+  {binary(), state()}.
+consume(State, TypesOrPred, Length) ->
+  do_consume(State, <<>>, TypesOrPred, Length).
+
+-spec do_consume( state()
+                , binary()
+                , [clj_utils:char_type()] | fun()
+                , integer()
+                ) ->
+  {binary(), state()}.
+do_consume(State, Acc, _TypesOrPred, 0) ->
+  {Acc, State};
+do_consume(State = #{src := <<>>}, Acc, TypesOrPred, Length) ->
   case check_reader(State) of
-    {ok, NewState} -> do_consume(NewState, Acc, Types);
+    {ok, NewState} -> do_consume(NewState, Acc, TypesOrPred, Length);
     eof -> {Acc, State}
   end;
 do_consume( State = #{src := <<X/utf8, _/binary>>}
           , Acc
           , Pred
+          , Length
           ) when is_function(Pred) ->
   case Pred(X) of
     true  ->
       State1 = consume_char(State),
-      do_consume(State1, <<Acc/binary, X/utf8>>, Pred);
+      do_consume(State1, <<Acc/binary, X/utf8>>, Pred, Length - 1);
     false -> {Acc, State}
   end;
 do_consume( State = #{src := <<X/utf8, Rest/binary>>}
           , Acc
           , Types
+          , Length
           ) ->
   Type = clj_utils:char_type(X, Rest),
   case lists:member(Type, Types) of
     true ->
       State1 = consume_char(State),
-      do_consume(State1, <<Acc/binary, X/utf8>>, Types);
+      do_consume(State1, <<Acc/binary, X/utf8>>, Types, Length - 1);
     false ->
       {Acc, State}
   end.

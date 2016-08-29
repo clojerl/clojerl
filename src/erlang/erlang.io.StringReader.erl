@@ -119,7 +119,7 @@ maybe_encode_result(_, X) ->
 get_chars(_N, <<>>) ->
   {eof, <<>>};
 get_chars(1, <<Ch/utf8, Str/binary>>) ->
-  {<<Ch>>, Str};
+  {<<Ch/utf8>>, Str};
 get_chars(N, Str) ->
   do_get_chars(N, Str, <<>>).
 
