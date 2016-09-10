@@ -740,7 +740,7 @@ arg(_Config) ->
 
   ct:comment("Invalid char after %"),
   ok = try clj_reader:read(<<"%a">>)
-       catch _:<<"?:1:1: Arg literal must be %, %& or %integer">> -> ok
+       catch _:<<"?:1:2: Arg literal must be %, %& or %integer">> -> ok
        end,
 
   erlang:erase(arg_env),
