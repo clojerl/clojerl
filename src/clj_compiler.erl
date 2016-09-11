@@ -108,7 +108,8 @@ timed_compile(Src, Opts, Env) when is_binary(Src) ->
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts, Env) when is_binary(Src) ->
-  DoCompile = fun() -> do_compile(Src, Opts, Env) end,
+  ProcDict = erlang:get(),
+  DoCompile = fun() -> copy_proc_dict(ProcDict), do_compile(Src, Opts, Env) end,
   run_monitored(DoCompile).
 
 -spec eval(any()) -> {any(), clj_env:env()}.
@@ -121,7 +122,8 @@ eval(Form, Opts) ->
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Opts, Env) ->
-  DoEval = fun() -> do_eval(Form, Opts, Env) end,
+  ProcDict = erlang:get(),
+  DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
   run_monitored(DoEval).
 
 %% Flags
@@ -137,6 +139,10 @@ no_warn_dynamic_var_name(Env) ->
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec copy_proc_dict([{any(), any()}]) -> ok.
+copy_proc_dict(List) ->
+  [erlang:put(K, V) || {K, V} <- List].
 
 -spec run_monitored(fun()) -> any().
 run_monitored(Fun) ->
