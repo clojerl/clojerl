@@ -108,16 +108,8 @@ timed_compile(Src, Opts, Env) when is_binary(Src) ->
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts, Env) when is_binary(Src) ->
-  DoCompile   = fun() -> do_compile(Src, Opts, Env) end,
-  {_Pid, Ref} = erlang:spawn_monitor(DoCompile),
-  receive
-    {'DOWN', Ref, _, _, {shutdown, Result}} ->
-      Result;
-    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
-      erlang:raise(Kind, Error, Stacktrace);
-    {'DOWN', Ref, _, _, Info} ->
-      throw(Info)
-  end.
+  DoCompile = fun() -> do_compile(Src, Opts, Env) end,
+  run_monitored(DoCompile).
 
 -spec eval(any()) -> {any(), clj_env:env()}.
 eval(Form) ->
@@ -128,25 +120,9 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts0, Env0) ->
-  Opts     = maps:merge(default_options(), Opts0),
-  CljFlags = maps:get(clj_flags, Opts),
-
-  EvalFun =
-    fun() ->
-        Env  = clj_env:put(Env0, clj_flags, CljFlags),
-        %% Emit & eval form and keep the resulting value
-        Env1 = clj_analyzer:analyze(Env, Form),
-        Env2 = clj_emitter:emit(Env1),
-        {Exprs, Env3} = clj_emitter:remove_state(Env2),
-
-        lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
-
-        [Value] = eval_expressions(Exprs),
-        {Value, clj_env:remove(Env3, clj_flags)}
-    end,
-
-  clj_module:with_context(EvalFun).
+eval(Form, Opts, Env) ->
+  DoEval = fun() -> do_eval(Form, Opts, Env) end,
+  run_monitored(DoEval).
 
 %% Flags
 
@@ -161,6 +137,18 @@ no_warn_dynamic_var_name(Env) ->
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec run_monitored(fun()) -> any().
+run_monitored(Fun) ->
+  {_Pid, Ref} = erlang:spawn_monitor(Fun),
+  receive
+    {'DOWN', Ref, _, _, {shutdown, Result}} ->
+      Result;
+    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
+      erlang:raise(Kind, Error, Stacktrace);
+    {'DOWN', Ref, _, _, Info} ->
+      throw(Info)
+  end.
 
 -spec do_compile(binary(), options(), clj_env:env()) -> ok.
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
@@ -208,6 +196,29 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     end,
 
   Result = clj_module:with_context(CompileFun),
+
+  exit(Result).
+
+-spec do_eval(any(), options(), clj_env:env()) -> ok.
+do_eval(Form, Opts0, Env0) ->
+  Opts     = maps:merge(default_options(), Opts0),
+  CljFlags = maps:get(clj_flags, Opts),
+
+  EvalFun =
+    fun() ->
+        Env  = clj_env:put(Env0, clj_flags, CljFlags),
+        %% Emit & eval form and keep the resulting value
+        Env1 = clj_analyzer:analyze(Env, Form),
+        Env2 = clj_emitter:emit(Env1),
+        {Exprs, Env3} = clj_emitter:remove_state(Env2),
+
+        lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
+
+        [Value] = eval_expressions(Exprs),
+        {shutdown, {Value, clj_env:remove(Env3, clj_flags)}}
+    end,
+
+  Result = clj_module:with_context(EvalFun),
 
   exit(Result).
 
