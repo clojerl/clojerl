@@ -302,6 +302,7 @@ parse_fn(Env, List) ->
         VarMeta = #{ 'variadic?'     => IsVariadic
                    , max_fixed_arity => MaxFixedArity
                    , variadic_arity  => VariadicArity
+                   , 'fn?'           => true
                    },
         DefVar1 = clj_core:with_meta(DefVar, VarMeta),
         clj_namespace:update_var(DefVar1),
