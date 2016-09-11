@@ -197,7 +197,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
           {shutdown, Env3}
         catch
           Kind:Error ->
-             {Kind, Error, erlang:get_stacktrace()}
+            {Kind, Error, erlang:get_stacktrace()}
         end
     end,
 
@@ -212,16 +212,21 @@ do_eval(Form, Opts0, Env0) ->
 
   EvalFun =
     fun() ->
-        Env  = clj_env:put(Env0, clj_flags, CljFlags),
-        %% Emit & eval form and keep the resulting value
-        Env1 = clj_analyzer:analyze(Env, Form),
-        Env2 = clj_emitter:emit(Env1),
-        {Exprs, Env3} = clj_emitter:remove_state(Env2),
+        try
+          Env  = clj_env:put(Env0, clj_flags, CljFlags),
+          %% Emit & eval form and keep the resulting value
+          Env1 = clj_analyzer:analyze(Env, Form),
+          Env2 = clj_emitter:emit(Env1),
+          {Exprs, Env3} = clj_emitter:remove_state(Env2),
 
-        lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
+          lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
-        [Value] = eval_expressions(Exprs),
-        {shutdown, {Value, clj_env:remove(Env3, clj_flags)}}
+          [Value] = eval_expressions(Exprs),
+          {shutdown, {Value, clj_env:remove(Env3, clj_flags)}}
+        catch
+          Kind:Error ->
+            {Kind, Error, erlang:get_stacktrace()}
+        end
     end,
 
   Result = clj_module:with_context(EvalFun),
