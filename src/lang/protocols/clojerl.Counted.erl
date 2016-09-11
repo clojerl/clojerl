@@ -1,5 +1,8 @@
 -module('clojerl.Counted').
 
+-clojure(true).
+-protocol(true).
+
 -export([count/1]).
 
 -type type() :: any().

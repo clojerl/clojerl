@@ -1,5 +1,8 @@
 -module('clojerl.ISeq').
 
+-clojure(true).
+-protocol(true).
+
 -export([first/1, next/1, more/1]).
 
 -type type() :: any().

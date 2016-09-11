@@ -1,5 +1,8 @@
 -module('clojerl.IFn').
 
+-clojure(true).
+-protocol(true).
+
 -export([invoke/2]).
 
 -type type() ::  any().

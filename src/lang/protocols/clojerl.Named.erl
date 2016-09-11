@@ -1,5 +1,8 @@
 -module('clojerl.Named').
 
+-clojure(true).
+-protocol(true).
+
 -export([name/1, namespace/1]).
 
 -type type() :: any().

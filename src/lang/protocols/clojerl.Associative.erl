@@ -1,5 +1,8 @@
 -module('clojerl.Associative').
 
+-clojure(true).
+-protocol(true).
+
 -export([contains_key/2, entry_at/2, assoc/3]).
 
 -type type() :: any().

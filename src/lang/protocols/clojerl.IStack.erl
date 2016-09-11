@@ -1,5 +1,8 @@
 -module('clojerl.IStack').
 
+-clojure(true).
+-protocol(true).
+
 -export([peek/1, pop/1]).
 
 -type type() :: any().

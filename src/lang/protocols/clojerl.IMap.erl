@@ -1,5 +1,8 @@
 -module('clojerl.IMap').
 
+-clojure(true).
+-protocol(true).
+
 -export([keys/1, vals/1, without/2]).
 
 -type type() :: any().

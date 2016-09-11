@@ -1,5 +1,8 @@
 -module('clojerl.IHash').
 
+-clojure(true).
+-protocol(true).
+
 -export([hash/1]).
 
 -type type() ::  any().

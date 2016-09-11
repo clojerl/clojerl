@@ -1,5 +1,8 @@
 -module('clojerl.IDeref').
 
+-clojure(true).
+-protocol(true).
+
 -export([deref/1]).
 
 -type type() ::  any().

@@ -1,5 +1,8 @@
 -module('clojerl.IEquiv').
 
+-clojure(true).
+-protocol(true).
+
 -export([equiv/2]).
 
 -type type() :: any().
