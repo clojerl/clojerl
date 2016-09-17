@@ -426,7 +426,7 @@ byte(X) when is_number(X), 0 =< X, X =< 256 ->
 short(X) when is_number(X), 0 =< X, X < 32768 ->
   erlang:trunc(X).
 
--spec str(any()) -> any().
+-spec str(any()) -> binary().
 str(X) ->
   'clojerl.Stringable':str(X).
 

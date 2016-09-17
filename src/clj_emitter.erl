@@ -100,12 +100,13 @@ ast(#{op := def} = Expr, State) ->
 
   ok      = clj_module:ensure_loaded(Module, file_from(Var)),
   VarAst  = erl_parse:abstract(Var),
+  VarAnno = anno_from(Var),
 
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
         { VarAst
-        , add_functions(Module, Name, FnExpr, State)
+        , add_functions(Module, Name, VarAnno, FnExpr, State)
         };
       _ ->
         {V, S} = pop_ast(ast(InitExpr, State)),
@@ -117,8 +118,8 @@ ast(#{op := def} = Expr, State) ->
         end
     end,
 
-  ValClause = {clause, anno_from(Var), [], [], [ValAst]},
-  ValFunAst = function_form(ValName, [ValClause]),
+  ValClause = {clause, VarAnno, [], [], [ValAst]},
+  ValFunAst = function_form(ValName, VarAnno, [ValClause]),
 
   clj_module:add_vars(Module, [Var]),
   clj_module:add_functions(Module, [ValFunAst]),
@@ -180,8 +181,9 @@ ast(#{op := deftype} = Expr, State0) ->
    , protocols := ProtocolsExprs
    } = Expr,
 
-  Module         = sym_to_kw(TypeSym),
-  ok             = clj_module:ensure_loaded(Module, file_from(Name)),
+  Module = sym_to_kw(TypeSym),
+  Anno   = anno_from(Name),
+  ok     = clj_module:ensure_loaded(Module, file_from(Name)),
 
   %% Attributes
   Attributes     = [ {attribute, 0, behavior, sym_to_kw(ProtocolName)}
@@ -217,7 +219,11 @@ ast(#{op := deftype} = Expr, State0) ->
                            ),
 
   %% Create a constructor that doesn't include the hidded fields.
-  CtorAst   = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
+  CtorAst   = constructor_function( Module
+                                  , Anno
+                                  , AllFieldsAsts
+                                  , HiddenFieldsAsts
+                                  ),
   %% When there are hidden fields we assume  it is a record, so we also want
   %% to create:
   %%   - a constructor function that includes the hidden fields.
@@ -225,8 +231,12 @@ ast(#{op := deftype} = Expr, State0) ->
   CtorsAsts = case HiddenFieldsAsts of
                 [] -> [CtorAst];
                 _  -> [ CtorAst
-                      , constructor_function(Module, AllFieldsAsts, [])
-                      , create_function(Module, AllFieldsAsts, HiddenFieldsAsts)
+                      , constructor_function(Module, Anno, AllFieldsAsts, [])
+                      , create_function( Module
+                                       , Anno
+                                       , AllFieldsAsts
+                                       , HiddenFieldsAsts
+                                       )
                       ]
               end,
 
@@ -266,7 +276,7 @@ ast(#{op := method} = Expr, State0) ->
   #{name := Name} = Expr,
 
   {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
-  FunAst = function_form(sym_to_kw(Name), [ClauseAst]),
+  FunAst = function_form(sym_to_kw(Name), anno_from(Name), [ClauseAst]),
 
   push_ast(FunAst, State1);
 %%------------------------------------------------------------------------------
@@ -796,32 +806,32 @@ expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
 %%
 %% The constructor will take AllFields -- HiddenFields as arguments.
 %% Hidden fields will be assigned the value `undefined'.
--spec constructor_function(atom(), [ast()], [ast()]) -> ast().
-constructor_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
+-spec constructor_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
+constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
   TupleAst    = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
   BodyAst     = [TupleAst],
   ClausesAsts = [{clause, 0, FieldsAsts, [], BodyAst}],
 
-  function_form(?CONSTRUCTOR, ClausesAsts).
+  function_form(?CONSTRUCTOR, Anno, ClausesAsts).
 
 %% @doc Builds an accessor function for the specified type and field.
 %%
 %% The accessor function generated has a '-' as a prefix.
 -spec accessor_function(atom(), ast()) -> ast().
-accessor_function(Typename, {var, _, FieldName} = FieldAst) ->
+accessor_function(Typename, {var, Anno, FieldName} = FieldAst) ->
   TupleAst     = type_tuple(Typename, [FieldAst], [], match),
   BodyAst      = [FieldAst],
-  ClausesAsts  = [{clause, 0, [TupleAst], [], BodyAst}],
+  ClausesAsts  = [{clause, Anno, [TupleAst], [], BodyAst}],
   AccessorName = field_fun_name(FieldName),
-  function_form(AccessorName, ClausesAsts).
+  function_form(AccessorName, Anno, ClausesAsts).
 
--spec create_function(atom(), [ast()], [ast()]) -> ast().
-create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
-  MapVarAst    = {var, 0, map},
+-spec create_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
+create_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
+  MapVarAst    = {var, Anno, map},
   GetAstFun    = fun(FName) ->
                      ArgsAst = [ MapVarAst
-                               , {atom, 0, FName}
+                               , {atom, Anno, FName}
                                ],
                      application_mfa(clj_core, get, ArgsAst)
                  end,
@@ -830,7 +840,7 @@ create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
                       case lists:member(FieldAst, HiddenFieldsAsts) of
                         true  -> MapAst;
                         false ->
-                          FAtom = {atom, 0, FName},
+                          FAtom = {atom, Anno, FName},
                           application_mfa(clj_core, dissoc, [MapAst, FAtom])
                       end
                   end,
@@ -843,30 +853,30 @@ create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
 
   FieldsMapAst = { map
-                 , 0
-                 ,  [ { map_field_assoc
-                      , 0
-                      , {atom, 0, FieldName}
-                      , case lists:member(FieldAst, HiddenFieldsAsts) of
-                          true when FieldName =:= '__extmap' ->
-                            ExtMapAst;
-                          true ->
-                            {atom, 0, undefined};
-                          false ->
-                            GetAstFun(FieldName)
-                        end
-                      }
-                      || {var, _, FieldName} = FieldAst <- AllFieldsAsts
-                    ]
+                 , Anno
+                 , [ { map_field_assoc
+                     , Anno
+                     , {atom, Anno, FieldName}
+                     , case lists:member(FieldAst, HiddenFieldsAsts) of
+                         true when FieldName =:= '__extmap' ->
+                           ExtMapAst;
+                         true ->
+                           {atom, Anno, undefined};
+                         false ->
+                           GetAstFun(FieldName)
+                       end
+                     }
+                     || {var, _, FieldName} = FieldAst <- AllFieldsAsts
+                   ]
                  },
-  InfoAst      = {atom, 0, undefined},
+  InfoAst      = {atom, Anno, undefined},
   TupleAst     = type_tuple_ast(Typename, FieldsMapAst, InfoAst),
 
   BodyAst      = [TupleAst],
 
-  ClausesAsts  = [{clause, 0, [MapVarAst], [], BodyAst}],
+  ClausesAsts  = [{clause, Anno, [MapVarAst], [], BodyAst}],
 
-  function_form(create, ClausesAsts).
+  function_form(create, Anno, ClausesAsts).
 
 -spec field_fun_name(atom()) -> atom().
 field_fun_name(FieldName) when is_atom(FieldName) ->
@@ -910,10 +920,10 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
     ]
   }.
 
--spec function_form(atom(), [ast()]) -> ast().
-function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
+-spec function_form(atom(), erl_anno:anno(), [ast()]) -> ast().
+function_form(Name, Anno, [Clause | _] = Clauses) when is_atom(Name) ->
   {clause, _, Args, _, _} = Clause,
-  {function, 0, Name, length(Args), Clauses}.
+  {function, Anno, Name, length(Args), Clauses}.
 
 -spec function_signature(ast()) -> {atom(), arity()}.
 function_signature({function, _, Name, Arity, _}) ->
@@ -985,8 +995,9 @@ group_methods(Methods) ->
   ParamCountFun = fun(#{params := Params}) -> length(Params) end,
   clj_utils:group_by(ParamCountFun, Methods).
 
--spec add_functions(module(), atom(), map(), state()) -> state().
-add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
+-spec add_functions(module(), atom(), erl_anno:anno(), map(), state()) ->
+  state().
+add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
   GroupedMethods = group_methods(Methods),
 
   ExportFun = fun(Arity) ->
@@ -1003,7 +1014,7 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
-        FunAst = function_form(Name, ClausesAst),
+        FunAst = function_form(Name, Anno, ClausesAst),
 
         clj_module:add_functions(Module, [FunAst]),
 
@@ -1109,8 +1120,7 @@ line_from(Form) ->
       case clj_core:meta(Form) of
         undefined -> 0;
         Map ->
-          {Line, _Col} = clj_core:get(Map, loc, {0, 1}),
-          Line
+          clj_core:get(Map, line, 0)
       end
   end.
 
@@ -1130,8 +1140,13 @@ anno_from(Form) ->
       case clj_core:meta(Form) of
         undefined -> 0;
         Map ->
-          LineCol = clj_core:get(Map, loc, {0, 1}),
-          erl_anno:new(LineCol)
+          Line   = clj_core:get(Map, line, 0),
+          Column = clj_core:get(Map, column, 1),
+          Anno   = [{location, {Line, Column}}],
+          case clj_core:get(Map, file, undefined) of
+            undefined -> Anno;
+            File      -> [{file, binary_to_list(File)} | Anno]
+          end
       end
   end.
 
