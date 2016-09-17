@@ -344,11 +344,12 @@ cleanup() ->
 %% @end
 -spec load(atom(), string()) -> ok | {error, term()}.
 load(Name, Source) ->
+  SourceStr = binary_to_list(Source),
   Module = case code:ensure_loaded(Name) of
              {module, Name} ->
-               new(clj_utils:code_from_binary(Name));
+               new(clj_utils:code_from_binary(Name), SourceStr);
              {error, _} ->
-               new(Name, Source)
+               new(Name, SourceStr)
            end,
   ok = gen_server:call(?MODULE, {load, Module}),
   Module.
@@ -465,13 +466,13 @@ save(Table, Value) ->
   Value.
 
 -spec new(atom(), string()) -> ok | {error, term()}.
-new(Name, Source) when is_atom(Name), is_binary(Source) ->
-  new(Name, binary_to_list(Source));
 new(Name, Source) when is_atom(Name), is_list(Source) ->
   new([ {attribute, 0, module, Name}
       , {attribute, 0, file, {Source, 0}}
       ]
-     ).
+     );
+new(Forms, Source) when is_list(Forms), is_list(Source) ->
+  new([{attribute, 0, file, {Source, 0}} | Forms]).
 
 -spec new([erl_parse:abstract_form()]) -> ok | {error, term()}.
 new(Forms) when is_list(Forms) ->
