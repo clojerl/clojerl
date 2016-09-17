@@ -408,10 +408,12 @@ read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
 -spec read_meta(state()) -> state().
 read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
   {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
-  Meta = clj_utils:desugar_meta(SugaredMeta),
+  Meta    = clj_utils:desugar_meta(SugaredMeta),
+  LocMeta = file_location_meta(State),
+  AllMeta = clj_core:merge([LocMeta, Meta]),
 
   {Form, State2} = pop_form(read_one(State1)),
-  NewForm = clj_core:with_meta(Form, Meta),
+  NewForm = clj_core:with_meta(Form, AllMeta),
 
   push_form(NewForm, State2).
 
