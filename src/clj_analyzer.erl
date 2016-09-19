@@ -89,6 +89,8 @@ special_forms() ->
    , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"defprotocol*">> => fun parse_defprotocol/2
+   , <<"extend-type*">> => fun parse_extend_type/2
+
    , <<"letfn*">>       => undefined
 
      %% , <<"monitor-enter">>
@@ -994,8 +996,9 @@ parse_deftype(Env, Form) ->
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
-  %% HACK: we need the module to be available so we emit the type, but
-  %% remove all protocols and methods.
+  %% HACK: by emitting the tyep we make module available, which means the type
+  %% gets resolved. But we remove all protocols and methods, thus generating
+  %% just a dummy erlang module for the type.
   DeftypeDummyExpr = #{ op        => deftype
                       , env       => ?DEBUG(Env)
                       , form      => Form
@@ -1007,7 +1010,7 @@ parse_deftype(Env, Form) ->
                       },
   _ = clj_emitter:emit(clj_env:push_expr(Env2, DeftypeDummyExpr)),
 
-  Env3        = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
+  Env3 = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
 
   IntfsList   = clj_core:seq_to_list(Interfaces),
@@ -1077,24 +1080,83 @@ analyze_deftype_method(Form, Env) ->
 -spec parse_defprotocol(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_defprotocol(Env, List) ->
   [ _ % defprotocol*
-  , Name
+  , FQNameSym
   | MethodsSigs
   ] = clj_core:seq_to_list(List),
 
-  clj_utils:throw_when( not clj_core:'symbol?'(Name)
+  clj_utils:throw_when( not clj_core:'symbol?'(FQNameSym)
                       , [ <<"Protocol name should be a symbol, had: ">>
-                        , clj_core:type(Name)
+                        , clj_core:type(FQNameSym)
                         ]
-                      , clj_reader:location_meta(Name)
+                      , clj_reader:location_meta(FQNameSym)
                       ),
+
+  %% Refer the name of the protocol (without the namespace) in the
+  %% current namespace.
+  Name     = clj_core:name(FQNameSym),
+  LastName = lists:last(binary:split(Name, <<".">>, [global])),
+  NameSym  = clj_core:symbol(LastName),
+
+  clj_namespace:refer(clj_namespace:current(), NameSym, FQNameSym),
 
   ProtocolExpr = #{ op           => defprotocol
                   , env          => ?DEBUG(Env)
-                  , name         => Name
+                  , name         => FQNameSym
                   , methods_sigs => MethodsSigs
                   },
 
   clj_env:push_expr(Env, ProtocolExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse extend-type
+%%------------------------------------------------------------------------------
+
+-spec parse_extend_type(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_extend_type(Env, List) ->
+  [ _ % extend-type*
+  , Type
+  | ProtosMethods
+  ] = clj_core:seq_to_list(List),
+
+  %% Group each protocol name with its implementation functions.
+  PartitionFun = fun
+                   (X, []) -> [[X]];
+                   (X, [First | Rest] = All) ->
+                     case clj_core:'symbol?'(X) of
+                       true  -> [[X] | All];
+                       false -> [[X | First] | Rest]
+                     end
+                 end,
+  GroupedProtoMethods = lists:map( fun lists:reverse/1
+                                 , lists:foldl(PartitionFun, [], ProtosMethods)
+                                 ),
+
+  %% Analyze each group and map protocols to their implementations.
+  AnalyzeProtoMethods =
+    fun([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
+        {ProtoExpr, EnvAcc1} = clj_env:pop_expr(analyze_form(EnvAcc, Proto)),
+
+        EnvAcc2 = lists:foldl(fun analyze_deftype_method/2, EnvAcc1, Methods),
+        {MethodsExprs, EnvAcc3} = clj_env:last_exprs(EnvAcc2, length(Methods)),
+
+        {ImplMapAcc#{ProtoExpr => MethodsExprs}, EnvAcc3}
+    end,
+
+  {ProtoImplsMap, Env1} = lists:foldl( AnalyzeProtoMethods
+                                     , {#{}, Env}
+                                     , GroupedProtoMethods
+                                     ),
+
+  {TypeExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Type)),
+
+  ExtendTypeExpr = #{ op    => extend_type
+                    , env   => ?DEBUG(Env)
+                    , type  => TypeExpr
+                    , form  => List
+                    , impls => ProtoImplsMap
+                    },
+
+  clj_env:push_expr(Env2, ExtendTypeExpr).
 
 %%------------------------------------------------------------------------------
 %% Parse throw
@@ -1446,7 +1508,10 @@ is_maybe_type(Symbol) ->
       case re:run(Name, Re, [global, {capture, none}]) of
         match ->
           Module = binary_to_atom(Name, utf8),
-          {module, Module} =:= code:ensure_loaded(Module);
+          %% Check if the module is either present in clj_module or a compiled
+          %% Erlang module.
+          clj_module:is_loaded(Module) orelse
+            {module, Module} =:= code:ensure_loaded(Module);
         _ ->
           false
       end;

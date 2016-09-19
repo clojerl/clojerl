@@ -27,3 +27,16 @@
 (defprotocol SomeProtocol
   (function-one [this] [this a])
   (function-two [this a b c]))
+
+(defprotocol OtherProtocol
+  (foo [this])
+  (bar [this]))
+
+(extend-type SomeRecord
+  SomeProtocol
+  (function-one [this] :one)
+  (function-one [this a] [:one a])
+  (function-two [this a b c] #{:one a b c})
+  examples.deftype.OtherProtocol
+  (foo [this] :foo)
+  (bar [this] :bar))

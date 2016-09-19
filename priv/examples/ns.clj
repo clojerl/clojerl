@@ -11,6 +11,6 @@
 
 (prn x)
 
-(prn simple/x)
+(prn 'simple/x simple/x)
 
-(prn 'examples.fn/one " = " one)
+(prn 'examples.fn/one "=" one)

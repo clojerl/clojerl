@@ -124,6 +124,8 @@ eval(Form, Opts) ->
 eval(Form, Opts, Env) ->
   ProcDict = erlang:get(),
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
+  %% FIX: Eval'ing doesn't keep the process dictionary and therefore the value
+  %% for *ns*.
   run_monitored(DoEval).
 
 %% Flags
