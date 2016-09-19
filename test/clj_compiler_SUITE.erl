@@ -93,11 +93,20 @@ eval(_Config) ->
   ct:comment("Eval form"),
   {1, _} = clj_compiler:eval(1),
 
+  ct:comment("Define a var"),
   DefList = clj_reader:read(<<"(def hello :world)">>),
   {Var, _} = clj_compiler:eval(DefList),
   Var = find_var(<<"clojure.core">>, <<"hello">>),
 
   check_var_value(<<"clojure.core">>, <<"hello">>, world),
+
+  ct:comment("Current namespace is changed"),
+  {_, _}  = clj_compiler:eval(clj_reader:read(<<"(ns a)">>)),
+  <<"a">> = clj_core:str(clj_namespace:name(clj_namespace:current())),
+
+  ct:comment("(erlang/self) should be this process"),
+  Self      = erlang:self(),
+  {Self, _} = clj_compiler:eval(clj_reader:read(<<"(erlang/self.e)">>)),
 
   {comments, ""}.
 

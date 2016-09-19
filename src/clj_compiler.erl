@@ -124,9 +124,11 @@ eval(Form, Opts) ->
 eval(Form, Opts, Env) ->
   ProcDict = erlang:get(),
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
-  %% FIX: Eval'ing doesn't keep the process dictionary and therefore the value
-  %% for *ns*.
-  run_monitored(DoEval).
+  {Exprs, Forms, Env1} = run_monitored(DoEval),
+
+  lists:foreach(compile_forms_fun(Opts), Forms),
+  [Value] = eval_expressions(Exprs),
+  {Value, Env1}.
 
 %% Flags
 
@@ -221,10 +223,12 @@ do_eval(Form, Opts0, Env0) ->
           Env2 = clj_emitter:emit(Env1),
           {Exprs, Env3} = clj_emitter:remove_state(Env2),
 
-          lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
-
-          [Value] = eval_expressions(Exprs),
-          {shutdown, {Value, clj_env:remove(Env3, clj_flags)}}
+          { shutdown
+          , { Exprs
+            , clj_module:all_forms()
+            , clj_env:remove(Env3, clj_flags)
+            }
+          }
         catch
           Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
