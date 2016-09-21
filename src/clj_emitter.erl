@@ -320,9 +320,43 @@ ast(#{op := defprotocol} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% defprotocol
 %%------------------------------------------------------------------------------
-ast(#{op := extend_type} = _Expr, State) ->
+ast(#{op := extend_type} = Expr, State) ->
+  #{ op    := extend_type
+   , type  := #{type := TypeSym}
+   , impls := Impls
+   } = Expr,
+
+  EmitProtocolFun =
+    fun(#{type := ProtoSym} = Proto, StateAcc) ->
+        ProtoBin  = clj_core:str(ProtoSym),
+        TypeBin   = clj_core:str(TypeSym),
+        ModuleBin = <<ProtoBin/binary, "__", TypeBin/binary>>,
+        Module    = erlang:binary_to_atom(ModuleBin, utf8),
+
+        clj_module:ensure_loaded(Module, file_from(TypeSym)),
+
+        MethodsExprs = maps:get(Proto, Impls),
+
+        %% Functions
+        StateAcc1 = lists:foldl(fun ast/2, StateAcc, MethodsExprs),
+        {FunctionsAsts, StateAcc2} = pop_ast(StateAcc1, length(MethodsExprs)),
+
+        %% Exports
+        Exports = lists:map(fun function_signature/1, FunctionsAsts),
+
+        clj_module:add_exports(Module, Exports),
+        clj_module:add_functions(Module, FunctionsAsts),
+
+        Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
+        Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+
+        StateAcc2
+    end,
+
+  State1 = lists:foldl(EmitProtocolFun, State, maps:keys(Impls)),
+
   Ast = {atom, 0, undefined},
-  push_ast(Ast, State);
+  push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
