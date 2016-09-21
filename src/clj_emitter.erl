@@ -328,10 +328,9 @@ ast(#{op := extend_type} = Expr, State) ->
 
   EmitProtocolFun =
     fun(#{type := ProtoSym} = Proto, StateAcc) ->
-        ProtoBin  = clj_core:str(ProtoSym),
-        TypeBin   = clj_core:str(TypeSym),
-        ModuleBin = <<ProtoBin/binary, "__", TypeBin/binary>>,
-        Module    = erlang:binary_to_atom(ModuleBin, utf8),
+        ProtoBin = clj_core:str(ProtoSym),
+        TypeBin  = clj_core:str(TypeSym),
+        Module   = 'clojerl.protocol':impl_module(ProtoBin, TypeBin),
 
         clj_module:ensure_loaded(Module, file_from(TypeSym)),
 

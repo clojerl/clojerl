@@ -38,5 +38,8 @@
   (function-one [this a] [:one a])
   (function-two [this a b c] #{:one a b c})
   examples.deftype.OtherProtocol
-  (foo [this] :foo)
-  (bar [this] :bar))
+  (foo [this] {:foo (:y this)})
+  (bar [this] {:bar (:x this)}))
+
+(prn (foo (new SomeRecord 1 2)))
+(prn (bar (new SomeRecord 1 2)))
