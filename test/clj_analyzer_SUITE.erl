@@ -32,6 +32,7 @@
         , new/1
         , deftype/1
         , defprotocol/1
+        , extend_type/1
         , on_load/1
         ]).
 
@@ -984,6 +985,75 @@ defprotocol(_Config) ->
                      "  [f1 1] [f2 4] [f2 2])">>),
   3 = clj_core:count(MethodsSigs),
 
+
+  {comments, ""}.
+
+-spec extend_type(config()) -> result().
+extend_type(_Config) ->
+  ct:comment("No protocols"),
+  #{ op    := extend_type
+   , type  := #{op := type, type := TypeSym}
+   , impls := #{}
+   } = analyze_one(<<"(extend-type* clojerl.String)">>),
+  true = clj_core:'symbol?'(TypeSym),
+  <<"clojerl.String">> = clj_core:str(TypeSym),
+
+  ct:comment("Extend one protocol"),
+  #{ op    := extend_type
+   , type  := #{op := type, type := TypeSym}
+   , impls := Impls
+   } = analyze_one(<<"(extend-type* clojerl.String "
+                     "  clojerl.Stringable "
+                     "  (str [this] :string))">>
+                  ),
+
+  [Stringable] = maps:keys(Impls),
+  #{ op   := type
+   , type := StringableSym
+   } = Stringable,
+  true = clj_core:'symbol?'(StringableSym),
+  <<"clojerl.Stringable">> = clj_core:str(StringableSym),
+
+  [#{op := method, name := StrSym}] = maps:get(Stringable, Impls),
+  true = clj_core:'symbol?'(StrSym),
+  <<"str">> = clj_core:str(StrSym),
+
+  ct:comment("Extend two protocols"),
+  #{ op    := extend_type
+   , type  := #{op := type, type := TypeSym}
+   , impls := Impls2
+   } = analyze_one(<<"(extend-type* clojerl.String "
+                     "  clojerl.Stringable "
+                     "  (str [this] :string) "
+                     "  clojerl.IMeta "
+                     "  (meta [this] :meta) "
+                     "  (with_meta [this meta] :with-meta))">>
+                  ),
+
+  [IMeta] = maps:keys(Impls2) -- [Stringable],
+  #{ op   := type
+   , type := IMetaSym
+   } = IMeta,
+  true = clj_core:'symbol?'(IMetaSym),
+  <<"clojerl.IMeta">> = clj_core:str(IMetaSym),
+
+  [_, _] = maps:get(IMeta, Impls2),
+
+  ct:comment("Use non-existing type"),
+  ok = try analyze_one(<<"(extend-type* foo.Bar)">>), error
+       catch _:_ -> ok
+       end,
+
+  ct:comment("Use non-existing protocol"),
+  ok = try
+         analyze_one(<<"(extend-type* clojerl.String"
+                       "  proto.Foo "
+                       "  (foo [this] :foo))">>
+                    ),
+         error
+       catch
+         _:_ -> ok
+       end,
 
   {comments, ""}.
 

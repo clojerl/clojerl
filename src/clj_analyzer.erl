@@ -56,7 +56,7 @@ macroexpand_1(Env, Form) ->
 macroexpand(Env, Form) ->
   ExpandedForm = macroexpand_1(Env, Form),
   case clj_core:equiv(ExpandedForm, Form) of
-    true -> {Form, Env};
+    true  -> {Form, Env};
     false -> macroexpand_1(Env, ExpandedForm)
   end.
 
@@ -1501,20 +1501,16 @@ erl_fun_arity(Name) ->
 
 -spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
 is_maybe_type(Symbol) ->
-  case clj_core:namespace(Symbol) of
-    undefined ->
-      Name = clj_core:name(Symbol),
-      Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
-      case re:run(Name, Re, [global, {capture, none}]) of
-        match ->
-          Module = binary_to_atom(Name, utf8),
-          %% Check if the module is either present in clj_module or a compiled
-          %% Erlang module.
-          clj_module:is_loaded(Module) orelse
-            {module, Module} =:= code:ensure_loaded(Module);
-        _ ->
-          false
-      end;
+  undefined = clj_core:namespace(Symbol),
+  Name      = clj_core:name(Symbol),
+  Re        = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
+  case re:run(Name, Re, [global, {capture, none}]) of
+    match ->
+      Module = binary_to_atom(Name, utf8),
+      %% Check if the module is either present in clj_module or a compiled
+      %% Erlang module.
+      clj_module:is_loaded(Module) orelse
+        {module, Module} =:= code:ensure_loaded(Module);
     _ ->
       false
   end.
