@@ -3,7 +3,6 @@
 -include("clojerl.hrl").
 
 -export([ analyze/2
-        , macroexpand/2
         , macroexpand_1/2
         , is_special/1
         ]).
@@ -49,15 +48,6 @@ macroexpand_1(Env, Form) ->
           clj_core:invoke(MacroVar, Args)
       end;
     false -> Form
-  end.
-
--spec macroexpand(clj_env:env(), 'clojerl.List':type()) ->
-  any().
-macroexpand(Env, Form) ->
-  ExpandedForm = macroexpand_1(Env, Form),
-  case clj_core:equiv(ExpandedForm, Form) of
-    true  -> {Form, Env};
-    false -> macroexpand_1(Env, ExpandedForm)
   end.
 
 %%------------------------------------------------------------------------------
