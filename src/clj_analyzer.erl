@@ -1109,30 +1109,10 @@ parse_extend_type(Env, List) ->
   ] = clj_core:seq_to_list(List),
 
   %% Group each protocol name with its implementation functions.
-  PartitionFun = fun
-                   (X, []) -> [[X]];
-                   (X, [First | Rest] = All) ->
-                     case clj_core:'symbol?'(X) of
-                       true  -> [[X] | All];
-                       false -> [[X | First] | Rest]
-                     end
-                 end,
-  GroupedProtoMethods = lists:map( fun lists:reverse/1
-                                 , lists:foldl(PartitionFun, [], ProtosMethods)
-                                 ),
+  GroupedProtoMethods = split_when(ProtosMethods, fun clj_core:'symbol?'/1),
 
   %% Analyze each group and map protocols to their implementations.
-  AnalyzeProtoMethods =
-    fun([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
-        {ProtoExpr, EnvAcc1} = clj_env:pop_expr(analyze_form(EnvAcc, Proto)),
-
-        EnvAcc2 = lists:foldl(fun analyze_deftype_method/2, EnvAcc1, Methods),
-        {MethodsExprs, EnvAcc3} = clj_env:last_exprs(EnvAcc2, length(Methods)),
-
-        {ImplMapAcc#{ProtoExpr => MethodsExprs}, EnvAcc3}
-    end,
-
-  {ProtoImplsMap, Env1} = lists:foldl( AnalyzeProtoMethods
+  {ProtoImplsMap, Env1} = lists:foldl( fun analyze_extend_methods/2
                                      , {#{}, Env}
                                      , GroupedProtoMethods
                                      ),
@@ -1147,6 +1127,33 @@ parse_extend_type(Env, List) ->
                     },
 
   clj_env:push_expr(Env2, ExtendTypeExpr).
+
+%% @doc Returns a list of lists where the first element of
+%%      each sublist is the protocol and the rest are
+%%      implementation methods.
+-spec split_when(list(), fun((any()) -> boolean())) -> list().
+split_when(List, Pred) ->
+  SplitFun = fun
+                   (X, []) -> [[X]];
+                   (X, [First | Rest] = All) ->
+                     case Pred(X) of
+                       true  -> [[X] | All];
+                       false -> [[X | First] | Rest]
+                     end
+                 end,
+  lists:map( fun lists:reverse/1
+           , lists:foldl(SplitFun, [], List)
+           ).
+
+-spec analyze_extend_methods(list(), {map(), clj_env:env()}) ->
+  {map(), clj_env:env()}.
+analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
+  {ProtoExpr, EnvAcc1} = clj_env:pop_expr(analyze_form(EnvAcc, Proto)),
+
+  EnvAcc2 = lists:foldl(fun analyze_deftype_method/2, EnvAcc1, Methods),
+  {MethodsExprs, EnvAcc3} = clj_env:last_exprs(EnvAcc2, length(Methods)),
+
+  {ImplMapAcc#{ProtoExpr => MethodsExprs}, EnvAcc3}.
 
 %%------------------------------------------------------------------------------
 %% Parse throw

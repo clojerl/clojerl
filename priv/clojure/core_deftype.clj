@@ -512,6 +512,17 @@
   [name & opts+sigs]
   (emit-protocol name opts+sigs))
 
+(defn normalize-methods
+  [specs]
+  (->> specs
+      (map (fn [proto-or-method]
+             (cond (symbol? proto-or-method) [proto-or-method]
+                   (vector? (second proto-or-method)) [proto-or-method]
+                   :else
+                   (let [[name & methods] proto-or-method]
+                     (map (partial cons name) methods)))))
+      (apply concat)))
+
 (defmacro extend-type
   "A macro that expands into an extend call. Useful when you are
   supplying the definitions explicitly inline, extend-type
@@ -526,7 +537,7 @@
       (baz ([x] ...) ([x y & zs] ...)))"
   {:added "1.2"}
   [t & specs]
-  `(extend-type* ~t ~@specs))
+  `(extend-type* ~t ~@(normalize-methods specs)))
 
 (defn- emit-extend-protocol [p specs]
   (let [impls (parse-impls specs)]
