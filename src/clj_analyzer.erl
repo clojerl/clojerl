@@ -1103,7 +1103,7 @@ parse_defprotocol(Env, List) ->
 
 -spec parse_extend_type(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_extend_type(Env, List) ->
-  [ _ % extend-type*
+  [ ExtendTypeSym % extend-type*
   , Type
   | ProtosMethods
   ] = clj_core:seq_to_list(List),
@@ -1118,6 +1118,15 @@ parse_extend_type(Env, List) ->
                                      ),
 
   {TypeExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Type)),
+
+  #{op := TypeOp} = TypeExpr,
+  clj_utils:throw_when( TypeOp =/= type
+                      , [ <<"The expression of type ">>
+                        , clj_core:type(Type)
+                        , <<" does not resolve to a type.">>
+                        ]
+                      , clj_reader:location_meta(ExtendTypeSym)
+                      ),
 
   ExtendTypeExpr = #{ op    => extend_type
                     , env   => ?DEBUG(Env)
@@ -1149,6 +1158,15 @@ split_when(List, Pred) ->
   {map(), clj_env:env()}.
 analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
   {ProtoExpr, EnvAcc1} = clj_env:pop_expr(analyze_form(EnvAcc, Proto)),
+
+  #{op := ProtoOp} = ProtoExpr,
+  clj_utils:throw_when( ProtoOp =/= type
+                      , [ <<"The symbol ">>
+                        , Proto
+                        , <<"does not resolve to a protocol">>
+                        ]
+                      , clj_reader:location_meta(Proto)
+                      ),
 
   EnvAcc2 = lists:foldl(fun analyze_deftype_method/2, EnvAcc1, Methods),
   {MethodsExprs, EnvAcc3} = clj_env:last_exprs(EnvAcc2, length(Methods)),

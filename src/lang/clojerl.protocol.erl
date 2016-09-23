@@ -32,9 +32,9 @@ resolve_impl(Protocol, Function, Type, Arity) ->
     true  -> {Type, Function};
     false ->
       ImplModule = impl_module(Protocol, Type),
-      case erlang:function_exported(ImplModule, Function, Arity) of
-        true  -> {ImplModule, Function};
-        false -> undefined
+      case code:ensure_loaded(ImplModule) of
+        {module, ImplModule} -> {ImplModule, Function};
+        _ -> undefined
       end
   end.
 
@@ -55,9 +55,10 @@ impl_module(ProtocolBin, TypeBin)
   Key = {extends, Protocol, Type},
   case clj_cache:get(Key) of
     undefined ->
+      ImplModule = impl_module(Protocol, Type),
       Value = ( erlang:function_exported(Type, module_info, 1) andalso
                 lists:keymember([Protocol], 2, Type:module_info(attributes))
-              ),
+              ) orelse {module, ImplModule} =:= code:ensure_loaded(ImplModule),
       clj_cache:put(Key, Value),
       Value;
     {ok, Value} -> Value

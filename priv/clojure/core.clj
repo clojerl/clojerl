@@ -6190,12 +6190,12 @@
 (load "core_print")
 ;; (load "genclass")
 (load "core_deftype")
-;; (load "core/protocols")
+(load "core/protocols")
 ;; (load "gvec")
 (load "instant")
 (load "uuid")
 
-#_(defn reduce
+(defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
   applying f to that result and the 3rd item, etc. If coll contains no
@@ -6207,34 +6207,27 @@
   items, returns val and f is not called."
   {:added "1.0"}
   ([f coll]
-     (if (instance? clojure.lang.IReduce coll)
-       (.reduce ^clojure.lang.IReduce coll f)
-       (clojure.core.protocols/coll-reduce coll f)))
+   (if (satisfies? :clojerl.IReduce coll)
+     (clojerl.IReduce/reduce.e coll f)
+     (clojure.core.protocols/coll-reduce coll f)))
   ([f val coll]
-     (if (instance? clojure.lang.IReduceInit coll)
-       (.reduce ^clojure.lang.IReduceInit coll f val)
-       (clojure.core.protocols/coll-reduce coll f val))))
+   (if (satisfies? :clojerl.IReduceInit coll)
+     (clojerl.IReduceInit/reduce.e coll f val)
+     (clojure.core.protocols/coll-reduce coll f val))))
 
-(def reduce reduce1)
+(extend-protocol clojure.core.protocols.IKVReduce
+  clojerl.Nil
+  (kv-reduce
+    [_ f init]
+    init)
 
-#_(extend-protocol clojure.core.protocols/IKVReduce
- nil
- (kv-reduce
-  [_ f init]
-  init)
+  ;;slow path default
+  clojerl.Map
+  (kv-reduce
+    [amap f init]
+    (reduce (fn [ret [k v]] (f ret k v)) init amap)))
 
- ;;slow path default
- clojure.lang.IPersistentMap
- (kv-reduce
-  [amap f init]
-  (reduce (fn [ret [k v]] (f ret k v)) init amap))
-
- clojure.lang.IKVReduce
- (kv-reduce
-  [amap f init]
-  (.kvreduce amap f init)))
-
-#_(defn reduce-kv
+(defn reduce-kv
   "Reduces an associative collection. f should be a function of 3
   arguments. Returns the result of applying f to init, the first key
   and the first value in coll, then applying f to that result and the
@@ -6257,7 +6250,7 @@
        ([x] (cf x))
        ([x y] (f x y)))))
 
-#_(defn transduce
+(defn transduce
   "reduce with a transformation of f (xf). If init is not
   supplied, (f) will be called to produce it. f should be a reducing
   step function that accepts both 1 and 2 arguments, if it accepts
@@ -6270,7 +6263,7 @@
   ([xform f init coll]
      (let [f (xform f)
            ret (if (instance? :clojure.lang.IReduceInit coll)
-                 (clojure.lang.IReduceInit/reduce coll f init)
+                 (clojerl.IReduceInit/reduce.e coll f init)
                  (clojure.core.protocols/coll-reduce coll f init))]
        (f ret))))
 
@@ -6282,7 +6275,7 @@
   ([to from]
    (reduce conj to from))
   ([to xform from]
-   #_(transduce xform conj to from)))
+   (transduce xform conj to from)))
 
 (defn mapv
   "Returns a vector consisting of the result of applying f to the
@@ -6313,7 +6306,7 @@
 
 #_(require '[clojure.erlang.io :as io])
 
-#_(defn- normalize-slurp-opts
+(defn- normalize-slurp-opts
   [opts]
   (if (string? (first opts))
     (do
