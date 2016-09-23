@@ -8,8 +8,9 @@
 
 -type ast()   :: erl_parse:abstract_form().
 
--type state() :: #{ asts            => [ast()]
-                  , lexical_renames => clj_scope:scope()
+-type state() :: #{ asts                => [ast()]
+                  , lexical_renames     => clj_scope:scope()
+                  , force_remote_invoke => boolean()
                   }.
 
 -spec emit(clj_env:env()) -> clj_env:env().
@@ -32,8 +33,9 @@ remove_state(Env) ->
 
 -spec initial_state() -> state().
 initial_state() ->
-  #{ asts            => []
-   , lexical_renames => clj_scope:new()
+  #{ asts                => []
+   , lexical_renames     => clj_scope:new()
+   , force_remote_invoke => false
    }.
 
 %%------------------------------------------------------------------------------
@@ -318,13 +320,15 @@ ast(#{op := defprotocol} = Expr, State) ->
   Ast = erl_parse:abstract(NameSym, line_from(NameSym)),
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
-%% defprotocol
+%% extend_type
 %%------------------------------------------------------------------------------
 ast(#{op := extend_type} = Expr, State) ->
   #{ op    := extend_type
    , type  := #{type := TypeSym}
    , impls := Impls
    } = Expr,
+
+  ForceRemote = maps:get(force_remote_invoke, State),
 
   EmitProtocolFun =
     fun(#{type := ProtoSym} = Proto, StateAcc) ->
@@ -352,10 +356,13 @@ ast(#{op := extend_type} = Expr, State) ->
         StateAcc2
     end,
 
-  State1 = lists:foldl(EmitProtocolFun, State, maps:keys(Impls)),
+  State1 = lists:foldl( EmitProtocolFun
+                      , State#{force_remote_invoke => true}
+                      , maps:keys(Impls)
+                      ),
 
   Ast = {atom, 0, undefined},
-  push_ast(Ast, State1);
+  push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -435,29 +442,30 @@ ast(#{op := invoke} = Expr, State) ->
       VarMeta = clj_core:meta(Var),
       Module  = 'clojerl.Var':module(Var),
 
-      Ast = case clj_core:get(VarMeta, 'fn?', false) of
-              true ->
-                Function = 'clojerl.Var':function(Var),
-                Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-                CurrentNs = clj_namespace:current(),
-                NsName    = clj_core:name(clj_namespace:name(CurrentNs)),
-                VarNsName = clj_core:namespace(Var),
-
-                %% When the var's symbol is not namespace qualified and the var's
-                %% namespace is the current namespace, emit a local function
-                %% call, otherwise emit a remote call.
-                case clj_core:namespace(Symbol) of
-                  undefined when NsName =:= VarNsName ->
-                    application_fa(Function, Args1, Anno);
-                  _ ->
-                    application_mfa(Module, Function, Args1, Anno)
-                end;
-              false ->
-                ValFunction = 'clojerl.Var':val_function(Var),
-                FunAst      = application_mfa(Module, ValFunction, [], Anno),
-                ArgsAst     = list_ast(Args),
-                application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
-            end,
+      Ast =
+        case clj_core:get(VarMeta, 'fn?', false) of
+          true ->
+            Function    = 'clojerl.Var':function(Var),
+            Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+            CurrentNs   = clj_namespace:current(),
+            NsName      = clj_core:name(clj_namespace:name(CurrentNs)),
+            VarNsName   = clj_core:namespace(Var),
+            ForceRemote = maps:get(force_remote_invoke, State),
+            %% When the var's symbol is not namespace qualified and the var's
+            %% namespace is the current namespace, emit a local function
+            %% call, otherwise emit a remote call.
+            case clj_core:namespace(Symbol) of
+              undefined when NsName =:= VarNsName, not ForceRemote ->
+                application_fa(Function, Args1, Anno);
+              _ ->
+                application_mfa(Module, Function, Args1, Anno)
+            end;
+          false ->
+            ValFunction = 'clojerl.Var':val_function(Var),
+            FunAst      = application_mfa(Module, ValFunction, [], Anno),
+            ArgsAst     = list_ast(Args),
+            application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
+        end,
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
