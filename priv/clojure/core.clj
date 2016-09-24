@@ -4222,15 +4222,15 @@
         psig (fn* [sig]
                   ;; Ensure correct type before destructuring sig
                   (when (not (seq? sig))
-                    (throw (str "Invalid signature " sig
-                                " should be a list")))
+                    (throw (str "Invalid signature \"" sig
+                                "\" should be a list")))
                   (let [[params & body] sig
                         _ (when (not (vector? params))
                             (throw (if (seq? (first sigs))
                                      (str "Parameter declaration " params
                                           " should be a vector")
-                                     (str "Invalid signature " sig
-                                          " should be a list"))))
+                                     (str "Invalid signature \"" sig
+                                          "\" should be a list"))))
                         conds (when (and (next body) (map? (first body)))
                                 (first body))
                         body (if conds (next body) body)

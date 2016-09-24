@@ -761,7 +761,7 @@ parse_def(Env, List) ->
   clj_utils:warn_when( not NoWarnDynamic
                        andalso not IsDynamic
                        andalso nomatch =/= re:run(NameBin, "\\*.+\\*")
-                     , [ <<"Var ">>
+                     , [ <<"Warning: ">>
                        , NameBin
                        , <<" is not dynamic but its name"
                            " suggests otherwise.~n">>
