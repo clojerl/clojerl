@@ -17,10 +17,10 @@ resolve(Protocol, Function, Args = [Head | _]) ->
   {module(), atom()} | undefined.
 resolve_impl_cache(Protocol, Function, Type, Arity) ->
   Key = {resolve_impl, Protocol, Function, Type, Arity},
-  case clj_cache:get(Key) of
+  case erlang:get(Key) of
     undefined ->
       Value = resolve_impl(Protocol, Function, Type, Arity),
-      clj_cache:put(Key, Value),
+      erlang:put(Key, {ok, Value}),
       Value;
     {ok, Value} -> Value
   end.
@@ -53,13 +53,13 @@ impl_module(ProtocolBin, TypeBin)
 -spec 'satisfies?'(atom(), atom()) -> boolean().
 'satisfies?'(Protocol, Type) ->
   Key = {satisfies, Protocol, Type},
-  case clj_cache:get(Key) of
+  case erlang:get(Key) of
     undefined ->
       ImplModule = impl_module(Protocol, Type),
       Value = ( erlang:function_exported(Type, module_info, 1) andalso
                 lists:keymember([Protocol], 2, Type:module_info(attributes))
               ) orelse {module, ImplModule} =:= code:ensure_loaded(ImplModule),
-      clj_cache:put(Key, Value),
+      erlang:put(Key, {ok, Value}),
       Value;
     {ok, Value} -> Value
   end.
