@@ -18,12 +18,12 @@
   (println)
 
   (println ";;; tuple & string ops")
-  (simple-benchmark [coll (tuple 1 2 3)] (seq coll) 1000000)
   (simple-benchmark [coll "foobar"] (seq coll) 1000000)
-  (simple-benchmark [coll (tuple 1 2 3)] (first coll) 1000000)
   (simple-benchmark [coll "foobar"] (first coll) 1000000)
-  (simple-benchmark [coll (tuple 1 2 3)] (nth coll 2) 1000000)
   (simple-benchmark [coll "foobar"] (nth coll 2) 1000000)
+  (simple-benchmark [coll (tuple 1 2 3)] (seq coll) 1000000)
+  (simple-benchmark [coll (tuple 1 2 3)] (first coll) 1000000)
+  (simple-benchmark [coll (tuple 1 2 3)] (nth coll 2) 1000000)
   (println)
 
   (println ";;; list ops")

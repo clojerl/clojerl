@@ -6181,14 +6181,37 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 ;; (load "core_proxy")
 (load "core_print")
 ;; (load "genclass")
 (load "core_deftype")
-(load "core/protocols")
 ;; (load "gvec")
 (load "instant")
 (load "uuid")
+
+(defn reduce ([f coll]) ([f val coll]))
+
+(defn- seq-reduce
+  ([f coll]
+    (if-let [s (seq coll)]
+      (reduce f (first s) (next s))
+      (f)))
+  ([f val coll]
+    (loop [val val, coll (seq coll)]
+      (if coll
+        (let [nval (f val (first coll))]
+          (if (reduced? nval)
+            @nval
+            (recur nval (next coll))))
+        val))))
+
+(defprotocol IKVReduce
+  "Protocol for concrete associative types that can reduce themselves
+   via a function of key and val faster than first/next recursion over map
+   entries. Called by clojure.core/reduce-kv, and has same
+   semantics (just different arg order)."
+  (kv-reduce [amap f init]))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -6204,13 +6227,13 @@
   ([f coll]
    (if (satisfies? clojerl.IReduce coll)
      (clojerl.IReduce/reduce.e coll f)
-     (clojure.core.protocols/coll-reduce coll f)))
+     (seq-reduce f coll)))
   ([f val coll]
-   (if (satisfies? clojerl.IReduceInit coll)
-     (clojerl.IReduceInit/reduce.e coll f val)
-     (clojure.core.protocols/coll-reduce coll f val))))
+   (if (satisfies? clojerl.IReduce coll)
+     (clojerl.IReduce/reduce.e coll f val)
+     (seq-reduce f val coll))))
 
-(extend-protocol clojure.core.protocols.IKVReduce
+(extend-protocol IKVReduce
   clojerl.Nil
   (kv-reduce
     [_ f init]
@@ -6231,7 +6254,7 @@
   where the keys will be the ordinals."
   {:added "1.4"}
   ([f init coll]
-     (clojure.core.protocols/kv-reduce coll f init)))
+     (kv-reduce coll f init)))
 
 (defn completing
   "Takes a reducing function f of 2 args and returns a fn suitable for
@@ -6257,9 +6280,9 @@
   ([xform f coll] (transduce xform f (f) coll))
   ([xform f init coll]
      (let [f (xform f)
-           ret (if (instance? clojerl.IReduceInit coll)
-                 (clojerl.IReduceInit/reduce.e coll f init)
-                 (clojure.core.protocols/coll-reduce coll f init))]
+           ret (if (instance? clojerl.IReduce coll)
+                 (clojerl.IReduce/reduce.e coll f init)
+                 (seq-reduce coll f init))]
        (f ret))))
 
 (defn into
