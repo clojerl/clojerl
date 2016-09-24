@@ -258,6 +258,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
   Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  ok     = clj_module:remove(Module),
 
   Ast = erl_parse:abstract(Name, line_from(Name)),
 
@@ -343,12 +344,13 @@ ast(#{op := extend_type} = Expr, State) ->
 
         Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
         Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+        ok     = clj_module:remove(Module),
 
         StateAcc2
     end,
 
   %% We force remote calls for all functions since the function will
-  %% live in its own module, but is analyzed in the context of the 
+  %% live in its own module, but is analyzed in the context of the
   %% surrounding code where the extend-type is used.
   State1 = lists:foldl( EmitProtocolFun
                       , State#{force_remote_invoke => true}

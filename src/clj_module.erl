@@ -10,6 +10,7 @@
         , get_forms/1
         , ensure_loaded/2
         , is_loaded/1
+        , remove/1
 
         , fake_fun/3
         , replace_calls/2
@@ -99,6 +100,11 @@ ensure_loaded(Name, Source) ->
     true  -> ok;
     false -> load(Name, Source), ok
   end.
+
+%% @doc Remove the module from the loaded modules in clj_module.
+-spec remove(module()) -> ok.
+remove(Module) ->
+  gen_server:cast(?MODULE, {remove, self(), Module}).
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%
@@ -312,14 +318,21 @@ handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
 
   {reply, Modules, State}.
 
-handle_cast(_Msg, State) ->
-  {ok, State}.
+handle_cast({remove, Pid, ModuleName}, #{loaded_modules := TabId} = State) ->
+  true = ets:delete(?MODULE, ModuleName),
+  case get(TabId, Pid) of
+    {Pid, Modules} ->
+      NewModules = [M || M <- Modules, M#module.name =/= ModuleName],
+      save(TabId, {Pid, NewModules});
+    undefined   -> ok
+  end,
+  {noreply, State}.
 
 handle_info(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
-terminate(_Msg, State) ->
-  {ok, State}.
+terminate(_Msg, _State) ->
+  ok.
 
 code_change(_Msg, _From, State) ->
   {ok, State}.
