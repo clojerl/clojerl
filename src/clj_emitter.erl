@@ -132,16 +132,7 @@ ast(#{op := def} = Expr, State) ->
 %% import
 %%------------------------------------------------------------------------------
 ast(#{op := import} = Expr, State) ->
-  #{ typename := Typename
-   , form     := Form
-   } = Expr,
-
-  Type = binary_to_atom(Typename, utf8),
-
-  clj_utils:throw_when( {module, Type} =/= code:ensure_loaded(Type)
-                      , [<<"Type '">>, Type, <<"' could not be loaded.">>]
-                      , clj_reader:location_meta(Form)
-                      ),
+  #{typename := Typename} = Expr,
 
   TypenameAst = erl_parse:abstract(Typename),
   ImportAst   = application_mfa(clj_namespace, import_type, [TypenameAst]),
