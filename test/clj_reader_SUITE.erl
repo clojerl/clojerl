@@ -292,45 +292,53 @@ meta(_Config) ->
        catch _:_ -> ok
        end,
 
+  %% Compare metadata after removing the location information.
+  CheckMetaEquiv =
+    fun(Value, ExpectedMeta) ->
+        Meta = clj_core:meta(Value),
+        MetaNoLocation = clj_reader:remove_location(Meta),
+        clj_core:equiv(MetaNoLocation, ExpectedMeta)
+    end,
+
   ct:comment("Keyword meta to symbol"),
   SymbolWithMetaKw = clj_reader:read(<<"^:private hello">>),
-  true = clj_core:equiv(MetadataKw, clj_core:meta(SymbolWithMetaKw)),
+  true = CheckMetaEquiv(SymbolWithMetaKw, MetadataKw),
 
   ct:comment("Symbol meta to symbol"),
   SymbolWithMetaSym = clj_reader:read(<<"^private hello">>),
-  true = clj_core:equiv(clj_core:meta(SymbolWithMetaSym), MetadataSym),
+  true = CheckMetaEquiv(SymbolWithMetaSym, MetadataSym),
 
   ct:comment("Map meta to symbol"),
   MapWithMetaKw = clj_reader:read(<<"^:private {}">>),
-  true = clj_core:equiv(clj_core:meta(MapWithMetaKw), MetadataKw),
+  true = CheckMetaEquiv(MapWithMetaKw, MetadataKw),
 
   ct:comment("Map meta to symbol"),
   MapWithMetaSym = clj_reader:read(<<"^private {}">>),
-  true = clj_core:equiv(clj_core:meta(MapWithMetaSym), MetadataSym),
+  true = CheckMetaEquiv(MapWithMetaSym, MetadataSym),
 
   ct:comment("List meta to symbol"),
   ListWithMetaKw = clj_reader:read(<<"^:private ()">>),
-  true = clj_core:equiv(clj_core:meta(ListWithMetaKw), MetadataKw),
+  true = CheckMetaEquiv(ListWithMetaKw, MetadataKw),
 
   ct:comment("List meta to symbol"),
   ListWithMetaSym = clj_reader:read(<<"^private ()">>),
-  true = clj_core:equiv(clj_core:meta(ListWithMetaSym), MetadataSym),
+  true = CheckMetaEquiv(ListWithMetaSym, MetadataSym),
 
   ct:comment("Vector meta to symbol"),
   VectorWithMetaKw = clj_reader:read(<<"^:private []">>),
-  true = clj_core:equiv(clj_core:meta(VectorWithMetaKw), MetadataKw),
+  true = CheckMetaEquiv(VectorWithMetaKw, MetadataKw),
 
   ct:comment("Vector meta to symbol"),
   VectorWithMetaSym = clj_reader:read(<<"^private []">>),
-  true = clj_core:equiv(clj_core:meta(VectorWithMetaSym), MetadataSym),
+  true = CheckMetaEquiv(VectorWithMetaSym, MetadataSym),
 
   ct:comment("Set meta to symbol"),
   SetWithMetaKw = clj_reader:read(<<"^:private #{}">>),
-  true = clj_core:equiv(clj_core:meta(SetWithMetaKw), MetadataKw),
+  true = CheckMetaEquiv(SetWithMetaKw, MetadataKw),
 
   ct:comment("Set meta to symbol"),
   SetWithMetaSym = clj_reader:read(<<"^private #{}">>),
-  true = clj_core:equiv(clj_core:meta(SetWithMetaSym), MetadataSym),
+  true = CheckMetaEquiv(SetWithMetaSym, MetadataSym),
 
   ct:comment("Meta number"),
   ok = try clj_reader:read(<<"^1 1">>)
@@ -740,7 +748,7 @@ arg(_Config) ->
 
   ct:comment("Invalid char after %"),
   ok = try clj_reader:read(<<"%a">>)
-       catch _:<<"?:1:1: Arg literal must be %, %& or %integer">> -> ok
+       catch _:<<"?:1:2: Arg literal must be %, %& or %integer">> -> ok
        end,
 
   erlang:erase(arg_env),

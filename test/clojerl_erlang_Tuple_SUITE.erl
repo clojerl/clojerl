@@ -4,8 +4,9 @@
 
 -export([ count/1
         , hash/1
-        , seq/1
         , is_sequential/1
+        , nth/1
+        , seq/1
         , str/1
         , complete_coverage/1
         ]).
@@ -46,6 +47,26 @@ hash(_Config) ->
 
   {comments, ""}.
 
+-spec is_sequential(config()) -> result().
+is_sequential(_Config) ->
+  true = clj_core:'sequential?'({1, 2, 3}),
+  true = clj_core:'sequential?'({}),
+
+  {comments, ""}.
+
+-spec nth(config()) -> result().
+nth(_Config) ->
+  Tuple = {1, b, 3},
+
+  1 = clj_core:nth(Tuple, 0),
+  b = clj_core:nth(Tuple, 1),
+  3 = clj_core:nth(Tuple, 2),
+
+  3 = clj_core:nth(Tuple, 2, not_found),
+  not_found = clj_core:nth(Tuple, 42, not_found),
+
+  {comments, ""}.
+
 -spec seq(config()) -> result().
 seq(_Config) ->
   [1, 2, 3] = clj_core:seq({1, 2, 3}),
@@ -53,13 +74,6 @@ seq(_Config) ->
   [1] = clj_core:seq({1}),
 
   undefined = clj_core:seq({}),
-
-  {comments, ""}.
-
--spec is_sequential(config()) -> result().
-is_sequential(_Config) ->
-  true = clj_core:'sequential?'({1, 2, 3}),
-  true = clj_core:'sequential?'({}),
 
   {comments, ""}.
 

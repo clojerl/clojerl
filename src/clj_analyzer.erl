@@ -3,7 +3,6 @@
 -include("clojerl.hrl").
 
 -export([ analyze/2
-        , macroexpand/2
         , macroexpand_1/2
         , is_special/1
         ]).
@@ -51,15 +50,6 @@ macroexpand_1(Env, Form) ->
     false -> Form
   end.
 
--spec macroexpand(clj_env:env(), 'clojerl.List':type()) ->
-  any().
-macroexpand(Env, Form) ->
-  ExpandedForm = macroexpand_1(Env, Form),
-  case clj_core:equiv(ExpandedForm, Form) of
-    true -> {Form, Env};
-    false -> macroexpand_1(Env, ExpandedForm)
-  end.
-
 %%------------------------------------------------------------------------------
 %% Internal
 %%------------------------------------------------------------------------------
@@ -88,6 +78,9 @@ special_forms() ->
    , <<"import*">>      => fun parse_import/2
    , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
+   , <<"defprotocol*">> => fun parse_defprotocol/2
+   , <<"extend-type*">> => fun parse_extend_type/2
+
    , <<"letfn*">>       => undefined
 
      %% , <<"monitor-enter">>
@@ -301,6 +294,7 @@ parse_fn(Env, List) ->
         VarMeta = #{ 'variadic?'     => IsVariadic
                    , max_fixed_arity => MaxFixedArity
                    , variadic_arity  => VariadicArity
+                   , 'fn?'           => true
                    },
         DefVar1 = clj_core:with_meta(DefVar, VarMeta),
         clj_namespace:update_var(DefVar1),
@@ -733,76 +727,76 @@ parse_def(Env, List) ->
   SymbolMeta   = clj_core:merge([ArgListsMap, DocstringMap, SymbolMeta0]),
   VarSymbol    = clj_core:with_meta(VarSymbol0, SymbolMeta),
 
-  case lookup_var(VarSymbol) of
-    undefined ->
-      clj_utils:throw( [ <<"Can't refer to qualified var that doesn't exist: ">>
+  Var0 = lookup_var(VarSymbol),
+
+  clj_utils:throw_when( Var0 =:= undefined
+                      ,[ <<"Can't refer to qualified var that doesn't exist: ">>
                        , VarSymbol
                        ]
+                      , clj_reader:location_meta(VarSymbol)
+                      ),
+
+  VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
+  CurrentNs    = clj_namespace:current(),
+  CurrentNsSym = clj_namespace:name(CurrentNs),
+  clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
+                        andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
+                      , <<"Can't create defs outside of current ns">>
+                      , clj_reader:location_meta(List)
+                      ),
+
+  NameBin       = clj_core:name(VarSymbol),
+  VarMeta       = clj_core:merge([ clj_core:meta(Var0)
+                                 , SymbolMeta
+                                 , #{ ns   => VarNsSym
+                                    , name => clj_core:symbol(NameBin)
+                                    }
+                                 , ArgListsMap
+                                 ]),
+  Var           = clj_core:with_meta(Var0, VarMeta),
+
+  IsDynamic     = 'clojerl.Var':is_dynamic(Var),
+
+  NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
+  clj_utils:warn_when( not NoWarnDynamic
+                       andalso not IsDynamic
+                       andalso nomatch =/= re:run(NameBin, "\\*.+\\*")
+                     , [ <<"Warning: ">>
+                       , NameBin
+                       , <<" is not dynamic but its name"
+                           " suggests otherwise.~n">>
+                       ]
                      , clj_reader:location_meta(VarSymbol)
-                     );
-    Var0 ->
-      VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
-      CurrentNs    = clj_namespace:current(),
-      CurrentNsSym = clj_namespace:name(CurrentNs),
-      clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
-                            andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
-                          , <<"Can't create defs outside of current ns">>
-                          , clj_reader:location_meta(List)
-                          ),
+                     ),
 
-      NameBin       = clj_core:name(VarSymbol),
-      VarMeta       = clj_core:merge([ clj_core:meta(Var0)
-                                     , SymbolMeta
-                                     , #{ ns   => VarNsSym
-                                        , name => clj_core:symbol(NameBin)
-                                        }
-                                     , ArgListsMap
-                                     ]),
-      Var           = clj_core:with_meta(Var0, VarMeta),
+  clj_namespace:update_var(Var),
+  Count = clj_core:count(List),
+  Init  = case Docstring of
+            undefined when Count =:= 3 -> clj_core:third(List);
+            _ when Count =:= 4 -> clj_core:fourth(List);
+            _ -> ?UNBOUND
+          end,
 
-      IsDynamic     = 'clojerl.Var':is_dynamic(Var),
+  ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
+  {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
 
-      NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
-      clj_utils:warn_when( not NoWarnDynamic
-                           andalso not IsDynamic
-                           andalso nomatch =/= re:run(NameBin, "\\*.+\\*")
-                         , [ <<"Var ">>
-                           , NameBin
-                           , <<" is not dynamic but its name"
-                               " suggests otherwise.~n">>
-                           ]
-                         , clj_reader:location_meta(VarSymbol)
-                         ),
+  Var1 = var_fn_info(Var, InitExpr),
+  clj_namespace:update_var(Var1),
 
-      clj_namespace:update_var(Var),
-      Count = clj_core:count(List),
-      Init  = case Docstring of
-                undefined when Count =:= 3 -> clj_core:third(List);
-                _ when Count =:= 4 -> clj_core:fourth(List);
-                _ -> unbound %% TODO: Create type clojerl.Unbound
-              end,
+  {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, VarMeta)),
 
-      ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
-      {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
+  DefExpr = #{ op      => def
+             , env     => ?DEBUG(Env)
+             , form    => List
+             , name    => VarSymbol
+             , var     => Var1
+             , init    => InitExpr
+             , meta    => MetaExpr
+             , dynamic => IsDynamic
+             },
 
-      Var1 = var_fn_info(Var, InitExpr),
-      clj_namespace:update_var(Var1),
-
-      {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, VarMeta)),
-
-      DefExpr = #{ op      => def
-                 , env     => ?DEBUG(Env)
-                 , form    => List
-                 , name    => VarSymbol
-                 , var     => Var1
-                 , init    => InitExpr
-                 , meta    => MetaExpr
-                 , dynamic => IsDynamic
-                 },
-
-      Env3 = restore_def_name(Env2, Env),
-      clj_env:push_expr(Env3, DefExpr)
-  end.
+  Env3 = restore_def_name(Env2, Env),
+  clj_env:push_expr(Env3, DefExpr).
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 add_def_name(Env, NameSym) ->
@@ -987,13 +981,32 @@ parse_deftype(Env, Form) ->
                 end,
   %% The analyzer adds the fields to the local scope of the methods,
   %% but it is the emitter who will need to pattern match the first argument
-  %% so that they are actually available.
+  %% so that they are actually available in the methods' body.
   Env1        = clj_env:add_locals_scope(Env),
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
-  Env3        = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
+  %% HACK: by emitting the tyep we make module available, which means the type
+  %% gets resolved. But we remove all protocols and methods, thus generating
+  %% just a dummy erlang module for the type.
+  DeftypeDummyExpr = #{ op        => deftype
+                      , env       => ?DEBUG(Env)
+                      , form      => Form
+                      , name      => Name
+                      , type      => TypeSym
+                      , fields    => FieldsExprs
+                      , protocols => []
+                      , methods   => []
+                      },
+  _ = clj_emitter:emit(clj_env:push_expr(Env2, DeftypeDummyExpr)),
+
+  Env3 = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
+
+  IntfsList   = clj_core:seq_to_list(Interfaces),
+  {InterfacesExprs, Env5} = clj_env:last_exprs( analyze_forms(Env4, IntfsList)
+                                              , length(IntfsList)
+                                              ),
 
   DeftypeExpr = #{ op        => deftype
                  , env       => ?DEBUG(Env)
@@ -1001,12 +1014,12 @@ parse_deftype(Env, Form) ->
                  , name      => Name
                  , type      => TypeSym
                  , fields    => FieldsExprs
+                 , protocols => InterfacesExprs
                  , methods   => MethodsExprs
-                 , protocols => clj_core:seq_to_list(Interfaces)
                  },
 
-  Env5 = clj_env:remove_locals_scope(Env4),
-  clj_env:push_expr(Env5, DeftypeExpr).
+  Env6 = clj_env:remove_locals_scope(Env5),
+  clj_env:push_expr(Env6, DeftypeExpr).
 
 -spec analyze_deftype_method('clojerl.List':type(), clj_env:env()) ->
   clj_env:env().
@@ -1014,7 +1027,7 @@ analyze_deftype_method(Form, Env) ->
   [MethodName, Args | _Body] = clj_core:seq_to_list(Form),
 
   clj_utils:throw_when( not clj_core:'symbol?'(MethodName)
-                      , [ <<"Method method must be a symbol, had: ">>
+                      , [ <<"Method name must be a symbol, had: ">>
                         , clj_core:type(MethodName)
                         ]
                       , clj_reader:location_meta(MethodName)
@@ -1049,6 +1062,116 @@ analyze_deftype_method(Form, Env) ->
                           ),
 
   clj_env:push_expr(Env1, MethodExpr1).
+
+%%------------------------------------------------------------------------------
+%% Parse defprotocol
+%%------------------------------------------------------------------------------
+
+-spec parse_defprotocol(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_defprotocol(Env, List) ->
+  [ _ % defprotocol*
+  , FQNameSym
+  | MethodsSigs
+  ] = clj_core:seq_to_list(List),
+
+  clj_utils:throw_when( not clj_core:'symbol?'(FQNameSym)
+                      , [ <<"Protocol name should be a symbol, had: ">>
+                        , clj_core:type(FQNameSym)
+                        ]
+                      , clj_reader:location_meta(FQNameSym)
+                      ),
+
+  %% Refer the name of the protocol (without the namespace) in the
+  %% current namespace.
+  Name     = clj_core:name(FQNameSym),
+  LastName = lists:last(binary:split(Name, <<".">>, [global])),
+  NameSym  = clj_core:symbol(LastName),
+
+  clj_namespace:refer(clj_namespace:current(), NameSym, FQNameSym),
+
+  ProtocolExpr = #{ op           => defprotocol
+                  , env          => ?DEBUG(Env)
+                  , name         => FQNameSym
+                  , methods_sigs => MethodsSigs
+                  },
+
+  clj_env:push_expr(Env, ProtocolExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse extend-type
+%%------------------------------------------------------------------------------
+
+-spec parse_extend_type(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_extend_type(Env, List) ->
+  [ ExtendTypeSym % extend-type*
+  , Type
+  | ProtosMethods
+  ] = clj_core:seq_to_list(List),
+
+  %% Group each protocol name with its implementation functions.
+  GroupedProtoMethods = split_when(ProtosMethods, fun clj_core:'symbol?'/1),
+
+  %% Analyze each group and map protocols to their implementations.
+  {ProtoImplsMap, Env1} = lists:foldl( fun analyze_extend_methods/2
+                                     , {#{}, Env}
+                                     , GroupedProtoMethods
+                                     ),
+
+  {TypeExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Type)),
+
+  #{op := TypeOp} = TypeExpr,
+  clj_utils:throw_when( TypeOp =/= type
+                      , [ <<"The expression of type ">>
+                        , clj_core:type(Type)
+                        , <<" does not resolve to a type.">>
+                        ]
+                      , clj_reader:location_meta(ExtendTypeSym)
+                      ),
+
+  ExtendTypeExpr = #{ op    => extend_type
+                    , env   => ?DEBUG(Env)
+                    , type  => TypeExpr
+                    , form  => List
+                    , impls => ProtoImplsMap
+                    },
+
+  clj_env:push_expr(Env2, ExtendTypeExpr).
+
+%% @doc Returns a list of lists where the first element of
+%%      each sublist is the protocol and the rest are
+%%      implementation methods.
+-spec split_when(list(), fun((any()) -> boolean())) -> list().
+split_when(List, Pred) ->
+  SplitFun = fun
+                   (X, []) -> [[X]];
+                   (X, [First | Rest] = All) ->
+                     case Pred(X) of
+                       true  -> [[X] | All];
+                       false -> [[X | First] | Rest]
+                     end
+                 end,
+  lists:map( fun lists:reverse/1
+           , lists:foldl(SplitFun, [], List)
+           ).
+
+-spec analyze_extend_methods(list(), {map(), clj_env:env()}) ->
+  {map(), clj_env:env()}.
+analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
+  {ProtoExpr, EnvAcc1} = clj_env:pop_expr(analyze_form(EnvAcc, Proto)),
+
+  #{op := ProtoOp} = ProtoExpr,
+  clj_utils:throw_when( ProtoOp =/= type
+                      , [ <<"The symbol ">>
+                        , Proto
+                        , <<"does not resolve to a protocol">>
+                        ]
+                      , clj_reader:location_meta(Proto)
+                      ),
+
+  EnvAcc2 = lists:foldl(fun analyze_deftype_method/2, EnvAcc1, Methods),
+  {MethodsExprs, EnvAcc3} = clj_env:last_exprs(EnvAcc2, length(Methods)),
+
+  {ImplMapAcc#{ProtoExpr => MethodsExprs}, EnvAcc3}.
 
 %%------------------------------------------------------------------------------
 %% Parse throw
@@ -1393,11 +1516,16 @@ erl_fun_arity(Name) ->
 
 -spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
 is_maybe_type(Symbol) ->
-  case clj_core:namespace(Symbol) of
-    undefined ->
-      Name = clj_core:name(Symbol),
-      Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
-      match =:= re:run(Name, Re, [global, {capture, none}]);
+  undefined = clj_core:namespace(Symbol),
+  Name      = clj_core:name(Symbol),
+  Re        = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
+  case re:run(Name, Re, [global, {capture, none}]) of
+    match ->
+      Module = binary_to_atom(Name, utf8),
+      %% Check if the module is either present in clj_module or a compiled
+      %% Erlang module.
+      clj_module:is_loaded(Module) orelse
+        {module, Module} =:= code:ensure_loaded(Module);
     _ ->
       false
   end.

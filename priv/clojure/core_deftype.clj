@@ -16,6 +16,8 @@
   [ns]
   (binary/replace.e (-> ns ns-name str) \- \_))
 
+(defn munge [s] s)
+
 ;for now, built on gen-interface
 (defmacro definterface
   "Creates a new Java interface with the given name and method sigs.
@@ -380,3 +382,206 @@
        ~(build-positional-factory gname classname fields)
        ;; Types are not reified so we just return the symbol.
        '~classname)))
+
+;;;;;;;;;;;;;;;;;;;;;;; protocols ;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- protocol?
+  [maybe-p]
+  (and (clj_module/is_clojure.e maybe-p)
+       (clj_module/is_protocol.e maybe-p)))
+
+(defn- implements? [protocol atype]
+  (satisfies? protocol atype))
+
+#_(defn extenders
+  "Returns a collection of the types explicitly extending protocol"
+  {:added "1.2"}
+  [protocol]
+  (keys (:impls protocol)))
+
+(defn- assert-same-protocol [protocol-name method-syms]
+  (doseq [m method-syms]
+    (let [v (resolve m)
+          p (:protocol (meta v))]
+      (when (and v (bound? v) (not= protocol-name p))
+        (binding [*out* *err*]
+          (println "Warning: protocol" protocol-name "is overwriting"
+                   (if p
+                     (str "method " v " of protocol " p)
+                     (str "function " v))))))))
+
+(defn- emit-protocol-function
+  [iname {name :name arglists :arglists :as sigs}]
+  (map (fn [args]
+         `(defn ~(vary-meta name assoc :protocol iname) ~args
+            (clojerl.protocol/resolve.e ~(keyword iname)
+                                         ~(keyword name)
+                                         (clj_core/seq_to_list.e ~args))))
+       arglists))
+
+(defn- emit-protocol [name opts+sigs]
+  (let [iname (symbol (str (munge (namespace-munge *ns*)) "." (munge name)))
+        [opts sigs]
+        (loop [opts {:on (list 'quote iname) :on-interface iname} sigs opts+sigs]
+          (condp #(%1 %2) (first sigs)
+            string? (recur (assoc opts :doc (first sigs)) (next sigs))
+            keyword? (recur (assoc opts (first sigs) (second sigs)) (nnext sigs))
+            [opts sigs]))
+        sigs (when sigs
+               (reduce1 (fn [m s]
+                          (let [name-meta (meta (first s))
+                                mname (with-meta (first s) nil)
+                                [arglists doc]
+                                (loop [as [] rs (rest s)]
+                                  (if (vector? (first rs))
+                                    (recur (conj as (first rs)) (next rs))
+                                    [(seq as) (first rs)]))]
+                            (when (some #{0} (map count arglists))
+                              (throw (str "Definition of function " mname " in protocol " name " must take at least one arg.")))
+                            (when (m (keyword mname))
+                              (throw (str "Function " mname " in protocol " name " was redefined. Specify all arities in single definition.")))
+                            (assoc m (keyword mname)
+                                   (merge name-meta
+                                          {:name (vary-meta mname assoc :doc doc :arglists arglists)
+                                           :arglists arglists
+                                           :doc doc}))))
+                        {} sigs))
+        meths (mapcat (fn [sig]
+                        (let [m (munge (:name sig))]
+                          (map #(vector m (count %)) (:arglists sig))))
+                      (vals sigs))]
+    `(do
+       ~(when sigs
+          `(#'assert-same-protocol '~iname
+                                   '~(clj_core/seq_to_list.e (map :name (vals sigs)))))
+       ~@(mapcat (partial emit-protocol-function iname) (vals sigs))
+       (~'defprotocol* ~iname ~@meths)
+       '~name)))
+
+(defmacro defprotocol
+  "A protocol is a named set of named methods and their signatures:
+  (defprotocol AProtocolName
+
+    ;optional doc string
+    \"A doc string for AProtocol abstraction\"
+
+  ;method signatures
+    (bar [this a b] \"bar docs\")
+    (baz [this a] [this a b] [this a b c] \"baz docs\"))
+
+  No implementations are provided. Docs can be specified for the
+  protocol overall and for each method. The above yields a set of
+  polymorphic functions and a protocol object. All are
+  namespace-qualified by the ns enclosing the definition The resulting
+  functions dispatch on the type of their first argument, which is
+  required and corresponds to the implicit target object ('this' in
+  Java parlance). defprotocol is dynamic, has no special compile-time
+  effect, and defines no new types or classes. Implementations of
+  the protocol methods can be provided using extend.
+
+  defprotocol will automatically generate a corresponding interface,
+  with the same name as the protocol, i.e. given a protocol:
+  my.ns/Protocol, an interface: my.ns.Protocol. The interface will
+  have methods corresponding to the protocol functions, and the
+  protocol will automatically work with instances of the interface.
+
+  Note that you should not use this interface with deftype or
+  reify, as they support the protocol directly:
+
+  (defprotocol P
+    (foo [this])
+    (bar-me [this] [this y]))
+
+  (deftype Foo [a b c]
+   P
+    (foo [this] a)
+    (bar-me [this] b)
+    (bar-me [this y] (+ c y)))
+
+  (bar-me (Foo. 1 2 3) 42)
+  => 45
+
+  (foo
+    (let [x 42]
+      (reify P
+        (foo [this] 17)
+        (bar-me [this] x)
+        (bar-me [this y] x))))
+  => 17"
+  {:added "1.2"}
+  [name & opts+sigs]
+  (emit-protocol name opts+sigs))
+
+(defn normalize-methods
+  [specs]
+  (->> specs
+      (map (fn [proto-or-method]
+             (cond (symbol? proto-or-method) [proto-or-method]
+                   (vector? (second proto-or-method)) [proto-or-method]
+                   :else
+                   (let [[name & methods] proto-or-method]
+                     (map (partial cons name) methods)))))
+      (apply concat)))
+
+(defmacro extend-type
+  "A macro that expands into an extend call. Useful when you are
+  supplying the definitions explicitly inline, extend-type
+  automatically creates the maps required by extend.  Propagates the
+  class as a type hint on the first argument of all fns.
+
+  (extend-type MyType
+    Countable
+      (cnt [c] ...)
+    Foo
+      (bar [x y] ...)
+      (baz ([x] ...) ([x y & zs] ...)))"
+  {:added "1.2"}
+  [t & specs]
+  `(extend-type* ~t ~@(normalize-methods specs)))
+
+(defn- emit-extend-protocol [p specs]
+  (let [impls (parse-impls specs)]
+    `(do
+       ~@(map (fn [[t fs]]
+                `(extend-type ~t ~p ~@fs))
+              impls))))
+
+(defmacro extend-protocol
+  "Useful when you want to provide several implementations of the same
+  protocol all at once. Takes a single protocol and the implementation
+  of that protocol for one or more types. Expands into calls to
+  extend-type:
+
+  (extend-protocol Protocol
+    AType
+      (foo [x] ...)
+      (bar [x y] ...)
+    BType
+      (foo [x] ...)
+      (bar [x y] ...)
+    AClass
+      (foo [x] ...)
+      (bar [x y] ...)
+    nil
+      (foo [x] ...)
+      (bar [x y] ...))
+
+  expands into:
+
+  (do
+   (clojure.core/extend-type AType Protocol
+     (foo [x] ...)
+     (bar [x y] ...))
+   (clojure.core/extend-type BType Protocol
+     (foo [x] ...)
+     (bar [x y] ...))
+   (clojure.core/extend-type AClass Protocol
+     (foo [x] ...)
+     (bar [x y] ...))
+   (clojure.core/extend-type nil Protocol
+     (foo [x] ...)
+     (bar [x y] ...)))"
+  {:added "1.2"}
+
+  [p & specs]
+  (emit-extend-protocol p specs))

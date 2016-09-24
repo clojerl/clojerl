@@ -14,6 +14,7 @@
         , is_dynamic/1
         , is_macro/1
         , is_public/1
+        , is_bound/1
         , has_root/1
         , get/1
         ]).
@@ -68,6 +69,13 @@ is_public(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
   not maps:get(private, Meta, false);
 is_public(#?TYPE{name = ?M}) ->
   true.
+
+-spec is_bound(type()) -> boolean().
+is_bound(#?TYPE{name = ?M} = Var) ->
+  case deref(Var) of
+    ?UNBOUND -> false;
+    _ -> true
+  end.
 
 -spec has_root(type()) -> boolean().
 has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
@@ -174,11 +182,13 @@ str(#?TYPE{name = ?M, data = {Ns, Name}}) ->
 deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
   Module      = module(Var),
   FunctionVal = val_function(Var),
+  %% HACK
+  Fun         = clj_module:fake_fun(Module, FunctionVal, 0),
 
   try
     %% Make the call in case the module is not loaded and handle the case
     %% when it doesn't even exist gracefully.
-    Module:FunctionVal()
+    Fun()
   catch
     Type:undef ->
       case erlang:function_exported(Module, FunctionVal, 0) of
@@ -216,6 +226,7 @@ invoke(#?TYPE{name = ?M} = Var, Args) ->
                Seq       -> Seq
              end,
   Args2    = process_args(Var, Args1, fun clj_core:seq/1),
+  %% HACK
   Fun      = clj_module:fake_fun(Module, Function, length(Args2)),
 
   erlang:apply(Fun, Args2).

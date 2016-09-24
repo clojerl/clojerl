@@ -1,5 +1,8 @@
 -module('clojerl.Seqable').
 
+-clojure(true).
+-protocol(true).
+
 -export([seq/1]).
 
 -type type() :: list().

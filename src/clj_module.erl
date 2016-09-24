@@ -21,6 +21,7 @@
         , add_on_load/2
 
         , is_clojure/1
+        , is_protocol/1
         ]).
 
 %% gen_server callbacks
@@ -37,7 +38,7 @@
 
 -record(module, { name              :: atom(),
                   source = ""       :: string(),
-                  %% ETS table where var are kept. The key is the var's
+                  %% ETS table where vars are kept. The key is the var's
                   %% name as a binary.
                   vars              :: ets:tid(),
                   %% ETS table where functions are kept. The key is the
@@ -56,7 +57,8 @@
                   %% on_load function are kept. The key is the expression
                   %% itself.
                   on_load           :: ets:tid(),
-                  attrs             :: [erl_parse:abstract_form()],
+                  %% ETS table where attributes that are kept.
+                  attrs             :: ets:tid(),
                   rest              :: [erl_parse:abstract_form()]
                 }).
 
@@ -257,6 +259,19 @@ is_clojure(Name) ->
       Value
   end.
 
+-spec is_protocol(module()) -> boolean().
+is_protocol(Name) ->
+  Key = {?MODULE, is_protocol, Name},
+  case clj_cache:get(Key) of
+    undefined ->
+      Attrs = Name:module_info(attributes),
+      IsProtocol = lists:keymember(protocol, 1, Attrs),
+      clj_cache:put(Key, IsProtocol),
+      IsProtocol;
+    {ok, Value} ->
+      Value
+  end.
+
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
 %%------------------------------------------------------------------------------
@@ -329,11 +344,12 @@ cleanup() ->
 %% @end
 -spec load(atom(), string()) -> ok | {error, term()}.
 load(Name, Source) ->
+  SourceStr = binary_to_list(Source),
   Module = case code:ensure_loaded(Name) of
              {module, Name} ->
-               new(clj_utils:code_from_binary(Name));
+               new(clj_utils:code_from_binary(Name), SourceStr);
              {error, _} ->
-               new(Name, Source)
+               new(Name, SourceStr)
            end,
   ok = gen_server:call(?MODULE, {load, Module}),
   Module.
@@ -450,19 +466,19 @@ save(Table, Value) ->
   Value.
 
 -spec new(atom(), string()) -> ok | {error, term()}.
-new(Name, Source) when is_atom(Name), is_binary(Source) ->
-  new(Name, binary_to_list(Source));
 new(Name, Source) when is_atom(Name), is_list(Source) ->
   new([ {attribute, 0, module, Name}
       , {attribute, 0, file, {Source, 0}}
       ]
-     ).
+     );
+new(Forms, Source) when is_list(Forms), is_list(Source) ->
+  new([{attribute, 0, file, {Source, 0}} | Forms]).
 
 -spec new([erl_parse:abstract_form()]) -> ok | {error, term()}.
 new(Forms) when is_list(Forms) ->
   {[ModuleAttr], Rest} = lists:partition(is_attribute_fun(module), Forms),
-  {AllAttrs, Rest1} = lists:partition(fun is_attribute/1, Rest),
-  {Funs, Rest2} = lists:partition(fun is_function/1, Rest1),
+  {AllAttrs, Rest1}    = lists:partition(fun is_attribute/1, Rest),
+  {Funs, Rest2}        = lists:partition(fun is_function/1, Rest1),
 
   {attribute, _, module, Name} = ModuleAttr,
   {VarsAttrs, RestAttrs} = lists:partition(is_attribute_fun(vars), AllAttrs),

@@ -1,5 +1,8 @@
 -module('clojerl.ILookup').
 
+-clojure(true).
+-protocol(true).
+
 -export([get/2, get/3]).
 
 -type type() ::  any().

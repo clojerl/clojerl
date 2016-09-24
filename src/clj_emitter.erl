@@ -8,8 +8,9 @@
 
 -type ast()   :: erl_parse:abstract_form().
 
--type state() :: #{ asts            => [ast()]
-                  , lexical_renames => clj_scope:scope()
+-type state() :: #{ asts                => [ast()]
+                  , lexical_renames     => clj_scope:scope()
+                  , force_remote_invoke => boolean()
                   }.
 
 -spec emit(clj_env:env()) -> clj_env:env().
@@ -32,8 +33,9 @@ remove_state(Env) ->
 
 -spec initial_state() -> state().
 initial_state() ->
-  #{ asts            => []
-   , lexical_renames => clj_scope:new()
+  #{ asts                => []
+   , lexical_renames     => clj_scope:new()
+   , force_remote_invoke => false
    }.
 
 %%------------------------------------------------------------------------------
@@ -100,12 +102,13 @@ ast(#{op := def} = Expr, State) ->
 
   ok      = clj_module:ensure_loaded(Module, file_from(Var)),
   VarAst  = erl_parse:abstract(Var),
+  VarAnno = anno_from(Var),
 
   {ValAst, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
         { VarAst
-        , add_functions(Module, Name, FnExpr, State)
+        , add_functions(Module, Name, VarAnno, FnExpr, State)
         };
       _ ->
         {V, S} = pop_ast(ast(InitExpr, State)),
@@ -117,8 +120,8 @@ ast(#{op := def} = Expr, State) ->
         end
     end,
 
-  ValClause = {clause, anno_from(Var), [], [], [ValAst]},
-  ValFunAst = function_form(ValName, [ValClause]),
+  ValClause = {clause, VarAnno, [], [], [ValAst]},
+  ValFunAst = function_form(ValName, VarAnno, [ValClause]),
 
   clj_module:add_vars(Module, [Var]),
   clj_module:add_functions(Module, [ValFunAst]),
@@ -129,21 +132,22 @@ ast(#{op := def} = Expr, State) ->
 %% import
 %%------------------------------------------------------------------------------
 ast(#{op := import} = Expr, State) ->
-  #{ typename := Typename
-   , form     := Form
-   } = Expr,
-
-  Type = binary_to_atom(Typename, utf8),
-
-  clj_utils:throw_when( {module, Type} =/= code:ensure_loaded(Type)
-                      , [<<"Type '">>, Type, <<"' could not be loaded.">>]
-                      , clj_reader:location_meta(Form)
-                      ),
+  #{typename := Typename} = Expr,
 
   TypenameAst = erl_parse:abstract(Typename),
   ImportAst   = application_mfa(clj_namespace, import_type, [TypenameAst]),
 
   push_ast(ImportAst, State);
+%%------------------------------------------------------------------------------
+%% type
+%%------------------------------------------------------------------------------
+ast(#{op := type} = Expr, State) ->
+  #{type := TypeSym} = Expr,
+
+  TypeModule = sym_to_kw(TypeSym),
+  Ast        = {atom, anno_from(TypeSym), TypeModule},
+
+  push_ast(Ast, State);
 %%------------------------------------------------------------------------------
 %% new
 %%------------------------------------------------------------------------------
@@ -167,15 +171,17 @@ ast(#{op := deftype} = Expr, State0) ->
    , name      := Name
    , fields    := FieldsExprs
    , methods   := MethodsExprs
-   , protocols := Protocols
+   , protocols := ProtocolsExprs
    } = Expr,
 
-  Module         = sym_to_kw(TypeSym),
-  ok             = clj_module:ensure_loaded(Module, file_from(Name)),
+  Module = sym_to_kw(TypeSym),
+  Anno   = anno_from(Name),
+  ok     = clj_module:ensure_loaded(Module, file_from(Name)),
 
   %% Attributes
-  ProtocolsNames = lists:map(fun sym_to_kw/1, Protocols),
-  Attributes     = [{attribute, 0, behavior, P} || P <- ProtocolsNames],
+  Attributes     = [ {attribute, 0, behavior, sym_to_kw(ProtocolName)}
+                     || #{type := ProtocolName} <- ProtocolsExprs
+                   ],
 
   %% Functions
   {AllFieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
@@ -206,7 +212,11 @@ ast(#{op := deftype} = Expr, State0) ->
                            ),
 
   %% Create a constructor that doesn't include the hidded fields.
-  CtorAst   = constructor_function(Module, AllFieldsAsts, HiddenFieldsAsts),
+  CtorAst   = constructor_function( Module
+                                  , Anno
+                                  , AllFieldsAsts
+                                  , HiddenFieldsAsts
+                                  ),
   %% When there are hidden fields we assume  it is a record, so we also want
   %% to create:
   %%   - a constructor function that includes the hidden fields.
@@ -214,8 +224,12 @@ ast(#{op := deftype} = Expr, State0) ->
   CtorsAsts = case HiddenFieldsAsts of
                 [] -> [CtorAst];
                 _  -> [ CtorAst
-                      , constructor_function(Module, AllFieldsAsts, [])
-                      , create_function(Module, AllFieldsAsts, HiddenFieldsAsts)
+                      , constructor_function(Module, Anno, AllFieldsAsts, [])
+                      , create_function( Module
+                                       , Anno
+                                       , AllFieldsAsts
+                                       , HiddenFieldsAsts
+                                       )
                       ]
               end,
 
@@ -242,10 +256,10 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Module, Exports),
   clj_module:add_functions(Module, Functions),
 
-  Ast = erl_parse:abstract(Name, line_from(Name)),
+  Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
+  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
 
-  CompileOpts = #{erl_flags => [binary, debug_info]},
-  clj_compiler:compile_forms(clj_module:get_forms(Module), CompileOpts),
+  Ast = erl_parse:abstract(Name, line_from(Name)),
 
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -255,9 +269,94 @@ ast(#{op := method} = Expr, State0) ->
   #{name := Name} = Expr,
 
   {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
-  FunAst = function_form(sym_to_kw(Name), [ClauseAst]),
+  FunAst = function_form(sym_to_kw(Name), anno_from(Name), [ClauseAst]),
 
   push_ast(FunAst, State1);
+%%------------------------------------------------------------------------------
+%% defprotocol
+%%------------------------------------------------------------------------------
+ast(#{op := defprotocol} = Expr, State) ->
+  #{ name         := NameSym
+   , methods_sigs := MethodsSigs
+   } = Expr,
+
+  Module = sym_to_kw(NameSym),
+  ok     = clj_module:ensure_loaded(Module, file_from(NameSym)),
+
+  TermType = {type, 0, term, []},
+  CallbackAttrFun = fun(Sig) ->
+                        MethodNameSym = clj_core:first(Sig),
+                        Arity         = clj_core:second(Sig),
+                        ArgsTypes     = lists:duplicate(Arity, TermType),
+                        { attribute
+                        , 0
+                        , callback
+                        , { {sym_to_kw(MethodNameSym), Arity}
+                          , [{ type
+                             , 0
+                             , 'fun'
+                             , [ {type, 0, product, ArgsTypes}
+                               , TermType
+                               ]
+                             }
+                            ]
+                          }
+                        }
+                    end,
+
+  ProtocolAttr = {attribute, 0, protocol, true},
+  Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
+  clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
+
+  Ast = erl_parse:abstract(NameSym, line_from(NameSym)),
+  push_ast(Ast, State);
+%%------------------------------------------------------------------------------
+%% extend_type
+%%------------------------------------------------------------------------------
+ast(#{op := extend_type} = Expr, State) ->
+  #{ op    := extend_type
+   , type  := #{type := TypeSym}
+   , impls := Impls
+   } = Expr,
+
+  ForceRemote = maps:get(force_remote_invoke, State),
+
+  EmitProtocolFun =
+    fun(#{type := ProtoSym} = Proto, StateAcc) ->
+        ProtoBin = clj_core:str(ProtoSym),
+        TypeBin  = clj_core:str(TypeSym),
+        Module   = 'clojerl.protocol':impl_module(ProtoBin, TypeBin),
+
+        clj_module:ensure_loaded(Module, file_from(TypeSym)),
+
+        MethodsExprs = maps:get(Proto, Impls),
+
+        %% Functions
+        StateAcc1 = lists:foldl(fun ast/2, StateAcc, MethodsExprs),
+        {FunctionsAsts, StateAcc2} = pop_ast(StateAcc1, length(MethodsExprs)),
+
+        %% Exports
+        Exports = lists:map(fun function_signature/1, FunctionsAsts),
+
+        clj_module:add_exports(Module, Exports),
+        clj_module:add_functions(Module, FunctionsAsts),
+
+        Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
+        Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+
+        StateAcc2
+    end,
+
+  %% We force remote calls for all functions since the function will
+  %% live in its own module, but is analyzed in the context of the 
+  %% surrounding code where the extend-type is used.
+  State1 = lists:foldl( EmitProtocolFun
+                      , State#{force_remote_invoke => true}
+                      , maps:keys(Impls)
+                      ),
+
+  Ast = {atom, 0, undefined},
+  push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -337,29 +436,30 @@ ast(#{op := invoke} = Expr, State) ->
       VarMeta = clj_core:meta(Var),
       Module  = 'clojerl.Var':module(Var),
 
-      Ast = case clj_core:get(VarMeta, 'fn?', false) of
-              true ->
-                Function = 'clojerl.Var':function(Var),
-                Args1    = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-                CurrentNs = clj_namespace:current(),
-                NsName    = clj_core:name(clj_namespace:name(CurrentNs)),
-                VarNsName = clj_core:namespace(Var),
-
-                %% When the var's symbol is not namespace qualified and the var's
-                %% namespace is the current namespace, emit a local function
-                %% call, otherwise emit a remote call.
-                case clj_core:namespace(Symbol) of
-                  undefined when NsName =:= VarNsName ->
-                    application_fa(Function, Args1, Anno);
-                  _ ->
-                    application_mfa(Module, Function, Args1, Anno)
-                end;
-              false ->
-                ValFunction = 'clojerl.Var':val_function(Var),
-                FunAst      = application_mfa(Module, ValFunction, [], Anno),
-                ArgsAst     = list_ast(Args),
-                application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
-            end,
+      Ast =
+        case clj_core:get(VarMeta, 'fn?', false) of
+          true ->
+            Function    = 'clojerl.Var':function(Var),
+            Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+            CurrentNs   = clj_namespace:current(),
+            NsName      = clj_core:name(clj_namespace:name(CurrentNs)),
+            VarNsName   = clj_core:namespace(Var),
+            ForceRemote = maps:get(force_remote_invoke, State),
+            %% When the var's symbol is not namespace qualified and the var's
+            %% namespace is the current namespace, emit a local function
+            %% call, otherwise emit a remote call.
+            case clj_core:namespace(Symbol) of
+              undefined when NsName =:= VarNsName, not ForceRemote ->
+                application_fa(Function, Args1, Anno);
+              _ ->
+                application_mfa(Module, Function, Args1, Anno)
+            end;
+          false ->
+            ValFunction = 'clojerl.Var':val_function(Var),
+            FunAst      = application_mfa(Module, ValFunction, [], Anno),
+            ArgsAst     = list_ast(Args),
+            application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
+        end,
 
       push_ast(Ast, State1);
     #{op := erl_fun} ->
@@ -701,7 +801,12 @@ ast(#{op := on_load} = Expr, State) ->
   ModuleName = binary_to_atom(clj_core:name(NameSym), utf8),
   clj_module:add_on_load(ModuleName, Ast),
 
-  push_ast(Ast, State1).
+  push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
+%% Unknown op
+%%------------------------------------------------------------------------------
+ast(#{op := Unknown}, _State) ->
+  error({unknown_op, Unknown}).
 
 %%------------------------------------------------------------------------------
 %% AST Helper Functions
@@ -742,32 +847,32 @@ expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
 %%
 %% The constructor will take AllFields -- HiddenFields as arguments.
 %% Hidden fields will be assigned the value `undefined'.
--spec constructor_function(atom(), [ast()], [ast()]) -> ast().
-constructor_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
+-spec constructor_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
+constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
   TupleAst    = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
   BodyAst     = [TupleAst],
   ClausesAsts = [{clause, 0, FieldsAsts, [], BodyAst}],
 
-  function_form(?CONSTRUCTOR, ClausesAsts).
+  function_form(?CONSTRUCTOR, Anno, ClausesAsts).
 
 %% @doc Builds an accessor function for the specified type and field.
 %%
 %% The accessor function generated has a '-' as a prefix.
 -spec accessor_function(atom(), ast()) -> ast().
-accessor_function(Typename, {var, _, FieldName} = FieldAst) ->
+accessor_function(Typename, {var, Anno, FieldName} = FieldAst) ->
   TupleAst     = type_tuple(Typename, [FieldAst], [], match),
   BodyAst      = [FieldAst],
-  ClausesAsts  = [{clause, 0, [TupleAst], [], BodyAst}],
+  ClausesAsts  = [{clause, Anno, [TupleAst], [], BodyAst}],
   AccessorName = field_fun_name(FieldName),
-  function_form(AccessorName, ClausesAsts).
+  function_form(AccessorName, Anno, ClausesAsts).
 
--spec create_function(atom(), [ast()], [ast()]) -> ast().
-create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
-  MapVarAst    = {var, 0, map},
+-spec create_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
+create_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
+  MapVarAst    = {var, Anno, map},
   GetAstFun    = fun(FName) ->
                      ArgsAst = [ MapVarAst
-                               , {atom, 0, FName}
+                               , {atom, Anno, FName}
                                ],
                      application_mfa(clj_core, get, ArgsAst)
                  end,
@@ -776,7 +881,7 @@ create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
                       case lists:member(FieldAst, HiddenFieldsAsts) of
                         true  -> MapAst;
                         false ->
-                          FAtom = {atom, 0, FName},
+                          FAtom = {atom, Anno, FName},
                           application_mfa(clj_core, dissoc, [MapAst, FAtom])
                       end
                   end,
@@ -789,30 +894,30 @@ create_function(Typename, AllFieldsAsts, HiddenFieldsAsts) ->
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
 
   FieldsMapAst = { map
-                 , 0
-                 ,  [ { map_field_assoc
-                      , 0
-                      , {atom, 0, FieldName}
-                      , case lists:member(FieldAst, HiddenFieldsAsts) of
-                          true when FieldName =:= '__extmap' ->
-                            ExtMapAst;
-                          true ->
-                            {atom, 0, undefined};
-                          false ->
-                            GetAstFun(FieldName)
-                        end
-                      }
-                      || {var, _, FieldName} = FieldAst <- AllFieldsAsts
-                    ]
+                 , Anno
+                 , [ { map_field_assoc
+                     , Anno
+                     , {atom, Anno, FieldName}
+                     , case lists:member(FieldAst, HiddenFieldsAsts) of
+                         true when FieldName =:= '__extmap' ->
+                           ExtMapAst;
+                         true ->
+                           {atom, Anno, undefined};
+                         false ->
+                           GetAstFun(FieldName)
+                       end
+                     }
+                     || {var, _, FieldName} = FieldAst <- AllFieldsAsts
+                   ]
                  },
-  InfoAst      = {atom, 0, undefined},
+  InfoAst      = {atom, Anno, undefined},
   TupleAst     = type_tuple_ast(Typename, FieldsMapAst, InfoAst),
 
   BodyAst      = [TupleAst],
 
-  ClausesAsts  = [{clause, 0, [MapVarAst], [], BodyAst}],
+  ClausesAsts  = [{clause, Anno, [MapVarAst], [], BodyAst}],
 
-  function_form(create, ClausesAsts).
+  function_form(create, Anno, ClausesAsts).
 
 -spec field_fun_name(atom()) -> atom().
 field_fun_name(FieldName) when is_atom(FieldName) ->
@@ -856,10 +961,10 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
     ]
   }.
 
--spec function_form(atom(), [ast()]) -> ast().
-function_form(Name, [Clause | _] = Clauses) when is_atom(Name) ->
+-spec function_form(atom(), erl_anno:anno(), [ast()]) -> ast().
+function_form(Name, Anno, [Clause | _] = Clauses) when is_atom(Name) ->
   {clause, _, Args, _, _} = Clause,
-  {function, 0, Name, length(Args), Clauses}.
+  {function, Anno, Name, length(Args), Clauses}.
 
 -spec function_signature(ast()) -> {atom(), arity()}.
 function_signature({function, _, Name, Arity, _}) ->
@@ -931,8 +1036,9 @@ group_methods(Methods) ->
   ParamCountFun = fun(#{params := Params}) -> length(Params) end,
   clj_utils:group_by(ParamCountFun, Methods).
 
--spec add_functions(module(), atom(), map(), state()) -> state().
-add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
+-spec add_functions(module(), atom(), erl_anno:anno(), map(), state()) ->
+  state().
+add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
   GroupedMethods = group_methods(Methods),
 
   ExportFun = fun(Arity) ->
@@ -949,7 +1055,7 @@ add_functions(Module, Name, #{op := fn, methods := Methods}, State) ->
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
-        FunAst = function_form(Name, ClausesAst),
+        FunAst = function_form(Name, Anno, ClausesAst),
 
         clj_module:add_functions(Module, [FunAst]),
 
@@ -1055,8 +1161,7 @@ line_from(Form) ->
       case clj_core:meta(Form) of
         undefined -> 0;
         Map ->
-          {Line, _Col} = clj_core:get(Map, loc, {0, 1}),
-          Line
+          clj_core:get(Map, line, 0)
       end
   end.
 
@@ -1076,8 +1181,13 @@ anno_from(Form) ->
       case clj_core:meta(Form) of
         undefined -> 0;
         Map ->
-          LineCol = clj_core:get(Map, loc, {0, 1}),
-          erl_anno:new(LineCol)
+          Line   = clj_core:get(Map, line, 0),
+          Column = clj_core:get(Map, column, 1),
+          Anno   = [{location, {Line, Column}}],
+          case clj_core:get(Map, file, undefined) of
+            undefined -> Anno;
+            File      -> [{file, binary_to_list(File)} | Anno]
+          end
       end
   end.
 

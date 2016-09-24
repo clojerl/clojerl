@@ -44,12 +44,8 @@
   `(try
    ~@body
    (report {:type :fail, :message ~msg, :expected '~form, :actual nil})
-   (catch _ t#
-     (if (some (fn [cause#]
-                 (and
-                  (= ~exception-class (class cause#))
-                  (re-find ~msg-re (.getMessage cause#))))
-               t#)
+   (catch ~exception-class t#
+     (if (re-find ~msg-re t#)
        (report {:type :pass, :message ~msg,
                 :expected '~form, :actual t#})
        (report {:type :fail, :message ~msg,
@@ -84,9 +80,8 @@
   "Evaluate with err pointing to a temporary PrintWriter, and
    return err contents as a string."
   [& body]
-  `(let [s# (java.io.StringWriter.)
-         p# (java.io.PrintWriter. s#)]
-     (binding [*err* p#]
+  `(let [s# (new ~'erlang.io.StringWriter)]
+     (binding [*err* s#]
        ~@body
        (str s#))))
 
@@ -94,7 +89,7 @@
   "Evaluate with err pointing to a temporary StringWriter, and
    return err contents as a string."
   [& body]
-  `(let [s# (java.io.StringWriter.)]
+  `(let [s# (new ~'erlang.io.StringWriter)]
      (binding [*err* s#]
        ~@body
        (str s#))))

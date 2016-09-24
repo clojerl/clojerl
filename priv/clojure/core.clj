@@ -130,40 +130,38 @@
   seq (fn ^:static seq [coll] (clj_core/seq.e coll)))
 
 (def
-  ^{:arglists '([p x])
-    :doc "Evaluates x and tests if it extends the protocol
-    p. Returns true or false"
-    :added "1.0"}
-  extends? (fn extends? [p x]
-             (clj_core/extends?.e p (clj_core/type.e x))))
+  ^{:arglists '([protocol x])
+    :doc "Returns true if x satisfies the protocol"
+    :added "1.2"}
+  satisfies? (fn satisfies? [protocol x]
+               (clj_core/satisfies?.e protocol (clj_core/type.e x))))
 
 (def
-  ^{:arglists '([t x])
-    :doc "Evaluates x and tests if it is of type t.
-    Returns true or false"
+  ^{:arglists '([atype x])
+    :doc "Returns true if x's type is atype"
     :added "1.0"}
-  instance? (fn instance? [t x] (erlang/==.e t (clj_core/type.e x))))
+  instance? (fn instance? [atype x] (erlang/==.e atype (clj_core/type.e x))))
 
 (def
   ^{:arglists '([x])
     :doc "Return true if x implements ISeq"
     :added "1.0"
     :static true}
-  seq? (fn ^:static seq? [x] (extends? :clojerl.ISeq x)))
+  seq? (fn ^:static seq? [x] (satisfies? clojerl.ISeq x)))
 
 (def
   ^{:arglists '([x])
     :doc "Return true if x implements ISeq"
     :added "1.0"
     :static true}
-  lazy-seq? (fn ^:static seq? [x] (instance? :clojerl.LazySeq x)))
+  lazy-seq? (fn ^:static seq? [x] (instance? clojerl.LazySeq x)))
 
 (def
   ^{:arglists '([x])
     :doc "Return true if x implements IMeta"
     :added "1.0"
     :static true}
-  meta? (fn ^:static meta? [x] (extends? :clojerl.IMeta x)))
+  meta? (fn ^:static meta? [x] (satisfies? clojerl.IMeta x)))
 
 (def
   ^{:arglists '([x])
@@ -186,21 +184,21 @@
     :doc "Return true if x implements IMap"
     :added "1.0"
     :static true}
-  map? (fn ^:static map? [x] (extends? :clojerl.IMap x)))
+  map? (fn ^:static map? [x] (satisfies? clojerl.IMap x)))
 
 (def
   ^{:arglists '([x])
     :doc "Return true if x is a Vector"
     :added "1.0"
     :static true}
-  vector? (fn ^:static vector? [x] (instance? :clojerl.Vector x)))
+  vector? (fn ^:static vector? [x] (instance? clojerl.Vector x)))
 
 (def
   ^{:arglists '([x])
     :doc "Return true if x is a Symbol"
     :added "1.0"
     :static true}
-  symbol? (fn ^:static symbol? [x] (instance? :clojerl.Symbol x)))
+  symbol? (fn ^:static symbol? [x] (instance? clojerl.Symbol x)))
 
 (def
   ^{:arglists '([x])
@@ -348,7 +346,7 @@
    :static true}
   ([coll]
    (if (vector? coll)
-     (if (extends? :clojerl.IMeta coll)
+     (if (satisfies? clojerl.IMeta coll)
        (with-meta coll nil)
        (clj_core/vector.e coll))
      (clj_core/vector.e coll))))
@@ -529,7 +527,7 @@
   "Return true if x is a Keyword"
   {:added "1.0"
    :static true}
-  [x] (instance? :clojerl.Keyword x))
+  [x] (instance? clojerl.Keyword x))
 
 (defn symbol
   "Returns a Symbol with the given namespace and name."
@@ -705,21 +703,24 @@
   calls. See also - realized?"
   {:added "1.0"}
   [& body]
-    (list 'new 'clojerl.Delay (list* `^{:once true} fn* [] body)))
+  (throw "unimplemented delay")
+  #_(list 'new 'clojerl.Delay (list* `^{:once true} fn* [] body)))
 
 (defn delay?
   "returns true if x is a Delay created with delay"
   {:added "1.0"
    :static true}
   [x]
-  (instance? :clojerl.Delay x))
+  (throw "unimplemented delay")
+  #_(instance? clojerl.Delay x))
 
 (defn force
   "If x is a Delay, returns the (possibly cached) value of its expression, else returns x"
   {:added "1.0"
    :static true}
   [x]
-  (clojerl.Delay/force.e x))
+  (throw "unimplemented delay")
+  #_(clojerl.Delay/force.e x))
 
 (defmacro if-not
   "Evaluates test. If logical false, evaluates and returns then expr,
@@ -1532,7 +1533,7 @@
       (check-valid-options options :default :hierarchy)
       `(let [v# (def ~mm-name)]
          (when-not (and (clojerl.Var/has_root.e v#)
-                        (instance? :clojerl.MultiFn (deref v#)))
+                        (instance? ~'clojerl.MultiFn (deref v#)))
            (defn ~(with-meta mm-name m)
              [& args#]
              (let [val# (apply ~dispatch-fn args#)
@@ -2116,7 +2117,7 @@
   {:added "1.0"
    :static true}
   ([ref]
-   (if (extends? :clojerl.IDeref ref)
+   (if (satisfies? clojerl.IDeref ref)
      (clj_core/deref.e ref)
      (throw (str "unimplemented deref for type " (clj_core/type.e ref)))
      #_(deref-future ref)))
@@ -2650,31 +2651,27 @@
   "Wraps x in a way such that a reduce will terminate with the value x"
   {:added "1.5"}
   [x]
-  (throw "unimplemented reduced")
-  #_(clojure.lang.Reduced. x))
+  (new clojerl.Reduced x))
 
 (defn reduced?
   "Returns true if x is the result of a call to reduced"
-  {:inline (fn [x] `(clojure.lang.RT/isReduced ~x ))
+  {:inline (fn [x] `(clj_core/is_reduced.e ~x ))
    :inline-arities #{1}
    :added "1.5"}
   [x]
-  (throw "unimplemented reduced")
-  #_(clojure.lang.RT/isReduced x))
+  (clojerl.Reduced/is_reduced.e x))
 
 (defn ensure-reduced
   "If x is already reduced?, returns it, else returns (reduced x)"
   {:added "1.7"}
   [x]
-  (throw "unimplemented reduced")
-  #_(if (reduced? x) x (reduced x)))
+  (if (reduced? x) x (reduced x)))
 
 (defn unreduced
   "If x is reduced?, returns (deref x), else returns x"
   {:added "1.7"}
   [x]
-  (throw "unimplemented reduced")
-  #_(if (reduced? x) (deref x) x))
+  (if (reduced? x) (deref x) x))
 
 (defn take
   "Returns a lazy sequence of the first n items in coll, or all items if
@@ -3280,12 +3277,8 @@
                                (into1 v (map #(str p "." %) cs)))))
                          [] specs)))))
 
-(defn into-array
-  "Returns an array with components set to the values in aseq. The array's
-  component type is type if provided, or the type of the first value in
-  aseq if present, or Object. All values in aseq must be compatible with
-  the component type. Class objects for the primitive types can be obtained
-  using, e.g., Integer/TYPE."
+(defn into-tuple
+  "Returns a tuple with components set to the values in aseq."
   {:added "1.0"
    :static true}
   ([aseq]
@@ -3293,10 +3286,10 @@
   ([type aseq]
    (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1)))
 
-(defn ^{:private true}
-  array
+(defn tuple
+  "Returns a tuple with items."
   [& items]
-  (into-array items))
+  (into-tuple items))
 
 (defn class
   "Returns the Class of x"
@@ -3814,7 +3807,7 @@
   "Returns true if x implements IPersistentSet"
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.ISet x))
+  [x] (satisfies? clojerl.ISet x))
 
 (defn set
   "Returns a set of the distinct elements of coll."
@@ -3906,7 +3899,7 @@
    :static true}
   [ns]
   (let [ns (the-ns ns)]
-    (filter-key val (fn [v] (and (instance? :clojerl.Var v)
+    (filter-key val (fn [v] (and (instance? clojerl.Var v)
                                 (identical? ns (find-ns (symbol (namespace v))))
                                 (clojerl.Var/is_public.e v)))
                 (ns-map ns))))
@@ -3925,7 +3918,7 @@
   [ns]
   (let [ns (the-ns ns)]
     (filter-key val (fn [v]
-                      (and (instance? :clojerl.Var v)
+                      (and (instance? clojerl.Var v)
                            (= ns (find-ns (symbol (namespace v))))))
                 (ns-map ns))))
 
@@ -3954,7 +3947,7 @@
         to-do (if (= :all (:refer fs))
                 (keys nspublics)
                 (or (:refer fs) (:only fs) (keys nspublics)))]
-    (when (and to-do (not (extends? :clojerl.ISequential to-do)))
+    (when (and to-do (not (satisfies? clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
     ;; keys in maps are strings to avoid be able to use the underlying map
     ;; implementation. We convert all to-do's to strings since some filters
@@ -3975,7 +3968,7 @@
    :static true}
   [ns]
   (let [ns (the-ns ns)]
-    (filter-key val (fn [v] (and (instance? :clojerl.Var v)
+    (filter-key val (fn [v] (and (instance? clojerl.Var v)
                                 (not= ns (find-ns (symbol (namespace v))))))
                 (ns-map ns))))
 
@@ -4229,15 +4222,15 @@
         psig (fn* [sig]
                   ;; Ensure correct type before destructuring sig
                   (when (not (seq? sig))
-                    (throw (str "Invalid signature " sig
-                                " should be a list")))
+                    (throw (str "Invalid signature \"" sig
+                                "\" should be a list")))
                   (let [[params & body] sig
                         _ (when (not (vector? params))
                             (throw (if (seq? (first sigs))
                                      (str "Parameter declaration " params
                                           " should be a vector")
-                                     (str "Invalid signature " sig
-                                          " should be a list"))))
+                                     (str "Invalid signature \"" sig
+                                          "\" should be a list"))))
                         conds (when (and (next body) (map? (first body)))
                                 (first body))
                         body (if conds (next body) body)
@@ -4575,7 +4568,7 @@
   "Returns true if v is of type clojure.lang.Var"
   {:added "1.0"
    :static true}
-  [v] (instance? :clojerl.Var v))
+  [v] (instance? clojerl.Var v))
 
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
@@ -4885,7 +4878,7 @@
   {:added "1.0"
    :static true}
   [coll]
-  (when (extends? :clojerl.IColl coll)
+  (when (satisfies? clojerl.IColl coll)
     (clj_core/empty.e coll)))
 
 #_ ((defmacro amap
@@ -5224,13 +5217,13 @@
   {:added "1.0"}
   ([tag parent]
    (assert (namespace parent))
-   (assert (or (class? tag) (and (extends? :clojerl.Named tag) (namespace tag))))
+   (assert (or (class? tag) (and (satisfies? clojerl.Named tag) (namespace tag))))
 
    (alter-var-root #'global-hierarchy derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
-   (assert (or (class? tag) (extends? :clojerl.Named tag)))
-   (assert (extends? :clojerl.Named parent))
+   (assert (or (class? tag) (satisfies? clojerl.Named tag)))
+   (assert (satisfies? clojerl.Named parent))
 
    (let [tp (:parents h)
          td (:descendants h)
@@ -5801,21 +5794,21 @@
   "Returns true if x implements IPersistentCollection"
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.IColl x))
+  [x] (satisfies? clojerl.IColl x))
 
 (defn list?
   "Returns true if x implements IPersistentList"
   {:added "1.0"
    :static true}
-  [x] (or  (instance? :clojerl.List x)
-           (instance? :clojerl.erlang.List x)))
+  [x] (or  (instance? clojerl.List x)
+           (instance? clojerl.erlang.List x)))
 
 (defn ifn?
   "Returns true if x implements IFn. Note that many data structures
   (e.g. sets and maps) implement IFn"
   {:added "1.0"
    :static true}
-  [x] (extends? :clojerl.IFn x))
+  [x] (satisfies? clojerl.IFn x))
 
 (defn fn?
   "Returns true if x implements Fn, i.e. is an object created via fn."
@@ -5828,31 +5821,35 @@
  "Returns true if coll implements Associative"
  {:added "1.0"
   :static true}
-  [coll] (extends? :clojerl.Associative coll))
+  [coll] (satisfies? clojerl.Associative coll))
 
 (defn sequential?
  "Returns true if coll implements Sequential"
  {:added "1.0"
   :static true}
-  [coll] (extends? :clojerl.ISequential coll))
+  [coll] (satisfies? clojerl.ISequential coll))
 
 (defn sorted?
  "Returns true if coll implements Sorted"
  {:added "1.0"
    :static true}
-  [coll] (extends? :clojerl.Sorted coll))
+  [coll]
+  (throw "unimplemented sorted")
+  #_(satisfies? clojerl.Sorted coll))
 
 (defn counted?
  "Returns true if coll implements count in constant time"
  {:added "1.0"
    :static true}
-  [coll] (extends? :clojerl.Counted coll))
+  [coll] (satisfies? clojerl.Counted coll))
 
 (defn reversible?
  "Returns true if coll implements Reversible"
  {:added "1.0"
    :static true}
-  [coll] (extends? :clojerl.Reversible coll))
+  [coll]
+  (throw "unimplemented reversible")
+  #_(satisfies? clojerl.Reversible coll))
 
 (def ^:dynamic
  ^{:doc "bound in a repl thread to the most recent value printed"
@@ -6184,16 +6181,39 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 ;; (load "core_proxy")
 (load "core_print")
 ;; (load "genclass")
 (load "core_deftype")
-;; (load "core/protocols")
 ;; (load "gvec")
 (load "instant")
 (load "uuid")
 
-#_(defn reduce
+(defn reduce ([f coll]) ([f val coll]))
+
+(defn- seq-reduce
+  ([f coll]
+    (if-let [s (seq coll)]
+      (reduce f (first s) (next s))
+      (f)))
+  ([f val coll]
+    (loop [val val, coll (seq coll)]
+      (if coll
+        (let [nval (f val (first coll))]
+          (if (reduced? nval)
+            @nval
+            (recur nval (next coll))))
+        val))))
+
+(defprotocol IKVReduce
+  "Protocol for concrete associative types that can reduce themselves
+   via a function of key and val faster than first/next recursion over map
+   entries. Called by clojure.core/reduce-kv, and has same
+   semantics (just different arg order)."
+  (kv-reduce [amap f init]))
+
+(defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
   applying f to that result and the 3rd item, etc. If coll contains no
@@ -6205,34 +6225,27 @@
   items, returns val and f is not called."
   {:added "1.0"}
   ([f coll]
-     (if (instance? clojure.lang.IReduce coll)
-       (.reduce ^clojure.lang.IReduce coll f)
-       (clojure.core.protocols/coll-reduce coll f)))
+   (if (satisfies? clojerl.IReduce coll)
+     (clojerl.IReduce/reduce.e coll f)
+     (seq-reduce f coll)))
   ([f val coll]
-     (if (instance? clojure.lang.IReduceInit coll)
-       (.reduce ^clojure.lang.IReduceInit coll f val)
-       (clojure.core.protocols/coll-reduce coll f val))))
+   (if (satisfies? clojerl.IReduce coll)
+     (clojerl.IReduce/reduce.e coll f val)
+     (seq-reduce f val coll))))
 
-(def reduce reduce1)
+(extend-protocol IKVReduce
+  clojerl.Nil
+  (kv-reduce
+    [_ f init]
+    init)
 
-#_(extend-protocol clojure.core.protocols/IKVReduce
- nil
- (kv-reduce
-  [_ f init]
-  init)
+  ;;slow path default
+  clojerl.Map
+  (kv-reduce
+    [amap f init]
+    (reduce (fn [ret [k v]] (f ret k v)) init amap)))
 
- ;;slow path default
- clojure.lang.IPersistentMap
- (kv-reduce
-  [amap f init]
-  (reduce (fn [ret [k v]] (f ret k v)) init amap))
-
- clojure.lang.IKVReduce
- (kv-reduce
-  [amap f init]
-  (.kvreduce amap f init)))
-
-#_(defn reduce-kv
+(defn reduce-kv
   "Reduces an associative collection. f should be a function of 3
   arguments. Returns the result of applying f to init, the first key
   and the first value in coll, then applying f to that result and the
@@ -6241,7 +6254,7 @@
   where the keys will be the ordinals."
   {:added "1.4"}
   ([f init coll]
-     (clojure.core.protocols/kv-reduce coll f init)))
+     (kv-reduce coll f init)))
 
 (defn completing
   "Takes a reducing function f of 2 args and returns a fn suitable for
@@ -6255,7 +6268,7 @@
        ([x] (cf x))
        ([x y] (f x y)))))
 
-#_(defn transduce
+(defn transduce
   "reduce with a transformation of f (xf). If init is not
   supplied, (f) will be called to produce it. f should be a reducing
   step function that accepts both 1 and 2 arguments, if it accepts
@@ -6267,9 +6280,9 @@
   ([xform f coll] (transduce xform f (f) coll))
   ([xform f init coll]
      (let [f (xform f)
-           ret (if (instance? :clojure.lang.IReduceInit coll)
-                 (clojure.lang.IReduceInit/reduce coll f init)
-                 (clojure.core.protocols/coll-reduce coll f init))]
+           ret (if (instance? clojerl.IReduce coll)
+                 (clojerl.IReduce/reduce.e coll f init)
+                 (seq-reduce coll f init))]
        (f ret))))
 
 (defn into
@@ -6280,7 +6293,7 @@
   ([to from]
    (reduce conj to from))
   ([to xform from]
-   #_(transduce xform conj to from)))
+   (transduce xform conj to from)))
 
 (defn mapv
   "Returns a vector consisting of the result of applying f to the
@@ -6311,7 +6324,7 @@
 
 #_(require '[clojure.erlang.io :as io])
 
-#_(defn- normalize-slurp-opts
+(defn- normalize-slurp-opts
   [opts]
   (if (string? (first opts))
     (do

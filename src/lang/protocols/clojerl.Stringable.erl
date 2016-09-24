@@ -1,5 +1,8 @@
 -module('clojerl.Stringable').
 
+-clojure(true).
+-protocol(true).
+
 -export([str/1]).
 
 -type type() :: binary().

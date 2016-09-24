@@ -42,6 +42,7 @@ default_options() ->
                     , report_warnings
                     , nowarn_unused_vars
                     , nowarn_shadow_vars
+                    , nowarn_unused_record
                     ]
    , clj_flags   => []
    , reader_opts => #{}
@@ -107,16 +108,9 @@ timed_compile(Src, Opts, Env) when is_binary(Src) ->
 
 -spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
 compile(Src, Opts, Env) when is_binary(Src) ->
-  DoCompile   = fun() -> do_compile(Src, Opts, Env) end,
-  {_Pid, Ref} = erlang:spawn_monitor(DoCompile),
-  receive
-    {'DOWN', Ref, _, _, {shutdown, Result}} ->
-      Result;
-    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
-      erlang:raise(Kind, Error, Stacktrace);
-    {'DOWN', Ref, _, _, Info} ->
-      throw(Info)
-  end.
+  ProcDict = erlang:get(),
+  DoCompile = fun() -> copy_proc_dict(ProcDict), do_compile(Src, Opts, Env) end,
+  run_monitored(DoCompile).
 
 -spec eval(any()) -> {any(), clj_env:env()}.
 eval(Form) ->
@@ -127,25 +121,14 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts0, Env0) ->
-  Opts     = maps:merge(default_options(), Opts0),
-  CljFlags = maps:get(clj_flags, Opts),
+eval(Form, Opts, Env) ->
+  ProcDict = erlang:get(),
+  DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
+  {Exprs, Forms, Env1} = run_monitored(DoEval),
 
-  EvalFun =
-    fun() ->
-        Env  = clj_env:put(Env0, clj_flags, CljFlags),
-        %% Emit & eval form and keep the resulting value
-        Env1 = clj_analyzer:analyze(Env, Form),
-        Env2 = clj_emitter:emit(Env1),
-        {Exprs, Env3} = clj_emitter:remove_state(Env2),
-
-        lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
-
-        [Value] = eval_expressions(Exprs),
-        {Value, clj_env:remove(Env3, clj_flags)}
-    end,
-
-  clj_module:with_context(EvalFun).
+  lists:foreach(compile_forms_fun(Opts), Forms),
+  [Value] = eval_expressions(Exprs),
+  {Value, Env1}.
 
 %% Flags
 
@@ -160,6 +143,22 @@ no_warn_dynamic_var_name(Env) ->
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec copy_proc_dict([{any(), any()}]) -> ok.
+copy_proc_dict(List) ->
+  [erlang:put(K, V) || {K, V} <- List].
+
+-spec run_monitored(fun()) -> any().
+run_monitored(Fun) ->
+  {_Pid, Ref} = erlang:spawn_monitor(Fun),
+  receive
+    {'DOWN', Ref, _, _, {shutdown, Result}} ->
+      Result;
+    {'DOWN', Ref, _, _, {Kind, Error, Stacktrace}} ->
+      erlang:raise(Kind, Error, Stacktrace);
+    {'DOWN', Ref, _, _, Info} ->
+      throw(Info)
+  end.
 
 -spec do_compile(binary(), options(), clj_env:env()) -> ok.
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
@@ -196,18 +195,47 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
           {_, Env2} = clj_emitter:remove_state(Env1),
 
           %% Compile all modules
-          ensure_output_dir(Opts),
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
           Env3 = clj_env:remove(Env2, clj_flags),
           {shutdown, Env3}
         catch
           Kind:Error ->
-             {Kind, Error, erlang:get_stacktrace()}
+            {Kind, Error, erlang:get_stacktrace()}
         end
     end,
 
   Result = clj_module:with_context(CompileFun),
+
+  exit(Result).
+
+-spec do_eval(any(), options(), clj_env:env()) -> ok.
+do_eval(Form, Opts0, Env0) ->
+  Opts     = maps:merge(default_options(), Opts0),
+  CljFlags = maps:get(clj_flags, Opts),
+
+  EvalFun =
+    fun() ->
+        try
+          Env  = clj_env:put(Env0, clj_flags, CljFlags),
+          %% Emit & eval form and keep the resulting value
+          Env1 = clj_analyzer:analyze(Env, Form),
+          Env2 = clj_emitter:emit(Env1),
+          {Exprs, Env3} = clj_emitter:remove_state(Env2),
+
+          { shutdown
+          , { Exprs
+            , clj_module:all_forms()
+            , clj_env:remove(Env3, clj_flags)
+            }
+          }
+        catch
+          Kind:Error ->
+            {Kind, Error, erlang:get_stacktrace()}
+        end
+    end,
+
+  Result = clj_module:with_context(EvalFun),
 
   exit(Result).
 
@@ -221,11 +249,11 @@ check_flag(Flag, Env) ->
   end.
 
 -spec ensure_output_dir(options()) -> ok.
-ensure_output_dir(Opts) ->
-  OutputDir = maps:get(output_dir, Opts),
-  ok = filelib:ensure_dir(OutputDir),
-  true = filelib:is_dir(OutputDir) orelse file:make_dir(OutputDir) =:= ok,
+ensure_output_dir(#{output_dir := OutputDir}) ->
+  ok   = filelib:ensure_dir(filename:join([OutputDir, "dummy"])),
   true = code:add_path(OutputDir),
+  ok;
+ensure_output_dir(_) ->
   ok.
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
@@ -256,16 +284,9 @@ compile_forms(Forms, Opts) ->
   ErlFlags = maps:get(erl_flags, Opts, []),
 
   case compile:forms(Forms, ErlFlags) of
-    {ok, Name, Binary} ->
-      %% io:format("Compiled ~p with ~p forms~n", [Name, length(Forms)]),
-      OutputDir    = maps:get(output_dir, Opts, "ebin"),
-      NameBin      = atom_to_binary(Name, utf8),
-      BeamFilename = <<NameBin/binary, ".beam">>,
-      BeamPath     = filename:join([OutputDir, BeamFilename]),
-      ok           = file:write_file(BeamPath, Binary),
-
-      BeamPathStr = binary_to_list(BeamPath),
-      {module, Name} = code:load_binary(Name, BeamPathStr, Binary),
+    {ok, Name, BeamBinary} ->
+      BeamPath = maybe_output_beam(Name, BeamBinary, Opts),
+      {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
       Name;
     Error ->
       error(Error)
@@ -300,3 +321,13 @@ maybe_output_erl(Forms, #{output_erl := Filename}) ->
   file:write_file(Filename, Source);
 maybe_output_erl(_, _) ->
   ok.
+
+-spec maybe_output_beam(atom(), binary(), options()) -> string().
+maybe_output_beam(Name, BeamBinary, #{output_dir := OutputDir} = Opts) ->
+  ensure_output_dir(Opts),
+  NameBin      = atom_to_binary(Name, utf8),
+  BeamFilename = <<NameBin/binary, ".beam">>,
+  BeamPath     = filename:join([OutputDir, BeamFilename]),
+  ok           = file:write_file(BeamPath, BeamBinary),
+  binary_to_list(BeamPath);
+maybe_output_beam(_, _, _) -> "".

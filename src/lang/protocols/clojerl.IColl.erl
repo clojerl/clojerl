@@ -1,5 +1,8 @@
 -module('clojerl.IColl').
 
+-clojure(true).
+-protocol(true).
+
 -export([cons/2, empty/1]).
 
 -type type() :: any().

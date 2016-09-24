@@ -1,5 +1,8 @@
 -module('clojerl.Indexed').
 
+-clojure(true).
+-protocol(true).
+
 -export([nth/2, nth/3]).
 
 -type type() :: any().

@@ -72,6 +72,10 @@ invoke(_Config) ->
   {CljFun, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
   ok = clj_core:invoke(CljFun, []),
 
+  ct:comment("Invoke a Clojure fun with a seq as the argument list"),
+  {CljFun2, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
+  ok = clj_core:invoke(CljFun2, clj_core:list([])),
+
   {comments, ""}.
 
 -spec str(config()) -> result().

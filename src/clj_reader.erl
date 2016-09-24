@@ -408,10 +408,12 @@ read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
 -spec read_meta(state()) -> state().
 read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
   {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
-  Meta = clj_utils:desugar_meta(SugaredMeta),
+  Meta    = clj_utils:desugar_meta(SugaredMeta),
+  LocMeta = file_location_meta(State),
+  AllMeta = clj_core:merge([LocMeta, Meta]),
 
   {Form, State2} = pop_form(read_one(State1)),
-  NewForm = clj_core:with_meta(Form, Meta),
+  NewForm = clj_core:with_meta(Form, AllMeta),
 
   push_form(NewForm, State2).
 
@@ -764,41 +766,44 @@ read_octal_char(#{src := RestToken} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_arg(state()) -> state().
-read_arg(#{src := <<"%"/utf8, Src/binary>>} = State) ->
+read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
   case erlang:get(arg_env) of
     undefined ->
       read_symbol(State);
     ArgEnv ->
-      case arg_type(Src) of
-        register_arg_1 ->
+      case arg_type(consume_char(State)) of
+        {register_arg_1, State1} ->
           ArgSym = register_arg(1, ArgEnv),
-          push_form(ArgSym, consume_char(State));
-        register_arg_multi ->
+          push_form(ArgSym, State1);
+        {register_arg_multi, State1} ->
           ArgSym = register_arg(-1, ArgEnv),
-          push_form(ArgSym, consume_chars(2, State));
-        register_arg_n ->
-          {N, NewState} = pop_form(read_one(consume_char(State))),
+          push_form(ArgSym, consume_chars(1, State1));
+        {register_arg_n, State1} ->
+          {N, State2} = pop_form(read_one(State1)),
           clj_utils:throw_when( not is_integer(N)
                               , <<"Arg literal must be %, %& or %integer">>
-                              , location(State)
+                              , location(State1)
                               ),
           ArgSym = register_arg(N, ArgEnv),
-          push_form(ArgSym, NewState)
+          push_form(ArgSym, State2)
       end
   end.
 
--spec arg_type(binary()) -> atom().
-arg_type(<<>>) ->
-  register_arg_1;
-arg_type(Str) ->
-  Char = binary:first(Str),
+-spec arg_type(state()) -> atom().
+arg_type(State = #{src := <<>>}) ->
+  case check_reader(State) of
+    eof -> {register_arg_1, State};
+    {ok, NewState} -> arg_type(NewState)
+  end;
+arg_type(State = #{src := <<Char/utf8, _/binary>>}) ->
   IsWhitespace = clj_utils:char_type(Char) == whitespace,
   IsMacroTerminating = is_macro_terminating(Char),
-  if
-    IsWhitespace orelse IsMacroTerminating -> register_arg_1;
-    Char == $& -> register_arg_multi;
-    true -> register_arg_n
-  end.
+  Type = if
+           IsWhitespace orelse IsMacroTerminating -> register_arg_1;
+           Char == $& -> register_arg_multi;
+           true -> register_arg_n
+         end,
+  {Type, State}.
 
 -spec register_arg(integer(), map()) -> 'clojerl.Symbol':type().
 register_arg(N, ArgEnv) ->
@@ -997,8 +1002,8 @@ read_cond(#{src := Src, opts := Opts} = State) ->
     true -> ok
   end,
 
-  ReadDelim = clj_core:boolean(scope_get(read_delim, State)),
-  IsSplicing = binary:first(Src) == $@,
+  ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
+  IsSplicing = case Src of <<"@"/utf8, _/binary>> -> true; _ -> false end,
   State1 =
     case IsSplicing of
       true when not ReadDelim ->

@@ -47,6 +47,7 @@ invoke(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
   world = clj_core:invoke(HelloKeyword, [#{HelloKeyword => world}]),
 
+  undefined = clj_core:invoke(HelloKeyword, [#{bla => ble}]),
   not_found = clj_core:invoke(HelloKeyword, [#{bla => ble}, not_found]),
 
   ok = try

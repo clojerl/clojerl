@@ -1,58 +1,65 @@
 -module('clojerl.protocol').
 
 -export([ resolve/3
-        , 'extends?'/2
+        , 'satisfies?'/2
+        , impl_module/2
         ]).
 
 -spec resolve(atom(), atom(), list()) -> any().
 resolve(Protocol, Function, Args = [Head | _]) ->
   Type = clj_core:type(Head),
-
-  try
-    apply(Type, Function, Args)
-  catch
-    Error:undef ->
-      maybe_protocol_undef(Protocol, Type, Function, Args, Error)
+  case resolve_impl_cache(Protocol, Function, Type, length(Args)) of
+    {M, F}    -> apply(M, F, Args);
+    undefined -> throw({unimplemented, Type, Protocol})
   end.
 
-maybe_protocol_undef(Proto, Type, Function, Args = [Head | _], Error) ->
-  case erlang:function_exported(Type, Function, length(Args)) of
-    false ->
-      TypeBin = atom_to_binary(Type, utf8),
-      FunctionBin = atom_to_binary(Function, utf8),
-      ProtocolBin = atom_to_binary(Proto, utf8),
-      Value = maybe_str(Head),
-      ArgsStr = maybe_str(lists:map(fun maybe_str/1, Args)),
-      erlang:raise( error
-                  , <<"Type '", TypeBin/binary, "'"
-                      " has no implementation for function '",
-                      FunctionBin/binary,
-                      "' in protocol '",
-                      ProtocolBin/binary, "' ",
-                      "(value = ", Value/binary, ", args = ",
-                      ArgsStr/binary, ")">>
-                  , erlang:get_stacktrace()
-                  );
-    true ->
-      erlang:raise(Error, undef, erlang:get_stacktrace())
-  end.
-
--spec maybe_str(term()) -> binary().
-maybe_str(X) ->
-  case 'extends?'('clojerl.Stringable', clj_core:type(X)) of
-    true -> clj_core:str(X);
-    false -> iolist_to_binary(io_lib:format("~p", [X]))
-  end.
-
--spec 'extends?'(atom(), atom()) -> boolean().
-'extends?'(Protocol, Type) ->
-  Key = {extends, Protocol, Type},
-  case clj_cache:get(Key) of
+-spec resolve_impl_cache(atom(), atom(), atom(), integer()) ->
+  {module(), atom()} | undefined.
+resolve_impl_cache(Protocol, Function, Type, Arity) ->
+  Key = {resolve_impl, Protocol, Function, Type, Arity},
+  case erlang:get(Key) of
     undefined ->
+      Value = resolve_impl(Protocol, Function, Type, Arity),
+      erlang:put(Key, {ok, Value}),
+      Value;
+    {ok, Value} -> Value
+  end.
+
+-spec resolve_impl(atom(), atom(), atom(), integer()) ->
+  {module(), atom()} | undefined.
+resolve_impl(Protocol, Function, Type, Arity) ->
+  case erlang:function_exported(Type, Function, Arity) of
+    true  -> {Type, Function};
+    false ->
+      ImplModule = impl_module(Protocol, Type),
+      case code:ensure_loaded(ImplModule) of
+        {module, ImplModule} -> {ImplModule, Function};
+        _ -> undefined
+      end
+  end.
+
+-spec impl_module(atom(), atom()) -> atom().
+impl_module(Protocol, Type)
+  when is_atom(Protocol),
+       is_atom(Type) ->
+  TypeBin     = atom_to_binary(Type, utf8),
+  ProtocolBin = atom_to_binary(Protocol, utf8),
+  impl_module(ProtocolBin, TypeBin);
+impl_module(ProtocolBin, TypeBin)
+  when is_binary(ProtocolBin),
+       is_binary(TypeBin) ->
+  binary_to_atom(<<ProtocolBin/binary, "__", TypeBin/binary>>, utf8).
+
+-spec 'satisfies?'(atom(), atom()) -> boolean().
+'satisfies?'(Protocol, Type) ->
+  Key = {satisfies, Protocol, Type},
+  case erlang:get(Key) of
+    undefined ->
+      ImplModule = impl_module(Protocol, Type),
       Value = ( erlang:function_exported(Type, module_info, 1) andalso
                 lists:keymember([Protocol], 2, Type:module_info(attributes))
-              ),
-      clj_cache:put(Key, Value),
+              ) orelse {module, ImplModule} =:= code:ensure_loaded(ImplModule),
+      erlang:put(Key, {ok, Value}),
       Value;
     {ok, Value} -> Value
   end.

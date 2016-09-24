@@ -79,8 +79,7 @@ find_var(Symbol) ->
 -spec find_var(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | undefined.
 find_var(DefaultNs, Symbol) ->
-  NsStr = clj_core:namespace(Symbol),
-  Ns = case NsStr of
+  Ns = case clj_core:namespace(Symbol) of
          undefined -> DefaultNs;
          NsStr     ->
            NsSym = clj_core:symbol(NsStr),
@@ -153,6 +152,11 @@ refer(Ns, Sym, Var) ->
 
 -spec import_type(binary()) -> namespace().
 import_type(TypeName) ->
+  Type = binary_to_atom(TypeName, utf8),
+  clj_utils:throw_when( {module, Type} =/= code:ensure_loaded(Type)
+                      , [ <<"Type '">>, Type, <<"' could not be loaded. ">>]
+                      ),
+
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
   Sym     = clj_core:symbol(SymName),
   TypeSym = clj_core:symbol(TypeName),

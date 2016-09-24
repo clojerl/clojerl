@@ -23,3 +23,23 @@
   (prn (merge x {:y 1984 :z :keyword}))
   (prn (merge {:y 1984 :z :keyword} x))
   (prn (= {:x 1 :y 2} x)))
+
+(defprotocol SomeProtocol
+  (function-one [this] [this a])
+  (function-two [this a b c]))
+
+(defprotocol OtherProtocol
+  (foo [this])
+  (bar [this]))
+
+(extend-type SomeRecord
+  SomeProtocol
+  (function-one [this] :one)
+  (function-one [this a] [:one a])
+  (function-two [this a b c] #{:one a b c})
+  examples.deftype.OtherProtocol
+  (foo [this] {:foo (:y this)})
+  (bar [this] {:bar (:x this)}))
+
+(prn (foo (new SomeRecord 1 2)))
+(prn (bar (new SomeRecord 1 2)))

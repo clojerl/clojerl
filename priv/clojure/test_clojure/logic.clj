@@ -52,7 +52,7 @@
       []
       {}
       #{}
-      (into-array []) )
+      (into-tuple []) )
 
   ; anything except nil/false is true
   (are [x]  (= (if x :t :f) :t)
@@ -75,7 +75,7 @@
       [1 2]
       {:a 1 :b 2}
       #{1 2}
-      (into-array [1 2])
+      (into-tuple [1 2])
 
       (erlang/self.e) ))
 
@@ -186,7 +186,7 @@
       ; keywords
       :kw
 
-      ; collections/arrays
+      ; collections/tuples
       ()
       '(1 2)
       []
@@ -195,8 +195,8 @@
       {:a 1 :b 2}
       #{}
       #{1 2}
-      (into-array [])
-      (into-array [1 2])
+      (into-tuple [])
+      (into-tuple [1 2])
 
       ; Process IDs
       (erlang/self.e) ))

@@ -1,5 +1,8 @@
 -module('clojerl.ISet').
 
+-clojure(true).
+-protocol(true).
+
 -export([disjoin/2, contains/2, get/2]).
 
 -type type() :: any().

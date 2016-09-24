@@ -1,5 +1,8 @@
 -module('clojerl.IMeta').
 
+-clojure(true).
+-protocol(true).
+
 -export([meta/1, with_meta/2]).
 
 -type type() ::  any().
