@@ -2656,31 +2656,27 @@
   "Wraps x in a way such that a reduce will terminate with the value x"
   {:added "1.5"}
   [x]
-  (throw "unimplemented reduced")
-  #_(clojure.lang.Reduced. x))
+  (new clojerl.Reduced x))
 
 (defn reduced?
   "Returns true if x is the result of a call to reduced"
-  {:inline (fn [x] `(clojure.lang.RT/isReduced ~x ))
+  {:inline (fn [x] `(clj_core/is_reduced.e ~x ))
    :inline-arities #{1}
    :added "1.5"}
   [x]
-  (throw "unimplemented reduced")
-  #_(clojure.lang.RT/isReduced x))
+  (clojerl.Reduced/is_reduced.e x))
 
 (defn ensure-reduced
   "If x is already reduced?, returns it, else returns (reduced x)"
   {:added "1.7"}
   [x]
-  (throw "unimplemented reduced")
-  #_(if (reduced? x) x (reduced x)))
+  (if (reduced? x) x (reduced x)))
 
 (defn unreduced
   "If x is reduced?, returns (deref x), else returns x"
   {:added "1.7"}
   [x]
-  (throw "unimplemented reduced")
-  #_(if (reduced? x) (deref x) x))
+  (if (reduced? x) (deref x) x))
 
 (defn take
   "Returns a lazy sequence of the first n items in coll, or all items if
