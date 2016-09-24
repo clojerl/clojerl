@@ -391,7 +391,7 @@
        (clj_module/is_protocol.e maybe-p)))
 
 (defn- implements? [protocol atype]
-  (extends? protocol atype))
+  (satisfies? protocol atype))
 
 #_(defn extenders
   "Returns a collection of the types explicitly extending protocol"

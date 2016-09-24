@@ -1,7 +1,7 @@
 -module('clojerl.protocol').
 
 -export([ resolve/3
-        , 'extends?'/2
+        , 'satisfies?'/2
         , impl_module/2
         ]).
 
@@ -50,9 +50,9 @@ impl_module(ProtocolBin, TypeBin)
        is_binary(TypeBin) ->
   binary_to_atom(<<ProtocolBin/binary, "__", TypeBin/binary>>, utf8).
 
--spec 'extends?'(atom(), atom()) -> boolean().
-'extends?'(Protocol, Type) ->
-  Key = {extends, Protocol, Type},
+-spec 'satisfies?'(atom(), atom()) -> boolean().
+'satisfies?'(Protocol, Type) ->
+  Key = {satisfies, Protocol, Type},
   case clj_cache:get(Key) of
     undefined ->
       ImplModule = impl_module(Protocol, Type),

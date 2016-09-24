@@ -17,7 +17,7 @@
          name/1, namespace/1,
          symbol/1, symbol/2,
          keyword/1, keyword/2,
-         'extends?'/2,
+         'satisfies?'/2,
          'coll?'/1, 'sequential?'/1, 'associative?'/1, 'seq?'/1,
          'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
          'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
@@ -110,7 +110,7 @@ nth(undefined, _) -> undefined;
 nth([], _) -> undefined;
 nth(Coll, N) ->
   Type = type(Coll),
-  case 'extends?'('clojerl.Indexed', Type) of
+  case 'satisfies?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N);
     false -> nth_from(Coll, N, undefined)
   end.
@@ -120,7 +120,7 @@ nth(undefined, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
   Type = type(Coll),
-  case 'extends?'('clojerl.Indexed', Type) of
+  case 'satisfies?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N, NotFound);
     false -> nth_from(Coll, N, NotFound)
   end.
@@ -128,7 +128,7 @@ nth(Coll, N, NotFound) ->
 -spec nth_from(any(), integer(), any()) -> any().
 nth_from(Coll, N, NotFound) ->
   Type = type(Coll),
-  case 'extends?'('clojerl.ISequential', Type) of
+  case 'satisfies?'('clojerl.ISequential', Type) of
     true  -> clj_utils:nth(N + 1, seq_to_list(Coll), NotFound);
     false -> clj_utils:throw([<<"Can't apply nth to type ">>, Type])
   end.
@@ -157,8 +157,8 @@ seq_to_list(Seqable) ->
 -spec equiv(any(), any()) -> boolean().
 equiv(X, Y) ->
   case
-    'extends?'('clojerl.IEquiv', type(X))
-    andalso 'extends?'('clojerl.IEquiv', type(Y))
+    'satisfies?'('clojerl.IEquiv', type(X))
+    andalso 'satisfies?'('clojerl.IEquiv', type(Y))
   of
     true  -> 'clojerl.IEquiv':equiv(X, Y);
     false -> X == Y
@@ -257,25 +257,25 @@ keyword(Name) ->
 keyword(Namespace, Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Namespace, Name).
 
--spec 'extends?'(atom(), atom()) -> boolean().
-'extends?'(Protocol, Type) ->
-  'clojerl.protocol':'extends?'(Protocol, Type).
+-spec 'satisfies?'(atom(), atom()) -> boolean().
+'satisfies?'(Protocol, Type) ->
+  'clojerl.protocol':'satisfies?'(Protocol, Type).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
-  'extends?'('clojerl.IColl', type(X)).
+  'satisfies?'('clojerl.IColl', type(X)).
 
 -spec 'sequential?'(any()) -> boolean().
 'sequential?'(X) ->
-  'extends?'('clojerl.ISequential', type(X)).
+  'satisfies?'('clojerl.ISequential', type(X)).
 
 -spec 'associative?'(any()) -> boolean().
 'associative?'(X) ->
-  'extends?'('clojerl.Associative', type(X)).
+  'satisfies?'('clojerl.Associative', type(X)).
 
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
-  'extends?'('clojerl.ISeq', type(X)).
+  'satisfies?'('clojerl.ISeq', type(X)).
 
 -spec 'list?'(any()) -> boolean().
 'list?'(X) ->
@@ -287,11 +287,11 @@ keyword(Namespace, Name) ->
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
-  'extends?'('clojerl.IMap', type(X)).
+  'satisfies?'('clojerl.IMap', type(X)).
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
-  'extends?'('clojerl.ISet', type(X)).
+  'satisfies?'('clojerl.ISet', type(X)).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
@@ -341,7 +341,7 @@ with_meta(X, Meta) ->
 
 -spec 'meta?'(any()) -> any().
 'meta?'(X) ->
-  'extends?'('clojerl.IMeta', type(X)).
+  'satisfies?'('clojerl.IMeta', type(X)).
 
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(undefined, _) ->
