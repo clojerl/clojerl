@@ -347,6 +347,9 @@ ast(#{op := extend_type} = Expr, State) ->
         StateAcc2
     end,
 
+  %% We force remote calls for all functions since the function will
+  %% live in its own module, but is analyzed in the context of the 
+  %% surrounding code where the extend-type is used.
   State1 = lists:foldl( EmitProtocolFun
                       , State#{force_remote_invoke => true}
                       , maps:keys(Impls)
