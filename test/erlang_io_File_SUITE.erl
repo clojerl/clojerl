@@ -41,7 +41,7 @@ str(_Config) ->
   File = 'erlang.io.File':open(<<"tmp">>, [read]),
 
   Str   = clj_core:str(File),
-  Regex = <<"#<erlang.io.File \\d+\\.\\d+\\.\\d+>">>,
+  Regex = <<"#<erlang.io.File tmp>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
   undefined = 'erlang.io.Closeable':close(File),

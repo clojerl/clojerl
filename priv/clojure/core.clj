@@ -6322,7 +6322,7 @@
           []
           coll))
 
-#_(require '[clojure.erlang.io :as io])
+(require '[clojure.erlang.io :as io])
 
 (defn- normalize-slurp-opts
   [opts]
@@ -6332,22 +6332,24 @@
       [:encoding (first opts)])
     opts))
 
-#_(defn slurp
+(defn slurp
   "Opens a reader on f and reads all its contents, returning a string.
-  See clojure.java.io/reader for a complete list of supported arguments."
+  See clojure.erlang.io/reader for a complete list of supported arguments."
   {:added "1.0"}
   ([f & opts]
      (let [opts (normalize-slurp-opts opts)]
-       (with-open [r (apply io/reader f opts)]
-         (io/read-file r)))))
+       (with-open [sw (new erlang.io.StringWriter)
+                   r (apply io/reader f opts)]
+         (io/copy r sw)
+         (str sw)))))
 
-#_(defn spit
+(defn spit
   "Opposite of slurp.  Opens f with writer, writes content, then
-  closes f. Options passed to clojure.java.io/writer."
+  closes f. Options passed to clojure.erlang.io/writer."
   {:added "1.2"}
   [f content & options]
-  (with-open [^java.io.Writer w (apply io/writer f options)]
-    (.write w (str content))))
+  (with-open [^erlang.io.IWriter w (apply io/writer f options)]
+    (erlang.io.IWriter/write.e w (str content))))
 
 (defn group-by
   "Returns a map of the elements of coll keyed by the result of
