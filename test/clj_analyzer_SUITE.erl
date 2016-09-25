@@ -1080,5 +1080,5 @@ analyze_all(Src) ->
   Fun = fun(Form, EnvAcc) ->
             clj_analyzer:analyze(EnvAcc, Form)
         end,
-  Env = clj_reader:read_fold(Fun, Src, #{}),
+  Env = clj_reader:read_fold(Fun, Src, #{}, clj_env:default()),
   clj_env:exprs(Env).

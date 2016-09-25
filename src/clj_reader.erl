@@ -2,10 +2,8 @@
 
 -include("clojerl.hrl").
 
--export([ read_fold/3
-        , read_fold/4
+-export([ read_fold/4
         , read/1, read/2, read/3
-        , read_all/1, read_all/2, read_all/3
         , location_meta/1
         , remove_location/1
         ]).
@@ -16,6 +14,8 @@
 -define(OPT_FEATURES, features).
 -define(OPT_READ_COND, 'read-cond').
 -define(OPT_IO_READER, 'io-reader').
+
+-define(EOFTHROW, eofthrow).
 
 -type location() :: #{ line   => non_neg_integer()
                      , column => non_neg_integer()
@@ -56,21 +56,25 @@
                     %% Current bindings.
                   }.
 
--type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
-
--spec read_fold(read_fold_fun(), binary(), opts()) -> clj_env:env().
-read_fold(Fun, Src, Opts) ->
-  read_fold(Fun, Src, Opts, clj_env:default()).
+-type read_fold_fun() :: fun((any(), any()) -> any()).
 
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
-read_fold(Fun, Src, Opts, Env) ->
+read_fold(Fun, Src, Opts0, Env) ->
+  %% Since we want to consume all of the source, we don't want to
+  %% throw when eof is reached.
+  Opts  = Opts0#{eof => ok},
   State = new_state(Src, Env, Opts),
   read_fold_loop(Fun, State).
 
 -spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
 read_fold_loop(Fun, State) ->
-  case read_one(State, false) of
+  NewState = try
+               read_one(State)
+             catch
+               throw:{eof, ok, StateTmp} -> StateTmp
+             end,
+  case NewState of
     %% Only finish when there is no more source to consume
     #{src := <<>>, forms := [], env := Env} ->
       Env;
@@ -118,22 +122,11 @@ read(Src, Opts) ->
 -spec read(binary(), opts(), clj_env:env()) -> any().
 read(Src, Opts, Env) ->
   State = new_state(Src, Env, Opts),
-  ensure_read(State).
-
-%% @doc Read all forms.
--spec read_all(state()) -> [any()].
-read_all(Src) ->
-  read_all(Src, #{}).
-
--spec read_all(state(), opts()) -> [any()].
-read_all(Src, Opts) ->
-  read_all(Src, Opts, clj_env:default()).
-
--spec read_all(state(), opts(), clj_env:env()) -> [any()].
-read_all(Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts),
-  #{forms := Forms} = do_read_all(State),
-  lists:reverse(Forms).
+  try
+    ensure_read(State)
+  catch
+    throw:{eof, Value, _} -> Value
+  end.
 
 %%------------------------------------------------------------------------------
 %% Internal functions
@@ -173,37 +166,27 @@ new_state(Src, Env, Opts) ->
 ensure_read(#{forms := [Form]}) ->
   Form;
 ensure_read(State) ->
-  ensure_read(read_one(State, true)).
-
-%% @private
--spec do_read_all(state()) -> state().
-do_read_all(#{src := <<>>} = State) ->
-  State;
-do_read_all(State) ->
-  do_read_all(read_one(State, false)).
+  ensure_read(read_one(State)).
 
 -spec read_one(state()) -> state().
-read_one(State) ->
-  read_one(State, true).
-
--spec read_one(state(), boolean()) -> state().
-read_one(#{pending_forms := [Form | PendingForms]} = State, _ThrowEof) ->
+read_one(#{pending_forms := [Form | PendingForms]} = State) ->
   push_form(Form, State#{pending_forms => PendingForms});
-read_one(#{src := <<>>} = State, ThrowEof) ->
+read_one(#{src := <<>>, opts := Opts} = State) ->
+  Eof = maps:get(?OPT_EOF, Opts, ?EOFTHROW),
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
   case check_reader(State) of
     {ok, NewState} ->
-      read_one(NewState, ThrowEof);
-    eof when ThrowEof ->
+      read_one(NewState);
+    eof when Eof =:= ?EOFTHROW ->
       clj_utils:throw(<<"EOF">>, location(State));
     eof ->
-      State
+      throw({eof, Eof, State})
   end;
-read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
+read_one(#{src := <<First/utf8, Rest/binary>>} = State) ->
   Second = peek_src(State#{src := Rest}),
   case clj_utils:char_type(First, Second) of
-    whitespace      -> read_one(consume_char(State), ThrowEof);
+    whitespace      -> read_one(consume_char(State));
     number          -> read_number(State);
     string          -> read_string(State);
     keyword         -> read_keyword(State);
