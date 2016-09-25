@@ -811,10 +811,10 @@ discard(_Config) ->
   {comments, ""}.
 
 'cond'(_Config) ->
-  AllowOpts = #{read_cond => allow},
-  AllowCljFeatureOpts = #{read_cond => allow,
+  AllowOpts = #{'read-cond' => allow},
+  AllowCljFeatureOpts = #{'read-cond' => allow,
                           features => clj_reader:read(<<"#{:clj}">>)},
-  AllowClrFeatureOpts = #{read_cond => allow,
+  AllowClrFeatureOpts = #{'read-cond' => allow,
                           features => clj_reader:read(<<"#{:clr}">>)},
   HelloKeyword = clj_core:keyword(<<"hello">>),
 
@@ -850,7 +850,7 @@ discard(_Config) ->
                     AllowClrFeatureOpts),
 
   ct:comment("Preserve read"),
-  PreserveOpts = #{read_cond => preserve},
+  PreserveOpts = #{'read-cond' => preserve},
   ReaderCond   =
     'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
                                           clj_reader:read(<<"(1 2)">>), false

@@ -10,21 +10,30 @@
         , remove_location/1
         ]).
 
+-define(PLATFORM_FEATURES, [clje]).
+
+-define(OPT_EOF, eof).
+-define(OPT_FEATURES, features).
+-define(OPT_READ_COND, 'read-cond').
+-define(OPT_IO_READER, 'io-reader').
+
 -type location() :: #{ line   => non_neg_integer()
                      , column => non_neg_integer()
                      , file   => binary()
                      }.
 
--type opts() :: #{ read_cond    => allow | preserve
+-type opts() :: #{ ?OPT_READ_COND => allow | preserve
                    %% When the value is `allow' then reader conditional will be
                    %% processed. If it is `preserve' then a ReaderConditional
                    %% value will be returned.
-                 , features     => 'clojerl.Set':type()
+                 , ?OPT_FEATURES  => 'clojerl.Set':type()
                    %% Set of features available when processing a reader
                    %% conditional.
-                 , file         => file:filename_all()
+                 , ?OPT_EOF       => any()
+                   %% When 'eofthrow' then throw, otherwise return value.
+                 , file           => file:filename_all()
                    %% Source file being read.
-                 , io_reader    => 'erlang.io.IReader':type()
+                 , ?OPT_IO_READER => 'erlang.io.IReader':type()
                    %% IReader that should be used when there are no more
                    %% characters to be read from the binary.
                  }.
@@ -130,11 +139,25 @@ read_all(Src, Opts, Env) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
+-spec platform_features(opts() | undefined) -> opts().
+platform_features(undefined) ->
+  #{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)};
+platform_features(#{?OPT_FEATURES := Features} = Opts) ->
+  NewFeatures = lists:foldl( fun(Feature, Acc) ->
+                                 clj_core:conj(Acc, Feature)
+                             end
+                           , Features
+                           , ?PLATFORM_FEATURES
+                           ),
+  Opts#{?OPT_FEATURES => NewFeatures};
+platform_features(Opts) ->
+  Opts#{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)}.
+
 %% @private
 -spec new_state(binary(), any(), opts()) -> state().
 new_state(Src, Env, Opts) ->
   #{ src           => Src
-   , opts          => Opts
+   , opts          => platform_features(Opts)
    , forms         => []
    , pending_forms => []
    , env           => Env
@@ -994,7 +1017,7 @@ read_cond(#{src := <<>>} = State) ->
       clj_utils:throw(<<"EOF while reading cond">>, location(State))
   end;
 read_cond(#{src := Src, opts := Opts} = State) ->
-  ReadCondOpt = maps:get(read_cond, Opts, undefined),
+  ReadCondOpt = maps:get(?OPT_READ_COND, Opts, undefined),
   case lists:member(ReadCondOpt, [allow, preserve]) of
     false -> clj_utils:throw( <<"Conditional read not allowed">>
                              , location(State)
@@ -1040,7 +1063,7 @@ reader_conditional(List, IsSplicing) ->
   'clojerl.reader.ReaderConditional':?CONSTRUCTOR(List, IsSplicing).
 
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
-  Features = maps:get(features, Opts, clj_core:hash_set([])),
+  Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
   Forms = clj_core:seq(List),
   case match_feature(Forms, Features, State) of
     nomatch ->
@@ -1315,7 +1338,7 @@ file_location_meta(State) ->
 -spec peek_src(state()) -> binary().
 peek_src(#{src := <<First/utf8, _/binary>>}) ->
   First;
-peek_src(#{src := <<>>, opts := #{io_reader := Reader}}) ->
+peek_src(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}}) ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> <<>>;
     Ch  ->
@@ -1326,7 +1349,7 @@ peek_src(_State) ->
   <<>>.
 
 -spec check_reader(state()) -> {ok, state()} | eof.
-check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)
+check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
   when Reader =/= undefined ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;

@@ -3540,11 +3540,11 @@
   ([stream]
    (read stream true nil))
   ([stream eof-error? eof-value]
+   (read {:eof (if eof-error? :eofthrow eof-value)}
+         stream))
+  ([opts stream]
    (clj_reader/read.e ""
-                      (clojerl.Map/to_erl_map.e
-                       {:io_reader  stream
-                        :eof-error? (boolean eof-error?)
-                        :eof-value  eof-value}))))
+                      (clojerl.Map/to_erl_map.e (assoc opts :io-reader stream)))))
 
 (defn read-line
   "Reads the next line from stream that is the current value of *in* ."
