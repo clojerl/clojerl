@@ -3564,7 +3564,7 @@
   {:added "1.0"
    :static true}
   ([s] (clj_reader/read.e s))
-  ([opts s] (clj_reader/read.e s opts)))
+  ([opts s] (clj_reader/read.e s (clojerl.Map/to_erl_map.e opts))))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
