@@ -134,7 +134,7 @@
   [request-prompt request-exit]
   (or ({:line-start request-prompt :stream-end request-exit}
        (skip-whitespace *in*))
-      (let [input (read)]
+      (let [input (read {:read-cond :allow} *in*)]
         input)))
 
 (defn repl-exception

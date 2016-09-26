@@ -558,18 +558,18 @@
 (defrecord TestRecord [x y])
 
 (deftest preserve-read-cond-test
-  (let [x (read-string {:read-cond :preserve} "#?(:clj foo :cljs bar)" )]
+  (let [x (read-string {:read-cond :preserve} "#?(:clje foo :cljs bar)" )]
        (is (reader-conditional? x))
        (is (not (:splicing? x)))
        (is (= :foo (get x :no-such-key :foo)))
-       (is (= (:form x) '(:clj foo :cljs bar)))
-       (is (= x (reader-conditional '(:clj foo :cljs bar) false))))
-  (let [x (read-string {:read-cond :preserve} "#?@(:clj [foo])" )]
+       (is (= (:form x) '(:clje foo :cljs bar)))
+       (is (= x (reader-conditional '(:clje foo :cljs bar) false))))
+  (let [x (read-string {:read-cond :preserve} "#?@(:clje [foo])" )]
        (is (reader-conditional? x))
        (is (:splicing? x))
        (is (= :foo (get x :no-such-key :foo)))
-       (is (= (:form x) '(:clj [foo])))
-       (is (= x (reader-conditional '(:clj [foo]) true))))
+       (is (= (:form x) '(:clje [foo])))
+       (is (= x (reader-conditional '(:clje [foo]) true))))
   (is (thrown-with-msg? :error #"No reader function for tag"
                         (read-string {:read-cond :preserve} "#js {:x 1 :y 2}" )))
   (let [x (read-string {:read-cond :preserve} "#?(:cljs #js {:x 1 :y 2})")
@@ -581,9 +581,9 @@
        (is (= :foo (get tl :no-such-key :foo)))
        #_(is (= tl (tagged-literal 'js {:x 1 :y 2}))))
   (testing "print form roundtrips"
-           (doseq [s ["#?(:clj foo :cljs bar)"
+           (doseq [s ["#?(:clje foo :cljs bar)"
                       "#?(:cljs #js {:x 1, :y 2})"
-                      "#?(:clj #clojure.test_clojure.reader.TestRecord [42 85])"]]
+                      "#?(:clje #clojure.test_clojure.reader.TestRecord [42 85])"]]
                   (is (= s (pr-str (read-string {:read-cond :preserve} s)))))))
 
 (deftest reader-conditionals
@@ -597,49 +597,49 @@
     (is (= '[]
            (read-string {:read-cond :allow :features #{:baz}} "[#?( :foo foo-form :bar bar-form)]"))))
   (testing "environmental features"
-    (is (= "clojure" #?(:clj "clojure" :cljs "clojurescript" :default "default"))))
+    (is (= "clojure" #?(:clje "clojure" :cljs "clojurescript" :default "default"))))
   (testing "default features"
     (is (= "default" #?(:clj-clr "clr" :cljs "cljs" :default "default"))))
   (testing "splicing"
-    (is (= [] [#?@(:clj [])]))
-    (is (= [:a] [#?@(:clj [:a])]))
-    (is (= [:a :b] [#?@(:clj [:a :b])]))
-    (is (= [:a :b :c] [#?@(:clj [:a :b :c])]))
-    (is (= [:a :b :c] [#?@(:clj [:a :b :c])])))
+    (is (= [] [#?@(:clje [])]))
+    (is (= [:a] [#?@(:clje [:a])]))
+    (is (= [:a :b] [#?@(:clje [:a :b])]))
+    (is (= [:a :b :c] [#?@(:clje [:a :b :c])]))
+    (is (= [:a :b :c] [#?@(:clje [:a :b :c])])))
   (testing "nested splicing"
     (is (= [:a :b :c :d :e]
-           [#?@(:clj [:a #?@(:clj [:b #?@(:clj [:c]) :d]):e])]))
+           [#?@(:clje [:a #?@(:clje [:b #?@(:clje [:c]) :d]):e])]))
     (is (= '(+ 1 (+ 2 3))
-           '(+ #?@(:clj [1 (+ #?@(:clj [2 3]))]))))
+           '(+ #?@(:clje [1 (+ #?@(:clje [2 3]))]))))
     (is (= '(+ (+ 2 3) 1)
-           '(+ #?@(:clj [(+ #?@(:clj [2 3])) 1]))))
+           '(+ #?@(:clje [(+ #?@(:clje [2 3])) 1]))))
     (is (= [:a [:b [:c] :d] :e]
-           [#?@(:clj [:a [#?@(:clj [:b #?@(:clj [[:c]]) :d])] :e])])))
+           [#?@(:clje [:a [#?@(:clje [:b #?@(:clje [[:c]]) :d])] :e])])))
   (testing "bypass unknown tagged literals"
-    (is (= [1 2 3] #?(:cljs #js [1 2 3] :clj [1 2 3])))
-    (is (= :clojure #?(:foo #some.nonexistent.Record {:x 1} :clj :clojure))))
+    (is (= [1 2 3] #?(:cljs #js [1 2 3] :clje [1 2 3])))
+    (is (= :clojure #?(:foo #some.nonexistent.Record {:x 1} :clje :clojure))))
   (testing "error cases"
     (is (thrown-with-msg? :error #"Feature should be a keyword" (read-string {:read-cond :allow} "#?((+ 1 2) :a)")))
     (is (thrown-with-msg? :error #"even number of forms" (read-string {:read-cond :allow} "#?(:cljs :a :clj)")))
-    (is (thrown-with-msg? :error #"read-cond-splicing must implement" (read-string {:read-cond :allow} "#?@(:clj :a)")))
+    (is (thrown-with-msg? :error #"read-cond-splicing must implement" (read-string {:read-cond :allow} "#?@(:clje :a)")))
     (is (thrown-with-msg? :error #"is reserved" (read-string {:read-cond :allow} "#?@(:foo :a :else :b)")))
     (is (thrown-with-msg? :error #"must be a list" (read-string {:read-cond :allow} "#?[:foo :a :else :b]")))
-    (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string {:read-cond :BOGUS} "#?[:clj :a :default nil]")))
-    (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string "#?[:clj :a :default nil]")))
-    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj [1 2])")))
-    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj [1])")))
-    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj []) 1"))))
+    (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string {:read-cond :BOGUS} "#?[:clje :a :default nil]")))
+    (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string "#?[:clje :a :default nil]")))
+    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clje [1 2])")))
+    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clje [1])")))
+    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clje []) 1"))))
   (testing "clj-1698-regression"
     (let [opts {:features #{:clj} :read-cond :allow}]
-      (is (= 1 (read-string opts "#?(:cljs {'a 1 'b 2} :clj 1)")))
-      (is (= 1 (read-string opts "#?(:cljs (let [{{b :b} :a {d :d} :c} {}]) :clj 1)")))
-      (is (= '(def m {}) (read-string opts "(def m #?(:cljs ^{:a :b} {} :clj  ^{:a :b} {}))")))
-      (is (= '(def m {}) (read-string opts "(def m #?(:cljs ^{:a :b} {} :clj ^{:a :b} {}))")))
-      (is (= 1 (read-string opts "#?(:cljs {:a #_:b :c} :clj 1)")))))
+      (is (= 1 (read-string opts "#?(:cljs {'a 1 'b 2} :clje 1)")))
+      (is (= 1 (read-string opts "#?(:cljs (let [{{b :b} :a {d :d} :c} {}]) :clje 1)")))
+      (is (= '(def m {}) (read-string opts "(def m #?(:cljs ^{:a :b} {} :clje  ^{:a :b} {}))")))
+      (is (= '(def m {}) (read-string opts "(def m #?(:cljs ^{:a :b} {} :clje ^{:a :b} {}))")))
+      (is (= 1 (read-string opts "#?(:cljs {:a #_:b :c} :clje 1)")))))
   (testing "nil expressions"
     (is (nil? #?(:default nil)))
-    (is (nil? #?(:foo :bar :clj nil)))
-    (is (nil? #?(:clj nil :foo :bar)))
+    (is (nil? #?(:foo :bar :clje nil)))
+    (is (nil? #?(:clje nil :foo :bar)))
     (is (nil? #?(:foo :bar :default nil)))))
 
 (deftest eof-option

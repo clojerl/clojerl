@@ -714,8 +714,8 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_unmatched_delim(state()) -> no_return().
-read_unmatched_delim(State) ->
-  clj_utils:throw(unmatched_delim, location(State)).
+read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
+  clj_utils:throw(<<"Umatched delimiter ", Delim/utf8>>, location(State)).
 
 %%------------------------------------------------------------------------------
 %% Character
@@ -1022,35 +1022,36 @@ read_cond(#{src := Src, opts := Opts} = State) ->
 
   {ListForm, NewState} = pop_form(read_one(State1)),
 
-  case clj_core:'list?'(ListForm) of
-    false -> clj_utils:throw( <<"read-cond body must be a list">>
-                            , location(State1)
-                            );
-    true ->
-      OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
-      SupressRead = OldSupressRead orelse ReadCondOpt == preserve,
-      erlang:put(supress_read, SupressRead),
-      ReturnState =
-        case SupressRead of
-          true ->
-            ReaderCondForm = reader_conditional(ListForm, IsSplicing),
-            push_form(ReaderCondForm, NewState);
-          false ->
-            read_cond_delimited(ListForm, IsSplicing, NewState)
-        end,
-      erlang:put(supress_read, OldSupressRead),
-      ReturnState
-  end.
+  clj_utils:throw_when( not clj_core:'list?'(ListForm)
+                      , <<"read-cond body must be a list">>
+                      , location(State1)
+                      ),
+
+  OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+  SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,
+  erlang:put(supress_read, SupressRead),
+
+  ReturnState = case SupressRead of
+                  true ->
+                    ReaderCondForm = reader_conditional(ListForm, IsSplicing),
+                    push_form(ReaderCondForm, NewState);
+                  false ->
+                    read_cond_delimited(ListForm, IsSplicing, NewState)
+                end,
+
+  erlang:put(supress_read, OldSupressRead),
+
+  ReturnState.
 
 reader_conditional(List, IsSplicing) ->
   'clojerl.reader.ReaderConditional':?CONSTRUCTOR(List, IsSplicing).
 
 read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
   Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
-  Forms = clj_core:seq(List),
+  Forms    = clj_core:seq(List),
   case match_feature(Forms, Features, State) of
-    nomatch ->
-      read_one(State);
+    nomatch -> %% When there is no match there is nothing to read
+      State;
     Form when IsSplicing ->
       PendingFormsFun = fun push_pending_form/2,
       case clj_core:'sequential?'(Form) of
@@ -1072,7 +1073,7 @@ match_feature([], _Features, _State) ->
   nomatch;
 match_feature([Feature, Form | Rest], Features, State) ->
   case clj_core:'contains?'(Features, Feature) of
-    true -> Form;
+    true  -> Form;
     false -> match_feature(Rest, Features, State)
   end;
 match_feature(_, _, State) ->
