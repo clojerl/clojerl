@@ -65,7 +65,7 @@
 
 (defn code-units
   [s]
-  (and (instance? String s) (map int s)))
+  (and (instance? clojerl.String s) (map int s)))
 
 (deftest Strings
   (is (= "abcde" (str \a \b \c \d \e)))
@@ -100,230 +100,164 @@
       (testing (str "Errors reading string literals from " (name source))
         (are [err msg form] (thrown-with-msg? err msg
                               (read-from source f (str "\"" form "\"")))
-             Exception #"EOF while reading string" "\\"
-             Exception #"Unsupported escape character: \\o" "\\o"
+             :error #"EOF while reading string" "\\"
+             :error #"Unsupported escape character: \\o" "\\o"
 
-             Exception #"Octal escape sequence must be in range \[0, 377\]" "\\400"
-             Exception #"Invalid digit: 8" "\\8"
-             Exception #"Invalid digit: 8" "\\8000"
-             Exception #"Invalid digit: 8" "\\0800"
-             Exception #"Invalid digit: 8" "\\0080"
-             Exception #"Invalid digit: a" "\\2and"
+             :error #"Octal escape sequence must be in range \[0, 377\]" "\\400"
+             :error #"Invalid digit: 8" "\\8"
+             :error #"Invalid digit: 8" "\\8000"
+             :error #"Invalid digit: 8" "\\0800"
+             :error #"Invalid digit: 8" "\\0080"
+             :error #"Invalid digit: a" "\\2and"
 
-             Exception #"Invalid unicode escape: \\u" "\\u"
-             Exception #"Invalid unicode escape: \\ug" "\\ug"
-             Exception #"Invalid unicode escape: \\ug" "\\ug000"
-             Exception #"Invalid character length: 1, should be: 4" "\\u0"
-             Exception #"Invalid character length: 3, should be: 4" "\\u004"
-             Exception #"Invalid digit: g" "\\u004g")))))
+             :error #"Invalid unicode escape: \\u" "\\u"
+             :error #"Invalid unicode escape: \\ug" "\\ug"
+             :error #"Invalid unicode escape: \\ug" "\\ug000"
+             :error #"Invalid character length: 1, should be: 4" "\\u0"
+             :error #"Invalid character length: 3, should be: 4" "\\u004"
+             :error #"Invalid digit: g" "\\u004g")))))
 
 ;; Numbers
 
 (deftest Numbers
 
   ; Read Integer
-  (is (instance? Long 2147483647))
-  (is (instance? Long +1))
-  (is (instance? Long 1))
-  (is (instance? Long +0))
-  (is (instance? Long 0))
-  (is (instance? Long -0))
-  (is (instance? Long -1))
-  (is (instance? Long -2147483648))
+  (is (instance? clojerl.Integer 2147483647))
+  (is (instance? clojerl.Integer +1))
+  (is (instance? clojerl.Integer 1))
+  (is (instance? clojerl.Integer +0))
+  (is (instance? clojerl.Integer 0))
+  (is (instance? clojerl.Integer -0))
+  (is (instance? clojerl.Integer -1))
+  (is (instance? clojerl.Integer -2147483648))
 
-  ; Read Long
-  (is (instance? Long 2147483648))
-  (is (instance? Long -2147483649))
-  (is (instance? Long 9223372036854775807))
-  (is (instance? Long -9223372036854775808))
+  ; Read clojerl.Integer
+  (is (instance? clojerl.Integer 2147483648))
+  (is (instance? clojerl.Integer -2147483649))
+  (is (instance? clojerl.Integer 9223372036854775807))
+  (is (instance? clojerl.Integer -9223372036854775808))
 
   ;; Numeric constants of different types don't wash out. Regression fixed in
   ;; r1157. Previously the compiler saw 0 and 0.0 as the same constant and
-  ;; caused the sequence to be built of Doubles.
+  ;; caused the sequence to be built of clojerl.Floats.
   (let [x 0.0]
     (let [sequence (loop [i 0 l '()]
                      (if (< i 5)
                        (recur (inc i) (conj l i))
                        l))]
       (is (= [4 3 2 1 0] sequence))
-      (is (every? #(instance? Long %)
+      (is (every? #(instance? clojerl.Integer %)
                   sequence))))
 
-  ; Read BigInteger
-  (is (instance? BigInt 9223372036854775808))
-  (is (instance? BigInt -9223372036854775809))
-  (is (instance? BigInt 10000000000000000000000000000000000000000000000000))
-  (is (instance? BigInt -10000000000000000000000000000000000000000000000000))
+  ; Read clojerl.Integereger
+  (is (instance? clojerl.Integer 9223372036854775808))
+  (is (instance? clojerl.Integer -9223372036854775809))
+  (is (instance? clojerl.Integer 10000000000000000000000000000000000000000000000000))
+  (is (instance? clojerl.Integer -10000000000000000000000000000000000000000000000000))
 
-  ; Read Double
-  (is (instance? Double +1.0e+1))
-  (is (instance? Double +1.e+1))
-  (is (instance? Double +1e+1))
+  ; Read clojerl.Float
+  (is (instance? clojerl.Float +1.0e+1))
+  ;; (is (instance? clojerl.Float +1.e+1))
+  ;; (is (instance? clojerl.Float +1e+1))
 
-  (is (instance? Double +1.0e1))
-  (is (instance? Double +1.e1))
-  (is (instance? Double +1e1))
+  (is (instance? clojerl.Float +1.0e1))
+  ;; (is (instance? clojerl.Float +1.e1))
+  ;; (is (instance? clojerl.Float +1e1))
 
-  (is (instance? Double +1.0e-1))
-  (is (instance? Double +1.e-1))
-  (is (instance? Double +1e-1))
+  (is (instance? clojerl.Float +1.0e-1))
+  ;; (is (instance? clojerl.Float +1.e-1))
+  ;; (is (instance? clojerl.Float +1e-1))
 
-  (is (instance? Double 1.0e+1))
-  (is (instance? Double 1.e+1))
-  (is (instance? Double 1e+1))
+  (is (instance? clojerl.Float 1.0e+1))
+  ;; (is (instance? clojerl.Float 1.e+1))
+  ;; (is (instance? clojerl.Float 1e+1))
 
-  (is (instance? Double 1.0e1))
-  (is (instance? Double 1.e1))
-  (is (instance? Double 1e1))
+  (is (instance? clojerl.Float 1.0e1))
+  ;; (is (instance? clojerl.Float 1.e1))
+  ;; (is (instance? clojerl.Float 1e1))
 
-  (is (instance? Double 1.0e-1))
-  (is (instance? Double 1.e-1))
-  (is (instance? Double 1e-1))
+  (is (instance? clojerl.Float 1.0e-1))
+  ;; (is (instance? clojerl.Float 1.e-1))
+  ;; (is (instance? clojerl.Float 1e-1))
 
-  (is (instance? Double -1.0e+1))
-  (is (instance? Double -1.e+1))
-  (is (instance? Double -1e+1))
+  (is (instance? clojerl.Float -1.0e+1))
+  ;; (is (instance? clojerl.Float -1.e+1))
+  ;; (is (instance? clojerl.Float -1e+1))
 
-  (is (instance? Double -1.0e1))
-  (is (instance? Double -1.e1))
-  (is (instance? Double -1e1))
+  (is (instance? clojerl.Float -1.0e1))
+  ;; (is (instance? clojerl.Float -1.e1))
+  ;; (is (instance? clojerl.Float -1e1))
 
-  (is (instance? Double -1.0e-1))
-  (is (instance? Double -1.e-1))
-  (is (instance? Double -1e-1))
+  (is (instance? clojerl.Float -1.0e-1))
+  ;; (is (instance? clojerl.Float -1.e-1))
+  ;; (is (instance? clojerl.Float -1e-1))
 
-  (is (instance? Double +1.0))
-  (is (instance? Double +1.))
+  (is (instance? clojerl.Float +1.0))
+  ;; (is (instance? clojerl.Float +1.))
 
-  (is (instance? Double 1.0))
-  (is (instance? Double 1.))
+  (is (instance? clojerl.Float 1.0))
+  ;; (is (instance? clojerl.Float 1.))
 
-  (is (instance? Double +0.0))
-  (is (instance? Double +0.))
+  (is (instance? clojerl.Float +0.0))
+  ;; (is (instance? clojerl.Float +0.))
 
-  (is (instance? Double 0.0))
-  (is (instance? Double 0.))
+  (is (instance? clojerl.Float 0.0))
+  ;; (is (instance? clojerl.Float 0.))
 
-  (is (instance? Double -0.0))
-  (is (instance? Double -0.))
+  (is (instance? clojerl.Float -0.0))
+  ;; (is (instance? clojerl.Float -0.))
 
-  (is (instance? Double -1.0))
-  (is (instance? Double -1.))
+  (is (instance? clojerl.Float -1.0))
+  ;; (is (instance? clojerl.Float -1.))
 
-  ; Read BigDecimal
-  (is (instance? BigDecimal 9223372036854775808M))
-  (is (instance? BigDecimal -9223372036854775809M))
-  (is (instance? BigDecimal 2147483647M))
-  (is (instance? BigDecimal +1M))
-  (is (instance? BigDecimal 1M))
-  (is (instance? BigDecimal +0M))
-  (is (instance? BigDecimal 0M))
-  (is (instance? BigDecimal -0M))
-  (is (instance? BigDecimal -1M))
-  (is (instance? BigDecimal -2147483648M))
+  ;; (is (instance? Ratio 1/2))
+  ;; (is (instance? Ratio -1/2))
+  ;; (is (instance? Ratio +1/2))
 
-  (is (instance? BigDecimal +1.0e+1M))
-  (is (instance? BigDecimal +1.e+1M))
-  (is (instance? BigDecimal +1e+1M))
 
-  (is (instance? BigDecimal +1.0e1M))
-  (is (instance? BigDecimal +1.e1M))
-  (is (instance? BigDecimal +1e1M))
+  ;; Characters
 
-  (is (instance? BigDecimal +1.0e-1M))
-  (is (instance? BigDecimal +1.e-1M))
-  (is (instance? BigDecimal +1e-1M))
+  (deftest t-Characters
+    (let [f (temp-file "clojure.core-reader" "test")]
+      (doseq [source [:string :file]]
+        (testing (str "Valid char literals read from " (name source))
+          (are [x form] (= x (read-from source f form))
+            (first "o") "\\o"
+            (char 0) "\\o0"
+            (char 0) "\\o000"
+            (char 047) "\\o47"
+            (char 0377) "\\o377"
 
-  (is (instance? BigDecimal 1.0e+1M))
-  (is (instance? BigDecimal 1.e+1M))
-  (is (instance? BigDecimal 1e+1M))
+            (first "u") "\\u"
+            (first "A") "\\u0041"
+            (char 0) "\\u0000"
+            (char 0xd7ff) "\\ud7ff"
+            (char 0xe000) "\\ue000"
+            (char 0xffff) "\\uffff"))
+        (testing (str "Errors reading char literals from " (name source))
+          (are [err msg form] (thrown-with-msg? err msg (read-from source f form))
+            :error #"EOF while reading character" "\\"
+            :error #"Unsupported character: \\00" "\\00"
+            :error #"Unsupported character: \\0009" "\\0009"
 
-  (is (instance? BigDecimal 1.0e1M))
-  (is (instance? BigDecimal 1.e1M))
-  (is (instance? BigDecimal 1e1M))
+            :error #"Invalid digit: 8" "\\o378"
+            :error #"Octal escape sequence must be in range \[0, 377\]" "\\o400"
+            :error #"Invalid digit: 8" "\\o800"
+            :error #"Invalid digit: a" "\\oand"
+            :error #"Invalid octal escape sequence length: 4" "\\o0470"
 
-  (is (instance? BigDecimal 1.0e-1M))
-  (is (instance? BigDecimal 1.e-1M))
-  (is (instance? BigDecimal 1e-1M))
+            :error #"Invalid unicode character: \\u0" "\\u0"
+            :error #"Invalid unicode character: \\ug" "\\ug"
+            :error #"Invalid unicode character: \\u000" "\\u000"
+            :error #"Invalid character constant: \\ud800" "\\ud800"
+            :error #"Invalid character constant: \\udfff" "\\udfff"
+            :error #"Invalid unicode character: \\u004" "\\u004"
+            :error #"Invalid unicode character: \\u00041" "\\u00041"
+            :error #"Invalid digit: g" "\\u004g")))))
 
-  (is (instance? BigDecimal -1.0e+1M))
-  (is (instance? BigDecimal -1.e+1M))
-  (is (instance? BigDecimal -1e+1M))
+  ;; nil
 
-  (is (instance? BigDecimal -1.0e1M))
-  (is (instance? BigDecimal -1.e1M))
-  (is (instance? BigDecimal -1e1M))
-
-  (is (instance? BigDecimal -1.0e-1M))
-  (is (instance? BigDecimal -1.e-1M))
-  (is (instance? BigDecimal -1e-1M))
-
-  (is (instance? BigDecimal +1.0M))
-  (is (instance? BigDecimal +1.M))
-
-  (is (instance? BigDecimal 1.0M))
-  (is (instance? BigDecimal 1.M))
-
-  (is (instance? BigDecimal +0.0M))
-  (is (instance? BigDecimal +0.M))
-
-  (is (instance? BigDecimal 0.0M))
-  (is (instance? BigDecimal 0.M))
-
-  (is (instance? BigDecimal -0.0M))
-  (is (instance? BigDecimal -0.M))
-
-  (is (instance? BigDecimal -1.0M))
-  (is (instance? BigDecimal -1.M))
-
-  (is (instance? Ratio 1/2))
-  (is (instance? Ratio -1/2))
-  (is (instance? Ratio +1/2))
-)
-
-;; Characters
-
-(deftest t-Characters
-  (let [f (temp-file "clojure.core-reader" "test")]
-    (doseq [source [:string :file]]
-      (testing (str "Valid char literals read from " (name source))
-        (are [x form] (= x (read-from source f form))
-             (first "o") "\\o"
-             (char 0) "\\o0"
-             (char 0) "\\o000"
-             (char 047) "\\o47"
-             (char 0377) "\\o377"
-
-             (first "u") "\\u"
-             (first "A") "\\u0041"
-             (char 0) "\\u0000"
-             (char 0xd7ff) "\\ud7ff"
-             (char 0xe000) "\\ue000"
-             (char 0xffff) "\\uffff"))
-      (testing (str "Errors reading char literals from " (name source))
-        (are [err msg form] (thrown-with-msg? err msg (read-from source f form))
-             Exception #"EOF while reading character" "\\"
-             Exception #"Unsupported character: \\00" "\\00"
-             Exception #"Unsupported character: \\0009" "\\0009"
-
-             Exception #"Invalid digit: 8" "\\o378"
-             Exception #"Octal escape sequence must be in range \[0, 377\]" "\\o400"
-             Exception #"Invalid digit: 8" "\\o800"
-             Exception #"Invalid digit: a" "\\oand"
-             Exception #"Invalid octal escape sequence length: 4" "\\o0470"
-
-             Exception #"Invalid unicode character: \\u0" "\\u0"
-             Exception #"Invalid unicode character: \\ug" "\\ug"
-             Exception #"Invalid unicode character: \\u000" "\\u000"
-             Exception #"Invalid character constant: \\ud800" "\\ud800"
-             Exception #"Invalid character constant: \\udfff" "\\udfff"
-             Exception #"Invalid unicode character: \\u004" "\\u004"
-             Exception #"Invalid unicode character: \\u00041" "\\u00041"
-             Exception #"Invalid digit: g" "\\u004g")))))
-
-;; nil
-
-(deftest t-nil)
+  (deftest t-nil))
 
 ;; Booleans
 
@@ -341,7 +275,7 @@
   (is (= :abc.def/ghi (keyword "abc.def" "ghi")))
   (is (= :abc/def.ghi (keyword "abc" "def.ghi")))
   (is (= :abc:def/ghi:jkl.mno (keyword "abc:def" "ghi:jkl.mno")))
-  (is (instance? clojure.lang.Keyword :alphabet))
+  (is (instance? clojerl.Keyword :alphabet))
   )
 
 (deftest reading-keywords
@@ -350,9 +284,9 @@
        :foo/bar ":foo/bar"
        :user/foo "::foo")
   (are [err msg form] (thrown-with-msg? err msg (read-string form))
-       Exception #"Invalid token: foo:" "foo:"
-       Exception #"Invalid token: :bar/" ":bar/"
-       Exception #"Invalid token: ::does.not/exist" "::does.not/exist"))
+       :error #"Invalid token: foo:" "foo:"
+       :error #"Invalid token: :bar/" ":bar/"
+       :error #"Invalid token: ::does.not/exist" "::does.not/exist"))
 ;; Lists
 
 (deftest t-Lists)
@@ -407,8 +341,8 @@
   (defn add-5
     [x]
     (reduce + x (range a))))"
-        stream (clojure.lang.LineNumberingPushbackReader.
-                 (java.io.StringReader. code))
+        stream (new erlang.io.PushbackReader
+                 (new erlang.io.StringReader code))
         top-levels (take-while identity (repeatedly #(read stream false nil)))
         expected-metadata '{ns {:line 1, :column 1}
                             :require {:line 2, :column 3}
@@ -426,14 +360,14 @@
            (is (->> (meta %)
                  vals
                  (filter number?)
-                 (every? (partial instance? Integer))))
+                 (every? (partial instance? clojerl.Integer))))
            (swap! verified-forms inc))
         form))
     ;; sanity check against e.g. reading returning ()
     (is (= (count expected-metadata) @verified-forms))))
 
-(deftest set-line-number
-  (let [r (clojure.lang.LineNumberingPushbackReader. *in*)]
+#_(deftest set-line-number
+  (let [r (new erlang.io.PushbackReader *in*)]
     (.setLineNumber r 100)
     (is (= 100 (.getLineNumber r)))))
 
@@ -474,11 +408,11 @@
 
 (deftest Instants
   (testing "Instants are read as java.util.Date by default"
-    (is (= java.util.Date (class #inst "2010-11-12T13:14:15.666"))))
+    (is (= clojerl.erlang.Tuple (type #inst "2010-11-12T13:14:15.666"))))
   (let [s "#inst \"2010-11-12T13:14:15.666-06:00\""]
     (binding [*data-readers* {'inst read-instant-date}]
       (testing "read-instant-date produces java.util.Date"
-        (is (= java.util.Date (class (read-string s)))))
+        (is (= clojerl.erlang.Tuple (type (read-string s)))))
       (testing "java.util.Date instants round-trips"
         (is (= (-> s read-string)
                (-> s read-string pr-str read-string))))
@@ -487,7 +421,7 @@
           (let [s (format "#inst \"2010-%02d-%02dT%02d:14:15.666-06:00\"" month day hour)]
             (is (= (-> s read-string)
                    (-> s read-string pr-str read-string))))))
-      (testing "java.util.Date handling DST in time zones"
+      #_(testing "java.util.Date handling DST in time zones"
         (let [dtz (TimeZone/getDefault)]
           (try
             ;; A timezone with DST in effect during 2010-11-12
@@ -498,7 +432,7 @@
       (testing "java.util.Date should always print in UTC"
         (let [d (read-string s)
               pstr (print-str d)
-              len (.length pstr)]
+              len (count pstr)]
           (is (= (subs pstr (- len 7)) "-00:00\"")))))
     #_(binding [*data-readers* {'inst read-instant-calendar}]
       (testing "read-instant-calendar produces java.util.Calendar"
@@ -547,18 +481,18 @@
 ;; #uuid "550e8400-e29b-41d4-a716-446655440000"
 
 (deftest UUID
-  (is (= java.util.UUID (class #uuid "550e8400-e29b-41d4-a716-446655440000")))
-  (is (.equals #uuid "550e8400-e29b-41d4-a716-446655440000"
-               #uuid "550e8400-e29b-41d4-a716-446655440000"))
+  (is (= clojerl.String (type #uuid "550e8400-e29b-41d4-a716-446655440000")))
+  (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
+         #uuid "550e8400-e29b-41d4-a716-446655440000"))
   (is (not (identical? #uuid "550e8400-e29b-41d4-a716-446655440000"
                        #uuid "550e8400-e29b-41d4-a716-446655440000")))
-  (is (= 4 (.version #uuid "550e8400-e29b-41d4-a716-446655440000")))
+  #_(is (= 4 (.version #uuid "550e8400-e29b-41d4-a716-446655440000")))
   (is (= (print-str #uuid "550e8400-e29b-41d4-a716-446655440000")
          "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
 
 (deftest unknown-tag
   (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})
-        throw-on-unknown (fn [tag val] (throw (RuntimeException. (str "No data reader function for tag " tag))))
+        throw-on-unknown (fn [tag val] (throw (:error. (str "No data reader function for tag " tag))))
         my-uuid (partial my-unknown 'uuid)
         u "#uuid \"550e8400-e29b-41d4-a716-446655440000\""
         s "#never.heard.of/some-tag [1 2]" ]
@@ -576,15 +510,15 @@
     (binding [*default-data-reader-fn* throw-on-unknown]
       (testing "Unknown tag with custom throw-on-unknown"
         (are [err msg form] (thrown-with-msg? err msg (read-string form))
-             Exception #"No data reader function for tag foo" "#foo [1 2]"
-             Exception #"No data reader function for tag bar/foo" "#bar/foo [1 2]"
-             Exception #"No data reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]")))
+          :error #"No data reader function for tag foo" "#foo [1 2]"
+          :error #"No data reader function for tag bar/foo" "#bar/foo [1 2]"
+          :error #"No data reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]")))
 
     (testing "Unknown tag out-of-the-box behavior (like Clojure 1.4)"
       (are [err msg form] (thrown-with-msg? err msg (read-string form))
-           Exception #"No reader function for tag foo" "#foo [1 2]"
-           Exception #"No reader function for tag bar/foo" "#bar/foo [1 2]"
-           Exception #"No reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]"))))
+        :error #"No reader function for tag foo" "#foo [1 2]"
+        :error #"No reader function for tag bar/foo" "#bar/foo [1 2]"
+        :error #"No reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]"))))
 
 
 (defn roundtrip
@@ -596,7 +530,7 @@
             *print-level* nil]
     (try
      (-> o pr-str read-string)
-     (catch Throwable t t))))
+     (catch :error t t))))
 
 (defn roundtrip-dup
   "Print an object with print-dup and read it back.
@@ -607,7 +541,7 @@
             *print-level* nil]
     (try
      (-> o pr-str read-string)
-     (catch Throwable t t))))
+     (catch :error t t))))
 
 #_(defspec types-that-should-roundtrip
   roundtrip
@@ -636,16 +570,16 @@
        (is (= :foo (get x :no-such-key :foo)))
        (is (= (:form x) '(:clj [foo])))
        (is (= x (reader-conditional '(:clj [foo]) true))))
-  (is (thrown-with-msg? RuntimeException #"No reader function for tag"
+  (is (thrown-with-msg? :error #"No reader function for tag"
                         (read-string {:read-cond :preserve} "#js {:x 1 :y 2}" )))
   (let [x (read-string {:read-cond :preserve} "#?(:cljs #js {:x 1 :y 2})")
         [platform tl] (:form x)]
        (is (reader-conditional? x))
-       (is (tagged-literal? tl))
+       #_(is (tagged-literal? tl))
        (is (= 'js (:tag tl)))
        (is (= {:x 1 :y 2} (:form tl)))
        (is (= :foo (get tl :no-such-key :foo)))
-       (is (= tl (tagged-literal 'js {:x 1 :y 2}))))
+       #_(is (= tl (tagged-literal 'js {:x 1 :y 2}))))
   (testing "print form roundtrips"
            (doseq [s ["#?(:clj foo :cljs bar)"
                       "#?(:cljs #js {:x 1, :y 2})"
@@ -685,16 +619,16 @@
     (is (= [1 2 3] #?(:cljs #js [1 2 3] :clj [1 2 3])))
     (is (= :clojure #?(:foo #some.nonexistent.Record {:x 1} :clj :clojure))))
   (testing "error cases"
-    (is (thrown-with-msg? RuntimeException #"Feature should be a keyword" (read-string {:read-cond :allow} "#?((+ 1 2) :a)")))
-    (is (thrown-with-msg? RuntimeException #"even number of forms" (read-string {:read-cond :allow} "#?(:cljs :a :clj)")))
-    (is (thrown-with-msg? RuntimeException #"read-cond-splicing must implement" (read-string {:read-cond :allow} "#?@(:clj :a)")))
-    (is (thrown-with-msg? RuntimeException #"is reserved" (read-string {:read-cond :allow} "#?@(:foo :a :else :b)")))
-    (is (thrown-with-msg? RuntimeException #"must be a list" (read-string {:read-cond :allow} "#?[:foo :a :else :b]")))
-    (is (thrown-with-msg? RuntimeException #"Conditional read not allowed" (read-string {:read-cond :BOGUS} "#?[:clj :a :default nil]")))
-    (is (thrown-with-msg? RuntimeException #"Conditional read not allowed" (read-string "#?[:clj :a :default nil]")))
-    (is (thrown-with-msg? RuntimeException #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj [1 2])")))
-    (is (thrown-with-msg? RuntimeException #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj [1])")))
-    (is (thrown-with-msg? RuntimeException #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj []) 1"))))
+    (is (thrown-with-msg? :error #"Feature should be a keyword" (read-string {:read-cond :allow} "#?((+ 1 2) :a)")))
+    (is (thrown-with-msg? :error #"even number of forms" (read-string {:read-cond :allow} "#?(:cljs :a :clj)")))
+    (is (thrown-with-msg? :error #"read-cond-splicing must implement" (read-string {:read-cond :allow} "#?@(:clj :a)")))
+    (is (thrown-with-msg? :error #"is reserved" (read-string {:read-cond :allow} "#?@(:foo :a :else :b)")))
+    (is (thrown-with-msg? :error #"must be a list" (read-string {:read-cond :allow} "#?[:foo :a :else :b]")))
+    (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string {:read-cond :BOGUS} "#?[:clj :a :default nil]")))
+    (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string "#?[:clj :a :default nil]")))
+    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj [1 2])")))
+    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj [1])")))
+    (is (thrown-with-msg? :error #"Reader conditional splicing not allowed at the top level" (read-string {:read-cond :allow} "#?@(:clj []) 1"))))
   (testing "clj-1698-regression"
     (let [opts {:features #{:clj} :read-cond :allow}]
       (is (= 1 (read-string opts "#?(:cljs {'a 1 'b 2} :clj 1)")))
@@ -710,5 +644,5 @@
 
 (deftest eof-option
   (is (= 23 (read-string {:eof 23} "")))
-  (is (= 23 (read {:eof 23} (clojure.lang.LineNumberingPushbackReader.
-                             (java.io.StringReader. ""))))))
+  (is (= 23 (read {:eof 23} (new erlang.io.PushbackReader
+                                 (new erlang.io.StringReader ""))))))
