@@ -999,33 +999,35 @@ read_cond(#{src := <<>>} = State) ->
     eof ->
       clj_utils:throw(<<"EOF while reading cond">>, location(State))
   end;
-read_cond(#{src := Src, opts := Opts} = State) ->
+read_cond(#{opts := Opts} = State0) ->
   ReadCondOpt = maps:get(?OPT_READ_COND, Opts, undefined),
-  case lists:member(ReadCondOpt, [allow, preserve]) of
-    false -> clj_utils:throw( <<"Conditional read not allowed">>
-                             , location(State)
-                             );
-    true -> ok
-  end,
+  clj_utils:throw_when(not lists:member(ReadCondOpt, [allow, preserve])
+                      , <<"Conditional read not allowed">>
+                      , location(State0)
+                      ),
 
+  {_, State} = consume(State0, [whitespace]),
   ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
-  IsSplicing = case Src of <<"@"/utf8, _/binary>> -> true; _ -> false end,
-  State1 =
-    case IsSplicing of
-      true when not ReadDelim ->
-        clj_utils:throw(<<"cond-splice not in list">>, location(State));
-      true ->
-        consume_char(State);
-      false ->
-        State
-    end,
+  IsSplicing = peek_src(State) =:= $@,
 
-  {ListForm, NewState} = pop_form(read_one(State1)),
+  clj_utils:throw_when( IsSplicing andalso not ReadDelim
+                      , <<"cond-splice not in list">>
+                      , location(State)
+                      ),
 
-  clj_utils:throw_when( not clj_core:'list?'(ListForm)
+  State1 = case IsSplicing of
+             true  -> consume_char(State);
+             false -> State
+           end,
+
+  {_, State2} = consume(State1, [whitespace]),
+
+  clj_utils:throw_when( peek_src(State2) =/= $(
                       , <<"read-cond body must be a list">>
                       , location(State1)
                       ),
+
+  {ListForm, NewState} = pop_form(read_one(State2)),
 
   OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
   SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,

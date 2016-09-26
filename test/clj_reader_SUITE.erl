@@ -834,6 +834,10 @@ discard(_Config) ->
                                         " :clr [:two]) :three]">>,
                                       AllowClrFeatureOpts),
 
+  OneTwoThreeVector = clj_reader:read(<<"[:one #? @  (:clj :three"
+                                        " :clr [:two]) :three]">>,
+                                      AllowClrFeatureOpts),
+
   OneTwoThreeFourVector = clj_reader:read(<<"[:one :two :three :four]">>),
   OneTwoThreeFourVector =
     clj_reader:read(<<"[:one #?@(:clj :three :clr"
