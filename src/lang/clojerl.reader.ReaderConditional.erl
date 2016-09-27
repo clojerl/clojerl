@@ -14,8 +14,8 @@
   #?TYPE{data = {List, IsSplicing}}.
 
 equiv( #?TYPE{name = ?M, data = {X1, Y}}
-                      , #?TYPE{name = ?M, data = {X2, Y}}
-                      ) ->
+     , #?TYPE{name = ?M, data = {X2, Y}}
+     ) ->
   clj_core:equiv(X1, X2);
 equiv(_, _) ->
   false.

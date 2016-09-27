@@ -646,3 +646,5 @@
   (is (= 23 (read-string {:eof 23} "")))
   (is (= 23 (read {:eof 23} (new erlang.io.PushbackReader
                                  (new erlang.io.StringReader ""))))))
+
+(run-tests)

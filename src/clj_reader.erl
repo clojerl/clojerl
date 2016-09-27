@@ -54,6 +54,7 @@
                     %% Current line and column location.
                   , bindings      => clj_scope:scope()
                     %% Current bindings.
+                  , return_on     => char()
                   }.
 
 -type read_fold_fun() :: fun((any(), any()) -> any()).
@@ -156,6 +157,7 @@ new_state(Src, Env, Opts) ->
    , env           => Env
    , loc           => {1, 1}
    , bindings      => clj_scope:new()
+   , return_on     => undefined
    }.
 
 %% @doc Makes sure a single form is read unless we reach
@@ -183,6 +185,8 @@ read_one(#{src := <<>>, opts := Opts} = State) ->
     eof ->
       throw({eof, Eof, State})
   end;
+read_one(#{ src := <<Ch/utf8, _/binary>>, return_on := Ch} = State) ->
+  throw({return_on, consume_char(State)});
 read_one(#{src := <<First/utf8, Rest/binary>>} = State) ->
   Second = peek_src(State#{src := Rest}),
   case clj_utils:char_type(First, Second) of
@@ -317,7 +321,7 @@ unicode_char(State, Base, Length, IsExact) ->
         EscapedChar = binary_to_integer(Number, Base),
         {EscapedChar, State1}
       catch
-        _:badarg ->
+        error:badarg ->
           BaseBin = integer_to_binary(Base),
           clj_utils:throw( <<"Number '", Number/binary,
                              "' is not in base ", BaseBin/binary>>
@@ -413,12 +417,12 @@ read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
 
 -spec read_meta(state()) -> state().
 read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
-  {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
+  {SugaredMeta, State1} = read_pop_one(State#{src => Src}),
   Meta    = clj_utils:desugar_meta(SugaredMeta),
   LocMeta = file_location_meta(State),
   AllMeta = clj_core:merge([LocMeta, Meta]),
 
-  {Form, State2} = pop_form(read_one(State1)),
+  {Form, State2} = read_pop_one(State1),
   NewForm = clj_core:with_meta(Form, AllMeta),
 
   push_form(NewForm, State2).
@@ -429,7 +433,7 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
 
 -spec read_syntax_quote(state()) -> state().
 read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
-  {Form, NewState} = pop_form(read_one(consume_char(State))),
+  {Form, NewState} = read_pop_one(consume_char(State)),
 
   try
     %% TODO: using process dictionary here might be a code smell
@@ -438,8 +442,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
     {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
 
     push_form(NewFormWithMeta, NewState#{env => Env2})
-  catch _:Reason ->
-      erlang:raise(throw, Reason, erlang:get_stacktrace()),
+  catch error:Reason ->
       clj_utils:throw(Reason, location(NewState))
   after
     erlang:erase(gensym_env)
@@ -785,7 +788,7 @@ read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
           ArgSym = register_arg(-1, ArgEnv),
           push_form(ArgSym, consume_chars(1, State1));
         {register_arg_n, State1} ->
-          {N, State2} = pop_form(read_one(State1)),
+          {N, State2} = read_pop_one(State1),
           clj_utils:throw_when( not is_integer(N)
                               , <<"Arg literal must be %, %& or %integer">>
                               , location(State1)
@@ -887,7 +890,7 @@ read_fn(State) ->
                                 )
   end,
   erlang:put(arg_env, #{}),
-  {Form, NewState} = pop_form(read_one(State)),
+  {Form, NewState} = read_pop_one(State),
   ArgEnv = erlang:erase(arg_env),
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
@@ -915,7 +918,7 @@ read_fn(State) ->
 
 -spec read_eval(state()) -> state().
 read_eval(#{env := Env} = State) ->
-  {Form, NewState} = pop_form(read_one(State)),
+  {Form, NewState} = read_pop_one(State),
   {Value, Env1} = clj_compiler:eval(Form, #{}, Env),
   push_form(Value, NewState#{env => Env1}).
 
@@ -983,7 +986,7 @@ read_regex(#{src := <<>>} = State) ->
 
 -spec read_discard(state()) -> state().
 read_discard(State) ->
-  {_, NewState} = pop_form(read_one(State)),
+  {_, NewState} = read_pop_one(State),
   %% Can't call read_one here because is might not be a top level form.
   NewState.
 
@@ -1027,61 +1030,84 @@ read_cond(#{opts := Opts} = State0) ->
                       , location(State1)
                       ),
 
-  {ListForm, NewState} = pop_form(read_one(State2)),
-
   OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
   SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,
   erlang:put(supress_read, SupressRead),
 
-  ReturnState = case SupressRead of
-                  true ->
-                    ReaderCondForm = reader_conditional(ListForm, IsSplicing),
-                    push_form(ReaderCondForm, NewState);
-                  false ->
-                    read_cond_delimited(ListForm, IsSplicing, NewState)
-                end,
-
-  erlang:put(supress_read, OldSupressRead),
-
-  ReturnState.
+  try
+    case SupressRead of
+      true ->
+        {ListForm, State3} = read_pop_one(State2),
+        ReaderCondForm = reader_conditional(ListForm, IsSplicing),
+        push_form(ReaderCondForm, State3);
+      false ->
+        read_cond_delimited(IsSplicing, consume_char(State2))
+    end
+  after
+    erlang:put(supress_read, OldSupressRead)
+  end.
 
 reader_conditional(List, IsSplicing) ->
   'clojerl.reader.ReaderConditional':?CONSTRUCTOR(List, IsSplicing).
 
-read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
-  Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
-  Forms    = clj_core:seq(List),
-  case match_feature(Forms, Features, State) of
-    nomatch -> %% When there is no match there is nothing to read
-      State;
-    Form when IsSplicing ->
-      PendingFormsFun = fun push_pending_form/2,
-      case clj_core:'sequential?'(Form) of
-        false ->
-          clj_utils:throw( <<"Spliced form list in read-cond-splicing must "
-                             "extend clojerl.ISequential">>
-                         , location(State)
-                         );
-        true ->
-          Seq   = clj_core:seq_to_list(Form),
-          Items = clj_core:seq_to_list(Seq),
-          lists:foldl(PendingFormsFun, State, lists:reverse(Items))
-      end;
-    Form ->
-      push_form(Form, State)
+read_cond_delimited(IsSplicing, State) ->
+  case match_feature(State) of
+    %% When there is no match at all there is nothing to read
+    {finished, State1} ->
+      State1;
+    {nomatch,  State1} ->
+      read_cond_delimited(IsSplicing, State1);
+    {match, Form, State1} when IsSplicing ->
+      clj_utils:throw_when( not clj_core:'sequential?'(Form)
+                          , <<"Spliced form list in "
+                              "read-cond-splicing must "
+                              "extend clojerl.ISequential">>
+                          , location(State1)
+                          ),
+      State2 = read_until($), fun read_skip_suppress/1, State1),
+      Items = lists:reverse(clj_core:seq_to_list(Form)),
+      lists:foldl(fun push_pending_form/2, State2, Items);
+    {match, Form, State1} ->
+      State2 = read_until($), fun read_skip_suppress/1, State1),
+      push_form(Form, State2)
   end.
 
-match_feature([], _Features, _State) ->
-  nomatch;
-match_feature([Feature, Form | Rest], Features, State) ->
-  case clj_core:'contains?'(Features, Feature) of
-    true  -> Form;
-    false -> match_feature(Rest, Features, State)
-  end;
-match_feature(_, _, State) ->
-  clj_utils:throw( <<"read-cond requires an even number of forms">>
-                 , location(State)
-                 ).
+-spec match_feature(state()) ->
+  {match | nomatch, any(), state()} | {finished, state()}.
+match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
+  Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
+  try
+    {Feature, State1} = read_pop_one(State#{return_on => $)}),
+    try
+      case clj_core:'contains?'(Features, Feature) of
+        true  ->
+          {Form, State2} = read_pop_one(State1),
+          {match, Form, State2#{return_on => ReturnOn}};
+        false ->
+          State2 = read_skip_suppress(State1),
+          {nomatch, State2#{return_on => ReturnOn}}
+      end
+    catch
+      throw:{return_on, State3} ->
+        clj_utils:throw( <<"read-cond requires an even number of forms">>
+                       , location(State3)
+                       )
+    end
+  catch
+    throw:{return_on, State4} ->
+      {finished, State4#{return_on => ReturnOn}}
+  end.
+
+-spec read_skip_suppress(state()) -> state().
+read_skip_suppress(State) ->
+  OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+  erlang:put(supress_read, true),
+  try
+    {_, NewState} = read_pop_one(State),
+    NewState
+  after
+    erlang:put(supress_read, OldSupressRead)
+  end.
 
 %%------------------------------------------------------------------------------
 %% # reader tag
@@ -1089,7 +1115,7 @@ match_feature(_, _, State) ->
 
 -spec read_tagged(state()) -> state().
 read_tagged(State) ->
-  {Symbol, State1} = pop_form(read_one(State)),
+  {Symbol, State1} = read_pop_one(State),
 
   clj_utils:throw_when( not clj_core:'symbol?'(Symbol)
                       , <<"Reader tag must be a symbol">>
@@ -1127,17 +1153,23 @@ read_tagged(State) ->
               DefaultReaderFun -> DefaultReaderFun
             end,
 
-  clj_utils:throw_when( Reader2 =:= undefined
-                      , [ <<"No reader function for tag ">>
-                        , Symbol
-                        ]
-                      , location(State)
-                      ),
 
-  {Form, State2} = pop_form(read_one(State1)),
-  ReadForm       = clj_core:invoke(Reader2, [Form]),
+  {Form, State2} = read_pop_one(State1),
+  case clj_core:boolean(erlang:get(supress_read)) of
+    true ->
+      push_form(tagged_literal(Symbol, Form), State2);
+    false ->
+      clj_utils:throw_when( Reader2 =:= undefined
+                          , [<<"No reader function for tag ">>, Symbol]
+                          , location(State)
+                          ),
+      ReadForm = clj_core:invoke(Reader2, [Form]),
+      push_form(ReadForm, State2)
+    end.
 
-  push_form(ReadForm, State2).
+-spec tagged_literal(any(), any()) -> 'clojerl.reader.Taggedliteral':type().
+tagged_literal(Tag, Form) ->
+  'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(Tag, Form).
 
 %%------------------------------------------------------------------------------
 %% Utility functions
@@ -1228,16 +1260,18 @@ read_token(State) ->
   consume(State, Fun).
 
 -spec read_until(char(), state()) -> state().
-read_until(Delim, #{src := <<>>} = State) ->
+read_until(Delim, State) ->
+  read_until(Delim, fun read_one/1, State).
+
+-spec read_until(char(), function(), state()) -> state().
+read_until(Delim, ReadFun, #{src := <<>>} = State) ->
   case check_reader(State) of
     {ok, NewState} ->
-      read_until(Delim, NewState);
+      read_until(Delim, ReadFun, NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      LineBin = integer_to_binary(Line),
-      ColBin = integer_to_binary(Col),
       clj_utils:throw( [ <<"Started reading at (">>
-                       , LineBin, <<":">>, ColBin
+                       , Line, <<":">>, Col
                        , <<") but found EOF while expecting '">>
                        , <<Delim/utf8>>
                        , <<"'">>
@@ -1245,15 +1279,21 @@ read_until(Delim, #{src := <<>>} = State) ->
                      , location(State)
                      )
   end;
-read_until(Delim, #{src := <<Delim/utf8, _/binary>>} = State) ->
-  consume_char(scope_put(read_delim, false, State));
-read_until(Delim, #{src := <<X/utf8, _/binary>>} = State) ->
+read_until(Delim, _ReadFun, #{src := <<Delim/utf8, _/binary>>} = State) ->
+  #{ forms         := Forms
+   , pending_forms := PendingForms
+   } = State,
+  State1 = State#{ forms := lists:reverse(PendingForms) ++ Forms
+                 , pending_forms => []
+                 },
+  consume_char(scope_put(read_delim, false, State1));
+read_until(Delim, ReadFun, #{src := <<X/utf8, _/binary>>} = State) ->
   case clj_utils:char_type(X) of
     whitespace ->
-      read_until(Delim, consume_char(State));
+      read_until(Delim, ReadFun, consume_char(State));
     _ ->
       State1 = scope_put(read_delim, true, State),
-      read_until(Delim, read_one(State1))
+      read_until(Delim, ReadFun, ReadFun(State1))
   end.
 
 -spec is_macro_terminating(char()) -> boolean().
@@ -1274,12 +1314,14 @@ skip_line(State) ->
 
 -spec wrapped_read('clojerl.Symbol':type(), state()) -> state().
 wrapped_read(Symbol, State) ->
-  {Form, NewState} = pop_form(read_one(State)),
+  {Form, NewState} = read_pop_one(State),
   List = clj_core:list([Symbol, Form]),
   push_form(List, NewState).
 
--spec pop_form(state()) -> {any(), state()}.
-pop_form(#{forms := [Form | Forms]} = State) ->
+-spec read_pop_one(state()) -> {any(), state()}.
+read_pop_one(State0) ->
+  State = read_one(State0),
+  #{forms := [Form | Forms]} = State,
   {Form, State#{forms => Forms}}.
 
 -spec push_form(any(), state()) -> state().

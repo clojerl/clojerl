@@ -41,6 +41,7 @@
 -define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
 -define(RATIO_PATTERN, "^([-+]?[0-9]+)/([0-9]+)$").
 
+
 -type char_type() :: whitespace | number | string
                    | keyword | comment | quote
                    | deref | meta | syntax_quote

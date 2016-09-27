@@ -907,7 +907,7 @@ discard(_Config) ->
   ct:comment("Splice in list but not sequential"),
   ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
                            AllowClrFeatureOpts)
-       catch _:<<"?:1:23: Spliced form list in read-cond-splicing must "
+       catch _:<<"?:1:13: Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
        end,
 
