@@ -1078,6 +1078,10 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
   Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
   try
     {Feature, State1} = read_pop_one(State#{return_on => $)}),
+    clj_utils:error_when( not clj_core:'keyword?'(Feature)
+                        , <<"Feature should be a keyword">>
+                        , location(State)
+                        ),
     try
       case clj_core:'contains?'(Features, Feature) of
         true  ->
@@ -1089,7 +1093,7 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
       end
     catch
       throw:{return_on, State3} ->
-        clj_utils:throw( <<"read-cond requires an even number of forms">>
+        clj_utils:error( <<"read-cond requires an even number of forms">>
                        , location(State3)
                        )
     end

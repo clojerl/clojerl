@@ -12,11 +12,14 @@
 
         , compare/2
 
-        , error/1
         , throw/1
         , throw/2
         , throw_when/2
         , throw_when/3
+        , error/1
+        , error/2
+        , error_when/2
+        , error_when/3
         , warn_when/2
         , warn_when/3
 
@@ -163,26 +166,13 @@ compare(X, Y) ->
     X >  Y -> 1
   end.
 
--spec error(any()) -> no_return().
-error(List) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
-  error(Reason);
-error(Reason) when is_binary(Reason) ->
-  erlang:error(Reason).
-
 -spec throw(any()) -> no_return().
 throw(Reason) ->
   throw(Reason, undefined).
 
--spec throw(boolean(), undefined | clj_reader:location()) -> no_return().
-throw(List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
-  throw(Reason, Location);
-throw(Reason, Location) when is_binary(Reason) ->
-  LocationBin = location_to_binary(Location),
-  erlang:throw(<<LocationBin/binary, Reason/binary>>);
-throw(Reason, Location) ->
-  erlang:throw({Location, Reason}).
+-spec throw(any(), undefined | clj_reader:location()) -> no_return().
+throw(List, Location) ->
+  throw_when(true, List, Location).
 
 -spec throw_when(boolean(), any()) -> ok | no_return().
 throw_when(Throw, Reason) ->
@@ -192,9 +182,36 @@ throw_when(Throw, Reason) ->
 throw_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   throw_when(true, Reason, Location);
+throw_when(true, Reason, Location) when is_binary(Reason) ->
+  LocationBin = location_to_binary(Location),
+  erlang:throw(<<LocationBin/binary, Reason/binary>>);
 throw_when(true, Reason, Location) ->
-  throw(Reason, Location);
+  erlang:throw({Location, Reason});
 throw_when(false, _, _) ->
+  ok.
+
+-spec error(any()) -> no_return().
+error(List) ->
+  error_when(true, List, undefined).
+
+-spec error(any(), undefined | clj_reader:location()) -> no_return().
+error(List, Location) ->
+  error_when(true, List, Location).
+
+-spec error_when(boolean(), any()) -> ok | no_return().
+error_when(Throw, Reason) ->
+  error_when(Throw, Reason, undefined).
+
+-spec error_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
+error_when(true, List, Location) when is_list(List) ->
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  error_when(true, Reason, Location);
+error_when(true, Reason, Location) when is_binary(Reason) ->
+  LocationBin = location_to_binary(Location),
+  erlang:error(<<LocationBin/binary, Reason/binary>>);
+error_when(true, Reason, Location) ->
+  erlang:error({Location, Reason});
+error_when(false, _, _) ->
   ok.
 
 -spec warn_when(boolean(), any()) -> ok | no_return().

@@ -819,7 +819,7 @@ discard(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
 
   ct:comment("Allow with no features"),
-  HelloKeyword = clj_reader:read(<<"#?(1 2) :hello">>, AllowOpts),
+  HelloKeyword = clj_reader:read(<<"#?(:one 2) :hello">>, AllowOpts),
 
   ct:comment("Allow with feature match"),
   2 = clj_reader:read(<<"#?(:clj 2) :hello">>, AllowCljFeatureOpts),
@@ -909,6 +909,11 @@ discard(_Config) ->
                            AllowClrFeatureOpts)
        catch _:<<"?:1:13: Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
+       end,
+
+  ct:comment("Feature is not a keyword"),
+  ok = try clj_reader:read(<<"#?(1 2) :hello">>, AllowOpts)
+       catch _:<<"?:1:4: Feature should be a keyword">> -> ok
        end,
 
   {comments, ""}.
