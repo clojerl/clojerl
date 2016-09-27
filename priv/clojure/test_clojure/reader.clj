@@ -492,7 +492,7 @@
 
 (deftest unknown-tag
   (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})
-        throw-on-unknown (fn [tag val] (throw (:error. (str "No data reader function for tag " tag))))
+        throw-on-unknown (fn [tag val] (throw (str "No data reader function for tag " tag)))
         my-uuid (partial my-unknown 'uuid)
         u "#uuid \"550e8400-e29b-41d4-a716-446655440000\""
         s "#never.heard.of/some-tag [1 2]" ]
@@ -510,9 +510,9 @@
     (binding [*default-data-reader-fn* throw-on-unknown]
       (testing "Unknown tag with custom throw-on-unknown"
         (are [err msg form] (thrown-with-msg? err msg (read-string form))
-          :error #"No data reader function for tag foo" "#foo [1 2]"
-          :error #"No data reader function for tag bar/foo" "#bar/foo [1 2]"
-          :error #"No data reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]")))
+          :throw #"No data reader function for tag foo" "#foo [1 2]"
+          :throw #"No data reader function for tag bar/foo" "#bar/foo [1 2]"
+          :throw #"No data reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]")))
 
     (testing "Unknown tag out-of-the-box behavior (like Clojure 1.4)"
       (are [err msg form] (thrown-with-msg? err msg (read-string form))
@@ -621,7 +621,7 @@
   (testing "error cases"
     (is (thrown-with-msg? :error #"Feature should be a keyword" (read-string {:read-cond :allow} "#?((+ 1 2) :a)")))
     (is (thrown-with-msg? :error #"even number of forms" (read-string {:read-cond :allow} "#?(:cljs :a :clj)")))
-    (is (thrown-with-msg? :error #"read-cond-splicing must implement" (read-string {:read-cond :allow} "#?@(:clje :a)")))
+    (is (thrown-with-msg? :error #"read-cond-splicing must extend" (read-string {:read-cond :allow} "#?@(:clje :a)")))
     (is (thrown-with-msg? :error #"is reserved" (read-string {:read-cond :allow} "#?@(:foo :a :else :b)")))
     (is (thrown-with-msg? :error #"must be a list" (read-string {:read-cond :allow} "#?[:foo :a :else :b]")))
     (is (thrown-with-msg? :error #"Conditional read not allowed" (read-string {:read-cond :BOGUS} "#?[:clje :a :default nil]")))

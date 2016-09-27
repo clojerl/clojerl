@@ -1000,23 +1000,17 @@ read_cond(#{src := <<>>} = State) ->
     {ok, NewState} ->
       read_cond(NewState);
     eof ->
-      clj_utils:throw(<<"EOF while reading cond">>, location(State))
+      clj_utils:error(<<"EOF while reading cond">>, location(State))
   end;
 read_cond(#{opts := Opts} = State0) ->
   ReadCondOpt = maps:get(?OPT_READ_COND, Opts, undefined),
-  clj_utils:throw_when(not lists:member(ReadCondOpt, [allow, preserve])
+  clj_utils:error_when(not lists:member(ReadCondOpt, [allow, preserve])
                       , <<"Conditional read not allowed">>
                       , location(State0)
                       ),
 
   {_, State} = consume(State0, [whitespace]),
-  ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
   IsSplicing = peek_src(State) =:= $@,
-
-  clj_utils:throw_when( IsSplicing andalso not ReadDelim
-                      , <<"cond-splice not in list">>
-                      , location(State)
-                      ),
 
   State1 = case IsSplicing of
              true  -> consume_char(State);
@@ -1025,7 +1019,7 @@ read_cond(#{opts := Opts} = State0) ->
 
   {_, State2} = consume(State1, [whitespace]),
 
-  clj_utils:throw_when( peek_src(State2) =/= $(
+  clj_utils:error_when( peek_src(State2) =/= $(
                       , <<"read-cond body must be a list">>
                       , location(State1)
                       ),
@@ -1038,7 +1032,7 @@ read_cond(#{opts := Opts} = State0) ->
     case SupressRead of
       true ->
         {ListForm, State3} = read_pop_one(State2),
-        ReaderCondForm = reader_conditional(ListForm, IsSplicing),
+        ReaderCondForm     = reader_conditional(ListForm, IsSplicing),
         push_form(ReaderCondForm, State3);
       false ->
         read_cond_delimited(IsSplicing, consume_char(State2))
@@ -1058,12 +1052,20 @@ read_cond_delimited(IsSplicing, State) ->
     {nomatch,  State1} ->
       read_cond_delimited(IsSplicing, State1);
     {match, Form, State1} when IsSplicing ->
-      clj_utils:throw_when( not clj_core:'sequential?'(Form)
+      clj_utils:error_when( not clj_core:'sequential?'(Form)
                           , <<"Spliced form list in "
                               "read-cond-splicing must "
                               "extend clojerl.ISequential">>
                           , location(State1)
                           ),
+
+      ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
+      clj_utils:error_when( IsSplicing andalso not ReadDelim
+                          , <<"Reader conditional splicing "
+                              "not allowed at the top level">>
+                          , location(State)
+                          ),
+
       State2 = read_until($), fun read_skip_suppress/1, State1),
       Items = lists:reverse(clj_core:seq_to_list(Form)),
       lists:foldl(fun push_pending_form/2, State2, Items);
@@ -1149,25 +1151,27 @@ read_tagged(State) ->
               DefaultDataReader -> DefaultDataReader
             end,
 
-  Reader2 = case
-              Reader1 =/= undefined
-              orelse clj_core:deref(DefaultReaderFunVar)
-            of
-              true -> Reader1;
-              DefaultReaderFun -> DefaultReaderFun
-            end,
-
+  {IsDefault, Reader2} = case Reader1 =/= undefined of
+                           true  -> {false, Reader1};
+                           false -> {true, clj_core:deref(DefaultReaderFunVar)}
+                         end,
 
   {Form, State2} = read_pop_one(State1),
   case clj_core:boolean(erlang:get(supress_read)) of
     true ->
       push_form(tagged_literal(Symbol, Form), State2);
     false ->
-      clj_utils:throw_when( Reader2 =:= undefined
+      clj_utils:error_when( Reader2 =:= undefined
                           , [<<"No reader function for tag ">>, Symbol]
                           , location(State)
                           ),
-      ReadForm = clj_core:invoke(Reader2, [Form]),
+
+      ReadForm = case IsDefault of
+                   true ->
+                     clj_core:invoke(Reader2, [Symbol, Form]);
+                   false ->
+                     clj_core:invoke(Reader2, [Form])
+                 end,
       push_form(ReadForm, State2)
     end.
 

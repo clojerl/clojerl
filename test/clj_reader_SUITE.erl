@@ -899,9 +899,10 @@ discard(_Config) ->
        catch _:<<"?:1:21: read-cond requires an even number of forms">> -> ok
        end,
 
-  ct:comment("Splice not in list"),
-  ok = try clj_reader:read(<<"#?@(:one [:two])">>, AllowOpts)
-       catch _:<<"?:1:3: cond-splice not in list">> -> ok
+  ct:comment("Splice at the top level"),
+  ok = try clj_reader:read(<<"#?@(:clje [:two])">>, AllowOpts)
+       catch _:<<"?:1:5: Reader conditional splicing not allowed "
+                 "at the top level">> -> ok
        end,
 
   ct:comment("Splice in list but not sequential"),
@@ -978,7 +979,7 @@ tagged(_Config) ->
     'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                               , <<"*default-data-reader-fn*">>
                               ),
-  DefaultReaderFun = fun(_) -> default end,
+  DefaultReaderFun = fun(_, _) -> default end,
   ok  = 'clojerl.Var':push_bindings(#{DefaultReaderFunVar => DefaultReaderFun}),
   default = clj_reader:read(<<"#whatever :tag">>),
   default = clj_reader:read(<<"#we use">>),
