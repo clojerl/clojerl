@@ -355,7 +355,7 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
               {Namespace, Name} ->
                 clj_core:keyword(Namespace, Name);
               undefined ->
-                clj_utils:throw( <<"Invalid token: :", Token/binary>>
+                clj_utils:error( <<"Invalid token: :", Token/binary>>
                                , location(State)
                                )
             end,
@@ -379,7 +379,7 @@ read_symbol(State) ->
              {Ns, Name} ->
                clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
              undefined ->
-               clj_utils:throw(<<"Invalid symbol ", Token/binary>>
+               clj_utils:error(<<"Invalid token: ", Token/binary>>
                               , location(State)
                               )
            end,
