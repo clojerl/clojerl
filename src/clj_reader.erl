@@ -352,9 +352,9 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
                 clj_core:keyword(Namespace, Name);
               {undefined, Name} ->
                 clj_core:keyword(Name);
-              {Namespace, Name} ->
+              {<<Ch/utf8, _/binary>> = Namespace, Name} when Ch =/= $: ->
                 clj_core:keyword(Namespace, Name);
-              undefined ->
+              _ ->
                 clj_utils:error( <<"Invalid token: :", Token/binary>>
                                , location(State)
                                )
