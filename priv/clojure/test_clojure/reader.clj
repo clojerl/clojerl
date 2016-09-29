@@ -61,11 +61,12 @@
     (read-string form)
     (do
       (spit file form)
-      (load-file (str file)))))
+      (load-file (erlang.io.File/path.e file)))))
 
 (defn code-units
   [s]
-  (and (instance? clojerl.String s) (map int s)))
+  (and (instance? clojerl.String s)
+       (unicode/characters_to_list.e s)))
 
 (deftest Strings
   (is (= "abcde" (str \a \b \c \d \e)))
@@ -342,7 +343,7 @@
     [x]
     (reduce + x (range a))))"
         stream (new erlang.io.PushbackReader
-                 (new erlang.io.StringReader code))
+                    (new erlang.io.StringReader code))
         top-levels (take-while identity (repeatedly #(read stream false nil)))
         expected-metadata '{ns {:line 1, :column 1}
                             :require {:line 2, :column 3}

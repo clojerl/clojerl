@@ -5722,7 +5722,7 @@
 (defn load-file
   {:added "1.0"}
   [path]
-  (clj_compiler/compile_file.e path))
+  (clj_compiler/load_file.e path))
 
 ;;;;;;;;;;;;; nested associative ops ;;;;;;;;;;;
 

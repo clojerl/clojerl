@@ -45,7 +45,7 @@ make_temp(Prefix, Suffix) ->
   TmpDir = tmp_dir(),
   ID     = erlang:integer_to_binary(erlang:phash2(erlang:make_ref())),
   Path   = <<TmpDir/binary, "/", Prefix/binary, ID/binary, Suffix/binary>>,
-  open(Path, [write]).
+  open(Path, [write, read]).
 
 -spec tmp_dir() -> binary().
 tmp_dir() ->

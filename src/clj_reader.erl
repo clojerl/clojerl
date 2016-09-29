@@ -233,7 +233,7 @@ read_string(#{ src     := <<"\"", _/binary>>
   State = consume_char(maps:remove(current, State0)),
   push_form(String, remove_scope(State));
 %% Process escaped character
-read_string(#{ src := <<"\\", _/binary>>
+read_string(#{ src     := <<"\\", _/binary>>
              , current := String
              } = State0
            ) ->
@@ -257,9 +257,9 @@ read_string(#{src := <<>>} = State) ->
       read_string(NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      clj_utils:throw( [ <<"Started reading at (">>
+      clj_utils:error( [ <<"Started reading at (">>
                        , Line, <<":">>, Col
-                       , <<") but found EOF while expecting '\"'">>
+                       , <<") but found EOF while reading string">>
                        ]
                      , location(State)
                      )
@@ -284,19 +284,19 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
     $u  ->
       %% Hexa unicode
       {CodePoint, State1} = unicode_char(consume_char(State), 16, 4, true),
-      {unicode:characters_to_binary([CodePoint]), State1};
+      {unicode:characters_to_binary([CodePoint], utf8), State1};
     _ when CharType == number ->
       %% Octal unicode
       case unicode_char(State, 8, 3, false) of
-        {CodePoint, State1} when CodePoint > 8#337 ->
-          clj_utils:throw( <<"Octal escape sequence must be in range [0, 377]">>
+        {CodePoint, State1} when CodePoint > 8#377 ->
+          clj_utils:error( <<"Octal escape sequence must be in range [0, 377]">>
                          , location(State1)
                          );
         {CodePoint, State1} ->
-          {unicode:characters_to_binary([CodePoint]), State1}
+          {unicode:characters_to_binary([CodePoint], utf8), State1}
       end;
     _ ->
-      clj_utils:throw( <<"Unsupported escape character: \\", Char>>
+      clj_utils:error( <<"Unsupported escape character: \\", Char>>
                      , location(State)
                      )
   end.

@@ -7,6 +7,7 @@
          compile_file/2,
          compile/1,
          compile/2,
+         load_file/1,
          eval/1,
          eval/2,
          eval/3,
@@ -101,6 +102,12 @@ compile(Src) when is_binary(Src) ->
 -spec compile(binary(), options()) -> clj_env:env().
 compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
+
+-spec load_file(binary()) -> any().
+load_file(Path) ->
+  Env = compile_file(Path),
+  [Values] = clj_env:get(Env, eval),
+  Values.
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
@@ -261,8 +268,8 @@ emit_eval_form(Form, Env) ->
   Env1 = clj_analyzer:analyze(Env, Form),
   Env2 = clj_emitter:emit(Env1),
   {Exprs, Env3} = clj_emitter:remove_state(Env2),
-  eval_expressions(Exprs),
-  Env3.
+  Values = eval_expressions(Exprs),
+  clj_env:put(Env3, eval, Values).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
