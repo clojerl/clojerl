@@ -279,10 +279,10 @@
   )
 
 (deftest reading-keywords
-  (are [x y] (= x (binding [*ns* (the-ns 'user)] (read-string y)))
+  (are [x y] (= x (binding [*ns* (the-ns 'clje.user)] (read-string y)))
        :foo ":foo"
        :foo/bar ":foo/bar"
-       :user/foo "::foo")
+       :clje.user/foo "::foo")
   (are [err msg form] (thrown-with-msg? err msg (read-string form))
        :error #"Invalid token: foo:" "foo:"
        :error #"Invalid token: :bar/" ":bar/"
