@@ -322,17 +322,16 @@ unicode_char(State, Base, Length, IsExact) ->
         {EscapedChar, State1}
       catch
         error:badarg ->
-          BaseBin = integer_to_binary(Base),
-          clj_utils:throw( <<"Number '", Number/binary,
-                             "' is not in base ", BaseBin/binary>>
+          clj_utils:error( [ <<"Number '">>, Number
+                           , <<"' is not in base ">>, Base
+                           ]
                           , location(State)
-                          )
+                         )
       end;
     NumLength ->
-      LengthBin = integer_to_binary(Length),
-      NumLengthBin = integer_to_binary(NumLength),
-      clj_utils:throw(<<"Invalid character length: ", NumLengthBin/binary,
-                        ", should be ", LengthBin/binary>>
+      clj_utils:error( [ <<"Invalid character length: ">>, NumLength
+                       , <<", should be: ">>, Length
+                       ]
                      , location(State)
                      )
   end.
@@ -745,7 +744,7 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
         Ch;
       <<"o", RestToken/binary>> ->
         read_octal_char(State1#{src => RestToken});
-      Ch -> clj_utils:throw( <<"Unsupported character: \\", Ch/binary>>
+      Ch -> clj_utils:error( <<"Unsupported character: \\", Ch/binary>>
                            , location(State)
                            )
     end,
@@ -757,14 +756,14 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
 read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
   Size    = size(RestToken),
   SizeBin = integer_to_binary(Size),
-  clj_utils:throw( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
+  clj_utils:error( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
                  , location(State)
                  );
 read_octal_char(#{src := RestToken} = State) ->
   Size = size(RestToken),
   case unicode_char(State, 8, Size, true) of
     {Ch, _} when Ch > 8#377 ->
-      clj_utils:throw(<<"Octal escape sequence must be in range [0, 377]">>
+      clj_utils:error(<<"Octal escape sequence must be in range [0, 377]">>
                      , location(State)
                      );
     {Ch, _} -> Ch

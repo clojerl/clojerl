@@ -29,7 +29,7 @@
          merge/1,
          'contains?'/2,
          boolean/1,
-         byte/1, short/1,
+         byte/1, char/1, short/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
          subvec/3,
@@ -421,6 +421,13 @@ boolean(_) -> true.
 -spec byte(any()) -> boolean().
 byte(X) when is_number(X), 0 =< X, X =< 256 ->
   erlang:trunc(X).
+
+-spec char(any()) -> boolean().
+char(X) when is_number(X) ->
+  case unicode:characters_to_binary([X], utf8) of
+    Char when is_binary(Char) -> Char;
+    Error -> error(Error)
+  end.
 
 -spec short(any()) -> boolean().
 short(X) when is_number(X), 0 =< X, X < 32768 ->

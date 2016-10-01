@@ -3352,11 +3352,10 @@
 
 (defn char
   "Coerce to char"
-  {:inline (fn  [x] `(. clojure.lang.RT (~'charCast ~x)))
+  {:inline (fn  [x] `(clj_core/to_char.e x))
    :added "1.1"}
   [x]
-  (throw "unimplemented cast to char")
-  #_(. clojure.lang.RT (charCast x)))
+  (clj_core/char.e x))
 
 (defn boolean
   "Coerce to boolean"
