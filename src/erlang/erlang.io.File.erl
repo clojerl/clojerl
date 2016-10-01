@@ -65,8 +65,7 @@ tmp_dir() ->
 
 close(#?TYPE{name = ?M, data = Pid, info = Path}) ->
   case file:close(Pid) of
-    {error, Reason} ->
-      erlang:display(Reason),
+    {error, _Reason} ->
       error(<<"Couldn't close ", Path/binary>>);
     ok ->
       undefined

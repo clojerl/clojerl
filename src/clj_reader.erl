@@ -283,18 +283,25 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
     $f  -> {<<"\f">>, consume_char(State)};
     $u  ->
       %% Hexa unicode
-      {CodePoint, State1} = unicode_char(consume_char(State), 16, 4, true),
-      {unicode:characters_to_binary([CodePoint], utf8), State1};
+      State1   = consume_char(State),
+      NextChar = peek_src(State1),
+      clj_utils:error_when( NextChar =/= eof
+                            andalso not is_char_valid(NextChar, 16)
+                          , [ <<"Invalid unicode escape: \\u">>
+                            , NextChar =/= eof andalso <<NextChar/utf8>>
+                            ]
+                          , location(State1)
+                          ),
+      {CodePoint, State2} = unicode_char(State1, 16, 4, true),
+      {unicode:characters_to_binary([CodePoint], utf8), State2};
     _ when CharType == number ->
       %% Octal unicode
-      case unicode_char(State, 8, 3, false) of
-        {CodePoint, State1} when CodePoint > 8#377 ->
-          clj_utils:error( <<"Octal escape sequence must be in range [0, 377]">>
-                         , location(State1)
-                         );
-        {CodePoint, State1} ->
-          {unicode:characters_to_binary([CodePoint], utf8), State1}
-      end;
+      {CodePoint, State1} = unicode_char(State, 8, 3, false),
+      clj_utils:error_when( CodePoint > 8#377
+                          , <<"Octal escape sequence must be in range [0, 377]">>
+                          , location(State1)
+                          ),
+      {unicode:characters_to_binary([CodePoint], utf8), State1};
     _ ->
       clj_utils:error( <<"Unsupported escape character: \\", Char>>
                      , location(State)
@@ -741,6 +748,13 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
       <<"formfeed">> -> $\f;
       <<"return">> -> $\r;
       <<"u", RestToken/binary>> ->
+        TokenLength = 'clojerl.String':count(RestToken),
+        clj_utils:error_when( TokenLength =/= 4
+                            , [ <<"Invalid unicode character: \\u">>
+                              , RestToken
+                              ]
+                            , location(State1)
+                            ),
         {Ch, _} = unicode_char(State1#{src => RestToken}, 16, 4, true),
         Ch;
       <<"o", RestToken/binary>> ->
@@ -1380,18 +1394,18 @@ file_location_meta(State) ->
               }
   end.
 
--spec peek_src(state()) -> binary().
+-spec peek_src(state()) -> integer().
 peek_src(#{src := <<First/utf8, _/binary>>}) ->
   First;
 peek_src(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}}) ->
   case 'erlang.io.IReader':read(Reader) of
-    eof -> <<>>;
+    eof -> eof;
     Ch  ->
       'erlang.io.IReader':unread(Reader, Ch),
       Ch
   end;
 peek_src(_State) ->
-  <<>>.
+  eof.
 
 -spec check_reader(state()) -> {ok, state()} | eof.
 check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
