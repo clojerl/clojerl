@@ -304,37 +304,38 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
 -spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
   {binary(), state()}.
 unicode_char(State, Base, Length, IsExact) ->
-  NumberBaseFun = fun
-                    (C) when C >= $0, C =< $9 -> C - $0 + 1  =< Base;
-                    (C) when C >= $a, C =< $z -> C - $a + 11 =< Base;
-                    (C) when C >= $A, C =< $Z -> C - $A + 11 =< Base;
-                    (_) -> false
-                  end,
-  {Number, State1} = consume(State, NumberBaseFun, Length),
+  {Number, State1} = read_token(State, Length),
   Size = case IsExact of
            true -> size(Number);
            false -> Length
          end,
-  case Size of
-    Length ->
-      try
-        EscapedChar = binary_to_integer(Number, Base),
-        {EscapedChar, State1}
-      catch
-        error:badarg ->
-          clj_utils:error( [ <<"Number '">>, Number
-                           , <<"' is not in base ">>, Base
-                           ]
-                          , location(State)
-                         )
-      end;
-    NumLength ->
-      clj_utils:error( [ <<"Invalid character length: ">>, NumLength
-                       , <<", should be: ">>, Length
-                       ]
-                     , location(State)
-                     )
-  end.
+
+  clj_utils:error_when( Size =/= Length
+                      , [ <<"Invalid character length: ">>, Size
+                        , <<", should be: ">>, Length
+                        ]
+                      , location(State)
+                      ),
+  Invalid      = fun(C) -> not is_char_valid(C, Base) end,
+  Chars        = unicode:characters_to_list(Number),
+  InvalidChars = lists:filter(Invalid, Chars),
+  InvalidChar  = case InvalidChars of
+                   [] -> undefined;
+                   [C | _] -> <<C/utf8>>
+                 end,
+  clj_utils:error_when( InvalidChars =/= []
+                      , [ <<"Invalid digit: ">>, InvalidChar]
+                      , location(State)
+                      ),
+
+  {binary_to_integer(Number, Base), State1}.
+
+-spec is_char_valid(integer(), integer()) -> boolean().
+is_char_valid(C, Base) when C >= $0, C =< $9 -> C - $0 + 1  =< Base;
+is_char_valid(C, Base) when C >= $a, C =< $z -> C - $a + 11 =< Base;
+is_char_valid(C, Base) when C >= $A, C =< $Z -> C - $A + 11 =< Base;
+is_char_valid(_, _) -> false.
+
 
 %%------------------------------------------------------------------------------
 %% Keyword
@@ -750,7 +751,11 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
-  push_form(CharBin, State1).
+  push_form(CharBin, State1);
+read_char(State) ->
+  clj_utils:error( <<"EOF while reading character">>
+                 , location(State)
+                 ).
 
 -spec read_octal_char(state()) -> char().
 read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
@@ -763,7 +768,7 @@ read_octal_char(#{src := RestToken} = State) ->
   Size = size(RestToken),
   case unicode_char(State, 8, Size, true) of
     {Ch, _} when Ch > 8#377 ->
-      clj_utils:error(<<"Octal escape sequence must be in range [0, 377]">>
+      clj_utils:error( <<"Octal escape sequence must be in range [0, 377]">>
                      , location(State)
                      );
     {Ch, _} -> Ch
@@ -1260,11 +1265,16 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
 
 -spec read_token(state()) -> {binary(), state()}.
 read_token(State) ->
+  read_token(State, -1).
+
+-spec read_token(state(), integer()) -> {binary(), state()}.
+read_token(State, Length) ->
   Fun = fun(Char) ->
             (not is_whitespace(Char))
               andalso (not is_macro_terminating(Char))
         end,
-  consume(State, Fun).
+  consume(State, Fun, Length).
+
 
 -spec read_until(char(), state()) -> state().
 read_until(Delim, State) ->
