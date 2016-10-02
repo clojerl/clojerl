@@ -423,7 +423,7 @@
                (-> s read-string pr-str read-string))))
       (testing "java.util.Date instants round-trip throughout the year"
         (doseq [month (range 1 13) day (range 1 29) hour (range 1 23)]
-          (let [s (format "#inst \"2010-%02d-%02dT%02d:14:15.666-06:00\"" month day hour)]
+          (let [s (format "#inst \"2010-~2.10.0B-~2.10.0BT~2.10.0B:14:15.666-06:00\"" month day hour)]
             (is (= (-> s read-string)
                    (-> s read-string pr-str read-string))))))
       #_(testing "java.util.Date handling DST in time zones"

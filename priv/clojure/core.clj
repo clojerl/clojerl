@@ -5310,7 +5310,7 @@
   #_(clojure.lang.EnumerationSeq/create e))
 
 (defn format
-  "Formats a string using java.lang.String.format, see java.util.Formatter for format
+  "Formats a string using io_lib/format, see io/format for format
   string syntax"
   {:added "1.0"
    :static true}
