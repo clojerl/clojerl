@@ -72,6 +72,7 @@ ast(#{op := local} = Expr, State) ->
   Ast     = {var, anno_from(NameSym), binary_to_atom(NameBin, utf8)},
 
   push_ast(Ast, State);
+%%------------------------------------------------------------------------------
 %% do
 %%------------------------------------------------------------------------------
 ast(#{op := do} = Expr, State) ->
@@ -84,10 +85,15 @@ ast(#{op := do} = Expr, State) ->
   {Stms, State1} = pop_ast( lists:foldl(fun ast/2, State, StatementsExprs)
                           , StmsCount
                           ),
-  {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
-  Ast = {block, anno_from(Form), Stms ++ [Ret]},
 
-  push_ast(Ast, State2);
+  {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
+  case maps:get(top_level, Expr, false) of
+    false ->
+      Ast = {block, anno_from(Form), Stms ++ [Ret]},
+      push_ast(Ast, State2);
+    true ->
+      lists:foldl(fun push_ast/2, State2, Stms ++ [Ret])
+  end;
 %%------------------------------------------------------------------------------
 %% def
 %%------------------------------------------------------------------------------

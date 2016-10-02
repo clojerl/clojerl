@@ -106,8 +106,7 @@ compile(Src, Opts) when is_binary(Src) ->
 -spec load_file(binary()) -> any().
 load_file(Path) ->
   Env = compile_file(Path),
-  [Values] = clj_env:get(Env, eval),
-  Values.
+  clj_env:get(Env, eval).
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
@@ -134,7 +133,8 @@ eval(Form, Opts, Env) ->
   {Exprs, Forms, Env1} = run_monitored(DoEval),
 
   lists:foreach(compile_forms_fun(Opts), Forms),
-  [Value] = eval_expressions(Exprs),
+  Value = lists:last(eval_expressions(Exprs)),
+
   {Value, Env1}.
 
 %% Flags
@@ -265,11 +265,11 @@ ensure_output_dir(_) ->
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
 emit_eval_form(Form, Env) ->
-  Env1 = clj_analyzer:analyze(Env, Form),
-  Env2 = clj_emitter:emit(Env1),
+  Env1  = clj_analyzer:analyze(Env, Form),
+  Env2  = clj_emitter:emit(Env1),
   {Exprs, Env3} = clj_emitter:remove_state(Env2),
-  Values = eval_expressions(Exprs),
-  clj_env:put(Env3, eval, Values).
+  Value = lists:last(eval_expressions(Exprs)),
+  clj_env:put(Env3, eval, Value).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -300,8 +300,6 @@ compile_forms(Forms, Opts) ->
   end.
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].
-eval_expressions([]) ->
-  [];
 eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   CurrentNs     = clj_namespace:current(),

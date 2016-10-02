@@ -218,51 +218,51 @@
   ;; (is (instance? Ratio 1/2))
   ;; (is (instance? Ratio -1/2))
   ;; (is (instance? Ratio +1/2))
+)
 
+;; Characters
 
-  ;; Characters
+(deftest t-Characters
+  (let [f (temp-file "clojure.core-reader" "test")]
+    (doseq [source [:string :file]]
+      (testing (str "Valid char literals read from " (name source))
+        (are [x form] (= x (read-from source f form))
+          (first "o") "\\o"
+          (char 0) "\\o0"
+          (char 0) "\\o000"
+          (char 047) "\\o47"
+          (char 0377) "\\o377"
 
-  (deftest t-Characters
-    (let [f (temp-file "clojure.core-reader" "test")]
-      (doseq [source [:string :file]]
-        (testing (str "Valid char literals read from " (name source))
-          (are [x form] (= x (read-from source f form))
-            (first "o") "\\o"
-            (char 0) "\\o0"
-            (char 0) "\\o000"
-            (char 047) "\\o47"
-            (char 0377) "\\o377"
+          (first "u") "\\u"
+          (first "A") "\\u0041"
+          (char 0) "\\u0000"
+          (char 0xd7ff) "\\ud7ff"
+          (char 0xe000) "\\ue000"
+          (char 0xffff) "\\uffff"))
+      (testing (str "Errors reading char literals from " (name source))
+        (are [err msg form] (thrown-with-msg? err msg (read-from source f form))
+          :error #"EOF while reading character" "\\"
+          :error #"Unsupported character: \\00" "\\00"
+          :error #"Unsupported character: \\0009" "\\0009"
 
-            (first "u") "\\u"
-            (first "A") "\\u0041"
-            (char 0) "\\u0000"
-            (char 0xd7ff) "\\ud7ff"
-            (char 0xe000) "\\ue000"
-            (char 0xffff) "\\uffff"))
-        (testing (str "Errors reading char literals from " (name source))
-          (are [err msg form] (thrown-with-msg? err msg (read-from source f form))
-            :error #"EOF while reading character" "\\"
-            :error #"Unsupported character: \\00" "\\00"
-            :error #"Unsupported character: \\0009" "\\0009"
+          :error #"Invalid digit: 8" "\\o378"
+          :error #"Octal escape sequence must be in range \[0, 377\]" "\\o400"
+          :error #"Invalid digit: 8" "\\o800"
+          :error #"Invalid digit: a" "\\oand"
+          :error #"Invalid octal escape sequence length: 4" "\\o0470"
 
-            :error #"Invalid digit: 8" "\\o378"
-            :error #"Octal escape sequence must be in range \[0, 377\]" "\\o400"
-            :error #"Invalid digit: 8" "\\o800"
-            :error #"Invalid digit: a" "\\oand"
-            :error #"Invalid octal escape sequence length: 4" "\\o0470"
+          :error #"Invalid unicode character: \\u0" "\\u0"
+          :error #"Invalid unicode character: \\ug" "\\ug"
+          :error #"Invalid unicode character: \\u000" "\\u000"
+          :error #"Invalid character constant: \\ud800" "\\ud800"
+          :error #"Invalid character constant: \\udfff" "\\udfff"
+          :error #"Invalid unicode character: \\u004" "\\u004"
+          :error #"Invalid unicode character: \\u00041" "\\u00041"
+          :error #"Invalid digit: g" "\\u004g")))))
 
-            :error #"Invalid unicode character: \\u0" "\\u0"
-            :error #"Invalid unicode character: \\ug" "\\ug"
-            :error #"Invalid unicode character: \\u000" "\\u000"
-            :error #"Invalid character constant: \\ud800" "\\ud800"
-            :error #"Invalid character constant: \\udfff" "\\udfff"
-            :error #"Invalid unicode character: \\u004" "\\u004"
-            :error #"Invalid unicode character: \\u00041" "\\u00041"
-            :error #"Invalid digit: g" "\\u004g")))))
+;; nil
 
-  ;; nil
-
-  (deftest t-nil))
+(deftest t-nil)
 
 ;; Booleans
 
@@ -651,5 +651,3 @@
   (is (= 23 (read-string {:eof 23} "")))
   (is (= 23 (read {:eof 23} (new erlang.io.PushbackReader
                                  (new erlang.io.StringReader ""))))))
-
-(run-tests)
