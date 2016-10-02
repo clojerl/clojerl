@@ -39,7 +39,9 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Items) when is_list(Items) ->
-  #?TYPE{data = Items}.
+  #?TYPE{data = Items};
+?CONSTRUCTOR(undefined) ->
+  #?TYPE{data = []}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
