@@ -311,7 +311,7 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
   end.
 
 -spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
-  {binary(), state()}.
+  {integer(), state()}.
 unicode_char(State, Base, Length, IsExact) ->
   {Number, State1} = read_token(State, Length),
   Size = case IsExact of
@@ -760,6 +760,12 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
                             , location(State1)
                             ),
         {Ch, _} = unicode_char(State1#{src => RestToken}, 16, 4, true),
+        clj_utils:error_when( Ch >= 16#D800 andalso Ch =< 16#DFFF
+                            , [ <<"Invalid character constant: \\u">>
+                              , RestToken
+                              ]
+                            , location(State)
+                            ),
         Ch;
       <<"o", RestToken/binary>> ->
         read_octal_char(State1#{src => RestToken});
