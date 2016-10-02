@@ -8,17 +8,6 @@
         , remove_location/1
         ]).
 
--define(PLATFORM_FEATURES, [clje]).
--define(RESERVED_FEATURES, [else, none]).
--define(DEFAULT_FEATURE, default).
-
--define(OPT_EOF, eof).
--define(OPT_FEATURES, features).
--define(OPT_READ_COND, 'read-cond').
--define(OPT_IO_READER, 'io-reader').
-
--define(EOFTHROW, eofthrow).
-
 -type location() :: #{ line   => non_neg_integer()
                      , column => non_neg_integer()
                      , file   => binary()

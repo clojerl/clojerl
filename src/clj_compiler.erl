@@ -1,5 +1,7 @@
 -module(clj_compiler).
 
+-include("clojerl.hrl").
+
 -export([
          compile_files/1,
          compile_files/2,
@@ -26,7 +28,6 @@
 -type options() :: #{ output_dir  => string()
                     , erl_flags   => [atom()]
                     , clj_flags   => [clj_flag()]
-                    , reader_opts => map()
                     , verbose     => boolean()
                     }.
 
@@ -46,7 +47,6 @@ default_options() ->
                     , nowarn_unused_record
                     ]
    , clj_flags   => []
-   , reader_opts => #{}
    , verbose     => false
    }.
 
@@ -81,7 +81,7 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
       Filename    = filename:basename(File),
       FilenameStr = binary_to_list(Filename),
       ErlFlags    = maps:get(erl_flags, Opts, []),
-      ReaderOpts  = maps:get(reader_opts, Opts, #{}),
+      ReaderOpts  = reader_opts(File),
       Opts1       = Opts#{ erl_flags   => [{source, FilenameStr} | ErlFlags]
                          , reader_opts => ReaderOpts#{file => Filename}
                          },
@@ -93,6 +93,13 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
       CompileFun(Src, Opts1, Env);
     Error ->
       throw(Error)
+  end.
+
+-spec reader_opts(binary()) -> map().
+reader_opts(File) ->
+  case filename:extension(File) of
+    <<".cljc">> -> #{?OPT_READ_COND => allow};
+    _ -> #{}
   end.
 
 -spec compile(binary()) -> clj_env:env().
@@ -171,7 +178,7 @@ run_monitored(Fun) ->
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
-  RdrOpts  = maps:get(reader_opts, Opts),
+  RdrOpts  = maps:get(reader_opts, Opts, #{}),
   Env      = clj_env:put(Env0, clj_flags, CljFlags),
   EmitEval = case Opts0 of
                #{time := true} ->
