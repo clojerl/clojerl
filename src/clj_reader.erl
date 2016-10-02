@@ -10,6 +10,7 @@
 
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).
+-define(DEFAULT_FEATURE, default).
 
 -define(OPT_EOF, eof).
 -define(OPT_FEATURES, features).
@@ -1114,7 +1115,10 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
                         ),
 
     try
-      case clj_core:'contains?'(Features, Feature) of
+      case
+        Feature =:= ?DEFAULT_FEATURE orelse
+        clj_core:'contains?'(Features, Feature)
+      of
         true  ->
           {Form, State2} = read_pop_one(State1),
           {match, Form, State2#{return_on => ReturnOn}};
