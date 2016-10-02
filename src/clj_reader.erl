@@ -86,7 +86,7 @@ read_fold_loop(Fun, State) ->
       read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
   end.
 
--spec location_meta(any()) -> location().
+-spec location_meta(any()) -> location() | undefined.
 location_meta(X) ->
   case clj_core:'meta?'(X) of
     true  ->
@@ -374,19 +374,17 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
 
 -spec read_symbol(state()) -> state().
 read_symbol(State) ->
-  Meta = file_location_meta(State),
-
   {Token, State1} = read_token(State),
   Symbol = case clj_utils:parse_symbol(Token) of
              {undefined, <<"nil">>}   -> undefined;
              {undefined, <<"true">>}  -> true;
              {undefined, <<"false">>} -> false;
              {undefined, Name} ->
-               clj_core:with_meta(clj_core:symbol(Name), Meta);
+               clj_core:symbol(Name);
              {Ns, Name} ->
-               clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
+               clj_core:symbol(Ns, Name);
              undefined ->
-               clj_utils:error(<<"Invalid token: ", Token/binary>>
+               clj_utils:error( <<"Invalid token: ", Token/binary>>
                               , location(State)
                               )
            end,
@@ -425,12 +423,16 @@ read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
 -spec read_meta(state()) -> state().
 read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
   {SugaredMeta, State1} = read_pop_one(State#{src => Src}),
-  Meta    = clj_utils:desugar_meta(SugaredMeta),
-  LocMeta = file_location_meta(State),
-  AllMeta = clj_core:merge([LocMeta, Meta]),
+  Meta = clj_utils:desugar_meta(SugaredMeta),
 
   {Form, State2} = read_pop_one(State1),
-  NewForm = clj_core:with_meta(Form, AllMeta),
+  FormMeta = clj_core:merge([clj_core:meta(Form), Meta]),
+  NewMeta  = case clj_core:'seq?'(Form) of
+              true  -> clj_core:merge([FormMeta, file_location_meta(State)]);
+              false -> FormMeta
+            end,
+
+  NewForm = clj_core:with_meta(Form, NewMeta),
 
   push_form(NewForm, State2).
 

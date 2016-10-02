@@ -194,7 +194,7 @@ throw_when(false, _, _) ->
 error(List) ->
   error_when(true, List, undefined).
 
--spec error(any(), undefined | clj_reader:location()) -> no_return().
+-spec error(any(), clj_reader:location() | undefined) -> no_return().
 error(List, Location) ->
   error_when(true, List, Location).
 
@@ -202,7 +202,8 @@ error(List, Location) ->
 error_when(Throw, Reason) ->
   error_when(Throw, Reason, undefined).
 
--spec error_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
+-spec error_when(boolean(), any(), clj_reader:location() | undefined) ->
+  ok | no_return().
 error_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   error_when(true, Reason, Location);
