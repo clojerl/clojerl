@@ -9,6 +9,7 @@
         ]).
 
 -define(PLATFORM_FEATURES, [clje]).
+-define(RESERVED_FEATURES, [else, none]).
 
 -define(OPT_EOF, eof).
 -define(OPT_FEATURES, features).
@@ -1099,11 +1100,19 @@ read_cond_delimited(IsSplicing, State) ->
 match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
   Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
   try
+    %% Change the return_on value so that we only read until the next
+    %% ')' char.
     {Feature, State1} = read_pop_one(State#{return_on => $)}),
     clj_utils:error_when( not clj_core:'keyword?'(Feature)
                         , <<"Feature should be a keyword">>
                         , location(State)
                         ),
+
+    clj_utils:error_when( lists:member(Feature, ?RESERVED_FEATURES)
+                        , [<<"Feature name ">>, Feature, <<" is reserved.">>]
+                        , location(State)
+                        ),
+
     try
       case clj_core:'contains?'(Features, Feature) of
         true  ->
