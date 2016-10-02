@@ -162,58 +162,58 @@
 
   ; Read clojerl.Float
   (is (instance? clojerl.Float +1.0e+1))
-  ;; (is (instance? clojerl.Float +1.e+1))
-  ;; (is (instance? clojerl.Float +1e+1))
+  (is (instance? clojerl.Float +1.e+1))
+  (is (instance? clojerl.Float +1e+1))
 
   (is (instance? clojerl.Float +1.0e1))
-  ;; (is (instance? clojerl.Float +1.e1))
-  ;; (is (instance? clojerl.Float +1e1))
+  (is (instance? clojerl.Float +1.e1))
+  (is (instance? clojerl.Float +1e1))
 
   (is (instance? clojerl.Float +1.0e-1))
-  ;; (is (instance? clojerl.Float +1.e-1))
-  ;; (is (instance? clojerl.Float +1e-1))
+  (is (instance? clojerl.Float +1.e-1))
+  (is (instance? clojerl.Float +1e-1))
 
   (is (instance? clojerl.Float 1.0e+1))
-  ;; (is (instance? clojerl.Float 1.e+1))
-  ;; (is (instance? clojerl.Float 1e+1))
+  (is (instance? clojerl.Float 1.e+1))
+  (is (instance? clojerl.Float 1e+1))
 
   (is (instance? clojerl.Float 1.0e1))
-  ;; (is (instance? clojerl.Float 1.e1))
-  ;; (is (instance? clojerl.Float 1e1))
+  (is (instance? clojerl.Float 1.e1))
+  (is (instance? clojerl.Float 1e1))
 
   (is (instance? clojerl.Float 1.0e-1))
-  ;; (is (instance? clojerl.Float 1.e-1))
-  ;; (is (instance? clojerl.Float 1e-1))
+  (is (instance? clojerl.Float 1.e-1))
+  (is (instance? clojerl.Float 1e-1))
 
   (is (instance? clojerl.Float -1.0e+1))
-  ;; (is (instance? clojerl.Float -1.e+1))
-  ;; (is (instance? clojerl.Float -1e+1))
+  (is (instance? clojerl.Float -1.e+1))
+  (is (instance? clojerl.Float -1e+1))
 
   (is (instance? clojerl.Float -1.0e1))
-  ;; (is (instance? clojerl.Float -1.e1))
-  ;; (is (instance? clojerl.Float -1e1))
+  (is (instance? clojerl.Float -1.e1))
+  (is (instance? clojerl.Float -1e1))
 
   (is (instance? clojerl.Float -1.0e-1))
-  ;; (is (instance? clojerl.Float -1.e-1))
-  ;; (is (instance? clojerl.Float -1e-1))
+  (is (instance? clojerl.Float -1.e-1))
+  (is (instance? clojerl.Float -1e-1))
 
   (is (instance? clojerl.Float +1.0))
-  ;; (is (instance? clojerl.Float +1.))
+  (is (instance? clojerl.Float +1.))
 
   (is (instance? clojerl.Float 1.0))
-  ;; (is (instance? clojerl.Float 1.))
+  (is (instance? clojerl.Float 1.))
 
   (is (instance? clojerl.Float +0.0))
-  ;; (is (instance? clojerl.Float +0.))
+  (is (instance? clojerl.Float +0.))
 
   (is (instance? clojerl.Float 0.0))
-  ;; (is (instance? clojerl.Float 0.))
+  (is (instance? clojerl.Float 0.))
 
   (is (instance? clojerl.Float -0.0))
-  ;; (is (instance? clojerl.Float -0.))
+  (is (instance? clojerl.Float -0.))
 
   (is (instance? clojerl.Float -1.0))
-  ;; (is (instance? clojerl.Float -1.))
+  (is (instance? clojerl.Float -1.))
 
   ;; (is (instance? Ratio 1/2))
   ;; (is (instance? Ratio -1/2))

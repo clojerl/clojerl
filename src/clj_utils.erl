@@ -367,17 +367,16 @@ int_properties(Groups) ->
 parse_float(FloatBin) ->
   {match, [_ | Groups]} =
     re:run(FloatBin, ?FLOAT_PATTERN, [{capture, all, list}]),
-  Decimal = nth(3, Groups, "") =/= "",
-  case Decimal of
-    true ->
-      FloatStr = nth(1, Groups),
-      list_to_float(FloatStr);
-    false ->
-      %% When there is no decimal part we add it so we can use
-      %% list_to_float/1.
-      FloatStr = nth(2, Groups) ++ ".0" ++ nth(4, Groups),
-      list_to_float(FloatStr)
-  end.
+
+  %% When there is no decimal part we add it so we can use
+  %% list_to_float/1.
+  FloatStr = case nth(3, Groups, "") of
+               ""  -> nth(2, Groups) ++ ".0" ++ nth(4, Groups, "");
+               "." -> nth(2, Groups) ++ ".0" ++ nth(4, Groups, "");
+               _   -> nth(1, Groups)
+             end,
+
+  list_to_float(FloatStr).
 
 -type ratio() :: #{type => ratio,
                    denom => integer(),
