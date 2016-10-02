@@ -6370,7 +6370,7 @@
   If true, splicing? indicates read-cond-splicing."
   {:added "1.7"}
   [form ^Boolean splicing?]
-  (clojerl.reader.ReaderConditional/create.e form splicing?))
+  (new clojerl.reader.ReaderConditional form splicing?))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; data readers ;;;;;;;;;;;;;;;;;;
 
