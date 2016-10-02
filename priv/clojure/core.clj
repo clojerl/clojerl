@@ -429,7 +429,7 @@
                 [name doc-string? attr-map? ([params*] body)+ attr-map?])
     :added "1.0"}
   defmacro (fn [&form &env name & args]
-             (let [name   (with-meta name (conj (meta name) {:macro true}))
+             (let [name   (with-meta name (assoc (meta name) :macro true))
                    prefix (loop [p (list name) args args]
                             (let [f (first args)]
                               (if (string? f)
