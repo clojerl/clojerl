@@ -75,6 +75,9 @@ complete_coverage(_Config) ->
   Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello\nworld!\n">>),
   Pid    = Writer#?TYPE.data,
 
+  ct:comment("Get the length"),
+  13 = clj_core:count(Writer),
+
   ct:comment("Send an unexpected message"),
   Pid ! {},
 
@@ -88,6 +91,10 @@ complete_coverage(_Config) ->
   undefined = 'erlang.io.Closeable':close(Writer),
 
   ok = try clj_core:str(Writer), error
+       catch _:_ -> ok
+       end,
+
+  ok = try clj_core:count(Writer), error
        catch _:_ -> ok
        end,
 

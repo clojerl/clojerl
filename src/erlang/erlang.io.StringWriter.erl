@@ -2,8 +2,9 @@
 
 -include("clojerl.hrl").
 
--behaviour('erlang.io.Closeable').
+-behaviour('clojerl.Counted').
 -behaviour('clojerl.Stringable').
+-behaviour('erlang.io.Closeable').
 -behaviour('erlang.io.IWriter').
 
 -export([?CONSTRUCTOR/0, ?CONSTRUCTOR/1]).
@@ -12,8 +13,9 @@
         , loop/1
         ]).
 
--export([close/1]).
+-export([count/1]).
 -export([str/1]).
+-export([close/1]).
 -export([ write/2
         , write/3
         ]).
@@ -32,16 +34,23 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
-close(#?TYPE{name = ?M, data = Pid}) ->
-  case send_command(Pid, close) of
-    {error, _} -> error(<<"Couldn't close erlang.io.StringWriter">>);
-    _          -> undefined
+count(#?TYPE{name = ?M, data = Pid}) ->
+  case send_command(Pid, count) of
+    {error, _} -> error(<<"Couldn't get length from erlang.io.StringWriter">>);
+    Count      -> Count
   end.
+
 
 str(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, str) of
     {error, _} -> error(<<"Couldn't get string from erlang.io.StringWriter">>);
     Str        -> Str
+  end.
+
+close(#?TYPE{name = ?M, data = Pid}) ->
+  case send_command(Pid, close) of
+    {error, _} -> error(<<"Couldn't close erlang.io.StringWriter">>);
+    _          -> undefined
   end.
 
 write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
@@ -84,6 +93,9 @@ loop(Str) ->
       ?MODULE:loop(NewState);
     {From, Ref, str} ->
       From ! {Ref, Str},
+      ?MODULE:loop(Str);
+    {From, Ref, count} ->
+      From ! {Ref, 'clojerl.String':count(Str)},
       ?MODULE:loop(Str);
     {From, Ref, close} ->
       From ! {Ref, ok};
