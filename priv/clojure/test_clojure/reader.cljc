@@ -27,10 +27,7 @@
                                 #_read-instant-timestamp]])
   (:require clojure.walk
             #_[clojure.test.generative :refer (defspec)]
-            #_[clojure.test-clojure.generators :as cgen])
-  #_(:import [clojure.lang BigInt Ratio]
-           java.io.File
-           java.util.TimeZone))
+            #_[clojure.test-clojure.generators :as cgen]))
 
 ;; Symbols
 
@@ -97,8 +94,7 @@
 
              [0] "\\u0000"
              [0xd7ff] "\\ud7ff"
-             [0xd800] "\\ud800"
-             [0xdfff] "\\udfff"
+
              [0xe000] "\\ue000"
              [0xffff] "\\uffff"
              [4 49] "\\u00041"))
@@ -107,6 +103,9 @@
                               (read-from source f (str "\"" form "\"")))
              :error #"EOF while reading string" "\\"
              :error #"Unsupported escape character: \\o" "\\o"
+
+             :error #"Invalid UTF-8 character number: " "\\ud800"
+             :error #"Invalid UTF-8 character number: " "\\udfff"
 
              :error #"Octal escape sequence must be in range \[0, 377\]" "\\400"
              :error #"Invalid digit: 8" "\\8"
@@ -254,8 +253,8 @@
           :error #"Invalid unicode character: \\u0" "\\u0"
           :error #"Invalid unicode character: \\ug" "\\ug"
           :error #"Invalid unicode character: \\u000" "\\u000"
-          :error #"Invalid character constant: \\ud800" "\\ud800"
-          :error #"Invalid character constant: \\udfff" "\\udfff"
+          :error #"Invalid UTF-8 character number: \\ud800" "\\ud800"
+          :error #"Invalid UTF-8 character number: \\udfff" "\\udfff"
           :error #"Invalid unicode character: \\u004" "\\u004"
           :error #"Invalid unicode character: \\u00041" "\\u00041"
           :error #"Invalid digit: g" "\\u004g")))))
@@ -338,7 +337,7 @@
 
 (deftest t-line-column-numbers
   (let [code "(ns reader-metadata-test
-  (:require [clojure.java.io
+  (:require [clojure.erlang.io
              :refer (resource reader)]))
 
 (let [a 5]
@@ -412,16 +411,16 @@
                (is (= clojure.core// bar//))))))
 
 (deftest Instants
-  (testing "Instants are read as java.util.Date by default"
+  (testing "Instants are read as Erlang's calendar:datetime() by default"
     (is (= clojerl.erlang.Tuple (type #inst "2010-11-12T13:14:15.666"))))
   (let [s "#inst \"2010-11-12T13:14:15.666-06:00\""]
     (binding [*data-readers* {'inst read-instant-date}]
-      (testing "read-instant-date produces java.util.Date"
+      (testing "read-instant-date produces calendar:datetime()"
         (is (= clojerl.erlang.Tuple (type (read-string s)))))
-      (testing "java.util.Date instants round-trips"
+      (testing "calendar:datetime() instants round-trips"
         (is (= (-> s read-string)
                (-> s read-string pr-str read-string))))
-      (testing "java.util.Date instants round-trip throughout the year"
+      (testing "calendar:datetime() instants round-trip throughout the year"
         (doseq [month (range 1 13) day (range 1 29) hour (range 1 23)]
           (let [s (format "#inst \"2010-~2.10.0B-~2.10.0BT~2.10.0B:14:15.666-06:00\"" month day hour)]
             (is (= (-> s read-string)
@@ -434,7 +433,7 @@
             (is (= (-> s read-string)
                    (-> s read-string pr-str read-string)))
             (finally (TimeZone/setDefault dtz)))))
-      (testing "java.util.Date should always print in UTC"
+      #_(testing "java.util.Date should always print in UTC"
         (let [d (read-string s)
               pstr (print-str d)
               len (count pstr)]

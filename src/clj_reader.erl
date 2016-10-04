@@ -326,7 +326,13 @@ unicode_char(State, Base, Length, IsExact) ->
                       , location(State)
                       ),
 
-  {binary_to_integer(Number, Base), State1}.
+  NumberInt = binary_to_integer(Number, Base),
+  clj_utils:error_when(  16#D800 =< NumberInt andalso NumberInt =< 16#DFFF
+                      , [ <<"Invalid UTF-8 character number: \\u">>, Number]
+                      , location(State)
+                      ),
+
+  {NumberInt, State1}.
 
 -spec is_char_valid(integer(), integer()) -> boolean().
 is_char_valid(C, Base) when C >= $0, C =< $9 -> C - $0 + 1  =< Base;
@@ -749,12 +755,6 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
                             , location(State1)
                             ),
         {Ch, _} = unicode_char(State1#{src => RestToken}, 16, 4, true),
-        clj_utils:error_when( Ch >= 16#D800 andalso Ch =< 16#DFFF
-                            , [ <<"Invalid character constant: \\u">>
-                              , RestToken
-                              ]
-                            , location(State)
-                            ),
         Ch;
       <<"o", RestToken/binary>> ->
         read_octal_char(State1#{src => RestToken});
