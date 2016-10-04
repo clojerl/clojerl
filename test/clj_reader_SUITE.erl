@@ -88,7 +88,7 @@ number(_Config) ->
        catch _:_ -> ok
        end,
 
-  [0, 1, 2.0, 3.0e-10] = clj_reader:read_all(<<"0N 1 2.0 3e-10">>),
+  [0, 1, 2.0, 3.0e-10] = read_all(<<"0N 1 2.0 3e-10">>),
 
   {comments, ""}.
 
@@ -225,16 +225,16 @@ comment(_Config) ->
   BlaKeyword = clj_core:keyword(<<"bla">>),
 
   ct:comment("Single semi-colon"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 ; comment\n :bla ">>),
+  [1, BlaKeyword] = read_all(<<"1 ; comment\n :bla ">>),
 
   ct:comment("Two semi-colon"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;; comment\n :bla ">>),
+  [1, BlaKeyword] = read_all(<<"1 ;; comment\n :bla ">>),
 
   ct:comment("A bunch of semi-colons"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 ;;;; comment\n :bla ">>),
+  [1, BlaKeyword] = read_all(<<"1 ;;;; comment\n :bla ">>),
 
   ct:comment("Comment reader"),
-  [1, BlaKeyword] = clj_reader:read_all(<<"1 #! comment\n :bla ">>),
+  [1, BlaKeyword] = read_all(<<"1 #! comment\n :bla ">>),
 
   {comments, ""}.
 
@@ -273,7 +273,7 @@ deref(_Config) ->
   true       = clj_core:equiv(clj_reader:read(<<"@list">>), ListDeref2),
 
   ct:comment("Deref symbol :P and read other stuff"),
-  [ListDeref3, 42.0] = clj_reader:read_all(<<"@list 42.0">>),
+  [ListDeref3, 42.0] = read_all(<<"@list 42.0">>),
   true = clj_core:equiv(ListDeref3, ListDeref2),
 
   ct:comment("Error: only provide @ "),
@@ -610,17 +610,17 @@ set(_Config) ->
 
 unmatched_delim(_Config) ->
   ct:comment("Single closing paren"),
-  ok = try clj_reader:read_all(<<"{1 42.0} )">>)
+  ok = try read_all(<<"{1 42.0} )">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Single closing bracket"),
-  ok = try clj_reader:read_all(<<"{1 42.0} ]">>)
+  ok = try read_all(<<"{1 42.0} ]">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Single closing braces"),
-  ok = try clj_reader:read_all(<<"{1 42.0} } ">>)
+  ok = try read_all(<<"{1 42.0} } ">>)
        catch _:_ -> ok
        end,
 
@@ -644,22 +644,22 @@ char(_Config) ->
   <<"\""/utf8>> = clj_reader:read(<<"\\\"">>),
 
   ct:comment("Char EOF"),
-  ok = try clj_reader:read_all(<<"12 \\">>)
+  ok = try read_all(<<"12 \\">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Octal char wrong length"),
-  ok = try clj_reader:read_all(<<"12 \\o0337">>)
+  ok = try read_all(<<"12 \\o0337">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Octal char wrong range"),
-  ok = try clj_reader:read_all(<<"12 \\o477">>)
+  ok = try read_all(<<"12 \\o477">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Unsupported char"),
-  ok = try clj_reader:read_all(<<"42.0 \\ab">>)
+  ok = try read_all(<<"42.0 \\ab">>)
        catch _:_ -> ok
        end,
 
@@ -742,7 +742,7 @@ arg(_Config) ->
   {match, _} = re:run(ArgFortyTwoGenName, "p42__\\d+#"),
 
   ct:comment("Read %& as an argument"),
-  [ArgRestGenSymbol] = clj_reader:read_all(<<"%&">>),
+  [ArgRestGenSymbol] = read_all(<<"%&">>),
   ArgRestGenName = clj_core:name(ArgRestGenSymbol),
   {match, _} = re:run(ArgRestGenName, "rest__\\d+#"),
 
@@ -782,7 +782,7 @@ regex(_Config) ->
   Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
 
   ct:comment("EOF: unterminated regex"),
-  ok = try clj_reader:read_all(<<"#\"a*">>)
+  ok = try read_all(<<"#\"a*">>)
        catch _:_ -> ok
        end,
 
@@ -797,7 +797,7 @@ unreadable_form(_Config) ->
   {comments, ""}.
 
 discard(_Config) ->
-  [1] = clj_reader:read_all(<<"#_ :hello 1">>),
+  [1] = read_all(<<"#_ :hello 1">>),
 
   1 = clj_reader:read(<<"#_ :hello 1">>),
 
@@ -811,15 +811,15 @@ discard(_Config) ->
   {comments, ""}.
 
 'cond'(_Config) ->
-  AllowOpts = #{read_cond => allow},
-  AllowCljFeatureOpts = #{read_cond => allow,
+  AllowOpts = #{'read-cond' => allow},
+  AllowCljFeatureOpts = #{'read-cond' => allow,
                           features => clj_reader:read(<<"#{:clj}">>)},
-  AllowClrFeatureOpts = #{read_cond => allow,
+  AllowClrFeatureOpts = #{'read-cond' => allow,
                           features => clj_reader:read(<<"#{:clr}">>)},
   HelloKeyword = clj_core:keyword(<<"hello">>),
 
   ct:comment("Allow with no features"),
-  HelloKeyword = clj_reader:read(<<"#?(1 2) :hello">>, AllowOpts),
+  HelloKeyword = clj_reader:read(<<"#?(:one 2) :hello">>, AllowOpts),
 
   ct:comment("Allow with feature match"),
   2 = clj_reader:read(<<"#?(:clj 2) :hello">>, AllowCljFeatureOpts),
@@ -831,6 +831,10 @@ discard(_Config) ->
   ct:comment("Cond splice vector"),
   OneTwoThreeVector = clj_reader:read(<<"[:one :two :three]">>),
   OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
+                                        " :clr [:two]) :three]">>,
+                                      AllowClrFeatureOpts),
+
+  OneTwoThreeVector = clj_reader:read(<<"[:one #? @  (:clj :three"
                                         " :clr [:two]) :three]">>,
                                       AllowClrFeatureOpts),
 
@@ -850,13 +854,13 @@ discard(_Config) ->
                     AllowClrFeatureOpts),
 
   ct:comment("Preserve read"),
-  PreserveOpts = #{read_cond => preserve},
+  PreserveOpts = #{'read-cond' => preserve},
   ReaderCond   =
     'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
                                           clj_reader:read(<<"(1 2)">>), false
                                          ),
   [ReaderCondCheck, HelloKeyword] =
-    clj_reader:read_all(<<"#?(1 2) :hello">>, PreserveOpts),
+    read_all(<<"#?(1 2) :hello">>, PreserveOpts),
   true = clj_core:equiv(ReaderCond, ReaderCondCheck),
 
   ReaderCondSplice =
@@ -895,16 +899,22 @@ discard(_Config) ->
        catch _:<<"?:1:21: read-cond requires an even number of forms">> -> ok
        end,
 
-  ct:comment("Splice not in list"),
-  ok = try clj_reader:read(<<"#?@(:one [:two])">>, AllowOpts)
-       catch _:<<"?:1:3: cond-splice not in list">> -> ok
+  ct:comment("Splice at the top level"),
+  ok = try clj_reader:read(<<"#?@(:clje [:two])">>, AllowOpts)
+       catch _:<<"?:1:5: Reader conditional splicing not allowed "
+                 "at the top level">> -> ok
        end,
 
   ct:comment("Splice in list but not sequential"),
   ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
                            AllowClrFeatureOpts)
-       catch _:<<"?:1:23: Spliced form list in read-cond-splicing must "
+       catch _:<<"?:1:13: Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
+       end,
+
+  ct:comment("Feature is not a keyword"),
+  ok = try clj_reader:read(<<"#?(1 2) :hello">>, AllowOpts)
+       catch _:<<"?:1:4: Feature should be a keyword">> -> ok
        end,
 
   {comments, ""}.
@@ -969,7 +979,7 @@ tagged(_Config) ->
     'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                               , <<"*default-data-reader-fn*">>
                               ),
-  DefaultReaderFun = fun(_) -> default end,
+  DefaultReaderFun = fun(_, _) -> default end,
   ok  = 'clojerl.Var':push_bindings(#{DefaultReaderFunVar => DefaultReaderFun}),
   default = clj_reader:read(<<"#whatever :tag">>),
   default = clj_reader:read(<<"#we use">>),
@@ -999,3 +1009,13 @@ tagged(_Config) ->
   meck:unload('clojure.core'),
 
   {comments, ""}.
+
+%% @doc Read all forms.
+-spec read_all(binary()) -> [any()].
+read_all(Src) ->
+  read_all(Src, #{eof => ok}).
+
+-spec read_all(binary(), map()) -> [any()].
+read_all(Src, Opts) ->
+  Fun = fun(Form, Acc) -> [Form | Acc] end,
+  lists:reverse(clj_reader:read_fold(Fun, Src, Opts, [])).

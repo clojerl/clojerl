@@ -1,5 +1,7 @@
 -module(clj_compiler).
 
+-include("clojerl.hrl").
+
 -export([
          compile_files/1,
          compile_files/2,
@@ -7,6 +9,7 @@
          compile_file/2,
          compile/1,
          compile/2,
+         load_file/1,
          eval/1,
          eval/2,
          eval/3,
@@ -25,7 +28,6 @@
 -type options() :: #{ output_dir  => string()
                     , erl_flags   => [atom()]
                     , clj_flags   => [clj_flag()]
-                    , reader_opts => map()
                     , verbose     => boolean()
                     }.
 
@@ -45,7 +47,6 @@ default_options() ->
                     , nowarn_unused_record
                     ]
    , clj_flags   => []
-   , reader_opts => #{}
    , verbose     => false
    }.
 
@@ -80,7 +81,7 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
       Filename    = filename:basename(File),
       FilenameStr = binary_to_list(Filename),
       ErlFlags    = maps:get(erl_flags, Opts, []),
-      ReaderOpts  = maps:get(reader_opts, Opts, #{}),
+      ReaderOpts  = reader_opts(File),
       Opts1       = Opts#{ erl_flags   => [{source, FilenameStr} | ErlFlags]
                          , reader_opts => ReaderOpts#{file => Filename}
                          },
@@ -94,6 +95,13 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
       throw(Error)
   end.
 
+-spec reader_opts(binary()) -> map().
+reader_opts(File) ->
+  case filename:extension(File) of
+    <<".cljc">> -> #{?OPT_READ_COND => allow};
+    _ -> #{}
+  end.
+
 -spec compile(binary()) -> clj_env:env().
 compile(Src) when is_binary(Src) ->
   compile(Src, default_options()).
@@ -101,6 +109,11 @@ compile(Src) when is_binary(Src) ->
 -spec compile(binary(), options()) -> clj_env:env().
 compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
+
+-spec load_file(binary()) -> any().
+load_file(Path) ->
+  Env = compile_file(Path),
+  clj_env:get(Env, eval).
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
@@ -127,7 +140,8 @@ eval(Form, Opts, Env) ->
   {Exprs, Forms, Env1} = run_monitored(DoEval),
 
   lists:foreach(compile_forms_fun(Opts), Forms),
-  [Value] = eval_expressions(Exprs),
+  Value = lists:last(eval_expressions(Exprs)),
+
   {Value, Env1}.
 
 %% Flags
@@ -164,7 +178,7 @@ run_monitored(Fun) ->
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
-  RdrOpts  = maps:get(reader_opts, Opts),
+  RdrOpts  = maps:get(reader_opts, Opts, #{}),
   Env      = clj_env:put(Env0, clj_flags, CljFlags),
   EmitEval = case Opts0 of
                #{time := true} ->
@@ -258,11 +272,11 @@ ensure_output_dir(_) ->
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
 emit_eval_form(Form, Env) ->
-  Env1 = clj_analyzer:analyze(Env, Form),
-  Env2 = clj_emitter:emit(Env1),
+  Env1  = clj_analyzer:analyze(Env, Form),
+  Env2  = clj_emitter:emit(Env1),
   {Exprs, Env3} = clj_emitter:remove_state(Env2),
-  eval_expressions(Exprs),
-  Env3.
+  Value = lists:last(eval_expressions(Exprs)),
+  clj_env:put(Env3, eval, Value).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -293,8 +307,6 @@ compile_forms(Forms, Opts) ->
   end.
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].
-eval_expressions([]) ->
-  [];
 eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   CurrentNs     = clj_namespace:current(),

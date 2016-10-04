@@ -234,8 +234,12 @@ with invalid arguments."
 milliseconds since the epoch, UTC."
   [years months days hours minutes seconds nanoseconds
    offset-sign offset-hours offset-minutes]
-  #[#[years months days]
-    #[hours minutes seconds]])
+  (let [offset-secs (+ (* offset-sign offset-hours 60 60)
+                       (* offset-sign offset-minutes 60))
+        datetime #[#[years months days]
+                   #[hours minutes seconds]]
+        greg-seconds (calendar/datetime_to_gregorian_seconds.e datetime)]
+    (calendar/gregorian_seconds_to_datetime.e (- greg-seconds offset-secs))))
 
 (defn read-instant-date
   "To read an instant as a java.util.Date, bind *data-readers* to a map with

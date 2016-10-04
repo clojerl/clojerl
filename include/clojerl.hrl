@@ -8,3 +8,15 @@
                , data       :: any()
                , info = #{} :: map()
                }).
+
+%% Reader constants
+-define(PLATFORM_FEATURES, [clje]).
+-define(RESERVED_FEATURES, [else, none]).
+-define(DEFAULT_FEATURE, default).
+
+-define(OPT_EOF, eof).
+-define(OPT_FEATURES, features).
+-define(OPT_READ_COND, 'read-cond').
+-define(OPT_IO_READER, 'io-reader').
+
+-define(EOFTHROW, eofthrow).

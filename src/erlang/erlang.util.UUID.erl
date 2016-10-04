@@ -3,9 +3,11 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.Stringable').
+-behavior('clojerl.IHash').
 
 -export([?CONSTRUCTOR/1]).
 
+-export([hash/1]).
 -export([str/1]).
 
 -type type() :: #?TYPE{data :: binary()}.
@@ -31,5 +33,8 @@ is_uuid(MaybeUUID) ->
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
+
+hash(Str) ->
+  erlang:phash2(Str).
 
 str(#?TYPE{name = ?M, data = UUID}) -> UUID.

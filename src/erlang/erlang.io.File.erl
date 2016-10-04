@@ -7,7 +7,8 @@
 -behaviour('erlang.io.IWriter').
 -behaviour('clojerl.Stringable').
 
--export([open/1, open/2]).
+-export([open/1, open/2, path/1]).
+-export([make_temp/2]).
 
 -export([close/1]).
 -export([  read/1
@@ -21,27 +22,53 @@
         ]).
 -export([str/1]).
 
+-type path() :: binary().
 -type type() :: #?TYPE{data :: pid()}.
 
--spec open(binary()) -> type().
-open(Path) ->
+-spec open(path()) -> type().
+open(Path) when is_binary(Path) ->
   open(Path, [read]).
 
--spec open(binary(), [atom()]) -> type().
-open(Path, Modes) ->
+-spec open(path(), [atom()]) -> type().
+open(Path, Modes) when is_binary(Path) ->
   case file:open(Path, Modes) of
-    {ok, Pid}       -> #?TYPE{data = Pid};
+    {ok, Pid}       -> #?TYPE{data = Pid, info = Path};
     {error, Reason} -> error(Reason)
+  end.
+
+-spec path(type()) -> binary().
+path(#?TYPE{name = ?M, info = Path}) ->
+  Path.
+
+-spec make_temp(binary(), binary()) -> binary().
+make_temp(Prefix, Suffix) ->
+  TmpDir = tmp_dir(),
+  ID     = erlang:integer_to_binary(erlang:phash2(erlang:make_ref())),
+  Path   = <<TmpDir/binary, "/", Prefix/binary, ID/binary, Suffix/binary>>,
+  open(Path, [write, read]).
+
+-spec tmp_dir() -> binary().
+tmp_dir() ->
+  case os:type() of
+    {win32, _} ->
+      case os:getenv("TEMP") of
+        false -> <<".">>;
+        Tmp   -> erlang:list_to_binary(Tmp)
+      end;
+    {unix, _}  ->
+      <<"/tmp">>
   end.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-close(#?TYPE{name = ?M, data = Pid}) ->
+close(#?TYPE{name = ?M, data = Pid, info = Path}) ->
   case file:close(Pid) of
-    {error, _} -> error(<<"Couldn't close erlang.io.File">>);
-    ok         -> undefined
+    {error, _Reason} ->
+      error(<<"Couldn't close ", Path/binary>>);
+    ok ->
+      undefined
   end.
 
 read(File) ->
@@ -75,6 +102,5 @@ write(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
   ok = io:fwrite(Pid, Format, clj_core:seq_to_list(Values)),
   SW.
 
-str(#?TYPE{name = ?M, data = Pid}) ->
-  <<"<", PidBin/binary>> = list_to_binary(erlang:pid_to_list(Pid)),
-  <<"#<erlang.io.File ", PidBin/binary>>.
+str(#?TYPE{name = ?M, info = Path}) ->
+  <<"#<erlang.io.File ", Path/binary, ">">>.

@@ -29,7 +29,7 @@
          merge/1,
          'contains?'/2,
          boolean/1,
-         byte/1, short/1,
+         byte/1, char/1, short/1,
          str/1,
          list/1, vector/1, hash_map/1, hash_set/1,
          subvec/3,
@@ -67,12 +67,11 @@ load(ScriptBase, FailIfNotFound) ->
   case load_ns(NsBin) of
     ok -> ok;
     _ ->
-      FilePath = <<ScriptBase/binary, ".clj">>,
-      case resolve_file(FilePath) of
+      case resolve_file(ScriptBase, [<<".clj">>, <<".cljc">>]) of
         undefined ->
           clj_utils:throw_when(FailIfNotFound
                                , [ <<"Could not locate ">>, NsBin
-                                 , <<".beam or ">>, FilePath
+                                 , <<".beam or ">>, ScriptBase
                                  , <<" on code path.">>
                                  ]
                               );
@@ -88,17 +87,19 @@ load_ns(NsBin) ->
     _           -> error
   end.
 
--spec resolve_file(binary()) -> binary() | undefined.
-resolve_file(FilePath) ->
-  Found = [ filename:join(CP, FilePath)
-            || CP <- code:get_path(),
-               filelib:is_regular(filename:join(CP, FilePath))
-          ],
+-spec resolve_file(binary(), [binary()]) -> binary() | undefined.
+resolve_file(Path, Exts) ->
+  Found =
+    [ filename:join(CP, <<Path/binary, Ext/binary>>)
+      || CP <- code:get_path(),
+         Ext <- Exts,
+         filelib:is_regular(filename:join(CP, <<Path/binary, Ext/binary>>))
+    ],
 
   case length(Found) of
     0 -> undefined;
     1 -> first(Found);
-    _ -> clj_utils:throw([<<"Found more than one ">>, FilePath])
+    _ -> clj_utils:throw([<<"Found more than one ">>, Path])
   end.
 
 -spec count(any()) -> integer().
@@ -421,6 +422,13 @@ boolean(_) -> true.
 -spec byte(any()) -> boolean().
 byte(X) when is_number(X), 0 =< X, X =< 256 ->
   erlang:trunc(X).
+
+-spec char(any()) -> boolean().
+char(X) when is_number(X) ->
+  case unicode:characters_to_binary([X], utf8) of
+    Char when is_binary(Char) -> Char;
+    Error -> error(Error)
+  end.
 
 -spec short(any()) -> boolean().
 short(X) when is_number(X), 0 =< X, X < 32768 ->

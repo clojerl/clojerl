@@ -11,8 +11,12 @@
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->
-  {Expr, Env} =  clj_env:pop_expr(analyze_form(Env0, Form)),
-  clj_env:push_expr(Env, Expr#{top_level => true}).
+  try
+    {Expr, Env} =  clj_env:pop_expr(analyze_form(Env0, Form)),
+    clj_env:push_expr(Env, Expr#{top_level => true})
+  catch throw:{analyzer, Reason} ->
+      clj_utils:error(Reason, clj_reader:location_meta(Form))
+  end.
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -136,19 +140,20 @@ analyze_const(Env, Constant) ->
 analyze_seq(_Env, undefined, List) ->
   clj_utils:throw(<<"Can't call nil">>, clj_reader:location_meta(List));
 analyze_seq(Env, Op, List) ->
-  IsSymbol     = clj_core:'symbol?'(Op),
   ExpandedList = macroexpand_1(Env, List),
   case clj_core:equiv(List, ExpandedList) of
     true ->
-      OpKey = case IsSymbol of
-                true  -> clj_core:name(Op);
-                false -> Op
-              end,
-      case maps:get(OpKey, special_forms(), undefined) of
-        ParseFun when IsSymbol, ParseFun =/= undefined ->
-          ParseFun(Env, List);
-        undefined ->
-          analyze_invoke(Env, List)
+      AnalyzeInvoke = fun analyze_invoke/2,
+      Fun = case clj_core:'symbol?'(Op) of
+              true ->
+                maps:get(clj_core:name(Op), special_forms(), AnalyzeInvoke);
+              false ->
+                AnalyzeInvoke
+            end,
+      try
+        Fun(Env, List)
+      catch throw:{analyzer, Reason} ->
+          clj_utils:error(Reason, clj_reader:location_meta(List))
       end;
     false ->
       analyze_form(Env, ExpandedList)
@@ -730,10 +735,10 @@ parse_def(Env, List) ->
   Var0 = lookup_var(VarSymbol),
 
   clj_utils:throw_when( Var0 =:= undefined
-                      ,[ <<"Can't refer to qualified var that doesn't exist: ">>
-                       , VarSymbol
-                       ]
-                      , clj_reader:location_meta(VarSymbol)
+                      , [ <<"Can't refer to qualified var that doesn't exist: ">>
+                        , VarSymbol
+                        ]
+                      , clj_reader:location_meta(List)
                       ),
 
   VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
@@ -766,7 +771,7 @@ parse_def(Env, List) ->
                        , <<" is not dynamic but its name"
                            " suggests otherwise.~n">>
                        ]
-                     , clj_reader:location_meta(VarSymbol)
+                     , clj_reader:location_meta(List)
                      ),
 
   clj_namespace:update_var(Var),
@@ -1030,21 +1035,21 @@ analyze_deftype_method(Form, Env) ->
                       , [ <<"Method name must be a symbol, had: ">>
                         , clj_core:type(MethodName)
                         ]
-                      , clj_reader:location_meta(MethodName)
+                      , clj_reader:location_meta(Form)
                       ),
 
   clj_utils:throw_when( not clj_core:'vector?'(Args)
                       , [ <<"Parameter listing should be a vector, had: ">>
                         , clj_core:type(Args)
                         ]
-                      , clj_reader:location_meta(Args)
+                      , clj_reader:location_meta(Form)
                       ),
 
   clj_utils:throw_when( clj_core:count(Args) < 1
                       , [ <<"Must supply at least one argument for 'this' in: ">>
                         , MethodName
                         ]
-                      , clj_reader:location_meta(MethodName)
+                      , clj_reader:location_meta(Form)
                       ),
 
   LoopId = {function, MethodName},
@@ -1078,7 +1083,7 @@ parse_defprotocol(Env, List) ->
                       , [ <<"Protocol name should be a symbol, had: ">>
                         , clj_core:type(FQNameSym)
                         ]
-                      , clj_reader:location_meta(FQNameSym)
+                      , clj_reader:location_meta(List)
                       ),
 
   %% Refer the name of the protocol (without the namespace) in the
@@ -1103,7 +1108,7 @@ parse_defprotocol(Env, List) ->
 
 -spec parse_extend_type(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_extend_type(Env, List) ->
-  [ ExtendTypeSym % extend-type*
+  [ _ExtendTypeSym % extend-type*
   , Type
   | ProtosMethods
   ] = clj_core:seq_to_list(List),
@@ -1125,7 +1130,7 @@ parse_extend_type(Env, List) ->
                         , clj_core:type(Type)
                         , <<" does not resolve to a type.">>
                         ]
-                      , clj_reader:location_meta(ExtendTypeSym)
+                      , clj_reader:location_meta(List)
                       ),
 
   ExtendTypeExpr = #{ op    => extend_type
@@ -1278,12 +1283,12 @@ parse_catch(Env, List) ->
 
   clj_utils:throw_when( not is_valid_bind_symbol(ErrName)
                       , [<<"Bad binding form: ">>, ErrName]
-                      , clj_reader:location_meta(ErrName)
+                      , clj_reader:location_meta(List)
                       ),
 
   clj_utils:throw_when( not is_valid_error_type(ErrType)
                       , [<<"Bad error type: ">>, ErrType]
-                      , clj_reader:location_meta(ErrType)
+                      , clj_reader:location_meta(List)
                       ),
 
   Env1 = clj_env:remove(Env, in_try),
@@ -1340,7 +1345,7 @@ parse_var(Env, List) ->
                       , VarSymbol
                       , <<" in this context">>
                       ]
-                     , clj_reader:location_meta(VarSymbol)
+                     , clj_reader:location_meta(List)
                      )
   end.
 
@@ -1374,12 +1379,11 @@ analyze_invoke(Env, Form) ->
 analyze_symbol(Env, Symbol) ->
   case resolve(Env, Symbol) of
     {undefined, _} ->
-      clj_utils:throw([ <<"Unable to resolve symbol '">>
-                      , Symbol
-                      , <<"' in this context">>
-                      ]
-                     , clj_reader:location_meta(Symbol)
-                     );
+      throw({ analyzer
+            , [ <<"Unable to resolve symbol '">>, Symbol
+              , <<"' in this context">>
+              ]
+            });
     {{local, Local}, Env1} ->
       clj_env:push_expr(Env1, Local#{op => local});
     {{erl_fun, Module, Function, Arity}, Env1} ->

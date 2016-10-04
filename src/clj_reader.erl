@@ -2,10 +2,8 @@
 
 -include("clojerl.hrl").
 
--export([ read_fold/3
-        , read_fold/4
+-export([ read_fold/4
         , read/1, read/2, read/3
-        , read_all/1, read_all/2, read_all/3
         , location_meta/1
         , remove_location/1
         ]).
@@ -15,16 +13,18 @@
                      , file   => binary()
                      }.
 
--type opts() :: #{ read_cond    => allow | preserve
+-type opts() :: #{ ?OPT_READ_COND => allow | preserve
                    %% When the value is `allow' then reader conditional will be
                    %% processed. If it is `preserve' then a ReaderConditional
                    %% value will be returned.
-                 , features     => 'clojerl.Set':type()
+                 , ?OPT_FEATURES  => 'clojerl.Set':type()
                    %% Set of features available when processing a reader
                    %% conditional.
-                 , file         => file:filename_all()
+                 , ?OPT_EOF       => any()
+                   %% When 'eofthrow' then throw, otherwise return value.
+                 , file           => file:filename_all()
                    %% Source file being read.
-                 , io_reader    => 'erlang.io.IReader':type()
+                 , ?OPT_IO_READER => 'erlang.io.IReader':type()
                    %% IReader that should be used when there are no more
                    %% characters to be read from the binary.
                  }.
@@ -45,23 +45,28 @@
                     %% Current line and column location.
                   , bindings      => clj_scope:scope()
                     %% Current bindings.
+                  , return_on     => char()
                   }.
 
--type read_fold_fun() :: fun((any(), clj_env:env()) -> clj_env:env()).
-
--spec read_fold(read_fold_fun(), binary(), opts()) -> clj_env:env().
-read_fold(Fun, Src, Opts) ->
-  read_fold(Fun, Src, Opts, clj_env:default()).
+-type read_fold_fun() :: fun((any(), any()) -> any()).
 
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
-read_fold(Fun, Src, Opts, Env) ->
+read_fold(Fun, Src, Opts0, Env) ->
+  %% Since we want to consume all of the source, we don't want to
+  %% throw when eof is reached.
+  Opts  = Opts0#{eof => ok},
   State = new_state(Src, Env, Opts),
   read_fold_loop(Fun, State).
 
 -spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
 read_fold_loop(Fun, State) ->
-  case read_one(State, false) of
+  NewState = try
+               read_one(State)
+             catch
+               throw:{eof, ok, StateTmp} -> StateTmp
+             end,
+  case NewState of
     %% Only finish when there is no more source to consume
     #{src := <<>>, forms := [], env := Env} ->
       Env;
@@ -72,7 +77,7 @@ read_fold_loop(Fun, State) ->
       read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
   end.
 
--spec location_meta(any()) -> location().
+-spec location_meta(any()) -> location() | undefined.
 location_meta(X) ->
   case clj_core:'meta?'(X) of
     true  ->
@@ -109,37 +114,41 @@ read(Src, Opts) ->
 -spec read(binary(), opts(), clj_env:env()) -> any().
 read(Src, Opts, Env) ->
   State = new_state(Src, Env, Opts),
-  ensure_read(State).
-
-%% @doc Read all forms.
--spec read_all(state()) -> [any()].
-read_all(Src) ->
-  read_all(Src, #{}).
-
--spec read_all(state(), opts()) -> [any()].
-read_all(Src, Opts) ->
-  read_all(Src, Opts, clj_env:default()).
-
--spec read_all(state(), opts(), clj_env:env()) -> [any()].
-read_all(Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts),
-  #{forms := Forms} = do_read_all(State),
-  lists:reverse(Forms).
+  try
+    ensure_read(State)
+  catch
+    throw:{eof, Value, _} -> Value
+  end.
 
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
 
+-spec platform_features(opts() | undefined) -> opts().
+platform_features(undefined) ->
+  #{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)};
+platform_features(#{?OPT_FEATURES := Features} = Opts) ->
+  NewFeatures = lists:foldl( fun(Feature, Acc) ->
+                                 clj_core:conj(Acc, Feature)
+                             end
+                           , Features
+                           , ?PLATFORM_FEATURES
+                           ),
+  Opts#{?OPT_FEATURES => NewFeatures};
+platform_features(Opts) ->
+  Opts#{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)}.
+
 %% @private
 -spec new_state(binary(), any(), opts()) -> state().
 new_state(Src, Env, Opts) ->
   #{ src           => Src
-   , opts          => Opts
+   , opts          => platform_features(Opts)
    , forms         => []
    , pending_forms => []
    , env           => Env
    , loc           => {1, 1}
    , bindings      => clj_scope:new()
+   , return_on     => undefined
    }.
 
 %% @doc Makes sure a single form is read unless we reach
@@ -150,37 +159,29 @@ new_state(Src, Env, Opts) ->
 ensure_read(#{forms := [Form]}) ->
   Form;
 ensure_read(State) ->
-  ensure_read(read_one(State, true)).
-
-%% @private
--spec do_read_all(state()) -> state().
-do_read_all(#{src := <<>>} = State) ->
-  State;
-do_read_all(State) ->
-  do_read_all(read_one(State, false)).
+  ensure_read(read_one(State)).
 
 -spec read_one(state()) -> state().
-read_one(State) ->
-  read_one(State, true).
-
--spec read_one(state(), boolean()) -> state().
-read_one(#{pending_forms := [Form | PendingForms]} = State, _ThrowEof) ->
+read_one(#{pending_forms := [Form | PendingForms]} = State) ->
   push_form(Form, State#{pending_forms => PendingForms});
-read_one(#{src := <<>>} = State, ThrowEof) ->
+read_one(#{src := <<>>, opts := Opts} = State) ->
+  Eof = maps:get(?OPT_EOF, Opts, ?EOFTHROW),
   %% If we got here it's because we were expecting something
   %% and it wasn't there.
   case check_reader(State) of
     {ok, NewState} ->
-      read_one(NewState, ThrowEof);
-    eof when ThrowEof ->
+      read_one(NewState);
+    eof when Eof =:= ?EOFTHROW ->
       clj_utils:throw(<<"EOF">>, location(State));
     eof ->
-      State
+      throw({eof, Eof, State})
   end;
-read_one(#{src := <<First/utf8, Rest/binary>>} = State, ThrowEof) ->
+read_one(#{ src := <<Ch/utf8, _/binary>>, return_on := Ch} = State) ->
+  throw({return_on, consume_char(State)});
+read_one(#{src := <<First/utf8, Rest/binary>>} = State) ->
   Second = peek_src(State#{src := Rest}),
   case clj_utils:char_type(First, Second) of
-    whitespace      -> read_one(consume_char(State), ThrowEof);
+    whitespace      -> read_one(consume_char(State));
     number          -> read_number(State);
     string          -> read_string(State);
     keyword         -> read_keyword(State);
@@ -223,7 +224,7 @@ read_string(#{ src     := <<"\"", _/binary>>
   State = consume_char(maps:remove(current, State0)),
   push_form(String, remove_scope(State));
 %% Process escaped character
-read_string(#{ src := <<"\\", _/binary>>
+read_string(#{ src     := <<"\\", _/binary>>
              , current := String
              } = State0
            ) ->
@@ -247,9 +248,9 @@ read_string(#{src := <<>>} = State) ->
       read_string(NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      clj_utils:throw( [ <<"Started reading at (">>
+      clj_utils:error( [ <<"Started reading at (">>
                        , Line, <<":">>, Col
-                       , <<") but found EOF while expecting '\"'">>
+                       , <<") but found EOF while reading string">>
                        ]
                      , location(State)
                      )
@@ -273,59 +274,72 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
     $f  -> {<<"\f">>, consume_char(State)};
     $u  ->
       %% Hexa unicode
-      {CodePoint, State1} = unicode_char(consume_char(State), 16, 4, true),
-      {unicode:characters_to_binary([CodePoint]), State1};
+      State1   = consume_char(State),
+      NextChar = peek_src(State1),
+      clj_utils:error_when( NextChar =/= eof
+                            andalso not is_char_valid(NextChar, 16)
+                          , [ <<"Invalid unicode escape: \\u">>
+                            , NextChar =/= eof andalso <<NextChar/utf8>>
+                            ]
+                          , location(State1)
+                          ),
+      {CodePoint, State2} = unicode_char(State1, 16, 4, true),
+      {unicode:characters_to_binary([CodePoint], utf8), State2};
     _ when CharType == number ->
       %% Octal unicode
-      case unicode_char(State, 8, 3, false) of
-        {CodePoint, State1} when CodePoint > 8#337 ->
-          clj_utils:throw( <<"Octal escape sequence must be in range [0, 377]">>
-                         , location(State1)
-                         );
-        {CodePoint, State1} ->
-          {unicode:characters_to_binary([CodePoint]), State1}
-      end;
+      {CodePoint, State1} = unicode_char(State, 8, 3, false),
+      clj_utils:error_when( CodePoint > 8#377
+                          , <<"Octal escape sequence must be in range [0, 377]">>
+                          , location(State1)
+                          ),
+      {unicode:characters_to_binary([CodePoint], utf8), State1};
     _ ->
-      clj_utils:throw( <<"Unsupported escape character: \\", Char>>
+      clj_utils:error( <<"Unsupported escape character: \\", Char>>
                      , location(State)
                      )
   end.
 
 -spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
-  {binary(), state()}.
+  {integer(), state()}.
 unicode_char(State, Base, Length, IsExact) ->
-  NumberBaseFun = fun
-                    (C) when C >= $0, C =< $9 -> C - $0 + 1  =< Base;
-                    (C) when C >= $a, C =< $z -> C - $a + 11 =< Base;
-                    (C) when C >= $A, C =< $Z -> C - $A + 11 =< Base;
-                    (_) -> false
-                  end,
-  {Number, State1} = consume(State, NumberBaseFun, Length),
+  {Number, State1} = read_token(State, Length),
   Size = case IsExact of
            true -> size(Number);
            false -> Length
          end,
-  case Size of
-    Length ->
-      try
-        EscapedChar = binary_to_integer(Number, Base),
-        {EscapedChar, State1}
-      catch
-        _:badarg ->
-          BaseBin = integer_to_binary(Base),
-          clj_utils:throw( <<"Number '", Number/binary,
-                             "' is not in base ", BaseBin/binary>>
-                          , location(State)
-                          )
-      end;
-    NumLength ->
-      LengthBin = integer_to_binary(Length),
-      NumLengthBin = integer_to_binary(NumLength),
-      clj_utils:throw(<<"Invalid character length: ", NumLengthBin/binary,
-                        ", should be ", LengthBin/binary>>
-                     , location(State)
-                     )
-  end.
+
+  clj_utils:error_when( Size =/= Length
+                      , [ <<"Invalid character length: ">>, Size
+                        , <<", should be: ">>, Length
+                        ]
+                      , location(State)
+                      ),
+  Invalid      = fun(C) -> not is_char_valid(C, Base) end,
+  Chars        = unicode:characters_to_list(Number),
+  InvalidChars = lists:filter(Invalid, Chars),
+  InvalidChar  = case InvalidChars of
+                   [] -> undefined;
+                   [C | _] -> <<C/utf8>>
+                 end,
+  clj_utils:error_when( InvalidChars =/= []
+                      , [ <<"Invalid digit: ">>, InvalidChar]
+                      , location(State)
+                      ),
+
+  NumberInt = binary_to_integer(Number, Base),
+  clj_utils:error_when(  16#D800 =< NumberInt andalso NumberInt =< 16#DFFF
+                      , [ <<"Invalid UTF-8 character number: \\u">>, Number]
+                      , location(State)
+                      ),
+
+  {NumberInt, State1}.
+
+-spec is_char_valid(integer(), integer()) -> boolean().
+is_char_valid(C, Base) when C >= $0, C =< $9 -> C - $0 + 1  =< Base;
+is_char_valid(C, Base) when C >= $a, C =< $z -> C - $a + 11 =< Base;
+is_char_valid(C, Base) when C >= $A, C =< $Z -> C - $A + 11 =< Base;
+is_char_valid(_, _) -> false.
+
 
 %%------------------------------------------------------------------------------
 %% Keyword
@@ -342,10 +356,10 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
                 clj_core:keyword(Namespace, Name);
               {undefined, Name} ->
                 clj_core:keyword(Name);
-              {Namespace, Name} ->
+              {<<Ch/utf8, _/binary>> = Namespace, Name} when Ch =/= $: ->
                 clj_core:keyword(Namespace, Name);
-              undefined ->
-                clj_utils:throw( <<"Invalid token: :", Token/binary>>
+              _ ->
+                clj_utils:error( <<"Invalid token: :", Token/binary>>
                                , location(State)
                                )
             end,
@@ -357,19 +371,17 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
 
 -spec read_symbol(state()) -> state().
 read_symbol(State) ->
-  Meta = file_location_meta(State),
-
   {Token, State1} = read_token(State),
   Symbol = case clj_utils:parse_symbol(Token) of
              {undefined, <<"nil">>}   -> undefined;
              {undefined, <<"true">>}  -> true;
              {undefined, <<"false">>} -> false;
              {undefined, Name} ->
-               clj_core:with_meta(clj_core:symbol(Name), Meta);
+               clj_core:symbol(Name);
              {Ns, Name} ->
-               clj_core:with_meta(clj_core:symbol(Ns, Name), Meta);
+               clj_core:symbol(Ns, Name);
              undefined ->
-               clj_utils:throw(<<"Invalid symbol ", Token/binary>>
+               clj_utils:error( <<"Invalid token: ", Token/binary>>
                               , location(State)
                               )
            end,
@@ -407,13 +419,17 @@ read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
 
 -spec read_meta(state()) -> state().
 read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
-  {SugaredMeta, State1} = pop_form(read_one(State#{src => Src})),
-  Meta    = clj_utils:desugar_meta(SugaredMeta),
-  LocMeta = file_location_meta(State),
-  AllMeta = clj_core:merge([LocMeta, Meta]),
+  {SugaredMeta, State1} = read_pop_one(State#{src => Src}),
+  Meta = clj_utils:desugar_meta(SugaredMeta),
 
-  {Form, State2} = pop_form(read_one(State1)),
-  NewForm = clj_core:with_meta(Form, AllMeta),
+  {Form, State2} = read_pop_one(State1),
+  FormMeta = clj_core:merge([clj_core:meta(Form), Meta]),
+  NewMeta  = case clj_core:'seq?'(Form) of
+              true  -> clj_core:merge([FormMeta, file_location_meta(State)]);
+              false -> FormMeta
+            end,
+
+  NewForm = clj_core:with_meta(Form, NewMeta),
 
   push_form(NewForm, State2).
 
@@ -423,7 +439,7 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
 
 -spec read_syntax_quote(state()) -> state().
 read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
-  {Form, NewState} = pop_form(read_one(consume_char(State))),
+  {Form, NewState} = read_pop_one(consume_char(State)),
 
   try
     %% TODO: using process dictionary here might be a code smell
@@ -432,8 +448,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
     {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
 
     push_form(NewFormWithMeta, NewState#{env => Env2})
-  catch _:Reason ->
-      erlang:raise(throw, Reason, erlang:get_stacktrace()),
+  catch error:Reason ->
       clj_utils:throw(Reason, location(NewState))
   after
     erlang:erase(gensym_env)
@@ -708,8 +723,8 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_unmatched_delim(state()) -> no_return().
-read_unmatched_delim(State) ->
-  clj_utils:throw(unmatched_delim, location(State)).
+read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
+  clj_utils:throw(<<"Umatched delimiter ", Delim/utf8>>, location(State)).
 
 %%------------------------------------------------------------------------------
 %% Character
@@ -732,30 +747,41 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
       <<"formfeed">> -> $\f;
       <<"return">> -> $\r;
       <<"u", RestToken/binary>> ->
+        TokenLength = 'clojerl.String':count(RestToken),
+        clj_utils:error_when( TokenLength =/= 4
+                            , [ <<"Invalid unicode character: \\u">>
+                              , RestToken
+                              ]
+                            , location(State1)
+                            ),
         {Ch, _} = unicode_char(State1#{src => RestToken}, 16, 4, true),
         Ch;
       <<"o", RestToken/binary>> ->
         read_octal_char(State1#{src => RestToken});
-      Ch -> clj_utils:throw( <<"Unsupported character: \\", Ch/binary>>
+      Ch -> clj_utils:error( <<"Unsupported character: \\", Ch/binary>>
                            , location(State)
                            )
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
-  push_form(CharBin, State1).
+  push_form(CharBin, State1);
+read_char(State) ->
+  clj_utils:error( <<"EOF while reading character">>
+                 , location(State)
+                 ).
 
 -spec read_octal_char(state()) -> char().
 read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
   Size    = size(RestToken),
   SizeBin = integer_to_binary(Size),
-  clj_utils:throw( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
+  clj_utils:error( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
                  , location(State)
                  );
 read_octal_char(#{src := RestToken} = State) ->
   Size = size(RestToken),
   case unicode_char(State, 8, Size, true) of
     {Ch, _} when Ch > 8#377 ->
-      clj_utils:throw(<<"Octal escape sequence must be in range [0, 377]">>
+      clj_utils:error( <<"Octal escape sequence must be in range [0, 377]">>
                      , location(State)
                      );
     {Ch, _} -> Ch
@@ -779,7 +805,7 @@ read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
           ArgSym = register_arg(-1, ArgEnv),
           push_form(ArgSym, consume_chars(1, State1));
         {register_arg_n, State1} ->
-          {N, State2} = pop_form(read_one(State1)),
+          {N, State2} = read_pop_one(State1),
           clj_utils:throw_when( not is_integer(N)
                               , <<"Arg literal must be %, %& or %integer">>
                               , location(State1)
@@ -881,7 +907,7 @@ read_fn(State) ->
                                 )
   end,
   erlang:put(arg_env, #{}),
-  {Form, NewState} = pop_form(read_one(State)),
+  {Form, NewState} = read_pop_one(State),
   ArgEnv = erlang:erase(arg_env),
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
@@ -909,7 +935,7 @@ read_fn(State) ->
 
 -spec read_eval(state()) -> state().
 read_eval(#{env := Env} = State) ->
-  {Form, NewState} = pop_form(read_one(State)),
+  {Form, NewState} = read_pop_one(State),
   {Value, Env1} = clj_compiler:eval(Form, #{}, Env),
   push_form(Value, NewState#{env => Env1}).
 
@@ -977,7 +1003,7 @@ read_regex(#{src := <<>>} = State) ->
 
 -spec read_discard(state()) -> state().
 read_discard(State) ->
-  {_, NewState} = pop_form(read_one(State)),
+  {_, NewState} = read_pop_one(State),
   %% Can't call read_one here because is might not be a top level form.
   NewState.
 
@@ -991,88 +1017,131 @@ read_cond(#{src := <<>>} = State) ->
     {ok, NewState} ->
       read_cond(NewState);
     eof ->
-      clj_utils:throw(<<"EOF while reading cond">>, location(State))
+      clj_utils:error(<<"EOF while reading cond">>, location(State))
   end;
-read_cond(#{src := Src, opts := Opts} = State) ->
-  ReadCondOpt = maps:get(read_cond, Opts, undefined),
-  case lists:member(ReadCondOpt, [allow, preserve]) of
-    false -> clj_utils:throw( <<"Conditional read not allowed">>
-                             , location(State)
-                             );
-    true -> ok
-  end,
+read_cond(#{opts := Opts} = State0) ->
+  ReadCondOpt = maps:get(?OPT_READ_COND, Opts, undefined),
+  clj_utils:error_when(not lists:member(ReadCondOpt, [allow, preserve])
+                      , <<"Conditional read not allowed">>
+                      , location(State0)
+                      ),
 
-  ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
-  IsSplicing = case Src of <<"@"/utf8, _/binary>> -> true; _ -> false end,
-  State1 =
-    case IsSplicing of
-      true when not ReadDelim ->
-        clj_utils:throw(<<"cond-splice not in list">>, location(State));
+  {_, State} = consume(State0, [whitespace]),
+  IsSplicing = peek_src(State) =:= $@,
+
+  State1 = case IsSplicing of
+             true  -> consume_char(State);
+             false -> State
+           end,
+
+  {_, State2} = consume(State1, [whitespace]),
+
+  clj_utils:error_when( peek_src(State2) =/= $(
+                      , <<"read-cond body must be a list">>
+                      , location(State1)
+                      ),
+
+  OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+  SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,
+  erlang:put(supress_read, SupressRead),
+
+  try
+    case SupressRead of
       true ->
-        consume_char(State);
+        {ListForm, State3} = read_pop_one(State2),
+        ReaderCondForm     = reader_conditional(ListForm, IsSplicing),
+        push_form(ReaderCondForm, State3);
       false ->
-        State
-    end,
-
-  {ListForm, NewState} = pop_form(read_one(State1)),
-
-  case clj_core:'list?'(ListForm) of
-    false -> clj_utils:throw( <<"read-cond body must be a list">>
-                            , location(State1)
-                            );
-    true ->
-      OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
-      SupressRead = OldSupressRead orelse ReadCondOpt == preserve,
-      erlang:put(supress_read, SupressRead),
-      ReturnState =
-        case SupressRead of
-          true ->
-            ReaderCondForm = reader_conditional(ListForm, IsSplicing),
-            push_form(ReaderCondForm, NewState);
-          false ->
-            read_cond_delimited(ListForm, IsSplicing, NewState)
-        end,
-      erlang:put(supress_read, OldSupressRead),
-      ReturnState
+        read_cond_delimited(IsSplicing, consume_char(State2))
+    end
+  after
+    erlang:put(supress_read, OldSupressRead)
   end.
 
 reader_conditional(List, IsSplicing) ->
   'clojerl.reader.ReaderConditional':?CONSTRUCTOR(List, IsSplicing).
 
-read_cond_delimited(List, IsSplicing, #{opts := Opts} = State) ->
-  Features = maps:get(features, Opts, clj_core:hash_set([])),
-  Forms = clj_core:seq(List),
-  case match_feature(Forms, Features, State) of
-    nomatch ->
-      read_one(State);
-    Form when IsSplicing ->
-      PendingFormsFun = fun push_pending_form/2,
-      case clj_core:'sequential?'(Form) of
-        false ->
-          clj_utils:throw( <<"Spliced form list in read-cond-splicing must "
-                             "extend clojerl.ISequential">>
-                         , location(State)
-                         );
-        true ->
-          Seq   = clj_core:seq_to_list(Form),
-          Items = clj_core:seq_to_list(Seq),
-          lists:foldl(PendingFormsFun, State, lists:reverse(Items))
-      end;
-    Form ->
-      push_form(Form, State)
+read_cond_delimited(IsSplicing, State) ->
+  case match_feature(State) of
+    %% When there is no match at all there is nothing to read
+    {finished, State1} ->
+      State1;
+    {nomatch,  State1} ->
+      read_cond_delimited(IsSplicing, State1);
+    {match, Form, State1} when IsSplicing ->
+      clj_utils:error_when( not clj_core:'sequential?'(Form)
+                          , <<"Spliced form list in "
+                              "read-cond-splicing must "
+                              "extend clojerl.ISequential">>
+                          , location(State1)
+                          ),
+
+      ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
+      clj_utils:error_when( IsSplicing andalso not ReadDelim
+                          , <<"Reader conditional splicing "
+                              "not allowed at the top level">>
+                          , location(State)
+                          ),
+
+      State2 = read_until($), fun read_skip_suppress/1, State1),
+      Items = lists:reverse(clj_core:seq_to_list(Form)),
+      lists:foldl(fun push_pending_form/2, State2, Items);
+    {match, Form, State1} ->
+      State2 = read_until($), fun read_skip_suppress/1, State1),
+      push_form(Form, State2)
   end.
 
-match_feature([], _Features, _State) ->
-  nomatch;
-match_feature([Feature, Form | Rest], Features, State) ->
-  case clj_core:'contains?'(Features, Feature) of
-    true -> Form;
-    false -> match_feature(Rest, Features, State)
-  end;
-match_feature(_, _, State) ->
-  clj_utils:throw( <<"read-cond requires an even number of forms">>
-                 , location(State)
-                 ).
+-spec match_feature(state()) ->
+  {match | nomatch, any(), state()} | {finished, state()}.
+match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
+  Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
+  try
+    %% Change the return_on value so that we only read until the next
+    %% ')' char.
+    {Feature, State1} = read_pop_one(State#{return_on => $)}),
+    clj_utils:error_when( not clj_core:'keyword?'(Feature)
+                        , <<"Feature should be a keyword">>
+                        , location(State)
+                        ),
+
+    clj_utils:error_when( lists:member(Feature, ?RESERVED_FEATURES)
+                        , [<<"Feature name ">>, Feature, <<" is reserved.">>]
+                        , location(State)
+                        ),
+
+    try
+      case
+        Feature =:= ?DEFAULT_FEATURE orelse
+        clj_core:'contains?'(Features, Feature)
+      of
+        true  ->
+          {Form, State2} = read_pop_one(State1),
+          {match, Form, State2#{return_on => ReturnOn}};
+        false ->
+          State2 = read_skip_suppress(State1),
+          {nomatch, State2#{return_on => ReturnOn}}
+      end
+    catch
+      throw:{return_on, State3} ->
+        clj_utils:error( <<"read-cond requires an even number of forms">>
+                       , location(State3)
+                       )
+    end
+  catch
+    throw:{return_on, State4} ->
+      {finished, State4#{return_on => ReturnOn}}
+  end.
+
+-spec read_skip_suppress(state()) -> state().
+read_skip_suppress(State) ->
+  OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+  erlang:put(supress_read, true),
+  try
+    {_, NewState} = read_pop_one(State),
+    NewState
+  after
+    erlang:put(supress_read, OldSupressRead)
+  end.
 
 %%------------------------------------------------------------------------------
 %% # reader tag
@@ -1080,7 +1149,7 @@ match_feature(_, _, State) ->
 
 -spec read_tagged(state()) -> state().
 read_tagged(State) ->
-  {Symbol, State1} = pop_form(read_one(State)),
+  {Symbol, State1} = read_pop_one(State),
 
   clj_utils:throw_when( not clj_core:'symbol?'(Symbol)
                       , <<"Reader tag must be a symbol">>
@@ -1110,25 +1179,33 @@ read_tagged(State) ->
               DefaultDataReader -> DefaultDataReader
             end,
 
-  Reader2 = case
-              Reader1 =/= undefined
-              orelse clj_core:deref(DefaultReaderFunVar)
-            of
-              true -> Reader1;
-              DefaultReaderFun -> DefaultReaderFun
-            end,
+  {IsDefault, Reader2} = case Reader1 =/= undefined of
+                           true  -> {false, Reader1};
+                           false -> {true, clj_core:deref(DefaultReaderFunVar)}
+                         end,
 
-  clj_utils:throw_when( Reader2 =:= undefined
-                      , [ <<"No reader function for tag ">>
-                        , Symbol
-                        ]
-                      , location(State)
-                      ),
+  {Form, State2} = read_pop_one(State1),
+  case clj_core:boolean(erlang:get(supress_read)) of
+    true ->
+      push_form(tagged_literal(Symbol, Form), State2);
+    false ->
+      clj_utils:error_when( Reader2 =:= undefined
+                          , [<<"No reader function for tag ">>, Symbol]
+                          , location(State)
+                          ),
 
-  {Form, State2} = pop_form(read_one(State1)),
-  ReadForm       = clj_core:invoke(Reader2, [Form]),
+      ReadForm = case IsDefault of
+                   true ->
+                     clj_core:invoke(Reader2, [Symbol, Form]);
+                   false ->
+                     clj_core:invoke(Reader2, [Form])
+                 end,
+      push_form(ReadForm, State2)
+    end.
 
-  push_form(ReadForm, State2).
+-spec tagged_literal(any(), any()) -> 'clojerl.reader.Taggedliteral':type().
+tagged_literal(Tag, Form) ->
+  'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(Tag, Form).
 
 %%------------------------------------------------------------------------------
 %% Utility functions
@@ -1212,23 +1289,30 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
 
 -spec read_token(state()) -> {binary(), state()}.
 read_token(State) ->
+  read_token(State, -1).
+
+-spec read_token(state(), integer()) -> {binary(), state()}.
+read_token(State, Length) ->
   Fun = fun(Char) ->
             (not is_whitespace(Char))
               andalso (not is_macro_terminating(Char))
         end,
-  consume(State, Fun).
+  consume(State, Fun, Length).
+
 
 -spec read_until(char(), state()) -> state().
-read_until(Delim, #{src := <<>>} = State) ->
+read_until(Delim, State) ->
+  read_until(Delim, fun read_one/1, State).
+
+-spec read_until(char(), function(), state()) -> state().
+read_until(Delim, ReadFun, #{src := <<>>} = State) ->
   case check_reader(State) of
     {ok, NewState} ->
-      read_until(Delim, NewState);
+      read_until(Delim, ReadFun, NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      LineBin = integer_to_binary(Line),
-      ColBin = integer_to_binary(Col),
       clj_utils:throw( [ <<"Started reading at (">>
-                       , LineBin, <<":">>, ColBin
+                       , Line, <<":">>, Col
                        , <<") but found EOF while expecting '">>
                        , <<Delim/utf8>>
                        , <<"'">>
@@ -1236,15 +1320,21 @@ read_until(Delim, #{src := <<>>} = State) ->
                      , location(State)
                      )
   end;
-read_until(Delim, #{src := <<Delim/utf8, _/binary>>} = State) ->
-  consume_char(scope_put(read_delim, false, State));
-read_until(Delim, #{src := <<X/utf8, _/binary>>} = State) ->
+read_until(Delim, _ReadFun, #{src := <<Delim/utf8, _/binary>>} = State) ->
+  #{ forms         := Forms
+   , pending_forms := PendingForms
+   } = State,
+  State1 = State#{ forms := lists:reverse(PendingForms) ++ Forms
+                 , pending_forms => []
+                 },
+  consume_char(scope_put(read_delim, false, State1));
+read_until(Delim, ReadFun, #{src := <<X/utf8, _/binary>>} = State) ->
   case clj_utils:char_type(X) of
     whitespace ->
-      read_until(Delim, consume_char(State));
+      read_until(Delim, ReadFun, consume_char(State));
     _ ->
       State1 = scope_put(read_delim, true, State),
-      read_until(Delim, read_one(State1))
+      read_until(Delim, ReadFun, ReadFun(State1))
   end.
 
 -spec is_macro_terminating(char()) -> boolean().
@@ -1265,12 +1355,14 @@ skip_line(State) ->
 
 -spec wrapped_read('clojerl.Symbol':type(), state()) -> state().
 wrapped_read(Symbol, State) ->
-  {Form, NewState} = pop_form(read_one(State)),
+  {Form, NewState} = read_pop_one(State),
   List = clj_core:list([Symbol, Form]),
   push_form(List, NewState).
 
--spec pop_form(state()) -> {any(), state()}.
-pop_form(#{forms := [Form | Forms]} = State) ->
+-spec read_pop_one(state()) -> {any(), state()}.
+read_pop_one(State0) ->
+  State = read_one(State0),
+  #{forms := [Form | Forms]} = State,
   {Form, State#{forms => Forms}}.
 
 -spec push_form(any(), state()) -> state().
@@ -1312,21 +1404,21 @@ file_location_meta(State) ->
               }
   end.
 
--spec peek_src(state()) -> binary().
+-spec peek_src(state()) -> integer().
 peek_src(#{src := <<First/utf8, _/binary>>}) ->
   First;
-peek_src(#{src := <<>>, opts := #{io_reader := Reader}}) ->
+peek_src(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}}) ->
   case 'erlang.io.IReader':read(Reader) of
-    eof -> <<>>;
+    eof -> eof;
     Ch  ->
       'erlang.io.IReader':unread(Reader, Ch),
       Ch
   end;
 peek_src(_State) ->
-  <<>>.
+  eof.
 
 -spec check_reader(state()) -> {ok, state()} | eof.
-check_reader(#{src := <<>>, opts := #{io_reader := Reader}} = State)
+check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
   when Reader =/= undefined ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;

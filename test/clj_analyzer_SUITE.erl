@@ -143,7 +143,7 @@ def(_Config) ->
   ct:comment("Qualified var that doesn't exist"),
   ok = try analyze_one(<<"(def x/y)">>)
        catch
-         _:<<"?:1:6: Can't refer to qualified var that doesn't exist: x/y">> ->
+         _:<<"?:1:1: Can't refer to qualified var that doesn't exist: x/y">> ->
            ok
        end,
 
@@ -387,7 +387,7 @@ fn(_Config) ->
 
   ct:comment("binding in fn should not leak out of fn* scope"),
   ok = try analyze_all(<<"(fn* ([zz y] zz y)) zz">>), error
-       catch _:<<"?:1:21: Unable to resolve symbol 'zz' in this context">> ->
+       catch _:<<"?:?:?: Unable to resolve symbol 'zz' in this context">> ->
            ok
        end,
 
@@ -552,7 +552,7 @@ do(_Config) ->
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
-       catch _:<<"?:1:17: Unable to resolve symbol 'z' in this context">> ->
+       catch _:<<"?:1:1: Unable to resolve symbol 'z' in this context">> ->
            ok
        end,
 
@@ -638,7 +638,7 @@ invoke(_Config) ->
 
   ct:comment("Call undefined symbol"),
   ok = try analyze_one(<<"(bla)">>)
-       catch _:<<"?:1:2: Unable to resolve symbol 'bla' in this context">> ->
+       catch _:<<"?:1:1: Unable to resolve symbol 'bla' in this context">> ->
            ok
        end,
 
@@ -669,7 +669,7 @@ invoke(_Config) ->
 symbol(_Config) ->
   ct:comment("Unresolved symbol"),
   ok = try analyze_one(<<"hello-world">>), error
-       catch _:<<"?:1:1: Unable to resolve symbol "
+       catch _:<<"?:?:?: Unable to resolve symbol "
                  "'hello-world' in this context">> ->
            ok
        end,
@@ -1080,5 +1080,5 @@ analyze_all(Src) ->
   Fun = fun(Form, EnvAcc) ->
             clj_analyzer:analyze(EnvAcc, Form)
         end,
-  Env = clj_reader:read_fold(Fun, Src, #{}),
+  Env = clj_reader:read_fold(Fun, Src, #{}, clj_env:default()),
   clj_env:exprs(Env).
