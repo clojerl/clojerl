@@ -112,6 +112,12 @@ close(_Config) ->
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   File = 'erlang.io.File':open(<<"tmp">>),
+  <<"tmp">> = 'erlang.io.File':path(File),
+
+  %% Make temp file
+  TmpFile = 'erlang.io.File':make_temp(<<"a">>, <<"b">>),
+  TmpPath = 'erlang.io.File':path(TmpFile),
+  true = filelib:is_regular(TmpPath),
 
   ct:comment("Skip is unsupported"),
   ok = try 'erlang.io.IReader':skip(File, 10), error

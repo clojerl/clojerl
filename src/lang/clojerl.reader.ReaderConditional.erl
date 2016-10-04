@@ -3,12 +3,14 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.Stringable').
 
 -export([?CONSTRUCTOR/2]).
 
 -export([equiv/2]).
+-export([hash/1]).
 -export([ get/2
         , get/3
         ]).
@@ -26,6 +28,11 @@ equiv( #?TYPE{name = ?M, data = {X1, Y}}
   clj_core:equiv(X1, X2);
 equiv(_, _) ->
   false.
+
+%% clojerl.IHash
+
+hash(#?TYPE{name = ?M} = ReaderCond) ->
+  erlang:phash2(ReaderCond).
 
 %% clojerl.ILookup
 

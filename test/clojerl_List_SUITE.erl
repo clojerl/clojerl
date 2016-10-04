@@ -38,6 +38,7 @@ new(_Config) ->
   [1, 2, 3] = clj_core:seq(List),
 
   List2 = clj_core:list([]),
+  List2 = clj_core:list(undefined),
   undefined = clj_core:seq(List2),
 
   {comments, ""}.

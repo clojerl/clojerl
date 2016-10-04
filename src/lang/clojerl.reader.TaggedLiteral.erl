@@ -19,6 +19,8 @@
 ?CONSTRUCTOR(Tag, Form) ->
   #?TYPE{data = {Tag, Form}}.
 
+%% clojerl.IEquiv
+
 equiv( #?TYPE{name = ?M, data = {T1, F1}}
      , #?TYPE{name = ?M, data = {T2, F2}}
      ) ->
