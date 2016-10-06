@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             clojure.test))
 
-(defn require-ns [root path]
+(defn- path->symbol [root path]
   (let [path (if root
                (subs path (count root))
                path)
@@ -11,15 +11,20 @@
                     (str/replace #"/" ".")
                     (str/replace #"_" "-"))
         ns-symbol (symbol ns-name)]
-    (require ns-symbol)
     ns-symbol))
+
+(def ignore-nss #{'clojure.test-clojure.test})
 
 (defn -main [& [test-dir root]]
   (when test-dir
     (let [paths (->> (file-seq test-dir)
                      (filter (complement filelib/is_dir.1)))
-          namespaces (mapv (partial require-ns root) paths)
-          result (apply clojure.test/run-tests namespaces)]
+          ns-symbols (->> paths
+                          (map (partial path->symbol root))
+                          (filter (comp not ignore-nss))
+                          doall)
+          _ (doseq [ns-symbol ns-symbols] (require ns-symbol))
+          result (apply clojure.test/run-tests ns-symbols)]
       (when (or (pos? (:error result))
                 (pos? (:fail result)))
         (throw result)))))
