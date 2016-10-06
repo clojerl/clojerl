@@ -148,7 +148,7 @@ maybe_binary(List) when is_list(List) -> list_to_binary(List).
 %% erlang.io.IWriter
 
 write(Name, Str) when is_atom(Name) ->
-  write(Name, Str, []).
+  write(Name, "~s", [Str]).
 
 write(IO, Format, Values)
   when IO =:= standard_io; IO =:= standard_error ->

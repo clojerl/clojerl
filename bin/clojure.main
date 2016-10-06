@@ -1,0 +1,7 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -smp enable -pa ebin -pa priv -s clojerl start -noshell
+
+main(Args) ->
+  ArgsBin = [list_to_binary(Arg) || Arg <- Args],
+  'clojure.main':main(ArgsBin).
