@@ -4542,7 +4542,7 @@
    (fn [^java.io.File f] (filelib/is_dir.e f))
    (fn [^java.io.File d] (->> (file/list_dir.e d)
                              second
-                             (map erlang/list_to_binary.1)
+                             (map #(filename/join.e d %))
                              seq))
    dir))
 

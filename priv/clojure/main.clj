@@ -300,7 +300,7 @@ by default when a new command-line REPL is started."} repl-requires
   [[_ main-ns & args] inits]
   (with-bindings
     (initialize args inits)
-    (apply (ns-resolve (require (symbol main-ns)) '-main) args)))
+    (apply (ns-resolve (doto (symbol main-ns) require) '-main) args)))
 
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
