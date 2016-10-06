@@ -18,5 +18,8 @@
   (when test-dir
     (let [paths (->> (file-seq test-dir)
                      (filter (complement filelib/is_dir.1)))
-          namespaces (mapv (partial require-ns root) paths)]
-      (apply clojure.test/run-tests namespaces))))
+          namespaces (mapv (partial require-ns root) paths)
+          result (apply clojure.test/run-tests namespaces)]
+      (when (or (pos? (:error result))
+                (pos? (:fail result)))
+        (throw result)))))
