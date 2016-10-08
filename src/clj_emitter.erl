@@ -428,7 +428,7 @@ ast(#{op := erl_fun} = Expr, State) ->
                         , <<"/">>
                         , atom_to_binary(Function, utf8)
                         ]
-                      , clj_env:get(Env, location)
+                      , clj_env:location(Env)
                       ),
 
   Anno = anno_from(Env),
@@ -1176,18 +1176,17 @@ var_val_function(Val, VarAst, Anno) ->
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->
-  Location = clj_env:get(Env, location, #{file => <<>>}),
-  clj_core:get(Location, file, <<>>).
+  maps:get(file, clj_env:location(Env), <<>>).
 
 -spec anno_from(clj_env:env()) -> erl_anno:anno().
 anno_from(Env) ->
-  case clj_env:get(Env, location) of
+  case clj_env:location(Env) of
     undefined -> 0;
-    Map ->
-      Line   = clj_core:get(Map, line, 0),
-      Column = clj_core:get(Map, column, 1),
+    Location ->
+      Line   = maps:get(line, Location, 0),
+      Column = maps:get(column, Location, 1),
       Anno   = [{location, {Line, Column}}],
-      case clj_core:get(Map, file, <<>>) of
+      case maps:get(file, Location, <<>>) of
         undefined -> Anno;
         File      -> [{file, binary_to_list(File)} | Anno]
       end

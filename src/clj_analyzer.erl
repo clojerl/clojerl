@@ -134,20 +134,15 @@ analyze_const(Env, Constant) ->
 
 -spec analyze_seq(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_seq(Env0, List) ->
-  OldLocation = clj_env:get(Env0, location),
-
-  Location    = case clj_reader:location_meta(List) of
-                  undefined   -> OldLocation;
-                  NewLocation -> NewLocation
-                end,
-  Op          = clj_core:first(List),
+  OldLocation   = clj_env:location(Env0),
+  MaybeLocation = clj_reader:location_meta(List),
+  Env           = clj_env:maybe_update_location(Env0, MaybeLocation),
+  Op            = clj_core:first(List),
 
   clj_utils:error_when( Op =:= undefined
                       , <<"Can't call nil">>
-                      , Location
+                      , clj_env:location(Env)
                       ),
-
-  Env = clj_env:put(Env0, location, Location),
 
   ExpandedList = macroexpand_1(Env, List),
   Env1 = case clj_core:equiv(List, ExpandedList) of
@@ -163,7 +158,7 @@ analyze_seq(Env0, List) ->
            false ->
              analyze_form(Env, ExpandedList)
          end,
-  clj_env:put(Env1, location, OldLocation).
+  clj_env:location(Env1, OldLocation).
 
 %%------------------------------------------------------------------------------
 %% Parse quote
