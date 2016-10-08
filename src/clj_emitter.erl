@@ -585,23 +585,16 @@ ast(#{op := 'if'} = Expr, State) ->
   Anno = anno_from(Env),
 
   {Test, State1} = pop_ast(ast(TestExpr, State)),
-
-  TrueSymbol    = clj_core:gensym(<<"true_">>),
-  TrueSymbolAt  = binary_to_atom(clj_core:str(TrueSymbol), utf8),
-  True          = {var, Anno, TrueSymbolAt},
-  FalseAtom     = {atom, Anno, false},
-  UndefinedAtom = {atom, Anno, undefined},
-  TrueGuards    = [ {op, 2, '=/=', True, FalseAtom}
-                  , {op, 2, '=/=', True, UndefinedAtom}
-                  ],
+  TrueAtom       = {atom, Anno, true},
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause    = {clause, Anno, [True], [TrueGuards], [ThenAst]},
+  TrueClause     = {clause, Anno, [TrueAtom], [], [ThenAst]},
 
-  Whatever = {var, Anno, '_'},
+  FalseAtom      = {atom, Anno, false},
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause = {clause, Anno, [Whatever], [], [ElseAst]},
+  FalseClause    = {clause, Anno, [FalseAtom], [], [ElseAst]},
 
-  Ast = {'case', Anno, Test, [TrueClause, FalseClause]},
+  TestBoolean    = call_mfa(clj_core, boolean, [Test], Anno),
+  Ast = {'case', Anno, TestBoolean, [TrueClause, FalseClause]},
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% case
