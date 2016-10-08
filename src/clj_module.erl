@@ -94,7 +94,7 @@ get_forms(ModuleName) when is_atom(ModuleName) ->
   to_forms(get(?MODULE, ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
--spec ensure_loaded(atom(), string()) -> ok.
+-spec ensure_loaded(atom(), binary()) -> ok.
 ensure_loaded(Name, Source) ->
   case is_loaded(Name) of
     true  -> ok;
@@ -355,8 +355,8 @@ cleanup() ->
 %% if the module's binary is not found, which is interpreted as if the
 %% module is new.
 %% @end
--spec load(atom(), string()) -> ok | {error, term()}.
-load(Name, Source) ->
+-spec load(atom(), binary()) -> ok | {error, term()}.
+load(Name, Source) when is_binary(Source) ->
   SourceStr = binary_to_list(Source),
   Module = case code:ensure_loaded(Name) of
              {module, Name} ->

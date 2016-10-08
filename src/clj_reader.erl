@@ -80,13 +80,26 @@ read_fold_loop(Fun, State) ->
 -spec location_meta(any()) -> location() | undefined.
 location_meta(X) ->
   case clj_core:'meta?'(X) of
-    true  ->
-      Meta = clj_core:meta(X),
-      #{ line   => clj_core:get(Meta, line, undefined)
-       , column => clj_core:get(Meta, column, undefined)
-       , file   => clj_core:get(Meta, file, undefined)
-       };
+    true ->
+      case clj_core:meta(X) of
+        undefined -> undefined;
+        Meta ->
+          Meta1 = add_location_field(Meta, line, #{}),
+          Meta2 = add_location_field(Meta, column, Meta1),
+          Meta3 = add_location_field(Meta, file, Meta2),
+          case Meta3 =:= #{} of
+            true  -> undefined;
+            false -> Meta3
+          end
+      end;
     false -> undefined
+  end.
+
+-spec add_location_field(atom(), any(), map()) -> map().
+add_location_field(Meta, Name, Location) ->
+  case clj_core:get(Meta, Name) of
+    undefined -> Location;
+    Value -> maps:put(Name, Value, Location)
   end.
 
 -spec remove_location(any()) -> any().
