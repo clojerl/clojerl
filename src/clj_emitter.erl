@@ -57,7 +57,7 @@ ast(#{op := var} = Expr, State) ->
    } = Expr,
   Module = 'clojerl.Var':module(Var),
   Name   = 'clojerl.Var':val_function(Var),
-  Ast    = application_mfa(Module, Name, [], anno_from(Env)),
+  Ast    = call_mfa(Module, Name, [], anno_from(Env)),
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
@@ -122,7 +122,7 @@ ast(#{op := def} = Expr, State) ->
         %% If the var is dynamic then the body of the val function needs
         %% to take this into account.
         case 'clojerl.Var':is_dynamic(Var) of
-          true  -> {var_val_function(V, VarAst), S};
+          true  -> {var_val_function(V, VarAst, VarAnno), S};
           false -> {V, S}
         end
     end,
@@ -139,10 +139,13 @@ ast(#{op := def} = Expr, State) ->
 %% import
 %%------------------------------------------------------------------------------
 ast(#{op := import} = Expr, State) ->
-  #{typename := Typename} = Expr,
+  #{ typename := Typename
+   , env      := Env
+   } = Expr,
 
   TypenameAst = erl_parse:abstract(Typename),
-  ImportAst   = application_mfa(clj_namespace, import_type, [TypenameAst]),
+  Anno        = anno_from(Env),
+  ImportAst   = call_mfa(clj_namespace, import_type, [TypenameAst], Anno),
 
   push_ast(ImportAst, State);
 %%------------------------------------------------------------------------------
@@ -163,6 +166,7 @@ ast(#{op := type} = Expr, State) ->
 ast(#{op := new} = Expr, State) ->
   #{ type := #{op := type, type := TypeSym}
    , args := ArgsExprs
+   , env  := Env
    } = Expr,
 
   {ArgsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
@@ -170,7 +174,7 @@ ast(#{op := new} = Expr, State) ->
                               ),
 
   TypeModule = sym_to_kw(TypeSym),
-  Ast = application_mfa(TypeModule, ?CONSTRUCTOR, ArgsAsts),
+  Ast = call_mfa(TypeModule, ?CONSTRUCTOR, ArgsAsts, anno_from(Env)),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% deftype
@@ -296,20 +300,21 @@ ast(#{op := defprotocol} = Expr, State) ->
 
   Module = sym_to_kw(NameSym),
   ok     = clj_module:ensure_loaded(Module, file_from(Env)),
+  Anno   = anno_from(Env),
 
-  TermType = {type, 0, term, []},
+  TermType = {type, Anno, term, []},
   CallbackAttrFun = fun(Sig) ->
                         MethodNameSym = clj_core:first(Sig),
                         Arity         = clj_core:second(Sig),
                         ArgsTypes     = lists:duplicate(Arity, TermType),
                         { attribute
-                        , 0
+                        , Anno
                         , callback
                         , { {sym_to_kw(MethodNameSym), Arity}
                           , [{ type
-                             , 0
+                             , Anno
                              , 'fun'
-                             , [ {type, 0, product, ArgsTypes}
+                             , [ {type, Anno, product, ArgsTypes}
                                , TermType
                                ]
                              }
@@ -318,11 +323,11 @@ ast(#{op := defprotocol} = Expr, State) ->
                         }
                     end,
 
-  ProtocolAttr = {attribute, 0, protocol, true},
+  ProtocolAttr = {attribute, Anno, protocol, true},
   Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
   clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
 
-  Ast = erl_parse:abstract(NameSym, anno_from(Env)),
+  Ast = erl_parse:abstract(NameSym, Anno),
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
 %% extend_type
@@ -371,7 +376,7 @@ ast(#{op := extend_type} = Expr, State) ->
                       , maps:keys(Impls)
                       ),
 
-  Ast = {atom, 0, undefined},
+  Ast = {atom, anno_from(Env), undefined},
   push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
@@ -466,15 +471,15 @@ ast(#{op := invoke} = Expr, State) ->
             %% call, otherwise emit a remote call.
             case clj_core:namespace(Symbol) of
               undefined when NsName =:= VarNsName, not ForceRemote ->
-                application_fa(Function, Args1, Anno);
+                call_fa(Function, Args1, Anno);
               _ ->
-                application_mfa(Module, Function, Args1, Anno)
+                call_mfa(Module, Function, Args1, Anno)
             end;
           false ->
             ValFunction = 'clojerl.Var':val_function(Var),
-            FunAst      = application_mfa(Module, ValFunction, [], Anno),
+            FunAst      = call_mfa(Module, ValFunction, [], Anno),
             ArgsAst     = list_ast(Args),
-            application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
+            call_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
         end,
 
       push_ast(Ast, State1);
@@ -486,7 +491,7 @@ ast(#{op := invoke} = Expr, State) ->
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),
-      Ast     = application_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno),
+      Ast     = call_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno),
 
       push_ast(Ast, State2)
   end;
@@ -496,12 +501,13 @@ ast(#{op := invoke} = Expr, State) ->
 ast(#{op := with_meta} = WithMetaExpr, State) ->
   #{ meta := Meta
    , expr := Expr
+   , env  := Env
    } = WithMetaExpr,
 
   {MetaAst, State1} = pop_ast(ast(Meta, State)),
   {ExprAst, State2} = pop_ast(ast(Expr, State1)),
 
-  Ast = application_mfa(clj_core, with_meta, [ExprAst, MetaAst]),
+  Ast = call_mfa(clj_core, with_meta, [ExprAst, MetaAst], anno_from(Env)),
 
   push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
@@ -517,11 +523,7 @@ ast(#{op := vector} = Expr, State) ->
                            ),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa( 'clojerl.Vector'
-                       , ?CONSTRUCTOR
-                       , [ListItems]
-                       , anno_from(Env)
-                       ),
+  Ast = call_mfa('clojerl.Vector', ?CONSTRUCTOR, [ListItems], anno_from(Env)),
   push_ast(Ast, State1);
 ast(#{op := map} = Expr, State) ->
   #{ keys := KeysExprs
@@ -545,11 +547,7 @@ ast(#{op := map} = Expr, State) ->
   Items = PairUp(Keys, Vals, []),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa( 'clojerl.Map'
-                       , ?CONSTRUCTOR
-                       , [ListItems]
-                       , anno_from(Env)
-                       ),
+  Ast = call_mfa('clojerl.Map', ?CONSTRUCTOR, [ListItems], anno_from(Env)),
   push_ast(Ast, State2);
 ast(#{op := set} = Expr, State) ->
   #{ items := ItemsExprs
@@ -561,11 +559,7 @@ ast(#{op := set} = Expr, State) ->
                            ),
   ListItems = list_ast(Items),
 
-  Ast = application_mfa( 'clojerl.Set'
-                       , ?CONSTRUCTOR
-                       , [ListItems]
-                       , anno_from(Env)
-                       ),
+  Ast = call_mfa('clojerl.Set', ?CONSTRUCTOR, [ListItems], anno_from(Env)),
   push_ast(Ast, State1);
 ast(#{op := tuple} = Expr, State) ->
   #{ items := ItemsExprs
@@ -622,9 +616,11 @@ ast(#{op := 'case'} = Expr, State) ->
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
   ClauseFun = fun({PatternExpr, BodyExpr}, StateAcc) ->
+                  EnvPattern  = maps:get(env, PatternExpr),
+                  AnnoPattern = anno_from(EnvPattern),
                   {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
                   {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
-                  ClauseAst = {clause, 0, [Pattern], [], [Body]},
+                  ClauseAst = {clause, AnnoPattern, [Pattern], [], [Body]},
                   push_ast(ClauseAst, StateAcc2)
               end,
 
@@ -635,8 +631,15 @@ ast(#{op := 'case'} = Expr, State) ->
     case DefaultExpr of
       undefined -> {ClausesAsts0, State3};
       _ ->
+        EnvDefault  = maps:get(env, DefaultExpr),
+        AnnoDefault = anno_from(EnvDefault),
         {DefaultAst, State3_1} = pop_ast(ast(DefaultExpr, State3)),
-        DefaultClause = {clause, 0, [{var, 0, '_'}], [], [DefaultAst]},
+        DefaultClause = { clause
+                        , AnnoDefault
+                        , [{var, AnnoDefault, '_'}]
+                        , []
+                        , [DefaultAst]
+                        },
         {ClausesAsts0 ++ [DefaultClause], State3_1}
     end,
 
@@ -721,7 +724,7 @@ ast(#{op := recur} = Expr, State) ->
           fn ->
             NameAst = {var, Anno, LoopIdAtom},
             ArgsAst = list_ast(Args),
-            application_mfa(clj_core, invoke, [NameAst, ArgsAst], Anno);
+            call_mfa(clj_core, invoke, [NameAst, ArgsAst], Anno);
           loop ->
             NameAst = {var, Anno, LoopIdAtom},
             {call, Anno, NameAst, Args};
@@ -741,7 +744,7 @@ ast(#{op := throw} = Expr, State) ->
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
 
   Anno = anno_from(Env),
-  Ast  = application_mfa(erlang, throw, [Exception], Anno),
+  Ast  = call_mfa(erlang, throw, [Exception], Anno),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% try
@@ -890,7 +893,7 @@ create_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
                      ArgsAst = [ MapVarAst
                                , {atom, Anno, FName}
                                ],
-                     application_mfa(clj_core, get, ArgsAst)
+                     call_mfa(clj_core, get, ArgsAst, Anno)
                  end,
 
   DissocFoldFun = fun({var, _, FName} = FieldAst, MapAst) ->
@@ -898,14 +901,14 @@ create_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
                         true  -> MapAst;
                         false ->
                           FAtom = {atom, Anno, FName},
-                          application_mfa(clj_core, dissoc, [MapAst, FAtom])
+                          call_mfa(clj_core, dissoc, [MapAst, FAtom], Anno)
                       end
                   end,
 
   %% Coerce argument into a clojerl.Map
   EmptyMapAst   = erl_parse:abstract('clojerl.Map':?CONSTRUCTOR([])),
   ArgsListAst   = list_ast([EmptyMapAst, MapVarAst]),
-  MergeCallAst  = application_mfa(clj_core, merge, [ArgsListAst]),
+  MergeCallAst  = call_mfa(clj_core, merge, [ArgsListAst], Anno),
 
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
 
@@ -997,8 +1000,9 @@ method_to_case_clause(MethodExpr, State) ->
 -spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
   ast().
 method_to_clause(MethodExpr, State0, ClauseFor) ->
-  #{ params      := ParamsExprs
-   , body        := BodyExpr
+  #{ params := ParamsExprs
+   , body   := BodyExpr
+   , env    := Env
    } = MethodExpr,
 
   %% Get this value this way since it might not be there
@@ -1025,26 +1029,22 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(Args)]
           end,
 
-  Clause = {clause, 0, Args1, Guards, [Body]},
+  Clause = {clause, anno_from(Env), Args1, Guards, [Body]},
 
   State3 = remove_lexical_renames_scope(State2),
 
   push_ast(Clause, State3).
 
--spec application_mfa(module(), atom(), list()) -> ast().
-application_mfa(Module, Function, Args) ->
-  application_mfa(Module, Function, Args, 0).
-
--spec application_mfa(module(), atom(), list(), erl_anno:anno()) -> ast().
-application_mfa(Module, Function, Args, Anno) ->
+-spec call_mfa(module(), atom(), list(), erl_anno:anno()) -> ast().
+call_mfa(Module, Function, Args, Anno) ->
   { call
   , Anno
   , {remote, Anno, {atom, Anno, Module}, {atom, Anno, Function}}
   , Args
   }.
 
--spec application_fa(atom(), list(), erl_anno:anno()) -> ast().
-application_fa(Function, Args, Anno) ->
+-spec call_fa(atom(), list(), erl_anno:anno()) -> ast().
+call_fa(Function, Args, Anno) ->
   {call, Anno, {atom, Anno, Function}, Args}.
 
 -spec group_methods([map()]) -> #{integer() => [map()]}.
@@ -1163,16 +1163,16 @@ do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= undefined ->
 do_shadow_depth(_, Depth) ->
   Depth.
 
--spec var_val_function(ast(), ast()) -> ast().
-var_val_function(Val, VarAst) ->
-  TestAst            = application_mfa('clojerl.Var', dynamic_binding, [VarAst]),
-  UndefinedAtom      = {atom, 0, undefined},
-  UndefinedClauseAst = {clause, 0, [UndefinedAtom], [], [Val]},
-  XVar               = {var, 0, x},
-  TupleAst           = {tuple, 0, [{atom, 0, ok}, XVar]},
-  ValueClauseAst     = {clause, 0, [TupleAst], [], [XVar]},
+-spec var_val_function(ast(), ast(), erl_anno:anno()) -> ast().
+var_val_function(Val, VarAst, Anno) ->
+  TestAst            = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
+  UndefinedAtom      = {atom, Anno, undefined},
+  UndefinedClauseAst = {clause, Anno, [UndefinedAtom], [], [Val]},
+  XVar               = {var, Anno, x},
+  TupleAst           = {tuple, Anno, [{atom, Anno, ok}, XVar]},
+  ValueClauseAst     = {clause, Anno, [TupleAst], [], [XVar]},
 
-  {'case', 0, TestAst, [UndefinedClauseAst, ValueClauseAst]}.
+  {'case', Anno, TestAst, [UndefinedClauseAst, ValueClauseAst]}.
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->

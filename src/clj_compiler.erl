@@ -303,6 +303,7 @@ compile_forms(Forms, Opts) ->
       {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
       Name;
     Error ->
+      io:format("~s~n", [ast_to_string(Forms)]),
       error(Error)
   end.
 
