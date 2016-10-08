@@ -7,16 +7,12 @@
         , is_special/1
         ]).
 
--define(DEBUG(X), undefined).
+-define(DEBUG(X), X).
 
 -spec analyze(clj_env:env(), any()) -> clj_env:env().
 analyze(Env0, Form) ->
-  try
-    {Expr, Env} =  clj_env:pop_expr(analyze_form(Env0, Form)),
-    clj_env:push_expr(Env, Expr#{top_level => true})
-  catch throw:{analyzer, Reason} ->
-      clj_utils:error(Reason, clj_reader:location_meta(Form))
-  end.
+  {Expr, Env} =  clj_env:pop_expr(analyze_form(Env0, Form)),
+  clj_env:push_expr(Env, Expr#{top_level => true}).
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -103,7 +99,7 @@ analyze_form(Env, Form) ->
     _ when IsSeq ->
       case clj_core:'empty?'(Form) of
         true  -> analyze_const(Env, Form);
-        false -> analyze_seq(Env, clj_core:first(Form), Form)
+        false -> analyze_seq(Env, Form)
       end;
     'clojerl.Symbol' ->
       analyze_symbol(Env, Form);
@@ -136,28 +132,33 @@ analyze_const(Env, Constant) ->
 %% Analyze seq
 %%------------------------------------------------------------------------------
 
--spec analyze_seq(clj_env:env(), any(), 'clojerl.List':type()) -> clj_env:env().
-analyze_seq(_Env, undefined, List) ->
-  clj_utils:throw(<<"Can't call nil">>, clj_reader:location_meta(List));
-analyze_seq(Env, Op, List) ->
+-spec analyze_seq(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+analyze_seq(Env0, List) ->
+  OldLocation   = clj_env:location(Env0),
+  MaybeLocation = clj_reader:location_meta(List),
+  Env           = clj_env:maybe_update_location(Env0, MaybeLocation),
+  Op            = clj_core:first(List),
+
+  clj_utils:error_when( Op =:= undefined
+                      , <<"Can't call nil">>
+                      , clj_env:location(Env)
+                      ),
+
   ExpandedList = macroexpand_1(Env, List),
-  case clj_core:equiv(List, ExpandedList) of
-    true ->
-      AnalyzeInvoke = fun analyze_invoke/2,
-      Fun = case clj_core:'symbol?'(Op) of
-              true ->
-                maps:get(clj_core:name(Op), special_forms(), AnalyzeInvoke);
-              false ->
-                AnalyzeInvoke
-            end,
-      try
-        Fun(Env, List)
-      catch throw:{analyzer, Reason} ->
-          clj_utils:error(Reason, clj_reader:location_meta(List))
-      end;
-    false ->
-      analyze_form(Env, ExpandedList)
-  end.
+  Env1 = case clj_core:equiv(List, ExpandedList) of
+           true ->
+             AnaInvoke = fun analyze_invoke/2,
+             Fun = case clj_core:'symbol?'(Op) of
+                     true ->
+                       maps:get(clj_core:name(Op), special_forms(), AnaInvoke);
+                     false ->
+                       AnaInvoke
+                   end,
+             Fun(Env, List);
+           false ->
+             analyze_form(Env, ExpandedList)
+         end,
+  clj_env:location(Env1, OldLocation).
 
 %%------------------------------------------------------------------------------
 %% Parse quote
@@ -168,7 +169,7 @@ parse_quote(Env, List) ->
   Count = clj_core:count(List),
   clj_utils:throw_when( Count =/= 2
                       , [<<"Wrong number of args to quote, had: ">>, Count - 1]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   Second = clj_core:second(List),
@@ -206,7 +207,10 @@ parse_fn(Env, List) ->
   %% identify the fun as a clojure function when evaluated with erl_eval
   %% (see clojerl.erlang.Fn)
   PrefixNameSym = 'clojerl.erlang.Fn':prefix(NameSym),
-  LocalExpr     = #{op => local, name => PrefixNameSym},
+  LocalExpr     = #{ op   => local
+                   , env  => ?DEBUG(Env)
+                   , name => PrefixNameSym
+                   },
 
   %% If there is a def var we add it to the local scope
   DefNameSym  = get_def_name(Env),
@@ -270,14 +274,14 @@ parse_fn(Env, List) ->
   %% Validations
   clj_utils:throw_when( length(AllVariadics) >= 2
                       , <<"Can't have more than 1 variadic overload">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   DistinctFixedArities = lists:usort(FixedArities),
   clj_utils:throw_when( length(DistinctFixedArities) =/= length(FixedArities)
                       , <<"Can't have 2 or more overloads "
                           "with the same arity">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   clj_utils:throw_when( IsVariadic andalso
@@ -286,7 +290,7 @@ parse_fn(Env, List) ->
                         MaxFixedArity > VariadicArity
                       , <<"Can't have fixed arity overload "
                           "with more params than variadic overload">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   %% Now that we have all the fn info we re-analyze the methods
@@ -349,7 +353,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
   Params = clj_core:first(List),
   clj_utils:throw_when( not clj_core:'vector?'(Params)
                       , <<"Parameter declaration should be a vector">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   ParamsList = clj_core:seq_to_list(Params),
@@ -357,7 +361,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                       , [ <<"Params must be valid binding symbols, had: ">>
                         , Params
                         ]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   IsNotAmpersandFun = fun(X) -> clj_core:str(X) =/= <<"&">> end,
@@ -403,9 +407,9 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
   %% TODO: check for a single symbol after '&
 
   FnMethodExpr = #{ op          => fn_method
+                  , env         => ?DEBUG(Env1)
                   , form        => List
                   , loop_id     => LoopId
-                  , env         => ?DEBUG(Env1)
                   , 'variadic?' => IsVariadic
                   , params      => lists:reverse(ParamsExprs)
                   , fixed_arity => FixedArity
@@ -469,7 +473,7 @@ parse_if(Env, Form) ->
   Count = clj_core:count(Form),
   clj_utils:throw_when( Count =/= 3 andalso Count =/= 4
                       , [<<"Wrong number of args to if, had: ">>, Count - 1]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   {Test, Then, Else} =
@@ -534,7 +538,7 @@ parse_loop(Env, Form) ->
 
 -spec analyze_let(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_let(Env, Form) ->
-  validate_bindings(Form),
+  validate_bindings(Env, Form),
   Op = clj_core:first(Form),
   IsLoop = clj_core:equiv(clj_core:symbol(<<"loop*">>), Op),
 
@@ -577,7 +581,7 @@ analyze_let(Env, Form) ->
 parse_binding({Name, Init}, Env) ->
   clj_utils:throw_when( not is_valid_bind_symbol(Name)
                       , [<<"Bad binding form: ">>, Name]
-                      , clj_reader:location_meta(Name)
+                      , clj_env:location(Env)
                       ),
   OpAtom = case clj_env:get(Env, is_loop) of
              true  -> loop;
@@ -596,8 +600,8 @@ parse_binding({Name, Init}, Env) ->
   Env2 = clj_env:put_local(Env1, Name, maps:remove(env, BindExpr)),
   clj_env:push_expr(Env2, BindExpr).
 
--spec validate_bindings('clojerl.List':type()) -> ok.
-validate_bindings(Form) ->
+-spec validate_bindings(clj_env:env(), 'clojerl.List':type()) -> ok.
+validate_bindings(Env, Form) ->
   Op = clj_core:first(Form),
   Bindings = clj_core:second(Form),
   clj_utils:throw_when( not clj_core:'vector?'(Bindings),
@@ -605,7 +609,7 @@ validate_bindings(Form) ->
                        , <<" requires a vector for its bindings, had: ">>
                        , clj_core:type(Bindings)
                        ]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   clj_utils:throw_when( not clj_core:'even?'(clj_core:count(Bindings))
@@ -614,7 +618,7 @@ validate_bindings(Form) ->
                             "vector, had: ">>
                         , clj_core:count(Bindings)
                         ]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
   ok.
 
@@ -630,7 +634,7 @@ parse_recur(Env, List) ->
   clj_utils:throw_when( clj_env:context(Env) =/= return
                         andalso clj_env:context(Env) =/= expr
                       , <<"Can only recur from tail position">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
   clj_utils:throw_when( LoopLocals =/= clj_core:count(List) - 1
                       , [<<"Mismatched argument count to recur, expected: ">>
@@ -638,7 +642,7 @@ parse_recur(Env, List) ->
                         , <<" args, had: ">>
                         , clj_core:count(List) - 1
                         ]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   Env1 = clj_env:context(Env, expr),
@@ -716,7 +720,7 @@ parse_patters_bodies(Env, [Pat, Body | Rest], PatternBodyPairs) ->
 
 -spec parse_def(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_def(Env, List) ->
-  Docstring    = validate_def_args(List),
+  Docstring    = validate_def_args(Env, List),
   VarSymbol0   = clj_core:second(List),
   SymbolMeta0  = clj_core:meta(VarSymbol0),
   ArgLists     = clj_core:get(SymbolMeta0, arglists),
@@ -729,7 +733,13 @@ parse_def(Env, List) ->
                    Docstring -> #{doc => Docstring}
                  end,
 
-  SymbolMeta   = clj_core:merge([ArgListsMap, DocstringMap, SymbolMeta0]),
+  LocationInfo = clj_env:get(Env, location),
+
+  SymbolMeta   = clj_core:merge([ ArgListsMap
+                                , DocstringMap
+                                , SymbolMeta0
+                                , LocationInfo
+                                ]),
   VarSymbol    = clj_core:with_meta(VarSymbol0, SymbolMeta),
 
   Var0 = lookup_var(VarSymbol),
@@ -738,7 +748,7 @@ parse_def(Env, List) ->
                       , [ <<"Can't refer to qualified var that doesn't exist: ">>
                         , VarSymbol
                         ]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
@@ -747,7 +757,7 @@ parse_def(Env, List) ->
   clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
                         andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
                       , <<"Can't create defs outside of current ns">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   NameBin       = clj_core:name(VarSymbol),
@@ -771,7 +781,7 @@ parse_def(Env, List) ->
                        , <<" is not dynamic but its name"
                            " suggests otherwise.~n">>
                        ]
-                     , clj_reader:location_meta(List)
+                     , clj_env:location(Env)
                      ),
 
   clj_namespace:update_var(Var),
@@ -837,8 +847,9 @@ var_fn_info(Var, #{op := fn} = Expr) ->
 var_fn_info(Var, _) ->
   Var.
 
--spec validate_def_args('clojerl.List':type()) -> undefined | binary().
-validate_def_args(List) ->
+-spec validate_def_args(clj_env:env(), 'clojerl.List':type()) ->
+  undefined | binary().
+validate_def_args(Env, List) ->
   Docstring =
     case {clj_core:count(List), clj_core:third(List)} of
       {4, Str} when is_binary(Str) -> Str;
@@ -852,17 +863,17 @@ validate_def_args(List) ->
       case clj_core:type(clj_core:second(List)) of
         'clojerl.Symbol' -> ok;
         _ -> clj_utils:throw( <<"First argument to def must be a symbol">>
-                            , clj_reader:location_meta(List)
+                            , clj_env:location(Env)
                             )
       end,
       Docstring;
     1 ->
       clj_utils:throw( <<"Too few arguments to def">>
-                     , clj_reader:location_meta(List)
+                     , clj_env:location(Env)
                      );
     _ ->
       clj_utils:throw( <<"Too many arguments to def">>
-                     , clj_reader:location_meta(List)
+                     , clj_env:location(Env)
                      )
   end.
 
@@ -921,13 +932,13 @@ parse_import(Env, Form) ->
                       , [ <<"Wrong number of args to import*, had: ">>
                         , ArgCount
                         ]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   TypeName = clj_core:second(Form),
   clj_utils:throw_when( not is_binary(TypeName)
                       , <<"Argument to import* must be a string">>
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   NewExpr = #{ op       => import
@@ -977,11 +988,11 @@ parse_deftype(Env, Form) ->
 
   FieldsList  = clj_core:seq_to_list(Fields),
   FieldsFun   = fun(FieldName) ->
-                    #{ env   => ?DEBUG(Env)
+                    #{ op    => binding
+                     , env   => ?DEBUG(Env)
                      , form  => FieldName
                      , name  => FieldName
                      , local => field
-                     , op    => binding
                      }
                 end,
   %% The analyzer adds the fields to the local scope of the methods,
@@ -1035,21 +1046,21 @@ analyze_deftype_method(Form, Env) ->
                       , [ <<"Method name must be a symbol, had: ">>
                         , clj_core:type(MethodName)
                         ]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   clj_utils:throw_when( not clj_core:'vector?'(Args)
                       , [ <<"Parameter listing should be a vector, had: ">>
                         , clj_core:type(Args)
                         ]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   clj_utils:throw_when( clj_core:count(Args) < 1
                       , [ <<"Must supply at least one argument for 'this' in: ">>
                         , MethodName
                         ]
-                      , clj_reader:location_meta(Form)
+                      , clj_env:location(Env)
                       ),
 
   LoopId = {function, MethodName},
@@ -1061,6 +1072,7 @@ analyze_deftype_method(Form, Env) ->
 
   MethodExpr1 = maps:merge( maps:remove('variadic?', MethodExpr)
                           , #{ op   => method
+                             , env  => ?DEBUG(Env)
                              , form => Form
                              , name => MethodName
                              }
@@ -1083,7 +1095,7 @@ parse_defprotocol(Env, List) ->
                       , [ <<"Protocol name should be a symbol, had: ">>
                         , clj_core:type(FQNameSym)
                         ]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   %% Refer the name of the protocol (without the namespace) in the
@@ -1130,7 +1142,7 @@ parse_extend_type(Env, List) ->
                         , clj_core:type(Type)
                         , <<" does not resolve to a type.">>
                         ]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   ExtendTypeExpr = #{ op    => extend_type
@@ -1170,7 +1182,7 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
                         , Proto
                         , <<"does not resolve to a protocol">>
                         ]
-                      , clj_reader:location_meta(Proto)
+                      , clj_env:location(EnvAcc)
                       ),
 
   EnvAcc2 = lists:foldl(fun analyze_deftype_method/2, EnvAcc1, Methods),
@@ -1189,7 +1201,7 @@ parse_throw(Env, List) ->
                       , [ <<"Wrong number of args to throw, had: ">>
                         , Count - 1
                         ]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   Second = clj_core:second(List),
@@ -1197,7 +1209,7 @@ parse_throw(Env, List) ->
   {ExceptionExpr, Env1} = clj_env:pop_expr(analyze_form(ExceptionEnv, Second)),
 
   ThrowExpr = #{ op        => throw
-               , env       => ?DEBUG(Env3)
+               , env       => ?DEBUG(Env)
                , form      => List
                , exception => ExceptionExpr
                },
@@ -1234,12 +1246,12 @@ parse_try(Env, List) ->
   clj_utils:throw_when( Tail =/= []
                       , <<"Only catch or finally clause can follow catch in "
                           "try expression">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   clj_utils:throw_when( length(Finallies) > 1
                       , <<"Only one finally clause allowed in try expression">>
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   Env1             = clj_env:put(Env, in_try, true),
@@ -1283,12 +1295,12 @@ parse_catch(Env, List) ->
 
   clj_utils:throw_when( not is_valid_bind_symbol(ErrName)
                       , [<<"Bad binding form: ">>, ErrName]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   clj_utils:throw_when( not is_valid_error_type(ErrType)
                       , [<<"Bad error type: ">>, ErrType]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   Env1 = clj_env:remove(Env, in_try),
@@ -1327,7 +1339,7 @@ parse_var(Env, List) ->
   Count = clj_core:count(List),
   clj_utils:throw_when( Count =/= 2
                       , [<<"Wrong number of args to var, had: ">>, Count]
-                      , clj_reader:location_meta(List)
+                      , clj_env:location(Env)
                       ),
 
   VarSymbol = clj_core:second(List),
@@ -1345,7 +1357,7 @@ parse_var(Env, List) ->
                       , VarSymbol
                       , <<" in this context">>
                       ]
-                     , clj_reader:location_meta(List)
+                     , clj_env:location(Env)
                      )
   end.
 
@@ -1379,13 +1391,13 @@ analyze_invoke(Env, Form) ->
 analyze_symbol(Env, Symbol) ->
   case resolve(Env, Symbol) of
     {undefined, _} ->
-      throw({ analyzer
-            , [ <<"Unable to resolve symbol '">>, Symbol
-              , <<"' in this context">>
-              ]
-            });
+      clj_utils:error([ <<"Unable to resolve symbol '">>, Symbol
+                      , <<"' in this context">>
+                      ]
+                     , clj_env:get(Env, location)
+                     );
     {{local, Local}, Env1} ->
-      clj_env:push_expr(Env1, Local#{op => local});
+      clj_env:push_expr(Env1, Local#{op => local, env => Env});
     {{erl_fun, Module, Function, Arity}, Env1} ->
       FunExpr = #{ op       => erl_fun
                  , env      => ?DEBUG(Env1)
@@ -1405,7 +1417,7 @@ analyze_symbol(Env, Symbol) ->
 
 -spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
   map().
-var_expr(Var, Symbol, _Env) ->
+var_expr(Var, Symbol, Env) ->
  #{ op   => var
   , env  => ?DEBUG(Env)
   , form => Symbol
@@ -1418,7 +1430,7 @@ var_expr(Var, Symbol, _Env) ->
                , clj_env:env()
                ) ->
   map().
-type_expr(Type, Symbol, _Env) ->
+type_expr(Type, Symbol, Env) ->
  #{ op   => type
   , env  => ?DEBUG(Env)
   , form => Symbol
@@ -1459,7 +1471,7 @@ resolve(Env, Symbol, CheckPrivate) ->
                                 andalso NsStr =/= CurrentNsName
                                 andalso not 'clojerl.Var':is_public(Var)
                               , [Var, <<" is not public">>]
-                              , clj_reader:location_meta(Symbol)
+                              , clj_env:location(Env)
                               ),
           {{var, Var}, Env}
       end;
@@ -1490,7 +1502,7 @@ erl_fun(Env, Symbol) ->
                        , <<" Add the suffix '.e' to the symbol's name">>
                        , <<" to remove this warning.">>
                        ]
-                     , clj_reader:location_meta(Symbol)
+                     , clj_env:location(Env)
                      ),
 
   Arity1 = case Arity of

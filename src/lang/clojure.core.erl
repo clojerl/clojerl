@@ -109,10 +109,10 @@
         , '*default-data-reader-fn*__val'/0
         ]).
 
-ns(_Form, _Env, Name, _References) ->
+ns(Form, _Env, Name, _References) ->
   clj_utils:throw_when( not clj_core:'symbol?'(Name)
                       , <<"First argument to ns must be a symbol">>
-                      , clj_reader:location_meta(Name)
+                      , clj_reader:location_meta(Form)
                       ),
 
   InNsSym = clj_core:symbol(<<"clojure.core">>, <<"in-ns">>),
@@ -132,7 +132,7 @@ ns__val() ->
   Name  = 'maybe-unquote'(MaybeQuotedName),
 
   clj_utils:throw_when( not clj_core:'symbol?'(Name)
-                      , <<"First argument to ns must be a symbol">>
+                      , <<"First argument to in-ns must be a symbol">>
                       , clj_reader:location_meta(Name)
                       ),
 

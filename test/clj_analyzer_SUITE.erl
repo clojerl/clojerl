@@ -316,7 +316,9 @@ fn(_Config) ->
    , params := [Fn4Param1b, Fn4Param2]
    } = Fn4Method2,
 
-  true = clj_core:equiv(Fn4Param1, Fn4Param1b),
+  true = clj_core:equiv( maps:remove(env, Fn4Param1)
+                       , maps:remove(env, Fn4Param1b)
+                       ),
 
   #{ op   := binding
    , name := XSymbolCheck4
@@ -408,15 +410,17 @@ do(_Config) ->
    } = analyze_one(<<"(do :expr)">>),
 
   ExprKeyword = clj_core:keyword(<<"expr">>),
-  #{op := constant,
-   form := ExprKeyword
+  #{ op   := constant
+   , form := ExprKeyword
    } = KeywordExpr,
 
   ct:comment("do with 3 expression"),
   #{op := do,
-    statements := [KeywordExpr, OneExpr],
+    statements := [KeywordExpr1, OneExpr],
     ret := RetExpr
    } = analyze_one(<<"(do :expr 1 :ret)">>),
+
+  true = maps:remove(env, KeywordExpr) =:= maps:remove(env, KeywordExpr1),
 
   #{op := constant,
    form := 1
@@ -1030,7 +1034,8 @@ extend_type(_Config) ->
                      "  (with_meta [this meta] :with-meta))">>
                   ),
 
-  [IMeta] = maps:keys(Impls2) -- [Stringable],
+  NotStringable = fun(#{type := T}) -> not clj_core:equiv(T, StringableSym) end,
+  [IMeta] = lists:filter(NotStringable, maps:keys(Impls2)),
   #{ op   := type
    , type := IMetaSym
    } = IMeta,
