@@ -529,7 +529,10 @@ syntax_quote(ReadFun) ->
 
   {comments, ""}.
 
-unquote(_Config) ->
+unquote(Config) when is_list(Config) ->
+  unquote(fun read/1),
+  unquote(fun read_io/1);
+unquote(ReadFun) ->
   UnquoteSymbol = clj_core:symbol(<<"clojure.core">>, <<"unquote">>),
   UnquoteSplicingSymbol = clj_core:symbol(<<"clojure.core">>,
                                                <<"unquote-splicing">>),
@@ -537,65 +540,73 @@ unquote(_Config) ->
 
   ct:comment("Unquote"),
   ListUnquote = clj_core:list([UnquoteSymbol, HelloWorldSymbol]),
-  true = clj_core:equiv(clj_reader:read(<<"~hello-world">>), ListUnquote),
+  true = clj_core:equiv(ReadFun(<<"~hello-world">>), ListUnquote),
 
   ct:comment("Unquote splicing"),
   ListUnquoteSplicing = clj_core:list([UnquoteSplicingSymbol,
-                                            HelloWorldSymbol]),
-  true =
-    clj_core:equiv(clj_reader:read(<<"~@hello-world">>), ListUnquoteSplicing),
+                                       HelloWorldSymbol]),
+  true = clj_core:equiv(ReadFun(<<"~@hello-world">>), ListUnquoteSplicing),
 
   ct:comment("Unquote nothing"),
-  ok = try clj_reader:read(<<"~">>)
+  ok = try ReadFun(<<"~">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-list(_Config) ->
+list(Config) when is_list(Config) ->
+  list(fun read/1),
+  list(fun read_io/1);
+list(ReadFun) ->
   HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Empty List"),
   EmptyList = clj_core:list([]),
-  true = clj_core:equiv(clj_reader:read(<<"()">>), EmptyList),
+  true = clj_core:equiv(ReadFun(<<"()">>), EmptyList),
 
   ct:comment("List"),
   List = clj_core:list([HelloWorldKeyword, HelloWorldSymbol]),
-  true = clj_core:equiv( clj_reader:read(<<"(:hello-world hello-world)">>)
+  true = clj_core:equiv( ReadFun(<<"(:hello-world hello-world)">>)
                        , List
                        ),
 
   ct:comment("List & space"),
-  true = clj_core:equiv( clj_reader:read(<<"(:hello-world hello-world )">>)
+  true = clj_core:equiv( ReadFun(<<"(:hello-world hello-world )">>)
                        , List
                        ),
 
   ct:comment("List without closing paren"),
-  ok = try clj_reader:read(<<"(1 42.0">>)
+  ok = try ReadFun(<<"(1 42.0">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-vector(_Config) ->
+vector(Config) when is_list(Config) ->
+  vector(fun read/1),
+  vector(fun read_io/1);
+vector(ReadFun) ->
   HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Vector"),
   Vector = 'clojerl.Vector':?CONSTRUCTOR([HelloWorldKeyword, HelloWorldSymbol]),
-  true = clj_core:equiv( clj_reader:read(<<"[:hello-world hello-world]">>)
+  true = clj_core:equiv( ReadFun(<<"[:hello-world hello-world]">>)
                        , Vector
                        ),
 
   ct:comment("Vector without closing bracket"),
-  ok = try clj_reader:read(<<"[1 42.0">>)
+  ok = try ReadFun(<<"[1 42.0">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-map(_Config) ->
+map(Config) when is_list(Config) ->
+  map(fun read/1),
+  map(fun read_io/1);
+map(ReadFun) ->
   HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
@@ -606,108 +617,121 @@ map(_Config) ->
                                    , HelloWorldKeyword
                                    ]
                                   ),
-  MapResult = clj_reader:read(<<"{:hello-world hello-world,"
-                                " hello-world :hello-world}">>),
+  MapResult = ReadFun(<<"{:hello-world hello-world,"
+                        " hello-world :hello-world}">>),
   true = clj_core:equiv(Map, MapResult),
 
   ct:comment("Map without closing braces"),
-  ok = try clj_reader:read(<<"{1 42.0">>)
+  ok = try ReadFun(<<"{1 42.0">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Literal map with odd number of expressions"),
-  ok = try clj_reader:read(<<"{1 42.0 :a}">>)
+  ok = try ReadFun(<<"{1 42.0 :a}">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-set(_Config) ->
+set(Config) when is_list(Config) ->
+  set(fun read/1),
+  set(fun read_io/1);
+set(ReadFun) ->
   HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
 
   ct:comment("Set"),
   Set = 'clojerl.Set':?CONSTRUCTOR([HelloWorldKeyword, HelloWorldSymbol]),
-  SetResult = clj_reader:read(<<"#{:hello-world hello-world}">>),
+  SetResult = ReadFun(<<"#{:hello-world hello-world}">>),
   true = clj_core:equiv(Set, SetResult),
 
   ct:comment("Set without closing braces"),
-  ok = try clj_reader:read(<<"#{1 42.0">>)
+  ok = try ReadFun(<<"#{1 42.0">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-unmatched_delim(_Config) ->
+unmatched_delim(Config) when is_list(Config) ->
+  unmatched_delim(fun read_all/1),
+  unmatched_delim(fun read_all_io/1);
+unmatched_delim(ReadAllFun) ->
   ct:comment("Single closing paren"),
-  ok = try read_all(<<"{1 42.0} )">>)
+  ok = try ReadAllFun(<<"{1 42.0} )">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Single closing bracket"),
-  ok = try read_all(<<"{1 42.0} ]">>)
+  ok = try ReadAllFun(<<"{1 42.0} ]">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Single closing braces"),
-  ok = try read_all(<<"{1 42.0} } ">>)
+  ok = try ReadAllFun(<<"{1 42.0} } ">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-char(_Config) ->
+char(Config) when is_list(Config) ->
+  char(fun read/1, fun read_all/1),
+  char(fun read_io/1, fun read_all_io/1).
+
+char(ReadFun, ReadAllFun) ->
   ct:comment("Read single char"),
-  <<"a">> = clj_reader:read(<<"\\a">>),
+  <<"a">>  = ReadFun(<<"\\a">>),
 
-  <<"\n">> = clj_reader:read(<<"\\newline">>),
-  <<" ">> = clj_reader:read(<<"\\space">>),
-  <<"\t">> = clj_reader:read(<<"\\tab">>),
-  <<"\b">> = clj_reader:read(<<"\\backspace">>),
-  <<"\f">> = clj_reader:read(<<"\\formfeed">>),
-  <<"\r">> = clj_reader:read(<<"\\return">>),
+  <<"\n">> = ReadFun(<<"\\newline">>),
+  <<" ">>  = ReadFun(<<"\\space">>),
+  <<"\t">> = ReadFun(<<"\\tab">>),
+  <<"\b">> = ReadFun(<<"\\backspace">>),
+  <<"\f">> = ReadFun(<<"\\formfeed">>),
+  <<"\r">> = ReadFun(<<"\\return">>),
 
-  <<"©"/utf8>> = clj_reader:read(<<"\\u00A9">>),
-  <<"ß"/utf8>> = clj_reader:read(<<"\\o337">>),
+  <<"©"/utf8>> = ReadFun(<<"\\u00A9">>),
+  <<"ß"/utf8>> = ReadFun(<<"\\o337">>),
 
-  <<" "/utf8>> = clj_reader:read(<<"\\ ">>),
-  <<"\""/utf8>> = clj_reader:read(<<"\\\"">>),
+  <<" "/utf8>> = ReadFun(<<"\\ ">>),
+  <<"\""/utf8>> = ReadFun(<<"\\\"">>),
 
   ct:comment("Char EOF"),
-  ok = try read_all(<<"12 \\">>)
+  ok = try ReadAllFun(<<"12 \\">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Octal char wrong length"),
-  ok = try read_all(<<"12 \\o0337">>)
+  ok = try ReadAllFun(<<"12 \\o0337">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Octal char wrong range"),
-  ok = try read_all(<<"12 \\o477">>)
+  ok = try ReadAllFun(<<"12 \\o477">>)
        catch _:_ -> ok
        end,
 
   ct:comment("Unsupported char"),
-  ok = try read_all(<<"42.0 \\ab">>)
+  ok = try ReadAllFun(<<"42.0 \\ab">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-fn(_Config) ->
+fn(Config) when is_list(Config) ->
+  fn(fun read/1),
+  fn(fun read_io/1);
+fn(ReadFun) ->
   FnSymbol = clj_core:symbol(<<"fn*">>),
   EmptyVector = clj_core:vector([]),
   EmptyList = clj_core:list([]),
 
   ct:comment("Read empty anonymous fn"),
-  EmptyFn = clj_reader:read(<<"#()">>),
+  EmptyFn = ReadFun(<<"#()">>),
   FnSymbol = clj_core:first(EmptyFn),
   EmptyVector = clj_core:second(EmptyFn),
   true = clj_core:equiv(clj_core:third(EmptyFn), EmptyList),
 
   ct:comment("Read anonymous fn with %"),
-  OneArgFn = clj_reader:read(<<"#(%)">>),
+  OneArgFn = ReadFun(<<"#(%)">>),
   FnSymbol = clj_core:first(OneArgFn),
   ArgVector1 = clj_core:second(OneArgFn),
   1 = clj_core:count(ArgVector1),
@@ -716,7 +740,7 @@ fn(_Config) ->
   true = clj_core:first(ArgVector1) == clj_core:first(ArgVector1),
 
   ct:comment("Read anonymous fn with %4 and %42"),
-  FortyTwoArgFn = clj_reader:read(<<"#(do %42 %4)">>),
+  FortyTwoArgFn = ReadFun(<<"#(do %42 %4)">>),
   FnSymbol = clj_core:first(FortyTwoArgFn),
   ArgVector42 = clj_core:second(FortyTwoArgFn),
   42 = clj_core:count(ArgVector42),
@@ -726,7 +750,7 @@ fn(_Config) ->
   {match, _} = re:run(clj_core:name(Arg42Sym), "p42__\\d+#"),
 
   ct:comment("Read anonymous fn with %3 and %&"),
-  RestArgFn = clj_reader:read(<<"#(do %& %3)">>),
+  RestArgFn = ReadFun(<<"#(do %& %3)">>),
   FnSymbol = clj_core:first(RestArgFn),
   ArgVectorRest = clj_core:second(RestArgFn),
   5 = clj_core:count(ArgVectorRest), %% 1-3, & and rest
@@ -736,7 +760,7 @@ fn(_Config) ->
   {match, _} = re:run(clj_core:name(ArgRestSym), "rest__\\d+#"),
 
   ct:comment("Nested #()"),
-  ok = try clj_reader:read(<<"#(do #(%))">>)
+  ok = try ReadFun(<<"#(do #(%))">>)
        catch _:<<"?:1:7: Nested #()s are not allowed">> -> ok end,
 
   {comments, ""}.

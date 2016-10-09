@@ -740,11 +740,18 @@ read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_char(state()) -> state().
-read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
+read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
+  State    = consume_char(State0),
+  NextChar = case peek_src(State) of
+               eof -> clj_utils:error( <<"EOF while reading character">>
+                                     , location(State)
+                                     );
+               NextCh  -> NextCh
+             end,
   {Token, State1} =
     case is_macro_terminating(NextChar) orelse is_whitespace(NextChar) of
-      true -> {<<NextChar/utf8>>, consume_chars(2, State)};
-      false -> read_token(consume_char(State))
+      true -> {<<NextChar/utf8>>, consume_char(State)};
+      false -> read_token(State)
     end,
   Char =
     case Token of
@@ -773,11 +780,7 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
-  push_form(CharBin, State1);
-read_char(State) ->
-  clj_utils:error( <<"EOF while reading character">>
-                 , location(State)
-                 ).
+  push_form(CharBin, State1).
 
 -spec read_octal_char(state()) -> char().
 read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
@@ -909,15 +912,19 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  case erlang:get(arg_env) of
-    undefined -> ok;
-    _         -> clj_utils:throw( <<"Nested #()s are not allowed">>
-                                , location(State)
-                                )
-  end,
-  erlang:put(arg_env, #{}),
-  {Form, NewState} = read_pop_one(State),
-  ArgEnv = erlang:erase(arg_env),
+  clj_utils:error_when(erlang:get(arg_env) =/= undefined
+                      , <<"Nested #()s are not allowed">>
+                      , location(State)
+                      ),
+
+  {{Form, NewState}, ArgEnv} =
+    try
+      erlang:put(arg_env, #{}),
+      {read_pop_one(State), erlang:get(arg_env)}
+    after
+      %% Make sure the process dictionary entry gets removed
+      erlang:erase(arg_env)
+    end,
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
   MapFun = fun(N) ->
@@ -933,7 +940,7 @@ read_fn(State) ->
   ArgsVector = clj_core:vector(ArgsSyms2),
 
   FnSymbol = clj_core:symbol(<<"fn*">>),
-  FnForm = clj_core:list([FnSymbol, ArgsVector, Form]),
+  FnForm   = clj_core:list([FnSymbol, ArgsVector, Form]),
   FnFormWithMeta = clj_core:with_meta(FnForm, file_location_meta(State)),
 
   push_form(FnFormWithMeta, NewState).
