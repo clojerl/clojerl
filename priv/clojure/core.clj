@@ -294,8 +294,17 @@
                 (recur (conj ret (first s)) (next s))
                 (seq ret)))))
 
-(def ^:macro defn
-  (fn* [form env name & fdecl]
+(def
+  ^{:doc "Same as (def name (fn [params* ] exprs*)) or (def
+    name (fn ([params* ] exprs*)+)) with any doc-string or attrs added
+    to the var metadata. prepost-map defines a map with optional keys
+    :pre and :post that contain collections of pre or post conditions."
+    :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
+                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])
+    :added "1.0"
+    :macro true}
+  defn
+  (fn* [&form &env name & fdecl]
        (if (symbol? name)
          nil
          (throw "First argument to defn must be a symbol"))
@@ -1119,14 +1128,6 @@
    :inline (fn [x y] `(erlang/rem.e ~x ~y))}
   [num div]
   (erlang/rem.e num div))
-
-(defn rationalize
-  "returns the rational value of num"
-  {:added "1.0"
-   :static true}
-  [num]
-  (throw "unimplemented ratio")
-  #_(. clojure.lang.Numbers (rationalize num)))
 
 ;;Bit ops
 
@@ -2329,7 +2330,7 @@
 
 (defmacro io!
   "If an io! block occurs in a transaction, throws an
-  IllegalStateException, else runs body in an implicit do. If the
+  error, else runs body in an implicit do. If the
   first expression in body is a literal string, will use that as the
   exception message."
   {:added "1.0"}
@@ -3380,45 +3381,12 @@
       m
       (+ m div))))
 
-(defn ratio?
-  "Returns true if n is a Ratio"
-  {:added "1.0"
-   :static true}
-  [n]
-  (throw "unimplemented ratio")
-  #_(instance? clojure.lang.Ratio n))
-
-(defn numerator
-  "Returns the numerator part of a Ratio."
-  {:tag BigInteger
-   :added "1.2"
-   :static true}
-  [r]
-  (throw "unimplemented ratio")
-  #_(.numerator ^clojure.lang.Ratio r))
-
-(defn denominator
-  "Returns the denominator part of a Ratio."
-  {:tag BigInteger
-   :added "1.2"
-   :static true}
-  [r]
-  (throw "unimplemented ratio")
-  #_(.denominator ^clojure.lang.Ratio r))
-
 (defn float?
   "Returns true if n is a floating point number"
   {:added "1.0"
    :static true}
   [n]
   (erlang/is_float.e n))
-
-(defn rational?
-  "Returns true if n is a rational number"
-  {:added "1.0"
-   :static true}
-  [n]
-  (throw "unimplemented ratio"))
 
 (defn bigint
   "Coerce to BigInt"
@@ -4713,6 +4681,7 @@
   once, but any effects on Refs will be atomic."
   {:added "1.0"}
   [& exprs]
+  (throw "unsupported refs")
   #_`(sync nil ~@exprs))
 
 #_ ((defmacro with-precision
@@ -5288,7 +5257,7 @@
   the rows in the java.sql.ResultSet rs"
   {:added "1.0"}
   [^java.sql.ResultSet rs]
-  (throw "unsupported sql resultste"))
+  (throw "unsupported sql result set"))
 
 (defn iterator-seq
   "Returns a seq on a java.util.Iterator. Note that most collections
@@ -5405,7 +5374,6 @@
         references (remove #(= :gen-class (first %)) references)
         ;ns-effect (clojure.core/in-ns name)
         name-metadata (meta name)]
-
     `(do
        (clojure.core/in-ns '~name)
        (with-loading-context
@@ -5453,7 +5421,7 @@
   *loading-verbosely* false)
 
 (defn- throw-if
-  "Throws a CompilerException with a message if pred is true"
+  "Throws an error with a message if pred is true"
   [pred fmt & args]
   (when pred
     (let [message   (apply format fmt (map str args))
@@ -5626,7 +5594,9 @@
   multiple libs whose names share a common prefix, or a flag that modifies
   how all the identified libs are loaded. Use :require in the ns macro
   in preference to calling this directly.
+
   Libs
+
   A 'lib' is a named set of resources in classpath whose contents define a
   library of Clojure code. Lib names are symbols and each lib is associated
   with a Clojure namespace and a Java package that share its name. A lib's
@@ -5634,27 +5604,35 @@
   package name to classpath-relative path mapping. All resources in a lib
   should be contained in the directory structure under its root directory.
   All definitions a lib makes should be in its associated namespace.
+
   'require loads a lib by loading its root resource. The root resource path
   is derived from the lib name in the following manner:
   Consider a lib named by the symbol 'x.y.z; it has the root directory
   <classpath>/x/y/, and its root resource is <classpath>/x/y/z.clj. The root
   resource should contain code to create the lib's namespace (usually by using
   the ns macro) and load any additional lib resources.
+
   Libspecs
+
   A libspec is a lib name or a vector containing a lib name followed by
   options expressed as sequential keywords and arguments.
+
   Recognized options:
   :as takes a symbol as its argument and makes that symbol an alias to the
     lib's namespace in the current namespace.
   :refer takes a list of symbols to refer from the namespace or the :all
     keyword to bring in all public vars.
+
   Prefix Lists
+
   It's common for Clojure code to depend on several libs whose names have
   the same prefix. When specifying libs, prefix lists can be used to reduce
   repetition. A prefix list contains the shared prefix followed by libspecs
   with the shared prefix removed from the lib names. After removing the
   prefix, the names that remain must not contain any periods.
+
   Flags
+
   A flag is a keyword.
   Recognized flags: :reload, :reload-all, :verbose
   :reload forces loading of all the identified libs even if they are
@@ -5662,9 +5640,12 @@
   :reload-all implies :reload and also forces loading of all libs that the
     identified libs directly or indirectly load via require or use
   :verbose triggers printing information about each load, alias, and refer
+
   Example:
+
   The following would load the libraries clojure.zip and clojure.set
   abbreviated as 's'.
+
   (require '(clojure zip [set :as s]))"
   {:added "1.0"}
 
@@ -5954,8 +5935,7 @@
   predicate as its argument, the result of that call being the return
   value of condp. A single default expression can follow the clauses,
   and its value will be returned if no clause matches. If no default
-  expression is provided and no clause matches, an
-  IllegalArgumentException is thrown."
+  expression is provided and no clause matches, an error is thrown."
   {:added "1.0"}
 
   [pred expr & clauses]
@@ -5970,7 +5950,7 @@
                      more   (second res)
                      n (count clause)]
                  (cond
-                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause: " ~expr)))
+                   (= 0 n) `(throw (str "No matching clause: " ~expr))
                    (= 1 n) a
                    (= 2 n) `(if (~pred ~a ~expr)
                               ~b
@@ -6113,6 +6093,22 @@
   "
   {:added "1.0"})
 
+(defn future?
+  "Returns true if x is a future"
+  {:added "1.1"
+   :static true}
+  [x]
+  (throw "unimplemented future")
+  #_(instance? java.util.concurrent.Future x))
+
+(defn future-done?
+  "Returns true if future f is done"
+  {:added "1.1"
+   :static true}
+  [^java.util.concurrent.Future f]
+  (throw "unimplemented future")
+  #_(.isDone f))
+
 (defmacro letfn
   "fnspec ==> (fname [params*] exprs) or (fname ([params*] exprs)+)
 
@@ -6167,7 +6163,7 @@
   test-constant, the corresponding result-expr is returned. A single
   default expression can follow the clauses, and its value will be
   returned if no clause matches. If no default expression is provided
-  and no clause matches, an IllegalArgumentException is thrown.
+  and no clause matches, an error is thrown.
 
   Unlike cond and condp, case does a constant-time dispatch, the
   clauses are not considered sequentially.  All manner of constant
@@ -6356,68 +6352,191 @@
     (erlang.io.IWriter/write.e w (str content))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; futures (needs proxy);;;;;;;;;;;;;;;;;;
+(defn future-call
+  "Takes a function of no args and yields a future object that will
+  invoke the function in another thread, and will cache the result and
+  return it on all subsequent calls to deref/@. If the computation has
+  not yet finished, calls to deref/@ will block, unless the variant
+  of deref with timeout is used. See also - realized?."
+  {:added "1.1"
+   :static true}
+  [f]
+  (throw "unimplemented future")
+  #_(let [f (binding-conveyor-fn f)
+        fut (.submit clojure.lang.Agent/soloExecutor ^Callable f)]
+    (reify
+     clojure.lang.IDeref
+     (deref [_] (deref-future fut))
+     clojure.lang.IBlockingDeref
+     (deref
+      [_ timeout-ms timeout-val]
+      (deref-future fut timeout-ms timeout-val))
+     clojure.lang.IPending
+     (isRealized [_] (.isDone fut))
+     java.util.concurrent.Future
+      (get [_] (.get fut))
+      (get [_ timeout unit] (.get fut timeout unit))
+      (isCancelled [_] (.isCancelled fut))
+      (isDone [_] (.isDone fut))
+      (cancel [_ interrupt?] (.cancel fut interrupt?)))))
 
-;; A lot of missing stuff
+(defmacro future
+  "Takes a body of expressions and yields a future object that will
+  invoke the body in another thread, and will cache the result and
+  return it on all subsequent calls to deref/@. If the computation has
+  not yet finished, calls to deref/@ will block, unless the variant of
+  deref with timeout is used. See also - realized?."
+  {:added "1.1"}
+  [& body] `(future-call (^{:once true} fn* [] ~@body)))
 
-(defn reader-conditional?
-  "Return true if the value is the data representation of a reader conditional"
-  {:added "1.7"}
-  [value]
-  (instance? clojerl.reader.ReaderConditional value))
 
-(defn reader-conditional
-  "Construct a data representation of a reader conditional.
-  If true, splicing? indicates read-cond-splicing."
-  {:added "1.7"}
-  [form ^Boolean splicing?]
-  (new clojerl.reader.ReaderConditional form splicing?))
+(defn future-cancel
+  "Cancels the future, if possible."
+  {:added "1.1"
+   :static true}
+  [^java.util.concurrent.Future f]
+  (throw "unimplemented future")
+  #_(.cancel f true))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; data readers ;;;;;;;;;;;;;;;;;;
+(defn future-cancelled?
+  "Returns true if future f is cancelled"
+  {:added "1.1"
+   :static true}
+  [^java.util.concurrent.Future f]
+  (throw "unimplemented future")
+  #_(.isCancelled f))
 
-(def ^{:added "1.4"} default-data-readers
-  "Default map of data reader functions provided by Clojure. May be
-  overridden by binding *data-readers*."
-  {'inst #'clojure.instant/read-instant-date
-   'uuid #'clojure.uuid/default-uuid-reader})
+(defn pmap
+  "Like map, except f is applied in parallel. Semi-lazy in that the
+  parallel computation stays ahead of the consumption, but doesn't
+  realize the entire result unless required. Only useful for
+  computationally intensive functions where the time of f dominates
+  the coordination overhead."
+  {:added "1.0"
+   :static true}
+  ([f coll]
+   (let [n (+ 2 (erlang/system_info.e :logical_processors_available))
+         rets (map #(future (f %)) coll)
+         step (fn step [[x & xs :as vs] fs]
+                (lazy-seq
+                 (if-let [s (seq fs)]
+                   (cons (deref x) (step xs (rest s)))
+                   (map deref vs))))]
+     (step rets (drop n rets))))
+  ([f coll & colls]
+   (let [step (fn step [cs]
+                (lazy-seq
+                 (let [ss (map seq cs)]
+                   (when (every? identity ss)
+                     (cons (map first ss) (step (map rest ss)))))))]
+     (pmap #(apply f %) (step (cons coll colls))))))
 
-(def ^{:added "1.4" :dynamic true} *data-readers*
-  "Map from reader tag symbols to data reader Vars.
+(defn pcalls
+  "Executes the no-arg fns in parallel, returning a lazy sequence of
+  their values"
+  {:added "1.0"
+   :static true}
+  [& fns] (pmap #(%) fns))
 
-  When Clojure starts, it searches for files named 'data_readers.clj'
-  at the root of the classpath. Each such file must contain a literal
-  map of symbols, like this:
+(defmacro pvalues
+  "Returns a lazy sequence of the values of the exprs, which are
+  evaluated in parallel"
+  {:added "1.0"
+   :static true}
+  [& exprs]
+  `(pcalls ~@(map #(list `fn [] %) exprs)))
 
-      {foo/bar my.project.foo/bar
-       foo/baz my.project/baz}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; clojure version number ;;;;;;;;;;;;;;;;;;;;;;
 
-  The first symbol in each pair is a tag that will be recognized by
-  the Clojure reader. The second symbol in the pair is the
-  fully-qualified name of a Var which will be invoked by the reader to
-  parse the form following the tag. For example, given the
-  data_readers.clj file above, the Clojure reader would parse this
-  form:
+(def ^:dynamic *clojure-version*
+  (let [properties (second (application/get_all_key.e :clojerl))
+        vsn        (proplists/get_value.e :vsn properties)
+        version-string (erlang/list_to_binary.e vsn)
+        [_ major minor incremental qualifier snapshot]
+        (re-matches
+         #"(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9_]+))?(?:-(SNAPSHOT))?"
+         version-string)
+        clojure-version {:major       (erlang/binary_to_integer.e major)
+                         :minor       (erlang/binary_to_integer.e minor)
+                         :incremental (erlang/binary_to_integer.e incremental)
+                         :qualifier   (if (= qualifier "SNAPSHOT") nil qualifier)}]
+    (if (clojerl.String/contains.e version-string "SNAPSHOT")
+      (assoc clojure-version :interim true)
+      clojure-version)))
 
-      #foo/bar [1 2 3]
+(add-doc-and-meta *clojure-version*
+  "The version info for Clojure core, as a map containing :major :minor
+  :incremental and :qualifier keys. Feature releases may increment
+  :minor and/or :major, bugfix releases will increment :incremental.
+  Possible values of :qualifier include \"GA\", \"SNAPSHOT\", \"RC-x\" \"BETA-x\""
+  {:added "1.0"})
 
-  by invoking the Var #'my.project.foo/bar on the vector [1 2 3]. The
-  data reader function is invoked on the form AFTER it has been read
-  as a normal Clojure data structure by the reader.
+(defn
+  clojure-version
+  "Returns clojure version as a printable string."
+  {:added "1.0"}
+  []
+  (str (:major *clojure-version*)
+       "."
+       (:minor *clojure-version*)
+       (when-let [i (:incremental *clojure-version*)]
+         (str "." i))
+       (when-let [q (:qualifier *clojure-version*)]
+         (when (pos? (count q)) (str "-" q)))
+       (when (:interim *clojure-version*)
+         "-SNAPSHOT")))
 
-  Reader tags without namespace qualifiers are reserved for
-  Clojure. Default reader tags are defined in
-  clojure.core/default-data-readers but may be overridden in
-  data_readers.clj or by rebinding this Var."
-  {})
+(defn promise
+  "Returns a promise object that can be read with deref/@, and set,
+  once only, with deliver. Calls to deref/@ prior to delivery will
+  block, unless the variant of deref with timeout is used. All
+  subsequent derefs will return the same delivered value without
+  blocking. See also - realized?."
+  {:added "1.1"
+   :static true}
+  []
+  (throw "unimplemented promise")
+  #_(let [d (java.util.concurrent.CountDownLatch. 1)
+        v (atom d)]
+    (reify
+     clojure.lang.IDeref
+       (deref [_] (.await d) @v)
+     clojure.lang.IBlockingDeref
+       (deref
+        [_ timeout-ms timeout-val]
+        (if (.await d timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
+          @v
+          timeout-val))
+     clojure.lang.IPending
+      (isRealized [this]
+       (zero? (.getCount d)))
+     clojure.lang.IFn
+     (invoke
+      [this x]
+      (when (and (pos? (.getCount d))
+                 (compare-and-set! v d x))
+        (.countDown d)
+        this)))))
 
-(def ^{:added "1.5" :dynamic true} *default-data-reader-fn*
-  "When no data reader is found for a tag and *default-data-reader-fn*
-  is non-nil, it will be called with two arguments,
-  the tag and the value.  If *default-data-reader-fn* is nil (the
-  default), an exception will be thrown for the unknown tag."
-  nil)
+(defn deliver
+  "Delivers the supplied value to the promise, releasing any pending
+  derefs. A subsequent call to deliver on a promise will have no effect."
+  {:added "1.1"
+   :static true}
+  [promise val]
+  (throw "unimplemented promise")
+  #_(promise val))
 
-;;------------------------------------------------------------------------------
-;;------------------------------------------------------------------------------
+
+(defn flatten
+  "Takes any nested combination of sequential things (lists, vectors,
+  etc.) and returns their contents as a single, flat sequence.
+  (flatten nil) returns an empty sequence."
+  {:added "1.2"
+   :static true}
+  [x]
+  (filter (complement sequential?)
+          (rest (tree-seq sequential? seq x))))
 
 (defn group-by
   "Returns a map of the elements of coll keyed by the result of
@@ -6431,6 +6550,336 @@
      (let [k (f x)]
        (assoc ret k (conj (get ret k []) x))))
    {} coll))
+
+(defn partition-by
+  "Applies f to each value in coll, splitting it each time f returns a
+   new value.  Returns a lazy seq of partitions.  Returns a stateful
+   transducer when no collection is provided."
+  {:added "1.2"
+   :static true}
+  ([f]
+   #_(fn [rf]
+    (let [a (java.util.ArrayList.)
+          pv (volatile! ::none)]
+      (fn
+        ([] (rf))
+        ([result]
+           (let [result (if (.isEmpty a)
+                          result
+                          (let [v (vec (.toArray a))]
+                            ;;clear first!
+                            (.clear a)
+                            (unreduced (rf result v))))]
+             (rf result)))
+        ([result input]
+           (let [pval @pv
+                 val (f input)]
+             (vreset! pv val)
+             (if (or (identical? pval ::none)
+                     (= val pval))
+               (do
+                 (.add a input)
+                 result)
+               (let [v (vec (.toArray a))]
+                 (.clear a)
+                 (let [ret (rf result v)]
+                   (when-not (reduced? ret)
+                     (.add a input))
+                   ret)))))))))
+  ([f coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (let [fst (first s)
+              fv (f fst)
+              run (cons fst (take-while #(= fv (f %)) (next s)))]
+          (cons run (partition-by f (seq (drop (count run) s)))))))))
+
+(defn frequencies
+  "Returns a map from distinct items in coll to the number of times
+  they appear."
+  {:added "1.2"
+   :static true}
+  [coll]
+  (reduce (fn [counts x]
+            (assoc counts x (inc (get counts x 0))))
+          {} coll))
+
+(defn reductions
+  "Returns a lazy seq of the intermediate values of the reduction (as
+  per reduce) of coll by f, starting with init."
+  {:added "1.2"}
+  ([f coll]
+     (lazy-seq
+      (if-let [s (seq coll)]
+        (reductions f (first s) (rest s))
+        (list (f)))))
+  ([f init coll]
+     (if (reduced? init)
+       (list @init)
+       (cons init
+             (lazy-seq
+              (when-let [s (seq coll)]
+                (reductions f (f init (first s)) (rest s))))))))
+
+(defn rand-nth
+  "Return a random element of the (sequential) collection. Will have
+  the same performance characteristics as nth for the given
+  collection."
+  {:added "1.2"
+   :static true}
+  [coll]
+  (nth coll (rand-int (count coll))))
+
+(defn partition-all
+  "Returns a lazy sequence of lists like partition, but may include
+  partitions with fewer than n items at the end.  Returns a stateful
+  transducer when no collection is provided."
+  {:added "1.2"
+   :static true}
+  #_([^long n]
+   (fn [rf]
+     (let [a (java.util.ArrayList. n)]
+       (fn
+         ([] (rf))
+         ([result]
+            (let [result (if (.isEmpty a)
+                           result
+                           (let [v (vec (.toArray a))]
+                             ;;clear first!
+                             (.clear a)
+                             (unreduced (rf result v))))]
+              (rf result)))
+         ([result input]
+            (.add a input)
+            (if (= n (.size a))
+              (let [v (vec (.toArray a))]
+                (.clear a)
+                (rf result v))
+              result))))))
+  ([n coll]
+     (partition-all n n coll))
+  ([n step coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (let [seg (doall (take n s))]
+          (cons seg (partition-all n step (nthrest s step))))))))
+
+(defn shuffle
+  "Return a random permutation of coll"
+  {:added "1.2"
+   :static true}
+  [^java.util.Collection coll]
+  (throw "unimplemented shuffle")
+  #_(let [al (java.util.ArrayList. coll)]
+      (java.util.Collections/shuffle al)
+      (clojure.lang.RT/vector (.toArray al))))
+
+(defn map-indexed
+  "Returns a lazy sequence consisting of the result of applying f to 0
+  and the first item of coll, followed by applying f to 1 and the second
+  item in coll, etc, until coll is exhausted. Thus function f should
+  accept 2 arguments, index and item. Returns a stateful transducer when
+  no collection is provided."
+  {:added "1.2"
+   :static true}
+  ([f]
+   #_(fn [rf]
+     (let [i (volatile! -1)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (rf result (f (vswap! i inc) input)))))))
+  ([f coll]
+   (throw "unimplemented letfn*")
+   #_(letfn [(mapi [idx coll]
+                 (lazy-seq
+                   (when-let [s (seq coll)]
+                     (if (chunked-seq? s)
+                       (let [c (chunk-first s)
+                             size (int (count c))
+                             b (chunk-buffer size)]
+                         (dotimes [i size]
+                           (chunk-append b (f (+ idx i) (.nth c i))))
+                         (chunk-cons (chunk b) (mapi (+ idx size) (chunk-rest s))))
+                       (cons (f idx (first s)) (mapi (inc idx) (rest s)))))))]
+     (mapi 0 coll))))
+
+(defn keep
+  "Returns a lazy sequence of the non-nil results of (f item). Note,
+  this means false return values will be included.  f must be free of
+  side-effects.  Returns a transducer when no collection is provided."
+  {:added "1.2"
+   :static true}
+  ([f]
+   (fn [rf]
+     (fn
+       ([] (rf))
+       ([result] (rf result))
+       ([result input]
+          (let [v (f input)]
+            (if (nil? v)
+              result
+              (rf result v)))))))
+  ([f coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (if (chunked-seq? s)
+        (let [c (chunk-first s)
+              size (count c)
+              b (chunk-buffer size)]
+          (dotimes [i size]
+            (let [x (f (nth c i))]
+              (when-not (nil? x)
+                (chunk-append b x))))
+          (chunk-cons (chunk b) (keep f (chunk-rest s))))
+        (let [x (f (first s))]
+          (if (nil? x)
+            (keep f (rest s))
+            (cons x (keep f (rest s))))))))))
+
+(defn every-pred
+  "Takes a set of predicates and returns a function f that returns true if all of its
+  composing predicates return a logical true value against all of its arguments, else it returns
+  false. Note that f is short-circuiting in that it will stop execution on the first
+  argument that triggers a logical false result against the original predicates."
+  {:added "1.3"}
+  ([p]
+     (fn ep1
+       ([] true)
+       ([x] (boolean (p x)))
+       ([x y] (boolean (and (p x) (p y))))
+       ([x y z] (boolean (and (p x) (p y) (p z))))
+       ([x y z & args] (boolean (and (ep1 x y z)
+                                     (every? p args))))))
+  ([p1 p2]
+     (fn ep2
+       ([] true)
+       ([x] (boolean (and (p1 x) (p2 x))))
+       ([x y] (boolean (and (p1 x) (p1 y) (p2 x) (p2 y))))
+       ([x y z] (boolean (and (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z))))
+       ([x y z & args] (boolean (and (ep2 x y z)
+                                     (every? #(and (p1 %) (p2 %)) args))))))
+  ([p1 p2 p3]
+     (fn ep3
+       ([] true)
+       ([x] (boolean (and (p1 x) (p2 x) (p3 x))))
+       ([x y] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y))))
+       ([x y z] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z))))
+       ([x y z & args] (boolean (and (ep3 x y z)
+                                     (every? #(and (p1 %) (p2 %) (p3 %)) args))))))
+  ([p1 p2 p3 & ps]
+     (let [ps (list* p1 p2 p3 ps)]
+       (fn epn
+         ([] true)
+         ([x] (every? #(% x) ps))
+         ([x y] (every? #(and (% x) (% y)) ps))
+         ([x y z] (every? #(and (% x) (% y) (% z)) ps))
+         ([x y z & args] (boolean (and (epn x y z)
+                                       (every? #(every? % args) ps))))))))
+
+(defn some-fn
+  "Takes a set of predicates and returns a function f that returns the first logical true value
+  returned by one of its composing predicates against any of its arguments, else it returns
+  logical false. Note that f is short-circuiting in that it will stop execution on the first
+  argument that triggers a logical true result against the original predicates."
+  {:added "1.3"}
+  ([p]
+     (fn sp1
+       ([] nil)
+       ([x] (p x))
+       ([x y] (or (p x) (p y)))
+       ([x y z] (or (p x) (p y) (p z)))
+       ([x y z & args] (or (sp1 x y z)
+                           (some p args)))))
+  ([p1 p2]
+     (fn sp2
+       ([] nil)
+       ([x] (or (p1 x) (p2 x)))
+       ([x y] (or (p1 x) (p1 y) (p2 x) (p2 y)))
+       ([x y z] (or (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z)))
+       ([x y z & args] (or (sp2 x y z)
+                           (some #(or (p1 %) (p2 %)) args)))))
+  ([p1 p2 p3]
+     (fn sp3
+       ([] nil)
+       ([x] (or (p1 x) (p2 x) (p3 x)))
+       ([x y] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y)))
+       ([x y z] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z)))
+       ([x y z & args] (or (sp3 x y z)
+                           (some #(or (p1 %) (p2 %) (p3 %)) args)))))
+  ([p1 p2 p3 & ps]
+     (let [ps (list* p1 p2 p3 ps)]
+       (fn spn
+         ([] nil)
+         ([x] (some #(% x) ps))
+         ([x y] (some #(or (% x) (% y)) ps))
+         ([x y z] (some #(or (% x) (% y) (% z)) ps))
+         ([x y z & args] (or (spn x y z)
+                             (some #(some % args) ps)))))))
+
+(defn- ^{:dynamic true} assert-valid-fdecl
+  "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
+  [fdecl]
+  (when (empty? fdecl) (throw "Parameter declaration missing"))
+  (let [argdecls (map
+                   #(if (seq? %)
+                      (first %)
+                      (throw (if (seq? (first fdecl))
+                               (str "Invalid signature \""
+                                    %
+                                    "\" should be a list")
+                               (str "Parameter declaration \""
+                                    %
+                                    "\" should be a vector"))))
+                   fdecl)
+        bad-args (seq (remove #(vector? %) argdecls))]
+    (when bad-args
+      (throw (str "Parameter declaration \"" (first bad-args)
+                  "\" should be a vector")))))
+
+(defn with-redefs-fn
+  "Temporarily redefines Vars during a call to func.  Each val of
+  binding-map will replace the root value of its key which must be
+  a Var.  After func is called with no args, the root values of all
+  the Vars will be set back to their old values.  These temporary
+  changes will be visible in all threads.  Useful for mocking out
+  functions during testing."
+  {:added "1.3"}
+  [binding-map func]
+  (throw "unimplemented with-redefs-fn")
+  #_(let [root-bind (fn [m]
+                    (doseq [[a-var a-val] m]
+                      (.bindRoot ^clojure.lang.Var a-var a-val)))
+        old-vals (zipmap (keys binding-map)
+                         (map #(.getRawRoot ^clojure.lang.Var %) (keys binding-map)))]
+    (try
+      (root-bind binding-map)
+      (func)
+      (finally
+        (root-bind old-vals)))))
+
+(defmacro with-redefs
+  "binding => var-symbol temp-value-expr
+
+  Temporarily redefines Vars while executing the body.  The
+  temp-value-exprs will be evaluated and each resulting value will
+  replace in parallel the root value of its Var.  After the body is
+  executed, the root values of all the Vars will be set back to their
+  old values.  These temporary changes will be visible in all threads.
+  Useful for mocking out functions during testing."
+  {:added "1.3"}
+  [bindings & body]
+  `(with-redefs-fn ~(zipmap (map #(list `var %) (take-nth 2 bindings))
+                            (take-nth 2 (next bindings)))
+                    (fn [] ~@body)))
+
+(defn realized?
+  "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
+  {:added "1.3"}
+  [^clojure.lang.IPending x]
+  (throw "unimplemented realized?")
+  #_(.isRealized x))
 
 (defmacro cond->
   "Takes an expression and a set of test/form pairs. Threads expr (via ->)
@@ -6505,6 +6954,215 @@
        ~(if (empty? steps)
           g
           (last steps)))))
+
+(defn ^:private preserving-reduced
+  [rf]
+  #(let [ret (rf %1 %2)]
+     (if (reduced? ret)
+       (reduced ret)
+       ret)))
+
+(defn cat
+  "A transducer which concatenates the contents of each input, which must be a
+  collection, into the reduction."
+  {:added "1.7"}
+  [rf]
+  (let [rrf (preserving-reduced rf)]
+    (fn
+      ([] (rf))
+      ([result] (rf result))
+      ([result input]
+         (reduce rrf result input)))))
+
+(defn dedupe
+  "Returns a lazy sequence removing consecutive duplicates in coll.
+  Returns a transducer when no collection is provided."
+  {:added "1.7"}
+  ([]
+   (fn [rf]
+     (let [pv (volatile! ::none)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+            (let [prior @pv]
+              (vreset! pv input)
+              (if (= prior input)
+                result
+                (rf result input))))))))
+  ;; TODO: this expression is generating invalid AST
+  #_([coll] (sequence (dedupe) coll)))
+
+(defn random-sample
+  "Returns items from coll with random probability of prob (0.0 -
+  1.0).  Returns a transducer when no collection is provided."
+  {:added "1.7"}
+  ([prob]
+     (filter (fn [_] (< (rand) prob))))
+  ([prob coll]
+     (filter (fn [_] (< (rand) prob)) coll)))
+
+(deftype Eduction [xform coll]
+  ;; Iterable
+  ;; (iterator [_]
+  ;;   (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
+
+  ;; TODO: this expression is generating invalid AST
+  ;; clojerl.IReduce
+  ;; (reduce [this f init]
+  ;;   ;; NB (completing f) isolates completion of inner rf from outer rf
+  ;;   (transduce xform (completing f) init coll))
+
+  clojerl.ISequential)
+
+(defn eduction
+  "Returns a reducible/iterable application of the transducers
+  to the items in coll. Transducers are applied in order as if
+  combined with comp. Note that these applications will be
+  performed every time reduce/iterator is called."
+  {:arglists '([xform* coll])
+   :added "1.7"}
+  [& xforms]
+  (new Eduction (apply comp (butlast xforms)) (last xforms)))
+
+(defmethod print-method Eduction [c, ^Writer w]
+  (if *print-readably*
+    (do
+      (print-sequential "(" pr-on " " ")" c w))
+    (print-simple c w)))
+
+(defn run!
+  "Runs the supplied procedure (via reduce), for purposes of side
+  effects, on successive items in the collection. Returns nil"
+  {:added "1.7"}
+  [proc coll]
+  (reduce #(proc %2) nil coll)
+  nil)
+
+
+(defn tagged-literal?
+  "Return true if the value is the data representation of a tagged literal"
+  {:added "1.7"}
+  [value]
+  (instance? clojerl.reader.TaggedLiteral value))
+
+(defn tagged-literal
+  "Construct a data representation of a tagged literal from a
+  tag symbol and a form."
+  {:added "1.7"}
+  [^clojure.lang.Symbol tag form]
+  (new clojerl.reader.TaggedLiteral tag form))
+
+(defn reader-conditional?
+  "Return true if the value is the data representation of a reader conditional"
+  {:added "1.7"}
+  [value]
+  (instance? clojerl.reader.ReaderConditional value))
+
+(defn reader-conditional
+  "Construct a data representation of a reader conditional.
+  If true, splicing? indicates read-cond-splicing."
+  {:added "1.7"}
+  [form ^Boolean splicing?]
+  (new clojerl.reader.ReaderConditional form splicing?))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; data readers ;;;;;;;;;;;;;;;;;;
+
+(def ^{:added "1.4"} default-data-readers
+  "Default map of data reader functions provided by Clojure. May be
+  overridden by binding *data-readers*."
+  {'inst #'clojure.instant/read-instant-date
+   'uuid #'clojure.uuid/default-uuid-reader})
+
+(def ^{:added "1.4" :dynamic true} *data-readers*
+  "Map from reader tag symbols to data reader Vars.
+
+  When Clojure starts, it searches for files named 'data_readers.clj'
+  at the root of the classpath. Each such file must contain a literal
+  map of symbols, like this:
+
+      {foo/bar my.project.foo/bar
+       foo/baz my.project/baz}
+
+  The first symbol in each pair is a tag that will be recognized by
+  the Clojure reader. The second symbol in the pair is the
+  fully-qualified name of a Var which will be invoked by the reader to
+  parse the form following the tag. For example, given the
+  data_readers.clj file above, the Clojure reader would parse this
+  form:
+
+      #foo/bar [1 2 3]
+
+  by invoking the Var #'my.project.foo/bar on the vector [1 2 3]. The
+  data reader function is invoked on the form AFTER it has been read
+  as a normal Clojure data structure by the reader.
+
+  Reader tags without namespace qualifiers are reserved for
+  Clojure. Default reader tags are defined in
+  clojure.core/default-data-readers but may be overridden in
+  data_readers.clj or by rebinding this Var."
+  {})
+
+(def ^{:added "1.5" :dynamic true} *default-data-reader-fn*
+  "When no data reader is found for a tag and *default-data-reader-fn*
+  is non-nil, it will be called with two arguments,
+  the tag and the value.  If *default-data-reader-fn* is nil (the
+  default), an exception will be thrown for the unknown tag."
+  nil)
+
+;; (defn- data-reader-urls []
+;;   (let [cl (.. Thread currentThread getContextClassLoader)]
+;;     (concat
+;;       (enumeration-seq (.getResources cl "data_readers.clj"))
+;;       (enumeration-seq (.getResources cl "data_readers.cljc")))))
+
+;; (defn- data-reader-var [sym]
+;;   (intern (create-ns (symbol (namespace sym)))
+;;           (symbol (name sym))))
+
+;; (defn- load-data-reader-file [mappings ^java.net.URL url]
+;;   (with-open [rdr (clojure.lang.LineNumberingPushbackReader.
+;;                    (java.io.InputStreamReader.
+;;                     (.openStream url) "UTF-8"))]
+;;     (binding [*file* (.getFile url)]
+;;       (let [read-opts (if (.endsWith (.getPath url) "cljc")
+;;                         {:eof nil :read-cond :allow}
+;;                         {:eof nil})
+;;             new-mappings (read read-opts rdr)]
+;;         (when (not (map? new-mappings))
+;;           (throw (ex-info (str "Not a valid data-reader map")
+;;                           {:url url})))
+;;         (reduce
+;;          (fn [m [k v]]
+;;            (when (not (symbol? k))
+;;              (throw (ex-info (str "Invalid form in data-reader file")
+;;                              {:url url
+;;                               :form k})))
+;;            (let [v-var (data-reader-var v)]
+;;              (when (and (contains? mappings k)
+;;                         (not= (mappings k) v-var))
+;;                (throw (ex-info "Conflicting data-reader mapping"
+;;                                {:url url
+;;                                 :conflict k
+;;                                 :mappings m})))
+;;              (assoc m k v-var)))
+;;          mappings
+;;          new-mappings)))))
+
+;; (defn- load-data-readers []
+;;   (alter-var-root #'*data-readers*
+;;                   (fn [mappings]
+;;                     (reduce load-data-reader-file
+;;                             mappings (data-reader-urls)))))
+
+;; (try
+;;  (load-data-readers)
+;;  (catch Throwable t
+;;    (.printStackTrace t)
+;;    (throw t)))
+
+;;------------------------------------------------------------------------------
+;;------------------------------------------------------------------------------
 
 (defmacro simple-benchmark
   "Runs expr iterations times in the context of a let expression with
