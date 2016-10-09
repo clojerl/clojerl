@@ -270,7 +270,7 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Module, Exports),
   clj_module:add_functions(Module, Functions),
 
-  Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
+  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
   Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
   ok     = clj_module:remove(Module),
 
@@ -361,7 +361,7 @@ ast(#{op := extend_type} = Expr, State) ->
         clj_module:add_exports(Module, Exports),
         clj_module:add_functions(Module, FunctionsAsts),
 
-        Opts   = #{erl_flags => [binary, debug_info], output_dir => "ebin"},
+        Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
         Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
         ok     = clj_module:remove(Module),
 
@@ -1187,3 +1187,7 @@ anno_from(Env) ->
 
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().
 sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).
+
+-spec default_compiler_options() -> clj_compiler:opts().
+default_compiler_options() ->
+  #{erl_flags => [binary, debug_info], output_dir => "ebin"}.

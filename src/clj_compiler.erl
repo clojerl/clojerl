@@ -40,8 +40,9 @@ default_options() ->
   #{ output_dir  => "ebin"
    , erl_flags   => [ debug_info
                     , verbose
-                    , report_errors
-                    , report_warnings
+                    %% Don't use these except for improving generated code
+                    %% , report_errors
+                    %% , report_warnings
                     , nowarn_unused_vars
                     , nowarn_shadow_vars
                     , nowarn_unused_record
@@ -180,6 +181,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
   Env      = clj_env:put(Env0, clj_flags, CljFlags),
+  Env1     = clj_env:put(Env, compiler_opts, Opts),
   EmitEval = case Opts0 of
                #{time := true} ->
                  fun() ->
@@ -188,7 +190,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                                    , [ fun emit_eval_form/2
                                      , Src
                                      , RdrOpts
-                                     , Env
+                                     , Env1
                                      ]
                                    )
                  end;
@@ -197,7 +199,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                      clj_reader:read_fold( fun emit_eval_form/2
                                          , Src
                                          , RdrOpts
-                                         , Env
+                                         , Env1
                                          )
                  end
              end,
@@ -205,14 +207,14 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   CompileFun =
     fun() ->
         try
-          Env1 = EmitEval(),
-          {_, Env2} = clj_emitter:remove_state(Env1),
+          Env2 = EmitEval(),
+          {_, Env3} = clj_emitter:remove_state(Env2),
 
           %% Compile all modules
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
-          Env3 = clj_env:remove(Env2, clj_flags),
-          {shutdown, Env3}
+          Env4 = clj_env:remove(Env3, clj_flags),
+          {shutdown, Env4}
         catch
           Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
