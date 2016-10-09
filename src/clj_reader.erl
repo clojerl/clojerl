@@ -645,16 +645,16 @@ is_literal(Form) ->
 %%------------------------------------------------------------------------------
 
 -spec read_unquote(state()) -> state().
-read_unquote(#{src := <<"\~"/utf8, Src/binary>>} = State) ->
-  case Src of
-    <<"@", _/binary>> ->
+read_unquote(#{src := <<"\~"/utf8, _/binary>>} = State0) ->
+  State = consume_char(State0),
+  case peek_src(State) of
+    $@ ->
       UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
                                         <<"unquote-splicing">>),
-      wrapped_read(UnquoteSplicing, consume_chars(2, State));
+      wrapped_read(UnquoteSplicing, consume_char(State));
     _ ->
-      UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
-                                        <<"unquote">>),
-      wrapped_read(UnquoteSplicing, consume_char(State))
+      Unquote = clj_core:symbol(<<"clojure.core">>, <<"unquote">>),
+      wrapped_read(Unquote, State)
   end.
 
 %%------------------------------------------------------------------------------
@@ -1240,7 +1240,12 @@ location_started(State, Loc) ->
 consume_char(#{src := <<"\n"/utf8, Src/binary>>, loc := {Line, _}} = State) ->
   State#{src => Src, loc => {Line + 1, 1}};
 consume_char(#{src := <<_/utf8, Src/binary>>, loc := {Line, Col}} = State) ->
-  State#{src => Src, loc => {Line, Col + 1}}.
+  State#{src => Src, loc => {Line, Col + 1}};
+consume_char(State) ->
+  case check_reader(State) of
+    {ok, NewState} -> consume_char(NewState);
+    eof -> State
+  end.
 
 -spec consume_chars(non_neg_integer(), state()) -> state().
 consume_chars(0, State) ->
@@ -1431,8 +1436,7 @@ check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
   when Reader =/= undefined ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
-    Ch ->
-      {ok, State#{src := Ch}}
+    Ch  -> {ok, State#{src := Ch}}
   end;
 check_reader(#{src := <<>>}) ->
   eof.
