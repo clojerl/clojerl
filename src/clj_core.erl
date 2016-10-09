@@ -69,11 +69,11 @@ load(ScriptBase, FailIfNotFound) ->
     _ ->
       case resolve_file(ScriptBase, [<<".clj">>, <<".cljc">>]) of
         undefined ->
-          clj_utils:throw_when(FailIfNotFound
-                               , [ <<"Could not locate ">>, NsBin
-                                 , <<".beam or ">>, ScriptBase
-                                 , <<" on code path.">>
-                                 ]
+          clj_utils:error_when( FailIfNotFound
+                              , [ <<"Could not locate ">>, NsBin
+                                , <<".beam or ">>, ScriptBase
+                                , <<" on code path.">>
+                                ]
                               );
         FullFilePath -> clj_compiler:compile_file(FullFilePath)
       end
@@ -99,7 +99,7 @@ resolve_file(Path, Exts) ->
   case length(Found) of
     0 -> undefined;
     1 -> first(Found);
-    _ -> clj_utils:throw([<<"Found more than one ">>, Path])
+    _ -> clj_utils:error([<<"Found more than one ">>, Path])
   end.
 
 -spec count(any()) -> integer().
@@ -131,7 +131,7 @@ nth_from(Coll, N, NotFound) ->
   Type = type(Coll),
   case 'satisfies?'('clojerl.ISequential', Type) of
     true  -> clj_utils:nth(N + 1, seq_to_list(Coll), NotFound);
-    false -> clj_utils:throw([<<"Can't apply nth to type ">>, Type])
+    false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
   end.
 
 -spec 'empty?'(any()) -> integer().
@@ -451,7 +451,7 @@ vector(Items) ->
 -spec subvec('clojerl.Vector':type(), integer(), integer()) ->
   'clojerl.Vector':type().
 subvec(Vector, Start, End) ->
-  clj_utils:throw_when(End < Start
+  clj_utils:error_when(End < Start
                        orelse Start < 0
                        orelse End > count(Vector),
                        ["Index out of bounds"]

@@ -421,7 +421,7 @@ ast(#{op := erl_fun} = Expr, State) ->
    , env      := Env
    } = Expr,
 
-  clj_utils:throw_when( Arity == undefined
+  clj_utils:error_when( Arity == undefined
                       , [ <<"Can't use an erlang function as a value without ">>
                         , <<"specifying its arity: ">>
                         , atom_to_binary(Module, utf8)

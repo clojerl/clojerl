@@ -849,7 +849,7 @@ throw(_Config) ->
 
   ct:comment("try, catch with invalid value"),
   ok = try analyze_one(<<"(try 1 (catch bla e e))">>), error
-       catch _ -> ok
+       catch _:_ -> ok
        end,
 
   {comments, ""}.

@@ -181,7 +181,7 @@ read_one(#{src := <<>>, opts := Opts} = State) ->
     {ok, NewState} ->
       read_one(NewState);
     eof when Eof =:= ?EOFTHROW ->
-      clj_utils:throw(<<"EOF">>, location(State));
+      clj_utils:error(<<"EOF">>, location(State));
     eof ->
       throw({eof, Eof, State})
   end;
@@ -268,7 +268,7 @@ read_string(#{src := <<>>} = State) ->
 -spec escape_char(state()) -> {binary(), state()}.
 escape_char(State = #{src := <<>>}) ->
   case check_reader(State) of
-    eof -> clj_utils:throw(<<"EOF while escaping char">>, location(State));
+    eof -> clj_utils:error(<<"EOF while escaping char">>, location(State));
     {ok, NewState} -> escape_char(NewState)
   end;
 escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
@@ -458,7 +458,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
 
     push_form(NewFormWithMeta, NewState#{env => Env2})
   catch error:Reason ->
-      clj_utils:throw(Reason, location(NewState))
+      clj_utils:error(Reason, location(NewState))
   after
     erlang:erase(gensym_env)
   end.
@@ -722,7 +722,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
                               ),
       State2#{forms => [Map | Forms]};
     _ ->
-      clj_utils:throw( <<"Map literal must contain an even number of forms">>
+      clj_utils:error( <<"Map literal must contain an even number of forms">>
                      , location(State2)
                      )
   end.
@@ -733,7 +733,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 
 -spec read_unmatched_delim(state()) -> no_return().
 read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
-  clj_utils:throw(<<"Umatched delimiter ", Delim/utf8>>, location(State)).
+  clj_utils:error(<<"Umatched delimiter ", Delim/utf8>>, location(State)).
 
 %%------------------------------------------------------------------------------
 %% Character
@@ -818,7 +818,7 @@ read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
           push_form(ArgSym, consume_chars(1, State1));
         {register_arg_n, State1} ->
           {N, State2} = read_pop_one(State1),
-          clj_utils:throw_when( not is_integer(N)
+          clj_utils:error_when( not is_integer(N)
                               , <<"Arg literal must be %, %& or %integer">>
                               , location(State1)
                               ),
@@ -877,7 +877,7 @@ read_dispatch(#{src := <<"#">>} = State) ->
     {ok, NewState = #{src := NewSrc}}  ->
       read_dispatch(NewState#{src := <<"#", NewSrc/binary>>});
     eof ->
-      clj_utils:throw(<<"EOF while reading dispatch">>, location(State))
+      clj_utils:error(<<"EOF while reading dispatch">>, location(State))
   end;
 read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
   <<Ch/utf8, _/binary>> = Src,
@@ -893,7 +893,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
-    $< -> clj_utils:throw(<<"Unreadable form">>, location(State));
+    $< -> clj_utils:error(<<"Unreadable form">>, location(State));
     _  -> read_tagged(consume_char(State))
   end.
 
@@ -1010,7 +1010,7 @@ read_regex(#{src := <<>>} = State) ->
     {ok, NewState}  ->
       read_regex(NewState);
     eof ->
-      clj_utils:throw(<<"EOF while reading regex">>, location(State))
+      clj_utils:error(<<"EOF while reading regex">>, location(State))
   end.
 
 %%------------------------------------------------------------------------------
@@ -1167,7 +1167,7 @@ read_skip_suppress(State) ->
 read_tagged(State) ->
   {Symbol, State1} = read_pop_one(State),
 
-  clj_utils:throw_when( not clj_core:'symbol?'(Symbol)
+  clj_utils:error_when( not clj_core:'symbol?'(Symbol)
                       , <<"Reader tag must be a symbol">>
                       , location(State)
                       ),
@@ -1332,7 +1332,7 @@ read_until(Delim, ReadFun, #{src := <<>>} = State) ->
       read_until(Delim, ReadFun, NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      clj_utils:throw( [ <<"Started reading at (">>
+      clj_utils:error( [ <<"Started reading at (">>
                        , Line, <<":">>, Col
                        , <<") but found EOF while expecting '">>
                        , <<Delim/utf8>>

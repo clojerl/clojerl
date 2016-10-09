@@ -112,7 +112,7 @@ name(#namespace{name = Name}) -> Name.
 
 -spec intern(namespace(), 'clojerl.Symbol':type()) -> namespace().
 intern(Namespace = #namespace{name = NsName}, Symbol) ->
-  clj_utils:throw_when( clj_core:namespace(Symbol) =/= undefined
+  clj_utils:error_when( clj_core:namespace(Symbol) =/= undefined
                       , <<"Can't intern namespace-qualified symbol">>
                       ),
 
@@ -140,11 +140,11 @@ get_aliases(#namespace{aliases = Aliases}) ->
 -spec refer(namespace(), 'clojerl.Symbol':type(), 'clojerl.Var':type()) ->
   namespace().
 refer(Ns, Sym, Var) ->
-  clj_utils:throw_when( not clj_core:'symbol?'(Sym)
+  clj_utils:error_when( not clj_core:'symbol?'(Sym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
-  clj_utils:throw_when( clj_core:namespace(Sym) =/= undefined
+  clj_utils:error_when( clj_core:namespace(Sym) =/= undefined
                       , <<"Can't refer namespace-qualified symbol">>
                       ),
 
@@ -153,7 +153,7 @@ refer(Ns, Sym, Var) ->
 -spec import_type(binary()) -> namespace().
 import_type(TypeName) ->
   Type = binary_to_atom(TypeName, utf8),
-  clj_utils:throw_when( {module, Type} =/= code:ensure_loaded(Type)
+  clj_utils:error_when( {module, Type} =/= code:ensure_loaded(Type)
                       , [ <<"Type '">>, Type, <<"' could not be loaded. ">>]
                       ),
 
@@ -165,7 +165,7 @@ import_type(TypeName) ->
 
 -spec unmap(namespace(), 'clojerl.Symbol':type()) -> namespace().
 unmap(Ns, Sym) ->
-  clj_utils:throw_when( not clj_core:'symbol?'(Sym)
+  clj_utils:error_when( not clj_core:'symbol?'(Sym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
@@ -174,7 +174,7 @@ unmap(Ns, Sym) ->
 -spec add_alias(namespace(), 'clojerl.Symbol':type(), namespace()) ->
   namespace().
 add_alias(Ns, AliasSym, AliasedNs) ->
-  clj_utils:throw_when( not clj_core:'symbol?'(AliasSym)
+  clj_utils:error_when( not clj_core:'symbol?'(AliasSym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
@@ -183,7 +183,7 @@ add_alias(Ns, AliasSym, AliasedNs) ->
 -spec remove_alias(namespace(), 'clojerl.Symbol':type()) ->
   namespace().
 remove_alias(Ns, AliasSym) ->
-  clj_utils:throw_when( not clj_core:'symbol?'(AliasSym)
+  clj_utils:error_when( not clj_core:'symbol?'(AliasSym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
@@ -274,10 +274,9 @@ code_change(_Msg, _From, State) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
-
 -spec new('clojerl.Symbol':type()) -> namespace().
 new(NameSym) ->
-  clj_utils:throw_when( not clj_core:'symbol?'(NameSym)
+  clj_utils:error_when( not clj_core:'symbol?'(NameSym)
                       , <<"Namespace name must be a symbol">>
                       ),
 

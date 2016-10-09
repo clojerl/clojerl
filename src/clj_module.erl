@@ -497,7 +497,7 @@ new(Forms) when is_list(Forms) ->
   {attribute, _, module, Name} = ModuleAttr,
   {VarsAttrs, RestAttrs} = lists:partition(is_attribute_fun(vars), AllAttrs),
 
-  clj_utils:throw_when( length(VarsAttrs) > 1
+  clj_utils:error_when( length(VarsAttrs) > 1
                       , [ <<"The module ">>
                         , atom_to_binary(Name, utf8)
                         , <<" contains more than one 'vars' attributes.">>

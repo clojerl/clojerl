@@ -167,7 +167,7 @@ analyze_seq(Env0, List) ->
 -spec parse_quote(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_quote(Env, List) ->
   Count = clj_core:count(List),
-  clj_utils:throw_when( Count =/= 2
+  clj_utils:error_when( Count =/= 2
                       , [<<"Wrong number of args to quote, had: ">>, Count - 1]
                       , clj_env:location(Env)
                       ),
@@ -272,19 +272,19 @@ parse_fn(Env, List) ->
                   end,
 
   %% Validations
-  clj_utils:throw_when( length(AllVariadics) >= 2
+  clj_utils:error_when( length(AllVariadics) >= 2
                       , <<"Can't have more than 1 variadic overload">>
                       , clj_env:location(Env)
                       ),
 
   DistinctFixedArities = lists:usort(FixedArities),
-  clj_utils:throw_when( length(DistinctFixedArities) =/= length(FixedArities)
+  clj_utils:error_when( length(DistinctFixedArities) =/= length(FixedArities)
                       , <<"Can't have 2 or more overloads "
                           "with the same arity">>
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:throw_when( IsVariadic andalso
+  clj_utils:error_when( IsVariadic andalso
                         VariadicArity =/= undefined andalso
                         MaxFixedArity =/= undefined andalso
                         MaxFixedArity > VariadicArity
@@ -351,13 +351,13 @@ analyze_fn_methods(Env, MethodsList, LoopId, IsOnce, AnalyzeBody) ->
   clj_env:env().
 analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
   Params = clj_core:first(List),
-  clj_utils:throw_when( not clj_core:'vector?'(Params)
+  clj_utils:error_when( not clj_core:'vector?'(Params)
                       , <<"Parameter declaration should be a vector">>
                       , clj_env:location(Env)
                       ),
 
   ParamsList = clj_core:seq_to_list(Params),
-  clj_utils:throw_when( not lists:all(fun is_valid_bind_symbol/1, ParamsList)
+  clj_utils:error_when( not lists:all(fun is_valid_bind_symbol/1, ParamsList)
                       , [ <<"Params must be valid binding symbols, had: ">>
                         , Params
                         ]
@@ -471,7 +471,7 @@ parse_do(Env, Form) ->
 -spec parse_if(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_if(Env, Form) ->
   Count = clj_core:count(Form),
-  clj_utils:throw_when( Count =/= 3 andalso Count =/= 4
+  clj_utils:error_when( Count =/= 3 andalso Count =/= 4
                       , [<<"Wrong number of args to if, had: ">>, Count - 1]
                       , clj_env:location(Env)
                       ),
@@ -579,7 +579,7 @@ analyze_let(Env, Form) ->
 
 -spec parse_binding({any(), any()}, clj_env:env()) -> clj_env:env().
 parse_binding({Name, Init}, Env) ->
-  clj_utils:throw_when( not is_valid_bind_symbol(Name)
+  clj_utils:error_when( not is_valid_bind_symbol(Name)
                       , [<<"Bad binding form: ">>, Name]
                       , clj_env:location(Env)
                       ),
@@ -604,7 +604,7 @@ parse_binding({Name, Init}, Env) ->
 validate_bindings(Env, Form) ->
   Op = clj_core:first(Form),
   Bindings = clj_core:second(Form),
-  clj_utils:throw_when( not clj_core:'vector?'(Bindings),
+  clj_utils:error_when( not clj_core:'vector?'(Bindings),
                        [ Op
                        , <<" requires a vector for its bindings, had: ">>
                        , clj_core:type(Bindings)
@@ -612,7 +612,7 @@ validate_bindings(Env, Form) ->
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:throw_when( not clj_core:'even?'(clj_core:count(Bindings))
+  clj_utils:error_when( not clj_core:'even?'(clj_core:count(Bindings))
                       , [ Op
                         , <<" requires an even number of forms in binding "
                             "vector, had: ">>
@@ -631,12 +631,12 @@ parse_recur(Env, List) ->
   {LoopType, LoopId} = clj_env:get(Env, loop_id),
   LoopLocals         = clj_env:get(Env, loop_locals),
 
-  clj_utils:throw_when( clj_env:context(Env) =/= return
+  clj_utils:error_when( clj_env:context(Env) =/= return
                         andalso clj_env:context(Env) =/= expr
                       , <<"Can only recur from tail position">>
                       , clj_env:location(Env)
                       ),
-  clj_utils:throw_when( LoopLocals =/= clj_core:count(List) - 1
+  clj_utils:error_when( LoopLocals =/= clj_core:count(List) - 1
                       , [<<"Mismatched argument count to recur, expected: ">>
                         , LoopLocals
                         , <<" args, had: ">>
@@ -744,7 +744,7 @@ parse_def(Env, List) ->
 
   Var0 = lookup_var(VarSymbol),
 
-  clj_utils:throw_when( Var0 =:= undefined
+  clj_utils:error_when( Var0 =:= undefined
                       , [ <<"Can't refer to qualified var that doesn't exist: ">>
                         , VarSymbol
                         ]
@@ -754,7 +754,7 @@ parse_def(Env, List) ->
   VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
   CurrentNs    = clj_namespace:current(),
   CurrentNsSym = clj_namespace:name(CurrentNs),
-  clj_utils:throw_when( clj_core:namespace(VarSymbol) =/= undefined
+  clj_utils:error_when( clj_core:namespace(VarSymbol) =/= undefined
                         andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
                       , <<"Can't create defs outside of current ns">>
                       , clj_env:location(Env)
@@ -862,17 +862,17 @@ validate_def_args(Env, List) ->
            C == 4, Docstring =/= undefined  ->
       case clj_core:type(clj_core:second(List)) of
         'clojerl.Symbol' -> ok;
-        _ -> clj_utils:throw( <<"First argument to def must be a symbol">>
+        _ -> clj_utils:error( <<"First argument to def must be a symbol">>
                             , clj_env:location(Env)
                             )
       end,
       Docstring;
     1 ->
-      clj_utils:throw( <<"Too few arguments to def">>
+      clj_utils:error( <<"Too few arguments to def">>
                      , clj_env:location(Env)
                      );
     _ ->
-      clj_utils:throw( <<"Too many arguments to def">>
+      clj_utils:error( <<"Too many arguments to def">>
                      , clj_env:location(Env)
                      )
   end.
@@ -928,7 +928,7 @@ lookup_var(VarSymbol, false) ->
 -spec parse_import(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_import(Env, Form) ->
   ArgCount = clj_core:count(Form) - 1,
-  clj_utils:throw_when( ArgCount > 1
+  clj_utils:error_when( ArgCount > 1
                       , [ <<"Wrong number of args to import*, had: ">>
                         , ArgCount
                         ]
@@ -936,7 +936,7 @@ parse_import(Env, Form) ->
                       ),
 
   TypeName = clj_core:second(Form),
-  clj_utils:throw_when( not is_binary(TypeName)
+  clj_utils:error_when( not is_binary(TypeName)
                       , <<"Argument to import* must be a string">>
                       , clj_env:location(Env)
                       ),
@@ -1042,21 +1042,21 @@ parse_deftype(Env, Form) ->
 analyze_deftype_method(Form, Env) ->
   [MethodName, Args | _Body] = clj_core:seq_to_list(Form),
 
-  clj_utils:throw_when( not clj_core:'symbol?'(MethodName)
+  clj_utils:error_when( not clj_core:'symbol?'(MethodName)
                       , [ <<"Method name must be a symbol, had: ">>
                         , clj_core:type(MethodName)
                         ]
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:throw_when( not clj_core:'vector?'(Args)
+  clj_utils:error_when( not clj_core:'vector?'(Args)
                       , [ <<"Parameter listing should be a vector, had: ">>
                         , clj_core:type(Args)
                         ]
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:throw_when( clj_core:count(Args) < 1
+  clj_utils:error_when( clj_core:count(Args) < 1
                       , [ <<"Must supply at least one argument for 'this' in: ">>
                         , MethodName
                         ]
@@ -1091,7 +1091,7 @@ parse_defprotocol(Env, List) ->
   | MethodsSigs
   ] = clj_core:seq_to_list(List),
 
-  clj_utils:throw_when( not clj_core:'symbol?'(FQNameSym)
+  clj_utils:error_when( not clj_core:'symbol?'(FQNameSym)
                       , [ <<"Protocol name should be a symbol, had: ">>
                         , clj_core:type(FQNameSym)
                         ]
@@ -1137,7 +1137,7 @@ parse_extend_type(Env, List) ->
   {TypeExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Type)),
 
   #{op := TypeOp} = TypeExpr,
-  clj_utils:throw_when( TypeOp =/= type
+  clj_utils:error_when( TypeOp =/= type
                       , [ <<"The expression of type ">>
                         , clj_core:type(Type)
                         , <<" does not resolve to a type.">>
@@ -1177,7 +1177,7 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
   {ProtoExpr, EnvAcc1} = clj_env:pop_expr(analyze_form(EnvAcc, Proto)),
 
   #{op := ProtoOp} = ProtoExpr,
-  clj_utils:throw_when( ProtoOp =/= type
+  clj_utils:error_when( ProtoOp =/= type
                       , [ <<"The symbol ">>
                         , Proto
                         , <<"does not resolve to a protocol">>
@@ -1197,7 +1197,7 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
 -spec parse_throw(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_throw(Env, List) ->
   Count = clj_core:count(List),
-  clj_utils:throw_when( Count =/= 2
+  clj_utils:error_when( Count =/= 2
                       , [ <<"Wrong number of args to throw, had: ">>
                         , Count - 1
                         ]
@@ -1243,13 +1243,13 @@ parse_try(Env, List) ->
   {Catches, FinallyTail}   = lists:splitwith(IsCatch, CatchFinallyTail),
   {Finallies, Tail}        = lists:splitwith(IsFinally, FinallyTail),
 
-  clj_utils:throw_when( Tail =/= []
+  clj_utils:error_when( Tail =/= []
                       , <<"Only catch or finally clause can follow catch in "
                           "try expression">>
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:throw_when( length(Finallies) > 1
+  clj_utils:error_when( length(Finallies) > 1
                       , <<"Only one finally clause allowed in try expression">>
                       , clj_env:location(Env)
                       ),
@@ -1293,12 +1293,12 @@ parse_catch(Env, List) ->
   ErrName = clj_core:third(List),
   Body    = lists:sublist(clj_core:seq_to_list(List), 4, clj_core:count(List)),
 
-  clj_utils:throw_when( not is_valid_bind_symbol(ErrName)
+  clj_utils:error_when( not is_valid_bind_symbol(ErrName)
                       , [<<"Bad binding form: ">>, ErrName]
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:throw_when( not is_valid_error_type(ErrType)
+  clj_utils:error_when( not is_valid_error_type(ErrType)
                       , [<<"Bad error type: ">>, ErrType]
                       , clj_env:location(Env)
                       ),
@@ -1337,7 +1337,7 @@ is_valid_error_type(Form)  ->
 -spec parse_var(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_var(Env, List) ->
   Count = clj_core:count(List),
-  clj_utils:throw_when( Count =/= 2
+  clj_utils:error_when( Count =/= 2
                       , [<<"Wrong number of args to var, had: ">>, Count]
                       , clj_env:location(Env)
                       ),
@@ -1353,7 +1353,7 @@ parse_var(Env, List) ->
                       },
       clj_env:push_expr(Env1, VarConstExpr);
     {undefined, _} ->
-      clj_utils:throw([ <<"Unable to resolve var: ">>
+      clj_utils:error([ <<"Unable to resolve var: ">>
                       , VarSymbol
                       , <<" in this context">>
                       ]
@@ -1467,7 +1467,7 @@ resolve(Env, Symbol, CheckPrivate) ->
           {erl_fun(Env, Symbol), Env};
         Var ->
           CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
-          clj_utils:throw_when( CheckPrivate
+          clj_utils:error_when( CheckPrivate
                                 andalso NsStr =/= CurrentNsName
                                 andalso not 'clojerl.Var':is_public(Var)
                               , [Var, <<" is not public">>]
