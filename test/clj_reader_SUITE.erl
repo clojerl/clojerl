@@ -765,43 +765,47 @@ fn(ReadFun) ->
 
   {comments, ""}.
 
-arg(_Config) ->
+arg(Config) when is_list(Config) ->
+  arg(fun read/1, fun read_all/1),
+  arg(fun read_io/1, fun read_all_io/1).
+
+arg(ReadFun, ReadAllFun) ->
   ct:comment("Read % as a symbol"),
   ArgSymbol = clj_core:symbol(<<"%">>),
-  true = clj_core:equiv(clj_reader:read(<<"%">>), ArgSymbol),
+  true = clj_core:equiv(ReadFun(<<"%">>), ArgSymbol),
 
   ct:comment("Read %1 as a symbol"),
   ArgOneSymbol = clj_core:symbol(<<"%1">>),
-  true = clj_core:equiv(clj_reader:read(<<"%1">>), ArgOneSymbol),
+  true = clj_core:equiv(ReadFun(<<"%1">>), ArgOneSymbol),
 
   erlang:put(arg_env, #{}),
 
   ct:comment("Read % as an argument"),
-  ArgGenSymbol = clj_reader:read(<<"%">>),
+  ArgGenSymbol = ReadFun(<<"%">>),
   ArgGenName = clj_core:name(ArgGenSymbol),
   {match, _} = re:run(ArgGenName, "p1__\\d+#"),
 
-  ArgGenSymbol2 = clj_reader:read(<<"% ">>),
+  ArgGenSymbol2 = ReadFun(<<"% ">>),
   ArgGenName2 = clj_core:name(ArgGenSymbol2),
   {match, _} = re:run(ArgGenName2, "p1__\\d+#"),
 
   ct:comment("Read %1 as an argument"),
-  ArgOneGenSymbol = clj_reader:read(<<"%1">>),
+  ArgOneGenSymbol = ReadFun(<<"%1">>),
   ArgOneGenName = clj_core:name(ArgOneGenSymbol),
   {match, _} = re:run(ArgOneGenName, "p1__\\d+#"),
 
   ct:comment("Read %42 as an argument"),
-  ArgFortyTwoGenSymbol = clj_reader:read(<<"%42">>),
+  ArgFortyTwoGenSymbol = ReadFun(<<"%42">>),
   ArgFortyTwoGenName = clj_core:name(ArgFortyTwoGenSymbol),
   {match, _} = re:run(ArgFortyTwoGenName, "p42__\\d+#"),
 
   ct:comment("Read %& as an argument"),
-  [ArgRestGenSymbol] = read_all(<<"%&">>),
+  [ArgRestGenSymbol] = ReadAllFun(<<"%&">>),
   ArgRestGenName = clj_core:name(ArgRestGenSymbol),
   {match, _} = re:run(ArgRestGenName, "rest__\\d+#"),
 
   ct:comment("Invalid char after %"),
-  ok = try clj_reader:read(<<"%a">>)
+  ok = try ReadFun(<<"%a">>)
        catch _:<<"?:1:2: Arg literal must be %, %& or %integer">> -> ok
        end,
 
@@ -809,109 +813,135 @@ arg(_Config) ->
 
   {comments, ""}.
 
-eval(_Config) ->
+eval(Config) when is_list(Config) ->
+  eval(fun read/1),
+  eval(fun read_io/1);
+eval(ReadFun) ->
   ct:comment("Read eval 1"),
-  1 = clj_reader:read(<<"#=1">>),
+  1 = ReadFun(<<"#=1">>),
 
   ct:comment("Read eval (do 1)"),
-  1 = clj_reader:read(<<"#=(do 1)">>),
+  1 = ReadFun(<<"#=(do 1)">>),
 
   ct:comment("Read eval (str 1)"),
-  <<"1">> = clj_reader:read(<<"#=(clj_core/str.e 1)">>),
+  <<"1">> = ReadFun(<<"#=(clj_core/str.e 1)">>),
 
   {comments, ""}.
 
-var(_Config) ->
+var(Config) when is_list(Config) ->
+  var(fun read/1),
+  var(fun read_io/1);
+var(ReadFun) ->
   VarSymbol = clj_core:symbol(<<"var">>),
   ListSymbol = clj_core:symbol(<<"list">>),
 
   ct:comment(""),
   List = clj_core:list([VarSymbol, ListSymbol]),
-  true = clj_core:equiv(clj_reader:read(<<"#'list">>), List),
+  true = clj_core:equiv(ReadFun(<<"#'list">>), List),
 
   {comments, ""}.
 
-regex(_Config) ->
+regex(Config) when is_list(Config) ->
+  regex(fun read/1, fun read_all/1),
+  regex(fun read_io/1, fun read_all_io/1).
+
+regex(ReadFun, ReadAllFun) ->
   Regex = 'erlang.util.Regex':?CONSTRUCTOR(<<".?el\\.lo">>),
-  Regex = clj_reader:read(<<"#\".?el\\.lo\"">>),
+  Regex = ReadFun(<<"#\".?el\\.lo\"">>),
 
   ct:comment("EOF: unterminated regex"),
-  ok = try read_all(<<"#\"a*">>)
+  ok = try ReadAllFun(<<"#\"a*">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-unreadable_form(_Config) ->
+unreadable_form(Config) when is_list(Config) ->
+  unreadable_form(fun read/1),
+  unreadable_form(fun read_io/1);
+unreadable_form(ReadFun) ->
   ct:comment("Read unreadable"),
-  ok = try clj_reader:read(<<"#<1>">>)
+  ok = try ReadFun(<<"#<1>">>)
        catch _:<<"?:1:1: Unreadable form">> -> ok
        end,
 
   {comments, ""}.
 
-discard(_Config) ->
-  [1] = read_all(<<"#_ :hello 1">>),
+discard(Config) when is_list(Config) ->
+  discard(fun read/1, fun read_all/1),
+  discard(fun read_io/1, fun read_all_io/1).
 
-  1 = clj_reader:read(<<"#_ :hello 1">>),
+discard(ReadFun, ReadAllFun) ->
+  [1] = ReadAllFun(<<"#_ :hello 1">>),
 
-  1 = clj_reader:read(<<"1 #_ :hello">>),
+  1 = ReadFun(<<"#_ :hello 1">>),
+
+  1 = ReadFun(<<"1 #_ :hello">>),
 
   StrSym = clj_core:symbol(<<"str">>),
   ByeKeyword = clj_core:keyword(<<"bye">>),
   List = clj_core:list([StrSym, ByeKeyword]),
-  true = clj_core:equiv(clj_reader:read(<<"(str  #_ :hello :bye)">>), List),
+  true = clj_core:equiv(ReadFun(<<"(str  #_ :hello :bye)">>), List),
 
   {comments, ""}.
 
-'cond'(_Config) ->
+'cond'(Config) when is_list(Config) ->
+  'cond'(fun read/1, fun read/2),
+  'cond'(fun read_io/1, fun read_io/2).
+
+'cond'(ReadFun, ReadFun2) ->
   AllowOpts = #{'read-cond' => allow},
   AllowCljFeatureOpts = #{'read-cond' => allow,
-                          features => clj_reader:read(<<"#{:clj}">>)},
+                          features => ReadFun(<<"#{:clj}">>)},
   AllowClrFeatureOpts = #{'read-cond' => allow,
-                          features => clj_reader:read(<<"#{:clr}">>)},
+                          features => ReadFun(<<"#{:clr}">>)},
   HelloKeyword = clj_core:keyword(<<"hello">>),
 
   ct:comment("Allow with no features"),
-  HelloKeyword = clj_reader:read(<<"#?(:one 2) :hello">>, AllowOpts),
+  HelloKeyword = ReadFun2(<<"#?(:one 2) :hello">>, AllowOpts),
 
   ct:comment("Allow with feature match"),
-  2 = clj_reader:read(<<"#?(:clj 2) :hello">>, AllowCljFeatureOpts),
+  2 = ReadFun2(<<"#?(:clj 2) :hello">>, AllowCljFeatureOpts),
 
   ct:comment("Allow with no feature match"),
-  HelloKeyword = clj_reader:read(<<"#?(:clj 2 :cljs [3]) :hello">>,
-                                 AllowClrFeatureOpts),
+  HelloKeyword = ReadFun2( <<"#?(:clj 2 :cljs [3]) :hello">>
+                         , AllowClrFeatureOpts
+                         ),
 
   ct:comment("Cond splice vector"),
-  OneTwoThreeVector = clj_reader:read(<<"[:one :two :three]">>),
-  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
-                                        " :clr [:two]) :three]">>,
-                                      AllowClrFeatureOpts),
+  OneTwoThreeVector = ReadFun(<<"[:one :two :three]">>),
+  OneTwoThreeVector = ReadFun2( <<"[:one #?@(:clj :three"
+                                  " :clr [:two]) :three]">>
+                              , AllowClrFeatureOpts
+                              ),
 
-  OneTwoThreeVector = clj_reader:read(<<"[:one #? @  (:clj :three"
-                                        " :clr [:two]) :three]">>,
-                                      AllowClrFeatureOpts),
+  OneTwoThreeVector = ReadFun2( <<"[:one #? @  (:clj :three"
+                                  " :clr [:two]) :three]">>
+                              , AllowClrFeatureOpts
+                              ),
 
-  OneTwoThreeFourVector = clj_reader:read(<<"[:one :two :three :four]">>),
+  OneTwoThreeFourVector = ReadFun(<<"[:one :two :three :four]">>),
   OneTwoThreeFourVector =
-    clj_reader:read(<<"[:one #?@(:clj :three :clr"
-                      " [:two :three] :cljs :five) :four]">>,
-                    AllowClrFeatureOpts),
+    ReadFun2( <<"[:one #?@(:clj :three :clr"
+                " [:two :three] :cljs :five) :four]">>
+            , AllowClrFeatureOpts
+            ),
 
   ct:comment("Cond splice list"),
-  OneTwoThreeVector = clj_reader:read(<<"[:one #?@(:clj :three"
-                                        " :clr (:two)) :three]">>,
-                                      AllowClrFeatureOpts),
-  OneTwoThreeFourVector =
-    clj_reader:read(<<"[:one #?@(:clj :three :clr"
-                     " (:two :three) :cljs :five) :four]">>,
-                    AllowClrFeatureOpts),
+  OneTwoThreeVector = ReadFun2( <<"[:one #?@(:clj :three"
+                                  " :clr (:two)) :three]">>
+                              , AllowClrFeatureOpts
+                              ),
+  OneTwoThreeFourVector = ReadFun2( <<"[:one #?@(:clj :three :clr"
+                                      " (:two :three) :cljs :five) :four]">>
+                                  , AllowClrFeatureOpts
+                                  ),
 
   ct:comment("Preserve read"),
   PreserveOpts = #{'read-cond' => preserve},
   ReaderCond   =
     'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
-                                          clj_reader:read(<<"(1 2)">>), false
+                                          ReadFun(<<"(1 2)">>), false
                                          ),
   [ReaderCondCheck, HelloKeyword] =
     read_all(<<"#?(1 2) :hello">>, PreserveOpts),
@@ -919,74 +949,78 @@ discard(_Config) ->
 
   ReaderCondSplice =
     'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
-                                          clj_reader:read(<<"(1 2)">>), true
+                                          ReadFun(<<"(1 2)">>), true
                                          ),
   ReaderCondSpliceVector = clj_core:vector([ReaderCondSplice, HelloKeyword]),
-  ReaderCondSpliceVectorCheck =
-    clj_reader:read(<<"[#?@(1 2) :hello]">>, PreserveOpts),
+  ReaderCondSpliceVectorCheck = ReadFun2(<<"[#?@(1 2) :hello]">>, PreserveOpts),
   true = clj_core:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
   false = clj_core:equiv(ReaderCond, ReaderCondSpliceVector),
 
   ct:comment("EOF while reading cond"),
-  ok = try clj_reader:read(<<"#?">>, AllowOpts)
+  ok = try ReadFun2(<<"#?">>, AllowOpts)
        catch _:<<"?:1:3: EOF while reading cond">> -> ok
        end,
 
   ct:comment("Reader conditional not allowed"),
-  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>)
+  ok = try ReadFun(<<"#?(:clj :whatever :clr :whateverrrr)">>)
        catch _:<<"?:1:3: Conditional read not allowed">> -> ok
        end,
 
   ct:comment("No list"),
-  ok = try clj_reader:read(<<"#?:clj">>, AllowOpts)
+  ok = try ReadFun2(<<"#?:clj">>, AllowOpts)
        catch _:<<"?:1:3: read-cond body must be a list">> -> ok
        end,
 
   ct:comment("EOF: no feature matched"),
-  ok = try clj_reader:read(<<"#?(:clj :whatever :clr :whateverrrr)">>,
-                           AllowOpts)
+  ok = try ReadFun2(<<"#?(:clj :whatever :clr :whateverrrr)">>, AllowOpts)
        catch _:<<"?:1:37: EOF">> -> ok
        end,
 
   ct:comment("Uneven number of forms"),
-  ok = try clj_reader:read(<<"#?(:one :two :three)">>, AllowOpts)
+  ok = try ReadFun2(<<"#?(:one :two :three)">>, AllowOpts)
        catch _:<<"?:1:21: read-cond requires an even number of forms">> -> ok
        end,
 
   ct:comment("Splice at the top level"),
-  ok = try clj_reader:read(<<"#?@(:clje [:two])">>, AllowOpts)
+  ok = try ReadFun2(<<"#?@(:clje [:two])">>, AllowOpts)
        catch _:<<"?:1:5: Reader conditional splicing not allowed "
                  "at the top level">> -> ok
        end,
 
   ct:comment("Splice in list but not sequential"),
-  ok = try clj_reader:read(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
+  ok = try ReadFun2(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
                            AllowClrFeatureOpts)
        catch _:<<"?:1:13: Spliced form list in read-cond-splicing must "
                   "extend clojerl.ISequential">> -> ok
        end,
 
   ct:comment("Feature is not a keyword"),
-  ok = try clj_reader:read(<<"#?(1 2) :hello">>, AllowOpts)
+  ok = try ReadFun2(<<"#?(1 2) :hello">>, AllowOpts)
        catch _:<<"?:1:4: Feature should be a keyword">> -> ok
        end,
 
   {comments, ""}.
 
-unsupported_reader(_Config) ->
+unsupported_reader(Config) when is_list(Config) ->
+  unsupported_reader(fun read/1),
+  unsupported_reader(fun read_io/1);
+unsupported_reader(ReadFun) ->
   ct:comment("Try unsupported reader"),
-  ok = try clj_reader:read(<<"#-:something">>)
+  ok = try ReadFun(<<"#-:something">>)
        catch _:_ -> ok
        end,
 
   {comments, ""}.
 
-tuple(_Config) ->
+tuple(Config) when is_list(Config) ->
+  tuple(fun read/1),
+  tuple(fun read_io/1);
+tuple(ReadFun) ->
   ct:comment("Read an empty tuple"),
-  {} = clj_reader:read(<<"#[]">>),
+  {} = ReadFun(<<"#[]">>),
 
   ct:comment("Read a tuple with a single element"),
-  {42} = clj_reader:read(<<"#[42]">>),
+  {42} = ReadFun(<<"#[42]">>),
 
   ct:comment("Read a tuple with many elements"),
   HelloKeyword = clj_core:keyword(<<"hello">>),
@@ -995,17 +1029,20 @@ tuple(_Config) ->
   , HelloKeywordCheck
   , 2.5
   , WorldSymbolCheck
-  } = clj_reader:read(<<"#[42, :hello, 2.5, world]">>),
+  } = ReadFun(<<"#[42, :hello, 2.5, world]">>),
   true = clj_core:equiv(HelloKeyword, HelloKeywordCheck),
   true = clj_core:equiv(WorldSymbol, WorldSymbolCheck),
 
   ct:comment("Read a tuple whose first element is an keyword"),
-  T = clj_reader:read(<<"#[:random, :hello, 2.5, 'world]">>),
+  T = ReadFun(<<"#[:random, :hello, 2.5, 'world]">>),
   'clojerl.erlang.Tuple' = clj_core:type(T),
 
   {comments, ""}.
 
-tagged(_Config) ->
+tagged(Config) when is_list(Config) ->
+  tagged(fun read/1),
+  tagged(fun read_io/1);
+tagged(ReadFun) ->
   DefaultDataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                                                     , <<"default-data-readers">>
                                                     ),
@@ -1024,9 +1061,9 @@ tagged(_Config) ->
              ),
 
   ct:comment("Use default readers"),
-  <<"2016">> = clj_reader:read(<<"#inst \"2016\"">>),
+  <<"2016">> = ReadFun(<<"#inst \"2016\"">>),
   <<"de305d54-75b4-431b-adb2-eb6b9e546014">> =
-    clj_reader:read(<<"#uuid \"de305d54-75b4-431b-adb2-eb6b9e546014\"">>),
+    ReadFun(<<"#uuid \"de305d54-75b4-431b-adb2-eb6b9e546014\"">>),
 
   ct:comment("Use *default-data-reader-fn*"),
   DefaultReaderFunVar =
@@ -1035,8 +1072,8 @@ tagged(_Config) ->
                               ),
   DefaultReaderFun = fun(_, _) -> default end,
   ok  = 'clojerl.Var':push_bindings(#{DefaultReaderFunVar => DefaultReaderFun}),
-  default = clj_reader:read(<<"#whatever :tag">>),
-  default = clj_reader:read(<<"#we use">>),
+  default = ReadFun(<<"#whatever :tag">>),
+  default = ReadFun(<<"#we use">>),
   ok  = 'clojerl.Var':pop_bindings(),
 
   ct:comment("Provide additional reader"),
@@ -1049,29 +1086,42 @@ tagged(_Config) ->
                                     ),
 
   ok  = 'clojerl.Var':push_bindings(#{DataReadersVar => DataReaders}),
-  bla = clj_reader:read(<<"#bla 1">>),
+  bla = ReadFun(<<"#bla 1">>),
   ok  = 'clojerl.Var':pop_bindings(),
 
   ct:comment("Don't provide a symbol"),
-  ok = try clj_reader:read(<<"#1">>), error
+  ok = try ReadFun(<<"#1">>), error
        catch _:<<"?:1:2: Reader tag must be a symbol">> -> ok end,
 
   ct:comment("Provide a missing reader"),
-  ok = try clj_reader:read(<<"#bla 1">>), error
+  ok = try ReadFun(<<"#bla 1">>), error
        catch _:<<"?:1:2: No reader function for tag bla">> -> ok end,
 
   meck:unload('clojure.core'),
 
   {comments, ""}.
 
+%%------------------------------------------------------------------------------
+%% Helper functions
+%%------------------------------------------------------------------------------
+
 -spec read_io(binary()) -> any().
 read_io(Src) ->
   Reader = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
   clj_reader:read(<<>>, #{?OPT_IO_READER => Reader}).
 
+-spec read_io(binary(), clj_reader:opts()) -> any().
+read_io(Src, Opts) ->
+  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
+  clj_reader:read(<<>>, Opts#{?OPT_IO_READER => Reader}).
+
 -spec read(binary()) -> any().
 read(Src) ->
   clj_reader:read(Src).
+
+-spec read(binary(), clj_reader:opts()) -> any().
+read(Src, Opts) ->
+  clj_reader:read(Src, Opts).
 
 -spec read_all_io(binary()) -> any().
 read_all_io(Src) ->
