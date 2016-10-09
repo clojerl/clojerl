@@ -318,7 +318,7 @@ code_from_binary(Name) when is_atom(Name) ->
           Error
       end;
     _ ->
-      clj_utils:throw([ <<"Could not load object code for namespace: ">>
+      clj_utils:error([ <<"Could not load object code for namespace: ">>
                       , atom_to_binary(Name, utf8)
                       ])
   end.

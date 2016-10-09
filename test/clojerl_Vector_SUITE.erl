@@ -189,7 +189,7 @@ stack(_Config) ->
   EmptyVector = clj_core:vector([]),
   undefined = clj_core:peek(EmptyVector),
   ok = try EmptyVector = clj_core:pop(EmptyVector), error
-       catch _ -> ok
+       catch _:_ -> ok
        end,
 
   OneVector = clj_core:vector([1]),

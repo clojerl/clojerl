@@ -110,7 +110,7 @@
         ]).
 
 ns(Form, _Env, Name, _References) ->
-  clj_utils:throw_when( not clj_core:'symbol?'(Name)
+  clj_utils:error_when( not clj_core:'symbol?'(Name)
                       , <<"First argument to ns must be a symbol">>
                       , clj_reader:location_meta(Form)
                       ),
@@ -131,7 +131,7 @@ ns__val() ->
 'in-ns'(MaybeQuotedName) ->
   Name  = 'maybe-unquote'(MaybeQuotedName),
 
-  clj_utils:throw_when( not clj_core:'symbol?'(Name)
+  clj_utils:error_when( not clj_core:'symbol?'(Name)
                       , <<"First argument to in-ns must be a symbol">>
                       , clj_reader:location_meta(Name)
                       ),

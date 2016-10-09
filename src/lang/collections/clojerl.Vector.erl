@@ -147,7 +147,7 @@ peek(#?TYPE{name = ?M, data = Array}) ->
 
 pop(#?TYPE{name = ?M, data = Array} = Vector) ->
   case array:size(Array) of
-    0    -> clj_utils:throw(<<"Can't pop empty vector">>);
+    0    -> error(<<"Can't pop empty vector">>);
     Size ->
       NewArray = array:resize(Size - 1, Array),
       Vector#?TYPE{data = NewArray}
