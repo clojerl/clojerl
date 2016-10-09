@@ -3,7 +3,7 @@
 -include("clojerl.hrl").
 
 -export([ read_fold/4
-        , read/1, read/2, read/3
+        , read/1, read/2
         , location_meta/1
         , remove_location/1
         ]).
@@ -118,15 +118,11 @@ remove_location(Meta) ->
 read(Src) ->
   read(Src, #{}).
 
--spec read(binary(), opts()) -> any().
-read(Src, Opts) ->
-  read(Src, Opts, clj_env:default()).
-
 %% @doc Reads the next form from the input. Returns the form
 %%      or throws if there is no form to read.
--spec read(binary(), opts(), clj_env:env()) -> any().
-read(Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts),
+-spec read(binary(), opts()) -> any().
+read(Src, Opts) ->
+  State = new_state(Src, clj_env:default(), Opts),
   try
     ensure_read(State)
   catch
@@ -649,16 +645,16 @@ is_literal(Form) ->
 %%------------------------------------------------------------------------------
 
 -spec read_unquote(state()) -> state().
-read_unquote(#{src := <<"\~"/utf8, Src/binary>>} = State) ->
-  case Src of
-    <<"@", _/binary>> ->
+read_unquote(#{src := <<"\~"/utf8, _/binary>>} = State0) ->
+  State = consume_char(State0),
+  case peek_src(State) of
+    $@ ->
       UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
                                         <<"unquote-splicing">>),
-      wrapped_read(UnquoteSplicing, consume_chars(2, State));
+      wrapped_read(UnquoteSplicing, consume_char(State));
     _ ->
-      UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
-                                        <<"unquote">>),
-      wrapped_read(UnquoteSplicing, consume_char(State))
+      Unquote = clj_core:symbol(<<"clojure.core">>, <<"unquote">>),
+      wrapped_read(Unquote, State)
   end.
 
 %%------------------------------------------------------------------------------
@@ -744,11 +740,18 @@ read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_char(state()) -> state().
-read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
+read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
+  State    = consume_char(State0),
+  NextChar = case peek_src(State) of
+               eof -> clj_utils:error( <<"EOF while reading character">>
+                                     , location(State)
+                                     );
+               NextCh  -> NextCh
+             end,
   {Token, State1} =
     case is_macro_terminating(NextChar) orelse is_whitespace(NextChar) of
-      true -> {<<NextChar/utf8>>, consume_chars(2, State)};
-      false -> read_token(consume_char(State))
+      true -> {<<NextChar/utf8>>, consume_char(State)};
+      false -> read_token(State)
     end,
   Char =
     case Token of
@@ -777,11 +780,7 @@ read_char(#{src := <<"\\"/utf8, NextChar/utf8,  _/binary>>} = State) ->
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
-  push_form(CharBin, State1);
-read_char(State) ->
-  clj_utils:error( <<"EOF while reading character">>
-                 , location(State)
-                 ).
+  push_form(CharBin, State1).
 
 -spec read_octal_char(state()) -> char().
 read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
@@ -913,15 +912,19 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  case erlang:get(arg_env) of
-    undefined -> ok;
-    _         -> clj_utils:throw( <<"Nested #()s are not allowed">>
-                                , location(State)
-                                )
-  end,
-  erlang:put(arg_env, #{}),
-  {Form, NewState} = read_pop_one(State),
-  ArgEnv = erlang:erase(arg_env),
+  clj_utils:error_when(erlang:get(arg_env) =/= undefined
+                      , <<"Nested #()s are not allowed">>
+                      , location(State)
+                      ),
+
+  {{Form, NewState}, ArgEnv} =
+    try
+      erlang:put(arg_env, #{}),
+      {read_pop_one(State), erlang:get(arg_env)}
+    after
+      %% Make sure the process dictionary entry gets removed
+      erlang:erase(arg_env)
+    end,
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
   MapFun = fun(N) ->
@@ -937,7 +940,7 @@ read_fn(State) ->
   ArgsVector = clj_core:vector(ArgsSyms2),
 
   FnSymbol = clj_core:symbol(<<"fn*">>),
-  FnForm = clj_core:list([FnSymbol, ArgsVector, Form]),
+  FnForm   = clj_core:list([FnSymbol, ArgsVector, Form]),
   FnFormWithMeta = clj_core:with_meta(FnForm, file_location_meta(State)),
 
   push_form(FnFormWithMeta, NewState).
@@ -1244,7 +1247,12 @@ location_started(State, Loc) ->
 consume_char(#{src := <<"\n"/utf8, Src/binary>>, loc := {Line, _}} = State) ->
   State#{src => Src, loc => {Line + 1, 1}};
 consume_char(#{src := <<_/utf8, Src/binary>>, loc := {Line, Col}} = State) ->
-  State#{src => Src, loc => {Line, Col + 1}}.
+  State#{src => Src, loc => {Line, Col + 1}};
+consume_char(State) ->
+  case check_reader(State) of
+    {ok, NewState} -> consume_char(NewState);
+    eof -> State
+  end.
 
 -spec consume_chars(non_neg_integer(), state()) -> state().
 consume_chars(0, State) ->
@@ -1417,14 +1425,14 @@ file_location_meta(State) ->
               }
   end.
 
--spec peek_src(state()) -> integer().
+-spec peek_src(state()) -> integer() | eof.
 peek_src(#{src := <<First/utf8, _/binary>>}) ->
   First;
 peek_src(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}}) ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
-    Ch  ->
-      'erlang.io.IReader':unread(Reader, Ch),
+    <<Ch/utf8>> = ChBin ->
+      'erlang.io.IReader':unread(Reader, ChBin),
       Ch
   end;
 peek_src(_State) ->
@@ -1435,8 +1443,7 @@ check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
   when Reader =/= undefined ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
-    Ch ->
-      {ok, State#{src := Ch}}
+    Ch  -> {ok, State#{src := Ch}}
   end;
 check_reader(#{src := <<>>}) ->
   eof.

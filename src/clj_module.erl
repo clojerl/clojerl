@@ -382,10 +382,11 @@ build_fake_fun(Module, Function, Arity) ->
   FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
 
   ModuleAst  = {attribute, 0, module, FakeModuleName},
+  FileAst    = {attribute, 0, file, {Module#module.source, 0}},
   ExportAst  = {attribute, 0, export, [{Function, Arity}]},
   ClojureAst = {attribute, 0, clojure, true},
   FunAst     = {function, 0, Function, Arity, Clauses},
-  Forms      = [ModuleAst, ExportAst, ClojureAst, FunAst],
+  Forms      = [ModuleAst, FileAst, ExportAst, ClojureAst, FunAst],
 
   CompileOpts = #{erl_flags => [binary]},
   clj_compiler:compile_forms(Forms, CompileOpts),
