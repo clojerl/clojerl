@@ -3,7 +3,7 @@
 -include("clojerl.hrl").
 
 -export([ read_fold/4
-        , read/1, read/2, read/3
+        , read/1, read/2
         , location_meta/1
         , remove_location/1
         ]).
@@ -118,15 +118,11 @@ remove_location(Meta) ->
 read(Src) ->
   read(Src, #{}).
 
--spec read(binary(), opts()) -> any().
-read(Src, Opts) ->
-  read(Src, Opts, clj_env:default()).
-
 %% @doc Reads the next form from the input. Returns the form
 %%      or throws if there is no form to read.
--spec read(binary(), opts(), clj_env:env()) -> any().
-read(Src, Opts, Env) ->
-  State = new_state(Src, Env, Opts),
+-spec read(binary(), opts()) -> any().
+read(Src, Opts) ->
+  State = new_state(Src, clj_env:default(), Opts),
   try
     ensure_read(State)
   catch
@@ -1417,14 +1413,14 @@ file_location_meta(State) ->
               }
   end.
 
--spec peek_src(state()) -> integer().
+-spec peek_src(state()) -> integer() | eof.
 peek_src(#{src := <<First/utf8, _/binary>>}) ->
   First;
 peek_src(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}}) ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
-    Ch  ->
-      'erlang.io.IReader':unread(Reader, Ch),
+    <<Ch/utf8>> = ChBin ->
+      'erlang.io.IReader':unread(Reader, ChBin),
       Ch
   end;
 peek_src(_State) ->
