@@ -12,8 +12,8 @@
 
 -spec name(type()) -> binary().
 name(X) ->
-  'clojerl.protocol':resolve(?MODULE, name, [X]).
+  'clojerl.protocol':resolve(?MODULE, name, X).
 
 -spec namespace(type()) -> binary().
 namespace(X) ->
-  'clojerl.protocol':resolve(?MODULE, namespace, [X]).
+  'clojerl.protocol':resolve(?MODULE, namespace, X).

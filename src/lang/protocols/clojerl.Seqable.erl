@@ -11,4 +11,4 @@
 
 -spec seq(any()) -> type().
 seq(Seqable) ->
-  'clojerl.protocol':resolve(?MODULE, seq, [Seqable]).
+  'clojerl.protocol':resolve(?MODULE, seq, Seqable).

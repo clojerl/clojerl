@@ -415,8 +415,8 @@
   (map (fn [args]
          `(defn ~(vary-meta name assoc :protocol iname) ~args
             (clojerl.protocol/resolve.e ~(keyword iname)
-                                         ~(keyword name)
-                                         (clj_core/seq_to_list.e ~args))))
+                                        ~(keyword name)
+                                        ~@args)))
        arglists))
 
 (defn- emit-protocol [name opts+sigs]

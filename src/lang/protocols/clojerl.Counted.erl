@@ -11,4 +11,4 @@
 
 -spec count(type()) -> type().
 count(Seq) ->
-  'clojerl.protocol':resolve(?MODULE, count, [Seq]).
+  'clojerl.protocol':resolve(?MODULE, count, Seq).

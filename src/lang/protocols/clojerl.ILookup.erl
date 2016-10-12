@@ -13,8 +13,8 @@
 
 -spec get(any(), any()) -> any().
 get(X, Key) ->
-  'clojerl.protocol':resolve(?MODULE, get, [X, Key]).
+  'clojerl.protocol':resolve(?MODULE, get, X, Key).
 
 -spec get(any(), any(), any()) -> any().
 get(X, Key, NotFound) ->
-  'clojerl.protocol':resolve(?MODULE, get, [X, Key, NotFound]).
+  'clojerl.protocol':resolve(?MODULE, get, X, Key, NotFound).

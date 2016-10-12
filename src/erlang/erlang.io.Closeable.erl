@@ -8,4 +8,4 @@
 
 -spec close(type()) -> undefined.
 close(X) ->
-  'clojerl.protocol':resolve(?MODULE, close, [X]).
+  'clojerl.protocol':resolve(?MODULE, close, X).

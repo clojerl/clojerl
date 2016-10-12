@@ -11,4 +11,4 @@
 
 -spec invoke(type(), any()) -> any().
 invoke(Fn, Args) ->
-  'clojerl.protocol':resolve(?MODULE, invoke, [Fn, Args]).
+  'clojerl.protocol':resolve(?MODULE, invoke, Fn, Args).
