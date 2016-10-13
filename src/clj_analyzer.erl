@@ -33,20 +33,8 @@ macroexpand_1(Env, Form) ->
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
-      Args   = [Form, Env] ++ clj_core:seq_to_list(clj_core:rest(Form)),
-      Module = 'clojerl.Var':module(MacroVar),
-      case clj_module:is_loaded(Module) of
-        true ->
-          Function = 'clojerl.Var':function(MacroVar),
-          SeqFun   = fun clj_core:seq/1,
-          Args1    = 'clojerl.Var':process_args(MacroVar, Args, SeqFun),
-          Arity    = length(Args1),
-          FakeFun  = clj_module:fake_fun(Module, Function, Arity),
-
-          erlang:apply(FakeFun, Args1);
-        false ->
-          clj_core:invoke(MacroVar, Args)
-      end;
+      Args = [Form, Env | clj_core:seq_to_list(clj_core:rest(Form))],
+      'clojerl.IFn':invoke(MacroVar, Args);
     false -> Form
   end.
 
