@@ -201,8 +201,8 @@ deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
   end.
 
 equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = X}
-                      ) ->
+     , #?TYPE{name = ?M, data = X}
+     ) ->
   true;
 equiv(_, _) ->
   false.
@@ -214,8 +214,8 @@ meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
 
 with_meta( #?TYPE{name = ?M, info = Info} = Keyword
-                         , Metadata
-                         ) ->
+         , Metadata
+         ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
 invoke(#?TYPE{name = ?M} = Var, Args) ->
@@ -238,21 +238,22 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
            M -> M
          end,
 
-  IsVariadic    = maps:get('variadic?', Meta, false),
-  MaxFixedArity = maps:get(max_fixed_arity, Meta, undefined),
-  VariadicArity = maps:get(variadic_arity, Meta, undefined),
-
-  ArgCount = length(Args),
-  case IsVariadic of
-    true when ArgCount =< MaxFixedArity, MaxFixedArity =/= undefined ->
-      Args;
-    true when ArgCount >= VariadicArity; MaxFixedArity == undefined ->
-      {Args1, Rest} = case VariadicArity < ArgCount of
-                        true  -> lists:split(VariadicArity, Args);
-                        false -> {Args, []}
-                      end,
-      Args1 ++ [RestFun(Rest)];
-    _ -> Args
+  case maps:get('variadic?', Meta, false) of
+    false -> Args;
+    true ->
+      MaxFixedArity = maps:get(max_fixed_arity, Meta),
+      VariadicArity = maps:get(variadic_arity, Meta),
+      ArgCount = length(Args),
+      if
+        MaxFixedArity =:= undefined;
+        MaxFixedArity < ArgCount, ArgCount >= VariadicArity ->
+          {Args1, Rest} = case VariadicArity < ArgCount of
+                            true  -> lists:split(VariadicArity, Args);
+                            false -> {Args, []}
+                          end,
+          Args1 ++ [RestFun(Rest)];
+        true -> Args
+      end
   end;
 process_args(Var, Args, RestFun) ->
   process_args(Var, clj_core:seq_to_list(Args), RestFun).
