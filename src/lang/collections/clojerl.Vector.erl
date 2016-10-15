@@ -41,7 +41,9 @@
 -export([ peek/1
         , pop/1
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
@@ -158,6 +160,9 @@ seq(#?TYPE{name = ?M, data = Array}) ->
     0 -> undefined;
     _ -> array:to_list(Array)
   end.
+
+to_list(#?TYPE{name = ?M, data = Array}) ->
+  array:to_list(Array).
 
 str(#?TYPE{name = ?M, data = Array}) ->
   Items = lists:map(fun clj_core:str/1, array:to_list(Array)),

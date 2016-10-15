@@ -13,13 +13,13 @@
 
 -spec ordered(any()) -> integer().
 ordered(Seq) ->
-  List = clj_core:seq_to_list(Seq),
+  List = clj_core:to_list(Seq),
   Hashes = ['clojerl.IHash':hash(X) || X <- List],
   ordered_nif(Hashes).
 
 -spec unordered(any()) -> integer().
 unordered(Seq) ->
-  List = clj_core:seq_to_list(Seq),
+  List = clj_core:to_list(Seq),
   Hashes = ['clojerl.IHash':hash(X) || X <- List],
   unordered_nif(Hashes).
 

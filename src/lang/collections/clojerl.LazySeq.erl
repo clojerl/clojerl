@@ -28,7 +28,9 @@
         , more/1
         ]).
 -export(['_'/1]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
@@ -58,7 +60,7 @@ equiv( #?TYPE{name = ?M, data = X}
   clj_core:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(clj_core:seq_to_list(LazySeq), Y);
+    true  -> clj_core:equiv(clj_core:to_list(LazySeq), Y);
     false -> false
   end.
 
@@ -102,6 +104,20 @@ seq(#?TYPE{name = ?M, data = Fn}) ->
       seq(LazySeq);
     Seq ->
       clj_core:seq(Seq)
+  end.
+
+to_list(#?TYPE{name = ?M} = LazySeq) ->
+  do_to_list(LazySeq, []).
+
+do_to_list(undefined, Acc) ->
+  lists:reverse(Acc);
+do_to_list(Seq0, Acc) ->
+  case clj_core:seq(Seq0) of
+    undefined -> do_to_list(undefined, Acc);
+    Seq ->
+      First = clj_core:first(Seq),
+      Rest  = clj_core:next(Seq),
+      do_to_list(Rest, [First | Acc])
   end.
 
 str(#?TYPE{name = ?M, data = Fn}) ->

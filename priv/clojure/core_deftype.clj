@@ -453,7 +453,7 @@
     `(do
        ~(when sigs
           `(#'assert-same-protocol '~iname
-                                   '~(clj_core/seq_to_list.e (map :name (vals sigs)))))
+                                   '~(clj_core/to_list.e (map :name (vals sigs)))))
        ~@(mapcat (partial emit-protocol-function iname) (vals sigs))
        (~'defprotocol* ~iname ~@meths)
        '~name)))

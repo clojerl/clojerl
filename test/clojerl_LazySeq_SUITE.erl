@@ -36,7 +36,7 @@ init_per_suite(Config) ->
 -spec new(config()) -> result().
 new(_Config) ->
   LazySeq3 = range(1, 3),
-  [1, 2, 3] = clj_core:seq_to_list(LazySeq3),
+  [1, 2, 3] = clj_core:to_list(LazySeq3),
 
   LazySeq0 = range(1, 0),
   undefined = clj_core:seq(LazySeq0),
@@ -97,7 +97,7 @@ seq(_Config) ->
   LazySeq1 = range(1, 1),
   1 = clj_core:first(LazySeq1),
   undefined = clj_core:next(LazySeq1),
-  [] = clj_core:seq_to_list(clj_core:rest(LazySeq1)),
+  [] = clj_core:to_list(clj_core:rest(LazySeq1)),
   undefined = clj_core:seq(clj_core:rest(LazySeq1)),
 
   LazySeq0  = range(1, 0),
@@ -110,7 +110,7 @@ seq(_Config) ->
   1 = clj_core:first(LazySeqBis),
   2 = clj_core:first(clj_core:rest(LazySeqBis)),
   3 = clj_core:first(clj_core:next(clj_core:next(LazySeqBis))),
-  [1, 2, 3] = clj_core:seq_to_list(clj_core:seq(LazySeqBis)),
+  [1, 2, 3] = clj_core:to_list(clj_core:seq(LazySeqBis)),
 
   {comments, ""}.
 
@@ -143,13 +143,13 @@ cons(_Config) ->
   TwoList = clj_core:conj(LazySeq, 1),
 
   2    = clj_core:count(TwoList),
-  true = clj_core:equiv(clj_core:seq_to_list(TwoList), [1, 2]),
+  true = clj_core:equiv(clj_core:to_list(TwoList), [1, 2]),
 
   ct:comment("Conj an element to a list with one element"),
   ThreeList = clj_core:conj(TwoList, 0),
 
   3    = clj_core:count(ThreeList),
-  true = clj_core:equiv(clj_core:seq_to_list(ThreeList), [0, 1, 2]),
+  true = clj_core:equiv(clj_core:to_list(ThreeList), [0, 1, 2]),
 
   {comments, ""}.
 

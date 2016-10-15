@@ -125,7 +125,7 @@ seq(_Config) ->
   Vector2 = clj_core:vector([1]),
   1 = clj_core:first(Vector2),
   undefined = clj_core:next(Vector2),
-  [] = clj_core:seq_to_list(clj_core:rest(Vector2)),
+  [] = clj_core:to_list(clj_core:rest(Vector2)),
 
   Vector3 = clj_core:vector([]),
   undefined = clj_core:first(Vector3),
@@ -180,7 +180,7 @@ subvec(_Config) ->
 
   ct:comment("Get subvec from 1 to 4, 0-based indexes"),
   TwoToFive = 'clojerl.Vector':subvec(OneToTen, 1, 4),
-  [2, 3, 4] = clj_core:seq_to_list(TwoToFive),
+  [2, 3, 4] = clj_core:to_list(TwoToFive),
 
   {comments, ""}.
 
@@ -210,9 +210,9 @@ associative(_Config) ->
   TwoVector  = clj_core:assoc(OneVector, 1, b),
   OneVector2 = clj_core:assoc(TwoVector, 0, c),
 
-  [a]    = clj_core:seq_to_list(OneVector),
-  [a, b] = clj_core:seq_to_list(TwoVector),
-  [c, b] = clj_core:seq_to_list(OneVector2),
+  [a]    = clj_core:to_list(OneVector),
+  [a, b] = clj_core:to_list(TwoVector),
+  [c, b] = clj_core:to_list(OneVector2),
 
   ok = try clj_core:assoc(EmptyVector, 2, a), error
        catch error:_ -> ok

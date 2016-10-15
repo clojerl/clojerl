@@ -131,7 +131,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 
 (defn- find-file-in-code-path [filename]
   (->> (code/get_path.e)
-       (map #(filename/join.e (clj_core/seq_to_list.e [% "**" filename])))
+       (map #(filename/join.e (clj_core/to_list.e [% "**" filename])))
        (map erlang/binary_to_list.1)
        (mapcat filelib/wildcard.1)
        (filter filelib/is_regular.1)

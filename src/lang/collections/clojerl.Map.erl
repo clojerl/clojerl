@@ -36,7 +36,10 @@
 -export([ meta/1
         , with_meta/2
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
+
 -export([str/1]).
 
 -type mappings() :: {map(), map()}.
@@ -107,7 +110,7 @@ equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
     true  ->
       KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
-                              , clj_core:seq_to_list(clj_core:keys(Y))
+                              , clj_core:to_list(clj_core:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso
@@ -136,7 +139,7 @@ cons(#?TYPE{name = ?M} = Map, undefined) ->
 cons(#?TYPE{name = ?M, data = {Keys, Vals}} = Map, X) ->
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
-  case clj_core:seq_to_list(X) of
+  case clj_core:to_list(X) of
     [K, V] when IsVector ->
       Hash = 'clojerl.IHash':hash(K),
       Map#?TYPE{data = {Keys#{Hash => K}, Vals#{Hash => V}}};
@@ -196,6 +199,12 @@ seq(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
     [] -> undefined;
     X -> X
   end.
+
+to_list(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
+  FoldFun = fun(Hash, K, List) ->
+                [clj_core:vector([K, maps:get(Hash, Vals)]) | List]
+            end,
+  maps:fold(FoldFun, [], Keys).
 
 %% clojerl.Stringable
 

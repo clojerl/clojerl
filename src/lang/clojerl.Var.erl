@@ -256,4 +256,4 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
       end
   end;
 process_args(Var, Args, RestFun) ->
-  process_args(Var, clj_core:seq_to_list(Args), RestFun).
+  process_args(Var, clj_core:to_list(Args), RestFun).

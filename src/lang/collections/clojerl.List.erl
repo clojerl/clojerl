@@ -32,7 +32,9 @@
 -export([ peek/1
         , pop/1
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
@@ -99,6 +101,8 @@ pop(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
 
 seq(#?TYPE{name = ?M, data = []}) -> undefined;
 seq(#?TYPE{name = ?M, data = Seq}) -> Seq.
+
+to_list(#?TYPE{name = ?M, data = List}) -> List.
 
 str(#?TYPE{name = ?M, data = []}) ->
   <<"()">>;

@@ -27,7 +27,9 @@
         , more/1
         ]).
 -export(['_'/1]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
@@ -53,7 +55,7 @@ equiv( #?TYPE{name = ?M, data = {XFirst, XMore}}
   clj_core:equiv(XFirst, YFirst) andalso clj_core:equiv(XMore, YMore);
 equiv(#?TYPE{name = ?M} = Cons, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(clj_core:seq_to_list(Cons), clj_core:seq(Y));
+    true  -> clj_core:equiv(to_list(Cons), clj_core:seq(Y));
     false -> false
   end.
 
@@ -78,5 +80,8 @@ more(#?TYPE{name = ?M, data = {_, More}}) -> More.
 
 seq(#?TYPE{name = ?M} = Cons) -> Cons.
 
+to_list(#?TYPE{name = ?M, data = {First, More}}) ->
+  [First | clj_core:to_list(More)].
+
 str(#?TYPE{name = ?M} = Cons) ->
-  clj_core:str(clj_core:seq_to_list(Cons)).
+  clj_core:str(to_list(Cons)).

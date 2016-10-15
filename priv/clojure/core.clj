@@ -2936,7 +2936,7 @@
    (sort compare coll))
   ([comp coll]
    (if (seq coll)
-     (lists/sort.e (clj_core/seq_to_list.e coll))
+     (lists/sort.e (clj_core/to_list.e coll))
      ())))
 
 (defn sort-by
@@ -3283,9 +3283,9 @@
   {:added "1.0"
    :static true}
   ([aseq]
-   (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1))
+   (-> (seq aseq) clj_core/to_list.1 erlang/list_to_tuple.1))
   ([type aseq]
-   (-> (seq aseq) clj_core/seq_to_list.1 erlang/list_to_tuple.1)))
+   (-> (seq aseq) clj_core/to_list.1 erlang/list_to_tuple.1)))
 
 (defn tuple
   "Returns a tuple with items."
@@ -3783,7 +3783,7 @@
   [coll]
   (if (set? coll)
     (with-meta coll nil)
-    (clj_core/hash_set.e (clj_core/seq_to_list.e coll))))
+    (clj_core/hash_set.e (clj_core/to_list.e coll))))
 
 (defn ^{:private true
         :static true}
@@ -4096,7 +4096,7 @@
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
                                       (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (new ~'clojerl.Map (clj_core/seq_to_list.e ~gmapseq))
+                                                           (new ~'clojerl.Map (clj_core/to_list.e ~gmapseq))
                                                            ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
@@ -4554,7 +4554,7 @@
   {:added "1.0"
    :static true}
   [re s & opts]
-  (let [opts (clj_core/seq_to_list.e opts)
+  (let [opts (clj_core/to_list.e opts)
         res  (erlang.util.Regex/run.e re s opts)]
     (when (and (tuple? res) (= (first res) :match))
       (vec (second res)))))
@@ -5284,7 +5284,7 @@
   {:added "1.0"
    :static true}
   ^clojerl.String [fmt & args]
-  (->> (clj_core/seq_to_list.e args)
+  (->> (clj_core/to_list.e args)
        (io_lib/format.e fmt)
        erlang/list_to_binary.e))
 
@@ -5454,8 +5454,8 @@
   [lib]
   (str "/"
        (-> (name lib)
-           (binary/replace.e "." "/" (clj_core/seq_to_list.e [:global]))
-           (binary/replace.e "-" "_" (clj_core/seq_to_list.e [:global])))))
+           (binary/replace.e "." "/" (clj_core/to_list.e [:global]))
+           (binary/replace.e "-" "_" (clj_core/to_list.e [:global])))))
 
 (defn- index-of [s x]
   (let [matches (binary/matches.e s x)]

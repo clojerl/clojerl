@@ -13,7 +13,9 @@
 -export([ nth/2
         , nth/3
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 %%------------------------------------------------------------------------------
@@ -37,6 +39,8 @@ nth(Tuple, N, NotFound) ->
 
 seq({}) -> undefined;
 seq(Tuple) -> tuple_to_list(Tuple).
+
+to_list(Tuple) -> tuple_to_list(Tuple).
 
 str(Tuple) when is_tuple(Tuple) ->
   Items     = tuple_to_list(Tuple),
