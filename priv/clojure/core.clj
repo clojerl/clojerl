@@ -2841,15 +2841,15 @@
   start. When start is equal to end, returns empty list."
   {:added "1.0"
    :static true}
-  ([] (range 0 999999999999 1))
+  ([] (iterate inc 0))
   ([end] (range 0 end 1))
   ([start end] (range start end 1))
   ([start end step]
    (lazy-seq
-    (let [comp (cond (or (zero? step) (= start end)) not=
-                     (pos? step) <
-                     (neg? step) >)]
-      (when (comp start end)
+    (let [comp (cond (or (zero? step) (= start end)) (not= start end)
+                     (pos? step) (< start end)
+                     (neg? step) (> start end))]
+      (when comp
         (cons start
               (range (+ start step) end)))
       #_(loop [i start]
