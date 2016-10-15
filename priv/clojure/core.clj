@@ -2845,22 +2845,7 @@
   ([end] (range 0 end 1))
   ([start end] (range start end 1))
   ([start end step]
-   (lazy-seq
-    (let [comp (cond (or (zero? step) (= start end)) (not= start end)
-                     (pos? step) (< start end)
-                     (neg? step) (> start end))]
-      (when comp
-        (cons start
-              (range (+ start step) end)))
-      #_(loop [i start]
-        (if (and (< (count b) 32)
-                 (comp i end))
-          (do
-            (chunk-append b i)
-            (recur (+ i step)))
-          (chunk-cons (chunk b)
-                      (when (comp i end)
-                        (range i end step)))))))))
+   (new clojerl.Range start end step)))
 
 (defn merge
   "Returns a map that consists of the rest of the maps conj-ed onto

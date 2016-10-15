@@ -137,6 +137,10 @@
                             (new ~classname ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
                         `(~'seq [this#] (seq (concat [~@(map #(vector (keyword %) %) base-fields)]
                                                      ~'__extmap)))
+                        `(~'to_list [this#]
+                          ;; TODO: Improve this implementation
+                          (clojerl.Seqable/to_list.e (concat [~@(map #(vector (keyword %) %) base-fields)]
+                                                             ~'__extmap)))
                         `(~'keys [this#] (map first (seq this#)))
                         `(~'vals [this#] (map second (seq this#)))
                         `(~'without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
