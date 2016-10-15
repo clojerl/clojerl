@@ -106,7 +106,7 @@ seq(_Config) ->
   true      = undefined =/= clj_core:rest(LazySeq0),
   undefined = clj_core:seq(clj_core:rest(LazySeq0)),
 
-  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> range(1, 3) end),
+  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> range(1, 3) end),
   1 = clj_core:first(LazySeqBis),
   2 = clj_core:first(clj_core:rest(LazySeqBis)),
   3 = clj_core:first(clj_core:next(clj_core:next(LazySeqBis))),
@@ -169,9 +169,9 @@ complete_coverage(_Config) ->
 -spec range(integer(), integer()) -> 'clojerl.LazySeq':type().
 range(Start, End) ->
   Fun = fun
-          () when Start =< End ->
+          ([]) when Start =< End ->
             'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End));
-          () when Start > End ->
+          ([]) when Start > End ->
             undefined
         end,
   'clojerl.LazySeq':?CONSTRUCTOR(Fun).

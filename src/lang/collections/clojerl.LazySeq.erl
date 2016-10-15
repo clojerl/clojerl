@@ -42,7 +42,7 @@
 %%------------------------------------------------------------------------------
 
 count(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> 0;
     Seq       -> clj_core:count(Seq)
   end.
@@ -53,8 +53,8 @@ cons(#?TYPE{name = ?M} = LazySeq, X) ->
 empty(_) -> [].
 
 equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
-                      ) ->
+     , #?TYPE{name = ?M, data = Y}
+     ) ->
   clj_core:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_core:'sequential?'(Y) of
@@ -72,21 +72,21 @@ with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 first(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> undefined;
     #?TYPE{name = ?M} = LazySeq -> first(LazySeq);
     Seq -> clj_core:first(Seq)
   end.
 
 next(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> undefined;
     #?TYPE{name = ?M} = LazySeq -> next(LazySeq);
     Seq -> clj_core:next(Seq)
   end.
 
 more(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> [];
     #?TYPE{name = ?M} = LazySeq -> more(LazySeq);
     Seq -> clj_core:rest(Seq)
@@ -95,7 +95,7 @@ more(#?TYPE{name = ?M, data = Fn}) ->
 '_'(_) -> undefined.
 
 seq(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined ->
       undefined;
     #?TYPE{name = ?M} = LazySeq ->
