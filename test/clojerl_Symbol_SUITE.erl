@@ -4,7 +4,7 @@
 
 -export([ equiv/1
         , hash/1
-        , invoke/1
+        , apply/1
         , meta/1
         , name/1
         , str/1
@@ -59,16 +59,16 @@ hash(_Config) ->
 
   {comments, ""}.
 
--spec invoke(config()) -> result().
-invoke(_Config) ->
+-spec apply(config()) -> result().
+apply(_Config) ->
   HelloSymbol = clj_core:symbol(<<"hello">>),
-  world = clj_core:invoke(HelloSymbol, [#{HelloSymbol => world}]),
+  world = clj_core:apply(HelloSymbol, [#{HelloSymbol => world}]),
 
-  undefined = clj_core:invoke(HelloSymbol, [#{bla => ble}]),
-  not_found = clj_core:invoke(HelloSymbol, [#{bla => ble}, not_found]),
+  undefined = clj_core:apply(HelloSymbol, [#{bla => ble}]),
+  not_found = clj_core:apply(HelloSymbol, [#{bla => ble}, not_found]),
 
   ok = try
-         clj_core:invoke(HelloSymbol, [#{bla => ble}, not_found, extra]),
+         clj_core:apply(HelloSymbol, [#{bla => ble}, not_found, extra]),
          error
        catch _:_ ->
            ok

@@ -15,7 +15,7 @@
         , find/2
         ]).
 
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([ read/1
         , read/2
@@ -72,11 +72,11 @@ find(Namespace, Name) ->
 
 %% clojerl.IFn
 
-invoke(Keyword, [Map]) ->
+apply(Keyword, [Map]) ->
   clj_core:get(Map, Keyword);
-invoke(Keyword, [Map, NotFound]) ->
+apply(Keyword, [Map, NotFound]) ->
   clj_core:get(Map, Keyword, NotFound);
-invoke(_, Args) ->
+apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>).
 

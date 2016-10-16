@@ -5,7 +5,7 @@
 -export([all/0, init_per_suite/1]).
 
 -export([ hash/1
-        , invoke/1
+        , apply/1
         , name/1
         , str/1
         , write/1
@@ -42,16 +42,16 @@ hash(_Config) ->
 
   {comments, ""}.
 
--spec invoke(config()) -> result().
-invoke(_Config) ->
+-spec apply(config()) -> result().
+apply(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
-  world = clj_core:invoke(HelloKeyword, [#{HelloKeyword => world}]),
+  world = clj_core:apply(HelloKeyword, [#{HelloKeyword => world}]),
 
-  undefined = clj_core:invoke(HelloKeyword, [#{bla => ble}]),
-  not_found = clj_core:invoke(HelloKeyword, [#{bla => ble}, not_found]),
+  undefined = clj_core:apply(HelloKeyword, [#{bla => ble}]),
+  not_found = clj_core:apply(HelloKeyword, [#{bla => ble}, not_found]),
 
   ok = try
-         clj_core:invoke(HelloKeyword, [#{bla => ble}, not_found, extra]),
+         clj_core:apply(HelloKeyword, [#{bla => ble}, not_found, extra]),
          error
        catch _:_ ->
            ok

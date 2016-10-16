@@ -34,7 +34,7 @@ macroexpand_1(Env, Form) ->
   of
     true ->
       Args = [Form, Env | clj_core:to_list(clj_core:rest(Form))],
-      'clojerl.IFn':invoke(MacroVar, Args);
+      'clojerl.IFn':apply(MacroVar, Args);
     false -> Form
   end.
 
