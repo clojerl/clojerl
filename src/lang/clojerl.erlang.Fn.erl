@@ -1,11 +1,13 @@
 -module('clojerl.erlang.Fn').
 
+-compile({no_auto_import, [{apply, 2}]}).
+
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behaviour('clojerl.Stringable').
 
 -export([prefix/1]).
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([str/1]).
 
@@ -21,7 +23,7 @@ prefix(Symbol) ->
 
   clj_core:with_meta(PrefixedSymbol, Meta).
 
-invoke(Fun, Args) when is_function(Fun), is_list(Args) ->
+apply(Fun, Args) when is_function(Fun), is_list(Args) ->
   {module, Module} = erlang:fun_info(Fun, module),
   IsClojure = case Module of
                 erl_eval -> is_clj_fun(Fun);
@@ -33,9 +35,9 @@ invoke(Fun, Args) when is_function(Fun), is_list(Args) ->
             false -> Args
           end,
 
-  apply(Fun, Args1);
-invoke(Fun, Args) when is_function(Fun) ->
-  invoke(Fun, clj_core:to_list(Args)).
+  erlang:apply(Fun, Args1);
+apply(Fun, Args) when is_function(Fun) ->
+  apply(Fun, clj_core:to_list(Args)).
 
 hash(Fun) when is_function(Fun) ->
   erlang:phash2(Fun).

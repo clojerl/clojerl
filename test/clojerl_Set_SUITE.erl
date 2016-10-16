@@ -9,7 +9,7 @@
         , equiv/1
         , hash/1
         , cons/1
-        , invoke/1
+        , apply/1
         , disjoin/1
         , complete_coverage/1
         ]).
@@ -133,18 +133,18 @@ cons(_Config) ->
 
   {comments, ""}.
 
--spec invoke(config()) -> result().
-invoke(_Config) ->
+-spec apply(config()) -> result().
+apply(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
   EmptySet     = clj_core:hash_set([]),
 
-  undefined = clj_core:invoke(EmptySet, [HelloKeyword]),
+  undefined = clj_core:apply(EmptySet, [HelloKeyword]),
 
   HelloSet = clj_core:conj(EmptySet, HelloKeyword),
-  HelloKeyword = clj_core:invoke(HelloSet, [HelloKeyword]),
+  HelloKeyword = clj_core:apply(HelloSet, [HelloKeyword]),
 
   ok = try
-         clj_core:invoke(HelloSet, [HelloKeyword, extra]),
+         clj_core:apply(HelloSet, [HelloKeyword, extra]),
          error
        catch _:_ ->
            ok

@@ -18,7 +18,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -69,10 +69,10 @@ equiv(_, _) ->
 
 %% clojerl.IFn
 
-invoke(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
+apply(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
   maps:get(Hash, MapSet, undefined);
-invoke(_, Args) ->
+apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
 

@@ -36,7 +36,7 @@
 
 -export([deref/1]).
 -export([equiv/2]).
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -218,7 +218,7 @@ with_meta( #?TYPE{name = ?M, info = Info} = Keyword
          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-invoke(#?TYPE{name = ?M} = Var, Args) ->
+apply(#?TYPE{name = ?M} = Var, Args) ->
   Module   = module(Var),
   Function = function(Var),
   Args1    = case clj_core:seq(Args) of

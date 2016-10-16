@@ -15,7 +15,7 @@
 
 -export([ deref/1
         , equiv/1
-        , invoke/1
+        , apply/1
         , meta/1
         , name/1
         , str/1
@@ -129,15 +129,15 @@ equiv(_Config) ->
 
   {comments, ""}.
 
--spec invoke(config()) -> result().
-invoke(_Config) ->
+-spec apply(config()) -> result().
+apply(_Config) ->
   Ns     = <<"clojerl_Var_SUITE">>,
   Name42 = <<"forty-two">>,
   Name43 = <<"forty-three">>,
 
   Var42  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name42),
-  42 = clj_core:invoke(Var42, []),
-  45 = clj_core:invoke(Var42, [3]),
+  42 = clj_core:apply(Var42, []),
+  45 = clj_core:apply(Var42, [3]),
 
   false = 'clojerl.Var':is_dynamic(Var42),
   false = 'clojerl.Var':is_macro(Var42),
@@ -147,9 +147,9 @@ invoke(_Config) ->
             , variadic_arity  => 1
             },
   Var42Variadic = clj_core:with_meta(Var42, Meta42),
-  43 = clj_core:invoke(Var42Variadic, [1]),
-  47 = clj_core:invoke(Var42Variadic, [3, 2]),
-  50 = clj_core:invoke(Var42Variadic, [3, 2, 1, 2]),
+  43 = clj_core:apply(Var42Variadic, [1]),
+  47 = clj_core:apply(Var42Variadic, [3, 2]),
+  50 = clj_core:apply(Var42Variadic, [3, 2, 1, 2]),
 
   false = 'clojerl.Var':is_dynamic(Var42Variadic),
   false = 'clojerl.Var':is_macro(Var42Variadic),
@@ -162,9 +162,9 @@ invoke(_Config) ->
             , variadic_arity  => 1
             },
   Var43Variadic = clj_core:with_meta(Var43, Meta43),
-  [43, 1, undefined]       = clj_core:invoke(Var43Variadic, [1]),
-  [43, 1, [2]]    = clj_core:invoke(Var43Variadic, [1, 2]),
-  [43, 1, [2, 3]] = clj_core:invoke(Var43Variadic, [1, 2, 3]),
+  [43, 1, undefined]       = clj_core:apply(Var43Variadic, [1]),
+  [43, 1, [2]]    = clj_core:apply(Var43Variadic, [1, 2]),
+  [43, 1, [2, 3]] = clj_core:apply(Var43Variadic, [1, 2, 3]),
 
   {comments, ""}.
 

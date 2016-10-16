@@ -621,15 +621,15 @@
   {:added "1.0"
    :static true}
   ([f args]
-   (clj_core/invoke.e f (seq args)))
+   (clojerl.IFn/apply.e f (seq args)))
   ([f x args]
-   (clj_core/invoke.e f (list* x args)))
+   (clojerl.IFn/apply.e f (list* x args)))
   ([f x y args]
-   (clj_core/invoke.e f (list* x y args)))
+   (clojerl.IFn/apply.e f (list* x y args)))
   ([f x y z args]
-   (clj_core/invoke.e f (list* x y z args)))
+   (clojerl.IFn/apply.e f (list* x y z args)))
   ([f a b c d & args]
-   (clj_core/invoke.e f (cons a (cons b (cons c (cons d (spread args))))))))
+   (clojerl.IFn/apply.e f (cons a (cons b (cons c (cons d (spread args))))))))
 
 (defn vary-meta
   "Returns an object of the same type and value as obj, with

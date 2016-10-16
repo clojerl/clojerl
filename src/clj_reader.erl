@@ -1212,9 +1212,9 @@ read_tagged(State) ->
 
       ReadForm = case IsDefault of
                    true ->
-                     clj_core:invoke(Reader2, [Symbol, Form]);
+                     clj_core:apply(Reader2, [Symbol, Form]);
                    false ->
-                     clj_core:invoke(Reader2, [Form])
+                     clj_core:apply(Reader2, [Form])
                  end,
       push_form(ReadForm, State2)
     end.

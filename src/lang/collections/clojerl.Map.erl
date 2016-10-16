@@ -1,5 +1,7 @@
 -module('clojerl.Map').
 
+-compile({no_auto_import, [{apply, 2}]}).
+
 -include("clojerl.hrl").
 
 -behavior('clojerl.Associative').
@@ -24,7 +26,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([ get/2
         , get/3
@@ -123,12 +125,12 @@ equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
 
 %% clojerl.IFn
 
-invoke(#?TYPE{name = ?M} = M, [Key]) ->
-  invoke(M, [Key, undefined]);
-invoke(#?TYPE{name = ?M, data = {_, Vals}}, [Key, NotFound]) ->
+apply(#?TYPE{name = ?M} = M, [Key]) ->
+  apply(M, [Key, undefined]);
+apply(#?TYPE{name = ?M, data = {_, Vals}}, [Key, NotFound]) ->
   Hash = 'clojerl.IHash':hash(Key),
   maps:get(Hash, Vals, NotFound);
-invoke(_, Args) ->
+apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 

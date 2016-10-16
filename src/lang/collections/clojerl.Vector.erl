@@ -26,7 +26,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([ get/2
         , get/3
@@ -102,9 +102,9 @@ equiv(#?TYPE{name = ?M, data = X}, Y) ->
     false -> false
   end.
 
-invoke(#?TYPE{name = ?M, data = Array}, [Index]) ->
+apply(#?TYPE{name = ?M, data = Array}, [Index]) ->
   array:get(Index, Array);
-invoke(#?TYPE{name = ?M}, Args) ->
+apply(#?TYPE{name = ?M}, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
 

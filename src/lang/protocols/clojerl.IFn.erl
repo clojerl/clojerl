@@ -3,12 +3,12 @@
 -clojure(true).
 -protocol(true).
 
--export([invoke/2]).
+-export([apply/2]).
 
 -type type() ::  any().
 
--callback invoke(type(), any()) -> any().
+-callback apply(type(), any()) -> any().
 
--spec invoke(type(), any()) -> any().
-invoke(Fn, Args) ->
-  'clojerl.protocol':resolve(?MODULE, invoke, Fn, Args).
+-spec apply(type(), any()) -> any().
+apply(Fn, Args) ->
+  'clojerl.protocol':resolve(?MODULE, apply, Fn, Args).

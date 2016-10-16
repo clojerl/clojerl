@@ -35,7 +35,7 @@
          subvec/3,
          keys/1, vals/1,
          'even?'/1,
-         invoke/2,
+         apply/2,
          next_id/0,
          gensym/0, gensym/1
         ]).
@@ -484,9 +484,9 @@ vals(Map) -> 'clojerl.IMap':vals(Map).
 'even?'(X) ->
   (X band 1) == 0.
 
--spec invoke('clojerl.IFn':type(), 'clojerl.ISequential':type()) -> any().
-invoke(Fn, Args) ->
-  'clojerl.IFn':invoke(Fn, Args).
+-spec apply('clojerl.IFn':type(), 'clojerl.ISequential':type()) -> any().
+apply(Fn, Args) ->
+  'clojerl.IFn':apply(Fn, Args).
 
 -spec next_id() -> integer().
 next_id() ->

@@ -22,7 +22,7 @@
         , empty/1
         ]).
 -export([ equiv/2]).
--export([ invoke/2]).
+-export([ apply/2]).
 -export([ hash/1]).
 -export([ get/2
         , get/3
@@ -113,11 +113,11 @@ remove_meta(K, V, Acc) ->
 
 %% clojerl.IFn
 
-invoke(Map, [Key]) ->
-  clj_core:get(Map, Key);
-invoke(Map, [Key, NotFound]) ->
-  clj_core:get(Map, Key, NotFound);
-invoke(_, Args) ->
+apply(Map, [Key]) ->
+  get(Map, Key);
+apply(Map, [Key, NotFound]) ->
+  get(Map, Key, NotFound);
+apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 

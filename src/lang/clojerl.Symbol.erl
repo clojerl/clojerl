@@ -12,7 +12,7 @@
 -export([?CONSTRUCTOR/1, ?CONSTRUCTOR/2]).
 
 -export([equiv/2]).
--export([invoke/2]).
+-export([apply/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -40,11 +40,11 @@
 
 %% clojerl.IFn
 
-invoke(#?TYPE{name = ?M} = Symbol, [Map]) ->
+apply(#?TYPE{name = ?M} = Symbol, [Map]) ->
   clj_core:get(Map, Symbol);
-invoke(#?TYPE{name = ?M} = Symbol, [Map, NotFound]) ->
+apply(#?TYPE{name = ?M} = Symbol, [Map, NotFound]) ->
   clj_core:get(Map, Symbol, NotFound);
-invoke(_, Args) ->
+apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for symbol, got: ", CountBin/binary>>).
 
