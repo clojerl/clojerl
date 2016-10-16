@@ -6,6 +6,7 @@
         , hash/1
         , seq/1
         , str/1
+        , complete_coverage/1
         ]).
 
 -type config() :: list().
@@ -61,5 +62,11 @@ seq(_Config) ->
 str(_Config) ->
   ct:comment("Check the string representation of true and false"),
   <<"">> = clj_core:str(undefined),
+
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  [] = 'clojerl.Nil':to_list(undefined),
 
   {comments, ""}.

@@ -74,6 +74,7 @@ seq(_Config) ->
   [1] = clj_core:seq({1}),
 
   undefined = clj_core:seq({}),
+  [1, 2, 3] = clj_core:to_list({1, 2, 3}),
 
   {comments, ""}.
 

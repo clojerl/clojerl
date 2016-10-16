@@ -91,6 +91,8 @@ seq(_Config) ->
   undefined = clj_core:next(Cons1),
   []        = clj_core:rest(Cons1),
 
+  [1, 2, 3] = clj_core:to_list(Cons),
+
   {comments, ""}.
 
 -spec equiv(config()) -> result().

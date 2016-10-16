@@ -71,6 +71,7 @@ str(_Config) ->
 seq(_Config) ->
   Set = clj_core:hash_set([1, 2, 3, 4]),
   [1, 2, 3, 4] = lists:sort(clj_core:seq(Set)),
+  [1, 2, 3, 4] = lists:sort(clj_core:to_list(Set)),
 
   Set2 = clj_core:hash_set([]),
   undefined = clj_core:seq(Set2),

@@ -122,15 +122,21 @@ seq(_Config) ->
   [2, 3] = clj_core:seq(clj_core:next(Vector)),
   [2, 3] = clj_core:seq(clj_core:rest(Vector)),
 
+  [1, 2, 3] = clj_core:to_list(Vector),
+
   Vector2 = clj_core:vector([1]),
   1 = clj_core:first(Vector2),
   undefined = clj_core:next(Vector2),
   [] = clj_core:to_list(clj_core:rest(Vector2)),
 
+  [1] = clj_core:to_list(Vector2),
+
   Vector3 = clj_core:vector([]),
   undefined = clj_core:first(Vector3),
   undefined = clj_core:next(Vector3),
   [] = clj_core:rest(Vector3),
+
+  [] = clj_core:to_list(Vector3),
 
   {comments, ""}.
 

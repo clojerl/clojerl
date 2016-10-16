@@ -126,6 +126,8 @@ seq(_Config) ->
 
   undefined = clj_core:seq(<<>>),
 
+  [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_core:to_list(<<"hello">>),
+
   {comments, ""}.
 
 -spec substring(config()) -> result().
