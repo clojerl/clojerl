@@ -47,10 +47,10 @@
 %%------------------------------------------------------------------------------
 
 count(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
-  trunc((End - Start) / Step).
+  (End - Start + Step) div Step.
 
 cons(#?TYPE{name = ?M} = Range, X) ->
-  clj_core:cons(X, Range).
+  'clojerl.Cons':?CONSTRUCTOR(X, Range).
 
 empty(_) -> [].
 
@@ -65,7 +65,7 @@ equiv(#?TYPE{name = ?M} = X, Y) ->
   end.
 
 hash(#?TYPE{name = ?M} = X) ->
-  clj_murmur3:ordered(X).
+  clj_murmur3:ordered(to_list(X)).
 
 meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, undefined).
@@ -97,9 +97,7 @@ seq(#?TYPE{name = ?M} = Seq) -> Seq.
 to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
   lists:seq(Start, End, Step).
 
-str(#?TYPE{name = ?M, data = []}) ->
-  <<"()">>;
-str(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
-  ItemsStrs = lists:map(fun clj_core:str/1, [Start, End, Step]),
-  Strs = 'clojerl.String':join(ItemsStrs, <<", ">>),
-  <<"#<clojerl.Range ", Strs/binary, ">">>.
+str(#?TYPE{name = ?M} = Range) ->
+  ItemsStrs = lists:map(fun clj_core:str/1, to_list(Range)),
+  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
+  <<"(", Strs/binary, ")">>.
