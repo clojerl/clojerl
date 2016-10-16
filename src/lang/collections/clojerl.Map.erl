@@ -191,11 +191,8 @@ with_meta(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
 
 %% clojerl.Seqable
 
-seq(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
-  FoldFun = fun(Hash, K, List) ->
-                [clj_core:vector([K, maps:get(Hash, Vals)]) | List]
-            end,
-  case maps:fold(FoldFun, [], Keys) of
+seq(#?TYPE{name = ?M} = Map) ->
+  case to_list(Map) of
     [] -> undefined;
     X -> X
   end.
