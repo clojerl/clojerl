@@ -25,3 +25,7 @@ clojure.main: $(call clj_to_beam,priv/clojure/main.clj)
 clojure: all $(call clj_to_beam,${CLJ_FILES})
 
 $(foreach clj,${CLJ_FILES},$(eval $(call compile_clojure_template,${clj})))
+
+benchmark: bootstrap-clj
+	@bin/compile ${CLJ_SRC}/benchmark/benchmark_runner.clj | \
+	tee ${CLJ_SRC}/benchmark/result.txt
