@@ -152,12 +152,12 @@ write(Name, Str) when is_atom(Name) ->
 
 write(IO, Format, Values)
   when IO =:= standard_io; IO =:= standard_error ->
-  ok = io:fwrite(IO, Format, clj_core:seq_to_list(Values)),
+  ok = io:fwrite(IO, Format, clj_core:to_list(Values)),
   IO;
 write(Name, Str, Values) when is_atom(Name) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
     _ ->
-      io:fwrite(Name, Str, clj_core:seq_to_list(Values))
+      io:fwrite(Name, Str, clj_core:to_list(Values))
   end.

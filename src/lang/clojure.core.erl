@@ -12,7 +12,7 @@
                         }
        , <<"in-ns">> => { ?TYPE, 'clojerl.Var'
                         , {<<"clojure.core">>, <<"in-ns">>}
-                        , #{meta => #{ 'variadic?'     => true
+                        , #{meta => #{ 'variadic?'     => false
                                      , max_fixed_arity => 1
                                      , variadic_arity  => undefined
                                      }
@@ -141,7 +141,7 @@ ns__val() ->
 
 'in-ns__val'() ->
   Var = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"in-ns">>),
-  Meta = #{ 'variadic?'     => true
+  Meta = #{ 'variadic?'     => false
           , max_fixed_arity => 1
           , variadic_arity  => undefined
           },

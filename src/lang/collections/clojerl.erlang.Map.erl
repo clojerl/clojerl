@@ -31,7 +31,9 @@
         , vals/1
         , without/2
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 %%------------------------------------------------------------------------------
@@ -57,7 +59,7 @@ count(Map) -> maps:size(Map).
 cons(Map, X) ->
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
-  case clj_core:seq_to_list(X) of
+  case clj_core:to_list(X) of
     [K, V] when IsVector ->
       Map#{K => V};
     KVs when IsMap ->
@@ -156,3 +158,9 @@ seq(Map) when is_map(Map) ->
     [] -> undefined;
     X -> X
   end.
+
+to_list(Map) ->
+  FoldFun = fun(K, V, List) ->
+                [clj_core:vector([K, V]) | List]
+            end,
+  maps:fold(FoldFun, [], Map).

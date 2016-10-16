@@ -479,7 +479,7 @@ ast(#{op := invoke} = Expr, State) ->
             ValFunction = 'clojerl.Var':val_function(Var),
             FunAst      = call_mfa(Module, ValFunction, [], Anno),
             ArgsAst     = list_ast(Args),
-            call_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno)
+            call_mfa('clojerl.IFn', invoke, [FunAst, ArgsAst], Anno)
         end,
 
       push_ast(Ast, State1);
@@ -491,7 +491,7 @@ ast(#{op := invoke} = Expr, State) ->
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),
-      Ast     = call_mfa(clj_core, invoke, [FunAst, ArgsAst], Anno),
+      Ast     = call_mfa('clojerl.IFn', invoke, [FunAst, ArgsAst], Anno),
 
       push_ast(Ast, State2)
   end;
@@ -717,7 +717,7 @@ ast(#{op := recur} = Expr, State) ->
           fn ->
             NameAst = {var, Anno, LoopIdAtom},
             ArgsAst = list_ast(Args),
-            call_mfa(clj_core, invoke, [NameAst, ArgsAst], Anno);
+            call_mfa('clojerl.IFn', invoke, [NameAst, ArgsAst], Anno);
           loop ->
             NameAst = {var, Anno, LoopIdAtom},
             {call, Anno, NameAst, Args};

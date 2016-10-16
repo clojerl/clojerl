@@ -12,8 +12,8 @@
 
 -spec reduce(type(), any()) -> any().
 reduce(Coll, Fun) ->
-  'clojerl.protocol':resolve(?MODULE, reduce, [Coll, Fun]).
+  'clojerl.protocol':resolve(?MODULE, reduce, Coll, Fun).
 
 -spec reduce(type(), any(), any()) -> any().
 reduce(Coll, Fun, Val) ->
-  'clojerl.protocol':resolve(?MODULE, reduce, [Coll, Fun, Val]).
+  'clojerl.protocol':resolve(?MODULE, reduce, Coll, Fun, Val).

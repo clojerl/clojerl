@@ -137,6 +137,10 @@
                             (new ~classname ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
                         `(~'seq [this#] (seq (concat [~@(map #(vector (keyword %) %) base-fields)]
                                                      ~'__extmap)))
+                        `(~'to_list [this#]
+                          ;; TODO: Improve this implementation
+                          (clojerl.Seqable/to_list.e (concat [~@(map #(vector (keyword %) %) base-fields)]
+                                                             ~'__extmap)))
                         `(~'keys [this#] (map first (seq this#)))
                         `(~'vals [this#] (map second (seq this#)))
                         `(~'without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
@@ -415,8 +419,8 @@
   (map (fn [args]
          `(defn ~(vary-meta name assoc :protocol iname) ~args
             (clojerl.protocol/resolve.e ~(keyword iname)
-                                         ~(keyword name)
-                                         (clj_core/seq_to_list.e ~args))))
+                                        ~(keyword name)
+                                        ~@args)))
        arglists))
 
 (defn- emit-protocol [name opts+sigs]
@@ -453,7 +457,7 @@
     `(do
        ~(when sigs
           `(#'assert-same-protocol '~iname
-                                   '~(clj_core/seq_to_list.e (map :name (vals sigs)))))
+                                   '~(clj_core/to_list.e (map :name (vals sigs)))))
        ~@(mapcat (partial emit-protocol-function iname) (vals sigs))
        (~'defprotocol* ~iname ~@meths)
        '~name)))

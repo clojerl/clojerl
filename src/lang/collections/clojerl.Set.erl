@@ -27,7 +27,9 @@
         , contains/2
         , get/2
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
@@ -111,6 +113,9 @@ seq(#?TYPE{name = ?M, data = MapSet}) ->
     0 -> undefined;
     _ -> maps:values(MapSet)
   end.
+
+to_list(#?TYPE{name = ?M, data = MapSet}) ->
+  maps:values(MapSet).
 
 %% clojerl.Stringable
 

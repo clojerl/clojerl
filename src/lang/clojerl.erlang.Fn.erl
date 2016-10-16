@@ -35,7 +35,7 @@ invoke(Fun, Args) when is_function(Fun), is_list(Args) ->
 
   apply(Fun, Args1);
 invoke(Fun, Args) when is_function(Fun) ->
-  invoke(Fun, clj_core:seq_to_list(Args)).
+  invoke(Fun, clj_core:to_list(Args)).
 
 hash(Fun) when is_function(Fun) ->
   erlang:phash2(Fun).

@@ -94,7 +94,7 @@ seq(_Config) ->
   List2 = [1],
   1 = clj_core:first(List2),
   undefined = clj_core:next(List2),
-  [] = clj_core:seq_to_list(clj_core:rest(List2)),
+  [] = clj_core:to_list(clj_core:rest(List2)),
 
   List3 = [],
   undefined = clj_core:first(List3),

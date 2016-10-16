@@ -76,6 +76,9 @@ seq(_Config) ->
   Map2 = clj_core:hash_map([]),
   undefined = clj_core:seq(Map2),
 
+  MapList = clj_core:to_list(Map),
+  true = clj_core:equiv(MapList, [[3, 4], [1, 2]]),
+
   {comments, ""}.
 
 -spec equiv(config()) -> result().

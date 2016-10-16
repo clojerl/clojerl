@@ -22,7 +22,9 @@
         ]).
 
 -export([count/1]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([hash/1]).
 -export(['_'/1]).
 -export([str/1]).
@@ -144,6 +146,8 @@ hash(Str) ->
 
 seq(<<>>) -> undefined;
 seq(Str)  -> to_seq(Str, []).
+
+to_list(Str)  -> to_seq(Str, []).
 
 str(Str) -> Str.
 

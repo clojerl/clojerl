@@ -104,7 +104,7 @@ Design notes for clojure.string:
   [s match replacement]
   (let [s (when s (str s))
         replace erlang.util.Regex/replace.4
-        opts (clj_core/seq_to_list.e [:global])]
+        opts (clj_core/to_list.e [:global])]
     (cond
       (string? match) (replace match s (str replacement) opts)
       (regex? match) (if (or (string? replacement)
@@ -166,7 +166,7 @@ Design notes for clojure.string:
   [s match replacement]
   (let [s (when s (str s))
         replace erlang.util.Regex/replace.4
-        opts (clj_core/seq_to_list.e [])]
+        opts (clj_core/to_list.e [])]
     (cond
       (or (string? match)
           (instance? :erlang.io.StringWriter match))
@@ -185,7 +185,7 @@ Design notes for clojure.string:
   ([coll]
    (apply str coll))
   ([separator coll]
-   (clojerl.String/join.e (clj_core/seq_to_list.e coll) separator)))
+   (clojerl.String/join.e (clj_core/to_list.e coll) separator)))
 
 (defn ^String upper-case
   "Converts string to all upper-case."
@@ -217,11 +217,11 @@ Design notes for clojure.string:
   ([s re]
    (vec (erlang.util.Regex/split.e re
                                   (when s (str s))
-                                  (clj_core/seq_to_list.e []))))
+                                  (clj_core/to_list.e []))))
   ([s re limit]
    (vec (erlang.util.Regex/split.e re
                                    (when s (str s))
-                                   (clj_core/seq_to_list.e [:global #[:match_limit limit]])))))
+                                   (clj_core/to_list.e [:global #[:match_limit limit]])))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."

@@ -1100,7 +1100,7 @@ read_cond_delimited(IsSplicing, State) ->
                           ),
 
       State2 = read_until($), fun read_skip_suppress/1, State1),
-      Items = lists:reverse(clj_core:seq_to_list(Form)),
+      Items = lists:reverse(clj_core:to_list(Form)),
       lists:foldl(fun push_pending_form/2, State2, Items);
     {match, Form, State1} ->
       State2 = read_until($), fun read_skip_suppress/1, State1),

@@ -117,7 +117,7 @@
     (if (= "latin1" (:encoding opts)) :latin1 :utf8)])
 
 (defn file-open [path modes]
-  (erlang.io.File/open.e path (clj_core/seq_to_list.1 modes)))
+  (erlang.io.File/open.e path (clj_core/to_list.1 modes)))
 
 (defn file-path [file]
   (erlang.io.File/path.e file))
@@ -202,12 +202,12 @@
      (as-file arg))
   ([parent child]
    (let [path (-> [parent (as-relative-path child)]
-                  clj_core/seq_to_list.1
+                  clj_core/to_list.1
                   filename/join.1)]
      (file path)))
   ([parent child & more]
    (let [path (-> (map str (list* parent child more))
-                  clj_core/seq_to_list.1
+                  clj_core/to_list.1
                   filename/join.1)]
      (file path))))
 

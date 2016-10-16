@@ -28,7 +28,9 @@
         , more/1
         ]).
 -export(['_'/1]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 -type type() :: #?TYPE{}.
@@ -42,9 +44,9 @@
 %%------------------------------------------------------------------------------
 
 count(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> 0;
-    Seq       -> clj_core:count(Seq)
+    Seq       -> 'clojerl.Counted':count(Seq)
   end.
 
 cons(#?TYPE{name = ?M} = LazySeq, X) ->
@@ -53,12 +55,12 @@ cons(#?TYPE{name = ?M} = LazySeq, X) ->
 empty(_) -> [].
 
 equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
-                      ) ->
+     , #?TYPE{name = ?M, data = Y}
+     ) ->
   clj_core:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(clj_core:seq_to_list(LazySeq), Y);
+    true  -> clj_core:equiv('clojerl.Seqable':to_list(LazySeq), Y);
     false -> false
   end.
 
@@ -72,39 +74,53 @@ with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 first(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> undefined;
     #?TYPE{name = ?M} = LazySeq -> first(LazySeq);
-    Seq -> clj_core:first(Seq)
+    Seq -> 'clojerl.ISeq':first(Seq)
   end.
 
 next(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> undefined;
     #?TYPE{name = ?M} = LazySeq -> next(LazySeq);
-    Seq -> clj_core:next(Seq)
+    Seq -> 'clojerl.ISeq':next(Seq)
   end.
 
 more(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined -> [];
     #?TYPE{name = ?M} = LazySeq -> more(LazySeq);
-    Seq -> clj_core:rest(Seq)
+    Seq -> 'clojerl.ISeq':more(Seq)
   end.
 
 '_'(_) -> undefined.
 
 seq(#?TYPE{name = ?M, data = Fn}) ->
-  case clj_core:invoke(Fn, []) of
+  case Fn([]) of
     undefined ->
       undefined;
     #?TYPE{name = ?M} = LazySeq ->
       seq(LazySeq);
     Seq ->
-      clj_core:seq(Seq)
+      'clojerl.Seqable':seq(Seq)
+  end.
+
+to_list(#?TYPE{name = ?M} = LazySeq) ->
+  do_to_list(LazySeq, []).
+
+do_to_list(undefined, Acc) ->
+  lists:reverse(Acc);
+do_to_list(Seq0, Acc) ->
+  case 'clojerl.Seqable':seq(Seq0) of
+    undefined -> do_to_list(undefined, Acc);
+    Seq ->
+      First = 'clojerl.ISeq':first(Seq),
+      Rest  = 'clojerl.ISeq':next(Seq),
+      do_to_list(Rest, [First | Acc])
   end.
 
 str(#?TYPE{name = ?M, data = Fn}) ->
   {uniq, Uniq} = erlang:fun_info(Fn, uniq),
-  UniqBin = clj_core:str(Uniq),
+  UniqBin = 'clojerl.Stringable':str(Uniq),
   <<"#<clojerl.LazySeq@", UniqBin/binary, ">">>.

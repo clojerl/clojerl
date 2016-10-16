@@ -33,20 +33,8 @@ macroexpand_1(Env, Form) ->
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
-      Args   = [Form, Env] ++ clj_core:seq_to_list(clj_core:rest(Form)),
-      Module = 'clojerl.Var':module(MacroVar),
-      case clj_module:is_loaded(Module) of
-        true ->
-          Function = 'clojerl.Var':function(MacroVar),
-          SeqFun   = fun clj_core:seq/1,
-          Args1    = 'clojerl.Var':process_args(MacroVar, Args, SeqFun),
-          Arity    = length(Args1),
-          FakeFun  = clj_module:fake_fun(Module, Function, Arity),
-
-          erlang:apply(FakeFun, Args1);
-        false ->
-          clj_core:invoke(MacroVar, Args)
-      end;
+      Args = [Form, Env | clj_core:to_list(clj_core:rest(Form))],
+      'clojerl.IFn':invoke(MacroVar, Args);
     false -> Form
   end.
 
@@ -198,7 +186,7 @@ parse_fn(Env, List) ->
   %% Check if there is more than one method
   MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
                   true  -> [Methods];
-                  false -> clj_core:seq_to_list(Methods)
+                  false -> clj_core:to_list(Methods)
                 end,
 
   Env0 = clj_env:add_locals_scope(Env),
@@ -356,7 +344,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                       , clj_env:location(Env)
                       ),
 
-  ParamsList = clj_core:seq_to_list(Params),
+  ParamsList = clj_core:to_list(Params),
   clj_utils:error_when( not lists:all(fun is_valid_bind_symbol/1, ParamsList)
                       , [ <<"Params must be valid binding symbols, had: ">>
                         , Params
@@ -440,7 +428,7 @@ is_valid_bind_symbol(X) ->
 -spec parse_do(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_do(Env, Form) ->
   StmtEnv = clj_env:context(Env, statement),
-  Statements = clj_core:seq_to_list(clj_core:rest(Form)),
+  Statements = clj_core:to_list(clj_core:rest(Form)),
 
   {StatementsList, Return} =
     case Statements of
@@ -479,10 +467,10 @@ parse_if(Env, Form) ->
   {Test, Then, Else} =
     case Count of
       3 ->
-        [_, Test1, Then1] = clj_core:seq_to_list(Form),
+        [_, Test1, Then1] = clj_core:to_list(Form),
         {Test1, Then1, undefined};
       4 ->
-        [_, Test1, Then1, Else1] = clj_core:seq_to_list(Form),
+        [_, Test1, Then1, Else1] = clj_core:to_list(Form),
         {Test1, Then1, Else1}
     end,
 
@@ -549,7 +537,7 @@ analyze_let(Env, Form) ->
                PairUp(Tail, [{X, Y} | Pairs])
            end,
   BindingsVec = clj_core:second(Form),
-  BindingsList = clj_core:seq_to_list(BindingsVec),
+  BindingsList = clj_core:to_list(BindingsVec),
   BindingPairs = PairUp(BindingsList, []),
 
   Env1 = clj_env:add_locals_scope(Env),
@@ -646,7 +634,7 @@ parse_recur(Env, List) ->
                       ),
 
   Env1 = clj_env:context(Env, expr),
-  ArgsList = clj_core:seq_to_list(clj_core:rest(List)),
+  ArgsList = clj_core:to_list(clj_core:rest(List)),
   Env2 = analyze_forms(Env1, ArgsList),
   {ArgsExprs, Env3} = clj_env:last_exprs(Env2, LoopLocals),
 
@@ -670,7 +658,7 @@ parse_case(Env, List) ->
   {TestExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Test)),
 
   PatternsBodies     = clj_core:rest(clj_core:rest(List)),
-  PatternsBodiesList = clj_core:seq_to_list(PatternsBodies),
+  PatternsBodiesList = clj_core:to_list(PatternsBodies),
 
   { ClausesExprs
   , DefaultExpr
@@ -955,7 +943,7 @@ parse_import(Env, Form) ->
 
 -spec parse_new(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_new(Env, Form) ->
-  [_, Type | Args] = clj_core:seq_to_list(Form),
+  [_, Type | Args] = clj_core:to_list(Form),
 
   {TypeExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Type)),
 
@@ -984,9 +972,9 @@ parse_deftype(Env, Form) ->
   , _ % :implements
   , Interfaces
   | Methods
-  ] = clj_core:seq_to_list(Form),
+  ] = clj_core:to_list(Form),
 
-  FieldsList  = clj_core:seq_to_list(Fields),
+  FieldsList  = clj_core:to_list(Fields),
   FieldsFun   = fun(FieldName) ->
                     #{ op    => binding
                      , env   => ?DEBUG(Env)
@@ -1019,7 +1007,7 @@ parse_deftype(Env, Form) ->
   Env3 = lists:foldl(fun analyze_deftype_method/2, Env2, Methods),
   {MethodsExprs, Env4} = clj_env:last_exprs(Env3, length(Methods)),
 
-  IntfsList   = clj_core:seq_to_list(Interfaces),
+  IntfsList   = clj_core:to_list(Interfaces),
   {InterfacesExprs, Env5} = clj_env:last_exprs( analyze_forms(Env4, IntfsList)
                                               , length(IntfsList)
                                               ),
@@ -1040,7 +1028,7 @@ parse_deftype(Env, Form) ->
 -spec analyze_deftype_method('clojerl.List':type(), clj_env:env()) ->
   clj_env:env().
 analyze_deftype_method(Form, Env) ->
-  [MethodName, Args | _Body] = clj_core:seq_to_list(Form),
+  [MethodName, Args | _Body] = clj_core:to_list(Form),
 
   clj_utils:error_when( not clj_core:'symbol?'(MethodName)
                       , [ <<"Method name must be a symbol, had: ">>
@@ -1089,7 +1077,7 @@ parse_defprotocol(Env, List) ->
   [ _ % defprotocol*
   , FQNameSym
   | MethodsSigs
-  ] = clj_core:seq_to_list(List),
+  ] = clj_core:to_list(List),
 
   clj_utils:error_when( not clj_core:'symbol?'(FQNameSym)
                       , [ <<"Protocol name should be a symbol, had: ">>
@@ -1123,7 +1111,7 @@ parse_extend_type(Env, List) ->
   [ _ExtendTypeSym % extend-type*
   , Type
   | ProtosMethods
-  ] = clj_core:seq_to_list(List),
+  ] = clj_core:to_list(List),
 
   %% Group each protocol name with its implementation functions.
   GroupedProtoMethods = split_when(ProtosMethods, fun clj_core:'symbol?'/1),
@@ -1238,7 +1226,7 @@ parse_try(Env, List) ->
   { Body
   , CatchFinallyTail
   } = lists:splitwith( IsNotCatchFinally
-                     , clj_core:seq_to_list(clj_core:rest(List))
+                     , clj_core:to_list(clj_core:rest(List))
                      ),
   {Catches, FinallyTail}   = lists:splitwith(IsCatch, CatchFinallyTail),
   {Finallies, Tail}        = lists:splitwith(IsFinally, FinallyTail),
@@ -1291,7 +1279,7 @@ parse_try(Env, List) ->
 parse_catch(Env, List) ->
   ErrType = clj_core:second(List),
   ErrName = clj_core:third(List),
-  Body    = lists:sublist(clj_core:seq_to_list(List), 4, clj_core:count(List)),
+  Body    = lists:sublist(clj_core:to_list(List), 4, clj_core:count(List)),
 
   clj_utils:error_when( not is_valid_bind_symbol(ErrName)
                       , [<<"Bad binding form: ">>, ErrName]
@@ -1370,7 +1358,7 @@ analyze_invoke(Env, Form) ->
   Env1 = analyze_form(Env, clj_core:first(Form)),
 
   Args = clj_core:rest(Form),
-  Env2 = analyze_forms(Env1, clj_core:seq_to_list(Args)),
+  Env2 = analyze_forms(Env1, clj_core:to_list(Args)),
 
   ArgCount = clj_core:count(Args),
   {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
@@ -1575,7 +1563,7 @@ wrapping_meta(Env, #{form := Form} = Expr) ->
 analyze_vector(Env, Vector) ->
   Count = clj_core:count(Vector),
   ExprEnv = clj_env:context(Env, expr),
-  Items = clj_core:seq_to_list(Vector),
+  Items = clj_core:to_list(Vector),
   Env1 = analyze_forms(ExprEnv, Items),
   {ItemsExpr, Env2} = clj_env:last_exprs(Env1, Count),
 
@@ -1620,7 +1608,7 @@ analyze_map(Env, Map) ->
 -spec analyze_set(clj_env:env(), 'clojerl.Set':type()) -> clj_env:env().
 analyze_set(Env, Set) ->
   ExprEnv = clj_env:context(Env, expr),
-  Items = clj_core:seq_to_list(Set),
+  Items = clj_core:to_list(Set),
   Env1 = analyze_forms(ExprEnv, Items),
 
   Count = clj_core:count(Set),

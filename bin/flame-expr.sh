@@ -10,7 +10,7 @@ SVG_FILE="$TRACE_FILE_SORTED.svg"
 
 echo "Running eflame..."
 
-PID=`erl -pa ebin -pa deps/*/ebin -s clojerl -noshell -eval "eflame:apply(normal_with_children, \"$TRACE_FILE\", $MODULE, $FUNCTION, $ARGS), io:format(\"~p~n\", [self()]), erlang:halt(0)."`
+PID=`erl -sname eflame-expr -pa ebin -pa deps/*/ebin -s clojerl -noshell -eval "eflame:apply(normal_with_children, \"$TRACE_FILE\", '$MODULE', '$FUNCTION', $ARGS), io:format(\"~p~n\", [self()]), erlang:halt(0)."`
 
 echo "PID: $PID"
 

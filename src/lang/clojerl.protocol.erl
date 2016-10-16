@@ -1,17 +1,58 @@
 -module('clojerl.protocol').
 
 -export([ resolve/3
+        , resolve/4
+        , resolve/5
+        , resolve/6
+        , resolve/7
+        , resolve/8
+        , resolve/9
         , 'satisfies?'/2
         , impl_module/2
         ]).
 
 -spec resolve(atom(), atom(), list()) -> any().
-resolve(Protocol, Function, Args = [Head | _]) ->
+resolve(Protocol, Function, Head) ->
   Type = clj_core:type(Head),
-  case resolve_impl_cache(Protocol, Function, Type, length(Args)) of
-    {M, F}    -> apply(M, F, Args);
-    undefined -> throw({unimplemented, Type, Protocol})
-  end.
+  F    = resolve_impl_cache(Protocol, Function, Type, 1),
+  F(Head).
+
+-spec resolve(atom(), atom(), any(), any()) -> any().
+resolve(Protocol, Function, Head, Arg1) ->
+  Type = clj_core:type(Head),
+  F    = resolve_impl_cache(Protocol, Function, Type, 2),
+  F(Head, Arg1).
+
+-spec resolve(atom(), atom(), any(), any(), any()) -> any().
+resolve(Protocol, Function, Head, Arg1, Arg2) ->
+  Type = clj_core:type(Head),
+  F    = resolve_impl_cache(Protocol, Function, Type, 3),
+  F(Head, Arg1, Arg2).
+
+-spec resolve(atom(), atom(), any(), any(), any(), any()) -> any().
+resolve(Protocol, Function, Head, Arg1, Arg2, Arg3) ->
+  Type = clj_core:type(Head),
+  F    = resolve_impl_cache(Protocol, Function, Type, 4),
+  F(Head, Arg1, Arg2, Arg3).
+
+-spec resolve(atom(), atom(), any(), any(), any(), any(), any()) -> any().
+resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4) ->
+  Type = clj_core:type(Head),
+  F    = resolve_impl_cache(Protocol, Function, Type, 5),
+  F(Head, Arg1, Arg2, Arg3, Arg4).
+
+-spec resolve(atom(), atom(), any(), any(), any(), any(), any(), any()) -> any().
+resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5) ->
+  Type = clj_core:type(Head),
+  F    = resolve_impl_cache(Protocol, Function, Type, 6),
+  F(Head, Arg1, Arg2, Arg3, Arg4, Arg5).
+
+-spec resolve( atom(), atom(), any(), any(), any(), any(), any(), any(), any()
+             ) -> any().
+resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) ->
+  Type = clj_core:type(Head),
+  F    = resolve_impl_cache(Protocol, Function, Type, 7),
+  F(Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6).
 
 -spec resolve_impl_cache(atom(), atom(), atom(), integer()) ->
   {module(), atom()} | undefined.
@@ -29,12 +70,18 @@ resolve_impl_cache(Protocol, Function, Type, Arity) ->
   {module(), atom()} | undefined.
 resolve_impl(Protocol, Function, Type, Arity) ->
   case erlang:function_exported(Type, Function, Arity) of
-    true  -> {Type, Function};
+    true  ->
+      erlang:make_fun(Type, Function, Arity);
     false ->
       ImplModule = impl_module(Protocol, Type),
       case code:ensure_loaded(ImplModule) of
-        {module, ImplModule} -> {ImplModule, Function};
-        _ -> undefined
+        {module, ImplModule} ->
+          erlang:make_fun(ImplModule, Function, Arity);
+        _ ->
+          clj_utils:error([ Type, <<" doesn't implement function ">>
+                          , Function, <<" of arity ">>, Arity
+                          , <<" in protocol ">>, Protocol
+                          ])
       end
   end.
 
