@@ -89,7 +89,10 @@ ast(#{op := do} = Expr, State) ->
   {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
   case maps:get(top_level, Expr, false) of
     false ->
-      Ast = {block, anno_from(Env), Stms ++ [Ret]},
+      Ast = case Stms of
+              [] -> Ret;
+              _  -> {block, anno_from(Env), Stms ++ [Ret]}
+            end,
       push_ast(Ast, State2);
     true ->
       lists:foldl(fun push_ast/2, State2, Stms ++ [Ret])
@@ -587,11 +590,13 @@ ast(#{op := 'if'} = Expr, State) ->
   {Test, State1} = pop_ast(ast(TestExpr, State)),
   TrueAtom       = {atom, Anno, true},
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause     = {clause, Anno, [TrueAtom], [], [ThenAst]},
+  SplicedThenAst    = splice_body(ThenAst),
+  TrueClause     = {clause, Anno, [TrueAtom], [], SplicedThenAst},
 
   FalseAtom      = {atom, Anno, false},
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause    = {clause, Anno, [FalseAtom], [], [ElseAst]},
+  SplicedElseAst    = splice_body(ElseAst),
+  FalseClause    = {clause, Anno, [FalseAtom], [], SplicedElseAst},
 
   TestBoolean    = call_mfa(clj_core, boolean, [Test], Anno),
   Ast = {'case', Anno, TestBoolean, [TrueClause, FalseClause]},
@@ -613,7 +618,8 @@ ast(#{op := 'case'} = Expr, State) ->
                   AnnoPattern = anno_from(EnvPattern),
                   {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
                   {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
-                  ClauseAst = {clause, AnnoPattern, [Pattern], [], [Body]},
+                  SplicedBody          = splice_body(Body),
+                  ClauseAst = {clause, AnnoPattern, [Pattern], [], SplicedBody},
                   push_ast(ClauseAst, StateAcc2)
               end,
 
@@ -664,10 +670,10 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   State1            = lists:foldl(MatchAstFun, State, BindingsExprs),
   {Matches, State2} = pop_ast(State1, length(BindingsExprs)),
   {Body,    State3} = pop_ast(ast(BodyExpr, State2)),
-
+  SplicedBody       = splice_body(Body),
   Ast = case Op of
           'let' ->
-            Clause = {clause, Anno, [], [], Matches ++ [Body]},
+            Clause = {clause, Anno, [], [], Matches ++ SplicedBody},
             FunAst = {'fun', Anno, {clauses, [Clause]}},
             {call, Anno, FunAst, []};
           loop  ->
@@ -678,7 +684,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             StateTmp = lists:foldl(fun ast/2, State3, BindingsExprs),
             {ArgsAsts, _} = pop_ast(StateTmp, length(BindingsExprs)),
 
-            LoopClause = {clause, Anno, ArgsAsts, [], [Body]},
+            LoopClause = {clause, Anno, ArgsAsts, [], SplicedBody},
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
@@ -752,6 +758,8 @@ ast(#{op := 'try'} = Expr, State) ->
   Anno = anno_from(Env),
 
   {Body, State1} = pop_ast(ast(BodyExpr, State)),
+  SplicedBody    = splice_body(Body),
+
   {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
                              , length(CatchesExprs)
                              ),
@@ -766,7 +774,7 @@ ast(#{op := 'try'} = Expr, State) ->
             _         -> [Finally]
           end,
 
-  TryAst    = {'try', Anno, [Body], [], Catches, After},
+  TryAst    = {'try', Anno, SplicedBody, [], Catches, After},
 
   %% We need to wrap everything in a fun to create a new variable scope.
   ClauseAst = {clause, Anno, [], [], [TryAst]},
@@ -796,8 +804,9 @@ ast(#{op := 'catch'} = Expr, State) ->
   ClassNameAst      = {tuple, Anno, [ClassAst, NameAst, {var, Anno, '_'}]},
 
   {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
+  SplicedBody       = splice_body(Body),
 
-  Ast = {clause, Anno, [ClassNameAst], [], [Body]},
+  Ast = {clause, Anno, [ClassNameAst], [], SplicedBody},
 
   push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
@@ -1009,6 +1018,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
                           ),
   Guards         = [],
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
+  SplicedBody    = splice_body(Body),
 
   ParamCount = length(ParamsExprs),
   Args1 = case ClauseFor of
@@ -1022,7 +1032,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(Args)]
           end,
 
-  Clause = {clause, anno_from(Env), Args1, Guards, [Body]},
+  Clause = {clause, anno_from(Env), Args1, Guards, SplicedBody},
 
   State3 = remove_lexical_renames_scope(State2),
 
@@ -1187,6 +1197,10 @@ anno_from(Env) ->
 
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().
 sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).
+
+-spec splice_body(ast()) -> [ast()].
+splice_body({block, _, Asts}) -> Asts;
+splice_body(Ast) -> [Ast].
 
 -spec default_compiler_options() -> clj_compiler:opts().
 default_compiler_options() ->
