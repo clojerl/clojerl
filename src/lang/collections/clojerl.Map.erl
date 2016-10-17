@@ -41,7 +41,6 @@
 -export([ seq/1
         , to_list/1
         ]).
-
 -export([str/1]).
 
 -type mappings() :: {map(), map()}.
@@ -67,7 +66,7 @@ build_key_values(KeyValues, []) ->
 build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
-%% @prvivate
+%% @private
 -spec build_mappings({any(), any()}, mappings()) -> mappings().
 build_mappings({K, V}, {Keys, Values}) ->
   KHash = 'clojerl.IHash':hash(K),
@@ -147,7 +146,7 @@ cons(#?TYPE{name = ?M, data = {Keys, Vals}} = Map, X) ->
       Map#?TYPE{data = {Keys#{Hash => K}, Vals#{Hash => V}}};
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                clj_core:assoc(Acc, clj_core:first(KV), clj_core:second(KV))
+                assoc(Acc, clj_core:first(KV), clj_core:second(KV))
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->
