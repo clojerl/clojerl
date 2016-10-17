@@ -405,7 +405,7 @@
   {:added "1.0"
    :static true}
   ([& keys]
-   #_(new clojerl.SortedSet keyvals)))
+   (new clojerl.SortedSet keys)))
 
 (defn sorted-set-by
   "Returns a new sorted set with supplied keys, using the supplied
