@@ -61,11 +61,11 @@ empty(_) -> ?CONSTRUCTOR([]).
 %% clojerl.IEquiv
 
 equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = Y}
-                      ) ->
+     , #?TYPE{name = ?M, data = Y}
+     ) ->
   clj_core:equiv(X, Y);
-equiv(_, _) ->
-  false.
+equiv(#?TYPE{name = ?M} = X, Y) ->
+  clj_core:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
