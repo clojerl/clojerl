@@ -98,7 +98,6 @@ equiv(_Config) ->
 
   {comments, ""}.
 
-
 -spec hash(config()) -> result().
 hash(_Config) ->
   List1 = sorted_set([1, 2, 3]),
@@ -132,6 +131,17 @@ cons(_Config) ->
 
   ct:comment("Conj an existing element in the set"),
   TwoSet = clj_core:conj(TwoSet, 1),
+
+  ct:comment("Conj the same symbol with different meta to an empty set"),
+  OneSymbol         = clj_core:symbol(<<"one">>),
+  OneSymbolWithMeta = clj_core:with_meta(OneSymbol, #{one => 1}),
+  OneSymbolSet      = clj_core:conj(EmptySet, OneSymbol),
+  OneSymbolSet2     = clj_core:conj(OneSymbolSet, OneSymbolWithMeta),
+
+  ct:comment("Sets should be equivalent"),
+  true      = clj_core:equiv(OneSymbolSet, OneSymbolSet2),
+  ct:comment("The symbol with the metadata is not added to the set"),
+  OneSymbol = clj_core:first(OneSymbolSet2),
 
   {comments, ""}.
 

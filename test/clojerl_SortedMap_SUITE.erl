@@ -39,6 +39,7 @@ new(_Config) ->
   Map = sorted_map([1, 2, 3, 4]),
   2 = clj_core:get(Map, 1),
   4 = clj_core:get(Map, 3),
+  undefined = clj_core:get(Map, 5),
 
   [1, 3] = clj_core:keys(Map),
   [2, 4] = clj_core:vals(Map),
