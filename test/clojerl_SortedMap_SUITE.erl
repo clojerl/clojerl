@@ -92,7 +92,7 @@ equiv(_Config) ->
   Map2 = clj_core:with_meta(sorted_map([3, 4, 1.0, 2]), #{b => 2}),
   true = clj_core:equiv(Map1, Map2),
 
-  ct:comment("Check that maps with the same elements are not equivalent"),
+  ct:comment("Check that maps with different elements are not equivalent"),
   Map3 = clj_core:with_meta(sorted_map([5, 6, 3, 4]), #{c => 3}),
   false = clj_core:equiv(Map1, Map3),
 
@@ -129,7 +129,6 @@ apply(_Config) ->
 -spec hash(config()) -> result().
 hash(_Config) ->
   Map1 = sorted_map([1, a, 2, b]),
-  Map1 = sorted_map([2, b, 1, a]),
   Map2 = sorted_map([2, b, 1, a, 3, c]),
   Map3 = sorted_map([2.0, b, 1.0, a, 3.0, c]),
 

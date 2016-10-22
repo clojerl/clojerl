@@ -88,7 +88,7 @@ equiv(_Config) ->
   Map2 = clj_core:with_meta(clj_core:hash_map([3, 4, 1.0, 2]), #{b => 2}),
   true = clj_core:equiv(Map1, Map2),
 
-  ct:comment("Check that maps with the same elements are not equivalent"),
+  ct:comment("Check that maps with different elements are not equivalent"),
   Map3 = clj_core:with_meta(clj_core:hash_map([5, 6, 3, 4]), #{c => 3}),
   false = clj_core:equiv(Map1, Map3),
 

@@ -117,7 +117,7 @@ equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
                 maps:is_key(Hash, Keys) andalso
                   clj_core:equiv(maps:get(Hash, Vals), clj_core:get(Y, Key))
             end,
-      maps:size(Keys) == clj_core:count(Y)
+      maps:size(Keys) =:= clj_core:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
@@ -137,13 +137,12 @@ apply(_, Args) ->
 
 cons(#?TYPE{name = ?M} = Map, undefined) ->
   Map;
-cons(#?TYPE{name = ?M, data = {Keys, Vals}} = Map, X) ->
+cons(#?TYPE{name = ?M} = Map, X) ->
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
   case clj_core:to_list(X) of
     [K, V] when IsVector ->
-      Hash = 'clojerl.IHash':hash(K),
-      Map#?TYPE{data = {Keys#{Hash => K}, Vals#{Hash => V}}};
+      assoc(Map, K, V);
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
                 assoc(Acc, clj_core:first(KV), clj_core:second(KV))

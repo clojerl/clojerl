@@ -3,6 +3,7 @@
 -export([all/0, init_per_suite/1]).
 
 -export([ count/1
+        , equiv/1
         , hash/1
         , is_sequential/1
         , nth/1
@@ -33,6 +34,31 @@ init_per_suite(Config) ->
 count(_Config) ->
   3 = clj_core:count({1, 2, 3}),
   0 = clj_core:count({}),
+
+  {comments, ""}.
+
+-spec equiv(config()) -> result().
+equiv(_Config) ->
+  Symbol = clj_core:symbol(<<"hello">>),
+  ct:comment("Check that tuples with the same elements are equivalent"),
+  Tuple1 = {clj_core:with_meta(Symbol, #{a => 1}), 1, a},
+  Tuple2 = {clj_core:with_meta(Symbol, #{b => 2}), 1, a},
+  true = clj_core:equiv(Tuple1, Tuple2),
+
+  ct:comment("Check that maps with different elements are not equivalent"),
+  false = clj_core:equiv(Tuple1, {a, b, c}),
+  false = clj_core:equiv(Tuple1, {1, 2, 3, 4}),
+
+  ct:comment("A Tuple and a List"),
+  true = clj_core:equiv(Tuple1, [Symbol, 1, a]),
+  false = clj_core:equiv(Tuple1, [1, 2, 3, 4]),
+  false = clj_core:equiv(Tuple1, [2, 3]),
+
+  ct:comment("A Tuple and something else"),
+  false = clj_core:equiv(Tuple1, whatever),
+  false = clj_core:equiv(Tuple1, 1),
+  false = clj_core:equiv(Tuple1, [1]),
+  false = clj_core:equiv(Tuple1, #{}),
 
   {comments, ""}.
 
