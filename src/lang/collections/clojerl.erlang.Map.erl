@@ -64,7 +64,7 @@ cons(Map, X) ->
       Map#{K => V};
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                clj_core:assoc(Acc, clj_core:first(KV), clj_core:second(KV))
+                assoc(Acc, clj_core:first(KV), clj_core:second(KV))
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->

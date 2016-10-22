@@ -1,6 +1,7 @@
 -module('clojerl.erlang.Tuple').
 
 -behavior('clojerl.Counted').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Indexed').
@@ -8,6 +9,7 @@
 -behavior('clojerl.Stringable').
 
 -export([count/1]).
+-export([equiv/2]).
 -export([hash/1]).
 -export(['_'/1]).
 -export([ nth/2
@@ -23,6 +25,25 @@
 %%------------------------------------------------------------------------------
 
 count(Tuple) -> tuple_size(Tuple).
+
+equiv(X, Y) when is_tuple(X), is_tuple(Y) ->
+  case erlang:tuple_size(X) =:= erlang:tuple_size(Y) of
+    true  -> do_equiv(X, Y, erlang:tuple_size(X), 1);
+    false -> false
+  end;
+equiv(X, Y) ->
+  case clj_core:'sequential?'(Y) of
+    true  -> clj_core:equiv(to_list(X), Y);
+    false -> false
+  end.
+
+%% @private
+do_equiv(_, _, Size, Size) -> true;
+do_equiv(X, Y, Size, Index) ->
+  case clj_core:equiv(element(Index, X), element(Index, Y)) of
+    false -> false;
+    true  -> do_equiv(X, Y, Size, Index + 1)
+  end.
 
 hash(Tuple) -> clj_murmur3:ordered(Tuple).
 

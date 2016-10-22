@@ -368,7 +368,7 @@
    :static true}
   ([] {})
   ([& keyvals]
-   (clj_core/hash_map.e keyvals)))
+   (new clojerl.Map keyvals)))
 
 (defn hash-set
   "Returns a new hash set with supplied keys.  Any equal keys are
@@ -377,7 +377,7 @@
    :static true}
   ([] #{})
   ([& keys]
-   (clj_core/hash_set.e keys)))
+   (new clojerl.Set keys)))
 
 (defn sorted-map
   "keyval => key val
@@ -386,8 +386,7 @@
   {:added "1.0"
    :static true}
   ([& keyvals]
-   (throw "unsupported sorted-map")
-   #_(clojure.lang.PersistentTreeMap/create keyvals)))
+   (new clojerl.SortedMap keyvals)))
 
 (defn sorted-map-by
   "keyval => key val
@@ -406,8 +405,7 @@
   {:added "1.0"
    :static true}
   ([& keys]
-   (throw "unsupported sorted-set")
-   #_(clojure.lang.PersistentTreeSet/create keys)))
+   (new clojerl.SortedSet keys)))
 
 (defn sorted-set-by
   "Returns a new sorted set with supplied keys, using the supplied

@@ -1,4 +1,6 @@
--module(clojerl_Set_SUITE).
+-module(clojerl_SortedSet_SUITE).
+
+-include("clojerl.hrl").
 
 -export([all/0, init_per_suite/1]).
 
@@ -34,7 +36,7 @@ init_per_suite(Config) ->
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
+  Set = sorted_set([1, 2, 3, 4]),
   1 = clj_core:get(Set, 1),
   2 = clj_core:get(Set, 2),
   3 = clj_core:get(Set, 3),
@@ -42,38 +44,38 @@ new(_Config) ->
   undefined   = clj_core:get(Set, 5),
   'not-found' = clj_core:get(Set, 5, 'not-found'),
 
-  Set2 = clj_core:hash_set([]),
+  Set2 = sorted_set([]),
   undefined = clj_core:get(Set2, whatever),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
+  Set = sorted_set([1, 2, 3, 4]),
   4 = clj_core:count(Set),
 
-  Set2 = clj_core:hash_set([]),
+  Set2 = sorted_set([]),
   0 = clj_core:count(Set2),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
-  <<"#{1 2 4 3}">> = clj_core:str(Set),
+  Set = sorted_set([1, 2, 3, 4]),
+  <<"#{1 2 3 4}">> = clj_core:str(Set),
 
-  Set2 = clj_core:hash_set([]),
+  Set2 = sorted_set([]),
   <<"#{}">> = clj_core:str(Set2),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
+  Set = sorted_set([1, 2, 3, 4]),
   [1, 2, 3, 4] = lists:sort(clj_core:seq(Set)),
   [1, 2, 3, 4] = lists:sort(clj_core:to_list(Set)),
 
-  Set2 = clj_core:hash_set([]),
+  Set2 = sorted_set([]),
   undefined = clj_core:seq(Set2),
 
   {comments, ""}.
@@ -81,12 +83,12 @@ seq(_Config) ->
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that sets with the same elements are equivalent"),
-  Set1 = clj_core:with_meta(clj_core:hash_set([1, 2, 3, 4]), #{a => 1}),
-  Set2 = clj_core:with_meta(clj_core:hash_set([3, 4, 1, 2]), #{b => 2}),
+  Set1 = clj_core:with_meta(sorted_set([1, 2, 3, 4]), #{a => 1}),
+  Set2 = clj_core:with_meta(sorted_set([3, 4, 1, 2]), #{b => 2}),
   true = clj_core:equiv(Set1, Set2),
 
   ct:comment("Check that sets with the same elements are not equivalent"),
-  Set3 = clj_core:with_meta(clj_core:hash_set([5, 6, 3, 4]), #{c => 3}),
+  Set3 = clj_core:with_meta(sorted_set([5, 6, 3, 4]), #{c => 3}),
   false = clj_core:equiv(Set1, Set3),
 
   ct:comment("A clojerl.Set and something else"),
@@ -96,12 +98,11 @@ equiv(_Config) ->
 
   {comments, ""}.
 
-
 -spec hash(config()) -> result().
 hash(_Config) ->
-  List1 = clj_core:hash_set([1, 2, 3]),
-  List2 = clj_core:hash_set([1, 3, 2]),
-  List3 = clj_core:hash_set([1.0, 2, 3]),
+  List1 = sorted_set([1, 2, 3]),
+  List2 = sorted_set([1, 3, 2]),
+  List3 = sorted_set([1.0, 2, 3]),
 
   Hash1 = 'clojerl.IHash':hash(List1),
   Hash2 = 'clojerl.IHash':hash(List2),
@@ -114,19 +115,19 @@ hash(_Config) ->
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  EmptySet = clj_core:hash_set([]),
+  EmptySet = sorted_set([]),
 
   ct:comment("Conj an element to an empty set"),
   OneSet = clj_core:conj(EmptySet, 1),
 
   1    = clj_core:count(OneSet),
-  true = clj_core:equiv(OneSet, clj_core:hash_set([1])),
+  true = clj_core:equiv(OneSet, sorted_set([1])),
 
   ct:comment("Conj a different element to a set with one element"),
   TwoSet = clj_core:conj(OneSet, 2),
 
   2    = clj_core:count(TwoSet),
-  true = clj_core:equiv(TwoSet, clj_core:hash_set([1, 2])),
+  true = clj_core:equiv(TwoSet, sorted_set([1, 2])),
 
   ct:comment("Conj an existing element in the set"),
   TwoSet = clj_core:conj(TwoSet, 1),
@@ -147,7 +148,7 @@ cons(_Config) ->
 -spec apply(config()) -> result().
 apply(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
-  EmptySet     = clj_core:hash_set([]),
+  EmptySet     = sorted_set([]),
 
   undefined = clj_core:apply(EmptySet, [HelloKeyword]),
 
@@ -165,7 +166,7 @@ apply(_Config) ->
 
 -spec disjoin(config()) -> result().
 disjoin(_Config) ->
-  EmptySet = clj_core:hash_set([]),
+  EmptySet = sorted_set([]),
   EmptySet = clj_core:disj(EmptySet, whatever),
 
   OneSet = clj_core:conj(EmptySet, 1),
@@ -178,11 +179,15 @@ disjoin(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  NotEmptySet = clj_core:hash_set([a, b, 2, 3]),
+  NotEmptySet = sorted_set([a, b, 2, 3]),
   EmptySet    = clj_core:empty(NotEmptySet),
-  EmptySet    = clj_core:hash_set([]),
+  EmptySet    = sorted_set([]),
 
-  SetMeta  = clj_core:with_meta(clj_core:hash_set([1, 2, 3, 4]), #{a => 1}),
+  SetMeta  = clj_core:with_meta(sorted_set([1, 2, 3, 4]), #{a => 1}),
   #{a := 1} = clj_core:meta(SetMeta),
 
   {comments, ""}.
+
+-spec sorted_set([any()]) -> 'clojerl.SortedSet':type().
+sorted_set(List) ->
+  'clojerl.SortedSet':?CONSTRUCTOR(List).

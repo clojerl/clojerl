@@ -394,15 +394,9 @@ ast(#{op := fn} = Expr, State) ->
   {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
 
   Anno        = anno_from(Env),
-  ListArgSym  = clj_core:gensym(<<"list_arg">>),
-  ListArgName = clj_core:name(ListArgSym),
-  ListArgAst  = {var, Anno, binary_to_atom(ListArgName, utf8)},
-  CaseAst     = {'case', Anno, ListArgAst, ClausesAsts},
-
   Name         = clj_core:name(NameSym),
   NameAtom     = binary_to_atom(Name, utf8),
-  FunClauseAst = {clause, Anno, [ListArgAst], [], [CaseAst]},
-  FunAst       = {named_fun, Anno, NameAtom, [FunClauseAst]},
+  FunAst       = {named_fun, Anno, NameAtom, ClausesAsts},
 
   push_ast(FunAst, State2);
 ast(#{op := erl_fun, invoke := true} = Expr, State) ->

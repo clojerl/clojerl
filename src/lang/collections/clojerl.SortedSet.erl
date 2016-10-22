@@ -1,4 +1,4 @@
--module('clojerl.Set').
+-module('clojerl.SortedSet').
 
 -include("clojerl.hrl").
 
@@ -36,8 +36,9 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  KVs = lists:map(fun(X) -> {'clojerl.IHash':hash(X), X} end, Values),
-  #?TYPE{data = maps:from_list(KVs)}.
+  Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
+  Vals   = [{X, true} || X <- Values],
+  #?TYPE{data = {maps:from_list(Hashes), rbdict:from_list(Vals)}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -45,41 +46,42 @@
 
 %% clojerl.Counted
 
-count(#?TYPE{name = ?M, data = MapSet}) -> maps:size(MapSet).
+count(#?TYPE{name = ?M, data = {Hashes, _}}) -> maps:size(Hashes).
 
 %% clojerl.IColl
 
-cons(#?TYPE{name = ?M, data = MapSet} = Set, X) ->
+cons(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, X) ->
   Hash = 'clojerl.IHash':hash(X),
-  case maps:is_key(Hash, MapSet) of
-    true  -> Set;
-    false -> Set#?TYPE{data = MapSet#{Hash => X}}
+  case maps:is_key(Hash, Hashes) of
+    true  -> S;
+    false -> S#?TYPE{data = {Hashes#{Hash => X}, rbdict:store(X, true, Vals)}}
   end.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IEquiv
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
-     ) ->
-  clj_core:equiv(X, Y);
+equiv(#?TYPE{name = ?M} = X, #?TYPE{name = ?M} = Y) ->
+  hash(X) =:= hash(Y);
 equiv(#?TYPE{name = ?M} = X, Y) ->
   clj_core:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
-apply(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
+apply(#?TYPE{name = ?M, data = {Hashes, _}}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
-  maps:get(Hash, MapSet, undefined);
+  case maps:is_key(Hash, Hashes) of
+    true  -> maps:get(Hash, Hashes);
+    false -> undefined
+  end;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M, data = MapSet}) ->
-  clj_murmur3:unordered(maps:values(MapSet)).
+hash(#?TYPE{name = ?M, data = {Hashes, _}}) ->
+  clj_murmur3:unordered(maps:keys(Hashes)).
 
 %% clojerl.IMeta
 
@@ -91,35 +93,39 @@ with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
 
 %% clojerl.ISet
 
-disjoin(#?TYPE{name = ?M, data = MapSet} = Set, Value) ->
+disjoin(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
-  Set#?TYPE{name = ?M, data = maps:remove(Hash, MapSet)}.
+  case maps:is_key(Hash, Hashes) of
+    false -> S;
+    true  ->
+      S#?TYPE{data = {maps:remove(Hash, Hashes), rbdict:erase(Value, Vals)}}
+  end.
 
-contains(#?TYPE{name = ?M, data = MapSet}, Value) ->
+contains(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
-  maps:is_key(Hash, MapSet).
+  maps:is_key(Hash, Hashes).
 
-get(#?TYPE{name = ?M, data = MapSet}, Value) ->
+get(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
-  case maps:is_key(Hash, MapSet) of
-    true  -> maps:get(Hash, MapSet);
+  case maps:is_key(Hash, Hashes) of
+    true  -> maps:get(Hash, Hashes);
     false -> undefined
   end.
 
 %% clojerl.Seqable
 
-seq(#?TYPE{name = ?M, data = MapSet}) ->
-  case maps:size(MapSet) of
+seq(#?TYPE{name = ?M, data = {Hashes, _}} = Set) ->
+  case maps:size(Hashes) of
     0 -> undefined;
-    _ -> maps:values(MapSet)
+    _ -> to_list(Set)
   end.
 
-to_list(#?TYPE{name = ?M, data = MapSet}) ->
-  maps:values(MapSet).
+to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  [K || {K, _} <- rbdict:to_list(Vals)].
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = MapSet}) ->
-  Items = lists:map(fun clj_core:str/1, maps:values(MapSet)),
+str(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  Items = [clj_core:str(K) || {K, _} <- rbdict:to_list(Vals)],
   Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.

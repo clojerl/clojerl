@@ -1,4 +1,4 @@
--module('clojerl.Map').
+-module('clojerl.SortedMap').
 
 -compile({no_auto_import, [{apply, 2}]}).
 
@@ -16,7 +16,7 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([?CONSTRUCTOR/1, to_erl_map/1]).
+-export([?CONSTRUCTOR/1]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -43,21 +43,14 @@
         ]).
 -export([str/1]).
 
--type mappings() :: {map(), map()}.
--type type()     :: #?TYPE{data :: mappings()}.
+-type type() :: #?TYPE{data :: orddict:orddict()}.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  Mappings = lists:foldl(fun build_mappings/2, {#{}, #{}}, KeyValuePairs),
-  #?TYPE{name = ?M, data = Mappings}.
-
--spec to_erl_map(type()) -> map().
-to_erl_map(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
-  ErlMapFun = fun({Hash, Key}, MapAcc) ->
-                  MapAcc#{Key => maps:get(Hash, Vals)}
-              end,
-  lists:foldl(ErlMapFun, #{}, maps:to_list(Keys)).
+  Keys   = lists:foldl(fun fold_key_values/2, #{}, KeyValuePairs),
+  Values = rbdict:from_list(KeyValuePairs),
+  #?TYPE{name = ?M, data = {Keys, Values}}.
 
 %% @private
 -spec build_key_values(list(), list()) -> [{any(), any()}].
@@ -67,10 +60,9 @@ build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
 %% @private
--spec build_mappings({any(), any()}, mappings()) -> mappings().
-build_mappings({K, V}, {Keys, Values}) ->
-  KHash = 'clojerl.IHash':hash(K),
-  {Keys#{KHash => K}, Values#{KHash => V}}.
+-spec fold_key_values({any(), any()}, map()) -> map().
+fold_key_values({K, _}, Map) ->
+  maps:put('clojerl.IHash':hash(K), K, Map).
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -79,21 +71,26 @@ build_mappings({K, V}, {Keys, Values}) ->
 %% clojerl.Associative
 
 contains_key(#?TYPE{name = ?M, data = {Keys, _}}, Key) ->
-  maps:is_key('clojerl.IHash':hash(Key), Keys).
+  Hash = 'clojerl.IHash':hash(Key),
+  maps:is_key(Hash, Keys).
 
 entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
   Hash = 'clojerl.IHash':hash(Key),
   case maps:is_key(Hash, Keys) of
     true ->
-      KeyFound = maps:get(Hash, Keys),
-      Val      = maps:get(Hash, Vals),
-      clj_core:vector([KeyFound, Val]);
+      FoundKey = maps:get(Hash, Keys),
+      Val = rbdict:fetch(FoundKey, Vals),
+      clj_core:vector([FoundKey, Val]);
     false -> undefined
   end.
 
-assoc(#?TYPE{name = ?M, data = {Keys, Vals}} = M, Key, Value) ->
+assoc(#?TYPE{name = ?M, data = {Keys, Vals0}} = M, Key, Value) ->
   Hash = 'clojerl.IHash':hash(Key),
-  M#?TYPE{data = {Keys#{Hash => Key}, Vals#{Hash => Value}}}.
+  Vals = case maps:get(Hash, Keys, undefined) of
+           undefined -> Vals0;
+           K -> rbdict:erase(K, Vals0)
+         end,
+  M#?TYPE{data = {Keys#{Hash => Key}, rbdict:store(Key, Value, Vals)}}.
 
 %% clojerl.Counted
 
@@ -105,7 +102,8 @@ count(#?TYPE{name = ?M, data = {Keys, _}}) ->
 equiv( #?TYPE{name = ?M, data = {KeysX, ValsX}}
      , #?TYPE{name = ?M, data = {KeysY, ValsY}}
      ) ->
-  clj_core:equiv(KeysX, KeysY) andalso clj_core:equiv(ValsX, ValsY);
+  maps:size(KeysX) =:= maps:size(KeysY)
+    andalso clj_core:equiv(rbdict:to_list(ValsX), rbdict:to_list(ValsY));
 equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
   case clj_core:'map?'(Y) of
     true  ->
@@ -115,7 +113,7 @@ equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
                               ),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso
-                  clj_core:equiv(maps:get(Hash, Vals), clj_core:get(Y, Key))
+                  clj_core:equiv(rbdict:fetch(Key, Vals), clj_core:get(Y, Key))
             end,
       maps:size(Keys) =:= clj_core:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
@@ -126,30 +124,29 @@ equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
 
 apply(#?TYPE{name = ?M} = M, [Key]) ->
   apply(M, [Key, undefined]);
-apply(#?TYPE{name = ?M, data = {_, Vals}}, [Key, NotFound]) ->
-  Hash = 'clojerl.IHash':hash(Key),
-  maps:get(Hash, Vals, NotFound);
+apply(#?TYPE{name = ?M} = M, [Key, NotFound]) ->
+  get(M, Key, NotFound);
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
-  throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
+  error(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
 %% clojerl.IColl
 
 cons(#?TYPE{name = ?M} = Map, undefined) ->
   Map;
-cons(#?TYPE{name = ?M} = Map, X) ->
+cons(#?TYPE{name = ?M} = M, X) ->
   IsVector = clj_core:'vector?'(X),
   IsMap    = clj_core:'map?'(X),
   case clj_core:to_list(X) of
     [K, V] when IsVector ->
-      assoc(Map, K, V);
+      assoc(M, K, V);
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
                 assoc(Acc, clj_core:first(KV), clj_core:second(KV))
             end,
-      lists:foldl(Fun, Map, KVs);
+      lists:foldl(Fun, M, KVs);
     _ ->
-      throw(<<"Can't conj something that is not a key/value pair or "
+      error(<<"Can't conj something that is not a key/value pair or "
               "another map to a map.">>)
   end.
 
@@ -157,17 +154,20 @@ empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M} = Map) ->
-  clj_murmur3:unordered(Map).
+hash(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  clj_murmur3:unordered(rbdict:to_list(Vals)).
 
 %% clojerl.ILookup
 
 get(#?TYPE{name = ?M} = Map, Key) ->
   get(Map, Key, undefined).
 
-get(#?TYPE{name = ?M, data = {_, Vals}}, Key, NotFound) ->
+get(#?TYPE{name = ?M, data = {Keys, Vals}}, Key, NotFound) ->
   Hash = 'clojerl.IHash':hash(Key),
-  maps:get(Hash, Vals, NotFound).
+  case maps:is_key(Hash, Keys) of
+    true  -> rbdict:fetch(maps:get(Hash, Keys), Vals);
+    false -> NotFound
+  end.
 
 %% clojerl.IMap
 
@@ -175,11 +175,15 @@ keys(#?TYPE{name = ?M, data = {Keys, _}}) ->
   maps:values(Keys).
 
 vals(#?TYPE{name = ?M, data = {_, Vals}}) ->
-  maps:values(Vals).
+  [Val || {_, Val} <- rbdict:to_list(Vals)].
 
-without(#?TYPE{name = ?M, data = {Keys, Vals}} = M, Key) ->
+without(#?TYPE{name = ?M, data = {Keys, Vals0}} = M, Key) ->
   Hash = 'clojerl.IHash':hash(Key),
-  M#?TYPE{data = {maps:remove(Hash, Keys), maps:remove(Hash, Vals)}}.
+  Vals = case maps:is_key(Hash, Keys) of
+           true  -> rbdict:erase(maps:get(Hash, Keys), Vals0);
+           false -> Vals0
+         end,
+  M#?TYPE{data = {maps:remove(Hash, Keys), Vals}}.
 
 %% clojerl.IMeta
 
@@ -197,20 +201,20 @@ seq(#?TYPE{name = ?M} = Map) ->
     X -> X
   end.
 
-to_list(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
-  FoldFun = fun(Hash, K, List) ->
-                [clj_core:vector([K, maps:get(Hash, Vals)]) | List]
-            end,
-  maps:fold(FoldFun, [], Keys).
+to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  VectorFun = fun({Key, Val}) ->
+                  clj_core:vector([Key, Val])
+              end,
+  lists:map(VectorFun, rbdict:to_list(Vals)).
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
-  StrFun = fun(Hash) ->
-               KeyStr = clj_core:str(maps:get(Hash, Keys)),
-               ValStr = clj_core:str(maps:get(Hash, Vals)),
+str(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  StrFun = fun({Key, Value}) ->
+               KeyStr = clj_core:str(Key),
+               ValStr = clj_core:str(Value),
                'clojerl.String':join([KeyStr, ValStr], <<" ">>)
            end,
-  KeyValueStrs = lists:map(StrFun, maps:keys(Keys)),
+  KeyValueStrs = lists:map(StrFun, rbdict:to_list(Vals)),
   Strs = 'clojerl.String':join(KeyValueStrs, <<", ">>),
   <<"{", Strs/binary, "}">>.
