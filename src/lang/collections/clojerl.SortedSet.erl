@@ -36,7 +36,9 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  #?TYPE{data = ordsets:from_list(Values)}.
+  Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
+  Vals   = [{X, true} || X <- Values],
+  #?TYPE{data = {maps:from_list(Hashes), rbdict:from_list(Vals)}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -44,32 +46,32 @@
 
 %% clojerl.Counted
 
-count(#?TYPE{name = ?M, data = Set}) -> ordsets:size(Set).
+count(#?TYPE{name = ?M, data = {Hashes, _}}) -> maps:size(Hashes).
 
 %% clojerl.IColl
 
-cons(#?TYPE{name = ?M, data = Set} = S, X) ->
-  case ordsets:is_element(X, Set) of
+cons(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, X) ->
+  Hash = 'clojerl.IHash':hash(X),
+  case maps:is_key(Hash, Hashes) of
     true  -> S;
-    false -> S#?TYPE{data = ordsets:add_element(X, Set)}
+    false -> S#?TYPE{data = {Hashes#{Hash => X}, rbdict:store(X, true, Vals)}}
   end.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IEquiv
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
-     ) ->
-  clj_core:equiv(X, Y);
+equiv(#?TYPE{name = ?M} = X, #?TYPE{name = ?M} = Y) ->
+  hash(X) =:= hash(Y);
 equiv(#?TYPE{name = ?M} = X, Y) ->
   clj_core:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
-apply(#?TYPE{name = ?M, data = Set}, [Item]) ->
-  case ordsets:is_element(Item, Set) of
-    true  -> Item;
+apply(#?TYPE{name = ?M, data = {Hashes, _}}, [Item]) ->
+  Hash = 'clojerl.IHash':hash(Item),
+  case maps:is_key(Hash, Hashes) of
+    true  -> maps:get(Hash, Hashes);
     false -> undefined
   end;
 apply(_, Args) ->
@@ -78,8 +80,8 @@ apply(_, Args) ->
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M, data = Set}) ->
-  clj_murmur3:unordered(ordsets:to_list(Set)).
+hash(#?TYPE{name = ?M, data = {Hashes, _}}) ->
+  clj_murmur3:unordered(maps:keys(Hashes)).
 
 %% clojerl.IMeta
 
@@ -91,32 +93,39 @@ with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
 
 %% clojerl.ISet
 
-disjoin(#?TYPE{name = ?M, data = Set} = S, Value) ->
-  S#?TYPE{data = ordsets:del_element(Value, Set)}.
+disjoin(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, Value) ->
+  Hash = 'clojerl.IHash':hash(Value),
+  case maps:is_key(Hash, Hashes) of
+    false -> S;
+    true  ->
+      S#?TYPE{data = {maps:remove(Hash, Hashes), rbdict:erase(Value, Vals)}}
+  end.
 
-contains(#?TYPE{name = ?M, data = Set}, Value) ->
-  ordsets:is_element(Value, Set).
+contains(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
+  Hash = 'clojerl.IHash':hash(Value),
+  maps:is_key(Hash, Hashes).
 
-get(#?TYPE{name = ?M, data = Set}, Value) ->
-  case ordsets:is_element(Value, Set) of
-    true  -> Value;
+get(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
+  Hash = 'clojerl.IHash':hash(Value),
+  case maps:is_key(Hash, Hashes) of
+    true  -> maps:get(Hash, Hashes);
     false -> undefined
   end.
 
 %% clojerl.Seqable
 
-seq(#?TYPE{name = ?M, data = Set}) ->
-  case ordsets:size(Set) of
+seq(#?TYPE{name = ?M, data = {Hashes, _}} = Set) ->
+  case maps:size(Hashes) of
     0 -> undefined;
-    _ -> ordsets:to_list(Set)
+    _ -> to_list(Set)
   end.
 
-to_list(#?TYPE{name = ?M, data = Set}) ->
-  ordsets:to_list(Set).
+to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  [K || {K, _} <- rbdict:to_list(Vals)].
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = Set}) ->
-  Items = lists:map(fun clj_core:str/1, ordsets:to_list(Set)),
+str(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  Items = [clj_core:str(K) || {K, _} <- rbdict:to_list(Vals)],
   Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.

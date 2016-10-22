@@ -43,7 +43,7 @@
         ]).
 -export([str/1]).
 
--type type()     :: #?TYPE{data :: orddict:orddict()}.
+-type type() :: #?TYPE{data :: orddict:orddict()}.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
