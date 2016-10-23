@@ -38,8 +38,8 @@
 -spec default_options() -> options().
 default_options() ->
   #{ output_dir  => "ebin"
-   , erl_flags   => [ debug_info
-                    , verbose
+   , erl_flags   => [ verbose
+                    %% , debug_info
                     %% Don't use these except for improving generated code
                     %% , report_errors
                     %% , report_warnings
@@ -299,12 +299,19 @@ compile_forms(Module, Opts) ->
   %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   ok       = maybe_output_erl(Module, Opts),
   ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
-
   {ok, _, BeamBinary} = compile:forms(Module, ErlFlags),
   Name     = cerl:atom_val(cerl:module_name(Module)),
-  BeamPath = maybe_output_beam(Name, BeamBinary, Opts),
+  BeamPath = maybe_output_beam(Name, add_core_code(BeamBinary, Module), Opts),
   {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
   Name.
+
+-spec add_core_code(binary(), cerl:cerl()) -> binary().
+add_core_code(BeamBinary, CoreModule) ->
+  CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
+  CoreAbstractChunk   = {"Core", CoreAbstract},
+  {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
+  {ok, NewBeamBinary} = beam_lib:build_module(OldChunks ++ [CoreAbstractChunk]),
+  NewBeamBinary.
 
 -define(CERL_EVAL_MODULE, cerl_eval).
 

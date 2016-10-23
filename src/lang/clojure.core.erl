@@ -2,6 +2,8 @@
 
 -include("clojerl.hrl").
 
+-clojure(true).
+
 -vars(#{ <<"ns">>    => { ?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"ns">>}
                         , #{meta => #{ macro           => true
                                      , 'variadic?'     => true
@@ -82,8 +84,6 @@
            , #{}
            }
        }).
-
--clojure(true).
 
 -export([ ns/4
         , ns__val/0

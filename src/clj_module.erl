@@ -68,6 +68,7 @@
 -export_type([clj_module/0]).
 
 -define(ON_LOAD_FUNCTION, '$_clj_on_load').
+-define(MODULE_INFO, 'module_info').
 
 %%------------------------------------------------------------------------------
 %% Exported Functions
@@ -425,6 +426,8 @@ to_forms(#module{} = Module) ->
          %% , rest    = Rest
          } = Module,
 
+  add_module_info_functions(Module),
+
   FileAttr    = {cerl:c_atom(file), cerl:abstract(Source)},
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
@@ -449,6 +452,34 @@ to_forms(#module{} = Module) ->
   Defs        = [{OnLoadName, OnLoadFun} | Funs],
 
   cerl:c_module(cerl:c_atom(Name), Exports, AllAttrs, Defs).
+
+add_module_info_functions(Module) ->
+  #module{ name    = Name
+         } = Module,
+
+  ModuleInfoName0 = cerl:c_fname(?MODULE_INFO, 0),
+  ModuleInfoFun0  = cerl:c_fun( []
+                              , cerl:c_call( cerl:c_atom(erlang)
+                                           , cerl:c_atom(get_module_info)
+                                           , [cerl:c_atom(Name)]
+                                           )
+                              ),
+
+  ModuleInfoName1 = cerl:c_fname(?MODULE_INFO, 1),
+  Arg             = cerl:c_var(x),
+  ModuleInfoFun1  = cerl:c_fun( [Arg]
+                              , cerl:c_call( cerl:c_atom(erlang)
+                                           , cerl:c_atom(get_module_info)
+                                           , [cerl:c_atom(Name), Arg]
+                                           )
+                              ),
+
+  add_functions(Module, [ {ModuleInfoName0, ModuleInfoFun0}
+                        , {ModuleInfoName1, ModuleInfoFun1}
+                        ]),
+  add_exports(Module, [{module_info, 0}, {module_info, 1}]),
+  ok.
+
 
 %% @private
 on_load_function(OnLoadTable) ->
@@ -481,42 +512,27 @@ save(Table, Value) ->
 
 -spec new(atom(), string()) -> ok | {error, term()}.
 new(Name, Source) when is_atom(Name), is_list(Source) ->
-  new([ {attribute, 0, module, Name}
-      , {attribute, 0, file, {Source, 0}}
-      ]
-     );
-new(Forms, Source) when is_list(Forms), is_list(Source) ->
-  new([{attribute, 0, file, {Source, 0}} | Forms]).
+  new(cerl:c_module(cerl:c_atom(Name), [], []));
+new(CoreModule, Source) when is_list(Source) ->
+  true = cerl:is_c_module(CoreModule),
+  new(CoreModule).
 
--spec new([erl_parse:abstract_form()]) -> ok | {error, term()}.
-new(Forms) when is_list(Forms) ->
-  {[ModuleAttr], Rest} = lists:partition(is_attribute_fun(module), Forms),
-  {AllAttrs, Rest1}    = lists:partition(fun is_attribute/1, Rest),
-  {Funs, Rest2}        = lists:partition(fun is_function/1, Rest1),
+-spec new(cerl:cerl()) -> ok | {error, term()}.
+new(CoreModule) ->
+  Name     = cerl:concrete(cerl:module_name(CoreModule)),
+  Exports  = [ {cerl:fname_id(E), cerl:fname_arity(E)}
+               || E <- cerl:module_exports(CoreModule)
+             ],
+  AllAttrs = cerl:module_attrs(CoreModule),
+  Funs     = cerl:module_defs(CoreModule),
 
-  {attribute, _, module, Name} = ModuleAttr,
-  {VarsAttrs, RestAttrs} = lists:partition(is_attribute_fun(vars), AllAttrs),
+  {Attrs, Extracted} = extract_attrs(AllAttrs, [vars, file]),
 
-  clj_utils:error_when( length(VarsAttrs) > 1
-                      , [ <<"The module ">>
-                        , atom_to_binary(Name, utf8)
-                        , <<" contains more than one 'vars' attributes.">>
-                        ]
-                      ),
-  Vars = case VarsAttrs of
-           [] -> #{};
-           [VarsAttr] ->
-             {attribute, _, _, V} = VarsAttr,
-             V
-         end,
-
-  {ExportAttrs, RestAttrs1} = lists:partition(is_attribute_fun(export)
-                                             , RestAttrs
-                                             ),
-
-  Exports = flat_exports(ExportAttrs),
-
-  {Source, Attrs} = source_file(RestAttrs1),
+  Vars   = case maps:get(vars, Extracted, #{}) of
+             [V] -> V;
+             V -> V
+           end,
+  Source = maps:get(file, Extracted, ""),
 
   %% Tables need to be public so that other compiler processes can modify them.
   TableOpts = [set, public, {keypos, 1}],
@@ -529,7 +545,6 @@ new(Forms) when is_list(Forms) ->
                   , exports           = ets:new(exports, TableOpts)
                   , on_load           = ets:new(on_load, TableOpts)
                   , attrs             = ets:new(attributes, TableOpts)
-                  , rest              = Rest2
                   },
 
   Module = add_functions(Module, Funs),
@@ -545,36 +560,27 @@ new(Forms) when is_list(Forms) ->
 
   add_exports(Module, Exports).
 
--spec is_attribute(erl_parse:abstract_form()) -> boolean.
-is_attribute({attribute, _, _, _}) -> true;
-is_attribute(_) -> false.
-
--spec is_attribute_fun(atom()) -> function().
-is_attribute_fun(Name) ->
-  fun
-    ({attribute, _, AttrName, _}) when Name =:= AttrName -> true;
-    (_) -> false
-  end.
-
--spec is_function(erl_parse:abstract_form()) -> boolean.
-is_function({function, _, _, _, _}) -> true;
-is_function(_) -> false.
-
 -spec function_id({cerl:cerl(), cerl:cerl()}) -> function_id().
 function_id({Name, _}) ->
   {cerl:fname_id(Name), cerl:fname_arity(Name)}.
 
--spec flat_exports([erl_parse:abstract_form()]) ->
-  [{atom(), non_neg_integer()}].
-flat_exports(ExportAttrs) ->
-  lists:flatmap(fun({attribute, _, _, Vals}) -> Vals end, ExportAttrs).
+-spec extract_attrs([{cerl:c_atom(), cerl:cerl()}], [atom()]) ->
+  {[{cerl:c_atom(), cerl:cerl()}], map()}.
+extract_attrs(Attrs, Names) ->
+  do_extract_attrs(Attrs, Names, [], #{}).
 
--spec source_file([erl_parse:abstract_form()]) ->
-  {binary(), [erl_parse:abstract_form()]}.
-source_file(Attrs) ->
-  case lists:partition(is_attribute_fun(file), Attrs) of
-    {[], Attrs} -> {"", Attrs};
-    {[FileAttr | _], RestAttrs} ->
-      {attribute, _, file, {Source, _}} = FileAttr,
-      {Source, RestAttrs}
+do_extract_attrs([], _Names, NewAttrs, Extracted) ->
+  {NewAttrs, Extracted};
+do_extract_attrs( [{NameAbst, ValAbst} = Attr | Attrs]
+                , Names
+                , NewAttrs
+                , Extracted
+                ) ->
+  Name = cerl:concrete(NameAbst),
+  case lists:member(Name, Names) of
+    true  ->
+      Val = cerl:concrete(ValAbst),
+      do_extract_attrs(Attrs, Names, NewAttrs, Extracted#{Name => Val});
+    false ->
+      do_extract_attrs(Attrs, Names, [Attr | NewAttrs], Extracted)
   end.
