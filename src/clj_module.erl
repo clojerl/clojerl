@@ -422,43 +422,43 @@ to_forms(#module{} = Module) ->
          , exports = ExportsTable
          , on_load = OnLoadTable
          , attrs   = AttrsTable
-         , rest    = Rest
+         %% , rest    = Rest
          } = Module,
 
-  ModuleAttr  = {attribute, 0, module, Name},
-  FileAttr    = {attribute, 0, file, {Source, 0}},
-  %% To avoid conflicts with Clojure functions with the same name
-  %% as some functions in the `erlang' module.
-  CompileAttr = {attribute, 0, compile, [no_auto_import]},
+  FileAttr    = {cerl:c_atom(file), cerl:abstract(Source)},
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
   Vars        = maps:from_list(VarsList),
-  VarsAttr    = {attribute, 0, vars, Vars},
+  VarsAttr    = {cerl:c_atom(vars), cerl:abstract(Vars)},
 
-  Exports     = [X || {X} <- ets:tab2list(ExportsTable)],
-  ExportAttr  = {attribute, 0, export, Exports},
+  Exports     = [cerl:c_fname(FName, Arity)
+                 || {{FName, Arity}} <- ets:tab2list(ExportsTable)
+                ],
 
-  ClojureAttr = {attribute, 0, clojure, true},
-  OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
+  ClojureAttr = {cerl:c_atom(clojure), cerl:abstract(true)},
+  OnLoadAttr  = {cerl:c_atom(on_load), cerl:abstract([{?ON_LOAD_FUNCTION, 0}])},
 
   Attrs       = [X || {X} <- ets:tab2list(AttrsTable)],
-  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
+  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
 
+  AllAttrs    = [FileAttr, VarsAttr | UniqueAttrs],
+
+  OnLoadName  = cerl:c_fname(?ON_LOAD_FUNCTION, 0),
   OnLoadFun   = on_load_function(OnLoadTable),
   Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
+  Defs        = [{OnLoadName, OnLoadFun} | Funs],
 
-  [ ModuleAttr, FileAttr, VarsAttr, ExportAttr |
-    UniqueAttrs ++ Rest ++ [OnLoadFun | Funs]
-  ].
+  cerl:c_module(cerl:c_atom(Name), Exports, AllAttrs, Defs).
 
 %% @private
 on_load_function(OnLoadTable) ->
-  Exprs = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
-            []       -> [{atom, 0, ok}];
-            ExprsTmp -> ExprsTmp
-          end,
-  Clause = {clause, 0, [], [], Exprs},
-  {function, 0, ?ON_LOAD_FUNCTION, 0, [Clause]}.
+  Body = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
+           []       -> cerl:c_atom(ok);
+           [Head | Tail]  ->
+             SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
+             lists:foldl(SeqFun, Head, Tail)
+         end,
+  cerl:c_fun([], Body).
 
 -spec get(atom(), module()) -> any().
 get(Table, Id) ->

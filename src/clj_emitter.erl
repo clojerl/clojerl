@@ -107,7 +107,7 @@ ast(#{op := def} = Expr, State) ->
   ValName = 'clojerl.Var':val_function(Var),
 
   ok      = clj_module:ensure_loaded(Module, file_from(Env)),
-  VarAst  = erl_parse:abstract(Var),
+  VarAst  = cerl:abstract(Var),
   VarAnno = anno_from(Env),
 
   {ValAst, State1} =
@@ -126,8 +126,7 @@ ast(#{op := def} = Expr, State) ->
         end
     end,
 
-  ValClause = cerl:ann_c_clause(VarAnno, [], ValAst),
-  ValFunAst = function_form(ValName, VarAnno, [ValClause]),
+  ValFunAst = function_form(ValName, VarAnno, [], ValAst),
 
   clj_module:add_vars(Module, [Var]),
   clj_module:add_functions(Module, [ValFunAst]),
@@ -285,7 +284,9 @@ ast(#{op := method} = Expr, State0) ->
    } = Expr,
 
   {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
-  FunAst = function_form(sym_to_kw(Name), anno_from(Env), [ClauseAst]),
+  Args = cerl:clause_pats(ClauseAst),
+  Body = cerl:clause_body(ClauseAst),
+  FunAst = function_form(sym_to_kw(Name), anno_from(Env), Args, Body),
 
   push_ast(FunAst, State1);
 %%------------------------------------------------------------------------------
@@ -820,9 +821,9 @@ ast(#{op := Unknown}, _State) ->
 
 -spec list_ast(list()) -> ast().
 list_ast([]) ->
-  {nil, 0};
+  cerl:c_nil();
 list_ast(List) when is_list(List) ->
-  list_ast(List, {nil, 0}).
+  list_ast(List, cerl:c_nil()).
 
 -spec list_ast(list(), any()) -> ast().
 list_ast(Heads, Tail) when is_list(Heads) ->
@@ -832,7 +833,7 @@ list_ast(Heads, Tail) when is_list(Heads) ->
 do_list_ast([], Tail) ->
   Tail;
 do_list_ast([H | Hs], Tail) ->
-  {cons, 0, H, do_list_ast(Hs, Tail)}.
+  cerl:c_cons(H, do_list_ast(Hs, Tail)).
 
 %% @doc Replaces the first argument of a function with a pattern match.
 %%
@@ -857,10 +858,7 @@ expand_first_argument( {function, _, _, _, [ClauseAst]} = Function
 constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
   TupleAst    = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
-  BodyAst     = [TupleAst],
-  ClausesAsts = [{clause, 0, FieldsAsts, [], BodyAst}],
-
-  function_form(?CONSTRUCTOR, Anno, ClausesAsts).
+  function_form(?CONSTRUCTOR, Anno, FieldsAsts, TupleAst).
 
 %% @doc Builds an accessor function for the specified type and field.
 %%
@@ -868,10 +866,8 @@ constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
 -spec accessor_function(atom(), ast()) -> ast().
 accessor_function(Typename, {var, Anno, FieldName} = FieldAst) ->
   TupleAst     = type_tuple(Typename, [FieldAst], [], match),
-  BodyAst      = [FieldAst],
-  ClausesAsts  = [{clause, Anno, [TupleAst], [], BodyAst}],
   AccessorName = field_fun_name(FieldName),
-  function_form(AccessorName, Anno, ClausesAsts).
+  function_form(AccessorName, Anno, [TupleAst], FieldAst).
 
 -spec create_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 create_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
@@ -919,11 +915,7 @@ create_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   InfoAst      = {atom, Anno, undefined},
   TupleAst     = type_tuple_ast(Typename, FieldsMapAst, InfoAst),
 
-  BodyAst      = [TupleAst],
-
-  ClausesAsts  = [{clause, Anno, [MapVarAst], [], BodyAst}],
-
-  function_form(create, Anno, ClausesAsts).
+  function_form(create, Anno, [MapVarAst], TupleAst).
 
 -spec field_fun_name(atom()) -> atom().
 field_fun_name(FieldName) when is_atom(FieldName) ->
@@ -967,11 +959,10 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
     ]
   }.
 
--spec function_form(atom(), erl_anno:anno(), [ast()]) -> ast().
-function_form(Name, Anno, [Clause | _] = _Clauses) when is_atom(Name) ->
-  Pats     = cerl:clause_pats(Clause),
-  EvalName = cerl:c_fname(Name, length(Pats)),
-  EvalFun  = cerl:ann_c_fun(Anno, [], []),
+-spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) -> cerl:cerl().
+function_form(Name, Anno, Args, Body) when is_atom(Name) ->
+  EvalName = cerl:c_fname(Name, 0),
+  EvalFun  = cerl:ann_c_fun(Anno, Args, Body),
   {EvalName, EvalFun}.
 
 -spec function_signature(ast()) -> {atom(), arity()}.
@@ -1057,7 +1048,9 @@ add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
-        FunAst = function_form(Name, Anno, ClausesAst),
+        %% TODO: clauses need to be wrapped up in a case and the Args should
+        %% be calculated based on that.
+        FunAst = function_form(Name, Anno, _Args = [], ClausesAst),
 
         clj_module:add_functions(Module, [FunAst]),
 
@@ -1152,13 +1145,15 @@ do_shadow_depth(_, Depth) ->
 -spec var_val_function(ast(), ast(), erl_anno:anno()) -> ast().
 var_val_function(Val, VarAst, Anno) ->
   TestAst            = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
-  UndefinedAtom      = {atom, Anno, undefined},
-  UndefinedClauseAst = {clause, Anno, [UndefinedAtom], [], [Val]},
-  XVar               = {var, Anno, x},
-  TupleAst           = {tuple, Anno, [{atom, Anno, ok}, XVar]},
-  ValueClauseAst     = {clause, Anno, [TupleAst], [], [XVar]},
 
-  {'case', Anno, TestAst, [UndefinedClauseAst, ValueClauseAst]}.
+  UndefinedAtom      = cerl:ann_c_atom(Anno, undefined),
+  UndefinedClauseAst = cerl:ann_c_clause(Anno, [UndefinedAtom], Val),
+
+  XVar               = cerl:ann_c_var(Anno, x),
+  TupleAst           = cerl:ann_c_tuple(Anno, [cerl:c_atom(ok), XVar]),
+  ValueClauseAst     = cerl:ann_c_clause(Anno, [TupleAst], XVar),
+
+  cerl:ann_c_case(Anno, TestAst, [UndefinedClauseAst, ValueClauseAst]).
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->

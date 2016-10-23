@@ -141,7 +141,7 @@ eval(Form, Opts, Env) ->
   {Exprs, Forms, Env1} = run_monitored(DoEval),
 
   lists:foreach(compile_forms_fun(Opts), Forms),
-  Value = lists:last(eval_expressions(Exprs)),
+  Value = eval_expressions(Exprs),
 
   {Value, Env1}.
 
@@ -295,19 +295,18 @@ compile_forms_fun(Opts) ->
   atom() | undefined.
 compile_forms([], _) ->
   undefined;
-compile_forms(Forms, Opts) ->
-  ok       = maybe_output_erl(Forms, Opts),
-  ErlFlags = maps:get(erl_flags, Opts, []),
+compile_forms(Module, Opts) ->
+  %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
+  ok       = maybe_output_erl(Module, Opts),
+  ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
 
-  case compile:forms(Forms, [from_core, binary | ErlFlags]) of
-    {ok, Name, BeamBinary} ->
-      Name = cerl:atom_val(cerl:module_name(Forms)),
-      BeamPath = maybe_output_beam(Name, BeamBinary, Opts),
-      {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
-      Name;
-    Error ->
-      error(Error)
-  end.
+  {ok, _, BeamBinary} = compile:forms(Module, ErlFlags),
+  Name     = cerl:atom_val(cerl:module_name(Module)),
+  BeamPath = maybe_output_beam(Name, BeamBinary, Opts),
+  {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
+  Name.
+
+-define(CERL_EVAL_MODULE, cerl_eval).
 
 -spec eval_expressions([erl_parse:abstract_expr()]) -> [any()].
 eval_expressions(Expressions) ->
@@ -317,16 +316,14 @@ eval_expressions(Expressions) ->
   CurrentNsAtom = erlang:binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
   ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom)
                    || Expr <- Expressions],
-  %% {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
-  %% Values.
 
   EvalModule = eval_module(ReplacedExprs),
-  io:format("~s~n", [core_pp:format(EvalModule)]),
-  {ok, _, Binary} = compile:forms(EvalModule, [from_core, load]),
-  code:load_binary(eval_module, "", Binary),
-  Value = eval_module:eval(),
-  code:purge(eval_module),
-  code:delete(eval_module),
+  %% io:format("~s~n", [core_pp:format(EvalModule)]),
+  {ok, _, Binary} = compile:forms(EvalModule, [from_core]),
+  code:load_binary(?CERL_EVAL_MODULE, "", Binary),
+  Value = cerl_eval:eval(),
+  code:purge(?CERL_EVAL_MODULE),
+  code:delete(?CERL_EVAL_MODULE),
   Value.
 
 -spec eval_module([cerl:cerl()]) -> [any()].
@@ -340,9 +337,9 @@ eval_module(Expressions) ->
   EvalFun    = cerl:c_fun([], EvalBody),
   Exports    = [EvalName],
   Attributes = [],
-  EvalDef = {EvalName, EvalFun},
-  Definitions = [EvalDef],
-  cerl:c_module(cerl:c_atom(eval_module), Exports, Attributes, Definitions).
+  Defs       = [{EvalName, EvalFun}],
+  ModuleName = cerl:c_atom(?CERL_EVAL_MODULE),
+  cerl:c_module(ModuleName, Exports, Attributes, Defs).
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().
 ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).
