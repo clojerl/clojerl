@@ -277,7 +277,7 @@ emit_eval_form(Form, Env) ->
   Env1  = clj_analyzer:analyze(Env, Form),
   Env2  = clj_emitter:emit(Env1),
   {Exprs, Env3} = clj_emitter:remove_state(Env2),
-  Value = lists:last(eval_expressions(Exprs)),
+  Value = eval_expressions(Exprs),
   clj_env:put(Env3, eval, Value).
 
 -spec compile_forms_fun(options()) -> function().
@@ -299,8 +299,9 @@ compile_forms(Forms, Opts) ->
   ok       = maybe_output_erl(Forms, Opts),
   ErlFlags = maps:get(erl_flags, Opts, []),
 
-  case compile:forms(Forms, ErlFlags) of
+  case compile:forms(Forms, [from_core, binary | ErlFlags]) of
     {ok, Name, BeamBinary} ->
+      Name = cerl:atom_val(cerl:module_name(Forms)),
       BeamPath = maybe_output_beam(Name, BeamBinary, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
       Name;
@@ -316,8 +317,32 @@ eval_expressions(Expressions) ->
   CurrentNsAtom = erlang:binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
   ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom)
                    || Expr <- Expressions],
-  {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
-  Values.
+  %% {Values, _}   = erl_eval:expr_list(ReplacedExprs, []),
+  %% Values.
+
+  EvalModule = eval_module(ReplacedExprs),
+  io:format("~s~n", [core_pp:format(EvalModule)]),
+  {ok, _, Binary} = compile:forms(EvalModule, [from_core, load]),
+  code:load_binary(eval_module, "", Binary),
+  Value = eval_module:eval(),
+  code:purge(eval_module),
+  code:delete(eval_module),
+  Value.
+
+-spec eval_module([cerl:cerl()]) -> [any()].
+eval_module(Expressions) ->
+  EvalName   = cerl:c_fname(eval, 0),
+  EvalBody   = case Expressions of
+                 [] -> cerl:c_nil();
+                 [Expr] -> Expr;
+                 [FirstExpr | RestExpr] -> cerl:c_seq(FirstExpr, RestExpr)
+               end,
+  EvalFun    = cerl:c_fun([], EvalBody),
+  Exports    = [EvalName],
+  Attributes = [],
+  EvalDef = {EvalName, EvalFun},
+  Definitions = [EvalDef],
+  cerl:c_module(cerl:c_atom(eval_module), Exports, Attributes, Definitions).
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().
 ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).

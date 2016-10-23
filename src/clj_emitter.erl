@@ -44,7 +44,7 @@ initial_state() ->
 
 -spec ast(map(), state()) -> {[ast()], state()}.
 ast(#{op := constant, form := Form, env := Env}, State) ->
-  Ast = erl_parse:abstract(Form, anno_from(Env)),
+  Ast = cerl:ann_abstract(anno_from(Env), Form),
   push_ast(Ast, State);
 ast(#{op := quote, expr := Expr}, State) ->
   ast(Expr, State);
@@ -63,13 +63,13 @@ ast(#{op := var} = Expr, State) ->
 ast(#{op := binding} = Expr, State) ->
   #{env := Env} = Expr,
   NameBin = get_lexical_rename(Expr, State),
-  Ast     = {var, anno_from(Env), binary_to_atom(NameBin, utf8)},
+  Ast     = cerl:ann_c_var(anno_from(Env), binary_to_atom(NameBin, utf8)),
 
   push_ast(Ast, State);
 ast(#{op := local} = Expr, State) ->
   #{env := Env} = Expr,
   NameBin = get_lexical_rename(Expr, State),
-  Ast     = {var, anno_from(Env), binary_to_atom(NameBin, utf8)},
+  Ast     = cerl:ann_c_var(anno_from(Env), binary_to_atom(NameBin, utf8)),
 
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
@@ -78,7 +78,6 @@ ast(#{op := local} = Expr, State) ->
 ast(#{op := do} = Expr, State) ->
   #{ statements := StatementsExprs
    , ret        := ReturnExpr
-   , env        := Env
    } = Expr,
 
   StmsCount = length(StatementsExprs),
@@ -87,16 +86,13 @@ ast(#{op := do} = Expr, State) ->
                           ),
 
   {Ret, State2} = pop_ast(ast(ReturnExpr, State1)),
-  case maps:get(top_level, Expr, false) of
-    false ->
-      Ast = case Stms of
-              [] -> Ret;
-              _  -> {block, anno_from(Env), Stms ++ [Ret]}
-            end,
-      push_ast(Ast, State2);
-    true ->
-      lists:foldl(fun push_ast/2, State2, Stms ++ [Ret])
-  end;
+  Ast = case Stms of
+          [] -> Ret;
+          [Head | Tail]  ->
+            SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
+            lists:foldl(SeqFun, Head, Tail ++ [Ret])
+        end,
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% def
 %%------------------------------------------------------------------------------
@@ -130,7 +126,7 @@ ast(#{op := def} = Expr, State) ->
         end
     end,
 
-  ValClause = {clause, VarAnno, [], [], [ValAst]},
+  ValClause = cerl:ann_c_clause(VarAnno, [], ValAst),
   ValFunAst = function_form(ValName, VarAnno, [ValClause]),
 
   clj_module:add_vars(Module, [Var]),
@@ -399,18 +395,6 @@ ast(#{op := fn} = Expr, State) ->
   FunAst       = {named_fun, Anno, NameAtom, ClausesAsts},
 
   push_ast(FunAst, State2);
-ast(#{op := erl_fun, invoke := true} = Expr, State) ->
-  #{ module   := Module
-   , function := Function
-   , env      := Env
-   } = Expr,
-
-  Anno        = anno_from(Env),
-  ModuleAst   = {atom, Anno, Module},
-  FunctionAst = {atom, Anno, Function},
-  Ast         = {remote, Anno, ModuleAst, FunctionAst},
-
-  push_ast(Ast, State);
 ast(#{op := erl_fun} = Expr, State) ->
   #{ module   := Module
    , function := Function
@@ -429,12 +413,14 @@ ast(#{op := erl_fun} = Expr, State) ->
                       ),
 
   Anno = anno_from(Env),
-  Ast  = {'fun', Anno, { function
-                       , {atom, Anno, Module}
-                       , {atom, Anno, Function}
-                       , {integer, Anno, Arity}
-                       }
-         },
+  Ast  = call_mfa( erlang
+                 , make_fun
+                 , [ cerl:ann_c_atom(Anno, Module)
+                   , cerl:ann_c_atom(Anno, Function)
+                   , cerl:ann_c_int(Anno, Arity)
+                   ]
+                 , Anno
+                 ),
 
   push_ast(Ast, State);
 ast(#{op := invoke} = Expr, State) ->
@@ -480,11 +466,16 @@ ast(#{op := invoke} = Expr, State) ->
         end,
 
       push_ast(Ast, State1);
-    #{op := erl_fun} ->
-      {FunAst, State2} = pop_ast(ast(FExpr, State1)),
-      Ast = {call, Anno, FunAst, Args},
+    #{ op := erl_fun
+     , invoke := true
+     , module   := Module
+     , function := Function
+     , env      := Env
+     } ->
 
-      push_ast(Ast, State2);
+      Anno = anno_from(Env),
+      Ast  = call_mfa(Module, Function, Args, Anno),
+      push_ast(Ast, State);
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),
@@ -977,9 +968,11 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
   }.
 
 -spec function_form(atom(), erl_anno:anno(), [ast()]) -> ast().
-function_form(Name, Anno, [Clause | _] = Clauses) when is_atom(Name) ->
-  {clause, _, Args, _, _} = Clause,
-  {function, Anno, Name, length(Args), Clauses}.
+function_form(Name, Anno, [Clause | _] = _Clauses) when is_atom(Name) ->
+  Pats     = cerl:clause_pats(Clause),
+  EvalName = cerl:c_fname(Name, length(Pats)),
+  EvalFun  = cerl:ann_c_fun(Anno, [], []),
+  {EvalName, EvalFun}.
 
 -spec function_signature(ast()) -> {atom(), arity()}.
 function_signature({function, _, Name, Arity, _}) ->
@@ -1034,15 +1027,11 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
 
 -spec call_mfa(module(), atom(), list(), erl_anno:anno()) -> ast().
 call_mfa(Module, Function, Args, Anno) ->
-  { call
-  , Anno
-  , {remote, Anno, {atom, Anno, Module}, {atom, Anno, Function}}
-  , Args
-  }.
+  cerl:ann_c_call(Anno, cerl:c_atom(Module), cerl:c_atom(Function), Args).
 
 -spec call_fa(atom(), list(), erl_anno:anno()) -> ast().
 call_fa(Function, Args, Anno) ->
-  {call, Anno, {atom, Anno, Function}, Args}.
+  cerl:ann_c_apply(Anno, cerl:c_atom(Function), Args).
 
 -spec group_methods([map()]) -> #{integer() => [map()]}.
 group_methods(Methods) ->
@@ -1178,15 +1167,11 @@ file_from(Env) ->
 -spec anno_from(clj_env:env()) -> erl_anno:anno().
 anno_from(Env) ->
   case clj_env:location(Env) of
-    undefined -> 0;
+    undefined -> [0];
     Location ->
       Line   = maps:get(line, Location, 0),
       Column = maps:get(column, Location, 1),
-      Anno   = [{location, {Line, Column}}],
-      case maps:get(file, Location, <<>>) of
-        undefined -> Anno;
-        File      -> [{file, binary_to_list(File)} | Anno]
-      end
+      [{Line, Column}]
   end.
 
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().

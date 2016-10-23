@@ -560,15 +560,9 @@ is_attribute_fun(Name) ->
 is_function({function, _, _, _, _}) -> true;
 is_function(_) -> false.
 
--spec function_name(erl_parse:abstract_form()) -> atom().
-function_name({function, _, Name, _, _}) -> Name.
-
--spec function_arity(erl_parse:abstract_form()) -> integer().
-function_arity({function, _, _, Arity, _}) -> Arity.
-
--spec function_id(erl_parse:abstract_form()) -> function_id().
-function_id(Function) ->
-  {function_name(Function), function_arity(Function)}.
+-spec function_id({cerl:cerl(), cerl:cerl()}) -> function_id().
+function_id({Name, _}) ->
+  {cerl:fname_id(Name), cerl:fname_arity(Name)}.
 
 -spec flat_exports([erl_parse:abstract_form()]) ->
   [{atom(), non_neg_integer()}].
