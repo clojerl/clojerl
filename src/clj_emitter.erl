@@ -155,7 +155,7 @@ ast(#{op := type} = Expr, State) ->
    } = Expr,
 
   TypeModule = sym_to_kw(TypeSym),
-  Ast        = {atom, anno_from(Env), TypeModule},
+  Ast        = cerl:ann_c_atom(anno_from(Env), TypeModule),
 
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
@@ -390,12 +390,22 @@ ast(#{op := fn} = Expr, State) ->
   State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
   {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
 
-  Anno        = anno_from(Env),
-  Name         = clj_core:name(NameSym),
-  NameAtom     = binary_to_atom(Name, utf8),
-  FunAst       = {named_fun, Anno, NameAtom, ClausesAsts},
+  Anno     = anno_from(Env),
+  Name     = clj_core:name(NameSym),
+  NameAtom = binary_to_atom(Name, utf8),
 
-  push_ast(FunAst, State2);
+  FName    = cerl:ann_c_fname(Anno, NameAtom, 1),
+  FunVar   = cerl:c_var(NameAtom),
+
+  ArgsVar  = cerl:c_var(args),
+  CaseAst  = cerl:ann_c_case(Anno, ArgsVar, ClausesAsts),
+  LetAst   = cerl:ann_c_let(Anno, [FunVar], FName, CaseAst),
+  FunAst   = cerl:ann_c_fun(Anno, [ArgsVar], LetAst),
+  Defs     = [{FName, FunAst}],
+
+  Ast      = cerl:ann_c_letrec(Anno, Defs, FName),
+
+  push_ast(Ast, State2);
 ast(#{op := erl_fun} = Expr, State) ->
   #{ module   := Module
    , function := Function
@@ -559,7 +569,7 @@ ast(#{op := tuple} = Expr, State) ->
                            , length(ItemsExprs)
                            ),
 
-  Ast = {tuple, anno_from(Env), Items},
+  Ast = cerl:ann_c_tuple(anno_from(Env), Items),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% if
@@ -961,7 +971,7 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
 
 -spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) -> cerl:cerl().
 function_form(Name, Anno, Args, Body) when is_atom(Name) ->
-  EvalName = cerl:c_fname(Name, 0),
+  EvalName = cerl:c_fname(Name, length(Args)),
   EvalFun  = cerl:ann_c_fun(Anno, Args, Body),
   {EvalName, EvalFun}.
 
@@ -994,9 +1004,8 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ParamsExprs)
                           , length(ParamsExprs)
                           ),
-  Guards         = [],
+  Guards         = cerl:c_atom(true),
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
-  SplicedBody    = splice_body(Body),
 
   ParamCount = length(ParamsExprs),
   Args1 = case ClauseFor of
@@ -1010,7 +1019,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(Args)]
           end,
 
-  Clause = {clause, anno_from(Env), Args1, Guards, SplicedBody},
+  Clause = cerl:ann_c_clause(anno_from(Env), Args1, Guards, Body),
 
   State3 = remove_lexical_renames_scope(State2),
 
@@ -1048,9 +1057,8 @@ add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
-        %% TODO: clauses need to be wrapped up in a case and the Args should
-        %% be calculated based on that.
-        FunAst = function_form(Name, Anno, _Args = [], ClausesAst),
+        {Vars, CaseAst} = case_from_clauses(Anno, ClausesAst),
+        FunAst = function_form(Name, Anno, Vars, CaseAst),
 
         clj_module:add_functions(Module, [FunAst]),
 
@@ -1058,6 +1066,14 @@ add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
     end,
 
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
+
+case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
+  Patterns = cerl:clause_pats(ClauseAst),
+  Vars = [ cerl:c_var(list_to_atom("_cor" ++ integer_to_list(N)))
+           || N <- lists:seq(0, length(Patterns) - 1)
+         ],
+  CaseAst = cerl:ann_c_case(Anno, cerl:c_values(Vars), ClausesAst),
+  {Vars, CaseAst}.
 
 %% Push & pop asts
 
@@ -1163,10 +1179,7 @@ file_from(Env) ->
 anno_from(Env) ->
   case clj_env:location(Env) of
     undefined -> [0];
-    Location ->
-      Line   = maps:get(line, Location, 0),
-      Column = maps:get(column, Location, 1),
-      [{Line, Column}]
+    Location  -> [maps:get(line, Location, 0)]
   end.
 
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().

@@ -299,7 +299,9 @@ compile_forms(Module, Opts) ->
   %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   ok       = maybe_output_erl(Module, Opts),
   ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
+
   {ok, _, BeamBinary} = compile:forms(Module, ErlFlags),
+
   Name     = cerl:atom_val(cerl:module_name(Module)),
   BeamPath = maybe_output_beam(Name, add_core_code(BeamBinary, Module), Opts),
   {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
@@ -320,13 +322,13 @@ eval_expressions(Expressions) ->
   %% io:format("==== EXPR ====~n~s~n", [ast_to_string(Expressions)]),
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
-  CurrentNsAtom = erlang:binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
+  CurrentNsAtom = binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
   ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom)
                    || Expr <- Expressions],
 
   EvalModule = eval_module(ReplacedExprs),
-  %% io:format("~s~n", [core_pp:format(EvalModule)]),
-  {ok, _, Binary} = compile:forms(EvalModule, [from_core]),
+  %% io:format("========= Eval ========~n~s~n", [core_pp:format(EvalModule)]),
+  {ok, _, Binary} = compile:forms(EvalModule, [clint, from_core]),
   code:load_binary(?CERL_EVAL_MODULE, "", Binary),
   Value = cerl_eval:eval(),
   code:purge(?CERL_EVAL_MODULE),
@@ -335,18 +337,21 @@ eval_expressions(Expressions) ->
 
 -spec eval_module([cerl:cerl()]) -> [any()].
 eval_module(Expressions) ->
-  EvalName   = cerl:c_fname(eval, 0),
-  EvalBody   = case Expressions of
+  FunName = cerl:c_fname(eval, 0),
+  FunBody = case Expressions of
                  [] -> cerl:c_nil();
                  [Expr] -> Expr;
                  [FirstExpr | RestExpr] -> cerl:c_seq(FirstExpr, RestExpr)
                end,
-  EvalFun    = cerl:c_fun([], EvalBody),
-  Exports    = [EvalName],
-  Attributes = [],
-  Defs       = [{EvalName, EvalFun}],
-  ModuleName = cerl:c_atom(?CERL_EVAL_MODULE),
-  cerl:c_module(ModuleName, Exports, Attributes, Defs).
+  Fun     = cerl:c_fun([], FunBody),
+
+  {InfoExports, InfoFuns} = clj_module:module_info_funs(?CERL_EVAL_MODULE),
+
+  Exports = [FunName | InfoExports],
+  Attrs   = [],
+  Defs    = [{FunName, Fun} | InfoFuns],
+  Name    = cerl:c_atom(?CERL_EVAL_MODULE),
+  cerl:c_module(Name, Exports, Attrs, Defs).
 
 -spec ast_to_string([erl_parse:abstract_form()]) -> string().
 ast_to_string(Forms) -> erl_prettypr:format(erl_syntax:form_list(Forms)).

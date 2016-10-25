@@ -23,6 +23,8 @@
 
         , is_clojure/1
         , is_protocol/1
+
+        , module_info_funs/1
         ]).
 
 %% gen_server callbacks
@@ -377,20 +379,18 @@ is_loaded(Name) ->
 build_fake_fun(Module, Function, Arity) ->
   {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
 
-  {function, _, _, _, Clauses} =
-    replace_calls(FunctionAst, Module#module.name),
+  {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),
   Int = erlang:unique_integer([positive]),
   FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
 
-  ModuleAst  = {attribute, 0, module, FakeModuleName},
-  FileAst    = {attribute, 0, file, {Module#module.source, 0}},
-  ExportAst  = {attribute, 0, export, [{Function, Arity}]},
-  ClojureAst = {attribute, 0, clojure, true},
-  FunAst     = {function, 0, Function, Arity, Clauses},
-  Forms      = [ModuleAst, FileAst, ExportAst, ClojureAst, FunAst],
+  ModuleName = cerl:c_atom(FakeModuleName),
+  Exports    = [FName],
+  File       = {cerl:c_atom(file), cerl:c_atom(Module#module.source)},
+  Clojure    = {cerl:c_atom(clojure), cerl:c_atom(true)},
+  FakeModule = cerl:c_module(ModuleName, Exports, [Clojure, File], [Fun]),
 
-  CompileOpts = #{erl_flags => [binary]},
-  clj_compiler:compile_forms(Forms, CompileOpts),
+  CompileOpts = #{erl_flags => [from_core, binary]},
+  clj_compiler:compile_forms(FakeModule, CompileOpts),
 
   save(Module#module.fake_modules, {FakeModuleName}),
 
@@ -454,32 +454,33 @@ to_forms(#module{} = Module) ->
   cerl:c_module(cerl:c_atom(Name), Exports, AllAttrs, Defs).
 
 add_module_info_functions(Module) ->
-  #module{ name    = Name
-         } = Module,
+  {_, Funs} = module_info_funs(Module#module.name),
+  add_functions(Module, Funs),
+  add_exports(Module, [{module_info, 0}, {module_info, 1}]).
 
-  ModuleInfoName0 = cerl:c_fname(?MODULE_INFO, 0),
-  ModuleInfoFun0  = cerl:c_fun( []
-                              , cerl:c_call( cerl:c_atom(erlang)
-                                           , cerl:c_atom(get_module_info)
-                                           , [cerl:c_atom(Name)]
-                                           )
-                              ),
+-spec module_info_funs(module()) -> {[cerl:cerl()], [cerl:cerl()]}.
+module_info_funs(Name) ->
+  InfoName0 = cerl:c_fname(?MODULE_INFO, 0),
+  InfoFun0  = cerl:c_fun( []
+                        , cerl:c_call( cerl:c_atom(erlang)
+                                     , cerl:c_atom(get_module_info)
+                                     , [cerl:c_atom(Name)]
+                                     )
+                        ),
 
-  ModuleInfoName1 = cerl:c_fname(?MODULE_INFO, 1),
+  InfoName1 = cerl:c_fname(?MODULE_INFO, 1),
   Arg             = cerl:c_var(x),
-  ModuleInfoFun1  = cerl:c_fun( [Arg]
-                              , cerl:c_call( cerl:c_atom(erlang)
-                                           , cerl:c_atom(get_module_info)
-                                           , [cerl:c_atom(Name), Arg]
-                                           )
-                              ),
+  InfoFun1  = cerl:c_fun( [Arg]
+                        , cerl:c_call( cerl:c_atom(erlang)
+                                     , cerl:c_atom(get_module_info)
+                                     , [cerl:c_atom(Name), Arg]
+                                     )
+                        ),
 
-  add_functions(Module, [ {ModuleInfoName0, ModuleInfoFun0}
-                        , {ModuleInfoName1, ModuleInfoFun1}
-                        ]),
-  add_exports(Module, [{module_info, 0}, {module_info, 1}]),
-  ok.
-
+  { [InfoName0, InfoName1]
+  , [ {InfoName0, InfoFun0}
+    , {InfoName1, InfoFun1}
+    ]}.
 
 %% @private
 on_load_function(OnLoadTable) ->
