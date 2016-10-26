@@ -168,17 +168,24 @@ replace_calls( #c_call{ module = ModuleAst
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
-replace_calls(#c_apply{ op   = FunctionAst
+replace_calls(#c_apply{ op   = #c_var{name = {_, _}} = FNameAst
                       , args = ArgsAsts
                       , anno = Anno
                       }
              , Module) ->
-  ModuleAst = cerl:ann_c_atom(Anno, Module),
-  fake_fun_call(Anno, Module, ModuleAst, FunctionAst, ArgsAsts);
+  case lists:member(local, Anno) of
+    true ->
+      ArgsAsts1 = replace_calls(ArgsAsts, Module),
+      cerl:ann_c_apply(Anno, FNameAst, ArgsAsts1);
+    false ->
+      ModuleAst   = cerl:ann_c_atom(Anno, Module),
+      FunctionAst = cerl:ann_c_atom(Anno, cerl:fname_id(FNameAst)),
+      fake_fun_call(Anno, Module, ModuleAst, FunctionAst, ArgsAsts)
+  end;
 replace_calls(Ast, Module) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
-replace_calls(Ast, Module) when is_list(Ast) ->
-  [replace_calls(Item, Module) || Item <- Ast];
+replace_calls(Asts, Module) when is_list(Asts) ->
+  [replace_calls(Item, Module) || Item <- Asts];
 replace_calls(Ast, _) ->
   Ast.
 

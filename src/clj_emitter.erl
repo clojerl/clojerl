@@ -395,9 +395,9 @@ ast(#{op := fn} = Expr, State) ->
   NameAtom = binary_to_atom(Name, utf8),
 
   FName    = cerl:ann_c_fname(Anno, NameAtom, 1),
-  FunVar   = cerl:c_var(NameAtom),
+  FunVar   = cerl:ann_c_var(Anno, NameAtom),
 
-  ArgsVar  = cerl:c_var(args),
+  ArgsVar  = cerl:ann_c_var(Anno, args),
   CaseAst  = cerl:ann_c_case(Anno, ArgsVar, ClausesAsts),
   LetAst   = cerl:ann_c_let(Anno, [FunVar], FName, CaseAst),
   FunAst   = cerl:ann_c_fun(Anno, [ArgsVar], LetAst),
@@ -586,13 +586,11 @@ ast(#{op := 'if'} = Expr, State) ->
   {Test, State1} = pop_ast(ast(TestExpr, State)),
   TrueAtom       = {atom, Anno, true},
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  SplicedThenAst    = splice_body(ThenAst),
-  TrueClause     = {clause, Anno, [TrueAtom], [], SplicedThenAst},
+  TrueClause     = {clause, Anno, [TrueAtom], [], ThenAst},
 
   FalseAtom      = {atom, Anno, false},
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  SplicedElseAst    = splice_body(ElseAst),
-  FalseClause    = {clause, Anno, [FalseAtom], [], SplicedElseAst},
+  FalseClause    = {clause, Anno, [FalseAtom], [], ElseAst},
 
   TestBoolean    = call_mfa(clj_core, boolean, [Test], Anno),
   Ast = {'case', Anno, TestBoolean, [TrueClause, FalseClause]},
@@ -614,8 +612,7 @@ ast(#{op := 'case'} = Expr, State) ->
                   AnnoPattern = anno_from(EnvPattern),
                   {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
                   {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
-                  SplicedBody          = splice_body(Body),
-                  ClauseAst = {clause, AnnoPattern, [Pattern], [], SplicedBody},
+                  ClauseAst = {clause, AnnoPattern, [Pattern], [], Body},
                   push_ast(ClauseAst, StateAcc2)
               end,
 
@@ -666,10 +663,9 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   State1            = lists:foldl(MatchAstFun, State, BindingsExprs),
   {Matches, State2} = pop_ast(State1, length(BindingsExprs)),
   {Body,    State3} = pop_ast(ast(BodyExpr, State2)),
-  SplicedBody       = splice_body(Body),
   Ast = case Op of
           'let' ->
-            Clause = {clause, Anno, [], [], Matches ++ SplicedBody},
+            Clause = {clause, Anno, [], [], Matches ++ Body},
             FunAst = {'fun', Anno, {clauses, [Clause]}},
             {call, Anno, FunAst, []};
           loop  ->
@@ -680,7 +676,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             StateTmp = lists:foldl(fun ast/2, State3, BindingsExprs),
             {ArgsAsts, _} = pop_ast(StateTmp, length(BindingsExprs)),
 
-            LoopClause = {clause, Anno, ArgsAsts, [], SplicedBody},
+            LoopClause = {clause, Anno, ArgsAsts, [], Body},
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
@@ -753,31 +749,61 @@ ast(#{op := 'try'} = Expr, State) ->
 
   Anno = anno_from(Env),
 
-  {Body, State1} = pop_ast(ast(BodyExpr, State)),
-  SplicedBody    = splice_body(Body),
-
+  {BodyAst, State1} = pop_ast(ast(BodyExpr, State)),
   {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
                              , length(CatchesExprs)
                              ),
+
+  [_, Y, Z] = CatchVarsAsts = [ new_c_var(Anno, "clj")
+                              , new_c_var(Anno, "clj")
+                              , new_c_var(Anno, "clj")
+                              ],
+  RaiseAst          = cerl:c_primop(cerl:c_atom(raise), [Z, Y]),
+
+  CatchAllClause    = cerl:ann_c_clause(Anno, CatchVarsAsts, RaiseAst),
+  { ClausesVars
+  , CaseAst
+  } = case_from_clauses(Anno, Catches ++ [CatchAllClause]),
 
   {Finally, State2} = case FinallyExpr of
                         undefined -> {undefined, State1};
                         _         -> pop_ast(ast(FinallyExpr, State))
                       end,
 
-  After = case Finally of
-            undefined -> [];
-            _         -> [Finally]
-          end,
+  VarAst = new_c_var(Anno, "clj"),
+  TryAst = cerl:ann_c_try( Anno
+                         , BodyAst
+                         , [VarAst]
+                         , VarAst
+                         , ClausesVars
+                         , CaseAst
+                         ),
 
-  TryAst    = {'try', Anno, SplicedBody, [], Catches, After},
+  Ast    =
+    case Finally of
+      undefined -> TryAst;
+      _         ->
+        %% after function
+        FinallyName     = cerl:var_name(new_c_var(Anno, "finally")),
+        FinallyFName    = cerl:ann_c_fname(Anno, FinallyName, 0),
+        FinallyFunAst   = cerl:ann_c_fun(Anno, [], Finally),
+        ApplyFinallyAst = cerl:ann_c_apply([local | Anno], FinallyFName, []),
 
-  %% We need to wrap everything in a fun to create a new variable scope.
-  ClauseAst = {clause, Anno, [], [], [TryAst]},
-  FunAst    = {'fun', Anno, {clauses, [ClauseAst]}},
-  ApplyAst  = {call, Anno, FunAst, []},
+        Defs = [{FinallyFName, FinallyFunAst}],
+        OuterVarAst  = new_c_var(Anno, "clj"),
+        OuterBodyAst = cerl:ann_c_seq(Anno, ApplyFinallyAst, OuterVarAst),
+        HandlerAst   = cerl:ann_c_seq(Anno, ApplyFinallyAst, RaiseAst),
+        OuterTryAst  = cerl:ann_c_try( Anno
+                                     , TryAst
+                                     , [OuterVarAst]
+                                     , OuterBodyAst
+                                     , CatchVarsAsts
+                                     , HandlerAst
+                                     ),
+        cerl:ann_c_letrec(Anno, Defs, OuterTryAst)
+    end,
 
-  push_ast(ApplyAst, State2);
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% catch
 %%------------------------------------------------------------------------------
@@ -791,18 +817,19 @@ ast(#{op := 'catch'} = Expr, State) ->
   Anno              = anno_from(Env),
   ClassAst          = case ErrType of
                         ErrType when is_atom(ErrType) ->
-                          {atom, Anno, ErrType};
+                          cerl:ann_c_atom(Anno, ErrType);
                         ErrType -> % If it's not an atom it's a symbol
                           ErrTypeBin = clj_core:name(ErrType),
-                          {var, Anno, binary_to_atom(ErrTypeBin, utf8)}
+                          cerl:ann_c_var(Anno, binary_to_atom(ErrTypeBin, utf8))
                       end,
   {NameAst, State1} = pop_ast(ast(Local, State)),
-  ClassNameAst      = {tuple, Anno, [ClassAst, NameAst, {var, Anno, '_'}]},
-
+  VarsAsts          = [ ClassAst
+                      , NameAst
+                      , new_c_var(Anno, "clj")
+                      ],
   {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
-  SplicedBody       = splice_body(Body),
 
-  Ast = {clause, Anno, [ClassNameAst], [], SplicedBody},
+  Ast = cerl:ann_c_clause(Anno, VarsAsts, Body),
 
   push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
@@ -1004,7 +1031,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ParamsExprs)
                           , length(ParamsExprs)
                           ),
-  Guards         = cerl:c_atom(true),
+
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
   ParamCount = length(ParamsExprs),
@@ -1019,7 +1046,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(Args)]
           end,
 
-  Clause = cerl:ann_c_clause(anno_from(Env), Args1, Guards, Body),
+  Clause = cerl:ann_c_clause(anno_from(Env), Args1, Body),
 
   State3 = remove_lexical_renames_scope(State2),
 
@@ -1057,7 +1084,7 @@ add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
-        {Vars, CaseAst} = case_from_clauses(Anno, ClausesAst),
+        {Vars, CaseAst} = body_from_clauses(Anno, ClausesAst),
         FunAst = function_form(Name, Anno, Vars, CaseAst),
 
         clj_module:add_functions(Module, [FunAst]),
@@ -1067,18 +1094,20 @@ add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
 
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
 
-
--spec case_from_clauses(cerl:anno(), [cerl:c_clause()]) ->
+-spec body_from_clauses(cerl:anno(), [cerl:c_clause()]) ->
   {[cerl:c_var()], cerl:cerl()}.
-case_from_clauses(_Anno, [ClauseAst]) ->
+body_from_clauses(_Anno, [ClauseAst]) ->
   Patterns = cerl:clause_pats(ClauseAst),
   BodyAst  = cerl:clause_body(ClauseAst),
   {Patterns, BodyAst};
+body_from_clauses(Anno, ClauseAsts) ->
+  case_from_clauses(Anno, ClauseAsts).
+
+-spec case_from_clauses(cerl:anno(), [cerl:c_clause()]) ->
+  {[cerl:c_var()], cerl:cerl()}.
 case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
   Patterns = cerl:clause_pats(ClauseAst),
-  Vars = [ cerl:c_var(list_to_atom("_cor" ++ integer_to_list(N)))
-           || N <- lists:seq(0, length(Patterns) - 1)
-         ],
+  Vars = [new_c_var(Anno, "clj") || _ <- lists:seq(0, length(Patterns) - 1)],
   CaseAst = cerl:ann_c_case(Anno, cerl:c_values(Vars), ClausesAst),
   {Vars, CaseAst}.
 
@@ -1172,7 +1201,7 @@ var_val_function(Val, VarAst, Anno) ->
   UndefinedAtom      = cerl:ann_c_atom(Anno, undefined),
   UndefinedClauseAst = cerl:ann_c_clause(Anno, [UndefinedAtom], Val),
 
-  XVar               = cerl:ann_c_var(Anno, x),
+  XVar               = new_c_var(Anno, "clj"),
   TupleAst           = cerl:ann_c_tuple(Anno, [cerl:c_atom(ok), XVar]),
   ValueClauseAst     = cerl:ann_c_clause(Anno, [TupleAst], XVar),
 
@@ -1192,10 +1221,12 @@ anno_from(Env) ->
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().
 sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).
 
--spec splice_body(ast()) -> [ast()].
-splice_body({block, _, Asts}) -> Asts;
-splice_body(Ast) -> [Ast].
-
 -spec default_compiler_options() -> clj_compiler:opts().
 default_compiler_options() ->
   #{erl_flags => [binary, debug_info], output_dir => "ebin"}.
+
+-spec new_c_var(cerl:ann(), string()) -> cerl:c_var().
+new_c_var(Anno, Prefix) ->
+  N = erlang:unique_integer([positive]),
+  Name = list_to_atom(Prefix ++ integer_to_list(N)),
+  cerl:ann_c_var(Anno, Name).
