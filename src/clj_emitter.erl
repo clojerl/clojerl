@@ -1067,6 +1067,13 @@ add_functions(Module, Name, Anno, #{op := fn, methods := Methods}, State) ->
 
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
 
+
+-spec case_from_clauses(cerl:anno(), [cerl:c_clause()]) ->
+  {[cerl:c_var()], cerl:cerl()}.
+case_from_clauses(_Anno, [ClauseAst]) ->
+  Patterns = cerl:clause_pats(ClauseAst),
+  BodyAst  = cerl:clause_body(ClauseAst),
+  {Patterns, BodyAst};
 case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
   Patterns = cerl:clause_pats(ClauseAst),
   Vars = [ cerl:c_var(list_to_atom("_cor" ++ integer_to_list(N)))
