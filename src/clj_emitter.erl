@@ -584,16 +584,16 @@ ast(#{op := 'if'} = Expr, State) ->
   Anno = anno_from(Env),
 
   {Test, State1} = pop_ast(ast(TestExpr, State)),
-  TrueAtom       = {atom, Anno, true},
+  TrueAtom       = cerl:ann_c_atom(Anno, true),
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause     = {clause, Anno, [TrueAtom], [], ThenAst},
+  TrueClause     = cerl:ann_c_clause(Anno, [TrueAtom], ThenAst),
 
-  FalseAtom      = {atom, Anno, false},
+  FalseAtom      = cerl:ann_c_atom(Anno, false),
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause    = {clause, Anno, [FalseAtom], [], ElseAst},
+  FalseClause    = cerl:ann_c_clause(Anno, [FalseAtom], ElseAst),
 
   TestBoolean    = call_mfa(clj_core, boolean, [Test], Anno),
-  Ast = {'case', Anno, TestBoolean, [TrueClause, FalseClause]},
+  Ast = cerl:ann_c_case(Anno, TestBoolean, [TrueClause, FalseClause]),
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% case
@@ -612,7 +612,7 @@ ast(#{op := 'case'} = Expr, State) ->
                   AnnoPattern = anno_from(EnvPattern),
                   {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
                   {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
-                  ClauseAst = {clause, AnnoPattern, [Pattern], [], Body},
+                  ClauseAst = cerl:ann_c_clause(AnnoPattern, [Pattern], Body),
                   push_ast(ClauseAst, StateAcc2)
               end,
 
@@ -625,17 +625,16 @@ ast(#{op := 'case'} = Expr, State) ->
       _ ->
         EnvDefault  = maps:get(env, DefaultExpr),
         AnnoDefault = anno_from(EnvDefault),
+        DefaultVarAst = new_c_var(AnnoDefault, "any"),
         {DefaultAst, State3_1} = pop_ast(ast(DefaultExpr, State3)),
-        DefaultClause = { clause
-                        , AnnoDefault
-                        , [{var, AnnoDefault, '_'}]
-                        , []
-                        , [DefaultAst]
-                        },
+        DefaultClause = cerl:ann_c_clause( AnnoDefault
+                                         , [DefaultVarAst]
+                                         , DefaultAst
+                                         ),
         {ClausesAsts0 ++ [DefaultClause], State3_1}
     end,
 
-  CaseAst = {'case', anno_from(Env), TestAst, ClausesAsts},
+  CaseAst = cerl:ann_c_case(anno_from(Env), TestAst, ClausesAsts),
 
   push_ast(CaseAst, State4);
 %%------------------------------------------------------------------------------
