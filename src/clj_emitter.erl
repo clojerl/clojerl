@@ -477,8 +477,7 @@ ast(#{op := invoke} = Expr, State) ->
         end,
 
       push_ast(Ast, State1);
-    #{ op := erl_fun
-     , invoke := true
+    #{ op       := erl_fun
      , module   := Module
      , function := Function
      , env      := Env
@@ -651,45 +650,45 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   State00 = add_lexical_renames_scope(State0),
   State = lists:foldl(fun put_lexical_rename/2, State00, BindingsExprs),
 
-  MatchAstFun = fun(BindingExpr = #{init := InitExpr}, StateAcc) ->
-                    #{env := InitEnv}  = BindingExpr,
-                    {Binding, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
-                    {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
-                    MatchAst = {match, anno_from(InitEnv), Binding, Init},
-                    push_ast(MatchAst, StateAcc2)
-                end,
+  MatchAstFun =
+    fun (BindingExpr = #{init := InitExpr}, {Bindings, StateAcc}) ->
+        {Var,  StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
+        {Init, StateAcc2} = pop_ast(ast(InitExpr, StateAcc1)),
+        {[{Var, Init} | Bindings], StateAcc2}
+    end,
 
-  State1            = lists:foldl(MatchAstFun, State, BindingsExprs),
-  {Matches, State2} = pop_ast(State1, length(BindingsExprs)),
-  {Body,    State3} = pop_ast(ast(BodyExpr, State2)),
-  Ast = case Op of
-          'let' ->
-            Clause = {clause, Anno, [], [], Matches ++ Body},
-            FunAst = {'fun', Anno, {clauses, [Clause]}},
-            {call, Anno, FunAst, []};
-          loop  ->
-            %% Emit two nested funs for 'loop' expressions.
-            %% An outer unnamed fun that initializes the bindings
-            %% and an inner named fun that receives the initialized
-            %% values as arguments and on every recur.
-            StateTmp = lists:foldl(fun ast/2, State3, BindingsExprs),
-            {ArgsAsts, _} = pop_ast(StateTmp, length(BindingsExprs)),
+  {Bindings, State1} =
+    lists:foldl(MatchAstFun, {[], State}, BindingsExprs),
+  {Body, State2} = pop_ast(ast(BodyExpr, State1)),
+  FoldFun        = fun ({Var, Init}, BodyAcc) ->
+                       cerl:ann_c_let(Anno, [Var], Init, BodyAcc)
+                   end,
 
-            LoopClause = {clause, Anno, ArgsAsts, [], Body},
+  Ast = case {Op, Bindings} of
+          {'let', []} ->
+            Body;
+          {'let',  _} ->
+            [{Var, Init} | RestBindings] = Bindings,
+            LetInit = cerl:ann_c_let(Anno, [Var], Init, Body),
+            lists:foldl(FoldFun, LetInit, RestBindings);
+          {loop, _} ->
+            Vars       = [V || {V, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
-            LoopFunAst = {named_fun, Anno, LoopIdAtom, [LoopClause]},
-            LoopAppAst = {call, Anno, LoopFunAst, ArgsAsts},
 
-            Clause = {clause, Anno, [], [], Matches ++ [LoopAppAst]},
-            FunAst = {'fun', Anno, {clauses, [Clause]}},
-            {call, Anno, FunAst, []}
+            FNameAst   = cerl:ann_c_fname(Anno, LoopIdAtom, length(Vars)),
+            FunAst     = cerl:ann_c_fun(Anno, Vars, Body),
+            Defs       = [{FNameAst, FunAst}],
+            ApplyAst   = cerl:ann_c_apply([local | Anno], FNameAst, Vars),
+            LetRecAst  = cerl:ann_c_letrec(Anno, Defs, ApplyAst),
+
+            lists:foldl(FoldFun, LetRecAst, Bindings)
         end,
 
-  State4 = remove_lexical_renames_scope(State3),
+  State3 = remove_lexical_renames_scope(State2),
 
-  push_ast(Ast, State4);
+  push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% recur
 %%------------------------------------------------------------------------------
@@ -700,27 +699,25 @@ ast(#{op := recur} = Expr, State) ->
    , env       := Env
    } = Expr,
 
+  Anno           = anno_from(Env),
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
                           , length(ArgsExprs)
                           ),
-
-  LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
-
-  Anno = anno_from(Env),
+  LoopIdAtom     = binary_to_atom(clj_core:str(LoopId), utf8),
 
   %% We need to use invoke so that recur also works inside functions
   %% (i.e not funs)
   Ast = case LoopType of
           fn ->
-            NameAst = {var, Anno, LoopIdAtom},
+            NameAst = cerl:ann_c_var(Anno, LoopIdAtom),
             ArgsAst = list_ast(Args),
             call_mfa('clojerl.IFn', apply, [NameAst, ArgsAst], Anno);
           loop ->
-            NameAst = {var, Anno, LoopIdAtom},
-            {call, Anno, NameAst, Args};
+            NameAst = cerl:ann_c_fname(Anno, LoopIdAtom, length(Args)),
+            cerl:ann_c_apply([local | Anno], NameAst, Args);
           LoopType when LoopType =:= var orelse LoopType =:= function ->
-            NameAst = {atom, Anno, LoopIdAtom},
-            {call, Anno, NameAst, Args}
+            NameAst = cerl:ann_c_fname(Anno, LoopIdAtom, length(Args)),
+            cerl:ann_c_apply([local | Anno], NameAst, Args)
         end,
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -1057,7 +1054,8 @@ call_mfa(Module, Function, Args, Anno) ->
 
 -spec call_fa(atom(), list(), erl_anno:anno()) -> ast().
 call_fa(Function, Args, Anno) ->
-  cerl:ann_c_apply(Anno, cerl:c_atom(Function), Args).
+  FName = cerl:ann_c_fname(Anno, Function, length(Args)),
+  cerl:ann_c_apply(Anno, FName, Args).
 
 -spec group_methods([map()]) -> #{integer() => [map()]}.
 group_methods(Methods) ->

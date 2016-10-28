@@ -1364,11 +1364,12 @@ analyze_invoke(Env, Form) ->
   {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
   {FExpr, Env4} = clj_env:pop_expr(Env3),
 
-  InvokeExpr = #{op   => invoke,
-                 env  => ?DEBUG(Env4),
-                 form => Form,
-                 f    => FExpr#{invoke => true},
-                 args => ArgsExpr},
+  InvokeExpr = #{ op   => invoke
+                , env  => ?DEBUG(Env4)
+                , form => Form
+                , f    => FExpr#{arity => ArgCount}
+                , args => ArgsExpr
+                },
   clj_env:push_expr(Env4, InvokeExpr).
 
 %%------------------------------------------------------------------------------
