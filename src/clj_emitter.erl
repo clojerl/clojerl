@@ -1164,12 +1164,7 @@ get_lexical_rename(BindingExpr, State) ->
                   clj_scope:get(Renames, Code)
               end,
 
-  %% Since _ can't be bound in Erlang, we need to modify it into
-  %% something boundable but that can't be read by the reader.
-  case clj_core:str(RenameSym) of
-    <<"_">>      -> <<"_ ">>;
-    RenameSymBin -> RenameSymBin
-  end.
+  clj_core:str(RenameSym).
 
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(#{shadow := undefined}, State) ->
