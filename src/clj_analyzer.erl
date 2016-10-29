@@ -990,9 +990,9 @@ parse_deftype(Env, Form) ->
   FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
-  %% HACK: by emitting the tyep we make module available, which means the type
-  %% gets resolved. But we remove all protocols and methods, thus generating
-  %% just a dummy erlang module for the type.
+  %% HACK: by emitting the tyep we make the module available, which means the
+  %% type gets resolved. But we remove all protocols and methods, thus
+  %% generating just a dummy erlang module for the type.
   DeftypeDummyExpr = #{ op        => deftype
                       , env       => ?DEBUG(Env)
                       , form      => Form

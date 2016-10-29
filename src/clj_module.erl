@@ -108,7 +108,7 @@ ensure_loaded(Name, Source) ->
 
 %% @doc Remove the module from the loaded modules in clj_module.
 -spec remove(module()) -> ok.
-remove(Module) ->
+remove(Module) when is_atom(Module)->
   gen_server:cast(?MODULE, {remove, self(), Module}).
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
@@ -402,16 +402,15 @@ build_fake_fun(Module, Function, Arity) ->
   {Names, Defs} = module_info_funs(FakeModuleName),
   ModuleName = cerl:c_atom(FakeModuleName),
   Exports    = [FName | Names],
-  File       = {cerl:c_atom(file), cerl:c_atom(Module#module.source)},
   Clojure    = {cerl:c_atom(clojure), cerl:c_atom(true)},
 
   FakeModule = cerl:c_module( ModuleName
                             , Exports
-                            , [Clojure, File]
+                            , [Clojure]
                             , [Fun | Defs]
                             ),
 
-  %% io:format("========= Fake ~p:~p ========~n", [Module#module.name, Function]),
+  %% io:format("======== Fake ~p:~p =======~n", [Module#module.name, Function]),
   %% io:format("~s~n", [core_pp:format(FakeModule)]),
 
   CompileOpts = #{erl_flags => [from_core, binary]},
@@ -538,10 +537,11 @@ save(Table, Value) ->
 
 -spec new(atom(), string()) -> ok | {error, term()}.
 new(Name, Source) when is_atom(Name), is_list(Source) ->
-  new(cerl:c_module(cerl:c_atom(Name), [], []));
-new(CoreModule, Source) when is_list(Source) ->
-  true = cerl:is_c_module(CoreModule),
-  new(CoreModule).
+  FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
+  new(cerl:c_module(cerl:c_atom(Name), [], [FileAttr], []));
+new(#c_module{attrs = Attrs} = CoreModule, Source) when is_list(Source) ->
+  FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
+  new(CoreModule#c_module{attrs = [FileAttr | Attrs]}).
 
 -spec new(cerl:cerl()) -> ok | {error, term()}.
 new(CoreModule) ->
