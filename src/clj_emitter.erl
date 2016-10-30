@@ -192,7 +192,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   %% Attributes
   Attributes     = [ { cerl:ann_c_atom(Anno, behavior)
-                     , cerl:ann_c_atom(Anno, sym_to_kw(ProtocolName))
+                     , cerl:ann_abstract(Anno, [sym_to_kw(ProtocolName)])
                      }
                      || #{type := ProtocolName} <- ProtocolsExprs
                    ],
