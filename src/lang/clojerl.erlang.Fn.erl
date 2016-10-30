@@ -25,12 +25,8 @@ prefix(Symbol) ->
 
 apply(Fun, Args) when is_function(Fun), is_list(Args) ->
   {module, Module} = erlang:fun_info(Fun, module),
-  IsClojure = case Module of
-                erl_eval -> is_clj_fun(Fun);
-                _ -> clj_module:is_clojure(Module)
-              end,
 
-  Args1 = case IsClojure of
+  Args1 = case clj_module:is_clojure(Module) of
             true  -> [Args];
             false -> Args
           end,
@@ -49,21 +45,3 @@ str(Fun) when is_function(Fun) ->
   NameBin = atom_to_binary(Name, utf8),
 
   <<"#<", ModuleBin/binary, "/", NameBin/binary, ">">>.
-
-%%------------------------------------------------------------------------------
-%% Helper functions
-%%------------------------------------------------------------------------------
-
--spec is_clj_fun(function()) -> boolean().
-is_clj_fun(Fun) ->
-  {env, Env} = erlang:fun_info(Fun, env),
-
-  Name = case hd(Env) of
-           {_, _, _, _, N} -> N;
-           _               -> undefined
-         end,
-
-  case atom_to_binary(Name, utf8) of
-    <<"__clj__", _/binary>> -> true;
-    _                       -> false
-  end.

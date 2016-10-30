@@ -272,6 +272,8 @@ add_on_load(Module, Expr) ->
   Module.
 
 -spec is_clojure(module()) -> boolean().
+is_clojure(cerl_eval) ->
+  true;
 is_clojure(Name) ->
   Key = {?MODULE, is_clojure, Name},
   case clj_cache:get(Key) of
