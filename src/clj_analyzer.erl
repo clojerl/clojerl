@@ -428,13 +428,14 @@ analyze_method_params(Env, IsVariadic, Arity, ParamsNames) ->
                      , local       => arg
                      , shadow      => clj_env:get_local(Env, Name)
                      },
-        { Id + 1
+        { Id - 1
         , MappedParams#{Name0Bin => Count}
         , [ParamExpr | ParamsExprs]
         }
     end,
+  ParamCount = length(ParamsNames),
   {_, _, ParamsExprs} = lists:foldl(ParamExprFun
-                                   , {0, #{}, []}
+                                   , {ParamCount - 1, #{}, []}
                                     %% We reverse the order of parameters so
                                     %% if there is any repeated one last one
                                     %% is the one resolved in the body.
