@@ -976,7 +976,7 @@ field_fun_name(FieldName) when is_atom(FieldName) ->
 type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
   {MapFieldType, InfoAst} = case TupleType of
                               create -> {assoc, cerl:c_atom(undefined)};
-                              match  -> {exact, new_c_var(0, "_")}
+                              match  -> {exact, new_c_var([0], "_")}
                             end,
 
   UndefinedAtom = cerl:c_atom(undefined),
@@ -995,7 +995,10 @@ type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
                                          )
                   end,
   MapPairsAsts  = lists:map(MapPairFun, AllFieldsAsts),
-  MapAst        = cerl:c_map(MapPairsAsts),
+  MapAst        = case TupleType of
+                    create -> cerl:c_map(MapPairsAsts);
+                    match  -> cerl:c_map_pattern(MapPairsAsts)
+                  end,
   type_tuple_ast(Typename, MapAst, InfoAst).
 
 -spec type_tuple_ast(atom(), ast(), ast()) -> ast().
