@@ -206,16 +206,10 @@ fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
                             , cerl:c_atom(fake_fun)
                             , CallArgs
                             ),
-  VarAst   = new_c_var(Anno, "f"),
+  VarAst   = clj_emitter:new_c_var(Anno, "f"),
   ApplyAst = cerl:ann_c_apply(Anno, VarAst, Args1),
 
   cerl:ann_c_let(Anno, [VarAst], CallAst, ApplyAst).
-
--spec new_c_var(cerl:ann(), string()) -> cerl:c_var().
-new_c_var(Anno, Prefix) ->
-  N = erlang:unique_integer([positive]),
-  Name = list_to_atom(Prefix ++ integer_to_list(N)),
-  cerl:ann_c_var(Anno, Name).
 
 -spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
@@ -409,9 +403,6 @@ build_fake_fun(Module, Function, Arity) ->
                             , [Clojure]
                             , [Fun | Defs]
                             ),
-
-  %% io:format("======== Fake ~p:~p =======~n", [Module#module.name, Function]),
-  %% io:format("~s~n", [core_pp:format(FakeModule)]),
 
   CompileOpts = #{erl_flags => [from_core, binary]},
   clj_compiler:compile_forms(FakeModule, CompileOpts),

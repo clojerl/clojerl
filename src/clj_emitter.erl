@@ -4,6 +4,7 @@
 
 -export([ emit/1
         , remove_state/1
+        , new_c_var/2
         ]).
 
 -type ast()   :: cerl:cerl().
