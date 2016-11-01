@@ -63,8 +63,7 @@
                   %% itself.
                   on_load           :: ets:tid(),
                   %% ETS table where attributes that are kept.
-                  attrs             :: ets:tid(),
-                  rest              :: [erl_parse:abstract_form()]
+                  attrs             :: ets:tid()
                 }).
 
 -type clj_module() :: #module{}.
@@ -447,7 +446,6 @@ to_forms(#module{} = Module) ->
          , exports = ExportsTable
          , on_load = OnLoadTable
          , attrs   = AttrsTable
-         %% , rest    = Rest
          } = Module,
 
   add_module_info_functions(Module),
