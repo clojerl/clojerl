@@ -226,11 +226,11 @@ warn_when(true, List, Location) when is_list(List) ->
 warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
   'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , <<LocationBin/binary, Reason/binary>>
+                           , <<LocationBin/binary, Reason/binary, "\n">>
                            );
 warn_when(true, Reason, Location) ->
   'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , "~p"
+                           , "~p~n"
                            , [{Location, Reason}]
                            );
 warn_when(false, _, _) ->

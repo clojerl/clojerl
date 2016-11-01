@@ -436,8 +436,8 @@ analyze_method_params(Env, IsVariadic, Arity, ParamsNames) ->
   ParamCount = length(ParamsNames),
   {_, _, ParamsExprs} = lists:foldl(ParamExprFun
                                    , {ParamCount - 1, #{}, []}
-                                    %% We reverse the order of parameters so
-                                    %% if there is any repeated one last one
+                                    %% We reverse the order so if there is
+                                    %% any repeated parameter, the last
                                     %% is the one resolved in the body.
                                    , lists:reverse(ParamsNames)
                                    ),
