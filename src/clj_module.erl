@@ -206,7 +206,7 @@ fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
                             , cerl:c_atom(fake_fun)
                             , CallArgs
                             ),
-  VarAst   = clj_emitter:new_c_var(Anno, "f"),
+  VarAst   = clj_emitter:new_c_var(Anno),
   ApplyAst = cerl:ann_c_apply(Anno, VarAst, Args1),
 
   cerl:ann_c_let(Anno, [VarAst], CallAst, ApplyAst).

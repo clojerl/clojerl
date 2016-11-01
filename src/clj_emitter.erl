@@ -4,7 +4,7 @@
 
 -export([ emit/1
         , remove_state/1
-        , new_c_var/2
+        , new_c_var/1
         ]).
 
 -type ast()   :: cerl:cerl().
@@ -18,6 +18,7 @@
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
   State       = clj_env:get(Env, emitter, initial_state()),
+  erlang:put(local_var_counter, 0),
   clj_env:put(Env, emitter, ast(Expr, State)).
 
 -spec remove_state(clj_env:env()) ->
@@ -626,9 +627,9 @@ ast(#{op := 'case'} = Expr, State) ->
     case DefaultExpr of
       undefined -> {ClausesAsts0, State3};
       _ ->
-        EnvDefault  = maps:get(env, DefaultExpr),
-        AnnoDefault = anno_from(EnvDefault),
-        DefaultVarAst = new_c_var(AnnoDefault, "any"),
+        EnvDefault    = maps:get(env, DefaultExpr),
+        AnnoDefault   = anno_from(EnvDefault),
+        DefaultVarAst = new_c_var(AnnoDefault),
         {DefaultAst, State3_1} = pop_ast(ast(DefaultExpr, State3)),
         DefaultClause = cerl:ann_c_clause( AnnoDefault
                                          , [DefaultVarAst]
@@ -754,9 +755,9 @@ ast(#{op := 'try'} = Expr, State) ->
                              , length(CatchesExprs)
                              ),
 
-  [_, Y, Z] = CatchVarsAsts = [ new_c_var(Anno, "clj")
-                              , new_c_var(Anno, "clj")
-                              , new_c_var(Anno, "clj")
+  [_, Y, Z] = CatchVarsAsts = [ new_c_var(Anno)
+                              , new_c_var(Anno)
+                              , new_c_var(Anno)
                               ],
   RaiseAst          = cerl:c_primop(cerl:c_atom(raise), [Z, Y]),
 
@@ -770,7 +771,7 @@ ast(#{op := 'try'} = Expr, State) ->
                         _         -> pop_ast(ast(FinallyExpr, State))
                       end,
 
-  VarAst = new_c_var(Anno, "clj"),
+  VarAst = new_c_var(Anno),
   TryAst = cerl:ann_c_try( Anno
                          , BodyAst
                          , [VarAst]
@@ -784,13 +785,13 @@ ast(#{op := 'try'} = Expr, State) ->
       undefined -> TryAst;
       _         ->
         %% after function
-        FinallyName     = cerl:var_name(new_c_var(Anno, "finally")),
+        FinallyName     = cerl:var_name(new_c_var(Anno)),
         FinallyFName    = cerl:ann_c_fname(Anno, FinallyName, 0),
         FinallyFunAst   = cerl:ann_c_fun(Anno, [], Finally),
         ApplyFinallyAst = cerl:ann_c_apply([local | Anno], FinallyFName, []),
 
         Defs = [{FinallyFName, FinallyFunAst}],
-        OuterVarAst  = new_c_var(Anno, "clj"),
+        OuterVarAst  = new_c_var(Anno),
         OuterBodyAst = cerl:ann_c_seq(Anno, ApplyFinallyAst, OuterVarAst),
         HandlerAst   = cerl:ann_c_seq(Anno, ApplyFinallyAst, RaiseAst),
         OuterTryAst  = cerl:ann_c_try( Anno
@@ -825,7 +826,7 @@ ast(#{op := 'catch'} = Expr, State) ->
   {NameAst, State1} = pop_ast(ast(Local, State)),
   VarsAsts          = [ ClassAst
                       , NameAst
-                      , new_c_var(Anno, "clj")
+                      , new_c_var(Anno)
                       ],
   {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
 
@@ -916,7 +917,7 @@ accessor_function(Typename, FieldAst) ->
 
 -spec creation_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
-  MapVarAst    = new_c_var(Anno, "map"),
+  MapVarAst    = new_c_var(Anno),
   GetAstFun    = fun(FName) ->
                      ArgsAst = [ MapVarAst
                                , cerl:ann_c_atom(Anno, FName)
@@ -977,7 +978,7 @@ field_fun_name(FieldName) when is_atom(FieldName) ->
 type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
   {MapFieldType, InfoAst} = case TupleType of
                               create -> {assoc, cerl:c_atom(undefined)};
-                              match  -> {exact, new_c_var([0], "_")}
+                              match  -> {exact, new_c_var([])}
                             end,
 
   UndefinedAtom = cerl:c_atom(undefined),
@@ -1122,7 +1123,7 @@ body_from_clauses(Anno, ClauseAsts) ->
   {[cerl:c_var()], cerl:cerl()}.
 case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
   Patterns = cerl:clause_pats(ClauseAst),
-  Vars = [new_c_var(Anno, "clj") || _ <- lists:seq(0, length(Patterns) - 1)],
+  Vars = [new_c_var(Anno) || _ <- lists:seq(0, length(Patterns) - 1)],
   CaseAst = cerl:ann_c_case(Anno, cerl:c_values(Vars), ClausesAst),
   {Vars, CaseAst}.
 
@@ -1211,7 +1212,7 @@ var_val_function(Val, VarAst, Anno) ->
   UndefinedAtom      = cerl:ann_c_atom(Anno, undefined),
   UndefinedClauseAst = cerl:ann_c_clause(Anno, [UndefinedAtom], Val),
 
-  XVar               = new_c_var(Anno, "clj"),
+  XVar               = new_c_var(Anno),
   TupleAst           = cerl:ann_c_tuple(Anno, [cerl:c_atom(ok), XVar]),
   ValueClauseAst     = cerl:ann_c_clause(Anno, [TupleAst], XVar),
 
@@ -1238,8 +1239,9 @@ sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).
 default_compiler_options() ->
   #{erl_flags => [binary, debug_info], output_dir => "ebin"}.
 
--spec new_c_var(cerl:ann(), string()) -> cerl:c_var().
-new_c_var(Anno, Prefix) ->
-  N    = erlang:unique_integer([positive]),
-  Name = list_to_atom(Prefix ++ integer_to_list(N)),
-  cerl:ann_c_var(Anno, Name).
+-spec new_c_var(cerl:ann()) -> cerl:c_var().
+new_c_var(Anno) ->
+  N = erlang:get(local_var_counter),
+  erlang:put(local_var_counter, N + 1),
+  Name = list_to_atom("clj " ++ integer_to_list(N)),
+  cerl:ann_c_var([generated | Anno], Name).
