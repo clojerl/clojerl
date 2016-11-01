@@ -228,7 +228,8 @@ add_vars(Module, Vars) ->
   lists:foreach(AddFun, Vars),
   Module.
 
--spec add_attributes(clj_module(), [erl_parse:abstract_form()]) -> clj_module().
+-spec add_attributes(clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
+  clj_module().
 add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
   add_attributes(get(?MODULE, ModuleName), Attrs);
 add_attributes(Module, []) ->
@@ -249,7 +250,7 @@ add_exports(Module, Exports) ->
   ok = lists:foreach(AddExport, Exports),
   Module.
 
--spec add_functions(module() | clj_module(), [erl_parse:abstract_form()]) ->
+-spec add_functions(module() | clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
   clj_module().
 add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
   add_functions(get(?MODULE, ModuleName), Funs);
@@ -262,7 +263,7 @@ add_functions(Module, Funs) ->
   lists:foreach(SaveFun, Funs),
   Module.
 
--spec add_on_load(module() | clj_module(), erl_parse:abstract_expr()) ->
+-spec add_on_load(module() | clj_module(), cerl:cerl()) ->
   clj_module().
 add_on_load(ModuleName, Expr) when is_atom(ModuleName) ->
   add_on_load(get(?MODULE, ModuleName), Expr);
@@ -437,7 +438,7 @@ delete_fake_modules(Module) ->
   ok.
 
 %% @private
--spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
+-spec to_forms(clj_module()) -> cerl:c_module().
 to_forms(#module{} = Module) ->
   #module{ name    = Name
          , source  = Source
