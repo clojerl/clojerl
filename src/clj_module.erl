@@ -456,7 +456,7 @@ to_forms(#module{} = Module) ->
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
   Vars        = maps:from_list(VarsList),
-  VarsAttr    = {cerl:c_atom(vars), cerl:abstract(Vars)},
+  VarsAttr    = {cerl:c_atom(vars), cerl:abstract([Vars])},
 
   Exports     = [cerl:c_fname(FName, Arity)
                  || {{FName, Arity}} <- ets:tab2list(ExportsTable)
