@@ -353,28 +353,16 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                       ),
 
   IsNotAmpersandFun = fun(X) -> clj_core:str(X) =/= <<"&">> end,
-  ParamsNames = lists:filter(IsNotAmpersandFun, ParamsList),
-  IsVariadic = length(ParamsNames) =/= length(ParamsList),
-  Env0 = clj_env:add_locals_scope(Env),
-  Env1 = maps:remove(local, Env0),
+  ParamsNames       = lists:filter(IsNotAmpersandFun, ParamsList),
+  IsVariadic        = length(ParamsNames) =/= length(ParamsList),
+
+  Env0  = clj_env:add_locals_scope(Env),
+  Env1  = maps:remove(local, Env0),
   Arity = length(ParamsNames),
 
-  ParamExprFun =
-    fun(Name, {Id, Exprs}) ->
-        ParamExpr = #{ op          => binding
-                     , env         => ?DEBUG(Env1)
-                     , form        => Name
-                     , name        => Name
-                     , 'variadic?' => IsVariadic andalso Id == Arity - 1
-                     , arg_id      => Id
-                     , local       => arg
-                     , shadow      => clj_env:get_local(Env1, Name)
-                     },
-        {Id + 1, [ParamExpr | Exprs]}
-    end,
-  {_, ParamsExprs} = lists:foldl(ParamExprFun, {0, []}, ParamsNames),
+  ParamsExprs = analyze_method_params(Env, IsVariadic, Arity, ParamsNames),
 
-  FixedArity = case IsVariadic of true -> Arity - 1; false -> Arity end,
+  FixedArity  = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
   OldLoopId     = clj_env:get(Env1, loop_id),
   OldLoopLocals = clj_env:get(Env1, loop_locals),
@@ -399,7 +387,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
                   , form        => List
                   , loop_id     => LoopId
                   , 'variadic?' => IsVariadic
-                  , params      => lists:reverse(ParamsExprs)
+                  , params      => ParamsExprs
                   , fixed_arity => FixedArity
                   , body        => BodyExpr
                   },
@@ -408,6 +396,52 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
   Env4 = clj_env:put(Env3, loop_locals, OldLoopLocals),
   Env5 = clj_env:remove_locals_scope(Env4),
   clj_env:push_expr(Env5, FnMethodExpr).
+
+-spec analyze_method_params(clj_env:env(), ['clojerl.Symbol':type()]) ->
+  [any()].
+analyze_method_params(Env, ParamsNames) ->
+  analyze_method_params(Env, false, -1, ParamsNames).
+
+-spec analyze_method_params( clj_env:env()
+                           , boolean()
+                           , non_neg_integer()
+                           , ['clojerl.Symbol':type()]
+                           ) -> [any()].
+analyze_method_params(Env, IsVariadic, Arity, ParamsNames) ->
+  ParamExprFun =
+    fun(Name0, {Id, MappedParams, ParamsExprs}) ->
+        %% Check if there is a another
+        Name0Bin  = clj_core:str(Name0),
+        Count     = maps:get(Name0Bin, MappedParams, -1) + 1,
+        Name      = case Count of
+                      0 -> Name0;
+                      N ->
+                        NBin = erlang:integer_to_binary(N),
+                        clj_core:symbol(<<Name0Bin/binary, NBin/binary>>)
+                    end,
+        ParamExpr = #{ op          => binding
+                     , env         => ?DEBUG(Env)
+                     , form        => Name
+                     , name        => Name
+                     , 'variadic?' => IsVariadic andalso Id == Arity - 1
+                     , arg_id      => Id
+                     , local       => arg
+                     , shadow      => clj_env:get_local(Env, Name)
+                     },
+        { Id - 1
+        , MappedParams#{Name0Bin => Count}
+        , [ParamExpr | ParamsExprs]
+        }
+    end,
+  ParamCount = length(ParamsNames),
+  {_, _, ParamsExprs} = lists:foldl(ParamExprFun
+                                   , {ParamCount - 1, #{}, []}
+                                    %% We reverse the order so if there is
+                                    %% any repeated parameter, the last
+                                    %% is the one resolved in the body.
+                                   , lists:reverse(ParamsNames)
+                                   ),
+  ParamsExprs.
 
 -spec analyze_body(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_body(Env, List) ->
@@ -975,24 +1009,17 @@ parse_deftype(Env, Form) ->
   ] = clj_core:to_list(Form),
 
   FieldsList  = clj_core:to_list(Fields),
-  FieldsFun   = fun(FieldName) ->
-                    #{ op    => binding
-                     , env   => ?DEBUG(Env)
-                     , form  => FieldName
-                     , name  => FieldName
-                     , local => field
-                     }
-                end,
+  FieldsExprs = analyze_method_params(Env, FieldsList),
+
   %% The analyzer adds the fields to the local scope of the methods,
   %% but it is the emitter who will need to pattern match the first argument
   %% so that they are actually available in the methods' body.
   Env1        = clj_env:add_locals_scope(Env),
-  FieldsExprs = lists:map(FieldsFun, FieldsList),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
-  %% HACK: by emitting the tyep we make module available, which means the type
-  %% gets resolved. But we remove all protocols and methods, thus generating
-  %% just a dummy erlang module for the type.
+  %% HACK: by emitting the tyep we make the module available, which means the
+  %% type gets resolved. But we remove all protocols and methods, thus
+  %% generating just a dummy erlang module for the type.
   DeftypeDummyExpr = #{ op        => deftype
                       , env       => ?DEBUG(Env)
                       , form      => Form
@@ -1364,11 +1391,12 @@ analyze_invoke(Env, Form) ->
   {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
   {FExpr, Env4} = clj_env:pop_expr(Env3),
 
-  InvokeExpr = #{op   => invoke,
-                 env  => ?DEBUG(Env4),
-                 form => Form,
-                 f    => FExpr#{invoke => true},
-                 args => ArgsExpr},
+  InvokeExpr = #{ op   => invoke
+                , env  => ?DEBUG(Env4)
+                , form => Form
+                , f    => FExpr#{arity => ArgCount}
+                , args => ArgsExpr
+                },
   clj_env:push_expr(Env4, InvokeExpr).
 
 %%------------------------------------------------------------------------------

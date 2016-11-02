@@ -226,11 +226,11 @@ warn_when(true, List, Location) when is_list(List) ->
 warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
   'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , <<LocationBin/binary, Reason/binary>>
+                           , <<LocationBin/binary, Reason/binary, "\n">>
                            );
 warn_when(true, Reason, Location) ->
   'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , "~p"
+                           , "~p~n"
                            , [{Location, Reason}]
                            );
 warn_when(false, _, _) ->
@@ -307,20 +307,37 @@ print_result(Name, {Time, Trials}) ->
     io:format("~s: ~.3f ms (~.2f per second)~n",
               [Name, (Time / 1000) / Trials, Trials / (Time / 1000000)]).
 
--spec code_from_binary(atom()) -> [erl_parse:abstract_form()] | {error, term()}.
+-spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
 code_from_binary(Name) when is_atom(Name) ->
   case code:get_object_code(Name) of
     {Name, Binary, _} ->
-      case beam_lib:chunks(Binary, [abstract_code]) of
-        {ok, {_, [{abstract_code, {raw_abstract_v1, Forms}}]}} ->
-          Forms;
-        Error ->
-          Error
-      end;
+      core_from_binary(Binary);
     _ ->
       clj_utils:error([ <<"Could not load object code for namespace: ">>
                       , atom_to_binary(Name, utf8)
                       ])
+  end.
+
+-spec core_from_binary(binary()) ->
+  cerl:cerl() | {error, missing_abstract_code}.
+core_from_binary(Binary) ->
+  ChunkNames = ["Core", abstract_code],
+  ChunkOpts  = [allow_missing_chunks],
+  {ok, {_, Chunks}} = beam_lib:chunks(Binary, ChunkNames, ChunkOpts),
+  case proplists:get_value("Core", Chunks) of
+    missing_chunk ->
+      case proplists:get_value(abstract_code, Chunks) of
+        %% This case is only for bootstrapping clojure.core since it
+        %% is written in Erlang it has erlang abstract syntax forms.
+        {raw_abstract_v1, Code} ->
+          {Mod, Exp, Forms, Opts} = sys_pre_expand:module(Code, []),
+          {ok, CoreModule, _} = v3_core:module({Mod, Exp, Forms}, Opts),
+          CoreModule;
+        missing_chunk ->
+          {error, missing_abstract_code}
+        end;
+    CoreModule ->
+      erlang:binary_to_term(CoreModule)
   end.
 
 %%------------------------------------------------------------------------------

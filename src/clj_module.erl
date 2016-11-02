@@ -4,6 +4,8 @@
 
 -compile({no_auto_import, [get/1]}).
 
+-include_lib("compiler/src/core_parse.hrl").
+
 -export([ with_context/1
 
         , all_forms/0
@@ -23,6 +25,8 @@
 
         , is_clojure/1
         , is_protocol/1
+
+        , module_info_funs/1
         ]).
 
 %% gen_server callbacks
@@ -59,8 +63,7 @@
                   %% itself.
                   on_load           :: ets:tid(),
                   %% ETS table where attributes that are kept.
-                  attrs             :: ets:tid(),
-                  rest              :: [erl_parse:abstract_form()]
+                  attrs             :: ets:tid()
                 }).
 
 -type clj_module() :: #module{}.
@@ -68,6 +71,7 @@
 -export_type([clj_module/0]).
 
 -define(ON_LOAD_FUNCTION, '$_clj_on_load').
+-define(MODULE_INFO, 'module_info').
 
 %%------------------------------------------------------------------------------
 %% Exported Functions
@@ -84,12 +88,12 @@ with_context(Fun) ->
 %% @doc Returns a list where each element is a list with the abstract
 %%      forms of all stored modules.
 %% @end
--spec all_forms() -> [[erl_parse:abstract_form()]].
+-spec all_forms() -> [cerl:c_module()].
 all_forms() ->
   All = gen_server:call(?MODULE, all),
   lists:map(fun to_forms/1, All).
 
--spec get_forms(atom()) -> [erl_parse:abstract_form()].
+-spec get_forms(atom()) -> cerl:c_module().
 get_forms(ModuleName) when is_atom(ModuleName) ->
   to_forms(get(?MODULE, ModuleName)).
 
@@ -103,7 +107,7 @@ ensure_loaded(Name, Source) ->
 
 %% @doc Remove the module from the loaded modules in clj_module.
 -spec remove(module()) -> ok.
-remove(Module) ->
+remove(Module) when is_atom(Module)->
   gen_server:cast(?MODULE, {remove, self(), Module}).
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
@@ -142,62 +146,70 @@ fake_fun(ModuleName, Function, Arity) ->
 %%      in the function's own module for a call to the fun returned by
 %%      clj_module:fake_fun/3.
 %% @end
--spec replace_calls(erl_parse:abstract_form(), module()) ->
-  erl_parse:abstract_form().
-replace_calls( { call, Line
-               , { remote, _
-                 , {atom, _, Module}
-                 , {atom, _, Function}
-                 } = RemoteOriginal
-               , Args
-               }
-             , CurrentModule) ->
+-spec replace_calls(cerl:cerl(), module()) -> cerl:cerl().
+replace_calls( #c_call{ module = ModuleAst
+                      , name   = FunctionAst
+                      , args   = ArgsAsts
+                      , anno   = Anno
+                      }
+             , CurrentModule
+             ) ->
   %% Only replace the call if the module is loaded. If it is not, then the
   %% replacement is happening for the evaluation of an expression where the
   %% called function hasn't been declared in the same evaluation.
+  Module = cerl:concrete(ModuleAst),
   case is_loaded(Module) of
     true  ->
-      Args1   = replace_calls(Args, CurrentModule),
-      Arity   = length(Args),
-      Remote  = {remote, Line,
-                 {atom, Line, ?MODULE},
-                 {atom, Line, fake_fun}
-                },
-
-      FunCall = { call, Line, Remote
-                , [ {atom, Line, Module}
-                  , {atom, Line, Function}
-                  , {integer, Line, Arity}
-                  ]
-                },
-      {call, Line, FunCall, Args1};
+      fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts);
     false ->
-      Args1 = replace_calls(Args, CurrentModule),
-      {call, Line, RemoteOriginal, Args1}
+      ArgsAsts1 = replace_calls(ArgsAsts, CurrentModule),
+      cerl:ann_c_call(Anno, ModuleAst, FunctionAst, ArgsAsts1)
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
-replace_calls({call, Line, {atom, Line2, Function}, Args}, ModuleName) ->
-  Arity   = length(Args),
-  Args1   = replace_calls(Args, ModuleName),
-  Remote  = {remote, Line,
-             {atom, Line, ?MODULE},
-             {atom, Line, fake_fun}
-            },
-
-  FunCall = { call, Line, Remote
-            , [ {atom, Line2, ModuleName}
-              , {atom, Line2, Function}
-              , {integer, Line2, Arity}
-              ]
-            },
-  {call, Line, FunCall, Args1};
+replace_calls(#c_apply{ op   = #c_var{name = {_, _}} = FNameAst
+                      , args = ArgsAsts
+                      , anno = Anno
+                      }
+             , Module) ->
+  case lists:member(local, Anno) of
+    true ->
+      ArgsAsts1 = replace_calls(ArgsAsts, Module),
+      cerl:ann_c_apply(Anno, FNameAst, ArgsAsts1);
+    false ->
+      ModuleAst   = cerl:ann_c_atom(Anno, Module),
+      FunctionAst = cerl:ann_c_atom(Anno, cerl:fname_id(FNameAst)),
+      fake_fun_call(Anno, Module, ModuleAst, FunctionAst, ArgsAsts)
+  end;
 replace_calls(Ast, Module) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
-replace_calls(Ast, Module) when is_list(Ast) ->
-  [replace_calls(Item, Module) || Item <- Ast];
+replace_calls(Asts, Module) when is_list(Asts) ->
+  [replace_calls(Item, Module) || Item <- Asts];
 replace_calls(Ast, _) ->
   Ast.
+
+-spec fake_fun_call( cerl:anno()
+                   , module()
+                   , cerl:cerl()
+                   , cerl:cerl()
+                   , [cerl:cerl()]
+                   ) -> cerl:cerl().
+fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
+  Args1    = replace_calls(ArgsAsts, CurrentModule),
+  Arity    = length(ArgsAsts),
+  CallArgs = [ ModuleAst
+             , FunctionAst
+             , cerl:ann_c_int(Anno, Arity)
+             ],
+  CallAst  = cerl:ann_c_call( Anno
+                            , cerl:c_atom(?MODULE)
+                            , cerl:c_atom(fake_fun)
+                            , CallArgs
+                            ),
+  VarAst   = clj_emitter:new_c_var(Anno),
+  ApplyAst = cerl:ann_c_apply(Anno, VarAst, Args1),
+
+  cerl:ann_c_let(Anno, [VarAst], CallAst, ApplyAst).
 
 -spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
@@ -210,7 +222,8 @@ add_vars(Module, Vars) ->
   lists:foreach(AddFun, Vars),
   Module.
 
--spec add_attributes(clj_module(), [erl_parse:abstract_form()]) -> clj_module().
+-spec add_attributes(clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
+  clj_module().
 add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
   add_attributes(get(?MODULE, ModuleName), Attrs);
 add_attributes(Module, []) ->
@@ -231,7 +244,7 @@ add_exports(Module, Exports) ->
   ok = lists:foreach(AddExport, Exports),
   Module.
 
--spec add_functions(module() | clj_module(), [erl_parse:abstract_form()]) ->
+-spec add_functions(module() | clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
   clj_module().
 add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
   add_functions(get(?MODULE, ModuleName), Funs);
@@ -244,7 +257,7 @@ add_functions(Module, Funs) ->
   lists:foreach(SaveFun, Funs),
   Module.
 
--spec add_on_load(module() | clj_module(), erl_parse:abstract_expr()) ->
+-spec add_on_load(module() | clj_module(), cerl:cerl()) ->
   clj_module().
 add_on_load(ModuleName, Expr) when is_atom(ModuleName) ->
   add_on_load(get(?MODULE, ModuleName), Expr);
@@ -376,20 +389,23 @@ is_loaded(Name) ->
 build_fake_fun(Module, Function, Arity) ->
   {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
 
-  {function, _, _, _, Clauses} =
-    replace_calls(FunctionAst, Module#module.name),
+  {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),
   Int = erlang:unique_integer([positive]),
   FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
 
-  ModuleAst  = {attribute, 0, module, FakeModuleName},
-  FileAst    = {attribute, 0, file, {Module#module.source, 0}},
-  ExportAst  = {attribute, 0, export, [{Function, Arity}]},
-  ClojureAst = {attribute, 0, clojure, true},
-  FunAst     = {function, 0, Function, Arity, Clauses},
-  Forms      = [ModuleAst, FileAst, ExportAst, ClojureAst, FunAst],
+  {Names, Defs} = module_info_funs(FakeModuleName),
+  ModuleName = cerl:c_atom(FakeModuleName),
+  Exports    = [FName | Names],
+  Clojure    = {cerl:c_atom(clojure), cerl:c_atom(true)},
 
-  CompileOpts = #{erl_flags => [binary]},
-  clj_compiler:compile_forms(Forms, CompileOpts),
+  FakeModule = cerl:c_module( ModuleName
+                            , Exports
+                            , [Clojure]
+                            , [Fun | Defs]
+                            ),
+
+  CompileOpts = #{erl_flags => [from_core, binary]},
+  clj_compiler:compile_forms(FakeModule, CompileOpts),
 
   save(Module#module.fake_modules, {FakeModuleName}),
 
@@ -413,7 +429,7 @@ delete_fake_modules(Module) ->
   ok.
 
 %% @private
--spec to_forms(clj_module()) -> [erl_parse:abstract_form()].
+-spec to_forms(clj_module()) -> cerl:c_module().
 to_forms(#module{} = Module) ->
   #module{ name    = Name
          , source  = Source
@@ -422,43 +438,73 @@ to_forms(#module{} = Module) ->
          , exports = ExportsTable
          , on_load = OnLoadTable
          , attrs   = AttrsTable
-         , rest    = Rest
          } = Module,
 
-  ModuleAttr  = {attribute, 0, module, Name},
-  FileAttr    = {attribute, 0, file, {Source, 0}},
-  %% To avoid conflicts with Clojure functions with the same name
-  %% as some functions in the `erlang' module.
-  CompileAttr = {attribute, 0, compile, [no_auto_import]},
+  add_module_info_functions(Module),
+
+  FileAttr    = {cerl:c_atom(file), cerl:abstract(Source)},
 
   VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
   Vars        = maps:from_list(VarsList),
-  VarsAttr    = {attribute, 0, vars, Vars},
+  VarsAttr    = {cerl:c_atom(vars), cerl:abstract([Vars])},
 
-  Exports     = [X || {X} <- ets:tab2list(ExportsTable)],
-  ExportAttr  = {attribute, 0, export, Exports},
+  Exports     = [cerl:c_fname(FName, Arity)
+                 || {{FName, Arity}} <- ets:tab2list(ExportsTable)
+                ],
 
-  ClojureAttr = {attribute, 0, clojure, true},
-  OnLoadAttr  = {attribute, 0, on_load, {?ON_LOAD_FUNCTION, 0}},
+  ClojureAttr = {cerl:c_atom(clojure), cerl:abstract(true)},
+  OnLoadAttr  = {cerl:c_atom(on_load), cerl:abstract([{?ON_LOAD_FUNCTION, 0}])},
 
   Attrs       = [X || {X} <- ets:tab2list(AttrsTable)],
-  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr, CompileAttr | Attrs]),
+  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
 
+  AllAttrs    = [FileAttr, VarsAttr | UniqueAttrs],
+
+  OnLoadName  = cerl:c_fname(?ON_LOAD_FUNCTION, 0),
   OnLoadFun   = on_load_function(OnLoadTable),
   Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
+  Defs        = [{OnLoadName, OnLoadFun} | Funs],
 
-  [ ModuleAttr, FileAttr, VarsAttr, ExportAttr |
-    UniqueAttrs ++ Rest ++ [OnLoadFun | Funs]
-  ].
+  cerl:c_module(cerl:c_atom(Name), Exports, AllAttrs, Defs).
+
+add_module_info_functions(Module) ->
+  {_, Funs} = module_info_funs(Module#module.name),
+  add_functions(Module, Funs),
+  add_exports(Module, [{module_info, 0}, {module_info, 1}]).
+
+-spec module_info_funs(module()) -> {[cerl:cerl()], [cerl:cerl()]}.
+module_info_funs(Name) ->
+  InfoName0 = cerl:c_fname(?MODULE_INFO, 0),
+  InfoFun0  = cerl:c_fun( []
+                        , cerl:c_call( cerl:c_atom(erlang)
+                                     , cerl:c_atom(get_module_info)
+                                     , [cerl:c_atom(Name)]
+                                     )
+                        ),
+
+  InfoName1 = cerl:c_fname(?MODULE_INFO, 1),
+  Arg             = cerl:c_var(x),
+  InfoFun1  = cerl:c_fun( [Arg]
+                        , cerl:c_call( cerl:c_atom(erlang)
+                                     , cerl:c_atom(get_module_info)
+                                     , [cerl:c_atom(Name), Arg]
+                                     )
+                        ),
+
+  { [InfoName0, InfoName1]
+  , [ {InfoName0, InfoFun0}
+    , {InfoName1, InfoFun1}
+    ]}.
 
 %% @private
 on_load_function(OnLoadTable) ->
-  Exprs = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
-            []       -> [{atom, 0, ok}];
-            ExprsTmp -> ExprsTmp
-          end,
-  Clause = {clause, 0, [], [], Exprs},
-  {function, 0, ?ON_LOAD_FUNCTION, 0, [Clause]}.
+  Body = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
+           []       -> cerl:c_atom(ok);
+           [Head | Tail]  ->
+             SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
+             lists:foldl(SeqFun, Head, Tail)
+         end,
+  cerl:c_fun([], Body).
 
 -spec get(atom(), module()) -> any().
 get(Table, Id) ->
@@ -481,42 +527,28 @@ save(Table, Value) ->
 
 -spec new(atom(), string()) -> ok | {error, term()}.
 new(Name, Source) when is_atom(Name), is_list(Source) ->
-  new([ {attribute, 0, module, Name}
-      , {attribute, 0, file, {Source, 0}}
-      ]
-     );
-new(Forms, Source) when is_list(Forms), is_list(Source) ->
-  new([{attribute, 0, file, {Source, 0}} | Forms]).
+  FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
+  new(cerl:c_module(cerl:c_atom(Name), [], [FileAttr], []));
+new(#c_module{attrs = Attrs} = CoreModule, Source) when is_list(Source) ->
+  FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
+  new(CoreModule#c_module{attrs = [FileAttr | Attrs]}).
 
--spec new([erl_parse:abstract_form()]) -> ok | {error, term()}.
-new(Forms) when is_list(Forms) ->
-  {[ModuleAttr], Rest} = lists:partition(is_attribute_fun(module), Forms),
-  {AllAttrs, Rest1}    = lists:partition(fun is_attribute/1, Rest),
-  {Funs, Rest2}        = lists:partition(fun is_function/1, Rest1),
+-spec new(cerl:cerl()) -> ok | {error, term()}.
+new(CoreModule) ->
+  Name     = cerl:concrete(cerl:module_name(CoreModule)),
+  Exports  = [ {cerl:fname_id(E), cerl:fname_arity(E)}
+               || E <- cerl:module_exports(CoreModule)
+             ],
+  AllAttrs = cerl:module_attrs(CoreModule),
+  Funs     = cerl:module_defs(CoreModule),
 
-  {attribute, _, module, Name} = ModuleAttr,
-  {VarsAttrs, RestAttrs} = lists:partition(is_attribute_fun(vars), AllAttrs),
+  {Attrs, Extracted} = extract_attrs(AllAttrs, [vars, file]),
 
-  clj_utils:error_when( length(VarsAttrs) > 1
-                      , [ <<"The module ">>
-                        , atom_to_binary(Name, utf8)
-                        , <<" contains more than one 'vars' attributes.">>
-                        ]
-                      ),
-  Vars = case VarsAttrs of
-           [] -> #{};
-           [VarsAttr] ->
-             {attribute, _, _, V} = VarsAttr,
-             V
-         end,
-
-  {ExportAttrs, RestAttrs1} = lists:partition(is_attribute_fun(export)
-                                             , RestAttrs
-                                             ),
-
-  Exports = flat_exports(ExportAttrs),
-
-  {Source, Attrs} = source_file(RestAttrs1),
+  Vars   = case maps:get(vars, Extracted, #{}) of
+             [V] -> V;
+             V -> V
+           end,
+  Source = maps:get(file, Extracted, ""),
 
   %% Tables need to be public so that other compiler processes can modify them.
   TableOpts = [set, public, {keypos, 1}],
@@ -529,7 +561,6 @@ new(Forms) when is_list(Forms) ->
                   , exports           = ets:new(exports, TableOpts)
                   , on_load           = ets:new(on_load, TableOpts)
                   , attrs             = ets:new(attributes, TableOpts)
-                  , rest              = Rest2
                   },
 
   Module = add_functions(Module, Funs),
@@ -545,42 +576,27 @@ new(Forms) when is_list(Forms) ->
 
   add_exports(Module, Exports).
 
--spec is_attribute(erl_parse:abstract_form()) -> boolean.
-is_attribute({attribute, _, _, _}) -> true;
-is_attribute(_) -> false.
+-spec function_id({cerl:cerl(), cerl:cerl()}) -> function_id().
+function_id({Name, _}) ->
+  {cerl:fname_id(Name), cerl:fname_arity(Name)}.
 
--spec is_attribute_fun(atom()) -> function().
-is_attribute_fun(Name) ->
-  fun
-    ({attribute, _, AttrName, _}) when Name =:= AttrName -> true;
-    (_) -> false
-  end.
+-spec extract_attrs([{cerl:c_atom(), cerl:cerl()}], [atom()]) ->
+  {[{cerl:c_atom(), cerl:cerl()}], map()}.
+extract_attrs(Attrs, Names) ->
+  do_extract_attrs(Attrs, Names, [], #{}).
 
--spec is_function(erl_parse:abstract_form()) -> boolean.
-is_function({function, _, _, _, _}) -> true;
-is_function(_) -> false.
-
--spec function_name(erl_parse:abstract_form()) -> atom().
-function_name({function, _, Name, _, _}) -> Name.
-
--spec function_arity(erl_parse:abstract_form()) -> integer().
-function_arity({function, _, _, Arity, _}) -> Arity.
-
--spec function_id(erl_parse:abstract_form()) -> function_id().
-function_id(Function) ->
-  {function_name(Function), function_arity(Function)}.
-
--spec flat_exports([erl_parse:abstract_form()]) ->
-  [{atom(), non_neg_integer()}].
-flat_exports(ExportAttrs) ->
-  lists:flatmap(fun({attribute, _, _, Vals}) -> Vals end, ExportAttrs).
-
--spec source_file([erl_parse:abstract_form()]) ->
-  {binary(), [erl_parse:abstract_form()]}.
-source_file(Attrs) ->
-  case lists:partition(is_attribute_fun(file), Attrs) of
-    {[], Attrs} -> {"", Attrs};
-    {[FileAttr | _], RestAttrs} ->
-      {attribute, _, file, {Source, _}} = FileAttr,
-      {Source, RestAttrs}
+do_extract_attrs([], _Names, NewAttrs, Extracted) ->
+  {NewAttrs, Extracted};
+do_extract_attrs( [{NameAbst, ValAbst} = Attr | Attrs]
+                , Names
+                , NewAttrs
+                , Extracted
+                ) ->
+  Name = cerl:concrete(NameAbst),
+  case lists:member(Name, Names) of
+    true  ->
+      Val = cerl:concrete(ValAbst),
+      do_extract_attrs(Attrs, Names, NewAttrs, Extracted#{Name => Val});
+    false ->
+      do_extract_attrs(Attrs, Names, [Attr | NewAttrs], Extracted)
   end.

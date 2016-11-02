@@ -24,7 +24,9 @@
 -export([ peek/1
         , pop/1
         ]).
--export([seq/1]).
+-export([ seq/1
+        , to_list/1
+        ]).
 -export([str/1]).
 
 %%------------------------------------------------------------------------------
@@ -44,6 +46,8 @@ str(Items) when is_list(Items) ->
 
 seq([]) -> undefined;
 seq(List) -> List.
+
+to_list(List) -> List.
 
 first([]) -> undefined;
 first([First | _]) -> First.

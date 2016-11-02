@@ -57,16 +57,10 @@ apply(_Config) ->
   [_ | _] = clj_core:apply(FunFunction, []),
 
   ct:comment("Apply a non Clojure fun generated through erl_eval"),
-  {ok, Tokens, _} = erl_scan:string("fun() -> ok end."),
-  {ok, Forms}     = erl_parse:parse_exprs(Tokens),
-  {value, EvalFun, _} = erl_eval:exprs(Forms, []),
-  ok = clj_core:apply(EvalFun, []),
+  ok = clj_core:apply(fun() -> ok end, []),
 
   ct:comment("Invoke a non Clojure named fun generated through erl_eval"),
-  {ok, NamedTokens, _} = erl_scan:string("fun Ok() -> ok end."),
-  {ok, NamedForms}     = erl_parse:parse_exprs(NamedTokens),
-  {value, EvalNamedFun, _} = erl_eval:exprs(NamedForms, []),
-  ok = clj_core:apply(EvalNamedFun, []),
+  ok = clj_core:apply(fun Ok() -> ok end, []),
 
   ct:comment("Invoke a Clojure fun"),
   {CljFun, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
