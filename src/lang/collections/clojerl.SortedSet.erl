@@ -81,7 +81,7 @@ apply(_, Args) ->
 %% clojerl.IHash
 
 hash(#?TYPE{name = ?M, data = {Hashes, _}}) ->
-  clj_murmur3:unordered(maps:keys(Hashes)).
+  clj_murmur3:unordered(maps:values(Hashes)).
 
 %% clojerl.IMeta
 
