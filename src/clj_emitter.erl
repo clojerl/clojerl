@@ -387,30 +387,19 @@ ast(#{op := extend_type} = Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
-  #{ methods := Methods
-   , local   := #{name := NameSym}
+  #{ local   := LocalExpr = #{name := NameSym}
    , env     := Env
    } = Expr,
 
-  State1 = lists:foldl(fun method_to_case_clause/2, State, Methods),
-  {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
+  Anno = anno_from(Env),
 
-  Anno     = anno_from(Env),
-  Name     = clj_core:name(NameSym),
-  NameAtom = binary_to_atom(Name, utf8),
+  {DefsAsts, State1} = letrec_defs([LocalExpr], [Expr], State),
 
+  NameAtom = sym_to_kw(NameSym),
   FName    = cerl:ann_c_fname(Anno, NameAtom, 1),
-  FunVar   = cerl:ann_c_var(Anno, NameAtom),
+  Ast      = cerl:ann_c_letrec(Anno, DefsAsts, FName),
 
-  ArgsVar  = cerl:ann_c_var(Anno, args),
-  CaseAst  = cerl:ann_c_case(Anno, ArgsVar, ClausesAsts),
-  LetAst   = cerl:ann_c_let(Anno, [FunVar], FName, CaseAst),
-  FunAst   = cerl:ann_c_fun(Anno, [ArgsVar], LetAst),
-  Defs     = [{FName, FunAst}],
-
-  Ast      = cerl:ann_c_letrec(Anno, Defs, FName),
-
-  push_ast(Ast, State2);
+  push_ast(Ast, State1);
 ast(#{op := erl_fun} = Expr, State) ->
   #{ module   := Module
    , function := Function
@@ -498,6 +487,32 @@ ast(#{op := invoke} = Expr, State) ->
 
       push_ast(Ast, State2)
   end;
+%%------------------------------------------------------------------------------
+%% letfn
+%%------------------------------------------------------------------------------
+ast(#{op := letfn} = Expr, State) ->
+  #{ vars := VarsExprs
+   , fns  := FnsExprs
+   , body := BodyExpr
+   , env  := Env
+   } = Expr,
+
+  Anno = anno_from(Env),
+
+  {DefsAsts, State1} = letrec_defs(VarsExprs, FnsExprs, State),
+  {BodyAst,  State2} = pop_ast(ast(BodyExpr, State1)),
+
+  FNamesAsts = [FNameAst || {FNameAst, _} <- DefsAsts],
+  VarsAsts   = [cerl:c_var(cerl:fname_id(FNameAst)) || FNameAst <- FNamesAsts],
+
+  LetAst    = cerl:ann_c_let( Anno
+                            , VarsAsts
+                            , cerl:c_values(FNamesAsts)
+                            , BodyAst
+                            ),
+  LetRecAst = cerl:ann_c_letrec(Anno, DefsAsts, LetAst),
+
+  push_ast(LetRecAst, State2);
 %%------------------------------------------------------------------------------
 %% with-meta
 %%------------------------------------------------------------------------------
@@ -1126,6 +1141,46 @@ case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
   Vars = [new_c_var(Anno) || _ <- lists:seq(0, length(Patterns) - 1)],
   CaseAst = cerl:ann_c_case(Anno, cerl:c_values(Vars), ClausesAst),
   {Vars, CaseAst}.
+
+-spec letrec_defs([ast()], [ast()], state()) ->
+  {[{cerl:cerl(), cerl:cerl()}], state()}.
+letrec_defs(VarsExprs, FnsExprs, State0) ->
+  {VarsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State0, VarsExprs)
+                              , length(VarsExprs)
+                              ),
+
+  FNamesAsts = [ cerl:ann_c_fname(anno_from(VarEnv), sym_to_kw(VarName), 1)
+                 || #{name := VarName, env := VarEnv} <- VarsExprs
+               ],
+
+  FoldFun =
+    fun(#{op := fn} = FnExpr, StateAcc) ->
+        #{ methods := Methods
+         , env     := Env
+         } = FnExpr,
+
+        Anno = anno_from(Env),
+
+        StateAcc1 = lists:foldl(fun method_to_case_clause/2, StateAcc, Methods),
+        {ClausesAsts, StateAcc2} = pop_ast(StateAcc1, length(Methods)),
+
+        ArgsVar  = cerl:ann_c_var(Anno, args),
+        CaseAst  = cerl:ann_c_case(Anno, ArgsVar, ClausesAsts),
+        LetAst   = cerl:ann_c_let( Anno
+                                 , VarsAsts
+                                 , cerl:c_values(FNamesAsts)
+                                 , CaseAst
+                                 ),
+        FunAst   = cerl:ann_c_fun(Anno, [ArgsVar], LetAst),
+
+        push_ast(FunAst, StateAcc2)
+    end,
+
+  {FnsAsts, State2} = pop_ast( lists:foldl(FoldFun, State1, FnsExprs)
+                             , length(FnsExprs)
+                             ),
+
+  {lists:zip(FNamesAsts, FnsAsts), State2}.
 
 %% Push & pop asts
 

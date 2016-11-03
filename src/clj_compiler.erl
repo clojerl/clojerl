@@ -313,7 +313,6 @@ add_core_code(BeamBinary, CoreModule) ->
 
 -spec eval_expressions([cerl:cerl()]) -> [any()].
 eval_expressions(Expressions) ->
-  %% io:format("==== EXPR ====~n~s~n", [core_pp:format(EvalModule)]),
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
   CurrentNsAtom = binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
