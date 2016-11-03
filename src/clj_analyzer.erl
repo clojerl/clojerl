@@ -50,6 +50,7 @@ special_forms() ->
    , <<"do">>           => fun parse_do/2
    , <<"if">>           => fun parse_if/2
    , <<"let*">>         => fun parse_let/2
+   , <<"letfn*">>       => fun parse_letfn/2
    , <<"loop*">>        => fun parse_loop/2
    , <<"recur">>        => fun parse_recur/2
    , <<"case*">>        => fun parse_case/2
@@ -68,8 +69,6 @@ special_forms() ->
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"extend-type*">> => fun parse_extend_type/2
-
-   , <<"letfn*">>       => undefined
 
      %% , <<"monitor-enter">>
      %% , <<"monitor-exit">>
@@ -191,13 +190,10 @@ parse_fn(Env, List) ->
 
   Env0 = clj_env:add_locals_scope(Env),
 
-  %% Add the name of the fn as a local with a modified name so that we can
-  %% identify the fun as a clojure function when evaluated with erl_eval
-  %% (see clojerl.erlang.Fn)
-  PrefixNameSym = 'clojerl.erlang.Fn':prefix(NameSym),
+  %% Add the name of the fn as a local
   LocalExpr     = #{ op   => local
                    , env  => ?DEBUG(Env)
-                   , name => PrefixNameSym
+                   , name => NameSym
                    },
 
   %% If there is a def var we add it to the local scope
@@ -229,7 +225,7 @@ parse_fn(Env, List) ->
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
   LoopId = case get_def_name(Env) of
-             undefined -> {fn, PrefixNameSym};
+             undefined -> {fn, NameSym};
              _         -> {var, DefNameSym}
            end,
 
@@ -681,6 +677,61 @@ parse_recur(Env, List) ->
                },
 
   clj_env:push_expr(Env3, RecurExpr).
+
+%%------------------------------------------------------------------------------
+%% Parse letfn
+%%------------------------------------------------------------------------------
+
+-spec parse_letfn(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
+parse_letfn(Env0, Form) ->
+  [ _ %% letfn*
+  , FnSpecs
+  | Body
+  ] = clj_core:to_list(Form),
+
+  {FnNames, FnForms} = partition_fun_defs(clj_core:to_list(FnSpecs)),
+
+  Env  = clj_env:add_locals_scope(Env0),
+
+  BindingFun = fun(FnName) ->
+                   #{ op     => local
+                    , env    => ?DEBUG(Env)
+                    , name   => FnName
+                    , shadow => clj_env:get_local(Env, FnName)
+                    , form   => FnName
+                    }
+               end,
+  FnNamesExprs = lists:map(BindingFun, FnNames),
+
+  Env1 = clj_env:put_locals(Env, FnNamesExprs),
+
+  {FnsExprs, Env2} = clj_env:last_exprs( analyze_forms(Env1, FnForms)
+                                       , length(FnNames)
+                                       ),
+
+  {BodyExpr, Env3} = clj_env:pop_expr(analyze_body(Env2, Body)),
+
+  LetFnExpr = #{ op   => letfn
+               , env  => ?DEBUG(Env)
+               , form => Form
+               , vars => FnNamesExprs
+               , fns  => FnsExprs
+               , body => BodyExpr
+               },
+
+  Env4 = clj_env:remove_locals_scope(Env3),
+
+  clj_env:push_expr(Env4, LetFnExpr).
+
+-spec partition_fun_defs([any()]) -> {[any()], [any()]}.
+partition_fun_defs(FnSpecs) ->
+  partition_fun_defs(FnSpecs, {[], []}).
+
+-spec partition_fun_defs([any()], {[any()], [any()]}) -> {[any()], [any()]}.
+partition_fun_defs([], {Names, Funs}) ->
+  {lists:reverse(Names), lists:reverse(Funs)};
+partition_fun_defs([Name, Fun | Rest], {NamesAcc, FunsAcc}) ->
+  partition_fun_defs(Rest, {[Name | NamesAcc], [Fun | FunsAcc]}).
 
 %%------------------------------------------------------------------------------
 %% Parse case*
