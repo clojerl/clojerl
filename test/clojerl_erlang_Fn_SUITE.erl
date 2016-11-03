@@ -60,7 +60,7 @@ apply(_Config) ->
   ok = clj_core:apply(fun() -> ok end, []),
 
   ct:comment("Invoke a non Clojure named fun generated through erl_eval"),
-  ok = clj_core:apply(fun Ok() -> ok end, []),
+  ok = clj_core:apply(fun _Ok() -> ok end, []),
 
   ct:comment("Invoke a Clojure fun"),
   {CljFun, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
