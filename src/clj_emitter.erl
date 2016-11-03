@@ -1296,7 +1296,10 @@ default_compiler_options() ->
 
 -spec new_c_var(cerl:ann()) -> cerl:c_var().
 new_c_var(Anno) ->
-  N = erlang:get(local_var_counter),
+  N = case erlang:get(local_var_counter) of
+        undefined -> 0;
+        X -> X
+      end,
   erlang:put(local_var_counter, N + 1),
   Name = list_to_atom("clj " ++ integer_to_list(N)),
   cerl:ann_c_var([generated | Anno], Name).
