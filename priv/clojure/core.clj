@@ -1601,9 +1601,10 @@
 
 ;;;;;;;;; var stuff
 
-(defn set!
+(defmacro set!
   [x val]
-  (clj_core/set!.e x val))
+  (assert-args (symbol? x) "a symbol as its first argument")
+  `(clj_core/set!.e (var ~x) ~val))
 
 (defmacro ^{:private true} assert-args
   [& pairs]
