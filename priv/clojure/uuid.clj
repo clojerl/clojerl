@@ -12,8 +12,8 @@
   {:pre [(string? form)]}
   (new erlang.util.UUID form))
 
-(defmethod print-method :erlang.util.UUID [uuid ^java.io.Writer w]
+(defmethod print-method erlang.util.UUID [uuid ^java.io.Writer w]
   (erlang.io.IWriter/write.e w (str "#uuid \"" (str uuid) "\"")))
 
-(defmethod print-dup :erlang.util.UUID [o w]
+(defmethod print-dup erlang.util.UUID [o w]
   (print-method o w))

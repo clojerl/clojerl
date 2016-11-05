@@ -1601,11 +1601,6 @@
 
 ;;;;;;;;; var stuff
 
-(defmacro set!
-  [x val]
-  (assert-args (symbol? x) "a symbol as its first argument")
-  `(clj_core/set!.e (var ~x) ~val))
-
 (defmacro ^{:private true} assert-args
   [& pairs]
   `(do (when-not ~(first pairs)
@@ -1613,6 +1608,11 @@
      ~(let [more (nnext pairs)]
         (when more
           (list* `assert-args more)))))
+
+(defmacro set!
+  [x val]
+  (assert-args (symbol? x) "a symbol as its first argument")
+  `(clj_core/set!.e (var ~x) ~val))
 
 (defmacro if-let
   "bindings => binding-form test
@@ -3281,7 +3281,7 @@
   {:added "1.0"
    :static true}
   ^clojerl.Keyword [^Object x]
-  (clj_core/type.e x))
+  (if (nil? x) x (clj_core/type.e x)))
 
 (defn type
   "Returns the :type metadata of x, or its Class if none"
@@ -6218,7 +6218,7 @@
      (seq-reduce f val coll))))
 
 (extend-protocol IKVReduce
-  clojerl.Nil
+  nil
   (kv-reduce
     [_ f init]
     init)

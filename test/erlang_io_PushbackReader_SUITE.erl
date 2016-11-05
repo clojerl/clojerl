@@ -47,7 +47,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.PushbackReader \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -66,7 +66,7 @@ read(_Config) ->
   <<"yeah">>  = 'erlang.io.IReader':read(Reader, 10),
   eof         = 'erlang.io.IReader':read(Reader),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -85,7 +85,7 @@ read_line(_Config) ->
 
   eof = 'erlang.io.IReader':read_line(Reader),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -103,7 +103,7 @@ skip(_Config) ->
   eof          = 'erlang.io.IReader':read_line(Reader),
   eof          = 'erlang.io.IReader':skip(Reader, 1),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -124,7 +124,7 @@ unread(_Config) ->
        catch _:_ -> ok
        end,
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -141,7 +141,7 @@ at_line_start(_Config) ->
   true         = 'erlang.io.PushbackReader':at_line_start(Reader),
   eof          = 'erlang.io.IReader':read(Reader),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   ct:comment("At line start fails"),
   FakePid = spawn_link(fun fake_loop/0),
@@ -157,9 +157,9 @@ close(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
-  ok = try undefined = 'erlang.io.Closeable':close(Reader), error
+  ok = try ?NIL = 'erlang.io.Closeable':close(Reader), error
        catch _:_ -> ok
        end,
 
@@ -177,7 +177,7 @@ complete_coverage(_Config) ->
   ct:comment("Send an unexpected io_request"),
   {error, request} = io:request(Pid, {io_request, self(), ref, unexpected}),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   ct:comment("Generate error when closing a PushbackReader that wraps a file"),
   File1   = 'erlang.io.File':open(<<"tmp">>),

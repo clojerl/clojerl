@@ -1,5 +1,7 @@
 -module('clojerl.String').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.Counted').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ISequential').
@@ -142,9 +144,9 @@ count(Str) ->
 hash(Str) ->
   erlang:phash2(Str).
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
-seq(<<>>) -> undefined;
+seq(<<>>) -> ?NIL;
 seq(Str)  -> to_seq(Str, []).
 
 to_list(Str)  -> to_seq(Str, []).

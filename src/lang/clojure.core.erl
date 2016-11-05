@@ -7,7 +7,7 @@
 -vars(#{ <<"ns">>    => { ?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"ns">>}
                         , #{meta => #{ macro           => true
                                      , 'variadic?'     => true
-                                     , max_fixed_arity => undefined
+                                     , max_fixed_arity => ?NIL
                                      , variadic_arity  => 3
                                      }
                            }
@@ -16,7 +16,7 @@
                         , {<<"clojure.core">>, <<"in-ns">>}
                         , #{meta => #{ 'variadic?'     => false
                                      , max_fixed_arity => 1
-                                     , variadic_arity  => undefined
+                                     , variadic_arity  => ?NIL
                                      }
                            }
                         }
@@ -123,7 +123,7 @@ ns__val() ->
   Var  = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"ns">>),
   Meta = #{ macro           => true
           , 'variadic?'     => true
-          , max_fixed_arity => undefined
+          , max_fixed_arity => ?NIL
           , variadic_arity  => 3
           },
   clj_core:with_meta(Var, Meta).
@@ -137,19 +137,19 @@ ns__val() ->
                       ),
 
   clj_namespace:find_or_create(Name),
-  undefined.
+  ?NIL.
 
 'in-ns__val'() ->
   Var = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"in-ns">>),
   Meta = #{ 'variadic?'     => false
           , max_fixed_arity => 1
-          , variadic_arity  => undefined
+          , variadic_arity  => ?NIL
           },
   clj_core:with_meta(Var, Meta).
 
 '*ns*__val'() ->
   case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*ns*">>) of
-    undefined ->
+    ?NIL ->
       ClojureCoreSym = clj_core:symbol(<<"clojure.core">>),
       clj_namespace:find_or_create(ClojureCoreSym);
     {ok, X}   -> X
@@ -188,10 +188,10 @@ ns__val() ->
 '*data-readers*__val'() ->
   var_value(<<"#'clojure.core/*data-readers*">>, #{}).
 
-'default-data-readers__val'() -> undefined.
+'default-data-readers__val'() -> ?NIL.
 
 '*default-data-reader-fn*__val'() ->
-  var_value(<<"#'clojure.core/*default-data-reader-fn*">>, undefined).
+  var_value(<<"#'clojure.core/*default-data-reader-fn*">>, ?NIL).
 
 %% @private
 'maybe-unquote'(MaybeQuotedForm) ->
@@ -208,6 +208,6 @@ ns__val() ->
 %% @private
 var_value(Name, Default) ->
   case 'clojerl.Var':dynamic_binding(Name) of
-    undefined -> Default;
+    ?NIL -> Default;
     {ok, X}   -> X
   end.

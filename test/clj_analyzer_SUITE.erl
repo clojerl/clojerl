@@ -68,7 +68,7 @@ end_per_testcase(_, Config) ->
 constants(_Config) ->
   ct:comment("nil"),
   #{op := constant,
-    form := undefined} = analyze_one(<<"nil">>),
+    form := ?NIL} = analyze_one(<<"nil">>),
 
   ct:comment("Boolean"),
   #{op := constant,
@@ -185,7 +185,7 @@ def(_Config) ->
 
   #{ 'variadic?'     := false
    , max_fixed_arity := 1
-   , variadic_arity  := undefined
+   , variadic_arity  := ?NIL
    } = VarMeta,
 
   ct:comment("Vars keep meta from symbol"),
@@ -400,7 +400,7 @@ do(_Config) ->
   ct:comment("do with no expressions"),
   #{op := do,
     statements := [],
-    ret := #{op := constant, form := undefined}
+    ret := #{op := constant, form := ?NIL}
    } = analyze_one(<<"(do)">>),
 
   ct:comment("do with 1 expression"),
@@ -462,7 +462,7 @@ do(_Config) ->
     form := ThenKeyword} = Then1,
 
   #{op := constant,
-    form := undefined} = Else1,
+    form := ?NIL} = Else1,
 
   ct:comment("if with then & else"),
   #{op := 'if',
@@ -489,14 +489,14 @@ do(_Config) ->
   #{ op      := 'case'
    , test    := #{op := constant}
    , clauses := []
-   , default := undefined
+   , default := ?NIL
    } = analyze_one(<<"(case* true)">>),
 
   ct:comment("case with two clauses"),
   #{ op      := 'case'
    , test    := #{op := constant}
    , clauses := [_, _]
-   , default := undefined
+   , default := ?NIL
    } = analyze_one(<<"(case* true true 1 false 0)">>),
 
   ct:comment("case with two clauses and default"),
@@ -506,7 +506,7 @@ do(_Config) ->
    , default := DefaultExpr
    } = analyze_one(<<"(case* true true 1 false 0 :default)">>),
 
-  true = DefaultExpr =/= undefined,
+  true = DefaultExpr =/= ?NIL,
 
   {comments, ""}.
 
@@ -519,7 +519,7 @@ do(_Config) ->
    } = analyze_one(<<"(let* [])">>),
   0 = length(Bindings0),
   #{ statements := []
-   , ret        := #{op := constant, form := undefined}
+   , ret        := #{op := constant, form := ?NIL}
    } = Body0,
 
   ct:comment("let with bindings and no body"),
@@ -529,7 +529,7 @@ do(_Config) ->
    } = analyze_one(<<"(let* [x 1, y :a])">>),
   2 = length(Bindings1),
   #{ statements := []
-   , ret        := #{op := constant, form := undefined}
+   , ret        := #{op := constant, form := ?NIL}
    } = Body1,
 
   ct:comment("let with bindings and body should resolve locals"),
@@ -759,13 +759,13 @@ throw(_Config) ->
   #{ op      := 'try'
    , body    := #{op := do}
    , catches := []
-   , finally := undefined
+   , finally := ?NIL
    } = analyze_one(<<"(try 1)">>),
 
   ct:comment("try with one catch and no finally"),
   #{ op      := 'try'
    , catches := [Catch1_1]
-   , finally := undefined
+   , finally := ?NIL
    } = analyze_one(<<"(try 1 (catch :error err err))">>),
 
   #{ op    := 'catch'
@@ -778,7 +778,7 @@ throw(_Config) ->
   ct:comment("try with two catches and no finally"),
   #{ op      := 'try'
    , catches := [Catch2_1, Catch2_2]
-   , finally := undefined
+   , finally := ?NIL
    } = analyze_one(<<"(try 1"
                      "  (catch :error err-1 err-1)"
                      "  (catch :throw err-2 err-2))">>
@@ -821,7 +821,7 @@ throw(_Config) ->
   ct:comment("try, catch with :exit"),
   #{ op      := 'try'
    , catches := [Catch4_1]
-   , finally := undefined
+   , finally := ?NIL
    } = analyze_one(<<"(try 1 (catch :exit e e))">>),
 
   #{ op    := 'catch'
@@ -835,7 +835,7 @@ throw(_Config) ->
   ct:comment("try, catch with _"),
   #{ op      := 'try'
    , catches := [Catch5_1]
-   , finally := undefined
+   , finally := ?NIL
    } = analyze_one(<<"(try 1 (catch _ e e))">>),
 
   #{ op    := 'catch'
@@ -873,7 +873,7 @@ erl_fun(_Config) ->
   #{ op       := erl_fun
    , module   := erlang
    , function := is_atom
-   , arity    := undefined
+   , arity    := ?NIL
    } = analyze_one(<<"erlang/is_atom">>),
 
   #{ op       := erl_fun
@@ -891,19 +891,19 @@ erl_fun(_Config) ->
   #{ op       := erl_fun
    , module   := erlang
    , function := 'is_atom.'
-   , arity    := undefined
+   , arity    := ?NIL
    } = analyze_one(<<"erlang/is_atom.">>),
 
   #{ op       := erl_fun
    , module   := erlang
    , function := 'is_atom.hello'
-   , arity    := undefined
+   , arity    := ?NIL
    } = analyze_one(<<"erlang/is_atom.hello">>),
 
   #{ op       := erl_fun
    , module   := erlang
    , function := 'is_atom'
-   , arity    := undefined
+   , arity    := ?NIL
    } = analyze_one(<<"erlang/is_atom.e">>),
 
   {comments, ""}.

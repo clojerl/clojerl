@@ -24,12 +24,12 @@ macroexpand_1(Env, Form) ->
   Op       = clj_core:first(Form),
   MacroVar = case clj_core:'symbol?'(Op) of
                true -> lookup_var(Op, false);
-               false -> undefined
+               false -> ?NIL
              end,
 
   case
     not is_special(Op)
-    andalso (MacroVar =/= undefined)
+    andalso (MacroVar =/= ?NIL)
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
@@ -42,7 +42,7 @@ macroexpand_1(Env, Form) ->
 %% Internal
 %%------------------------------------------------------------------------------
 
--spec special_forms() -> #{'clojerl.Symbol':type() => fun() | undefined}.
+-spec special_forms() -> #{'clojerl.Symbol':type() => fun() | ?NIL}.
 special_forms() ->
   #{ <<"def">>          => fun parse_def/2
    , <<"quote">>        => fun parse_quote/2
@@ -56,11 +56,8 @@ special_forms() ->
    , <<"case*">>        => fun parse_case/2
    , <<"throw">>        => fun parse_throw/2
    , <<"try">>          => fun parse_try/2
-   , <<"catch">>        => undefined
-   , <<"finally">>      => undefined
-   , <<"var">>          => fun parse_var/2
 
-   , <<"&">>            => undefined
+   , <<"var">>          => fun parse_var/2
 
    , <<"erl-on-load*">> => fun parse_on_load/2
 
@@ -70,8 +67,12 @@ special_forms() ->
    , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"extend-type*">> => fun parse_extend_type/2
 
-     %% , <<"monitor-enter">>
-     %% , <<"monitor-exit">>
+     %% These are special forms but they are meant to be parsed under other
+     %% special forms. If they are at function position then they should be
+     %% analyzed as regular symbols.
+   , <<"catch">>        => fun analyze_invoke/2
+   , <<"finally">>      => fun analyze_invoke/2
+   , <<"&">>            => fun analyze_invoke/2
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
@@ -126,7 +127,7 @@ analyze_seq(Env0, List) ->
   Env           = clj_env:maybe_update_location(Env0, MaybeLocation),
   Op            = clj_core:first(List),
 
-  clj_utils:error_when( Op =:= undefined
+  clj_utils:error_when( Op =:= ?NIL
                       , <<"Can't call nil">>
                       , clj_env:location(Env)
                       ),
@@ -198,7 +199,7 @@ parse_fn(Env, List) ->
 
   %% If there is a def var we add it to the local scope
   DefNameSym  = get_def_name(Env),
-  IsDef       = DefNameSym =/= undefined,
+  IsDef       = DefNameSym =/= ?NIL,
   DefVar      = case IsDef of
                   true  ->
                     DefVarNs    = clj_namespace:current(),
@@ -206,7 +207,7 @@ parse_fn(Env, List) ->
                     'clojerl.Var':?CONSTRUCTOR( clj_core:name(DefVarNsSym)
                                               , clj_core:name(DefNameSym)
                                               );
-                  false -> undefined
+                  false -> ?NIL
                 end,
 
   %% If it is a def we only register the var, otherwise register the local.
@@ -225,8 +226,8 @@ parse_fn(Env, List) ->
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
   LoopId = case get_def_name(Env) of
-             undefined -> {fn, NameSym};
-             _         -> {var, DefNameSym}
+             ?NIL -> {fn, NameSym};
+             _    -> {var, DefNameSym}
            end,
 
   %% Remove def_name do that inner fn* are not influenced by it.
@@ -245,14 +246,14 @@ parse_fn(Env, List) ->
   AllVariadics = lists:filter(IsVariadicFun, MethodsExprs),
   {IsVariadic, VariadicArity} =
     case AllVariadics of
-      [] -> {false, undefined};
+      [] -> {false, ?NIL};
       [Variadic | _] -> {true, MethodArityFun(Variadic)}
     end,
 
   FixedArities = lists:map(MethodArityFun, MethodsExprs -- AllVariadics),
   MaxFixedArity = case FixedArities of
-                    [] -> undefined;
-                    _ -> lists:max(FixedArities)
+                    [] -> ?NIL;
+                    _  -> lists:max(FixedArities)
                   end,
 
   %% Validations
@@ -269,8 +270,8 @@ parse_fn(Env, List) ->
                       ),
 
   clj_utils:error_when( IsVariadic andalso
-                        VariadicArity =/= undefined andalso
-                        MaxFixedArity =/= undefined andalso
+                        VariadicArity =/= ?NIL andalso
+                        MaxFixedArity =/= ?NIL andalso
                         MaxFixedArity > VariadicArity
                       , <<"Can't have fixed arity overload "
                           "with more params than variadic overload">>
@@ -373,7 +374,7 @@ analyze_fn_method(Env, List, LoopId, AnalyzeBody) ->
         Body     = clj_core:rest(List),
         clj_env:pop_expr(analyze_body(BodyEnv3, Body));
       false ->
-        {undefined, Env1}
+        {?NIL, Env1}
     end,
 
   %% TODO: check for a single symbol after '&
@@ -462,7 +463,7 @@ parse_do(Env, Form) ->
 
   {StatementsList, Return} =
     case Statements of
-      [] -> {[], undefined};
+      [] -> {[], ?NIL};
       _  -> {lists:droplast(Statements), lists:last(Statements)}
     end,
 
@@ -498,7 +499,7 @@ parse_if(Env, Form) ->
     case Count of
       3 ->
         [_, Test1, Then1] = clj_core:to_list(Form),
-        {Test1, Then1, undefined};
+        {Test1, Then1, ?NIL};
       4 ->
         [_, Test1, Then1, Else1] = clj_core:to_list(Form),
         {Test1, Then1, Else1}
@@ -769,7 +770,7 @@ parse_patters_bodies(Env1, PatternsBodies) ->
   {list(), any(), clj_env:env()}.
 parse_patters_bodies(Env, [], PatternBodyPairs) ->
   { lists:reverse(PatternBodyPairs)
-  , undefined
+  , ?NIL
   , Env
   };
 parse_patters_bodies(Env, [Default], PatternBodyPairs) ->
@@ -798,11 +799,11 @@ parse_def(Env, List) ->
   SymbolMeta0  = clj_core:meta(VarSymbol0),
   ArgLists     = clj_core:get(SymbolMeta0, arglists),
   ArgListsMap  = case ArgLists of
-                   undefined -> #{};
+                   ?NIL -> #{};
                    ArgLists -> #{arglists => clj_core:second(ArgLists)}
                  end,
   DocstringMap = case Docstring of
-                   undefined -> #{};
+                   ?NIL -> #{};
                    Docstring -> #{doc => Docstring}
                  end,
 
@@ -817,7 +818,7 @@ parse_def(Env, List) ->
 
   Var0 = lookup_var(VarSymbol),
 
-  clj_utils:error_when( Var0 =:= undefined
+  clj_utils:error_when( Var0 =:= ?NIL
                       , [ <<"Can't refer to qualified var that doesn't exist: ">>
                         , VarSymbol
                         ]
@@ -827,7 +828,7 @@ parse_def(Env, List) ->
   VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
   CurrentNs    = clj_namespace:current(),
   CurrentNsSym = clj_namespace:name(CurrentNs),
-  clj_utils:error_when( clj_core:namespace(VarSymbol) =/= undefined
+  clj_utils:error_when( clj_core:namespace(VarSymbol) =/= ?NIL
                         andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
                       , <<"Can't create defs outside of current ns">>
                       , clj_env:location(Env)
@@ -860,7 +861,7 @@ parse_def(Env, List) ->
   clj_namespace:update_var(Var),
   Count = clj_core:count(List),
   Init  = case Docstring of
-            undefined when Count =:= 3 -> clj_core:third(List);
+            ?NIL when Count =:= 3 -> clj_core:third(List);
             _ when Count =:= 4 -> clj_core:fourth(List);
             _ -> ?UNBOUND
           end,
@@ -894,14 +895,14 @@ add_def_name(Env, NameSym) ->
 remove_def_name(Env) ->
   clj_env:remove(Env, def_name).
 
--spec get_def_name(clj_env:env()) -> 'clojerl.Symbol':type() | undefined.
+-spec get_def_name(clj_env:env()) -> 'clojerl.Symbol':type() | ?NIL.
 get_def_name(Env) ->
   clj_env:get(Env, def_name).
 
 -spec restore_def_name(clj_env:env(), clj_env:env()) -> clj_env:env().
 restore_def_name(Env, PreviousEnv) ->
   case clj_env:get(PreviousEnv, def_name) of
-    undefined ->
+    ?NIL ->
       clj_env:remove(Env, def_name);
     NameSym ->
       %% This is just in case there are nested defs
@@ -921,18 +922,18 @@ var_fn_info(Var, _) ->
   Var.
 
 -spec validate_def_args(clj_env:env(), 'clojerl.List':type()) ->
-  undefined | binary().
+  ?NIL | binary().
 validate_def_args(Env, List) ->
   Docstring =
     case {clj_core:count(List), clj_core:third(List)} of
       {4, Str} when is_binary(Str) -> Str;
-      _ -> undefined
+      _ -> ?NIL
     end,
 
   case clj_core:count(List) of
     C when C == 2;
-           C == 3, Docstring == undefined;
-           C == 4, Docstring =/= undefined  ->
+           C == 3, Docstring == ?NIL;
+           C == 4, Docstring =/= ?NIL  ->
       case clj_core:type(clj_core:second(List)) of
         'clojerl.Symbol' -> ok;
         _ -> clj_utils:error( <<"First argument to def must be a symbol">>
@@ -951,16 +952,16 @@ validate_def_args(Env, List) ->
   end.
 
 -spec lookup_var('clojerl.Symbol':type()) ->
-  'clojerl.Var':type() | undefined.
+  'clojerl.Var':type() | ?NIL.
 lookup_var(VarSymbol) ->
   lookup_var(VarSymbol, true).
 
 -spec lookup_var('clojerl.Symbol':type(), boolean()) ->
-  'clojerl.Var':type() | undefined.
+  'clojerl.Var':type() | ?NIL.
 lookup_var(VarSymbol, true = _CreateNew) ->
   NsSym = case clj_core:namespace(VarSymbol) of
-            undefined -> undefined;
-            NsStr     -> clj_core:symbol(NsStr)
+            ?NIL  -> ?NIL;
+            NsStr -> clj_core:symbol(NsStr)
           end,
 
   NameSym   = clj_core:symbol(clj_core:name(VarSymbol)),
@@ -969,7 +970,7 @@ lookup_var(VarSymbol, true = _CreateNew) ->
   CurrentNsSym = clj_namespace:name(CurrentNs),
 
   case clj_core:equiv(CurrentNsSym, NsSym) of
-    Equal when Equal; NsSym == undefined ->
+    Equal when Equal; NsSym == ?NIL ->
       clj_namespace:intern(CurrentNs, NameSym),
       lookup_var(VarSymbol, false);
     false ->
@@ -980,11 +981,11 @@ lookup_var(VarSymbol, false) ->
   NameStr = clj_core:name(VarSymbol),
 
   case {NsStr, NameStr} of
-    {undefined, NameStr} when NameStr == <<"ns">>;
+    {?NIL, NameStr} when NameStr == <<"ns">>;
                               NameStr == <<"in-ns">> ->
       ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, NameStr),
       clj_namespace:find_var(ClojureCoreSym);
-    {undefined, _} ->
+    {?NIL, _} ->
       CurrentNs    = clj_namespace:current(),
       CurrentNsSym = clj_namespace:name(CurrentNs),
       Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
@@ -1187,7 +1188,7 @@ parse_defprotocol(Env, List) ->
 -spec parse_extend_type(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_extend_type(Env, List) ->
   [ _ExtendTypeSym % extend-type*
-  , Type
+  , Type0
   | ProtosMethods
   ] = clj_core:to_list(List),
 
@@ -1200,6 +1201,10 @@ parse_extend_type(Env, List) ->
                                      , GroupedProtoMethods
                                      ),
 
+  Type = case Type0 of
+           ?NIL -> clj_core:symbol(atom_to_binary(?NIL_TYPE, utf8));
+           _    -> Type0
+         end,
   {TypeExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Type)),
 
   #{op := TypeOp} = TypeExpr,
@@ -1335,7 +1340,7 @@ parse_try(Env, List) ->
                             RestFinally = clj_core:rest(Finally),
                             clj_env:pop_expr(analyze_body(Env4, RestFinally));
                           _ ->
-                            {undefined, Env4}
+                            {?NIL, Env4}
                         end,
 
   TryExpr = #{ op      => 'try'
@@ -1418,7 +1423,7 @@ parse_var(Env, List) ->
                       , form => Var
                       },
       clj_env:push_expr(Env1, VarConstExpr);
-    {undefined, _} ->
+    {?NIL, _} ->
       clj_utils:error([ <<"Unable to resolve var: ">>
                       , VarSymbol
                       , <<" in this context">>
@@ -1457,7 +1462,7 @@ analyze_invoke(Env, Form) ->
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Env, Symbol) ->
   case resolve(Env, Symbol) of
-    {undefined, _} ->
+    {?NIL, _} ->
       clj_utils:error([ <<"Unable to resolve symbol '">>, Symbol
                       , <<"' in this context">>
                       ]
@@ -1507,14 +1512,14 @@ type_expr(Type, Symbol, Env) ->
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env()) ->
-  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | undefined
+  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | ?NIL
   , clj_env:env()
   }.
 resolve(Env, Symbol) ->
   resolve(Env, Symbol, true).
 
 -spec resolve(clj_env:env(), 'clojerl.Symbol':env(), boolean()) ->
-  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | undefined
+  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | ?NIL
   , clj_env:env()
   }.
 resolve(Env, Symbol, CheckPrivate) ->
@@ -1524,11 +1529,11 @@ resolve(Env, Symbol, CheckPrivate) ->
   MappedVal = clj_namespace:mapping(CurrentNs, Symbol),
 
   if
-    Local =/= undefined ->
+    Local =/= ?NIL ->
       {{local, Local}, Env};
-    NsStr =/= undefined ->
+    NsStr =/= ?NIL ->
       case clj_namespace:find_var(Symbol) of
-        undefined ->
+        ?NIL ->
           %% If there is no var then assume it's a Module:Function pair.
           %% Let's see how this works out.
           {erl_fun(Env, Symbol), Env};
@@ -1542,7 +1547,7 @@ resolve(Env, Symbol, CheckPrivate) ->
                               ),
           {{var, Var}, Env}
       end;
-    MappedVal =/= undefined ->
+    MappedVal =/= ?NIL ->
       case clj_core:'var?'(MappedVal) of
         true  -> {{var, MappedVal}, Env};
         false -> {{type, MappedVal}, Env}
@@ -1550,7 +1555,7 @@ resolve(Env, Symbol, CheckPrivate) ->
     true ->
       case is_maybe_type(Symbol) of
         true  -> {{type, Symbol}, Env};
-        false -> {undefined, Env}
+        false -> {?NIL, Env}
       end
   end.
 
@@ -1574,22 +1579,22 @@ erl_fun(Env, Symbol) ->
 
   Arity1 = case Arity of
              _ when is_integer(Arity) -> Arity;
-             _ -> undefined
+             _ -> ?NIL
            end,
 
   {erl_fun, NsAtom, NameAtom, Arity1}.
 
--spec erl_fun_arity(binary()) -> {binary(), undefined | integer()}.
+-spec erl_fun_arity(binary()) -> {binary(), ?NIL | integer()}.
 erl_fun_arity(Name) ->
   case binary:split(Name, <<".">>, [global]) of
-    [_] -> {Name, undefined};
+    [_] -> {Name, ?NIL};
     Parts ->
       Last = lists:last(Parts),
       case {re:run(Last, <<"\\d+">>), Last} of
         {nomatch, <<"e">>} when length(Parts) > 1 ->
           {iolist_to_binary(lists:droplast(Parts)), <<"e">>};
         {nomatch, _} ->
-          {Name, undefined};
+          {Name, ?NIL};
         _ ->
           NameParts = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
           Arity = binary_to_integer(Last),
@@ -1599,9 +1604,9 @@ erl_fun_arity(Name) ->
 
 -spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
 is_maybe_type(Symbol) ->
-  undefined = clj_core:namespace(Symbol),
-  Name      = clj_core:name(Symbol),
-  Re        = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
+  ?NIL = clj_core:namespace(Symbol),
+  Name = clj_core:name(Symbol),
+  Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
   case re:run(Name, Re, [global, {capture, none}]) of
     match ->
       Module = binary_to_atom(Name, utf8),
@@ -1620,7 +1625,7 @@ is_maybe_type(Symbol) ->
 -spec wrapping_meta(clj_env:env(), map()) -> clj_env:env().
 wrapping_meta(Env, #{form := Form} = Expr) ->
   case clj_reader:remove_location(clj_core:meta(Form)) of
-    Meta when Meta =/= undefined andalso Meta =/= #{} ->
+    Meta when Meta =/= ?NIL andalso Meta =/= #{} ->
       {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
 
       WithMetaExpr = #{ op   => with_meta

@@ -57,7 +57,7 @@ init_per_suite(Config) ->
 'forty-two__val'() ->
   Name = <<"#'clojerl_Var_SUITE/forty-two">>,
   case 'clojerl.Var':dynamic_binding(Name) of
-    undefined -> 42;
+    ?NIL -> 42;
     {ok, X}   -> X
   end.
 
@@ -158,11 +158,11 @@ apply(_Config) ->
 
   Var43  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name43),
   Meta43 = #{ 'variadic?'     => true
-            , max_fixed_arity => undefined
+            , max_fixed_arity => ?NIL
             , variadic_arity  => 1
             },
   Var43Variadic = clj_core:with_meta(Var43, Meta43),
-  [43, 1, undefined]       = clj_core:apply(Var43Variadic, [1]),
+  [43, 1, ?NIL]       = clj_core:apply(Var43Variadic, [1]),
   [43, 1, [2]]    = clj_core:apply(Var43Variadic, [1, 2]),
   [43, 1, [2, 3]] = clj_core:apply(Var43Variadic, [1, 2, 3]),
 
@@ -240,9 +240,9 @@ dynamic_bindings(_Config) ->
 
   42 = clj_core:deref(Var),
 
-  ct:comment("Assign value undefined to a var"),
-  'clojerl.Var':push_bindings(#{Var => undefined}),
-  undefined = clj_core:deref(Var),
+  ct:comment("Assign value nil to a var"),
+  'clojerl.Var':push_bindings(#{Var => ?NIL}),
+  ?NIL = clj_core:deref(Var),
   'clojerl.Var':pop_bindings(),
 
   42 = clj_core:deref(Var),

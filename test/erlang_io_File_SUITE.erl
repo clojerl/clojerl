@@ -44,7 +44,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.File tmp>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  undefined = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -62,7 +62,7 @@ read(_Config) ->
   <<"How are you?\r\n">> = 'erlang.io.IReader':read(File, 14),
   eof     = 'erlang.io.IReader':read(File),
 
-  undefined = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -74,7 +74,7 @@ read_line(_Config) ->
   <<"How are you?\n">> = 'erlang.io.IReader':read_line(File),
   eof                    = 'erlang.io.IReader':read_line(File),
 
-  undefined = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 
@@ -90,7 +90,7 @@ write(_Config) ->
 
   File = 'erlang.io.IWriter':write(File, <<"~s!">>, [<<" Yeah">>]),
 
-  undefined = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.Closeable':close(File),
 
   {ok, <<"hello world! Yeah!">>} = file:read_file(<<"tmp-write">>),
 
@@ -102,10 +102,10 @@ write(_Config) ->
 close(_Config) ->
   ct:comment("Open an existing file and close it"),
   File = 'erlang.io.File':open(<<"tmp">>),
-  undefined = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.Closeable':close(File),
 
   ct:comment("Closing it again shouldn't be a problem"),
-  undefined = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.Closeable':close(File),
 
   {comments, ""}.
 

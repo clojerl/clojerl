@@ -96,12 +96,12 @@ seq(_Config) ->
 
   Range2 = 'clojerl.Range':?CONSTRUCTOR(1, 1, 1),
   1 = clj_core:first(Range2),
-  undefined = clj_core:next(Range2),
+  ?NIL = clj_core:next(Range2),
   [] = clj_core:to_list(clj_core:rest(Range2)),
 
   Range3 = 'clojerl.Range':?CONSTRUCTOR(2, 1, 1),
-  undefined = clj_core:first(Range3),
-  undefined = clj_core:next(Range3),
+  ?NIL = clj_core:first(Range3),
+  ?NIL = clj_core:next(Range3),
   [] = clj_core:rest(Range3),
 
   {comments, ""}.
@@ -149,7 +149,7 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.Range':'_'(undefined),
+  ?NIL  = 'clojerl.Range':'_'(?NIL),
 
   Range = 'clojerl.Range':?CONSTRUCTOR(1, 10, 1),
   []    = clj_core:empty(Range),
@@ -157,8 +157,8 @@ complete_coverage(_Config) ->
   RangeMeta = clj_core:with_meta(Range, #{a => 1}),
   #{a := 1} = clj_core:meta(RangeMeta),
 
-  Range2    = 'clojerl.Range':?CONSTRUCTOR(1, 1, 1),
-  Range     = clj_core:seq(Range),
-  undefined = clj_core:seq(Range2),
+  Range2 = 'clojerl.Range':?CONSTRUCTOR(1, 1, 1),
+  Range  = clj_core:seq(Range),
+  ?NIL   = clj_core:seq(Range2),
 
   {comments, ""}.

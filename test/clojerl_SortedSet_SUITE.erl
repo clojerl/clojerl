@@ -41,11 +41,11 @@ new(_Config) ->
   2 = clj_core:get(Set, 2),
   3 = clj_core:get(Set, 3),
   4 = clj_core:get(Set, 4),
-  undefined   = clj_core:get(Set, 5),
+  ?NIL   = clj_core:get(Set, 5),
   'not-found' = clj_core:get(Set, 5, 'not-found'),
 
   Set2 = sorted_set([]),
-  undefined = clj_core:get(Set2, whatever),
+  ?NIL = clj_core:get(Set2, whatever),
 
   {comments, ""}.
 
@@ -76,7 +76,7 @@ seq(_Config) ->
   [1, 2, 3, 4] = lists:sort(clj_core:to_list(Set)),
 
   Set2 = sorted_set([]),
-  undefined = clj_core:seq(Set2),
+  ?NIL = clj_core:seq(Set2),
 
   {comments, ""}.
 
@@ -150,7 +150,7 @@ apply(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
   EmptySet     = sorted_set([]),
 
-  undefined = clj_core:apply(EmptySet, [HelloKeyword]),
+  ?NIL = clj_core:apply(EmptySet, [HelloKeyword]),
 
   HelloSet = clj_core:conj(EmptySet, HelloKeyword),
   HelloKeyword = clj_core:apply(HelloSet, [HelloKeyword]),

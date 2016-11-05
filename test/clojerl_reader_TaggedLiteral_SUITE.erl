@@ -53,7 +53,7 @@ get(_Config) ->
   TaggedLit = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, [a, b]),
   [a, b]    = clj_core:get(TaggedLit, form),
   ErlSymbol = clj_core:get(TaggedLit, tag),
-  undefined = clj_core:get(TaggedLit, bla),
+  ?NIL      = clj_core:get(TaggedLit, bla),
   not_found = clj_core:get(TaggedLit, bla, not_found),
 
   {comments, ""}.

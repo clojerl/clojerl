@@ -1,5 +1,7 @@
 -module(clojerl_MultiFn_SUITE).
 
+-include("clojerl.hrl").
+
 -export([ all/0
         , init_per_suite/1
         , init_per_testcase/2
@@ -88,11 +90,11 @@ get_method(_Config) ->
 
   ct:comment("Some other value will return the default implementation"),
   default_method =
-    'clojerl.MultiFn':get_method(<<"test-method">>, hello, default, undefined),
+    'clojerl.MultiFn':get_method(<<"test-method">>, hello, default, ?NIL),
 
 
   ct:comment("Try to get a non-existent method"),
-  undefined = 'clojerl.MultiFn':get_method( <<"doesn't-exists">>, whatever),
+  ?NIL = 'clojerl.MultiFn':get_method( <<"doesn't-exists">>, whatever),
 
   {comments, ""}.
 

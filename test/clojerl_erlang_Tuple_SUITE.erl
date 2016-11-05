@@ -1,5 +1,7 @@
 -module(clojerl_erlang_Tuple_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ count/1
@@ -99,7 +101,7 @@ seq(_Config) ->
 
   [1] = clj_core:seq({1}),
 
-  undefined = clj_core:seq({}),
+  ?NIL = clj_core:seq({}),
   [1, 2, 3] = clj_core:to_list({1, 2, 3}),
 
   {comments, ""}.
@@ -116,6 +118,6 @@ str(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.erlang.Tuple':'_'(undefined),
+  ?NIL = 'clojerl.erlang.Tuple':'_'(?NIL),
 
   {comments, ""}.

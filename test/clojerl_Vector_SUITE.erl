@@ -1,5 +1,7 @@
 -module(clojerl_Vector_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ new/1
@@ -42,7 +44,7 @@ new(_Config) ->
   [1, 2, 3] = clj_core:seq(Vector),
 
   Vector2 = clj_core:vector([]),
-  undefined = clj_core:seq(Vector2),
+  ?NIL = clj_core:seq(Vector2),
 
   {comments, ""}.
 
@@ -126,14 +128,14 @@ seq(_Config) ->
 
   Vector2 = clj_core:vector([1]),
   1 = clj_core:first(Vector2),
-  undefined = clj_core:next(Vector2),
+  ?NIL = clj_core:next(Vector2),
   [] = clj_core:to_list(clj_core:rest(Vector2)),
 
   [1] = clj_core:to_list(Vector2),
 
   Vector3 = clj_core:vector([]),
-  undefined = clj_core:first(Vector3),
-  undefined = clj_core:next(Vector3),
+  ?NIL = clj_core:first(Vector3),
+  ?NIL = clj_core:next(Vector3),
   [] = clj_core:rest(Vector3),
 
   [] = clj_core:to_list(Vector3),
@@ -193,7 +195,7 @@ subvec(_Config) ->
 -spec stack(config()) -> result().
 stack(_Config) ->
   EmptyVector = clj_core:vector([]),
-  undefined = clj_core:peek(EmptyVector),
+  ?NIL = clj_core:peek(EmptyVector),
   ok = try EmptyVector = clj_core:pop(EmptyVector), error
        catch _:_ -> ok
        end,
@@ -231,7 +233,7 @@ associative(_Config) ->
   a = clj_core:find(TwoVector, 0),
   b = clj_core:find(TwoVector, 1),
 
-  undefined = clj_core:find(TwoVector, 3),
+  ?NIL = clj_core:find(TwoVector, 3),
 
   true = clj_core:'contains?'(OneVector, 0),
   true = clj_core:'contains?'(TwoVector, 1),
@@ -244,7 +246,7 @@ associative(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.Vector':'_'(undefined),
+  ?NIL = 'clojerl.Vector':'_'(?NIL),
 
   NotEmptyVector = clj_core:vector([a, b, 2, 3]),
   EmptyVector    = clj_core:empty(NotEmptyVector),
@@ -257,7 +259,7 @@ complete_coverage(_Config) ->
   b = clj_core:get(NotEmptyVector, 1),
   2 = clj_core:get(NotEmptyVector, 2),
   3 = clj_core:get(NotEmptyVector, 3),
-  undefined = clj_core:get(NotEmptyVector, 4),
+  ?NIL = clj_core:get(NotEmptyVector, 4),
   bla = clj_core:get(NotEmptyVector, 43, bla),
 
   {comments, ""}.

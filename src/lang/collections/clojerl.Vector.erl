@@ -50,7 +50,7 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Items) when is_list(Items) ->
-  #?TYPE{data = array:from_list(Items, undefined)}.
+  #?TYPE{data = array:from_list(Items, ?NIL)}.
 
 -spec subvec(type(), integer(), integer()) -> type().
 subvec(Vector, Start, End) ->
@@ -114,7 +114,7 @@ hash(#?TYPE{name = ?M, data = Array}) ->
 %% clojerl.ILookup
 
 get(#?TYPE{name = ?M} = Vector, Index) ->
-  get(Vector, Index, undefined).
+  get(Vector, Index, ?NIL).
 
 get(#?TYPE{name = ?M, data = Array}, Index, NotFound) ->
   case Index < array:size(Array) of
@@ -125,12 +125,12 @@ get(#?TYPE{name = ?M, data = Array}, Index, NotFound) ->
 %% clojerl.IMeta
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
 nth(#?TYPE{name = ?M, data = Array}, N) ->
   array:get(N, Array).
@@ -143,7 +143,7 @@ nth(#?TYPE{name = ?M, data = Array}, N, NotFound) ->
 
 peek(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
-    0    -> undefined;
+    0    -> ?NIL;
     Size -> array:get(Size - 1, Array)
   end.
 
@@ -157,7 +157,7 @@ pop(#?TYPE{name = ?M, data = Array} = Vector) ->
 
 seq(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
-    0 -> undefined;
+    0 -> ?NIL;
     _ -> array:to_list(Array)
   end.
 

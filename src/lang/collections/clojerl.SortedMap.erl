@@ -81,13 +81,13 @@ entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
       FoundKey = maps:get(Hash, Keys),
       Val = rbdict:fetch(FoundKey, Vals),
       clj_core:vector([FoundKey, Val]);
-    false -> undefined
+    false -> ?NIL
   end.
 
 assoc(#?TYPE{name = ?M, data = {Keys, Vals0}} = M, Key, Value) ->
   Hash = 'clojerl.IHash':hash(Key),
-  Vals = case maps:get(Hash, Keys, undefined) of
-           undefined -> Vals0;
+  Vals = case maps:get(Hash, Keys, ?NIL) of
+           ?NIL -> Vals0;
            K -> rbdict:erase(K, Vals0)
          end,
   M#?TYPE{data = {Keys#{Hash => Key}, rbdict:store(Key, Value, Vals)}}.
@@ -123,7 +123,7 @@ equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
 %% clojerl.IFn
 
 apply(#?TYPE{name = ?M} = M, [Key]) ->
-  apply(M, [Key, undefined]);
+  apply(M, [Key, ?NIL]);
 apply(#?TYPE{name = ?M} = M, [Key, NotFound]) ->
   get(M, Key, NotFound);
 apply(_, Args) ->
@@ -132,7 +132,7 @@ apply(_, Args) ->
 
 %% clojerl.IColl
 
-cons(#?TYPE{name = ?M} = Map, undefined) ->
+cons(#?TYPE{name = ?M} = Map, ?NIL) ->
   Map;
 cons(#?TYPE{name = ?M} = M, X) ->
   IsVector = clj_core:'vector?'(X),
@@ -160,7 +160,7 @@ hash(#?TYPE{name = ?M, data = {_, Vals}}) ->
 %% clojerl.ILookup
 
 get(#?TYPE{name = ?M} = Map, Key) ->
-  get(Map, Key, undefined).
+  get(Map, Key, ?NIL).
 
 get(#?TYPE{name = ?M, data = {Keys, Vals}}, Key, NotFound) ->
   Hash = 'clojerl.IHash':hash(Key),
@@ -188,7 +188,7 @@ without(#?TYPE{name = ?M, data = {Keys, Vals0}} = M, Key) ->
 %% clojerl.IMeta
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
   Map#?TYPE{info = Info#{meta => Metadata}}.
@@ -197,7 +197,7 @@ with_meta(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
 
 seq(#?TYPE{name = ?M} = Map) ->
   case to_list(Map) of
-    [] -> undefined;
+    [] -> ?NIL;
     X -> X
   end.
 

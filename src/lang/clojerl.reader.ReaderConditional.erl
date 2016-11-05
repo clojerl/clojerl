@@ -37,7 +37,7 @@ hash(#?TYPE{name = ?M} = ReaderCond) ->
 %% clojerl.ILookup
 
 get(#?TYPE{name = ?M} = ReaderCond, Key) ->
-  get(ReaderCond, Key, undefined).
+  get(ReaderCond, Key, ?NIL).
 
 get(#?TYPE{name = ?M, data = {Form, _}}, form, _) ->
   Form;

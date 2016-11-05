@@ -1,5 +1,7 @@
 -module(clojerl_Symbol_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ equiv/1
@@ -64,7 +66,7 @@ apply(_Config) ->
   HelloSymbol = clj_core:symbol(<<"hello">>),
   world = clj_core:apply(HelloSymbol, [#{HelloSymbol => world}]),
 
-  undefined = clj_core:apply(HelloSymbol, [#{bla => ble}]),
+  ?NIL      = clj_core:apply(HelloSymbol, [#{bla => ble}]),
   not_found = clj_core:apply(HelloSymbol, [#{bla => ble}, not_found]),
 
   ok = try
@@ -86,7 +88,7 @@ meta(_Config) ->
 -spec name(config()) -> result().
 name(_Config) ->
   HelloSymbol = clj_core:symbol(<<"hello">>),
-  undefined   = clj_core:namespace(HelloSymbol),
+  ?NIL        = clj_core:namespace(HelloSymbol),
   <<"hello">> = clj_core:name(HelloSymbol),
 
   HelloWorldSymbol = clj_core:symbol(<<"hello">>, <<"world">>),

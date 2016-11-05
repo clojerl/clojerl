@@ -1,5 +1,7 @@
 -module(clojerl_erlang_Map_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ new/1
@@ -74,7 +76,7 @@ seq(_Config) ->
   [[1, 2], [3, 4]] = lists:sort(KVs),
 
   Map2 = #{},
-  undefined = clj_core:seq(Map2),
+  ?NIL = clj_core:seq(Map2),
 
   {comments, ""}.
 
@@ -114,7 +116,7 @@ apply(_Config) ->
   ct:comment("Invoke a map"),
   a = clj_core:apply(Map, [1]),
   b = clj_core:apply(Map, [2]),
-  undefined = clj_core:apply(Map, [3]),
+  ?NIL = clj_core:apply(Map, [3]),
 
   ct:comment("Invoke a map with a not-found value"),
   c = clj_core:apply(Map, [3, c]),
@@ -184,7 +186,7 @@ associative(_Config) ->
   Pair   = clj_core:find(TwoMap, 2),
   true   = clj_core:equiv(Pair, clj_core:vector([2, b])),
 
-  undefined = clj_core:find(TwoMap, 3),
+  ?NIL = clj_core:find(TwoMap, 3),
 
   TwoMap = clj_core:dissoc(TwoMap, 3),
   OneMap = clj_core:dissoc(TwoMap, 2),

@@ -257,7 +257,7 @@ check_flag(Flag, Env) ->
   case clj_env:get(Env, clj_flags) of
     CljFlags when is_list(CljFlags) ->
       lists:member(Flag, CljFlags);
-    undefined ->
+    ?NIL ->
       false
   end.
 

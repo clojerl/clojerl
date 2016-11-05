@@ -1,5 +1,7 @@
 -module(clojerl_Nil_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ cons/1
@@ -29,7 +31,7 @@ init_per_suite(Config) ->
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  Nil = undefined,
+  Nil = ?NIL,
 
   ct:comment("Conj an element to nil"),
   OneList = clj_core:conj(Nil, 1),
@@ -41,19 +43,19 @@ cons(_Config) ->
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  HashNil = 'clojerl.IHash':hash(undefined),
+  HashNil = 'clojerl.IHash':hash(?NIL),
   true = is_integer(HashNil),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Nil = undefined,
+  Nil = ?NIL,
 
-  undefined = clj_core:seq(Nil),
+  ?NIL = clj_core:seq(Nil),
 
-  undefined = clj_core:first(Nil),
-  undefined = clj_core:next(Nil),
+  ?NIL = clj_core:first(Nil),
+  ?NIL = clj_core:next(Nil),
   [] = clj_core:rest(Nil),
 
   {comments, ""}.
@@ -61,12 +63,12 @@ seq(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   ct:comment("Check the string representation of true and false"),
-  <<"">> = clj_core:str(undefined),
+  <<"">> = clj_core:str(?NIL),
 
   {comments, ""}.
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  [] = 'clojerl.Nil':to_list(undefined),
+  [] = 'clojerl.Nil':to_list(?NIL),
 
   {comments, ""}.

@@ -22,15 +22,15 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: {undefined | binary(), binary()}}.
+-type type() :: #?TYPE{data :: {?NIL | binary(), binary()}}.
 
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Name) when is_binary(Name) ->
-  ?CONSTRUCTOR(undefined, Name).
+  ?CONSTRUCTOR(?NIL, Name).
 
--spec ?CONSTRUCTOR(binary() | undefined, binary()) -> type().
+-spec ?CONSTRUCTOR(binary() | ?NIL, binary()) -> type().
 ?CONSTRUCTOR(Namespace, Name)
-  when is_binary(Namespace) orelse Namespace == undefined,
+  when is_binary(Namespace) orelse Namespace == ?NIL,
        is_binary(Name) ->
   #?TYPE{data = {Namespace, Name}}.
 
@@ -50,7 +50,7 @@ apply(_, Args) ->
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = {undefined, Name}}) ->
+str(#?TYPE{name = ?M, data = {?NIL, Name}}) ->
   Name;
 str(#?TYPE{name = ?M, data = {Namespace, Name}}) ->
   <<Namespace/binary, "/", Name/binary>>.
@@ -61,7 +61,7 @@ namespace(#?TYPE{name = ?M, data = {Namespace, _}}) ->
   Namespace.
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta( #?TYPE{name = ?M, info = Info} = Keyword
                          , Metadata

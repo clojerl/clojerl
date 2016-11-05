@@ -4,6 +4,7 @@
 
 -compile({no_auto_import, [get/1]}).
 
+-include("clojerl.hrl").
 -include_lib("compiler/src/core_parse.hrl").
 
 -export([ with_context/1
@@ -128,7 +129,7 @@ remove(Module) when is_atom(Module)->
 -spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
   case get(?MODULE, ModuleName) of
-    undefined ->
+    ?NIL ->
       fun ModuleName:Function/Arity;
     Module ->
       FA     = {Function, Arity},
@@ -269,7 +270,7 @@ add_on_load(Module, Expr) ->
 is_clojure(Name) ->
   Key = {?MODULE, is_clojure, Name},
   case clj_cache:get(Key) of
-    undefined ->
+    ?NIL ->
       Attrs = Name:module_info(attributes),
       IsClojure = lists:keymember(clojure, 1, Attrs),
       clj_cache:put(Key, IsClojure),
@@ -282,7 +283,7 @@ is_clojure(Name) ->
 is_protocol(Name) ->
   Key = {?MODULE, is_protocol, Name},
   case clj_cache:get(Key) of
-    undefined ->
+    ?NIL ->
       Attrs = Name:module_info(attributes),
       IsProtocol = lists:keymember(protocol, 1, Attrs),
       clj_cache:put(Key, IsProtocol),
@@ -306,7 +307,7 @@ init([]) ->
 handle_call({load, Module}, {Pid, _}, #{loaded_modules := TabId} = State) ->
   Module = save(?MODULE, Module),
   case get(TabId, Pid) of
-    undefined ->
+    ?NIL ->
       save(TabId, {Pid, [Module]});
     {Pid, Modules}  ->
       save(TabId, {Pid, [Module | Modules]})
@@ -315,7 +316,7 @@ handle_call({load, Module}, {Pid, _}, #{loaded_modules := TabId} = State) ->
   {reply, ok, State};
 handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
   Modules = case get(TabId, Pid) of
-              undefined   -> [];
+              ?NIL   -> [];
               {Pid, Mods} -> Mods
             end,
 
@@ -325,7 +326,7 @@ handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
   {reply, Modules, State};
 handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
   Modules = case get(TabId, Pid) of
-              undefined   -> [];
+              ?NIL   -> [];
               {Pid, Mods} -> Mods
             end,
 
@@ -337,7 +338,7 @@ handle_cast({remove, Pid, ModuleName}, #{loaded_modules := TabId} = State) ->
     {Pid, Modules} ->
       NewModules = [M || M <- Modules, M#module.name =/= ModuleName],
       save(TabId, {Pid, NewModules});
-    undefined   -> ok
+    ?NIL   -> ok
   end,
   {noreply, State}.
 
@@ -511,12 +512,12 @@ get(Table, Id) ->
   get(Table, Id, false).
 
 -spec get(atom(), module(), boolean()) -> any().
-get(undefined, Id, _) -> %% If there is no table then nothing will be found.
+get(?NIL, Id, _) -> %% If there is no table then nothing will be found.
   throw({no_table, Id});
 get(Table, Id, Throw) ->
   case ets:lookup(Table, Id) of
     [] when Throw -> throw({not_found, Id});
-    []      -> undefined;
+    []      -> ?NIL;
     [Value] -> Value
   end.
 

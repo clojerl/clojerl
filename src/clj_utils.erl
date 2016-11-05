@@ -63,11 +63,11 @@ parse_number(Number) ->
              int       -> parse_int(Number);
              float     -> parse_float(Number);
              ratio     -> parse_ratio(Number);
-             undefined -> undefined
+             ?NIL -> ?NIL
            end,
 
   case Result of
-    undefined ->
+    ?NIL ->
       throw(<<"Invalid number format [", Number/binary, "]">>);
     _ ->
       Result
@@ -76,24 +76,24 @@ parse_number(Number) ->
 -spec parse_symbol(binary()) ->
   {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()}.
 parse_symbol(<<>>) ->
-  undefined;
+  ?NIL;
 parse_symbol(<<"::"/utf8, _/binary>>) ->
-  undefined;
+  ?NIL;
 parse_symbol(<<"/">>) ->
-  {undefined, <<"/">>};
+  {?NIL, <<"/">>};
 parse_symbol(Str) ->
   case binary:last(Str) of
-    $: -> undefined;
+    $: -> ?NIL;
     _ ->
       case binary:split(Str, <<"/">>) of
         [_Namespace, <<>>] ->
-          undefined;
+          ?NIL;
         [Namespace, <<"/">>] ->
           {Namespace, <<"/">>};
         [Namespace, Name] ->
           verify_symbol_name({Namespace, Name});
         [Name] ->
-          verify_symbol_name({undefined, Name})
+          verify_symbol_name({?NIL, Name})
       end
   end.
 
@@ -104,7 +104,7 @@ verify_symbol_name({_, Name} = Result) ->
   ApplyPred = fun(Fun) -> Fun(Name) end,
   case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoDoubleSlash]) of
     true -> Result;
-    false -> undefined
+    false -> ?NIL
   end.
 
 -spec char_type(non_neg_integer()) -> char_type().
@@ -168,15 +168,15 @@ compare(X, Y) ->
 
 -spec throw(any()) -> no_return().
 throw(Reason) ->
-  throw(Reason, undefined).
+  throw(Reason, ?NIL).
 
--spec throw(any(), undefined | clj_reader:location()) -> no_return().
+-spec throw(any(), ?NIL | clj_reader:location()) -> no_return().
 throw(List, Location) ->
   throw_when(true, List, Location).
 
 -spec throw_when(boolean(), any()) -> ok | no_return().
 throw_when(Throw, Reason) ->
-  throw_when(Throw, Reason, undefined).
+  throw_when(Throw, Reason, ?NIL).
 
 -spec throw_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
 throw_when(true, List, Location) when is_list(List) ->
@@ -192,17 +192,17 @@ throw_when(false, _, _) ->
 
 -spec error(any()) -> no_return().
 error(List) ->
-  error_when(true, List, undefined).
+  error_when(true, List, ?NIL).
 
--spec error(any(), clj_reader:location() | undefined) -> no_return().
+-spec error(any(), clj_reader:location() | ?NIL) -> no_return().
 error(List, Location) ->
   error_when(true, List, Location).
 
 -spec error_when(boolean(), any()) -> ok | no_return().
 error_when(Throw, Reason) ->
-  error_when(Throw, Reason, undefined).
+  error_when(Throw, Reason, ?NIL).
 
--spec error_when(boolean(), any(), clj_reader:location() | undefined) ->
+-spec error_when(boolean(), any(), clj_reader:location() | ?NIL) ->
   ok | no_return().
 error_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
@@ -217,7 +217,7 @@ error_when(false, _, _) ->
 
 -spec warn_when(boolean(), any()) -> ok | no_return().
 warn_when(Warn, Reason) ->
-  warn_when(Warn, Reason, undefined).
+  warn_when(Warn, Reason, ?NIL).
 
 -spec warn_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
 warn_when(true, List, Location) when is_list(List) ->
@@ -346,7 +346,7 @@ core_from_binary(Binary) ->
 
 %% @doc Valid integers can be either in decimal, octal, hexadecimal or any
 %%      base specified (e.g. `2R010` is binary for `2`).
--spec parse_int(binary()) -> integer() | undefined.
+-spec parse_int(binary()) -> integer() | ?NIL.
 parse_int(IntBin) ->
   {match, [_ | Groups]} = re:run(IntBin, ?INT_PATTERN, [{capture, all, list}]),
   case int_properties(Groups) of
@@ -355,10 +355,10 @@ parse_int(IntBin) ->
     {{Base, Value}, _Arbitrary, Negate} ->
       list_to_integer(Value, Base) * Negate;
     _ ->
-      undefined
+      ?NIL
   end.
 
--spec int_properties([string()]) -> {zero | undefined | {integer(), string()},
+-spec int_properties([string()]) -> {zero | ?NIL | {integer(), string()},
                                      boolean(),
                                      boolean()}.
 int_properties(Groups) ->
@@ -373,7 +373,7 @@ int_properties(Groups) ->
         Base = list_to_integer(lists:nth(6, Groups)),
         {Base, lists:nth(7, Groups)};
       _ ->
-        undefined
+        ?NIL
     end,
 
   Arbitrary = nth(8, Props, false),
@@ -420,14 +420,14 @@ number_type(Number) ->
             end
         end,
   case maps:fold(Fun, [], Regex) of
-    [] -> undefined;
+    [] -> ?NIL;
     [T | _] -> T
   end.
 
-%% @doc Like lists:nth/2 but returns `undefined` if `Index` is
+%% @doc Like lists:nth/2 but returns nil if `Index` is
 %%      larger than the amount of elements in `List`.
 nth(Index, List) ->
-  nth(Index, List, undefined).
+  nth(Index, List, ?NIL).
 
 nth(Index, List, Default) ->
   case Index =< length(List) of
@@ -435,18 +435,18 @@ nth(Index, List, Default) ->
     false -> Default
   end.
 
--spec location_to_binary(undefined | clj_reader:location()) -> binary().
+-spec location_to_binary(?NIL | clj_reader:location()) -> binary().
 location_to_binary(#{line := Line, column := Col, file := Filename})
   when is_integer(Line) andalso is_integer(Col) ->
   LineBin     = integer_to_binary(Line),
   ColBin      = integer_to_binary(Col),
   FilenameBin = case Filename of
-                  undefined -> <<"?">>;
+                  ?NIL -> <<"?">>;
                   _ -> Filename
                 end,
   <<FilenameBin/binary, ":", LineBin/binary, ":", ColBin/binary, ": ">>;
 location_to_binary(#{line := Line, column := Col} = Location)
   when is_integer(Line) andalso is_integer(Col) ->
-  location_to_binary(Location#{file => undefined});
+  location_to_binary(Location#{file => ?NIL});
 location_to_binary(_) ->
   <<"?:?:?: ">>.

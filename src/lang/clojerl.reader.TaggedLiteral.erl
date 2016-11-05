@@ -31,7 +31,7 @@ equiv(_, _) ->
 %% clojerl.ILookup
 
 get(#?TYPE{name = ?M} = TaggedLiteral, Key) ->
-  get(TaggedLiteral, Key, undefined).
+  get(TaggedLiteral, Key, ?NIL).
 
 get(#?TYPE{name = ?M, data = {Tag, _}}, tag, _) ->
   Tag;

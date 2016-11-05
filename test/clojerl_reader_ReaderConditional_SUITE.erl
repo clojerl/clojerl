@@ -63,7 +63,7 @@ get(_Config) ->
   ReadCond  = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([a, b], true),
   [a, b]    = clj_core:get(ReadCond, form),
   true      = clj_core:get(ReadCond, 'splicing?'),
-  undefined = clj_core:get(ReadCond, bla),
+  ?NIL      = clj_core:get(ReadCond, bla),
   not_found = clj_core:get(ReadCond, bla, not_found),
 
   {comments, ""}.

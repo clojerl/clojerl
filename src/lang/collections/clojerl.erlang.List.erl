@@ -1,5 +1,7 @@
 -module('clojerl.erlang.List').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.Counted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
@@ -44,24 +46,24 @@ str(Items) when is_list(Items) ->
   Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
-seq([]) -> undefined;
+seq([]) -> ?NIL;
 seq(List) -> List.
 
 to_list(List) -> List.
 
-first([]) -> undefined;
+first([]) -> ?NIL;
 first([First | _]) -> First.
 
 more([]) -> [];
 more([_ | Rest]) -> Rest.
 
-next([]) -> undefined;
-next([_ | []]) -> undefined;
+next([]) -> ?NIL;
+next([_ | []]) -> ?NIL;
 next([_ | Rest]) -> Rest.
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
-peek([]) -> undefined;
+peek([]) -> ?NIL;
 peek([X | _]) -> X.
 
 pop([]) -> [];
