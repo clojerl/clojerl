@@ -45,7 +45,7 @@
 
 count(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
-    undefined -> 0;
+    ?NIL -> 0;
     Seq       -> 'clojerl.Counted':count(Seq)
   end.
 
@@ -68,38 +68,38 @@ hash(#?TYPE{name = ?M} = LazySeq) ->
   clj_murmur3:ordered(LazySeq).
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 first(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
-    undefined -> undefined;
+    ?NIL -> ?NIL;
     #?TYPE{name = ?M} = LazySeq -> first(LazySeq);
     Seq -> 'clojerl.ISeq':first(Seq)
   end.
 
 next(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
-    undefined -> undefined;
+    ?NIL -> ?NIL;
     #?TYPE{name = ?M} = LazySeq -> next(LazySeq);
     Seq -> 'clojerl.ISeq':next(Seq)
   end.
 
 more(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
-    undefined -> [];
+    ?NIL -> [];
     #?TYPE{name = ?M} = LazySeq -> more(LazySeq);
     Seq -> 'clojerl.ISeq':more(Seq)
   end.
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
 seq(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
-    undefined ->
-      undefined;
+    ?NIL ->
+      ?NIL;
     #?TYPE{name = ?M} = LazySeq ->
       seq(LazySeq);
     Seq ->
@@ -109,11 +109,11 @@ seq(#?TYPE{name = ?M, data = Fn}) ->
 to_list(#?TYPE{name = ?M} = LazySeq) ->
   do_to_list(LazySeq, []).
 
-do_to_list(undefined, Acc) ->
+do_to_list(?NIL, Acc) ->
   lists:reverse(Acc);
 do_to_list(Seq0, Acc) ->
   case 'clojerl.Seqable':seq(Seq0) of
-    undefined -> do_to_list(undefined, Acc);
+    ?NIL -> do_to_list(?NIL, Acc);
     Seq ->
       First = 'clojerl.ISeq':first(Seq),
       Rest  = 'clojerl.ISeq':next(Seq),

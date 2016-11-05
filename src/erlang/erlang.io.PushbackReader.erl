@@ -45,7 +45,7 @@ close(#?TYPE{name = ?M, data = Pid}) ->
       TypeName = atom_to_binary(?MODULE, utf8),
       error(<<"Couldn't close ", TypeName/binary>>);
     _ ->
-      undefined
+      ?NIL
   end.
 
 str(#?TYPE{name = ?M, data = Pid}) ->
@@ -204,7 +204,7 @@ do_get_line(#{reader := Reader} = State, Result) ->
 -spec get_until(module(), atom(), list(), term()) ->
   {term(), binary()}.
 get_until(Module, Function, XArgs, State) ->
-  case apply(Module, Function, [State, undefined | XArgs]) of
+  case apply(Module, Function, [State, ?NIL | XArgs]) of
     {done, Result, NewStr} -> {Result, NewStr};
     {more, NewState} -> get_until(Module, Function, XArgs, NewState)
   end.

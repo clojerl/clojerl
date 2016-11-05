@@ -1,5 +1,7 @@
 -module(clj_env).
 
+-include("clojerl.hrl").
+
 -export([ default/0
         , context/1
         , context/2
@@ -25,7 +27,7 @@
 -type context() :: expr | return | statement.
 
 -type env() :: #{ context    => context()
-                , location   => undefined | clj_reader:location()
+                , location   => ?NIL | clj_reader:location()
                 , exprs      => []
                 , locals     => clj_scope:scope()
                 }.
@@ -35,7 +37,7 @@
 -spec default() -> env().
 default() ->
   #{ context    => expr
-   , location   => undefined
+   , location   => ?NIL
    , exprs      => []
    , locals     => clj_scope:new()
    }.
@@ -46,16 +48,16 @@ context(#{context := Ctx}) -> Ctx.
 -spec context(env(), context()) -> env().
 context(Env, Ctx) -> Env#{context => Ctx}.
 
--spec location(env()) -> undefined | clj_reader:location().
+-spec location(env()) -> ?NIL | clj_reader:location().
 location(#{location := Location}) ->
   Location.
 
--spec location(env(), undefined | clj_reader:location()) -> env().
+-spec location(env(), ?NIL | clj_reader:location()) -> env().
 location(Env, Location) ->
   Env#{location => Location}.
 
--spec maybe_update_location(env(), undefined | map()) -> env().
-maybe_update_location(Env, undefined) ->
+-spec maybe_update_location(env(), ?NIL | map()) -> env().
+maybe_update_location(Env, ?NIL) ->
   Env;
 maybe_update_location(Env, Location) ->
   Env#{location => Location}.
@@ -105,7 +107,7 @@ put_locals(Env, Locals) ->
 
 -spec get(env(), atom()) -> any().
 get(Env, Name) ->
-  get(Env, Name, undefined).
+  get(Env, Name, ?NIL).
 
 -spec get(env(), atom(), any()) -> any().
 get(Env, Name, Default) ->

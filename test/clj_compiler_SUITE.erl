@@ -1,5 +1,7 @@
 -module(clj_compiler_SUITE).
 
+-include("clojerl.hrl").
+
 -export([ all/0
         , init_per_suite/1
         ]).
@@ -123,6 +125,6 @@ check_var_value(Namespace, Name, Value) ->
 find_var(Namespace, Name) ->
   Symbol = clj_core:symbol(Namespace, Name),
   case clj_namespace:find_var(Symbol) of
-    undefined -> error;
+    ?NIL -> error;
     V -> V
   end.

@@ -45,7 +45,7 @@
 ?CONSTRUCTOR(Namespace, Name)
   when is_binary(Namespace) andalso is_binary(Name) ->
   binary_to_atom(<<Namespace/binary, "/", Name/binary>>, utf8);
-?CONSTRUCTOR(undefined, Name) ->
+?CONSTRUCTOR(?NIL, Name) ->
   ?CONSTRUCTOR(Name).
 
 -spec find(binary()) -> type().
@@ -53,17 +53,17 @@ find(Name) ->
   try
     binary_to_existing_atom(Name, utf8)
   catch
-    _:_ -> undefined
+    _:_ -> ?NIL
   end.
 
--spec find(binary() | undefined, binary()) -> type().
-find(undefined, Name) ->
+-spec find(binary() | ?NIL, binary()) -> type().
+find(?NIL, Name) ->
   find(Name);
 find(Namespace, Name) ->
   try
     binary_to_existing_atom(<<Namespace/binary, "/", Name/binary>>, utf8)
   catch
-    _:_ -> undefined
+    _:_ -> ?NIL
   end.
 
 %%------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ name(Keyword) ->
 namespace(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
   case binary:split(KeywordBin, <<"/">>) of
-    [_] -> undefined;
+    [_] -> ?NIL;
     [Namespace, _] -> Namespace
   end.
 

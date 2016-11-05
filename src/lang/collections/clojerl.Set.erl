@@ -71,7 +71,7 @@ equiv(#?TYPE{name = ?M} = X, Y) ->
 
 apply(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
-  maps:get(Hash, MapSet, undefined);
+  maps:get(Hash, MapSet, ?NIL);
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
@@ -84,7 +84,7 @@ hash(#?TYPE{name = ?M, data = MapSet}) ->
 %% clojerl.IMeta
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
   Set#?TYPE{info = Info#{meta => Metadata}}.
@@ -103,14 +103,14 @@ get(#?TYPE{name = ?M, data = MapSet}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   case maps:is_key(Hash, MapSet) of
     true  -> maps:get(Hash, MapSet);
-    false -> undefined
+    false -> ?NIL
   end.
 
 %% clojerl.Seqable
 
 seq(#?TYPE{name = ?M, data = MapSet}) ->
   case maps:size(MapSet) of
-    0 -> undefined;
+    0 -> ?NIL;
     _ -> maps:values(MapSet)
   end.
 

@@ -48,7 +48,7 @@ entry_at(Map, Key) ->
     true ->
       Val = maps:get(Key, Map),
       clj_core:vector([Key, Val]);
-    false -> undefined
+    false -> ?NIL
   end.
 
 assoc(Map, Key, Value) ->
@@ -106,7 +106,7 @@ equiv(X, Y) when is_map(X) ->
   end.
 
 remove_meta(#?TYPE{} = K, V, Acc) ->
-  K1 = K#?TYPE{info = undefined},
+  K1 = K#?TYPE{info = ?NIL},
   Acc#{K1 => V};
 remove_meta(K, V, Acc) ->
   Acc#{K => V}.
@@ -125,7 +125,7 @@ hash(Map) ->
   clj_murmur3:unordered(Map).
 
 get(Map, Key) ->
-  get(Map, Key, undefined).
+  get(Map, Key, ?NIL).
 
 get(Map, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
@@ -155,7 +155,7 @@ seq(Map) when is_map(Map) ->
                 [clj_core:vector([K, V]) | List]
             end,
   case maps:fold(FoldFun, [], Map) of
-    [] -> undefined;
+    [] -> ?NIL;
     X -> X
   end.
 

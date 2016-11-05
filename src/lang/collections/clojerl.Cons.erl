@@ -63,20 +63,20 @@ hash(#?TYPE{name = ?M, data = Cons}) ->
   clj_murmur3:ordered(Cons).
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 first(#?TYPE{name = ?M, data = {First, _}}) -> First.
 
-next(#?TYPE{name = ?M, data = {_, undefined}}) -> undefined;
+next(#?TYPE{name = ?M, data = {_, ?NIL}}) -> ?NIL;
 next(#?TYPE{name = ?M, data = {_, More}}) -> clj_core:seq(More).
 
-more(#?TYPE{name = ?M, data = {_, undefined}}) -> [];
+more(#?TYPE{name = ?M, data = {_, ?NIL}}) -> [];
 more(#?TYPE{name = ?M, data = {_, More}}) -> More.
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
 seq(#?TYPE{name = ?M} = Cons) -> Cons.
 

@@ -50,25 +50,25 @@ type(X) when is_list(X)      -> 'clojerl.erlang.List';
 type(X) when is_map(X)       -> 'clojerl.erlang.Map';
 type(X) when is_tuple(X)     -> 'clojerl.erlang.Tuple';
 type(X) when is_function(X)  -> 'clojerl.erlang.Fn';
-type(undefined)              -> 'clojerl.Nil';
+type(?NIL)                   -> ?NIL_TYPE;
 type(X) when is_atom(X)      -> 'clojerl.Keyword';
 type(X) when is_port(X)      -> 'clojerl.erlang.Port';
 type(X) when is_pid(X)       -> 'clojerl.erlang.Process';
 type(X) when is_reference(X) -> 'clojerl.erlang.Reference';
 type(Value) -> throw({Value, <<" has an unsupported type">>}).
 
--spec load(binary()) -> undefined.
+-spec load(binary()) -> ?NIL.
 load(ScriptBase) ->
   load(ScriptBase, true).
 
--spec load(binary(), boolean()) -> undefined.
+-spec load(binary(), boolean()) -> ?NIL.
 load(ScriptBase, FailIfNotFound) ->
   NsBin = binary:replace(ScriptBase, <<"/">>, <<".">>, [global]),
   case load_ns(NsBin) of
     ok -> ok;
     _ ->
       case resolve_file(ScriptBase, [<<".clj">>, <<".cljc">>]) of
-        undefined ->
+        ?NIL ->
           clj_utils:error_when( FailIfNotFound
                               , [ <<"Could not locate ">>, NsBin
                                 , <<".beam or ">>, ScriptBase
@@ -78,7 +78,7 @@ load(ScriptBase, FailIfNotFound) ->
         FullFilePath -> clj_compiler:compile_file(FullFilePath)
       end
   end,
-  undefined.
+  ?NIL.
 
 -spec load_ns(binary()) -> ok | error.
 load_ns(NsBin) ->
@@ -87,7 +87,7 @@ load_ns(NsBin) ->
     _           -> error
   end.
 
--spec resolve_file(binary(), [binary()]) -> binary() | undefined.
+-spec resolve_file(binary(), [binary()]) -> binary() | ?NIL.
 resolve_file(Path, Exts) ->
   Found =
     [ filename:join(CP, <<Path/binary, Ext/binary>>)
@@ -97,27 +97,27 @@ resolve_file(Path, Exts) ->
     ],
 
   case length(Found) of
-    0 -> undefined;
+    0 -> ?NIL;
     1 -> first(Found);
     _ -> clj_utils:error([<<"Found more than one ">>, Path])
   end.
 
 -spec count(any()) -> integer().
-count(undefined) -> 0;
+count(?NIL) -> 0;
 count(Seq)       -> 'clojerl.Counted':count(Seq).
 
 -spec nth(any(), integer()) -> any().
-nth(undefined, _) -> undefined;
-nth([], _) -> undefined;
+nth(?NIL, _) -> ?NIL;
+nth([], _) -> ?NIL;
 nth(Coll, N) ->
   Type = type(Coll),
   case 'satisfies?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N);
-    false -> nth_from(Coll, N, undefined)
+    false -> nth_from(Coll, N, ?NIL)
   end.
 
 -spec nth(any(), integer(), any()) -> any().
-nth(undefined, _, NotFound) -> NotFound;
+nth(?NIL, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
   Type = type(Coll),
@@ -136,18 +136,18 @@ nth_from(Coll, N, NotFound) ->
 
 -spec 'empty?'(any()) -> integer().
 'empty?'(Seq) ->
-  'clojerl.Seqable':seq(Seq) == undefined.
+  'clojerl.Seqable':seq(Seq) == ?NIL.
 
 -spec empty(any()) -> integer().
 empty(Coll) ->
   'clojerl.IColl':empty(Coll).
 
--spec seq(any()) -> list() | undefined.
+-spec seq(any()) -> list() | ?NIL.
 seq(Seqable) ->
   'clojerl.Seqable':seq(Seqable).
 
 -spec to_list(any()) -> list().
-to_list(undefined) -> [];
+to_list(?NIL) -> [];
 to_list(List) when is_list(List) -> List;
 to_list(Seqable) ->
   'clojerl.Seqable':to_list(Seqable).
@@ -163,14 +163,14 @@ equiv(X, Y) ->
   end.
 
 -spec conj(any(), any()) -> any().
-conj(undefined, Item) ->
+conj(?NIL, Item) ->
   list([Item]);
 conj(Coll, Item) ->
   'clojerl.IColl':cons(Coll, Item).
 
 -spec disj(any(), any()) -> any().
-disj(undefined, _Item) ->
-  undefined;
+disj(?NIL, _Item) ->
+  ?NIL;
 disj(Coll, Item) ->
   'clojerl.ISet':disjoin(Coll, Item).
 
@@ -179,7 +179,7 @@ disj(Coll, Item) ->
 %%      it is a clojerl.Cons cell, so that the realization of values
 %%      can be postponed until they are used.
 -spec cons(any(), any()) -> list().
-cons(Item, undefined) ->
+cons(Item, ?NIL) ->
   list([Item]);
 cons(Item, Seq) ->
   case 'seq?'(Seq) of
@@ -188,7 +188,7 @@ cons(Item, Seq) ->
   end.
 
 -spec first(any()) -> any().
-first(undefined) -> undefined;
+first(?NIL) -> ?NIL;
 first(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':first(Seq);
@@ -196,7 +196,7 @@ first(Seq) ->
   end.
 
 -spec next(any()) -> any().
-next(undefined) -> undefined;
+next(?NIL) -> ?NIL;
 next(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':next(Seq);
@@ -204,7 +204,7 @@ next(Seq) ->
   end.
 
 -spec rest(any()) -> any().
-rest(undefined) -> [];
+rest(?NIL) -> [];
 rest(Seq) ->
   case 'seq?'(Seq) of
     true  -> 'clojerl.ISeq':more(Seq);
@@ -224,11 +224,11 @@ fourth(Seq) ->
   first(next(next(next(Seq)))).
 
 -spec peek(any()) -> any().
-peek(undefined) -> undefined;
+peek(?NIL) -> ?NIL;
 peek(Stack)     -> 'clojerl.IStack':peek(Stack).
 
 -spec pop(any()) -> any().
-pop(undefined) -> undefined;
+pop(?NIL) -> ?NIL;
 pop(Stack)     -> 'clojerl.IStack':pop(Stack).
 
 -spec name(any()) -> any().
@@ -309,7 +309,7 @@ keyword(Namespace, Name) ->
 'string?'(X) -> type(X) == 'clojerl.String'.
 
 -spec 'nil?'(any()) -> boolean().
-'nil?'(X) -> type(X) == 'clojerl.Nil'.
+'nil?'(X) -> type(X) == ?NIL_TYPE.
 
 -spec 'boolean?'(any()) -> boolean().
 'boolean?'(X) -> type(X) == 'clojerl.Boolean'.
@@ -342,7 +342,7 @@ with_meta(X, Meta) ->
   'satisfies?'('clojerl.IMeta', type(X)).
 
 -spec 'contains?'(any(), any()) -> boolean().
-'contains?'(undefined, _) ->
+'contains?'(?NIL, _) ->
   false;
 'contains?'(Coll, Key) ->
   IsAssociative = 'associative?'(Coll),
@@ -356,7 +356,7 @@ with_meta(X, Meta) ->
   end.
 
 -spec get(any(), any()) -> any().
-get(undefined, _Key) -> undefined;
+get(?NIL, _Key) -> ?NIL;
 get(X, Key) ->
   case 'set?'(X) of
     true  -> 'clojerl.ISet':get(X, Key);
@@ -364,7 +364,7 @@ get(X, Key) ->
   end.
 
 -spec get(any(), any(), any()) -> any().
-get(undefined, _Key, NotFound) -> NotFound;
+get(?NIL, _Key, NotFound) -> NotFound;
 get(X, Key, NotFound) ->
   case 'set?'(X) of
     true  ->
@@ -377,34 +377,34 @@ get(X, Key, NotFound) ->
 
 -spec assoc('clojerl.Associative':type(), any(), any()) ->
   'clojerl.Associative':type().
-assoc(undefined, Key, Value) ->
+assoc(?NIL, Key, Value) ->
   hash_map([Key, Value]);
 assoc(Map, Key, Value) ->
   'clojerl.Associative':assoc(Map, Key, Value).
 
 -spec dissoc('clojerl.IMap':type(), any()) -> 'clojerl.IMap':type().
-dissoc(undefined, _Key) ->
-  undefined;
+dissoc(?NIL, _Key) ->
+  ?NIL;
 dissoc(Map, Key) ->
   'clojerl.IMap':without(Map, Key).
 
 -spec find(any(), any()) -> any().
-find(undefined, _) ->
-  undefined;
+find(?NIL, _) ->
+  ?NIL;
 find(Map, Key) ->
   case 'associative?'(Map) of
     true  -> 'clojerl.Associative':entry_at(Map, Key);
-    false -> undefined
+    false -> ?NIL
   end.
 
 -spec merge([any()]) -> any().
 merge([]) ->
-  undefined;
+  ?NIL;
 merge([Map]) ->
   Map;
-merge([undefined | Maps]) ->
+merge([?NIL | Maps]) ->
   merge(Maps);
-merge([First, undefined | Rest]) ->
+merge([First, ?NIL | Rest]) ->
   merge([First | Rest]);
 merge([First, Second | Rest]) ->
   ConjFun = fun(Item, Acc) -> conj(Acc, Item) end,
@@ -412,7 +412,7 @@ merge([First, Second | Rest]) ->
   merge([Result | Rest]).
 
 -spec boolean(any()) -> boolean().
-boolean(undefined) -> false;
+boolean(?NIL) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
 
@@ -477,7 +477,7 @@ keys(Map) ->
   'clojerl.IMap':keys(Map).
 
 -spec vals('clojerl.IMap':type()) -> list().
-vals(undefined) -> undefined;
+vals(?NIL) -> ?NIL;
 vals(Map) -> 'clojerl.IMap':vals(Map).
 
 -spec 'even?'(integer()) -> boolean().

@@ -47,7 +47,7 @@ apply(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
   world = clj_core:apply(HelloKeyword, [#{HelloKeyword => world}]),
 
-  undefined = clj_core:apply(HelloKeyword, [#{bla => ble}]),
+  ?NIL = clj_core:apply(HelloKeyword, [#{bla => ble}]),
   not_found = clj_core:apply(HelloKeyword, [#{bla => ble}, not_found]),
 
   ok = try
@@ -62,7 +62,7 @@ apply(_Config) ->
 -spec name(config()) -> result().
 name(_Config) ->
   HelloKeyword = clj_core:keyword(<<"hello">>),
-  undefined   = clj_core:namespace(HelloKeyword),
+  ?NIL   = clj_core:namespace(HelloKeyword),
   <<"hello">> = clj_core:name(HelloKeyword),
 
   HelloWorldKeyword = clj_core:keyword(<<"hello">>, <<"world">>),
@@ -156,14 +156,14 @@ complete_coverage(_Config) ->
   'hello/world' = 'clojerl.Keyword':find(<<"hello">>, <<"world">>),
 
   ct:comment("Find existing leywords"),
-  undefined = 'clojerl.Keyword':find(<<"123456">>),
-  undefined = 'clojerl.Keyword':find(<<"123456">>, <<"123456">>),
-  undefined = 'clojerl.Keyword':find(undefined, <<"123456">>),
+  ?NIL = 'clojerl.Keyword':find(<<"123456">>),
+  ?NIL = 'clojerl.Keyword':find(<<"123456">>, <<"123456">>),
+  ?NIL = 'clojerl.Keyword':find(?NIL, <<"123456">>),
 
   ct:comment("Use all new clauses"),
   hello = 'clojerl.Keyword':?CONSTRUCTOR(hello),
   hello = 'clojerl.Keyword':?CONSTRUCTOR(clj_core:symbol(<<"hello">>)),
-  hello = 'clojerl.Keyword':?CONSTRUCTOR( undefined
+  hello = 'clojerl.Keyword':?CONSTRUCTOR( ?NIL
                                         , clj_core:symbol(<<"hello">>)
                                         ),
 

@@ -1,5 +1,7 @@
 -module('clojerl.erlang.Tuple').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.Counted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
@@ -47,7 +49,7 @@ do_equiv(X, Y, Size, Index) ->
 
 hash(Tuple) -> clj_murmur3:ordered(Tuple).
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
 nth(Tuple, N) ->
   erlang:element(N + 1, Tuple).
@@ -58,7 +60,7 @@ nth(Tuple, N, NotFound) ->
     false -> erlang:element(N + 1, Tuple)
   end.
 
-seq({}) -> undefined;
+seq({}) -> ?NIL;
 seq(Tuple) -> tuple_to_list(Tuple).
 
 to_list(Tuple) -> tuple_to_list(Tuple).

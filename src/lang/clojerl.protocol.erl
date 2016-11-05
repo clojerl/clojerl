@@ -55,7 +55,7 @@ resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) ->
   F(Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6).
 
 -spec resolve_impl_cache(atom(), atom(), atom(), integer()) ->
-  {module(), atom()} | undefined.
+  {module(), atom()}.
 resolve_impl_cache(Protocol, Function, Type, Arity) ->
   Key = {resolve_impl, Protocol, Function, Type, Arity},
   case erlang:get(Key) of
@@ -66,8 +66,7 @@ resolve_impl_cache(Protocol, Function, Type, Arity) ->
     {ok, Value} -> Value
   end.
 
--spec resolve_impl(atom(), atom(), atom(), integer()) ->
-  {module(), atom()} | undefined.
+-spec resolve_impl(atom(), atom(), atom(), integer()) -> {module(), atom()}.
 resolve_impl(Protocol, Function, Type, Arity) ->
   case erlang:function_exported(Type, Function, Arity) of
     true  ->

@@ -217,7 +217,7 @@ symbol(ReadFun) ->
   true    = clj_core:equiv(ReadFun(<<"some-ns//">>), Symbol4),
 
   ct:comment("nil, true & false"),
-  undefined = ReadFun(<<"nil">>),
+  ?NIL = ReadFun(<<"nil">>),
   true = ReadFun(<<"true">>),
   false = ReadFun(<<"false">>),
 

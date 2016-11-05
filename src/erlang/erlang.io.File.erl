@@ -68,7 +68,7 @@ close(#?TYPE{name = ?M, data = Pid, info = Path}) ->
     {error, _Reason} ->
       error(<<"Couldn't close ", Path/binary>>);
     ok ->
-      undefined
+      ?NIL
   end.
 
 read(File) ->

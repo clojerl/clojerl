@@ -35,7 +35,7 @@
 close(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
     {error, _} -> error(<<"Couldn't close erlang.io.StringReader">>);
-    _          -> undefined
+    _          -> ?NIL
   end.
 
 str(#?TYPE{name = ?M, data = Pid}) ->
@@ -152,7 +152,7 @@ do_get_line(<<Ch/utf8, RestStr/binary>>, Result) ->
 -spec get_until(module(), atom(), list(), term()) ->
   {term(), binary()}.
 get_until(Module, Function, XArgs, State) ->
-  case apply(Module, Function, [State, undefined | XArgs]) of
+  case apply(Module, Function, [State, ?NIL | XArgs]) of
     {done, Result, NewStr} -> {Result, NewStr};
     {more, NewState} -> get_until(Module, Function, XArgs, NewState)
   end.

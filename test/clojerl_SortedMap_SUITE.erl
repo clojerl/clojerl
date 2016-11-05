@@ -39,13 +39,13 @@ new(_Config) ->
   Map = sorted_map([1, 2, 3, 4]),
   2 = clj_core:get(Map, 1),
   4 = clj_core:get(Map, 3),
-  undefined = clj_core:get(Map, 5),
+  ?NIL = clj_core:get(Map, 5),
 
   [1, 3] = clj_core:keys(Map),
   [2, 4] = clj_core:vals(Map),
 
   Map2 = sorted_map([]),
-  undefined = clj_core:seq(Map2),
+  ?NIL = clj_core:seq(Map2),
 
   {comments, ""}.
 
@@ -78,7 +78,7 @@ seq(_Config) ->
   [[1, 2], [3, 4]] = lists:sort(KVs),
 
   Map2 = sorted_map([]),
-  undefined = clj_core:seq(Map2),
+  ?NIL = clj_core:seq(Map2),
 
   MapList = clj_core:to_list(Map),
   true = clj_core:equiv(MapList, [[1, 2], [3, 4]]),
@@ -115,7 +115,7 @@ apply(_Config) ->
   ct:comment("Invoke a map"),
   a = clj_core:apply(Map, [1]),
   b = clj_core:apply(Map, [2]),
-  undefined = clj_core:apply(Map, [3]),
+  ?NIL = clj_core:apply(Map, [3]),
 
   ct:comment("Invoke a map with a not-found value"),
   c = clj_core:apply(Map, [3, c]),
@@ -163,10 +163,10 @@ cons(_Config) ->
   true = clj_core:equiv(ThreeMap, #{1 => 2, 3 => 4, 5 => 6}),
 
   ct:comment("Conj a map to nil"),
-  EmptyMap = clj_core:conj(EmptyMap, undefined),
-  OneMap   = clj_core:conj(OneMap, undefined),
-  TwoMap   = clj_core:conj(TwoMap, undefined),
-  ThreeMap = clj_core:conj(ThreeMap, undefined),
+  EmptyMap = clj_core:conj(EmptyMap, ?NIL),
+  OneMap   = clj_core:conj(OneMap, ?NIL),
+  TwoMap   = clj_core:conj(TwoMap, ?NIL),
+  ThreeMap = clj_core:conj(ThreeMap, ?NIL),
 
   ct:comment("Conj something that is not a key-value pair to an empty map"),
   ok = try clj_core:conj(EmptyMap, clj_core:vector([1])), error
@@ -191,7 +191,7 @@ associative(_Config) ->
   Pair   = clj_core:find(TwoMap, 2),
   true   = clj_core:equiv(Pair, clj_core:vector([2, b])),
 
-  undefined = clj_core:find(TwoMap, 3),
+  ?NIL   = clj_core:find(TwoMap, 3),
 
   TwoMap = clj_core:dissoc(TwoMap, 3),
   OneMap = clj_core:dissoc(TwoMap, 2),

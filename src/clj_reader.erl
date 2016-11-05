@@ -77,40 +77,40 @@ read_fold_loop(Fun, State) ->
       read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
   end.
 
--spec location_meta(any()) -> location() | undefined.
+-spec location_meta(any()) -> location() | ?NIL.
 location_meta(X) ->
   case clj_core:'meta?'(X) of
     true ->
       case clj_core:meta(X) of
-        undefined -> undefined;
+        ?NIL -> ?NIL;
         Meta ->
           Meta1 = add_location_field(Meta, line, #{}),
           Meta2 = add_location_field(Meta, column, Meta1),
           Meta3 = add_location_field(Meta, file, Meta2),
           case Meta3 =:= #{} of
-            true  -> undefined;
+            true  -> ?NIL;
             false -> Meta3
           end
       end;
-    false -> undefined
+    false -> ?NIL
   end.
 
 -spec add_location_field(atom(), any(), map()) -> map().
 add_location_field(Meta, Name, Location) ->
   case clj_core:get(Meta, Name) of
-    undefined -> Location;
+    ?NIL -> Location;
     Value -> maps:put(Name, Value, Location)
   end.
 
 -spec remove_location(any()) -> any().
-remove_location(undefined) ->
-  undefined;
+remove_location(?NIL) ->
+  ?NIL;
 remove_location(Meta) ->
   Meta1 = clj_core:dissoc(Meta, file),
   Meta2 = clj_core:dissoc(Meta1, line),
   Meta3 = clj_core:dissoc(Meta2, column),
   case clj_core:'empty?'(Meta3) of
-    true  -> undefined;
+    true  -> ?NIL;
     false -> Meta3
   end.
 
@@ -133,8 +133,8 @@ read(Src, Opts) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec platform_features(opts() | undefined) -> opts().
-platform_features(undefined) ->
+-spec platform_features(opts() | ?NIL) -> opts().
+platform_features(?NIL) ->
   #{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)};
 platform_features(#{?OPT_FEATURES := Features} = Opts) ->
   NewFeatures = lists:foldl( fun(Feature, Acc) ->
@@ -157,7 +157,7 @@ new_state(Src, Env, Opts) ->
    , env           => Env
    , loc           => {1, 1}
    , bindings      => clj_scope:new()
-   , return_on     => undefined
+   , return_on     => ?NIL
    }.
 
 %% @doc Makes sure a single form is read unless we reach
@@ -327,7 +327,7 @@ unicode_char(State, Base, Length, IsExact) ->
   Chars        = unicode:characters_to_list(Number),
   InvalidChars = lists:filter(Invalid, Chars),
   InvalidChar  = case InvalidChars of
-                   [] -> undefined;
+                   [] -> ?NIL;
                    [C | _] -> <<C/utf8>>
                  end,
   clj_utils:error_when( InvalidChars =/= []
@@ -358,12 +358,12 @@ is_char_valid(_, _) -> false.
 read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
   Keyword = case clj_utils:parse_symbol(Token) of
-              {undefined, <<":", Name/binary>>} ->
+              {?NIL, <<":", Name/binary>>} ->
                 Ns    = clj_namespace:current(),
                 NsSym = clj_namespace:name(Ns),
                 Namespace = clj_core:name(NsSym),
                 clj_core:keyword(Namespace, Name);
-              {undefined, Name} ->
+              {?NIL, Name} ->
                 clj_core:keyword(Name);
               {<<Ch/utf8, _/binary>> = Namespace, Name} when Ch =/= $: ->
                 clj_core:keyword(Namespace, Name);
@@ -382,14 +382,14 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
 read_symbol(State) ->
   {Token, State1} = read_token(State),
   Symbol = case clj_utils:parse_symbol(Token) of
-             {undefined, <<"nil">>}   -> undefined;
-             {undefined, <<"true">>}  -> true;
-             {undefined, <<"false">>} -> false;
-             {undefined, Name} ->
+             {?NIL, <<"nil">>}   -> ?NIL;
+             {?NIL, <<"true">>}  -> true;
+             {?NIL, <<"false">>} -> false;
+             {?NIL, Name} ->
                clj_core:symbol(Name);
              {Ns, Name} ->
                clj_core:symbol(Ns, Name);
-             undefined ->
+             ?NIL ->
                clj_utils:error( <<"Invalid token: ", Token/binary>>
                               , location(State)
                               )
@@ -499,7 +499,7 @@ syntax_quote(Form, Env) ->
           ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
           syntax_quote_coll(Form, ListSymbol, Env);
         true ->
-          syntax_quote_coll(Form, undefined, Env)
+          syntax_quote_coll(Form, ?NIL, Env)
       end;
     IsLiteral -> {Form, Env};
     true      -> {clj_core:list([QuoteSymbol, Form]), Env}
@@ -510,8 +510,8 @@ flatten_map(Map) ->
   MapSeq = clj_core:seq(Map),
   flatten_map(MapSeq, clj_core:vector([])).
 
--spec flatten_map(any() | undefined, 'clojerl.Vector':type()) -> any().
-flatten_map(undefined, Vector) ->
+-spec flatten_map(any() | ?NIL, 'clojerl.Vector':type()) -> any().
+flatten_map(?NIL, Vector) ->
   clj_core:seq(Vector);
 flatten_map(MapSeq, Vector) ->
   First = clj_core:first(MapSeq),
@@ -525,7 +525,7 @@ syntax_quote_symbol(Symbol) ->
   NameStr = clj_core:name(Symbol),
   IsGenSym = 'clojerl.String':ends_with(NameStr, <<"#">>),
   case {NamespaceStr, IsGenSym} of
-    {undefined, true} ->
+    {?NIL, true} ->
       register_gensym(Symbol);
     _ ->
       resolve_symbol(Symbol)
@@ -537,8 +537,8 @@ register_gensym(Symbol) ->
                 undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
-  case maps:get(clj_core:name(Symbol), GensymEnv, undefined) of
-    undefined ->
+  case maps:get(clj_core:name(Symbol), GensymEnv, ?NIL) of
+    ?NIL ->
       NameStr = clj_core:name(Symbol),
       NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
       Parts = [NameStr2, <<"__">>, clj_core:next_id(), <<"__auto__">>],
@@ -554,9 +554,9 @@ register_gensym(Symbol) ->
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
   case clj_namespace:find_var(Symbol) of
-    undefined ->
+    ?NIL ->
       case clj_core:namespace(Symbol) of
-        undefined ->
+        ?NIL ->
           CurrentNs = clj_namespace:current(),
           NameSym   = clj_namespace:name(CurrentNs),
           Namespace = clj_core:name(NameSym),
@@ -573,7 +573,7 @@ resolve_symbol(Symbol) ->
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->
   {any(), clj_env:env()}.
-syntax_quote_coll(List, undefined, Env) ->
+syntax_quote_coll(List, ?NIL, Env) ->
   syntax_quote_coll(List, Env);
 syntax_quote_coll(List, FunSymbol, Env) ->
   {ExpandedList, Env1} = syntax_quote_coll(List, Env),
@@ -594,7 +594,7 @@ syntax_quote_coll(List, Env) ->
   end.
 
 -spec expand_list(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
-expand_list(undefined, Env, Result) ->
+expand_list(?NIL, Env, Result) ->
   {Result, Env};
 expand_list(List, Env, Result) ->
   Item = clj_core:first(List),
@@ -845,8 +845,8 @@ arg_type(State = #{src := <<Char/utf8, _/binary>>}) ->
 
 -spec register_arg(integer(), map()) -> 'clojerl.Symbol':type().
 register_arg(N, ArgEnv) ->
-  case maps:get(N, ArgEnv, undefined) of
-    undefined ->
+  case maps:get(N, ArgEnv, ?NIL) of
+    ?NIL ->
       ArgSymbol = gen_arg_sym(N),
       NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
       erlang:put(arg_env, NewArgEnv),
@@ -931,8 +931,8 @@ read_fn(State) ->
                maps:get(N, ArgEnv, gen_arg_sym(N))
            end,
   ArgsSyms = lists:map(MapFun, lists:seq(1, MaxArg)),
-  ArgsSyms2 = case maps:get(-1, ArgEnv, undefined) of
-                undefined -> ArgsSyms;
+  ArgsSyms2 = case maps:get(-1, ArgEnv, ?NIL) of
+                ?NIL -> ArgsSyms;
                 RestArgSym  ->
                   AmpSym = clj_core:symbol(<<"&">>),
                   ArgsSyms ++ [AmpSym, RestArgSym]
@@ -1036,7 +1036,7 @@ read_cond(#{src := <<>>} = State) ->
       clj_utils:error(<<"EOF while reading cond">>, location(State))
   end;
 read_cond(#{opts := Opts} = State0) ->
-  ReadCondOpt = maps:get(?OPT_READ_COND, Opts, undefined),
+  ReadCondOpt = maps:get(?OPT_READ_COND, Opts, ?NIL),
   clj_utils:error_when(not lists:member(ReadCondOpt, [allow, preserve])
                       , <<"Conditional read not allowed">>
                       , location(State0)
@@ -1057,7 +1057,10 @@ read_cond(#{opts := Opts} = State0) ->
                       , location(State1)
                       ),
 
-  OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+  OldSupressRead = case erlang:get(supress_read) of
+                     undefined -> false;
+                     SR -> SR
+                   end,
   SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,
   erlang:put(supress_read, SupressRead),
 
@@ -1150,7 +1153,10 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
 
 -spec read_skip_suppress(state()) -> state().
 read_skip_suppress(State) ->
-  OldSupressRead = clj_core:boolean(erlang:get(supress_read)),
+  OldSupressRead = case erlang:get(supress_read) of
+                     undefined -> false;
+                     SR -> SR
+                   end,
   erlang:put(supress_read, true),
   try
     {_, NewState} = read_pop_one(State),
@@ -1184,28 +1190,28 @@ read_tagged(State) ->
                               ),
 
   DataReaders = clj_core:deref(DataReadersVar),
-  Reader0     = clj_core:get(DataReaders, Symbol, undefined),
+  Reader0     = clj_core:get(DataReaders, Symbol, ?NIL),
 
   DefaultDataReaders = clj_core:deref(DefaultDataReadersVar),
   Reader1 = case
-              Reader0 =/= undefined
-              orelse clj_core:get(DefaultDataReaders, Symbol, undefined)
+              Reader0 =/= ?NIL
+              orelse clj_core:get(DefaultDataReaders, Symbol, ?NIL)
             of
               true -> Reader0;
               DefaultDataReader -> DefaultDataReader
             end,
 
-  {IsDefault, Reader2} = case Reader1 =/= undefined of
+  {IsDefault, Reader2} = case Reader1 =/= ?NIL of
                            true  -> {false, Reader1};
                            false -> {true, clj_core:deref(DefaultReaderFunVar)}
                          end,
 
   {Form, State2} = read_pop_one(State1),
-  case clj_core:boolean(erlang:get(supress_read)) of
+  case erlang:get(supress_read) of
     true ->
       push_form(tagged_literal(Symbol, Form), State2);
-    false ->
-      clj_utils:error_when( Reader2 =:= undefined
+    _ ->
+      clj_utils:error_when( Reader2 =:= ?NIL
                           , [<<"No reader function for tag ">>, Symbol]
                           , location(State)
                           ),
@@ -1229,13 +1235,13 @@ tagged_literal(Tag, Form) ->
 
 -spec location(state()) -> location().
 location(#{opts := Opts} = State) ->
-  {Line, Col} = case maps:get(loc, State, undefined) of
-                  undefined -> {undefined, undefined};
-                  Loc       -> Loc
+  {Line, Col} = case maps:get(loc, State, ?NIL) of
+                  ?NIL -> {?NIL, ?NIL};
+                  Loc  -> Loc
                 end,
   #{ line   => Line
    , column => Col
-   , file   => maps:get(file, Opts, undefined)
+   , file   => maps:get(file, Opts, ?NIL)
    }.
 
 -spec location_started(state(), {non_neg_integer(), non_neg_integer()}) ->
@@ -1440,7 +1446,7 @@ peek_src(_State) ->
 
 -spec check_reader(state()) -> {ok, state()} | eof.
 check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
-  when Reader =/= undefined ->
+  when Reader =/= ?NIL ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
     Ch  -> {ok, State#{src := Ch}}

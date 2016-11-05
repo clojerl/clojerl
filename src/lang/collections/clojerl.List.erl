@@ -42,7 +42,7 @@
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Items) when is_list(Items) ->
   #?TYPE{data = Items};
-?CONSTRUCTOR(undefined) ->
+?CONSTRUCTOR(?NIL) ->
   #?TYPE{data = []}.
 
 %%------------------------------------------------------------------------------
@@ -72,24 +72,24 @@ hash(#?TYPE{name = ?M, data = X}) ->
   clj_murmur3:ordered(X).
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
-first(#?TYPE{name = ?M, data = []}) -> undefined;
+first(#?TYPE{name = ?M, data = []}) -> ?NIL;
 first(#?TYPE{name = ?M, data = [First | _]}) -> First.
 
-next(#?TYPE{name = ?M, data = []}) -> undefined;
-next(#?TYPE{name = ?M, data = [_ | []]}) -> undefined;
+next(#?TYPE{name = ?M, data = []}) -> ?NIL;
+next(#?TYPE{name = ?M, data = [_ | []]}) -> ?NIL;
 next(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{name = ?M, data = Rest}.
 
-more(#?TYPE{name = ?M, data = []}) -> undefined;
+more(#?TYPE{name = ?M, data = []}) -> ?NIL;
 more(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
 peek(#?TYPE{name = ?M, data = List}) ->
   clj_core:peek(List).
@@ -99,7 +99,7 @@ pop(#?TYPE{name = ?M, data = []} = List) ->
 pop(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
   List#?TYPE{data = Rest}.
 
-seq(#?TYPE{name = ?M, data = []}) -> undefined;
+seq(#?TYPE{name = ?M, data = []}) -> ?NIL;
 seq(#?TYPE{name = ?M, data = Seq}) -> Seq.
 
 to_list(#?TYPE{name = ?M, data = List}) -> List.

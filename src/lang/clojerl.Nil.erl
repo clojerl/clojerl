@@ -1,5 +1,7 @@
 -module('clojerl.Nil').
 
+-include("clojerl.hrl").
+
 -behavior('clojerl.IHash').
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
@@ -10,7 +12,7 @@
         ]).
 -export([str/1]).
 
-hash(undefined) -> erlang:phash2(undefined).
-str(undefined) -> <<"">>.
-seq(undefined) -> undefined.
-to_list(undefined) -> [].
+hash(?NIL) -> erlang:phash2(?NIL).
+str(?NIL) -> <<"">>.
+seq(?NIL) -> ?NIL.
+to_list(?NIL) -> [].

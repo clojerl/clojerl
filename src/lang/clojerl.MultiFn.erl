@@ -1,4 +1,7 @@
 -module('clojerl.MultiFn').
+
+-include("clojerl.hrl").
+
 -behaviour(gen_server).
 
 -export([ get_method/2
@@ -35,14 +38,14 @@
 
 -spec get_method(binary(), any()) -> any().
 get_method(Name, Value) ->
-  get_method(Name, Value, default, undefined).
+  get_method(Name, Value, default, ?NIL).
 
 -spec get_method(binary(), any(), any(), map()) -> any().
 get_method(Name, Value, Default, _Hierarchy) ->
   case get(?MODULE, {Name, 'clojerl.IHash':hash(Value)}) of
-    undefined ->
+    ?NIL ->
       case get(?MODULE, {Name, 'clojerl.IHash':hash(Default)}) of
-        undefined -> undefined;
+        ?NIL -> ?NIL;
         Method -> Method#multifn.method
       end;
     Method -> Method#multifn.method
@@ -80,7 +83,7 @@ start_link() ->
 
 init([]) ->
   ets:new(?METHODS, [named_table, set, protected, {keypos, 2}]),
-  {ok, undefined}.
+  {ok, ?NIL}.
 
 handle_call({add_method, Name, Value, Hash, Method}, _From, State) ->
   #multifn{} = new_method(Name, Value, Hash, Method),
@@ -125,7 +128,7 @@ save(Table, Value) ->
 -spec get(ets:tid(), term()) -> term().
 get(Table, Id) ->
   case ets:lookup(Table, Id) of
-    [] -> undefined;
+    [] -> ?NIL;
     [Value] -> Value
   end.
 

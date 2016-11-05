@@ -381,7 +381,7 @@ ast(#{op := extend_type} = Expr, State) ->
                       , maps:keys(Impls)
                       ),
 
-  Ast = cerl:ann_c_atom(anno_from(Env), undefined),
+  Ast = cerl:ann_c_atom(anno_from(Env), ?NIL),
   push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
@@ -407,7 +407,7 @@ ast(#{op := erl_fun} = Expr, State) ->
    , env      := Env
    } = Expr,
 
-  clj_utils:error_when( Arity == undefined
+  clj_utils:error_when( Arity == ?NIL
                       , [ <<"Can't use an erlang function as a value without ">>
                         , <<"specifying its arity: ">>
                         , atom_to_binary(Module, utf8)
@@ -458,7 +458,7 @@ ast(#{op := invoke} = Expr, State) ->
             %% namespace is the current namespace, emit a local function
             %% call, otherwise emit a remote call.
             case clj_core:namespace(Symbol) of
-              undefined when NsName =:= VarNsName, not ForceRemote ->
+              ?NIL when NsName =:= VarNsName, not ForceRemote ->
                 call_fa(Function, Args1, Anno);
               _ ->
                 call_mfa(Module, Function, Args1, Anno)
@@ -640,7 +640,7 @@ ast(#{op := 'case'} = Expr, State) ->
 
   {ClausesAsts, State4} =
     case DefaultExpr of
-      undefined -> {ClausesAsts0, State3};
+      ?NIL -> {ClausesAsts0, State3};
       _ ->
         EnvDefault    = maps:get(env, DefaultExpr),
         AnnoDefault   = anno_from(EnvDefault),
@@ -782,7 +782,7 @@ ast(#{op := 'try'} = Expr, State) ->
   } = case_from_clauses(Anno, Catches ++ [CatchAllClause]),
 
   {Finally, State2} = case FinallyExpr of
-                        undefined -> {undefined, State1};
+                        ?NIL -> {?NIL, State1};
                         _         -> pop_ast(ast(FinallyExpr, State))
                       end,
 
@@ -797,7 +797,7 @@ ast(#{op := 'try'} = Expr, State) ->
 
   Ast    =
     case Finally of
-      undefined -> TryAst;
+      ?NIL -> TryAst;
       _         ->
         %% after function
         FinallyName     = cerl:var_name(new_c_var(Anno)),
@@ -910,7 +910,7 @@ expand_first_argument( {FNameAst, FunAst}
 %% @doc Builds a constructor function for the specified type.
 %%
 %% The constructor will take AllFields -- HiddenFields as arguments.
-%% Hidden fields will be assigned the value `undefined'.
+%% Hidden fields will be assigned the value `?NIL'.
 -spec constructor_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
@@ -958,14 +958,14 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
 
   AssocAtom     = cerl:c_atom(assoc),
-  UndefinedAtom = cerl:c_atom(undefined),
+  NilAtom       = cerl:c_atom(?NIL),
   MapPairsFun   = fun(FieldAst) ->
                       FieldName = cerl:var_name(FieldAst),
                       Value = case lists:member(FieldAst, HiddenFieldsAsts) of
                                 true when FieldName =:= '__extmap' ->
                                   ExtMapAst;
                                 true ->
-                                  UndefinedAtom;
+                                  NilAtom;
                                 false ->
                                   GetAstFun(FieldName)
                               end,
@@ -977,7 +977,7 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
                   end,
   MapPairs      = lists:map(MapPairsFun, AllFieldsAsts),
   FieldsMapAst  = cerl:ann_c_map(Anno, MapPairs),
-  InfoAst       = UndefinedAtom,
+  InfoAst       = NilAtom,
   TupleAst      = type_tuple_ast(Typename, FieldsMapAst, InfoAst),
 
   function_form(create, Anno, [MapVarAst], TupleAst).
@@ -992,16 +992,16 @@ field_fun_name(FieldName) when is_atom(FieldName) ->
   cerl:cerl().
 type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
   {MapFieldType, InfoAst} = case TupleType of
-                              create -> {assoc, cerl:c_atom(undefined)};
+                              create -> {assoc, cerl:c_atom(?NIL)};
                               match  -> {exact, new_c_var([])}
                             end,
 
-  UndefinedAtom = cerl:c_atom(undefined),
+  NilAtom       = cerl:c_atom(?NIL),
   MapPairFun    = fun(FieldAst) ->
                       FieldName = cerl:var_name(FieldAst),
                       Value = case lists:member(FieldAst, HiddenFieldsAsts) of
                                 true when TupleType =:= create ->
-                                  UndefinedAtom;
+                                  NilAtom;
                                 _ ->
                                   FieldAst
                               end,
@@ -1227,7 +1227,7 @@ get_lexical_rename(BindingExpr, State) ->
   clj_core:str(RenameSym).
 
 -spec put_lexical_rename(map(), state()) -> state().
-put_lexical_rename(#{shadow := undefined}, State) ->
+put_lexical_rename(#{shadow := ?NIL}, State) ->
   State;
 put_lexical_rename(BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
@@ -1255,7 +1255,7 @@ shadow_depth(_) ->
   0.
 
 -spec do_shadow_depth(map(), non_neg_integer()) -> non_neg_integer().
-do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= undefined ->
+do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= ?NIL ->
   do_shadow_depth(Shadowed, Depth + 1);
 do_shadow_depth(_, Depth) ->
   Depth.
@@ -1264,14 +1264,14 @@ do_shadow_depth(_, Depth) ->
 var_val_function(Val, VarAst, Anno) ->
   TestAst            = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
 
-  UndefinedAtom      = cerl:ann_c_atom(Anno, undefined),
-  UndefinedClauseAst = cerl:ann_c_clause(Anno, [UndefinedAtom], Val),
+  NilAtom        = cerl:ann_c_atom(Anno, ?NIL),
+  NilClauseAst   = cerl:ann_c_clause(Anno, [NilAtom], Val),
 
-  XVar               = new_c_var(Anno),
-  TupleAst           = cerl:ann_c_tuple(Anno, [cerl:c_atom(ok), XVar]),
-  ValueClauseAst     = cerl:ann_c_clause(Anno, [TupleAst], XVar),
+  XVar           = new_c_var(Anno),
+  TupleAst       = cerl:ann_c_tuple(Anno, [cerl:c_atom(ok), XVar]),
+  ValueClauseAst = cerl:ann_c_clause(Anno, [TupleAst], XVar),
 
-  cerl:ann_c_case(Anno, TestAst, [UndefinedClauseAst, ValueClauseAst]).
+  cerl:ann_c_case(Anno, TestAst, [NilClauseAst, ValueClauseAst]).
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->
@@ -1280,7 +1280,7 @@ file_from(Env) ->
 -spec anno_from(clj_env:env()) -> erl_anno:anno().
 anno_from(Env) ->
   case clj_env:location(Env) of
-    undefined -> [0];
+    ?NIL -> [0];
     Location  ->
       [ maps:get(line, Location, 0)
       , {file, maps:get(file, Location, "")}
@@ -1297,7 +1297,7 @@ default_compiler_options() ->
 -spec new_c_var(cerl:ann()) -> cerl:c_var().
 new_c_var(Anno) ->
   N = case erlang:get(local_var_counter) of
-        undefined -> 0;
+        ?NIL -> 0;
         X -> X
       end,
   erlang:put(local_var_counter, N + 1),

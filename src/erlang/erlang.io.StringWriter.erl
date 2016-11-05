@@ -50,7 +50,7 @@ str(#?TYPE{name = ?M, data = Pid}) ->
 close(#?TYPE{name = ?M, data = Pid}) ->
   case send_command(Pid, close) of
     {error, _} -> error(<<"Couldn't close erlang.io.StringWriter">>);
-    _          -> undefined
+    _          -> ?NIL
   end.
 
 write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->

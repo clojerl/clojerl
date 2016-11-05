@@ -36,7 +36,7 @@ str(_Config) ->
   Writer = 'erlang.io.IWriter':write(Writer, <<" world!">>),
   <<"hello world!">> = clj_core:str(Writer),
 
-  undefined = 'erlang.io.Closeable':close(Writer),
+  ?NIL = 'erlang.io.Closeable':close(Writer),
 
   {comments, ""}.
 
@@ -54,7 +54,7 @@ write(_Config) ->
 
   <<"hello world! Yeah!">> = clj_core:str(Writer),
 
-  undefined = 'erlang.io.Closeable':close(Writer),
+  ?NIL = 'erlang.io.Closeable':close(Writer),
 
   {comments, ""}.
 
@@ -62,9 +62,9 @@ write(_Config) ->
 close(_Config) ->
   Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello\nworld!\n">>),
 
-  undefined = 'erlang.io.Closeable':close(Writer),
+  ?NIL = 'erlang.io.Closeable':close(Writer),
 
-  ok = try undefined = 'erlang.io.Closeable':close(Writer), error
+  ok = try ?NIL = 'erlang.io.Closeable':close(Writer), error
        catch _:_ -> ok
        end,
 
@@ -88,7 +88,7 @@ complete_coverage(_Config) ->
   Request = {put_chars, unicode, io, format, ["~s", []]},
   {error, format} = io:request(Pid, Request),
 
-  undefined = 'erlang.io.Closeable':close(Writer),
+  ?NIL = 'erlang.io.Closeable':close(Writer),
 
   ok = try clj_core:str(Writer), error
        catch _:_ -> ok

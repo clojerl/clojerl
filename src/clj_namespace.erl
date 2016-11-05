@@ -63,33 +63,33 @@ all() -> ets:tab2list(?MODULE).
 
 %% @doc Tries to get the vars from the module associated to the
 %%      namespace. If the module is not found or if it doesn't
-%%      have a 'vars' attribute, then undefined is returned.
--spec find('clojerl.Symbol':type()) -> namespace() | undefined.
+%%      have a 'vars' attribute, then nil is returned.
+-spec find('clojerl.Symbol':type()) -> namespace() | ?NIL.
 find(Name) ->
   case get(?MODULE, clj_core:str(Name)) of
-    undefined -> gen_server:call(?MODULE, {load, Name});
+    ?NIL -> gen_server:call(?MODULE, {load, Name});
     Ns -> Ns
   end.
 
 -spec find_var('clojerl.Symbol':type()) ->
-  'clojerl.Var':type() | undefined.
+  'clojerl.Var':type() | ?NIL.
 find_var(Symbol) ->
   find_var(current(), Symbol).
 
 -spec find_var(namespace(), 'clojerl.Symbol':type()) ->
-  'clojerl.Var':type() | undefined.
+  'clojerl.Var':type() | ?NIL.
 find_var(DefaultNs, Symbol) ->
   Ns = case clj_core:namespace(Symbol) of
-         undefined -> DefaultNs;
+         ?NIL -> DefaultNs;
          NsStr     ->
            NsSym = clj_core:symbol(NsStr),
            case find(NsSym) of
-             undefined -> alias(current(), NsSym);
+             ?NIL -> alias(current(), NsSym);
              NsTemp    -> NsTemp
            end
        end,
   case Ns of
-    undefined -> undefined;
+    ?NIL -> ?NIL;
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
       mapping(Ns, NameSym)
@@ -98,7 +98,7 @@ find_var(DefaultNs, Symbol) ->
 -spec find_or_create('clojerl.Symbol':type()) -> namespace().
 find_or_create(Name) ->
   Ns = case find(Name) of
-         undefined -> gen_server:call(?MODULE, {new, Name});
+         ?NIL -> gen_server:call(?MODULE, {new, Name});
          X -> X
        end,
   current(Ns).
@@ -112,7 +112,7 @@ name(#namespace{name = Name}) -> Name.
 
 -spec intern(namespace(), 'clojerl.Symbol':type()) -> namespace().
 intern(Namespace = #namespace{name = NsName}, Symbol) ->
-  clj_utils:error_when( clj_core:namespace(Symbol) =/= undefined
+  clj_utils:error_when( clj_core:namespace(Symbol) =/= ?NIL
                       , <<"Can't intern namespace-qualified symbol">>
                       ),
 
@@ -144,7 +144,7 @@ refer(Ns, Sym, Var) ->
                       , <<"Name for refer var is not a symbol">>
                       ),
 
-  clj_utils:error_when( clj_core:namespace(Sym) =/= undefined
+  clj_utils:error_when( clj_core:namespace(Sym) =/= ?NIL
                       , <<"Can't refer namespace-qualified symbol">>
                       ),
 
@@ -190,19 +190,19 @@ remove_alias(Ns, AliasSym) ->
   gen_server:call(?MODULE, {remove_alias, Ns, AliasSym}).
 
 -spec mapping(namespace(), 'clojerl.Symbol':type()) ->
-  'clojerl.Var':type() | undefined.
+  'clojerl.Var':type() | ?NIL.
 mapping(#namespace{mappings = Mappings}, Symbol) ->
   case get(Mappings, clj_core:str(Symbol)) of
     {_, Var} -> Var;
-    undefined -> undefined
+    ?NIL -> ?NIL
   end.
 
 -spec alias(namespace(), 'clojerl.Symbol':type()) ->
-  'clojerl.Symbol':type() | undefined.
+  'clojerl.Symbol':type() | ?NIL.
 alias(#namespace{aliases = Aliases}, Symbol) ->
   case get(Aliases, clj_core:str(Symbol)) of
     {_, Var} -> Var;
-    undefined -> undefined
+    ?NIL -> ?NIL
   end.
 
 %%------------------------------------------------------------------------------
@@ -214,13 +214,13 @@ start_link() ->
 
 init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
-  {ok, undefined}.
+  {ok, ?NIL}.
 
 handle_call({new, Name}, _From, State) ->
   {reply, new(Name), State};
 handle_call({load, Name}, _Form, State) ->
   Ns = case load(Name) of
-         undefined -> undefined;
+         ?NIL -> ?NIL;
          X -> save(?MODULE, X)
        end,
   {reply, Ns, State};
@@ -291,7 +291,7 @@ new(NameSym) ->
 -spec get(ets:tid(), term()) -> term().
 get(Table, Id) ->
   case ets:lookup(Table, Id) of
-    [] -> undefined;
+    [] -> ?NIL;
     [Value] -> Value
   end.
 
@@ -314,13 +314,13 @@ load(Name) ->
              Attrs = Module:module_info(attributes),
              case lists:keyfind(vars, 1, Attrs) of
                {vars, [VarsMap]} -> maps:values(VarsMap);
-               false             -> undefined
+               false             -> ?NIL
              end;
-           {error, _} -> undefined
+           {error, _} -> ?NIL
          end,
 
   case Vars of
-    undefined -> undefined;
+    ?NIL -> ?NIL;
     _ ->
       UpdateVarFun = fun(Var, Ns = #namespace{mappings = Mappings}) ->
                          save(Mappings, {clj_core:name(Var), Var}),

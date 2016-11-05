@@ -39,7 +39,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.StringReader \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -55,7 +55,7 @@ read(_Config) ->
   eof     = 'erlang.io.IReader':read(Reader),
   eof     = 'erlang.io.IReader':read(Reader),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello world!">>),
 
@@ -65,7 +65,7 @@ read(_Config) ->
   <<"world!">>  = 'erlang.io.IReader':read(Reader2, 7),
   eof           = 'erlang.io.IReader':read(Reader2),
 
-  undefined = 'erlang.io.Closeable':close(Reader2),
+  ?NIL = 'erlang.io.Closeable':close(Reader2),
 
   {comments, ""}.
 
@@ -77,7 +77,7 @@ read_line(_Config) ->
   <<"world!">> = 'erlang.io.IReader':read_line(Reader),
   eof          = 'erlang.io.IReader':read_line(Reader),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\rworld!\rHello.">>),
 
@@ -86,7 +86,7 @@ read_line(_Config) ->
   <<"Hello.">> = 'erlang.io.IReader':read_line(Reader2),
   eof          = 'erlang.io.IReader':read_line(Reader2),
 
-  undefined = 'erlang.io.Closeable':close(Reader2),
+  ?NIL = 'erlang.io.Closeable':close(Reader2),
 
   Reader3 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\r\nworld!\r\n">>),
 
@@ -94,7 +94,7 @@ read_line(_Config) ->
   <<"world!">> = 'erlang.io.IReader':read_line(Reader3),
   eof          = 'erlang.io.IReader':read_line(Reader3),
 
-  undefined = 'erlang.io.Closeable':close(Reader3),
+  ?NIL = 'erlang.io.Closeable':close(Reader3),
 
   {comments, ""}.
 
@@ -107,7 +107,7 @@ skip(_Config) ->
   eof          = 'erlang.io.IReader':read_line(Reader),
   eof          = 'erlang.io.IReader':skip(Reader, 1),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.
 
@@ -124,7 +124,7 @@ unread(_Config) ->
   <<"o">> = 'erlang.io.IReader':read(Reader),
   eof     = 'erlang.io.IReader':read(Reader),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello world!">>),
 
@@ -136,7 +136,7 @@ unread(_Config) ->
   <<"world!">>  = 'erlang.io.IReader':read(Reader2, 7),
   eof           = 'erlang.io.IReader':read(Reader2),
 
-  undefined = 'erlang.io.Closeable':close(Reader2),
+  ?NIL = 'erlang.io.Closeable':close(Reader2),
 
   {comments, ""}.
 
@@ -144,9 +144,9 @@ unread(_Config) ->
 close(_Config) ->
   Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\nworld!\n">>),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
-  ok = try undefined = 'erlang.io.Closeable':close(Reader), error
+  ok = try ?NIL = 'erlang.io.Closeable':close(Reader), error
        catch _:_ -> ok
        end,
 
@@ -163,6 +163,6 @@ complete_coverage(_Config) ->
   ct:comment("Send an unexpected io_request"),
   {error, request} = io:request(Pid, {io_request, self(), ref, unexpected}),
 
-  undefined = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.Closeable':close(Reader),
 
   {comments, ""}.

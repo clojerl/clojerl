@@ -72,7 +72,7 @@ apply(#?TYPE{name = ?M, data = {Hashes, _}}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
   case maps:is_key(Hash, Hashes) of
     true  -> maps:get(Hash, Hashes);
-    false -> undefined
+    false -> ?NIL
   end;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -86,7 +86,7 @@ hash(#?TYPE{name = ?M, data = {Hashes, _}}) ->
 %% clojerl.IMeta
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
   Set#?TYPE{info = Info#{meta => Metadata}}.
@@ -109,14 +109,14 @@ get(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   case maps:is_key(Hash, Hashes) of
     true  -> maps:get(Hash, Hashes);
-    false -> undefined
+    false -> ?NIL
   end.
 
 %% clojerl.Seqable
 
 seq(#?TYPE{name = ?M, data = {Hashes, _}} = Set) ->
   case maps:size(Hashes) of
-    0 -> undefined;
+    0 -> ?NIL;
     _ -> to_list(Set)
   end.
 

@@ -9,6 +9,10 @@
                , info = #{} :: map()
                }).
 
+%% nil
+-define(NIL, undefined).
+-define(NIL_TYPE, 'clojerl.Nil').
+
 %% Reader constants
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).

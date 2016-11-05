@@ -88,7 +88,7 @@ seq(_Config) ->
 
   Cons1     = range(1, 1),
   1         = clj_core:first(Cons1),
-  undefined = clj_core:next(Cons1),
+  ?NIL = clj_core:next(Cons1),
   []        = clj_core:rest(Cons1),
 
   [1, 2, 3] = clj_core:to_list(Cons),
@@ -136,7 +136,7 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.Cons':'_'(undefined),
+  ?NIL = 'clojerl.Cons':'_'(?NIL),
 
   Cons = range(2, 2),
   []   = clj_core:empty(Cons),
@@ -148,6 +148,6 @@ complete_coverage(_Config) ->
 
 -spec range(integer(), integer()) -> 'clojerl.LazySeq':type().
 range(Start, End) when Start > End ->
-  undefined;
+  ?NIL;
 range(Start, End) ->
   'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End)).

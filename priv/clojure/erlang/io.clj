@@ -33,7 +33,7 @@
       url-decode))
 
 (extend-protocol Coercions
-  clojerl.Nil
+  nil
   (as-file [_] nil)
   (as-url [_] nil)
 
@@ -142,7 +142,7 @@
           enc  (file-encoding opts)]
       (file-open (file-path this) [mode enc]))))
 
-(extend-type clojerl.Nil
+(extend-type nil
   IOFactory
   (make-reader [x opts]
     (throw (str "Cannot open <" (pr-str x) "> as a Reader.")))

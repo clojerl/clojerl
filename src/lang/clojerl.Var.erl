@@ -100,7 +100,7 @@ val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
 
 -spec push_bindings(map()) -> ok.
 push_bindings(BindingsMap) ->
-  Bindings      = erlang:get(dynamic_bindings),
+  Bindings      = get_bindings(),
   NewBindings   = clj_scope:new(Bindings),
   AddBindingFun = fun(K, Acc) ->
                       clj_scope:put( Acc
@@ -117,19 +117,22 @@ push_bindings(BindingsMap) ->
 
 -spec pop_bindings() -> ok.
 pop_bindings() ->
-  Bindings = erlang:get(dynamic_bindings),
+  Bindings = get_bindings(),
   Parent   = clj_scope:parent(Bindings),
   erlang:put(dynamic_bindings, Parent),
   ok.
 
 -spec get_bindings() -> clj_scope:scope().
 get_bindings() ->
-  erlang:get(dynamic_bindings).
+  case erlang:get(dynamic_bindings) of
+    undefined -> ?NIL;
+    Bindings  -> Bindings
+  end.
 
 -spec get_bindings_map() -> map().
 get_bindings_map() ->
-  case erlang:get(dynamic_bindings) of
-    undefined -> #{};
+  case get_bindings() of
+    ?NIL -> #{};
     Bindings  ->
       UnwrapFun = fun(_, {ok, X}) -> X end,
       clj_scope:to_map(Bindings, UnwrapFun)
@@ -141,17 +144,13 @@ reset_bindings(Bindings) ->
 
 -spec dynamic_binding('clojerl.Var':type()) -> any().
 dynamic_binding(Var) ->
-  case erlang:get(dynamic_bindings) of
-    undefined -> undefined;
-    Bindings  ->
-      Key = clj_core:str(Var),
-      clj_scope:get(Bindings, Key)
-  end.
+  Key = clj_core:str(Var),
+  clj_scope:get(get_bindings(), Key).
 
 -spec dynamic_binding('clojerl.Var':type(), any()) -> any().
 dynamic_binding(Var, Value) ->
-  case erlang:get(dynamic_bindings) of
-    undefined ->
+  case get_bindings() of
+    ?NIL ->
       push_bindings(#{}),
       dynamic_binding(Var, Value);
     Bindings  ->
@@ -211,7 +210,7 @@ hash(#?TYPE{name = ?M, data = Data}) ->
   erlang:phash2(Data).
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta( #?TYPE{name = ?M, info = Info} = Keyword
          , Metadata
@@ -222,7 +221,7 @@ apply(#?TYPE{name = ?M} = Var, Args) ->
   Module   = module(Var),
   Function = function(Var),
   Args1    = case clj_core:seq(Args) of
-               undefined -> [];
+               ?NIL -> [];
                Seq       -> Seq
              end,
   Args2    = process_args(Var, Args1, fun clj_core:seq/1),
@@ -234,7 +233,7 @@ apply(#?TYPE{name = ?M} = Var, Args) ->
 -spec process_args(type(), [any()], function()) -> [any()].
 process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
   Meta = case meta(Var) of
-           undefined -> #{};
+           ?NIL -> #{};
            M -> M
          end,
 
@@ -245,7 +244,7 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
       VariadicArity = maps:get(variadic_arity, Meta),
       ArgCount = length(Args),
       if
-        MaxFixedArity =:= undefined;
+        MaxFixedArity =:= ?NIL;
         MaxFixedArity < ArgCount, ArgCount >= VariadicArity ->
           {Args1, Rest} = case VariadicArity < ArgCount of
                             true  -> lists:split(VariadicArity, Args);

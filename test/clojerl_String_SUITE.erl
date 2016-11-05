@@ -1,5 +1,7 @@
 -module(clojerl_String_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ append/1
@@ -124,7 +126,7 @@ seq(_Config) ->
   5 = clj_core:count(clj_core:seq(<<"hello">>)),
   [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_core:seq(<<"hello">>),
 
-  undefined = clj_core:seq(<<>>),
+  ?NIL = clj_core:seq(<<>>),
 
   [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_core:to_list(<<"hello">>),
 
@@ -171,7 +173,7 @@ complete_coverage(_Config) ->
 
   <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
 
-  undefined = 'clojerl.String':'_'(undefined),
+  ?NIL = 'clojerl.String':'_'(?NIL),
 
   true = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
 

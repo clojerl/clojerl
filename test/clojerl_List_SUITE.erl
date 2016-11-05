@@ -1,5 +1,7 @@
 -module(clojerl_List_SUITE).
 
+-include("clojerl.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ new/1
@@ -38,8 +40,8 @@ new(_Config) ->
   [1, 2, 3] = clj_core:seq(List),
 
   List2 = clj_core:list([]),
-  List2 = clj_core:list(undefined),
-  undefined = clj_core:seq(List2),
+  List2 = clj_core:list(?NIL),
+  ?NIL = clj_core:seq(List2),
 
   {comments, ""}.
 
@@ -94,13 +96,13 @@ seq(_Config) ->
 
   List2 = clj_core:list([1]),
   1 = clj_core:first(List2),
-  undefined = clj_core:next(List2),
+  ?NIL = clj_core:next(List2),
   [] = clj_core:to_list(clj_core:rest(List2)),
 
   List3 = clj_core:list([]),
-  undefined = clj_core:first(List3),
-  undefined = clj_core:next(List3),
-  undefined = clj_core:rest(List3),
+  ?NIL = clj_core:first(List3),
+  ?NIL = clj_core:next(List3),
+  ?NIL = clj_core:rest(List3),
 
   {comments, ""}.
 
@@ -147,7 +149,7 @@ cons(_Config) ->
 -spec stack(config()) -> result().
 stack(_Config) ->
   EmptyList = clj_core:list([]),
-  undefined = clj_core:peek(EmptyList),
+  ?NIL = clj_core:peek(EmptyList),
   EmptyList = clj_core:pop(EmptyList),
 
   OneList   = clj_core:list([1]),
@@ -162,7 +164,7 @@ stack(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  undefined = 'clojerl.List':'_'(undefined),
+  ?NIL = 'clojerl.List':'_'(?NIL),
 
   NotEmptyList = clj_core:list([a, b, 2, 3]),
   EmptyList    = clj_core:empty(NotEmptyList),

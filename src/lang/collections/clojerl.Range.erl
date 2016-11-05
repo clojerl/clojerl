@@ -68,7 +68,7 @@ hash(#?TYPE{name = ?M} = X) ->
   clj_murmur3:ordered(to_list(X)).
 
 meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, undefined).
+  maps:get(meta, Info, ?NIL).
 
 with_meta(#?TYPE{name = ?M, info = Info} = Range, Metadata) ->
   Range#?TYPE{info = Info#{meta => Metadata}}.
@@ -78,7 +78,7 @@ first(#?TYPE{name = ?M, data = {Start, _, _}}) -> Start.
 next(#?TYPE{name = ?M, data = {Start, End, Step}}) when
     Step >= 0, Start + Step > End;
     Step < 1, Start + Step < End ->
-  undefined;
+  ?NIL;
 next(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
 
@@ -89,9 +89,9 @@ more(#?TYPE{name = ?M, data = {Start, End, Step}}) when
 more(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
 
-'_'(_) -> undefined.
+'_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M, data = {Start, Start, _}}) -> undefined;
+seq(#?TYPE{name = ?M, data = {Start, Start, _}}) -> ?NIL;
 seq(#?TYPE{name = ?M} = Seq) -> Seq.
 
 to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
