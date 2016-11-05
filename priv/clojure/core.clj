@@ -3273,6 +3273,7 @@
 
 (defn tuple
   "Returns a tuple with items."
+  {:added "1.8"}
   [& items]
   (into-tuple items))
 

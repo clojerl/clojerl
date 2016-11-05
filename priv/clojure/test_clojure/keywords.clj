@@ -9,7 +9,7 @@
 (ns clojure.test-clojure.keywords
   (:use clojure.test))
 
-(def this-ns (str (ns-name *ns*)))
+(def this-ns "clojure.test-clojure.keywords")
 
 (deftest test-find-keyword
   :foo
