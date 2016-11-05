@@ -56,11 +56,8 @@ special_forms() ->
    , <<"case*">>        => fun parse_case/2
    , <<"throw">>        => fun parse_throw/2
    , <<"try">>          => fun parse_try/2
-   , <<"catch">>        => ?NIL
-   , <<"finally">>      => ?NIL
-   , <<"var">>          => fun parse_var/2
 
-   , <<"&">>            => ?NIL
+   , <<"var">>          => fun parse_var/2
 
    , <<"erl-on-load*">> => fun parse_on_load/2
 
@@ -70,8 +67,12 @@ special_forms() ->
    , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"extend-type*">> => fun parse_extend_type/2
 
-     %% , <<"monitor-enter">>
-     %% , <<"monitor-exit">>
+     %% These are special forms but they are meant to be parsed under other
+     %% special forms. If they are at function position then they should be
+     %% analyzed as regular symbols.
+   , <<"catch">>        => fun analyze_invoke/2
+   , <<"finally">>      => fun analyze_invoke/2
+   , <<"&">>            => fun analyze_invoke/2
    }.
 
 -spec analyze_forms(clj_env:env(), [any()]) -> clj_env:env().
