@@ -133,6 +133,23 @@ eval(Form, Opts) ->
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Opts, Env) ->
+  DoSymbol = clj_core:symbol(<<"do">>),
+  case
+    clj_core:'seq?'(Form)
+    andalso clj_core:equiv(clj_core:first(Form), DoSymbol)
+  of
+    true ->
+      Forms = clj_core:to_list(clj_core:rest(Form)),
+      FoldFun = fun(F, {_, EnvAcc}) ->
+                    eval1(F, Opts, EnvAcc)
+                end,
+      lists:foldl(FoldFun, {?NIL, Env}, Forms);
+    false ->
+      eval1(Form, Opts, Env)
+  end.
+
+-spec eval1(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
+eval1(Form, Opts, Env) ->
   ProcDict = erlang:get(),
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
   {Exprs, Forms, Env1} = run_monitored(DoEval),
