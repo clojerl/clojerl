@@ -73,7 +73,7 @@
              ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
              *command-line-args* *command-line-args*
              *assert* *assert*
-             *in* (new ~'erlang.io.PushbackReader *in*)
+             *in* (new erlang.io.PushbackReader *in*)
              *1 nil
              *2 nil
              *3 nil

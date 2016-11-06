@@ -1532,7 +1532,7 @@
       (check-valid-options options :default :hierarchy)
       `(let [v# (def ~mm-name)]
          (when-not (and (clojerl.Var/has_root.e v#)
-                        (instance? ~'clojerl.MultiFn (deref v#)))
+                        (instance? clojerl.MultiFn (deref v#)))
            (defn ~(with-meta mm-name m)
              [& args#]
              (let [val# (apply ~dispatch-fn args#)
@@ -4081,7 +4081,7 @@
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
                                       (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (new ~'clojerl.Map (clj_core/to_list.e ~gmapseq))
+                                                           (new clojerl.Map (clj_core/to_list.e ~gmapseq))
                                                            ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
@@ -4355,7 +4355,7 @@
   calls."
   {:added "1.0"}
   [& body]
-  `(with-open [s# (new ~'erlang.io.StringWriter)]
+  `(with-open [s# (new erlang.io.StringWriter)]
      (binding [*out* s#]
        ~@body
        (str s#))))
@@ -4365,7 +4365,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  `(with-open [s# (new ~'erlang.io.StringReader ~s)]
+  `(with-open [s# (new erlang.io.StringReader ~s)]
      (binding [*in* s#]
        ~@body)))
 
@@ -5365,7 +5365,7 @@
          ;; ~@(when gen-class-call (list gen-class-call))
          ~@(when (and (not= name 'clojure.core)
                       (not-any? #(= :refer-clojure (first %)) references))
-             `((clojure.core/refer '~'clojure.core)))
+             `((clojure.core/refer 'clojure.core)))
          ~@(map process-reference references))
        #_(if (= '~name 'clojure.core)
          nil
@@ -5375,7 +5375,7 @@
   "Same as (refer 'clojure.core <filters>)"
   {:added "1.0"}
   [& filters]
-  `(clojure.core/refer '~'clojure.core ~@filters))
+  `(clojure.core/refer 'clojure.core ~@filters))
 
 (defmacro defonce
   "defs name to have the root value of the expr iff the named var has no root value,
