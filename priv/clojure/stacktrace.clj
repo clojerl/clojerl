@@ -11,8 +11,8 @@
 ;; by Stuart Sierra
 ;; January 6, 2009
 
-(ns ^{:doc "Print stack traces oriented towards Clojure, not Java."
-       :author "Stuart Sierra"}
+(ns ^{:doc "Print stack traces oriented towards Clojure, not Erlang."
+      :author "Stuart Sierra"}
   clojure.stacktrace)
 
 (defn root-cause
@@ -33,25 +33,22 @@
         (catch :throw e
           (erlang/get_stacktrace.e))))))
 
-(defn filename
-  [e]
-  (let [info (nth e 3)]
-    (when (list? info)
-      (when-let [filename (proplists/get_value.e :file info)]
-        (erlang/list_to_binary.1 filename)))))
+(defn info [x k default]
+  (let [info (nth x 3)]
+    (proplists/get_value.e k info default)))
 
-(defn line-num
-  [e]
-  (let [info (nth e 3)]
-    (if (list? info)
-      (proplists/get_value.e :line info "?")
-      info)))
+(defn filename [x]
+  (erlang/list_to_binary.e (info x :file
+                                 (erlang/binary_to_list.e "NO_SOURCE_FILE"))))
 
-(defn module [e]
-  (first e))
+(defn line-num [x]
+  (info x :line "?"))
 
-(defn function [e]
-  (second e))
+(defn module [x]
+  (erlang/atom_to_binary.e (first x) :utf8))
+
+(defn function [x]
+  (erlang/atom_to_binary.e (second x) :utf8))
 
 (defn print-trace-element
   "Prints a Clojure-oriented view of one element in a stack trace."
@@ -59,21 +56,13 @@
   [e]
   (let [class  (module e)
 	method (function e)
-        info   (nth e 4)
         file   (filename e)
         line   (line-num e)]
     (let [match (re-matches #"^([A-Za-z0-9_.-]+)\$(\w+)__\d+$" (str class))]
       (if (and match (= "invoke" method))
-	(apply printf "%s/%s" (rest match))
-	(printf "%s.%s" class method)))
-    (printf " (%s:%d)" (or file "") line)))
-
-(defn print-throwable
-  "Prints the class and message of a Throwable."
-  {:added "1.1"}
-  [tr]
-  (throw "unimplemented throwable")
-  #_(printf "%s: %s" (.getName (class tr)) (.getMessage tr)))
+	(apply printf "~s/~s" (rest match))
+	(printf "~s/~s" class method)))
+    (printf " (~s:~p)" (or file "") line)))
 
 (defn print-stack-trace
   "Prints a Clojure-oriented stack trace.
@@ -82,7 +71,6 @@
   {:added "1.1"}
   ([st] (print-stack-trace st nil))
   ([st n]
-   #_(print-throwable tr)
    (newline)
    (print " at ")
    (if-let [e (first st)]
@@ -95,13 +83,6 @@
      (print "    ")
      (print-trace-element e)
      (newline))))
-
-(defn print-cause-trace
-  "Like print-stack-trace but prints chained exceptions (causes)."
-  {:added "1.1"}
-  ([st] (print-cause-trace st nil))
-  ([st n]
-   (throw "unsupported")))
 
 (defn e
   "REPL utility.  Prints a brief stack trace for the root cause of the

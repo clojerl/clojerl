@@ -389,9 +389,8 @@
    (println "expected:" (pr-str (:expected m)))
    (print "  actual: ")
    (let [actual (:actual m)]
-     (if (instance? :Throwable actual)
-       (stack/print-cause-trace actual *stack-trace-depth*)
-       (prn actual)))))
+     (prn actual)
+     (stack/print-stack-trace (stack/get-stacktrace) *stack-trace-depth*))))
 
 (defmethod report :summary [m]
   (with-test-out
