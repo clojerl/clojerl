@@ -8,7 +8,7 @@
 
 -spec start() -> ok.
 start() ->
-  {ok, _} = application:ensure_all_started(clojerl),
+  {ok, _} = application:ensure_all_started(clojerl, permanent),
   ok.
 
 -spec start(any(), any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
