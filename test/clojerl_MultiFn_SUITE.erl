@@ -11,6 +11,7 @@
 -export([ get_method/1
         , get_method_table/1
         , remove_method/1
+        , ets_heir/1
         , complete_coverage/1
         ]).
 
@@ -129,6 +130,41 @@ remove_method(_Config) ->
 
   {comment, ""}.
 
+-spec ets_heir(config()) -> result().
+ets_heir(_Config) ->
+  GenServerName = 'clojerl.MultiFn',
+  MethodsTable  = 'clojerl.MultiFn',
+  HeirName      = 'clojerl.MultiFn.Heir',
+
+  ct:comment("Check owner and heir"),
+  Heir0  = ets:info(MethodsTable, heir),
+  Owner0 = ets:info(MethodsTable, owner),
+
+  Heir0  = erlang:whereis(HeirName),
+  Owner0 = erlang:whereis(GenServerName),
+
+  ct:comment("Kill the heir, check a new one is spawned"),
+  exit(Heir0, kill),
+  %% Give the gen_server some time to create an heir
+  timer:sleep(100),
+  Heir1 = ets:info(MethodsTable, heir),
+  true  = is_pid(Heir1) andalso Heir0 =/= Heir1,
+
+  ct:comment("After killing the owner the contents should be there"),
+  ok = gen_server:stop(GenServerName),
+  MethodTable = 'clojerl.MultiFn':get_method_table(<<"test-method">>),
+  3 = maps:size(MethodTable),
+
+  ct:comment("Heir should be the same"),
+  Heir1 = ets:info(MethodsTable, heir),
+
+  ct:comment("Owner should be the different"),
+  Owner1 = ets:info(MethodsTable, owner),
+  true = is_pid(Owner1) andalso Owner0 =/= Owner1,
+
+  {comment, ""}.
+
+
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   ProcessName = 'clojerl.MultiFn',
@@ -138,9 +174,6 @@ complete_coverage(_Config) ->
 
   ct:comment("Force handle_cast execution"),
   gen_server:cast(ProcessName, ok),
-
-  ct:comment("Force terminate execution"),
-  gen_server:stop(ProcessName),
 
   ct:comment("Call code_change"),
   ProcessName:code_change(ok, undefined, undefined),
