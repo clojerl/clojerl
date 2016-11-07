@@ -270,7 +270,7 @@ add_on_load(Module, Expr) ->
 is_clojure(Name) ->
   Key = {?MODULE, is_clojure, Name},
   case clj_cache:get(Key) of
-    ?NIL ->
+    undefined ->
       Attrs = Name:module_info(attributes),
       IsClojure = lists:keymember(clojure, 1, Attrs),
       clj_cache:put(Key, IsClojure),
@@ -283,7 +283,7 @@ is_clojure(Name) ->
 is_protocol(Name) ->
   Key = {?MODULE, is_protocol, Name},
   case clj_cache:get(Key) of
-    ?NIL ->
+    undefined ->
       Attrs = Name:module_info(attributes),
       IsProtocol = lists:keymember(protocol, 1, Attrs),
       clj_cache:put(Key, IsProtocol),

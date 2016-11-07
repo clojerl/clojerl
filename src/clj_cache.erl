@@ -1,7 +1,5 @@
 -module(clj_cache).
 
--include("clojerl.hrl").
-
 -behavior(gen_server).
 
 -export([ get/1
@@ -22,10 +20,10 @@
 %% Exported Functions
 %%------------------------------------------------------------------------------
 
--spec get(any()) -> ?NIL | {ok, any()}.
+-spec get(any()) -> undefined | {ok, any()}.
 get(Key) ->
   case ets:lookup(?MODULE, Key) of
-    [] -> ?NIL;
+    [] -> undefined;
     [{Key, Value}] -> {ok, Value}
   end.
 
@@ -42,7 +40,7 @@ start_link() ->
 
 init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 1}]),
-  {ok, ?NIL}.
+  {ok, undefined}.
 
 handle_call({put, Key, Value}, _From, State) ->
   true = ets:insert(?MODULE, {Key, Value}),
