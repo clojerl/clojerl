@@ -66,16 +66,6 @@
           (foo 10))))
   (testing "protocols generate a corresponding interface using _ instead of - for method names"
     (is (= ["bar" "baz" "baz" "foo" "with_quux"] (method-names clojure.test-clojure.protocols.examples.ExampleProtocol))))
-  #_(testing "protocol will work with instances of its interface (use for interop, not in Clojure!)"
-    (let [obj (proxy [clojure.test-clojure.protocols.examples.ExampleProtocol] []
-                (foo [] "foo!"))]
-      (is (= "foo!" (.foo obj)) "call through interface")
-      (is (= "foo!" (foo obj)) "call through protocol")))
-  #_(testing "you can implement just part of a protocol if you want"
-    (let [obj (reify ExampleProtocol
-                     (baz [a b] "two-arg baz!"))]
-      (is (= "two-arg baz!" (baz obj nil)))
-      (is (thrown? AbstractMethodError (baz obj)))))
   (testing "error conditions checked when defining protocols"
     (is (thrown-with-msg?
          :throw
@@ -87,10 +77,7 @@
          (eval '(defprotocol badprotdef (m [this arg]) (m [this arg1 arg2]))))))
   (testing "you can redefine a protocol with different methods"
     (eval '(defprotocol Elusive (old-method [x])))
-    (eval '(defprotocol Elusive (new-method [x])))
-    #_(is (= :new-method (eval '(new-method (reify Elusive (new-method [x] :new-method))))))
-    #_(is (fails-with-cause? IllegalArgumentException #"No method of interface: .*\.Elusive found for function: old-method of protocol: Elusive \(The protocol method may have been defined before and removed\.\)"
-          (eval '(old-method (reify Elusive (new-method [x] :new-method))))))))
+    (eval '(defprotocol Elusive (new-method [x])))))
 
 (deftype HasMarkers []
   ExampleProtocol
