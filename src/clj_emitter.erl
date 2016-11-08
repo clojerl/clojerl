@@ -164,7 +164,7 @@ ast(#{op := type} = Expr, State) ->
 %% new
 %%------------------------------------------------------------------------------
 ast(#{op := new} = Expr, State) ->
-  #{ type := #{op := type, type := TypeSym}
+  #{ type := TypeExpr
    , args := ArgsExprs
    , env  := Env
    } = Expr,
@@ -173,9 +173,11 @@ ast(#{op := new} = Expr, State) ->
                               , length(ArgsExprs)
                               ),
 
-  TypeModule = sym_to_kw(TypeSym),
+  {TypeAst, State2}  = pop_ast(ast(TypeExpr, State1)),
+  TypeModule         = cerl:concrete(TypeAst),
+
   Ast = call_mfa(TypeModule, ?CONSTRUCTOR, ArgsAsts, anno_from(Env)),
-  push_ast(Ast, State1);
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% deftype
 %%------------------------------------------------------------------------------
@@ -1288,7 +1290,8 @@ anno_from(Env) ->
   end.
 
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().
-sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).
+sym_to_kw(Symbol) ->
+  binary_to_atom(clj_core:str(Symbol), utf8).
 
 -spec default_compiler_options() -> clj_compiler:opts().
 default_compiler_options() ->

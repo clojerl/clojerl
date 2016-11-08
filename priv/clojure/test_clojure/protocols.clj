@@ -13,7 +13,7 @@
   (:require [clojure.test-clojure.protocols.more-examples :as other]
             [clojure.set :as set]
             clojure.test-helper)
-  (:import [clojure.test_clojure.protocols.examples
+  (:import [clojure.test-clojure.protocols.examples
             ExampleProtocol
             MarkerProtocol
             MarkerProtocol2]))
@@ -52,7 +52,7 @@
 (deftest protocols-test
   (testing "protocol fns have useful metadata"
     (let [common-meta {:ns 'clojure.test-clojure.protocols.examples
-                       :protocol 'clojure.test_clojure.protocols.examples.ExampleProtocol}]
+                       :protocol 'clojure.test-clojure.protocols.examples.ExampleProtocol}]
       (are [m f] (subset-map? (merge (quote m) common-meta)
                               (meta (var f)))
            {:name foo :arglists ([a]) :doc "method with one arg"} foo
@@ -62,12 +62,12 @@
   (testing "protocol fns throw IllegalArgumentException if no impl matches"
     (is (thrown-with-msg?
           :error
-          #"No implementation of method: :foo of protocol: :clojure.test_clojure.protocols.examples.ExampleProtocol found for type: :clojerl.Integer"
+          #"No implementation of method: :foo of protocol: :clojure.test-clojure.protocols.examples.ExampleProtocol found for type: :clojerl.Integer"
           (foo 10))))
   (testing "protocols generate a corresponding interface using _ instead of - for method names"
-    (is (= ["bar" "baz" "baz" "foo" "with_quux"] (method-names clojure.test_clojure.protocols.examples.ExampleProtocol))))
+    (is (= ["bar" "baz" "baz" "foo" "with_quux"] (method-names clojure.test-clojure.protocols.examples.ExampleProtocol))))
   #_(testing "protocol will work with instances of its interface (use for interop, not in Clojure!)"
-    (let [obj (proxy [clojure.test_clojure.protocols.examples.ExampleProtocol] []
+    (let [obj (proxy [clojure.test-clojure.protocols.examples.ExampleProtocol] []
                 (foo [] "foo!"))]
       (is (= "foo!" (.foo obj)) "call through interface")
       (is (= "foo!" (foo obj)) "call through protocol")))
@@ -106,7 +106,7 @@
 
 (deftest marker-tests
   (testing "That a marker protocol has no methods"
-    (is (= '() (method-names clojure.test_clojure.protocols.examples.MarkerProtocol))))
+    (is (= '() (method-names clojure.test-clojure.protocols.examples.MarkerProtocol))))
   (testing "That types with markers are reportedly satifying them."
     (let [hm (new HasMarkers)
           wgm (new WillGetMarker)]
@@ -142,13 +142,13 @@
 #_(deftest illegal-extending
   (testing "you cannot extend a protocol to a type that implements the protocol inline"
     (is (fails-with-cause? IllegalArgumentException #".*HasProtocolInline already directly implements interface"
-          (eval '(extend clojure.test_clojure.protocols.HasProtocolInline
+          (eval '(extend clojure.test-clojure.protocols.HasProtocolInline
                          clojure.test-clojure.protocols.examples/ExampleProtocol
                          {:foo (fn [_] :extended)})))))
   (testing "you cannot extend to an interface"
-    (is (fails-with-cause? IllegalArgumentException #"interface clojure.test_clojure.protocols.examples.ExampleProtocol is not a protocol"
-          (eval '(extend clojure.test_clojure.protocols.HasProtocolInline
-                         clojure.test_clojure.protocols.examples.ExampleProtocol
+    (is (fails-with-cause? IllegalArgumentException #"interface clojure.test-clojure.protocols.examples.ExampleProtocol is not a protocol"
+          (eval '(extend clojure.test-clojure.protocols.HasProtocolInline
+                         clojure.test-clojure.protocols.examples.ExampleProtocol
                          {:foo (fn [_] :extended)}))))))
 
 (deftype ExtendsTestWidget []
@@ -296,17 +296,17 @@
 ;;         (is (= r3    (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
 ;;         (is (= rn    (RecordToTestStatics3/create {:a 1}))))
 ;;       (testing "that a literal record equals one by the static factory method"
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestStatics1{:a 1} (RecordToTestStatics1/create {:a 1})))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestStatics2{:a 1 :b 2} (RecordToTestStatics2/create {:a 1 :b 2})))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestStatics3{:a 1 :b 2 :c 3} (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestStatics3{:a 1} (RecordToTestStatics3/create {:a 1})))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestStatics3{:a 1 :b nil :c nil} (RecordToTestStatics3/create {:a 1}))))))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics1{:a 1} (RecordToTestStatics1/create {:a 1})))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics2{:a 1 :b 2} (RecordToTestStatics2/create {:a 1 :b 2})))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b 2 :c 3} (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1} (RecordToTestStatics3/create {:a 1})))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b nil :c nil} (RecordToTestStatics3/create {:a 1}))))))
 ;;   (testing "that records and types have a sane generated basis method"
-;;     (let [rb  (clojure.test_clojure.protocols.RecordToTestBasis/getBasis)
-;;           rbh (clojure.test_clojure.protocols.RecordToTestBasisHinted/getBasis)
-;;           rhg (clojure.test_clojure.protocols.RecordToTestHugeBasis/getBasis)
-;;           tb (clojure.test_clojure.protocols.TypeToTestBasis/getBasis)
-;;           tbh (clojure.test_clojure.protocols.TypeToTestBasisHinted/getBasis)]
+;;     (let [rb  (clojure.test-clojure.protocols.RecordToTestBasis/getBasis)
+;;           rbh (clojure.test-clojure.protocols.RecordToTestBasisHinted/getBasis)
+;;           rhg (clojure.test-clojure.protocols.RecordToTestHugeBasis/getBasis)
+;;           tb (clojure.test-clojure.protocols.TypeToTestBasis/getBasis)
+;;           tbh (clojure.test-clojure.protocols.TypeToTestBasisHinted/getBasis)]
 ;;       (is (= '[a b c] rb))
 ;;       (is (= '[a b c] rb))
 ;;       (is (= '[a b c d e f g h i j k l m n o p q r s t u v w x y z] rhg))
@@ -378,13 +378,13 @@
 ;;         (is (false? (-> ->RecordToTestFactories var meta :doc nil?)))
 ;;         (is (false? (->  map->RecordToTestFactories var meta :doc nil?))))
 ;;       (testing "that a literal record equals one by the positional factory fn"
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (->RecordToTestFactories 1 2 3)))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (->RecordToTestFactories 1 nil nil)))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a [] :b {} :c ()} (->RecordToTestFactories [] {} ()))))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (->RecordToTestFactories 1 2 3)))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (->RecordToTestFactories 1 nil nil)))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a [] :b {} :c ()} (->RecordToTestFactories [] {} ()))))
 ;;       (testing "that a literal record equals one by the map-> factory fn"
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (map->RecordToTestFactories {:a 1 :b 2 :c 3})))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (map->RecordToTestFactories {:a 1})))
-;;         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a nil :b nil :c nil} (map->RecordToTestFactories {})))))))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (map->RecordToTestFactories {:a 1 :b 2 :c 3})))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (map->RecordToTestFactories {:a 1})))
+;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a nil :b nil :c nil} (map->RecordToTestFactories {})))))))
 
 ;; (defn compare-huge-types
 ;;   [hugeL hugeR]
@@ -438,10 +438,10 @@
 ;;   (testing "that constructor literals are embeddable"
 ;;     (is (= 42 #java.lang.Long[#java.lang.String["42"]])))
 ;;   (testing "that constructor literals work for deftypes too"
-;;     (is (= (.a (TypeToTestFactory. 42)) (.a #clojure.test_clojure.protocols.TypeToTestFactory[42])))
+;;     (is (= (.a (TypeToTestFactory. 42)) (.a #clojure.test-clojure.protocols.TypeToTestFactory[42])))
 ;;     (is (compare-huge-types
 ;;          (TypeToTestHugeFactories.  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
-;;          #clojure.test_clojure.protocols.TypeToTestHugeFactories[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26]))))
+;;          #clojure.test-clojure.protocols.TypeToTestHugeFactories[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26]))))
 
 ;; (defrecord RecordToTestLiterals [a])
 ;; (defrecord TestNode [v l r])
@@ -449,13 +449,13 @@
 ;; (def lang-str "en")
 ;; (deftest exercise-literals
 ;;   (testing "that ctor literals can be used in common 'places'"
-;;     (is (= (RecordToTestLiterals. ()) #clojure.test_clojure.protocols.RecordToTestLiterals[()]))
-;;     (is (= (.a (TypeToTestLiterals. ())) (.a #clojure.test_clojure.protocols.TypeToTestLiterals[()])))
-;;     (is (= (RecordToTestLiterals. 42) (into #clojure.test_clojure.protocols.RecordToTestLiterals[0] {:a 42})))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (RecordToTestLiterals. #clojure.test_clojure.protocols.RecordToTestLiterals[42])))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (->RecordToTestLiterals #clojure.test_clojure.protocols.RecordToTestLiterals[42])))
+;;     (is (= (RecordToTestLiterals. ()) #clojure.test-clojure.protocols.RecordToTestLiterals[()]))
+;;     (is (= (.a (TypeToTestLiterals. ())) (.a #clojure.test-clojure.protocols.TypeToTestLiterals[()])))
+;;     (is (= (RecordToTestLiterals. 42) (into #clojure.test-clojure.protocols.RecordToTestLiterals[0] {:a 42})))
+;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (RecordToTestLiterals. #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
+;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (->RecordToTestLiterals #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
 ;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            #clojure.test_clojure.protocols.RecordToTestLiterals[#clojure.test_clojure.protocols.RecordToTestLiterals[42]]))
+;;            #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals[42]]))
 ;;     (is (= (TestNode. 1
 ;;                       (TestNode. 2
 ;;                                  (TestNode. 3
@@ -471,36 +471,36 @@
 ;;                                  (TestNode. 7
 ;;                                             nil
 ;;                                             nil)))
-;;            #clojure.test_clojure.protocols.TestNode{:v 1
-;;                                                     :l #clojure.test_clojure.protocols.TestNode{:v 2
-;;                                                                                                 :l #clojure.test_clojure.protocols.TestNode{:v 3 :l nil :r nil}
+;;            #clojure.test-clojure.protocols.TestNode{:v 1
+;;                                                     :l #clojure.test-clojure.protocols.TestNode{:v 2
+;;                                                                                                 :l #clojure.test-clojure.protocols.TestNode{:v 3 :l nil :r nil}
 ;;                                                                                                 :r nil}
-;;                                                     :r #clojure.test_clojure.protocols.TestNode{:v 4
-;;                                                                                                 :l #clojure.test_clojure.protocols.TestNode{:v 5
-;;                                                                                                                                             :l #clojure.test_clojure.protocols.TestNode{:v 6 :l nil :r nil}
+;;                                                     :r #clojure.test-clojure.protocols.TestNode{:v 4
+;;                                                                                                 :l #clojure.test-clojure.protocols.TestNode{:v 5
+;;                                                                                                                                             :l #clojure.test-clojure.protocols.TestNode{:v 6 :l nil :r nil}
 ;;                                                                                                                                             :r nil}
-;;                                                                                                 :r #clojure.test_clojure.protocols.TestNode{:v 7 :l nil :r nil}}})))
+;;                                                                                                 :r #clojure.test-clojure.protocols.TestNode{:v 7 :l nil :r nil}}})))
 
 ;;   (testing "that records and types are evalable"
-;;     (is (= (RecordToTestLiterals. 42) (eval #clojure.test_clojure.protocols.RecordToTestLiterals[42])))
-;;     (is (= (RecordToTestLiterals. 42) (eval #clojure.test_clojure.protocols.RecordToTestLiterals{:a 42})))
+;;     (is (= (RecordToTestLiterals. 42) (eval #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
+;;     (is (= (RecordToTestLiterals. 42) (eval #clojure.test-clojure.protocols.RecordToTestLiterals{:a 42})))
 ;;     (is (= (RecordToTestLiterals. 42) (eval (RecordToTestLiterals. 42))))
 ;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            (eval #clojure.test_clojure.protocols.RecordToTestLiterals[#clojure.test_clojure.protocols.RecordToTestLiterals[42]])))
+;;            (eval #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals[42]])))
 ;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            (eval #clojure.test_clojure.protocols.RecordToTestLiterals[#clojure.test_clojure.protocols.RecordToTestLiterals{:a 42}])))
+;;            (eval #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals{:a 42}])))
 ;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            (eval #clojure.test_clojure.protocols.RecordToTestLiterals{:a #clojure.test_clojure.protocols.RecordToTestLiterals[42]})))
-;;     (is (= 42 (.a (eval #clojure.test_clojure.protocols.TypeToTestLiterals[42])))))
+;;            (eval #clojure.test-clojure.protocols.RecordToTestLiterals{:a #clojure.test-clojure.protocols.RecordToTestLiterals[42]})))
+;;     (is (= 42 (.a (eval #clojure.test-clojure.protocols.TypeToTestLiterals[42])))))
 
 ;;   (testing "that ctor literals only work with constants or statics"
 ;;     (is (thrown? Exception (read-string "#java.util.Locale[(str 'en)]")))
 ;;     (is (thrown? Exception (read-string "(let [s \"en\"] #java.util.Locale[(str 'en)])")))
-;;     (is (thrown? Exception (read-string "#clojure.test_clojure.protocols.RecordToTestLiterals{(keyword \"a\") 42}"))))
+;;     (is (thrown? Exception (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals{(keyword \"a\") 42}"))))
 
 ;;   (testing "that ctors can have whitespace after class name but before {"
 ;;     (is (= (RecordToTestLiterals. 42)
-;;            (read-string "#clojure.test_clojure.protocols.RecordToTestLiterals   {:a 42}"))))
+;;            (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals   {:a 42}"))))
 
 ;;   (testing "that the correct errors are thrown with malformed literals"
 ;;     (is (thrown-with-msg?
@@ -517,11 +517,11 @@
 ;; (deftest defrecord-printing
 ;;   (testing "that the default printer gives the proper representation"
 ;;     (let [r   (RecordToTestPrinting. 1 2)]
-;;       (is (= "#clojure.test_clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
 ;;              (pr-str r)))
-;;       (is (= "#clojure.test_clojure.protocols.RecordToTestPrinting[1, 2]"
+;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
 ;;              (binding [*print-dup* true] (pr-str r))))
-;;       (is (= "#clojure.test_clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
 ;;              (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
 
 ;; (defrecord RecordToTest__ [__a ___b])
@@ -547,25 +547,25 @@
 
 ;; (deftest hinting-test
 ;;   (testing "that primitive hinting requiring no coercion works as expected"
-;;     (is (= (RecordToTestLongHint. 42) #clojure.test_clojure.protocols.RecordToTestLongHint{:a 42}))
-;;     (is (= (RecordToTestLongHint. 42) #clojure.test_clojure.protocols.RecordToTestLongHint[42]))
-;;     (is (= (RecordToTestLongHint. 42) (clojure.test_clojure.protocols.RecordToTestLongHint/create {:a 42})))
+;;     (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint{:a 42}))
+;;     (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint[42]))
+;;     (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a 42})))
 ;;     (is (= (RecordToTestLongHint. 42) (map->RecordToTestLongHint {:a 42})))
 ;;     (is (= (RecordToTestLongHint. 42) (->RecordToTestLongHint 42)))
 ;;     (is (= (.a (TypeToTestLongHint. 42)) (.a (->TypeToTestLongHint (long 42)))))
 ;;     (testing "that invalid primitive types on hinted defrecord fields fails"
 ;;       (is (thrown?
 ;;             ClassCastException
-;;             (read-string "#clojure.test_clojure.protocols.RecordToTestLongHint{:a \"\"}")))
+;;             (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint{:a \"\"}")))
 ;;       (is (thrown?
 ;;             IllegalArgumentException
-;;             (read-string "#clojure.test_clojure.protocols.RecordToTestLongHint[\"\"]")))
+;;             (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint[\"\"]")))
 ;;       (is (thrown?
 ;;             IllegalArgumentException
-;;             (read-string "#clojure.test_clojure.protocols.TypeToTestLongHint[\"\"]")))
+;;             (read-string "#clojure.test-clojure.protocols.TypeToTestLongHint[\"\"]")))
 ;;       (is (thrown?
 ;;             ClassCastException
-;;             (clojure.test_clojure.protocols.RecordToTestLongHint/create {:a ""})))
+;;             (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a ""})))
 ;;       (is (thrown?
 ;;             ClassCastException
 ;;             (map->RecordToTestLongHint {:a ""})))
@@ -573,14 +573,14 @@
 ;;             ClassCastException
 ;;             (->RecordToTestLongHint "")))))
 ;;   (testing "that primitive hinting requiring coercion works as expected"
-;;     (is (= (RecordToTestByteHint. 42) (clojure.test_clojure.protocols.RecordToTestByteHint/create {:a (byte 42)})))
+;;     (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create {:a (byte 42)})))
 ;;     (is (= (RecordToTestByteHint. 42) (map->RecordToTestByteHint {:a (byte 42)})))
 ;;     (is (= (RecordToTestByteHint. 42) (->RecordToTestByteHint (byte 42))))
 ;;     (is (= (.a (TypeToTestByteHint. 42)) (.a (->TypeToTestByteHint (byte 42))))))
 ;;   (testing "that primitive hinting for non-numerics works as expected"
-;;     (is (= (RecordToTestBoolHint. true) #clojure.test_clojure.protocols.RecordToTestBoolHint{:a true}))
-;;     (is (= (RecordToTestBoolHint. true) #clojure.test_clojure.protocols.RecordToTestBoolHint[true]))
-;;     (is (= (RecordToTestBoolHint. true) (clojure.test_clojure.protocols.RecordToTestBoolHint/create {:a true})))
+;;     (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint{:a true}))
+;;     (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint[true]))
+;;     (is (= (RecordToTestBoolHint. true) (clojure.test-clojure.protocols.RecordToTestBoolHint/create {:a true})))
 ;;     (is (= (RecordToTestBoolHint. true) (map->RecordToTestBoolHint {:a true})))
 ;;     (is (= (RecordToTestBoolHint. true) (->RecordToTestBoolHint true))))
 ;;   (testing "covariant hints -- deferred"))
@@ -641,7 +641,7 @@
 ;;   (testing "disambiguating with type hints"
 ;;     (testing "you must hint an overloaded method"
 ;;       (is (thrown? Exception
-;;             (eval '(reify clojure.test_clojure.protocols.examples.ExampleInterface (hinted [_ o]))))))
+;;             (eval '(reify clojure.test-clojure.protocols.examples.ExampleInterface (hinted [_ o]))))))
 ;;     (testing "hinting"
 ;;       (let [r (reify
 ;;                ExampleInterface

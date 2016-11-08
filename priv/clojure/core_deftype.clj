@@ -14,7 +14,7 @@
   "Convert a Clojure namespace name to a legal Java package name."
   {:added "1.2"}
   [ns]
-  (binary/replace.e (-> ns ns-name str) \- \_))
+  (-> ns ns-name str))
 
 (defn munge [s] s)
 
