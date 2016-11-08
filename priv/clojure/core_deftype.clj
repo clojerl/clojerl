@@ -301,7 +301,7 @@
   {:added "1.6"
    :static true}
   [x]
-  (instance? :clojerl.IRecord x))
+  (satisfies? clojerl.IRecord x))
 
 (defn- emit-deftype*
   "Do not use this directly - use deftype"

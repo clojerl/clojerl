@@ -77,9 +77,12 @@ resolve_impl(Protocol, Function, Type, Arity) ->
         {module, ImplModule} ->
           erlang:make_fun(ImplModule, Function, Arity);
         _ ->
-          clj_utils:error([ Type, <<" doesn't implement function ">>
-                          , Function, <<" of arity ">>, Arity
-                          , <<" in protocol ">>, Protocol
+          clj_utils:error([ <<"No implementation of method: ">>
+                          , Function
+                          , <<" of protocol: ">>
+                          , Protocol
+                          , <<" found for type: ">>
+                          , Type
                           ])
       end
   end.

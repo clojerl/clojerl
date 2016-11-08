@@ -35,7 +35,8 @@
   [m]
   (->> (erlang/get_module_info.e m :functions)
        (map (comp str first))
-       (sort)))
+       (filter (comp not #{":$_clj_on_load" ":module_info" ":module_info"}))
+       sort))
 
 (defrecord EmptyRecord [])
 (defrecord TestRecord [a b])
@@ -45,20 +46,23 @@
 
 (defrecord MapEntry [k v])
 
+(defn subset-map? [a b]
+  (set/subset? (set a) (set b)))
+
 (deftest protocols-test
   (testing "protocol fns have useful metadata"
-    (let [common-meta {:ns (find-ns 'clojure.test-clojure.protocols.examples)
-                       :protocol 'ExampleProtocol}]
-      (are [m f] (= (merge (quote m) common-meta)
-                    (meta (var f)))
+    (let [common-meta {:ns 'clojure.test-clojure.protocols.examples
+                       :protocol 'clojure.test_clojure.protocols.examples.ExampleProtocol}]
+      (are [m f] (subset-map? (merge (quote m) common-meta)
+                              (meta (var f)))
            {:name foo :arglists ([a]) :doc "method with one arg"} foo
            {:name bar :arglists ([a b]) :doc "method with two args"} bar
            {:name baz :arglists ([a] [a b]) :doc "method with multiple arities" :tag String} baz
            {:name with-quux :arglists ([a]) :doc "method name with a hyphen"} with-quux)))
   (testing "protocol fns throw IllegalArgumentException if no impl matches"
     (is (thrown-with-msg?
-          :throw
-          #"No implementation of method: :foo of protocol: #'clojure.test-clojure.protocols.examples/ExampleProtocol found for class: java.lang.Long"
+          :error
+          #"No implementation of method: :foo of protocol: :clojure.test_clojure.protocols.examples.ExampleProtocol found for type: :clojerl.Integer"
           (foo 10))))
   (testing "protocols generate a corresponding interface using _ instead of - for method names"
     (is (= ["bar" "baz" "baz" "foo" "with_quux"] (method-names clojure.test_clojure.protocols.examples.ExampleProtocol))))
