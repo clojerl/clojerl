@@ -17,11 +17,13 @@
         , update_var/2
         , find_var/1
         , find_var/2
+        , find_mapping/2
         , get_mappings/1
         , get_aliases/1
 
         , refer/3
         , import_type/1
+        , import_type/2
         , unmap/2
         , add_alias/3
         , remove_alias/2
@@ -78,21 +80,34 @@ find_var(Symbol) ->
 
 -spec find_var(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | ?NIL.
-find_var(DefaultNs, Symbol) ->
-  Ns = case clj_core:namespace(Symbol) of
-         ?NIL -> DefaultNs;
-         NsStr     ->
-           NsSym = clj_core:symbol(NsStr),
-           case find(NsSym) of
-             ?NIL -> alias(current(), NsSym);
-             NsTemp    -> NsTemp
-           end
-       end,
-  case Ns of
+find_var(Ns, Symbol) ->
+  Var = find_mapping(Ns, Symbol),
+  case clj_core:'var?'(Var) of
+    true  -> Var;
+    false -> ?NIL
+  end.
+
+-spec find_mapping(namespace(), 'clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | 'clojerl.Symbol':type() | ?NIL.
+find_mapping(DefaultNs, Symbol) ->
+  case resolve_ns(DefaultNs, Symbol) of
     ?NIL -> ?NIL;
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
       mapping(Ns, NameSym)
+  end.
+
+-spec resolve_ns(namespace(), 'clojerl.Symbol':type()) ->
+  namespace() | ?NIL.
+resolve_ns(DefaultNs, Symbol) ->
+  case clj_core:namespace(Symbol) of
+    ?NIL  -> DefaultNs;
+    NsStr ->
+      NsSym = clj_core:symbol(NsStr),
+      case find(NsSym) of
+        ?NIL -> alias(DefaultNs, NsSym);
+        Ns   -> Ns
+      end
   end.
 
 -spec find_or_create('clojerl.Symbol':type()) -> namespace().
@@ -152,8 +167,13 @@ refer(Ns, Sym, Var) ->
 
 -spec import_type(binary()) -> namespace().
 import_type(TypeName) ->
+  import_type(TypeName, true).
+
+-spec import_type(binary(), boolean()) -> namespace().
+import_type(TypeName, CheckLoaded) ->
   Type = binary_to_atom(TypeName, utf8),
-  clj_utils:error_when( {module, Type} =/= code:ensure_loaded(Type)
+  clj_utils:error_when( CheckLoaded
+                        andalso {module, Type} =/= code:ensure_loaded(Type)
                       , [ <<"Type '">>, Type, <<"' could not be loaded. ">>]
                       ),
 

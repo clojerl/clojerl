@@ -1165,13 +1165,9 @@ parse_defprotocol(Env, List) ->
                       , clj_env:location(Env)
                       ),
 
-  %% Refer the name of the protocol (without the namespace) in the
-  %% current namespace.
-  Name     = clj_core:name(FQNameSym),
-  LastName = lists:last(binary:split(Name, <<".">>, [global])),
-  NameSym  = clj_core:symbol(LastName),
-
-  clj_namespace:refer(clj_namespace:current(), NameSym, FQNameSym),
+  %% Import the protocol type
+  Name = clj_core:name(FQNameSym),
+  clj_namespace:import_type(Name, false),
 
   ProtocolExpr = #{ op           => defprotocol
                   , env          => ?DEBUG(Env)
@@ -1526,32 +1522,30 @@ resolve(Env, Symbol, CheckPrivate) ->
   CurrentNs = clj_namespace:current(),
   Local     = clj_env:get_local(Env, Symbol),
   NsStr     = clj_core:namespace(Symbol),
-  MappedVal = clj_namespace:mapping(CurrentNs, Symbol),
+  MappedVal = clj_namespace:find_mapping(CurrentNs, Symbol),
 
   if
     Local =/= ?NIL ->
       {{local, Local}, Env};
-    NsStr =/= ?NIL ->
-      case clj_namespace:find_var(Symbol) of
-        ?NIL ->
-          %% If there is no var then assume it's a Module:Function pair.
-          %% Let's see how this works out.
-          {erl_fun(Env, Symbol), Env};
-        Var ->
-          CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
-          clj_utils:error_when( CheckPrivate
-                                andalso NsStr =/= CurrentNsName
-                                andalso not 'clojerl.Var':is_public(Var)
-                              , [Var, <<" is not public">>]
-                              , clj_env:location(Env)
-                              ),
-          {{var, Var}, Env}
-      end;
     MappedVal =/= ?NIL ->
       case clj_core:'var?'(MappedVal) of
-        true  -> {{var, MappedVal}, Env};
-        false -> {{type, MappedVal}, Env}
+        true ->
+          CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
+          clj_utils:error_when( CheckPrivate
+                                andalso NsStr =/= ?NIL
+                                andalso NsStr =/= CurrentNsName
+                                andalso not 'clojerl.Var':is_public(MappedVal)
+                              , [MappedVal, <<" is not public">>]
+                              , clj_env:location(Env)
+                              ),
+          {{var, MappedVal}, Env};
+        false ->
+          {{type, MappedVal}, Env}
       end;
+    NsStr =/= ?NIL ->
+      %% If there is no var then assume it's a Module:Function pair.
+      %% Let's see how this works out.
+      {erl_fun(Env, Symbol), Env};
     true ->
       case is_maybe_type(Symbol) of
         true  -> {{type, Symbol}, Env};
