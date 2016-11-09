@@ -1167,7 +1167,7 @@ parse_defprotocol(Env, List) ->
 
   %% Import the protocol type
   Name = clj_core:name(FQNameSym),
-  clj_namespace:import_type(Name, false),
+  clj_namespace:import_type(Name, _EnsureLoaded = false),
 
   ProtocolExpr = #{ op           => defprotocol
                   , env          => ?DEBUG(Env)

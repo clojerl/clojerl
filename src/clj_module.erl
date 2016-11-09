@@ -445,7 +445,7 @@ to_forms(#module{} = Module) ->
 
   FileAttr    = {cerl:c_atom(file), cerl:abstract(Source)},
 
-  VarsList    = [{clj_core:name(X), X} || {_, X} <- ets:tab2list(VarsTable)],
+  VarsList    = ets:tab2list(VarsTable),
   Vars        = maps:from_list(VarsList),
   VarsAttr    = {cerl:c_atom(vars), cerl:abstract([Vars])},
 
