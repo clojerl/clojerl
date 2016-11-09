@@ -394,7 +394,10 @@
   (and (clj_module/is_clojure.e maybe-p)
        (clj_module/is_protocol.e maybe-p)))
 
-(defn- implements? [protocol atype]
+(defn extends?
+  "Returns true if atype extends protocol"
+  {:added "1.2"}
+  [protocol atype]
   (satisfies? protocol atype))
 
 #_(defn extenders

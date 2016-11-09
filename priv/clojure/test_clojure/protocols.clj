@@ -105,53 +105,21 @@
 (deftype HasProtocolInline []
   ExampleProtocol
   (foo [this] :inline))
-#_(deftest extend-test
-  (testing "you can extend a protocol to a class"
-    (extend String ExampleProtocol
-            {:foo identity})
-    (is (= "pow" (foo "pow"))))
-  (testing "you can have two methods with the same name. Just use namespaces!"
-    (extend String other/SimpleProtocol
-     {:foo (fn [s] (.toUpperCase s))})
-    (is (= "POW" (other/foo "pow"))))
-  (testing "you can extend deftype types"
-    (extend
-     ExtendTestWidget
-     ExampleProtocol
-     {:foo (fn [this] (str "widget " (.name this)))})
-    (is (= "widget z" (foo (ExtendTestWidget. "z"))))))
 
 (deftest record-marker-interfaces
   (testing "record? and type? return expected result for IRecord and IType"
     (let [r (new TestRecord 1 2)]
       (is (record? r)))))
 
-#_(deftest illegal-extending
-  (testing "you cannot extend a protocol to a type that implements the protocol inline"
-    (is (fails-with-cause? IllegalArgumentException #".*HasProtocolInline already directly implements interface"
-          (eval '(extend clojure.test-clojure.protocols.HasProtocolInline
-                         clojure.test-clojure.protocols.examples/ExampleProtocol
-                         {:foo (fn [_] :extended)})))))
-  (testing "you cannot extend to an interface"
-    (is (fails-with-cause? IllegalArgumentException #"interface clojure.test-clojure.protocols.examples.ExampleProtocol is not a protocol"
-          (eval '(extend clojure.test-clojure.protocols.HasProtocolInline
-                         clojure.test-clojure.protocols.examples.ExampleProtocol
-                         {:foo (fn [_] :extended)}))))))
-
 (deftype ExtendsTestWidget []
   ExampleProtocol)
-#_(deftest extends?-test
-  (reload-example-protocols)
+
+(deftest extends?-test
+  ;; (reload-example-protocols)
   (testing "returns false if a type does not implement the protocol at all"
     (is (false? (extends? other/SimpleProtocol ExtendsTestWidget))))
   (testing "returns true if a type implements the protocol directly" ;; semantics changed 4/15/2010
-    (is (true? (extends? ExampleProtocol ExtendsTestWidget))))
-  (testing "returns true if a type explicitly extends protocol"
-    (extend
-     ExtendsTestWidget
-     other/SimpleProtocol
-     {:foo identity})
-    (is (true? (extends? other/SimpleProtocol ExtendsTestWidget)))))
+    (is (true? (extends? ExampleProtocol ExtendsTestWidget)))))
 
 (deftype ExtendersTestWidget [])
 #_(deftest extenders-test
