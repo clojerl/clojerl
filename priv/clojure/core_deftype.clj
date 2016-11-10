@@ -398,7 +398,7 @@
   "Returns true if atype extends protocol"
   {:added "1.2"}
   [protocol atype]
-  (satisfies? protocol atype))
+  (clj_core/satisfies?.e protocol atype))
 
 #_(defn extenders
   "Returns a collection of the types explicitly extending protocol"
