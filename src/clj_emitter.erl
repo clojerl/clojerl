@@ -150,7 +150,7 @@ ast(#{op := import} = Expr, State) ->
 
   clj_module:ensure_loaded(Module, file_from(Env)),
   %% Add the mapping from type name symbol to fully qualified symbol
-  clj_module:add_mappings(Module, [clj_core:symbol(SymName)]),
+  clj_module:add_mappings(Module, [{SymName, clj_core:symbol(Typename)}]),
 
   TypenameAst = cerl:abstract(Typename),
   Anno        = anno_from(Env),

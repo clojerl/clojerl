@@ -216,7 +216,10 @@ fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
 add_mappings(ModuleName, Mappings) when is_atom(ModuleName)  ->
   add_mappings(get(?MODULE, ModuleName), Mappings);
 add_mappings(Module, Mappings) ->
-  AddFun = fun(V) ->
+  AddFun = fun
+             ({K, V}) ->
+               save(Module#module.mappings, {K, V});
+             (V) ->
                K = clj_core:name(V),
                save(Module#module.mappings, {K, V})
            end,
@@ -447,7 +450,7 @@ to_forms(#module{} = Module) ->
 
   MappingsList = ets:tab2list(MappingsTable),
   Mappings     = maps:from_list(MappingsList),
-  MappingsAttr = {cerl:c_atom(vars), cerl:abstract([Mappings])},
+  MappingsAttr = {cerl:c_atom(mappings), cerl:abstract([Mappings])},
 
   Exports      = [cerl:c_fname(FName, Arity)
                   || {{FName, Arity}} <- ets:tab2list(ExportsTable)
@@ -543,9 +546,9 @@ new(CoreModule) ->
   AllAttrs = cerl:module_attrs(CoreModule),
   Funs     = cerl:module_defs(CoreModule),
 
-  {Attrs, Extracted} = extract_attrs(AllAttrs, [vars, file]),
+  {Attrs, Extracted} = extract_attrs(AllAttrs, [mappings, file]),
 
-  Mappings = case maps:get(vars, Extracted, #{}) of
+  Mappings = case maps:get(mappings, Extracted, #{}) of
                [V] -> V;
                V -> V
              end,
@@ -565,7 +568,7 @@ new(CoreModule) ->
                   },
 
   Module = add_functions(Module, Funs),
-  Module = add_mappings(Module, maps:values(Mappings)),
+  Module = add_mappings(Module, maps:to_list(Mappings)),
   Module = add_attributes(Module, Attrs),
 
   %% Remove the on_load function and all its contents.

@@ -4,86 +4,89 @@
 
 -clojure(true).
 
--vars(#{ <<"ns">>    => { ?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"ns">>}
-                        , #{meta => #{ macro           => true
-                                     , 'variadic?'     => true
-                                     , max_fixed_arity => ?NIL
-                                     , variadic_arity  => 3
-                                     }
-                           }
+-mappings(#{ <<"ns">>    => { ?TYPE, 'clojerl.Var'
+                            , {<<"clojure.core">>, <<"ns">>}
+                            , #{meta => #{ macro           => true
+                                         , 'variadic?'     => true
+                                         , max_fixed_arity => ?NIL
+                                         , variadic_arity  => 3
+                                         }
+                               }
                         }
-       , <<"in-ns">> => { ?TYPE, 'clojerl.Var'
-                        , {<<"clojure.core">>, <<"in-ns">>}
-                        , #{meta => #{ 'variadic?'     => false
-                                     , max_fixed_arity => 1
-                                     , variadic_arity  => ?NIL
-                                     }
-                           }
-                        }
-       , <<"*ns*">>  => { ?TYPE, 'clojerl.Var'
-                        , {<<"clojure.core">>, <<"*ns*">>}
-                        , #{}
-                        }
-       , <<"*compile-files*">>  =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*compile-files*">>}
-           , #{}
-           }
+           , <<"in-ns">> => { ?TYPE, 'clojerl.Var'
+                            , {<<"clojure.core">>, <<"in-ns">>}
+                            , #{meta => #{ 'variadic?'     => false
+                                         , max_fixed_arity => 1
+                                         , variadic_arity  => ?NIL
+                                         }
+                               }
+                            }
+           , <<"*ns*">>  => { ?TYPE, 'clojerl.Var'
+                            , {<<"clojure.core">>, <<"*ns*">>}
+                            , #{}
+                            }
+           , <<"*compile-files*">>  =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*compile-files*">>}
+               , #{}
+               }
 
-       , <<"*assert*">> =>
-           {?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"*assert*">>}, #{}}
-       , <<"*read-eval*">> =>
-           {?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"*read-eval*">>}, #{}}
-       , <<"*command-line-args*">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*command-line-args*">>}
-           , #{}
-           }
+           , <<"*assert*">> =>
+               {?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"*assert*">>}, #{}}
+           , <<"*read-eval*">> =>
+               {?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*read-eval*">>}, #{}
+               }
+           , <<"*command-line-args*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*command-line-args*">>}
+               , #{}
+               }
 
-       , <<"*out*">> => { ?TYPE, 'clojerl.Var'
-                        , {<<"clojure.core">>, <<"*out*">>}
-                        , #{}
-                        }
-       , <<"*in*">>  => { ?TYPE, 'clojerl.Var'
-                        , {<<"clojure.core">>, <<"*in*">>}
-                        , #{}
-                        }
-       , <<"*err*">>  => { ?TYPE, 'clojerl.Var'
-                        , {<<"clojure.core">>, <<"*err*">>}
-                        , #{}
-                        }
+           , <<"*out*">> => { ?TYPE, 'clojerl.Var'
+                            , {<<"clojure.core">>, <<"*out*">>}
+                            , #{}
+                            }
+           , <<"*in*">>  => { ?TYPE, 'clojerl.Var'
+                            , {<<"clojure.core">>, <<"*in*">>}
+                            , #{}
+                            }
+           , <<"*err*">>  => { ?TYPE, 'clojerl.Var'
+                             , {<<"clojure.core">>, <<"*err*">>}
+                             , #{}
+                             }
 
-       , <<"*print-dup*">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*print-dup*">>}
-           , #{}
-           }
-       , <<"*flush-on-newline*">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*flush-on-newline*">>}
-           , #{}
-           }
-       , <<"*print-readably*">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*print-readably*">>}
-           , #{}
-           }
-       , <<"*data-readers*">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*data-readers*">>}
-           , #{}
-           }
-       , <<"default-data-readers">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"default-data-readers">>}
-           , #{}
-           }
-       , <<"*default-data-reader-fn*">> =>
-           { ?TYPE, 'clojerl.Var'
-           , {<<"clojure.core">>, <<"*default-data-reader-fn*">>}
-           , #{}
-           }
-       }).
+           , <<"*print-dup*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*print-dup*">>}
+               , #{}
+               }
+           , <<"*flush-on-newline*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*flush-on-newline*">>}
+               , #{}
+               }
+           , <<"*print-readably*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*print-readably*">>}
+               , #{}
+               }
+           , <<"*data-readers*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*data-readers*">>}
+               , #{}
+               }
+           , <<"default-data-readers">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"default-data-readers">>}
+               , #{}
+               }
+           , <<"*default-data-reader-fn*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*default-data-reader-fn*">>}
+               , #{}
+               }
+           }).
 
 -export([ ns/4
         , ns__val/0

@@ -63,9 +63,9 @@ current(#namespace{} = Ns) ->
 -spec all() -> namespace().
 all() -> ets:tab2list(?MODULE).
 
-%% @doc Tries to get the vars from the module associated to the
+%% @doc Tries to get the mappings from the module associated to the
 %%      namespace. If the module is not found or if it doesn't
-%%      have a 'vars' attribute, then nil is returned.
+%%      have a 'mappings' attribute, then nil is returned.
 -spec find('clojerl.Symbol':type()) -> namespace() | ?NIL.
 find(Name) ->
   case get(?MODULE, clj_core:str(Name)) of
@@ -341,23 +341,23 @@ load(Name) ->
   NameStr = clj_core:name(Name),
   Module  = binary_to_atom(NameStr, utf8),
 
-  Vars = case code:ensure_loaded(Module) of
-           {module, _} ->
-             Attrs = Module:module_info(attributes),
-             case lists:keyfind(vars, 1, Attrs) of
-               {vars, [VarsMap]} -> maps:values(VarsMap);
-               false             -> ?NIL
-             end;
-           {error, _} -> ?NIL
-         end,
+  Mappings = case code:ensure_loaded(Module) of
+               {module, _} ->
+                 Attrs = Module:module_info(attributes),
+                 case lists:keyfind(mappings, 1, Attrs) of
+                   {mappings, [Map]} -> Map;
+                   false             -> ?NIL
+                 end;
+               {error, _} -> ?NIL
+             end,
 
-  case Vars of
+  case Mappings of
     ?NIL -> ?NIL;
     _ ->
-      UpdateVarFun = fun(Var, Ns = #namespace{mappings = Mappings}) ->
-                         save(Mappings, {clj_core:name(Var), Var}),
-                         Ns
-                     end,
-
-      lists:foldl(UpdateVarFun, new(Name), Vars)
+      Ns = new(Name),
+      SaveFun = fun(K, V) ->
+                    save(Ns#namespace.mappings, {K, V})
+                end,
+      maps:map(SaveFun, Mappings),
+      Ns
   end.
