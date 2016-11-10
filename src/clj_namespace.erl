@@ -180,8 +180,20 @@ import_type(TypeName, CheckLoaded) ->
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
   Sym     = clj_core:symbol(SymName),
   TypeSym = clj_core:symbol(TypeName),
+  Ns      = current(),
+  Exists  = mapping(Ns, Sym),
 
-  gen_server:call(?MODULE, {intern, current(), Sym, TypeSym}).
+  clj_utils:error_when( Exists =/= ?NIL
+                        andalso not clj_core:equiv(Exists, TypeSym)
+                      , [ Sym
+                        , <<" already refers to: ">>
+                        , Exists
+                        , <<" in namespace: ">>
+                        , name(Ns)
+                        ]
+                      ),
+
+  gen_server:call(?MODULE, {intern, Ns, Sym, TypeSym}).
 
 -spec unmap(namespace(), 'clojerl.Symbol':type()) -> namespace().
 unmap(Ns, Sym) ->

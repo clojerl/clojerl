@@ -130,7 +130,7 @@ ast(#{op := def} = Expr, State) ->
 
   ValFunAst = function_form(ValName, VarAnno, [], ValAst),
 
-  clj_module:add_vars(Module, [Var]),
+  clj_module:add_mappings(Module, [Var]),
   clj_module:add_functions(Module, [ValFunAst]),
   clj_module:add_exports(Module, [{ValName, 0}]),
 
@@ -142,6 +142,15 @@ ast(#{op := import} = Expr, State) ->
   #{ typename := Typename
    , env      := Env
    } = Expr,
+
+  Parts   = binary:split(Typename, <<".">>, [global]),
+  SymName = lists:last(Parts),
+  NsName  = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
+  Module  = binary_to_atom(NsName, utf8),
+
+  clj_module:ensure_loaded(Module, file_from(Env)),
+  %% Add the mapping from type name symbol to fully qualified symbol
+  clj_module:add_mappings(Module, [clj_core:symbol(SymName)]),
 
   TypenameAst = cerl:abstract(Typename),
   Anno        = anno_from(Env),
@@ -333,6 +342,10 @@ ast(#{op := defprotocol} = Expr, State) ->
   ProtocolAttr = {cerl:ann_c_atom(Anno, protocol), cerl:c_atom(true)},
   Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
   clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
+
+  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  ok     = clj_module:remove(Module),
 
   Ast = cerl:ann_abstract(Anno, NameSym),
   push_ast(Ast, State);

@@ -18,7 +18,7 @@
         , fake_fun/3
         , replace_calls/2
 
-        , add_vars/2
+        , add_mappings/2
         , add_attributes/2
         , add_exports/2
         , add_functions/2
@@ -44,9 +44,9 @@
 
 -record(module, { name              :: atom(),
                   source = ""       :: string(),
-                  %% ETS table where vars are kept. The key is the var's
+                  %% ETS table where mappings are kept. The key is the var's
                   %% name as a binary.
-                  vars              :: ets:tid(),
+                  mappings          :: ets:tid(),
                   %% ETS table where functions are kept. The key is the
                   %% function's name and arity.
                   funs              :: ets:tid(),
@@ -212,15 +212,15 @@ fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
 
   cerl:ann_c_let(Anno, [VarAst], CallAst, ApplyAst).
 
--spec add_vars(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
-add_vars(ModuleName, Vars) when is_atom(ModuleName)  ->
-  add_vars(get(?MODULE, ModuleName), Vars);
-add_vars(Module, Vars) ->
+-spec add_mappings(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
+add_mappings(ModuleName, Mappings) when is_atom(ModuleName)  ->
+  add_mappings(get(?MODULE, ModuleName), Mappings);
+add_mappings(Module, Mappings) ->
   AddFun = fun(V) ->
                K = clj_core:name(V),
-               save(Module#module.vars, {K, V})
+               save(Module#module.mappings, {K, V})
            end,
-  lists:foreach(AddFun, Vars),
+  lists:foreach(AddFun, Mappings),
   Module.
 
 -spec add_attributes(clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
@@ -432,39 +432,39 @@ delete_fake_modules(Module) ->
 %% @private
 -spec to_forms(clj_module()) -> cerl:c_module().
 to_forms(#module{} = Module) ->
-  #module{ name    = Name
-         , source  = Source
-         , vars    = VarsTable
-         , funs    = FunsTable
-         , exports = ExportsTable
-         , on_load = OnLoadTable
-         , attrs   = AttrsTable
+  #module{ name     = Name
+         , source   = Source
+         , mappings = MappingsTable
+         , funs     = FunsTable
+         , exports  = ExportsTable
+         , on_load  = OnLoadTable
+         , attrs    = AttrsTable
          } = Module,
 
   add_module_info_functions(Module),
 
-  FileAttr    = {cerl:c_atom(file), cerl:abstract(Source)},
+  FileAttr     = {cerl:c_atom(file), cerl:abstract(Source)},
 
-  VarsList    = ets:tab2list(VarsTable),
-  Vars        = maps:from_list(VarsList),
-  VarsAttr    = {cerl:c_atom(vars), cerl:abstract([Vars])},
+  MappingsList = ets:tab2list(MappingsTable),
+  Mappings     = maps:from_list(MappingsList),
+  MappingsAttr = {cerl:c_atom(vars), cerl:abstract([Mappings])},
 
-  Exports     = [cerl:c_fname(FName, Arity)
-                 || {{FName, Arity}} <- ets:tab2list(ExportsTable)
-                ],
+  Exports      = [cerl:c_fname(FName, Arity)
+                  || {{FName, Arity}} <- ets:tab2list(ExportsTable)
+                 ],
 
-  ClojureAttr = {cerl:c_atom(clojure), cerl:abstract(true)},
-  OnLoadAttr  = {cerl:c_atom(on_load), cerl:abstract([{?ON_LOAD_FUNCTION, 0}])},
+  ClojureAttr  = {cerl:c_atom(clojure), cerl:abstract(true)},
+  OnLoadAttr   = {cerl:c_atom(on_load), cerl:abstract([{?ON_LOAD_FUNCTION, 0}])},
 
-  Attrs       = [X || {X} <- ets:tab2list(AttrsTable)],
-  UniqueAttrs = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
+  Attrs        = [X || {X} <- ets:tab2list(AttrsTable)],
+  UniqueAttrs  = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
 
-  AllAttrs    = [FileAttr, VarsAttr | UniqueAttrs],
+  AllAttrs     = [FileAttr, MappingsAttr | UniqueAttrs],
 
-  OnLoadName  = cerl:c_fname(?ON_LOAD_FUNCTION, 0),
-  OnLoadFun   = on_load_function(OnLoadTable),
-  Funs        = [X || {_, X} <- ets:tab2list(FunsTable)],
-  Defs        = [{OnLoadName, OnLoadFun} | Funs],
+  OnLoadName   = cerl:c_fname(?ON_LOAD_FUNCTION, 0),
+  OnLoadFun    = on_load_function(OnLoadTable),
+  Funs         = [X || {_, X} <- ets:tab2list(FunsTable)],
+  Defs         = [{OnLoadName, OnLoadFun} | Funs],
 
   cerl:c_module(cerl:c_atom(Name), Exports, AllAttrs, Defs).
 
@@ -545,27 +545,27 @@ new(CoreModule) ->
 
   {Attrs, Extracted} = extract_attrs(AllAttrs, [vars, file]),
 
-  Vars   = case maps:get(vars, Extracted, #{}) of
-             [V] -> V;
-             V -> V
-           end,
+  Mappings = case maps:get(vars, Extracted, #{}) of
+               [V] -> V;
+               V -> V
+             end,
   Source = maps:get(file, Extracted, ""),
 
   %% Tables need to be public so that other compiler processes can modify them.
   TableOpts = [set, public, {keypos, 1}],
-  Module = #module{ name              = Name
-                  , source            = Source
-                  , vars              = ets:new(var, TableOpts)
-                  , funs              = ets:new(funs, TableOpts)
-                  , fake_funs         = ets:new(fake_funs, TableOpts)
-                  , fake_modules      = ets:new(fake_modules, TableOpts)
-                  , exports           = ets:new(exports, TableOpts)
-                  , on_load           = ets:new(on_load, TableOpts)
-                  , attrs             = ets:new(attributes, TableOpts)
+  Module = #module{ name         = Name
+                  , source       = Source
+                  , mappings     = ets:new(var, TableOpts)
+                  , funs         = ets:new(funs, TableOpts)
+                  , fake_funs    = ets:new(fake_funs, TableOpts)
+                  , fake_modules = ets:new(fake_modules, TableOpts)
+                  , exports      = ets:new(exports, TableOpts)
+                  , on_load      = ets:new(on_load, TableOpts)
+                  , attrs        = ets:new(attributes, TableOpts)
                   },
 
   Module = add_functions(Module, Funs),
-  Module = add_vars(Module, maps:values(Vars)),
+  Module = add_mappings(Module, maps:values(Mappings)),
   Module = add_attributes(Module, Attrs),
 
   %% Remove the on_load function and all its contents.

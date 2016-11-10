@@ -463,6 +463,7 @@
                                    '~(clj_core/to_list.e (map :name (vals sigs)))))
        ~@(mapcat (partial emit-protocol-function iname) (vals sigs))
        (~'defprotocol* ~iname ~@meths)
+       (import* ~(str iname))
        '~name)))
 
 (defmacro defprotocol
