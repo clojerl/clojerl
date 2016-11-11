@@ -301,9 +301,10 @@ ast(#{op := method} = Expr, State0) ->
    } = Expr,
 
   {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
-  Args = cerl:clause_pats(ClauseAst),
-  Body = cerl:clause_body(ClauseAst),
-  FunAst = function_form(sym_to_kw(Name), anno_from(Env), Args, Body),
+  Args    = cerl:clause_pats(ClauseAst),
+  Body    = cerl:clause_body(ClauseAst),
+  NameSym = clj_core:name(Name),
+  FunAst  = function_form(sym_to_kw(NameSym), anno_from(Env), Args, Body),
 
   push_ast(FunAst, State1);
 %%------------------------------------------------------------------------------
