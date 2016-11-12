@@ -12,21 +12,46 @@
   (:use clojure.test clojure.test-clojure.protocols.examples)
   (:require [clojure.test-clojure.protocols.more-examples :as other]
             [clojure.set :as set]
+            [clojure.string :as str]
             clojure.test-helper)
   (:import [clojure.test-clojure.protocols.examples
             ExampleProtocol
             MarkerProtocol
             MarkerProtocol2]))
 
+(defn delete-module [module]
+  (doto module
+    code/purge.e
+    code/delete.e
+    (-> code/which.e file/delete.e)))
+
+(defn find-protocol-impls
+  [protocol]
+  (let [type->str #(subs (str %) 1)
+        prefix (type->str protocol)
+        f (fn [[module path]]
+            (str/starts-with? (type->str module) prefix))]
+    (->> (code/all_loaded.e)
+         (filter f)
+         (map first))))
+
+(defn clean-protocol [protocol]
+  (doseq [m (find-protocol-impls protocol)]
+    (delete-module m)))
+
 ;; temporary hack until I decide how to cleanly reload protocol
 ;; this no longer works
-#_(defn reload-example-protocols
+(defn reload-example-protocols
   []
-  (alter-var-root #'clojure.test-clojure.protocols.examples/ExampleProtocol
-                  assoc :impls {})
-  (alter-var-root #'clojure.test-clojure.protocols.more-examples/SimpleProtocol
-                  assoc :impls {})
-  (require :reload
+  ;; (clean-protocol ExampleProtocol)
+  ;; (clean-protocol other/SimpleProtocol)
+
+  ;; (alter-var-root #'clojure.test-clojure.protocols.examples/ExampleProtocol
+  ;;                 assoc :impls {})
+  ;; (alter-var-root #'clojure.test-clojure.protocols.more-examples/SimpleProtocol
+  ;;                 assoc :impls {})
+
+  #_(require :reload
            'clojure.test-clojure.protocols.examples
            'clojure.test-clojure.protocols.more-examples))
 
@@ -35,7 +60,9 @@
   [m]
   (->> (erlang/get_module_info.e m :functions)
        (map (comp str first))
-       (filter (comp not #{":$_clj_on_load" ":module_info" ":module_info"}))
+       (map #(subs % 1))
+       (filter (comp not #{"$_clj_on_load" "module_info" "module_info"}))
+       (filter #(not (str/ends-with? % "__val")))
        sort))
 
 (defrecord EmptyRecord [])
@@ -65,7 +92,7 @@
           #"No implementation of method: :foo of protocol: :clojure.test-clojure.protocols.examples.ExampleProtocol found for type: :clojerl.Integer"
           (foo 10))))
   (testing "protocols generate a corresponding interface using _ instead of - for method names"
-    (is (= ["bar" "baz" "baz" "foo" "with_quux"] (method-names clojure.test-clojure.protocols.examples.ExampleProtocol))))
+    (is (= ["bar" "baz" "baz" "foo" "with-quux"] (method-names :clojure.test-clojure.protocols.examples))))
   (testing "error conditions checked when defining protocols"
     (is (thrown-with-msg?
          :throw
@@ -113,9 +140,8 @@
 
 (deftype ExtendsTestWidget []
   ExampleProtocol)
-
 (deftest extends?-test
-  ;; (reload-example-protocols)
+  (reload-example-protocols)
   (testing "returns false if a type does not implement the protocol at all"
     (is (false? (extends? other/SimpleProtocol ExtendsTestWidget))))
   (testing "returns true if a type implements the protocol directly" ;; semantics changed 4/15/2010
@@ -136,36 +162,33 @@
 
 (deftype SatisfiesTestWidget []
   ExampleProtocol)
-#_(deftest satisifies?-test
+(deftest satisifies?-test
   (reload-example-protocols)
-  (let [whatzit (SatisfiesTestWidget.)]
+  (let [whatzit (new SatisfiesTestWidget)]
     (testing "returns false if a type does not implement the protocol at all"
       (is (false? (satisfies? other/SimpleProtocol whatzit))))
     (testing "returns true if a type implements the protocol directly"
       (is (true? (satisfies? ExampleProtocol whatzit))))
     (testing "returns true if a type explicitly extends protocol"
-      (extend
-       SatisfiesTestWidget
-       other/SimpleProtocol
-       {:foo identity})
-      (is (true? (satisfies? other/SimpleProtocol whatzit)))))  )
+      (extend-type SatisfiesTestWidget
+        other/SimpleProtocol
+        (foo [this] this))
+      (is (true? (satisfies? other/SimpleProtocol whatzit))))))
 
 (deftype ReExtendingTestWidget [])
-#_(deftest re-extending-test
+(deftest re-extending-test
   (reload-example-protocols)
-  (extend
-   ReExtendingTestWidget
-   ExampleProtocol
-   {:foo (fn [_] "first foo")
-    :baz (fn [_] "first baz")})
+  (extend-type ReExtendingTestWidget
+    ExampleProtocol
+    (foo [_] "first foo")
+    (baz [_] "first baz"))
   (testing "if you re-extend, the old implementation is replaced (not merged!)"
-    (extend
-     ReExtendingTestWidget
-     ExampleProtocol
-     {:baz (fn [_] "second baz")
-      :bar (fn [_ _] "second bar")})
-    (let [whatzit (ReExtendingTestWidget.)]
-      (is (thrown? IllegalArgumentException (foo whatzit)))
+    (extend-type ReExtendingTestWidget
+      ExampleProtocol
+      (baz [_] "second baz")
+      (bar [_ _] "second bar"))
+    (let [whatzit (new ReExtendingTestWidget)]
+      (is (thrown? :error (foo whatzit)))
       (is (= "second bar" (bar whatzit nil)))
       (is (= "second baz" (baz whatzit))))))
 
@@ -468,16 +491,16 @@
 ;;           (read-string "#java.util.Locale[\"\" \"\" \"\" \"\"]")))
 ;;     (is (thrown? Exception (read-string "#java.util.Nachos(\"en\")")))))
 
-;; (defrecord RecordToTestPrinting [a b])
-;; (deftest defrecord-printing
-;;   (testing "that the default printer gives the proper representation"
-;;     (let [r   (RecordToTestPrinting. 1 2)]
-;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
-;;              (pr-str r)))
-;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
-;;              (binding [*print-dup* true] (pr-str r))))
-;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
-;;              (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
+(defrecord RecordToTestPrinting [a b])
+(deftest defrecord-printing
+  (testing "that the default printer gives the proper representation"
+    (let [r   (new RecordToTestPrinting 1 2)]
+      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+             (pr-str r)))
+      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
+             (binding [*print-dup* true] (pr-str r))))
+      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+             (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
 
 ;; (defrecord RecordToTest__ [__a ___b])
 ;; (defrecord TypeToTest__   [__a ___b])
@@ -606,34 +629,33 @@
 ;;         (is (= "xoxo" (.hinted r "xo")))))))
 
 
-;; ; see CLJ-845
-;; (defprotocol SyntaxQuoteTestProtocol
-;;   (sqtp [p]))
+; see CLJ-845
+(defprotocol SyntaxQuoteTestProtocol
+  (sqtp [p]))
 
-;; (defmacro try-extend-type [c]
-;;   `(extend-type ~c
-;;      SyntaxQuoteTestProtocol
-;;      (sqtp [p#] p#)))
+(defmacro try-extend-type [c]
+  `(extend-type ~c
+     SyntaxQuoteTestProtocol
+     (sqtp [p#] p#)))
 
-;; (defmacro try-extend-protocol [c]
-;;   `(extend-protocol SyntaxQuoteTestProtocol
-;;      ~c
-;;      (sqtp [p#] p#)))
+(defmacro try-extend-protocol [c]
+  `(extend-protocol SyntaxQuoteTestProtocol
+     ~c
+     (sqtp [p#] p#)))
 
-;; (try-extend-type String)
-;; (try-extend-protocol clojure.lang.Keyword)
+(try-extend-type clojerl.String)
+(try-extend-protocol clojerl.Keyword)
 
-;; (deftest test-no-ns-capture
-;;   (is (= "foo" (sqtp "foo")))
-;;   (is (= :foo (sqtp :foo))))
+(deftest test-no-ns-capture
+  (is (= "foo" (sqtp "foo")))
+  (is (= :foo (sqtp :foo))))
 
+(defprotocol Dasherizer
+  (-do-dashed [this]))
+(deftype Dashed []
+  Dasherizer
+  (-do-dashed [this] 10))
 
-;; (defprotocol Dasherizer
-;;   (-do-dashed [this]))
-;; (deftype Dashed []
-;;   Dasherizer
-;;   (-do-dashed [this] 10))
-
-;; (deftest test-leading-dashes
-;;   (is (= 10 (-do-dashed (Dashed.))))
-;;   (is (= [10] (map -do-dashed [(Dashed.)]))))
+(deftest test-leading-dashes
+  (is (= 10 (-do-dashed (new Dashed))))
+  (is (= [10] (map -do-dashed [(new Dashed)]))))
