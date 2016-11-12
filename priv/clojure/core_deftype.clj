@@ -418,13 +418,14 @@
                      (str "function " v))))))))
 
 (defn- emit-protocol-function
-  [iname {name :name arglists :arglists :as sigs}]
-  (map (fn [args]
-         `(defn ~(vary-meta name assoc :protocol iname) ~args
-            (clojerl.protocol/resolve.e ~(keyword iname)
-                                        ~(keyword name)
-                                        ~@args)))
-       arglists))
+  [iname {name :name arglists :arglists :as sig}]
+  `(defn ~(with-meta name (assoc sig :protocol iname))
+     ~@(map (fn [args]
+              `(~args
+                (clojerl.protocol/resolve.e ~(keyword iname)
+                                            ~(keyword name)
+                                            ~@args)))
+            arglists)))
 
 (defn- emit-protocol [name opts+sigs]
   (let [iname (symbol (str (munge (namespace-munge *ns*)) "." (munge name)))
@@ -461,7 +462,7 @@
        ~(when sigs
           `(#'assert-same-protocol '~iname
                                    '~(clj_core/to_list.e (map :name (vals sigs)))))
-       ~@(mapcat (partial emit-protocol-function iname) (vals sigs))
+       ~@(map (partial emit-protocol-function iname) (vals sigs))
        (~'defprotocol* ~iname ~@meths)
        (import* ~(str iname))
        '~name)))
