@@ -379,6 +379,7 @@ ast(#{op := extend_type} = Expr, State) ->
         %% Exports
         Exports = lists:map(fun function_signature/1, FunctionsAsts),
 
+        clj_module:remove_all_functions(Module),
         clj_module:add_exports(Module, Exports),
         clj_module:add_functions(Module, FunctionsAsts),
 

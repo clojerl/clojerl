@@ -22,6 +22,7 @@
         , add_attributes/2
         , add_exports/2
         , add_functions/2
+        , remove_all_functions/1
         , add_on_load/2
 
         , is_clojure/1
@@ -259,6 +260,15 @@ add_functions(Module, Funs) ->
                 save(Module#module.funs, {FunctionId, F})
             end,
   lists:foreach(SaveFun, Funs),
+  Module.
+
+-spec remove_all_functions(module() | clj_module()) ->
+  clj_module().
+remove_all_functions(ModuleName) when is_atom(ModuleName)  ->
+  remove_all_functions(get(?MODULE, ModuleName));
+remove_all_functions(Module) ->
+  true = ets:delete_all_objects(Module#module.funs),
+  true = ets:delete_all_objects(Module#module.exports),
   Module.
 
 -spec add_on_load(module() | clj_module(), cerl:cerl()) ->
