@@ -204,11 +204,11 @@ ast(#{op := deftype} = Expr, State0) ->
   ok     = clj_module:ensure_loaded(Module, file_from(Env)),
 
   %% Attributes
-  Attributes     = [ { cerl:ann_c_atom(Anno, behavior)
-                     , cerl:ann_abstract(Anno, [sym_to_kw(ProtocolName)])
-                     }
-                     || #{type := ProtocolName} <- ProtocolsExprs
-                   ],
+  Attributes = [ { cerl:ann_c_atom(Anno, behavior)
+                 , cerl:ann_abstract(Anno, [sym_to_kw(ProtocolName)])
+                 }
+                 || #{type := ProtocolName} <- ProtocolsExprs
+               ],
 
   %% Functions
   {AllFieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
@@ -220,7 +220,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   %% Expand the first argument to pattern match on all fields so that they are
   %% available in the functions scope.
-  TypeTupleAst = type_tuple(Module, AllFieldsAsts, [], match),
+  TypeTupleAst = type_tuple(Module, Anno, AllFieldsAsts, [], match),
   MethodsAsts1 = lists:map( fun(F) ->
                                 expand_first_argument(F, TypeTupleAst)
                             end
@@ -491,10 +491,10 @@ ast(#{op := invoke} = Expr, State) ->
     #{ op       := erl_fun
      , module   := Module
      , function := Function
-     , env      := Env
+     , env      := EnvErlFun
      } ->
 
-      Anno = anno_from(Env),
+      Anno = anno_from(EnvErlFun),
       Ast  = call_mfa(Module, Function, Args, Anno),
       push_ast(Ast, State);
     _ ->
@@ -931,7 +931,7 @@ expand_first_argument( {FNameAst, FunAst}
 -spec constructor_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
-  TupleAst    = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
+  TupleAst    = type_tuple(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts, create),
   function_form(?CONSTRUCTOR, Anno, FieldsAsts, TupleAst).
 
 %% @doc Builds an accessor function for the specified type and field.
@@ -941,7 +941,7 @@ constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
 accessor_function(Typename, FieldAst) ->
   Anno         = cerl:get_ann(FieldAst),
   FieldName    = cerl:var_name(FieldAst),
-  TupleAst     = type_tuple(Typename, [FieldAst], [], match),
+  TupleAst     = type_tuple(Typename, Anno, [FieldAst], [], match),
   AccessorName = field_fun_name(FieldName),
   ClauseAst    = cerl:ann_c_clause(Anno, [TupleAst], FieldAst),
   {Vars, CaseAst} = case_from_clauses(Anno, [ClauseAst]),
@@ -949,13 +949,11 @@ accessor_function(Typename, FieldAst) ->
 
 -spec creation_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
-  MapVarAst    = new_c_var(Anno),
-  GetAstFun    = fun(FName) ->
-                     ArgsAst = [ MapVarAst
-                               , cerl:ann_c_atom(Anno, FName)
-                               ],
-                     call_mfa(clj_core, get, ArgsAst, Anno)
-                 end,
+  MapVarAst     = new_c_var(Anno),
+  GetAstFun     = fun(FName) ->
+                      ArgsAst = [MapVarAst, cerl:ann_c_atom(Anno, FName)],
+                      call_mfa(clj_core, get, ArgsAst, Anno)
+                  end,
 
   DissocFoldFun = fun(FieldAst, MapAst) ->
                       FName = cerl:var_name(FieldAst),
@@ -1005,9 +1003,14 @@ field_fun_name(FieldName) when is_atom(FieldName) ->
 
 %% @doc Builds a tuple abstract form tagged with atom ?TYPE which is used
 %%      to build Clojerl data types.
--spec type_tuple(atom(), [cerl:cerl()], [cerl:cerl()], create | match) ->
+-spec type_tuple( atom()
+                , [cerl:cerl()]
+                , [cerl:cerl()]
+                , [cerl:cerl()]
+                , create | match
+                ) ->
   cerl:cerl().
-type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
+type_tuple(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
   {MapFieldType, InfoAst} = case TupleType of
                               create -> {assoc, cerl:c_atom(?NIL)};
                               match  -> {exact, new_c_var([])}
@@ -1022,7 +1025,7 @@ type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
                                 _ ->
                                   FieldAst
                               end,
-                      cerl:ann_c_map_pair( 0
+                      cerl:ann_c_map_pair( Anno
                                          , cerl:c_atom(MapFieldType)
                                          , cerl:c_atom(FieldName)
                                          , Value
