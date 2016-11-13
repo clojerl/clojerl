@@ -68,8 +68,8 @@
 (defrecord EmptyRecord [])
 (defrecord TestRecord [a b])
 (defn r
-  ([a b] (new TestRecord a b))
-  ([a b meta ext] (new TestRecord a b meta ext)))
+  ([a b] (TestRecord. a b))
+  ([a b meta ext] (TestRecord. a b meta ext)))
 
 (defrecord MapEntry [k v])
 
@@ -122,8 +122,8 @@
   (testing "That a marker protocol has no methods"
     (is (= '() (method-names clojure.test-clojure.protocols.examples.MarkerProtocol))))
   (testing "That types with markers are reportedly satifying them."
-    (let [hm (new HasMarkers)
-          wgm (new WillGetMarker)]
+    (let [hm (HasMarkers.)
+          wgm (WillGetMarker.)]
       (is (satisfies? MarkerProtocol hm))
       (is (satisfies? MarkerProtocol2 hm))
       (is (satisfies? MarkerProtocol wgm)))))
@@ -135,7 +135,7 @@
 
 (deftest record-marker-interfaces
   (testing "record? and type? return expected result for IRecord and IType"
-    (let [r (new TestRecord 1 2)]
+    (let [r (TestRecord. 1 2)]
       (is (record? r)))))
 
 (deftype ExtendsTestWidget []
@@ -164,7 +164,7 @@
   ExampleProtocol)
 (deftest satisifies?-test
   (reload-example-protocols)
-  (let [whatzit (new SatisfiesTestWidget)]
+  (let [whatzit (SatisfiesTestWidget.)]
     (testing "returns false if a type does not implement the protocol at all"
       (is (false? (satisfies? other/SimpleProtocol whatzit))))
     (testing "returns true if a type implements the protocol directly"
@@ -187,7 +187,7 @@
       ExampleProtocol
       (baz [_] "second baz")
       (bar [_ _] "second bar"))
-    (let [whatzit (new ReExtendingTestWidget)]
+    (let [whatzit (ReExtendingTestWidget.)]
       (is (thrown? :error (foo whatzit)))
       (is (= "second bar" (bar whatzit nil)))
       (is (= "second baz" (baz whatzit))))))
@@ -196,12 +196,12 @@
 (defrecord DefrecordObjectMethodsWidgetB [a])
 (deftest defrecord-object-methods-test
   (testing "= depends on fields and type"
-    (is (true? (= (new DefrecordObjectMethodsWidgetA 1)
-                  (new DefrecordObjectMethodsWidgetA 1))))
-    (is (false? (= (new DefrecordObjectMethodsWidgetA 1)
-                   (new DefrecordObjectMethodsWidgetA 2))))
-    (is (false? (= (new DefrecordObjectMethodsWidgetA 1)
-                   (new DefrecordObjectMethodsWidgetB 1))))))
+    (is (true? (= (DefrecordObjectMethodsWidgetA. 1)
+                  (DefrecordObjectMethodsWidgetA. 1))))
+    (is (false? (= (DefrecordObjectMethodsWidgetA. 1)
+                   (DefrecordObjectMethodsWidgetA. 2))))
+    (is (false? (= (DefrecordObjectMethodsWidgetA. 1)
+                   (DefrecordObjectMethodsWidgetB. 1))))))
 
 (deftest defrecord-acts-like-a-map
   (let [rec (r 1 2)]
@@ -210,7 +210,7 @@
     (is (= {:a 11 :b 2 :c 10} (merge-with + rec {:a 10 :c 10})))))
 
 (deftest degenerate-defrecord-test
-  (let [empty (new EmptyRecord)]
+  (let [empty (EmptyRecord.)]
     (is (nil? (seq empty)))
     #_(is (not (.containsValue empty :a)))))
 
@@ -246,7 +246,7 @@
 
 (defrecord RecordWithSpecificFieldNames [this that k m o])
 (deftest defrecord-with-specific-field-names
-  (let [rec (new RecordWithSpecificFieldNames 1 2 3 4 5)]
+  (let [rec (RecordWithSpecificFieldNames. 1 2 3 4 5)]
     (is (= rec rec))
     (is (= 1 (:this (with-meta rec {:foo :bar}))))
     (is (= 3 (get rec :k)))
@@ -264,10 +264,10 @@
 
 (deftest test-statics
   (testing "that a record has its generated static methods"
-    (let [r1 (new RecordToTestStatics1 1)
-          r2 (new RecordToTestStatics2 1 2)
-          r3 (new RecordToTestStatics3 1 2 3)
-          rn (new RecordToTestStatics3 1 nil nil)]
+    (let [r1 (RecordToTestStatics1. 1)
+          r2 (RecordToTestStatics2. 1 2)
+          r3 (RecordToTestStatics3. 1 2 3)
+          rn (RecordToTestStatics3. 1 nil nil)]
       (testing "that a record created with the ctor equals one by the static factory method"
         (is (= r1    (RecordToTestStatics1/create.e {:a 1})))
         (is (= r2    (RecordToTestStatics2/create.e {:a 1 :b 2})))
@@ -297,72 +297,72 @@
         (is (= (:tag (meta (tbh 1))) 'Long))
         (is (nil? (:tag (meta (tbh 2)))))))))
 
-;; (defrecord RecordToTestFactories [a b c])
-;; (defrecord RecordToTestA [a])
-;; (defrecord RecordToTestB [b])
-;; (defrecord RecordToTestHugeFactories [a b c d e f g h i j k l m n o p q r s t u v w x y z])
-;; (defrecord RecordToTestDegenerateFactories [])
+(defrecord RecordToTestFactories [a b c])
+(defrecord RecordToTestA [a])
+(defrecord RecordToTestB [b])
+(defrecord RecordToTestHugeFactories [a b c d e f g h i j k l m n o p q r s t u v w x y z])
+(defrecord RecordToTestDegenerateFactories [])
 
-;; (deftest test-record-factory-fns
-;;   (testing "if the definition of a defrecord generates the appropriate factory functions"
-;;     (let [r    (RecordToTestFactories. 1 2 3)
-;;           r-n  (RecordToTestFactories. nil nil nil)
-;;           huge (RecordToTestHugeFactories. 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
-;;           r-a  (map->RecordToTestA {:a 1 :b 2})
-;;           r-b  (map->RecordToTestB {:a 1 :b 2})
-;;           r-d  (RecordToTestDegenerateFactories.)]
-;;       (testing "that a record created with the ctor equals one by the positional factory fn"
-;;         (is (= r    (->RecordToTestFactories 1 2 3)))
-;;         (is (= huge (->RecordToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))))
-;;       (testing "that a record created with the ctor equals one by the map-> factory fn"
-;;         (is (= r    (map->RecordToTestFactories {:a 1 :b 2 :c 3})))
-;;         (is (= r-n  (map->RecordToTestFactories {})))
-;;         (is (= r    (map->RecordToTestFactories (map->RecordToTestFactories {:a 1 :b 2 :c 3}))))
-;;         (is (= r-n  (map->RecordToTestFactories (map->RecordToTestFactories {}))))
-;;         (is (= r-d  (map->RecordToTestDegenerateFactories {})))
-;;         (is (= r-d  (map->RecordToTestDegenerateFactories
-;;                      (map->RecordToTestDegenerateFactories {})))))
-;;       (testing "that ext maps work correctly"
-;;         (is (= (assoc r :xxx 42)  (map->RecordToTestFactories {:a 1 :b 2 :c 3 :xxx 42})))
-;;         (is (= (assoc r :xxx 42)  (map->RecordToTestFactories (map->RecordToTestFactories
-;;                                                                {:a 1 :b 2 :c 3 :xxx 42}))))
-;;         (is (= (assoc r-n :xxx 42) (map->RecordToTestFactories {:xxx 42})))
-;;         (is (= (assoc r-n :xxx 42) (map->RecordToTestFactories (map->RecordToTestFactories
-;;   {:xxx 42}))))
-;;         (is (= (assoc r-d :xxx 42) (map->RecordToTestDegenerateFactories {:xxx 42})))
-;;         (is (= (assoc r-d :xxx 42) (map->RecordToTestDegenerateFactories
-;;                                     (map->RecordToTestDegenerateFactories {:xxx 42})))))
-;;       (testing "record equality"
-;;         (is (not= r-a r-b))
-;;         (is (= (into {} r-a) (into {} r-b)))
-;;         (is (not= (into {} r-a) r-b))
-;;         (is (= (map->RecordToTestA {:a 1 :b 2})
-;;                (map->RecordToTestA (map->RecordToTestB {:a 1 :b 2}))))
-;;         (is (= (map->RecordToTestA {:a 1 :b 2 :c 3})
-;;                (map->RecordToTestA (map->RecordToTestB {:a 1 :b 2 :c 3}))))
-;;         (is (= (map->RecordToTestA {:a 1 :d 4})
-;;                (map->RecordToTestA (map->RecordToTestDegenerateFactories {:a 1 :d 4}))))
-;;         (is (= r-n (map->RecordToTestFactories (java.util.HashMap.))))
-;;         (is (= r-a (map->RecordToTestA (into {} r-b))))
-;;         (is (= r-a (map->RecordToTestA r-b)))
-;;         (is (not= r-a (map->RecordToTestB r-a)))
-;;         (is (= r (assoc r-n :a 1 :b 2 :c 3)))
-;;         (is (not= r-a (assoc r-n :a 1 :b 2)))
-;;         (is (not= (assoc r-b :c 3 :d 4) (assoc r-n :a 1 :b 2 :c 3 :d 4)))
-;;         (is (= (into {} (assoc r-b :c 3 :d 4)) (into {} (assoc r-n :a 1 :b 2 :c 3 :d 4))))
-;;         (is (= (assoc r :d 4) (assoc r-n :a 1 :b 2 :c 3 :d 4))))
-;;       (testing "that factory functions have docstrings"
-;;         ;; just test non-nil to avoid overspecifiying what's in the docstring
-;;         (is (false? (-> ->RecordToTestFactories var meta :doc nil?)))
-;;         (is (false? (->  map->RecordToTestFactories var meta :doc nil?))))
-;;       (testing "that a literal record equals one by the positional factory fn"
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (->RecordToTestFactories 1 2 3)))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (->RecordToTestFactories 1 nil nil)))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a [] :b {} :c ()} (->RecordToTestFactories [] {} ()))))
-;;       (testing "that a literal record equals one by the map-> factory fn"
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (map->RecordToTestFactories {:a 1 :b 2 :c 3})))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (map->RecordToTestFactories {:a 1})))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a nil :b nil :c nil} (map->RecordToTestFactories {})))))))
+(deftest test-record-factory-fns
+  (testing "if the definition of a defrecord generates the appropriate factory functions"
+    (let [r    (RecordToTestFactories. 1 2 3)
+          r-n  (RecordToTestFactories. nil nil nil)
+          huge (RecordToTestHugeFactories. 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
+          r-a  (map->RecordToTestA {:a 1 :b 2})
+          r-b  (map->RecordToTestB {:a 1 :b 2})
+          r-d  (RecordToTestDegenerateFactories.)]
+      (testing "that a record created with the ctor equals one by the positional factory fn"
+        (is (= r    (->RecordToTestFactories 1 2 3)))
+        (is (= huge (->RecordToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))))
+      (testing "that a record created with the ctor equals one by the map-> factory fn"
+        (is (= r    (map->RecordToTestFactories {:a 1 :b 2 :c 3})))
+        (is (= r-n  (map->RecordToTestFactories {})))
+        (is (= r    (map->RecordToTestFactories (map->RecordToTestFactories {:a 1 :b 2 :c 3}))))
+        (is (= r-n  (map->RecordToTestFactories (map->RecordToTestFactories {}))))
+        (is (= r-d  (map->RecordToTestDegenerateFactories {})))
+        (is (= r-d  (map->RecordToTestDegenerateFactories
+                     (map->RecordToTestDegenerateFactories {})))))
+      (testing "that ext maps work correctly"
+        (is (= (assoc r :xxx 42)  (map->RecordToTestFactories {:a 1 :b 2 :c 3 :xxx 42})))
+        (is (= (assoc r :xxx 42)  (map->RecordToTestFactories (map->RecordToTestFactories
+                                                               {:a 1 :b 2 :c 3 :xxx 42}))))
+        (is (= (assoc r-n :xxx 42) (map->RecordToTestFactories {:xxx 42})))
+        (is (= (assoc r-n :xxx 42) (map->RecordToTestFactories (map->RecordToTestFactories
+  {:xxx 42}))))
+        (is (= (assoc r-d :xxx 42) (map->RecordToTestDegenerateFactories {:xxx 42})))
+        (is (= (assoc r-d :xxx 42) (map->RecordToTestDegenerateFactories
+                                    (map->RecordToTestDegenerateFactories {:xxx 42})))))
+      (testing "record equality"
+        (is (not= r-a r-b))
+        (is (= (into {} r-a) (into {} r-b)))
+        (is (not= (into {} r-a) r-b))
+        (is (= (map->RecordToTestA {:a 1 :b 2})
+               (map->RecordToTestA (map->RecordToTestB {:a 1 :b 2}))))
+        (is (= (map->RecordToTestA {:a 1 :b 2 :c 3})
+               (map->RecordToTestA (map->RecordToTestB {:a 1 :b 2 :c 3}))))
+        (is (= (map->RecordToTestA {:a 1 :d 4})
+               (map->RecordToTestA (map->RecordToTestDegenerateFactories {:a 1 :d 4}))))
+        (is (= r-n (map->RecordToTestFactories (maps/new.e))))
+        (is (= r-a (map->RecordToTestA (into {} r-b))))
+        (is (= r-a (map->RecordToTestA r-b)))
+        (is (not= r-a (map->RecordToTestB r-a)))
+        (is (= r (assoc r-n :a 1 :b 2 :c 3)))
+        (is (not= r-a (assoc r-n :a 1 :b 2)))
+        (is (not= (assoc r-b :c 3 :d 4) (assoc r-n :a 1 :b 2 :c 3 :d 4)))
+        (is (= (into {} (assoc r-b :c 3 :d 4)) (into {} (assoc r-n :a 1 :b 2 :c 3 :d 4))))
+        (is (= (assoc r :d 4) (assoc r-n :a 1 :b 2 :c 3 :d 4))))
+      (testing "that factory functions have docstrings"
+        ;; just test non-nil to avoid overspecifiying what's in the docstring
+        (is (false? (-> ->RecordToTestFactories var meta :doc nil?)))
+        (is (false? (->  map->RecordToTestFactories var meta :doc nil?))))
+      (testing "that a literal record equals one by the positional factory fn"
+        (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (->RecordToTestFactories 1 2 3)))
+        (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (->RecordToTestFactories 1 nil nil)))
+        (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a [] :b {} :c ()} (->RecordToTestFactories [] {} ()))))
+      (testing "that a literal record equals one by the map-> factory fn"
+        (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (map->RecordToTestFactories {:a 1 :b 2 :c 3})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (map->RecordToTestFactories {:a 1})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a nil :b nil :c nil} (map->RecordToTestFactories {})))))))
 
 ;; (defn compare-huge-types
 ;;   [hugeL hugeR]
@@ -491,16 +491,16 @@
 ;;           (read-string "#java.util.Locale[\"\" \"\" \"\" \"\"]")))
 ;;     (is (thrown? Exception (read-string "#java.util.Nachos(\"en\")")))))
 
-(defrecord RecordToTestPrinting [a b])
-(deftest defrecord-printing
-  (testing "that the default printer gives the proper representation"
-    (let [r   (new RecordToTestPrinting 1 2)]
-      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
-             (pr-str r)))
-      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
-             (binding [*print-dup* true] (pr-str r))))
-      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
-             (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
+;; (defrecord RecordToTestPrinting [a b])
+;; (deftest defrecord-printing
+;;   (testing "that the default printer gives the proper representation"
+;;     (let [r   (RecordToTestPrinting. 1 2)]
+;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+;;              (pr-str r)))
+;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
+;;              (binding [*print-dup* true] (pr-str r))))
+;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+;;              (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
 
 ;; (defrecord RecordToTest__ [__a ___b])
 ;; (defrecord TypeToTest__   [__a ___b])
@@ -657,5 +657,5 @@
   (-do-dashed [this] 10))
 
 (deftest test-leading-dashes
-  (is (= 10 (-do-dashed (new Dashed))))
-  (is (= [10] (map -do-dashed [(new Dashed)]))))
+  (is (= 10 (-do-dashed (Dashed.))))
+  (is (= [10] (map -do-dashed [(Dashed.)]))))

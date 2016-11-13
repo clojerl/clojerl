@@ -19,10 +19,11 @@ is_special(S) ->
   clj_core:'symbol?'(S) andalso
     maps:is_key(clj_core:str(S), special_forms()).
 
--spec macroexpand_1(clj_env:env(), 'clojerl.List':type()) -> any().
+-spec macroexpand_1(clj_env:env(), any()) -> any().
 macroexpand_1(Env, Form) ->
   Op       = clj_core:first(Form),
-  MacroVar = case clj_core:'symbol?'(Op) of
+  IsSymbol = clj_core:'symbol?'(Op),
+  MacroVar = case IsSymbol of
                true -> lookup_var(Op, false);
                false -> ?NIL
              end,
@@ -35,12 +36,33 @@ macroexpand_1(Env, Form) ->
     true ->
       Args = [Form, Env | clj_core:to_list(clj_core:rest(Form))],
       'clojerl.IFn':apply(MacroVar, Args);
-    false -> Form
+    false ->
+      case IsSymbol of
+        true  -> maybe_macroexpand_symbol(Form, Op);
+        false -> Form
+      end
   end.
+
 
 %%------------------------------------------------------------------------------
 %% Internal
 %%------------------------------------------------------------------------------
+
+-spec maybe_macroexpand_symbol(any(), 'clojerl.Symbol':type()) -> any().
+maybe_macroexpand_symbol(Form, OpSym) ->
+  OpBin = clj_core:name(OpSym),
+  case 'clojerl.String':ends_with(OpBin, <<".">>) of
+    true ->
+      NewSym  = clj_core:symbol(<<"new">>),
+      Length  = 'clojerl.String':count(OpBin),
+      NameBin = 'clojerl.String':substring(OpBin, 0, Length - 1),
+      NameSym = clj_core:symbol(NameBin),
+      [_ | Args]  = clj_core:to_list(Form),
+
+      clj_core:list([NewSym, NameSym | Args]);
+    false ->
+      Form
+  end.
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | ?NIL}.
 special_forms() ->
