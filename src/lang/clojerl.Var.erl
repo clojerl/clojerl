@@ -155,11 +155,11 @@ dynamic_binding(Var, Value) ->
       dynamic_binding(Var, Value);
     Bindings  ->
       Key = clj_core:str(Var),
-      NewBindings = try
-                      clj_scope:update(Bindings, Key, {ok, Value})
-                    catch
-                      throw:{not_found, _} ->
-                        clj_scope:put(Bindings, Key, {ok, Value})
+      NewBindings = case clj_scope:update(Bindings, Key, {ok, Value}) of
+                      not_found ->
+                        clj_scope:put(Bindings, Key, {ok, Value});
+                      NewBindingsTemp ->
+                        NewBindingsTemp
                     end,
       erlang:put(dynamic_bindings, NewBindings),
       Value
