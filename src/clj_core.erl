@@ -7,7 +7,7 @@
          load/1, load/2,
          count/1, nth/2, nth/3,
          'empty?'/1, empty/1,
-         seq/1, to_list/1,
+         seq/1, seq_or_else/1, to_list/1,
          equiv/2,
          conj/2, disj/2,
          cons/2,
@@ -142,9 +142,16 @@ nth_from(Coll, N, NotFound) ->
 empty(Coll) ->
   'clojerl.IColl':empty(Coll).
 
--spec seq(any()) -> list() | ?NIL.
+-spec seq(any()) -> any() | ?NIL.
 seq(Seqable) ->
   'clojerl.Seqable':seq(Seqable).
+
+-spec seq_or_else(any()) -> any() | ?NIL.
+seq_or_else(Seqable) ->
+  case seq(Seqable) of
+    ?NIL -> ?NIL;
+    _    -> Seqable
+  end.
 
 -spec to_list(any()) -> list().
 to_list(?NIL) -> [];

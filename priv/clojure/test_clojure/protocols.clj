@@ -244,58 +244,58 @@
 ;;         (is (= (r 1 4) (.cons rec [:b 4])))
 ;;         (is (= (r 1 5) (.cons rec (MapEntry. :b 5))))))))
 
-;; ;; (defrecord RecordWithSpecificFieldNames [this that k m o])
-;; (deftest defrecord-with-specific-field-names
-;;   (let [rec (new RecordWithSpecificFieldNames 1 2 3 4 5)]
-;;     (is (= rec rec))
-;;     (is (= 1 (:this (with-meta rec {:foo :bar}))))
-;;     (is (= 3 (get rec :k)))
-;;     (is (= (seq rec) '([:this 1] [:that 2] [:k 3] [:m 4] [:o 5])))
-;;     (is (= (dissoc rec :k) {:this 1, :that 2, :m 4, :o 5}))))
+(defrecord RecordWithSpecificFieldNames [this that k m o])
+(deftest defrecord-with-specific-field-names
+  (let [rec (new RecordWithSpecificFieldNames 1 2 3 4 5)]
+    (is (= rec rec))
+    (is (= 1 (:this (with-meta rec {:foo :bar}))))
+    (is (= 3 (get rec :k)))
+    (is (= (seq rec) '([:this 1] [:that 2] [:k 3] [:m 4] [:o 5])))
+    (is (= (dissoc rec :k) {:this 1, :that 2, :m 4, :o 5}))))
 
-;; (defrecord RecordToTestStatics1 [a])
-;; (defrecord RecordToTestStatics2 [a b])
-;; (defrecord RecordToTestStatics3 [a b c])
-;; (defrecord RecordToTestBasis [a b c])
-;; (defrecord RecordToTestBasisHinted [^String a ^Long b c])
-;; (defrecord RecordToTestHugeBasis [a b c d e f g h i j k l m n o p q r s t u v w x y z])
-;; (defrecord TypeToTestBasis [a b c])
-;; (defrecord TypeToTestBasisHinted [^String a ^Long b c])
+(defrecord RecordToTestStatics1 [a])
+(defrecord RecordToTestStatics2 [a b])
+(defrecord RecordToTestStatics3 [a b c])
+(defrecord RecordToTestBasis [a b c])
+(defrecord RecordToTestBasisHinted [^String a ^Long b c])
+(defrecord RecordToTestHugeBasis [a b c d e f g h i j k l m n o p q r s t u v w x y z])
+(defrecord TypeToTestBasis [a b c])
+(defrecord TypeToTestBasisHinted [^String a ^Long b c])
 
-;; (deftest test-statics
-;;   (testing "that a record has its generated static methods"
-;;     (let [r1 (RecordToTestStatics1. 1)
-;;           r2 (RecordToTestStatics2. 1 2)
-;;           r3 (RecordToTestStatics3. 1 2 3)
-;;           rn (RecordToTestStatics3. 1 nil nil)]
-;;       (testing "that a record created with the ctor equals one by the static factory method"
-;;         (is (= r1    (RecordToTestStatics1/create {:a 1})))
-;;         (is (= r2    (RecordToTestStatics2/create {:a 1 :b 2})))
-;;         (is (= r3    (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
-;;         (is (= rn    (RecordToTestStatics3/create {:a 1}))))
-;;       (testing "that a literal record equals one by the static factory method"
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics1{:a 1} (RecordToTestStatics1/create {:a 1})))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics2{:a 1 :b 2} (RecordToTestStatics2/create {:a 1 :b 2})))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b 2 :c 3} (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1} (RecordToTestStatics3/create {:a 1})))
-;;         (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b nil :c nil} (RecordToTestStatics3/create {:a 1}))))))
-;;   (testing "that records and types have a sane generated basis method"
-;;     (let [rb  (clojure.test-clojure.protocols.RecordToTestBasis/getBasis)
-;;           rbh (clojure.test-clojure.protocols.RecordToTestBasisHinted/getBasis)
-;;           rhg (clojure.test-clojure.protocols.RecordToTestHugeBasis/getBasis)
-;;           tb (clojure.test-clojure.protocols.TypeToTestBasis/getBasis)
-;;           tbh (clojure.test-clojure.protocols.TypeToTestBasisHinted/getBasis)]
-;;       (is (= '[a b c] rb))
-;;       (is (= '[a b c] rb))
-;;       (is (= '[a b c d e f g h i j k l m n o p q r s t u v w x y z] rhg))
-;;       (testing "that record basis hinting looks as we expect"
-;;         (is (= (:tag (meta (rbh 0))) 'String))
-;;         (is (= (:tag (meta (rbh 1))) 'Long))
-;;         (is (nil? (:tag (meta (rbh 2))))))
-;;       (testing "that type basis hinting looks as we expect"
-;;         (is (= (:tag (meta (tbh 0))) 'String))
-;;         (is (= (:tag (meta (tbh 1))) 'Long))
-;;         (is (nil? (:tag (meta (tbh 2)))))))))
+(deftest test-statics
+  (testing "that a record has its generated static methods"
+    (let [r1 (new RecordToTestStatics1 1)
+          r2 (new RecordToTestStatics2 1 2)
+          r3 (new RecordToTestStatics3 1 2 3)
+          rn (new RecordToTestStatics3 1 nil nil)]
+      (testing "that a record created with the ctor equals one by the static factory method"
+        (is (= r1    (RecordToTestStatics1/create.e {:a 1})))
+        (is (= r2    (RecordToTestStatics2/create.e {:a 1 :b 2})))
+        (is (= r3    (RecordToTestStatics3/create.e {:a 1 :b 2 :c 3})))
+        (is (= rn    (RecordToTestStatics3/create.e {:a 1}))))
+      (testing "that a literal record equals one by the static factory method"
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics1{:a 1} (RecordToTestStatics1/create.e {:a 1})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics2{:a 1 :b 2} (RecordToTestStatics2/create.e {:a 1 :b 2})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b 2 :c 3} (RecordToTestStatics3/create.e {:a 1 :b 2 :c 3})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1} (RecordToTestStatics3/create.e {:a 1})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b nil :c nil} (RecordToTestStatics3/create.e {:a 1}))))))
+  (testing "that records and types have a sane generated basis method"
+    (let [rb  (clojure.test-clojure.protocols.RecordToTestBasis/get_basis.e)
+          rbh (clojure.test-clojure.protocols.RecordToTestBasisHinted/get_basis.e)
+          rhg (clojure.test-clojure.protocols.RecordToTestHugeBasis/get_basis.e)
+          tb  (clojure.test-clojure.protocols.TypeToTestBasis/get_basis.e)
+          tbh (clojure.test-clojure.protocols.TypeToTestBasisHinted/get_basis.e)]
+      (is (= '[a b c] rb))
+      (is (= '[a b c] rb))
+      (is (= '[a b c d e f g h i j k l m n o p q r s t u v w x y z] rhg))
+      (testing "that record basis hinting looks as we expect"
+        (is (= (:tag (meta (rbh 0))) 'String))
+        (is (= (:tag (meta (rbh 1))) 'Long))
+        (is (nil? (:tag (meta (rbh 2))))))
+      (testing "that type basis hinting looks as we expect"
+        (is (= (:tag (meta (tbh 0))) 'String))
+        (is (= (:tag (meta (tbh 1))) 'Long))
+        (is (nil? (:tag (meta (tbh 2)))))))))
 
 ;; (defrecord RecordToTestFactories [a b c])
 ;; (defrecord RecordToTestA [a])

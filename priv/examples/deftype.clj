@@ -46,3 +46,7 @@
 (prn (bar (new SomeRecord 1 2)))
 
 other/ExampleProtocol
+
+(prn #examples.deftype.SomeRecord{:x 1 :y 2})
+(prn #examples.deftype.SomeRecord[1 2])
+(prn (SomeRecord/create.e {:x 1 :y 2}))

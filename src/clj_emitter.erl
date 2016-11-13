@@ -229,8 +229,8 @@ ast(#{op := deftype} = Expr, State0) ->
 
   %% Predicate function to check if a field is one of the hidden record fields.
   IsRecordFld = fun(Field) ->
-                    FieldName = cerl:var_name(Field),
-                    not (FieldName =:= '__meta' orelse FieldName =:= '__extmap')
+                    FieldName = atom_to_binary(cerl:var_name(Field), utf8),
+                    not lists:member(FieldName, hidden_fields())
                   end,
   {FieldsAsts, HiddenFieldsAsts} = lists:partition(IsRecordFld, AllFieldsAsts),
 
@@ -245,7 +245,7 @@ ast(#{op := deftype} = Expr, State0) ->
                                   , AllFieldsAsts
                                   , HiddenFieldsAsts
                                   ),
-  %% When there are hidden fields we assume  it is a record, so we also want
+  %% When there are hidden fields we assume it is a record, so we also want
   %% to create:
   %%   - a constructor function that includes the hidden fields.
   %%   - a create/1 function that takes a map.
@@ -258,6 +258,9 @@ ast(#{op := deftype} = Expr, State0) ->
                                          , AllFieldsAsts
                                          , HiddenFieldsAsts
                                          )
+                      , get_basis_function( Anno
+                                          , FieldsExprs
+                                          )
                       ]
               end,
 
@@ -269,6 +272,7 @@ ast(#{op := deftype} = Expr, State0) ->
                      _  -> [ CtorExport
                            , {?CONSTRUCTOR, length(AllFieldsAsts)}
                            , {create, 1}
+                           , {get_basis, 0}
                            ]
                    end,
   AccessorsExports = lists:map( fun(FieldAst) ->
@@ -905,6 +909,12 @@ do_list_ast([], Tail) ->
 do_list_ast([H | Hs], Tail) ->
   cerl:c_cons(H, do_list_ast(Hs, Tail)).
 
+%% ----- deftype -------
+
+-spec hidden_fields() -> [binary()].
+hidden_fields() ->
+  [<<"__extmap">>, <<"__meta">>].
+
 %% @doc Replaces the first argument of a function with a pattern match.
 %%
 %% This function is used for deftype methods so that the fields are available
@@ -931,7 +941,12 @@ expand_first_argument( {FNameAst, FunAst}
 -spec constructor_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
-  TupleAst    = type_tuple(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts, create),
+  TupleAst    = type_tuple( Typename
+                          , Anno
+                          , AllFieldsAsts
+                          , HiddenFieldsAsts
+                          , create
+                          ),
   function_form(?CONSTRUCTOR, Anno, FieldsAsts, TupleAst).
 
 %% @doc Builds an accessor function for the specified type and field.
@@ -971,6 +986,7 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   MergeCallAst  = call_mfa(clj_core, merge, [ArgsListAst], Anno),
 
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
+  NilOrExtMapAst= call_mfa(clj_core, seq_or_else, [ExtMapAst], Anno),
 
   AssocAtom     = cerl:c_atom(assoc),
   NilAtom       = cerl:c_atom(?NIL),
@@ -978,7 +994,7 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
                       FieldName = cerl:var_name(FieldAst),
                       Value = case lists:member(FieldAst, HiddenFieldsAsts) of
                                 true when FieldName =:= '__extmap' ->
-                                  ExtMapAst;
+                                  NilOrExtMapAst;
                                 true ->
                                   NilAtom;
                                 false ->
@@ -996,6 +1012,21 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   TupleAst      = type_tuple_ast(Typename, FieldsMapAst, InfoAst),
 
   function_form(create, Anno, [MapVarAst], TupleAst).
+
+-spec get_basis_function([any()], [map()]) -> ast().
+get_basis_function(Anno, FieldsExprs) ->
+  FilterMapFun   = fun(#{name := NameSym}) ->
+                       NameBin = clj_core:name(NameSym),
+                       case lists:member(NameBin, hidden_fields()) of
+                         true  -> false;
+                         false -> {true, cerl:ann_abstract(Anno, NameSym)}
+                       end
+                   end,
+  FieldNamesAsts = lists:filtermap(FilterMapFun, FieldsExprs),
+  ListAst        = list_ast(FieldNamesAsts),
+  VectorAst      = call_mfa('clojerl.Vector', ?CONSTRUCTOR, [ListAst], Anno),
+
+  function_form(get_basis, Anno, [], VectorAst).
 
 -spec field_fun_name(atom()) -> atom().
 field_fun_name(FieldName) when is_atom(FieldName) ->
@@ -1046,6 +1077,8 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
                , InfoAst
                ]).
 
+%% ----- Functions -------
+
 -spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) -> cerl:cerl().
 function_form(Name, Anno, Args, Body) when is_atom(Name) ->
   EvalName = cerl:c_fname(Name, length(Args)),
@@ -1055,6 +1088,8 @@ function_form(Name, Anno, Args, Body) when is_atom(Name) ->
 -spec function_signature(ast()) -> {atom(), arity()}.
 function_signature({FName, _}) ->
   {cerl:fname_id(FName), cerl:fname_arity(FName)}.
+
+%% ----- Methods -------
 
 -spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
 method_to_function_clause(MethodExpr, State) ->
@@ -1162,6 +1197,8 @@ case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
   CaseAst = cerl:ann_c_case(Anno, cerl:c_values(Vars), ClausesAst),
   {Vars, CaseAst}.
 
+%% ----- letrec -------
+
 -spec letrec_defs([ast()], [ast()], state()) ->
   {[{cerl:cerl(), cerl:cerl()}], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
@@ -1202,7 +1239,7 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
 
   {lists:zip(FNamesAsts, FnsAsts), State2}.
 
-%% Push & pop asts
+%% ----- Push & pop asts -------
 
 -spec push_ast(ast(), state()) -> state().
 push_ast(Ast, State = #{asts := Asts}) ->
@@ -1217,7 +1254,7 @@ pop_ast(State = #{asts := Asts}, N) ->
   {ReturnAsts, RestAsts} = lists:split(N, Asts),
   {lists:reverse(ReturnAsts), State#{asts => RestAsts}}.
 
-%% Lexical renames
+%% ----- Lexical renames -------
 
 -spec add_lexical_renames_scope(state()) -> state().
 add_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
@@ -1280,6 +1317,8 @@ do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= ?NIL ->
 do_shadow_depth(_, Depth) ->
   Depth.
 
+%% ----- Vars -------
+
 -spec var_val_function(ast(), ast(), erl_anno:anno()) -> ast().
 var_val_function(Val, VarAst, Anno) ->
   TestAst            = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
@@ -1292,6 +1331,8 @@ var_val_function(Val, VarAst, Anno) ->
   ValueClauseAst = cerl:ann_c_clause(Anno, [TupleAst], XVar),
 
   cerl:ann_c_case(Anno, TestAst, [NilClauseAst, ValueClauseAst]).
+
+%% ----- Annotations -------
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->
@@ -1306,6 +1347,8 @@ anno_from(Env) ->
       , {file, maps:get(file, Location, "")}
       ]
   end.
+
+%% ----- Misc -------
 
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().
 sym_to_kw(Symbol) ->
