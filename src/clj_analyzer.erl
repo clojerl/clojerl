@@ -1550,10 +1550,17 @@ resolve(Env, Symbol, CheckPrivate) ->
   end.
 
 -spec erl_fun(clj_env:env(), 'clojerl.Symbol':type()) -> erl_fun().
-erl_fun(Env, Symbol) ->
-  NsAtom = binary_to_atom(clj_core:namespace(Symbol), utf8),
+erl_fun(Env0, Symbol) ->
+  NsSym          = clj_core:symbol(clj_core:namespace(Symbol)),
+  {NsName, Env}  = case resolve(Env0, NsSym) of
+                     {{type, TypeSym}, EnvTmp} ->
+                       {clj_core:name(TypeSym), EnvTmp};
+                     {_, EnvTmp} ->
+                       {clj_core:name(NsSym), EnvTmp}
+                  end,
+  NsAtom        = binary_to_atom(NsName, utf8),
   {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
-  NameAtom = binary_to_atom(Name, utf8),
+  NameAtom      = binary_to_atom(Name, utf8),
 
   NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
   clj_utils:warn_when( not NoWarnErlFun
