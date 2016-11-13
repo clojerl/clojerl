@@ -24,14 +24,14 @@
     tr))
 
 (defn get-stacktrace
-  []
-  (let [st (erlang/get_stacktrace.e)]
-    (if-not (empty? st)
-      st
-      (try
-        (throw :fake)
-        (catch :throw e
-          (erlang/get_stacktrace.e))))))
+  ([] (get-stacktrace false))
+  ([from-process]
+   (let [st (erlang/get_stacktrace.e)]
+     (if-not (or (empty? st) from-process)
+       st
+       (-> (erlang/self.e)
+           (erlang/process_info.e :current_stacktrace)
+           second)))))
 
 (defn info [x k default]
   (let [info (nth x 3)]
