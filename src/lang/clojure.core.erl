@@ -86,6 +86,11 @@
                , {<<"clojure.core">>, <<"*default-data-reader-fn*">>}
                , #{}
                }
+           , <<"*warn-on-type-resolution*">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*warn-on-type-resolution*">>}
+               , #{}
+               }
            }).
 
 -export([ ns/4
@@ -110,6 +115,8 @@
         , '*data-readers*__val'/0
         , 'default-data-readers__val'/0
         , '*default-data-reader-fn*__val'/0
+
+        , '*warn-on-type-resolution*__val'/0
         ]).
 
 ns(Form, _Env, Name, _References) ->
@@ -195,6 +202,9 @@ ns__val() ->
 
 '*default-data-reader-fn*__val'() ->
   var_value(<<"#'clojure.core/*default-data-reader-fn*">>, ?NIL).
+
+'*warn-on-type-resolution*__val'() ->
+  var_value(<<"#'clojure.core/*warn-on-type-resolution*">>, false).
 
 %% @private
 'maybe-unquote'(MaybeQuotedForm) ->

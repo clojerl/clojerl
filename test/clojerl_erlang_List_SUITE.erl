@@ -180,4 +180,6 @@ complete_coverage(_Config) ->
   ListMeta  = clj_core:with_meta(clj_core:list([1, 2, 3]), #{a => 1}),
   #{a := 1} = clj_core:meta(ListMeta),
 
+  [1, 2, 3] = 'clojerl.erlang.List':to_list([1, 2, 3]),
+
   {comments, ""}.

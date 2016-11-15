@@ -462,6 +462,7 @@ ast(#{op := invoke} = Expr, State) ->
                           ),
 
   case FExpr of
+    %% Var
     #{op := var, var := Var, form := Symbol} ->
       VarMeta = clj_core:meta(Var),
       Module  = 'clojerl.Var':module(Var),
@@ -492,15 +493,48 @@ ast(#{op := invoke} = Expr, State) ->
         end,
 
       push_ast(Ast, State1);
+    %% Erlang Function
     #{ op       := erl_fun
      , module   := Module
      , function := Function
      , env      := EnvErlFun
      } ->
+      AnnoErlFun = anno_from(EnvErlFun),
+      Ast = call_mfa(Module, Function, Args, AnnoErlFun),
 
-      Anno = anno_from(EnvErlFun),
-      Ast  = call_mfa(Module, Function, Args, Anno),
       push_ast(Ast, State);
+    %% Resolve Target Type
+    #{ op       := resolve_type
+     , module   := Module
+     , function := Function
+     } ->
+      ArgCount   = length(Args),
+      TargetAst  = erlang:hd(Args),
+      case Module of
+        ?NIL ->
+          FVarAst    = new_c_var(Anno),
+          ModuleAst  = call_mfa(clj_core, type, [TargetAst], Anno),
+          ResolveAst = call_mfa( erlang
+                               , make_fun
+                               , [ ModuleAst
+                                 , cerl:ann_c_atom(Anno, Function)
+                                 , cerl:ann_abstract(Anno, ArgCount)
+                                 ]
+                               , Anno
+                               ),
+
+          Ast = cerl:ann_c_let( Anno
+                              , [FVarAst]
+                              , ResolveAst
+                              , cerl:ann_c_apply(Anno, FVarAst, Args)
+                              ),
+
+          push_ast(Ast, State);
+        Module ->
+          Ast = call_mfa(Module, Function, Args, Anno),
+          push_ast(Ast, State)
+      end;
+    %% Apply Fn
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),

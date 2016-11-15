@@ -66,7 +66,7 @@ do_get(Scope = #{mappings := Mappings}, Key) ->
 
 %% @private
 -spec do_update(scope() | ?NIL, any(), any()) -> scope() | not_found.
-do_update(?NIL, _K, _Mappings) ->
+do_update(?NIL, _K, _V) ->
   not_found;
 do_update(Scope = #{mappings := Mappings, parent := Parent}, K, V) ->
   case maps:is_key(K, Mappings) of
