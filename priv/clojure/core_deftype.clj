@@ -186,7 +186,7 @@
                   ~@field-args
                   ~@(for [i (range 0 (count over))]
                       (list `nth 'overage i)))
-             (throw (str "Arity exception: " (+ ~arg-count (count ~'overage)) (name '~fn-name))))
+             (throw (str "Arity exception: " (+ ~arg-count (count ~'overage)) " " (name '~fn-name))))
           `(new ~classname ~@field-args)))))
 
 (defn- validate-fields

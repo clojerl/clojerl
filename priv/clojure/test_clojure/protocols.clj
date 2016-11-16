@@ -364,48 +364,48 @@
         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (map->RecordToTestFactories {:a 1})))
         (is (= #clojure.test-clojure.protocols.RecordToTestFactories{:a nil :b nil :c nil} (map->RecordToTestFactories {})))))))
 
-;; (defn compare-huge-types
-;;   [hugeL hugeR]
-;;   (and
-;;    (= (.a hugeL) (.a hugeR))
-;;    (= (.b hugeL) (.b hugeR))
-;;    (= (.c hugeL) (.c hugeR))
-;;    (= (.d hugeL) (.d hugeR))
-;;    (= (.e hugeL) (.e hugeR))
-;;    (= (.f hugeL) (.f hugeR))
-;;    (= (.g hugeL) (.g hugeR))
-;;    (= (.h hugeL) (.h hugeR))
-;;    (= (.i hugeL) (.i hugeR))
-;;    (= (.j hugeL) (.j hugeR))
-;;    (= (.k hugeL) (.k hugeR))
-;;    (= (.l hugeL) (.l hugeR))
-;;    (= (.m hugeL) (.m hugeR))
-;;    (= (.n hugeL) (.n hugeR))
-;;    (= (.o hugeL) (.o hugeR))
-;;    (= (.p hugeL) (.p hugeR))
-;;    (= (.q hugeL) (.q hugeR))
-;;    (= (.r hugeL) (.r hugeR))
-;;    (= (.s hugeL) (.s hugeR))
-;;    (= (.t hugeL) (.t hugeR))
-;;    (= (.u hugeL) (.u hugeR))
-;;    (= (.v hugeL) (.v hugeR))
-;;    (= (.w hugeL) (.w hugeR))
-;;    (= (.x hugeL) (.x hugeR))
-;;    (= (.y hugeL) (.y hugeR))
-;;    (= (.z hugeL) (.z hugeR))))
+(defn compare-huge-types
+  [hugeL hugeR]
+  (and
+   (= (.-a hugeL) (.-a hugeR))
+   (= (.-b hugeL) (.-b hugeR))
+   (= (.-c hugeL) (.-c hugeR))
+   (= (.-d hugeL) (.-d hugeR))
+   (= (.-e hugeL) (.-e hugeR))
+   (= (.-f hugeL) (.-f hugeR))
+   (= (.-g hugeL) (.-g hugeR))
+   (= (.-h hugeL) (.-h hugeR))
+   (= (.-i hugeL) (.-i hugeR))
+   (= (.-j hugeL) (.-j hugeR))
+   (= (.-k hugeL) (.-k hugeR))
+   (= (.-l hugeL) (.-l hugeR))
+   (= (.-m hugeL) (.-m hugeR))
+   (= (.-n hugeL) (.-n hugeR))
+   (= (.-o hugeL) (.-o hugeR))
+   (= (.-p hugeL) (.-p hugeR))
+   (= (.-q hugeL) (.-q hugeR))
+   (= (.-r hugeL) (.-r hugeR))
+   (= (.-s hugeL) (.-s hugeR))
+   (= (.-t hugeL) (.-t hugeR))
+   (= (.-u hugeL) (.-u hugeR))
+   (= (.-v hugeL) (.-v hugeR))
+   (= (.-w hugeL) (.-w hugeR))
+   (= (.-x hugeL) (.-x hugeR))
+   (= (.-y hugeL) (.-y hugeR))
+   (= (.-z hugeL) (.-z hugeR))))
 
-;; (deftype TypeToTestFactory [a])
-;; (defrecord TypeToTestHugeFactories [a b c d e f g h i j k l m n o p q r s t u v w x y z])
+(deftype TypeToTestFactory [a])
+(defrecord TypeToTestHugeFactories [a b c d e f g h i j k l m n o p q r s t u v w x y z])
 
-;; (deftest deftype-factory-fn
-;;   (testing "that the ->T factory is gen'd for a deftype and that it works"
-;;     (is (= (.a (TypeToTestFactory. 42)) (.a (->TypeToTestFactory 42))))
-;;     (is (compare-huge-types
-;;          (TypeToTestHugeFactories.  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
-;;          (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))))
-;;   (testing "that the generated factory checks arity constraints"
-;;     (is (thrown? clojure.lang.ArityException (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25)))
-;;     (is (thrown? clojure.lang.ArityException (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
+(deftest deftype-factory-fn
+  (testing "that the ->T factory is gen'd for a deftype and that it works"
+    (is (= (.-a (TypeToTestFactory. 42)) (.-a (->TypeToTestFactory 42))))
+    (is (compare-huge-types
+         (TypeToTestHugeFactories.  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
+         (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))))
+  (testing "that the generated factory checks arity constraints"
+    (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25)))
+    (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
 
 ;; (deftest test-ctor-literals
 ;;   (testing "that constructor calls to print-dup'able classes are supported as literals"
