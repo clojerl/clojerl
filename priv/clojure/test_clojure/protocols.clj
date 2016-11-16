@@ -407,89 +407,89 @@
     (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25)))
     (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
 
-;; (deftest test-ctor-literals
-;;   (testing "that constructor calls to print-dup'able classes are supported as literals"
-;;     (is (= "Hi" #java.lang.String["Hi"]))
-;;     (is (= 42 #java.lang.Long[42]))
-;;     (is (= 42 #java.lang.Long["42"]))
-;;     (is (= [:a 42] #clojure.lang.MapEntry[:a 42])))
-;;   (testing "that constructor literals are embeddable"
-;;     (is (= 42 #java.lang.Long[#java.lang.String["42"]])))
-;;   (testing "that constructor literals work for deftypes too"
-;;     (is (= (.a (TypeToTestFactory. 42)) (.a #clojure.test-clojure.protocols.TypeToTestFactory[42])))
-;;     (is (compare-huge-types
-;;          (TypeToTestHugeFactories.  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
-;;          #clojure.test-clojure.protocols.TypeToTestHugeFactories[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26]))))
+(deftest test-ctor-literals
+  ;; (testing "that constructor calls to print-dup'able classes are supported as literals"
+  ;;   (is (= "Hi" #java.lang.String["Hi"]))
+  ;;   (is (= 42 #java.lang.Long[42]))
+  ;;   (is (= 42 #java.lang.Long["42"]))
+  ;;   (is (= [:a 42] #clojure.lang.MapEntry[:a 42])))
+  ;; (testing "that constructor literals are embeddable"
+  ;;   (is (= 42 #java.lang.Long[#java.lang.String["42"]])))
+  (testing "that constructor literals work for deftypes too"
+    (is (= (.-a (TypeToTestFactory. 42)) (.-a #clojure.test-clojure.protocols.TypeToTestFactory[42])))
+    (is (compare-huge-types
+         (TypeToTestHugeFactories.  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
+         #clojure.test-clojure.protocols.TypeToTestHugeFactories[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26]))))
 
-;; (defrecord RecordToTestLiterals [a])
-;; (defrecord TestNode [v l r])
-;; (deftype TypeToTestLiterals [a])
-;; (def lang-str "en")
-;; (deftest exercise-literals
-;;   (testing "that ctor literals can be used in common 'places'"
-;;     (is (= (RecordToTestLiterals. ()) #clojure.test-clojure.protocols.RecordToTestLiterals[()]))
-;;     (is (= (.a (TypeToTestLiterals. ())) (.a #clojure.test-clojure.protocols.TypeToTestLiterals[()])))
-;;     (is (= (RecordToTestLiterals. 42) (into #clojure.test-clojure.protocols.RecordToTestLiterals[0] {:a 42})))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (RecordToTestLiterals. #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (->RecordToTestLiterals #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals[42]]))
-;;     (is (= (TestNode. 1
-;;                       (TestNode. 2
-;;                                  (TestNode. 3
-;;                                             nil
-;;                                             nil)
-;;                                  nil)
-;;                       (TestNode. 4
-;;                                  (TestNode. 5
-;;                                             (TestNode. 6
-;;                                                        nil
-;;                                                        nil)
-;;                                             nil)
-;;                                  (TestNode. 7
-;;                                             nil
-;;                                             nil)))
-;;            #clojure.test-clojure.protocols.TestNode{:v 1
-;;                                                     :l #clojure.test-clojure.protocols.TestNode{:v 2
-;;                                                                                                 :l #clojure.test-clojure.protocols.TestNode{:v 3 :l nil :r nil}
-;;                                                                                                 :r nil}
-;;                                                     :r #clojure.test-clojure.protocols.TestNode{:v 4
-;;                                                                                                 :l #clojure.test-clojure.protocols.TestNode{:v 5
-;;                                                                                                                                             :l #clojure.test-clojure.protocols.TestNode{:v 6 :l nil :r nil}
-;;                                                                                                                                             :r nil}
-;;                                                                                                 :r #clojure.test-clojure.protocols.TestNode{:v 7 :l nil :r nil}}})))
+(defrecord RecordToTestLiterals [a])
+(defrecord TestNode [v l r])
+(deftype TypeToTestLiterals [a])
+(def lang-str "en")
+(deftest exercise-literals
+  (testing "that ctor literals can be used in common 'places'"
+    (is (= (RecordToTestLiterals. ()) #clojure.test-clojure.protocols.RecordToTestLiterals[()]))
+    (is (= (.-a (TypeToTestLiterals. ())) (.-a #clojure.test-clojure.protocols.TypeToTestLiterals[()])))
+    (is (= (RecordToTestLiterals. 42) (into #clojure.test-clojure.protocols.RecordToTestLiterals[0] {:a 42})))
+    (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (RecordToTestLiterals. #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
+    (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))  (->RecordToTestLiterals #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
+    (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
+           #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals[42]]))
+    (is (= (TestNode. 1
+                      (TestNode. 2
+                                 (TestNode. 3
+                                            nil
+                                            nil)
+                                 nil)
+                      (TestNode. 4
+                                 (TestNode. 5
+                                            (TestNode. 6
+                                                       nil
+                                                       nil)
+                                            nil)
+                                 (TestNode. 7
+                                            nil
+                                            nil)))
+           #clojure.test-clojure.protocols.TestNode{:v 1
+                                                    :l #clojure.test-clojure.protocols.TestNode{:v 2
+                                                                                                :l #clojure.test-clojure.protocols.TestNode{:v 3 :l nil :r nil}
+                                                                                                :r nil}
+                                                    :r #clojure.test-clojure.protocols.TestNode{:v 4
+                                                                                                :l #clojure.test-clojure.protocols.TestNode{:v 5
+                                                                                                                                            :l #clojure.test-clojure.protocols.TestNode{:v 6 :l nil :r nil}
+                                                                                                                                            :r nil}
+                                                                                                :r #clojure.test-clojure.protocols.TestNode{:v 7 :l nil :r nil}}})))
 
-;;   (testing "that records and types are evalable"
-;;     (is (= (RecordToTestLiterals. 42) (eval #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
-;;     (is (= (RecordToTestLiterals. 42) (eval #clojure.test-clojure.protocols.RecordToTestLiterals{:a 42})))
-;;     (is (= (RecordToTestLiterals. 42) (eval (RecordToTestLiterals. 42))))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            (eval #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals[42]])))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            (eval #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals{:a 42}])))
-;;     (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
-;;            (eval #clojure.test-clojure.protocols.RecordToTestLiterals{:a #clojure.test-clojure.protocols.RecordToTestLiterals[42]})))
-;;     (is (= 42 (.a (eval #clojure.test-clojure.protocols.TypeToTestLiterals[42])))))
+  (testing "that records and types are evalable"
+    (is (= (RecordToTestLiterals. 42) (eval #clojure.test-clojure.protocols.RecordToTestLiterals[42])))
+    (is (= (RecordToTestLiterals. 42) (eval #clojure.test-clojure.protocols.RecordToTestLiterals{:a 42})))
+    (is (= (RecordToTestLiterals. 42) (eval (RecordToTestLiterals. 42))))
+    (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
+           (eval #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals[42]])))
+    (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
+           (eval #clojure.test-clojure.protocols.RecordToTestLiterals[#clojure.test-clojure.protocols.RecordToTestLiterals{:a 42}])))
+    (is (= (RecordToTestLiterals. (RecordToTestLiterals. 42))
+           (eval #clojure.test-clojure.protocols.RecordToTestLiterals{:a #clojure.test-clojure.protocols.RecordToTestLiterals[42]})))
+    (is (= 42 (.-a (eval #clojure.test-clojure.protocols.TypeToTestLiterals[42])))))
 
-;;   (testing "that ctor literals only work with constants or statics"
-;;     (is (thrown? Exception (read-string "#java.util.Locale[(str 'en)]")))
-;;     (is (thrown? Exception (read-string "(let [s \"en\"] #java.util.Locale[(str 'en)])")))
-;;     (is (thrown? Exception (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals{(keyword \"a\") 42}"))))
+  (testing "that ctor literals only work with constants or statics"
+    (is (thrown? :error (read-string "#java.util.Locale[(str 'en)]")))
+    (is (thrown? :error (read-string "(let [s \"en\"] #java.util.Locale[(str 'en)])")))
+    (is (thrown? :error (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals{(keyword \"a\") 42}"))))
 
-;;   (testing "that ctors can have whitespace after class name but before {"
-;;     (is (= (RecordToTestLiterals. 42)
-;;            (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals   {:a 42}"))))
+  (testing "that ctors can have whitespace after class name but before {"
+    (is (= (RecordToTestLiterals. 42)
+           (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals   {:a 42}"))))
 
-;;   (testing "that the correct errors are thrown with malformed literals"
-;;     (is (thrown-with-msg?
-;;           Exception
-;;           #"Unreadable constructor form.*"
-;;           (read-string "#java.util.Locale(\"en\")")))
-;;     (is (thrown-with-msg?
-;;           Exception
-;;           #"Unexpected number of constructor arguments.*"
-;;           (read-string "#java.util.Locale[\"\" \"\" \"\" \"\"]")))
-;;     (is (thrown? Exception (read-string "#java.util.Nachos(\"en\")")))))
+  (testing "that the correct errors are thrown with malformed literals"
+    (is (thrown-with-msg?
+          :error
+          #"Unreadable constructor form.*"
+          (read-string "#java.util.Locale(\"en\")")))
+    (is (thrown-with-msg?
+          :error
+          #"Unexpected number of constructor arguments.*"
+          (read-string "#java.util.Locale[\"\" \"\" \"\" \"\"]")))
+    (is (thrown? :error (read-string "#java.util.Nachos(\"en\")")))))
 
 ;; (defrecord RecordToTestPrinting [a b])
 ;; (deftest defrecord-printing
