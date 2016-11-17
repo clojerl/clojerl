@@ -484,11 +484,11 @@
     (is (thrown-with-msg?
           :error
           #"Unreadable constructor form.*"
-          (read-string "#java.util.Locale(\"en\")")))
+          (read-string "#clojerl.String(\"en\")")))
     (is (thrown-with-msg?
           :error
           #"Unexpected number of constructor arguments.*"
-          (read-string "#java.util.Locale[\"\" \"\" \"\" \"\"]")))
+          (read-string "#clojerl.String[\"\" \"\" \"\" \"\"]")))
     (is (thrown? :error (read-string "#java.util.Nachos(\"en\")")))))
 
 ;; (defrecord RecordToTestPrinting [a b])
@@ -502,66 +502,66 @@
 ;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
 ;;              (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
 
-;; (defrecord RecordToTest__ [__a ___b])
-;; (defrecord TypeToTest__   [__a ___b])
+(defrecord RecordToTest__ [__a ___b])
+(defrecord TypeToTest__   [__a ___b])
 
-;; (deftest test-record-and-type-field-names
-;;   (testing "that types and records allow names starting with double-underscore.
-;;             This is a regression test for CLJ-837."
-;;     (let [r (RecordToTest__. 1 2)
-;;           t (TypeToTest__. 3 4)]
-;;       (are [x y] (= x y)
-;;            1 (:__a r)
-;;            2 (:___b r)
-;;            3 (.__a t)
-;;            4 (.___b t)))))
+(deftest test-record-and-type-field-names
+  (testing "that types and records allow names starting with double-underscore.
+            This is a regression test for CLJ-837."
+    (let [r (RecordToTest__. 1 2)
+          t (TypeToTest__. 3 4)]
+      (are [x y] (= x y)
+           1 (:__a r)
+           2 (:___b r)
+           3 (.-__a t)
+           4 (.-___b t)))))
 
-;; (defrecord RecordToTestLongHint [^long a])
-;; (defrecord RecordToTestByteHint [^byte a])
-;; (defrecord RecordToTestBoolHint [^boolean a])
-;; (defrecord RecordToTestCovariantHint [^String a]) ;; same for arrays also
-;; (deftype TypeToTestLongHint [^long a])
-;; (deftype TypeToTestByteHint [^byte a])
+(defrecord RecordToTestLongHint [^long a])
+(defrecord RecordToTestByteHint [^byte a])
+(defrecord RecordToTestBoolHint [^boolean a])
+(defrecord RecordToTestCovariantHint [^String a]) ;; same for arrays also
+(deftype TypeToTestLongHint [^long a])
+(deftype TypeToTestByteHint [^byte a])
 
-;; (deftest hinting-test
-;;   (testing "that primitive hinting requiring no coercion works as expected"
-;;     (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint{:a 42}))
-;;     (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint[42]))
-;;     (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a 42})))
-;;     (is (= (RecordToTestLongHint. 42) (map->RecordToTestLongHint {:a 42})))
-;;     (is (= (RecordToTestLongHint. 42) (->RecordToTestLongHint 42)))
-;;     (is (= (.a (TypeToTestLongHint. 42)) (.a (->TypeToTestLongHint (long 42)))))
-;;     (testing "that invalid primitive types on hinted defrecord fields fails"
-;;       (is (thrown?
-;;             ClassCastException
-;;             (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint{:a \"\"}")))
-;;       (is (thrown?
-;;             IllegalArgumentException
-;;             (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint[\"\"]")))
-;;       (is (thrown?
-;;             IllegalArgumentException
-;;             (read-string "#clojure.test-clojure.protocols.TypeToTestLongHint[\"\"]")))
-;;       (is (thrown?
-;;             ClassCastException
-;;             (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a ""})))
-;;       (is (thrown?
-;;             ClassCastException
-;;             (map->RecordToTestLongHint {:a ""})))
-;;       (is (thrown?
-;;             ClassCastException
-;;             (->RecordToTestLongHint "")))))
-;;   (testing "that primitive hinting requiring coercion works as expected"
-;;     (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create {:a (byte 42)})))
-;;     (is (= (RecordToTestByteHint. 42) (map->RecordToTestByteHint {:a (byte 42)})))
-;;     (is (= (RecordToTestByteHint. 42) (->RecordToTestByteHint (byte 42))))
-;;     (is (= (.a (TypeToTestByteHint. 42)) (.a (->TypeToTestByteHint (byte 42))))))
-;;   (testing "that primitive hinting for non-numerics works as expected"
-;;     (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint{:a true}))
-;;     (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint[true]))
-;;     (is (= (RecordToTestBoolHint. true) (clojure.test-clojure.protocols.RecordToTestBoolHint/create {:a true})))
-;;     (is (= (RecordToTestBoolHint. true) (map->RecordToTestBoolHint {:a true})))
-;;     (is (= (RecordToTestBoolHint. true) (->RecordToTestBoolHint true))))
-;;   (testing "covariant hints -- deferred"))
+(deftest hinting-test
+  (testing "that primitive hinting requiring no coercion works as expected"
+    (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint{:a 42}))
+    (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint[42]))
+    (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create.e {:a 42})))
+    (is (= (RecordToTestLongHint. 42) (map->RecordToTestLongHint {:a 42})))
+    (is (= (RecordToTestLongHint. 42) (->RecordToTestLongHint 42)))
+    (is (= (.-a (TypeToTestLongHint. 42)) (.-a (->TypeToTestLongHint (long 42)))))
+    #_(testing "that invalid primitive types on hinted defrecord fields fails"
+      (is (thrown?
+            ClassCastException
+            (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint{:a \"\"}")))
+      (is (thrown?
+            IllegalArgumentException
+            (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint[\"\"]")))
+      (is (thrown?
+            IllegalArgumentException
+            (read-string "#clojure.test-clojure.protocols.TypeToTestLongHint[\"\"]")))
+      (is (thrown?
+            ClassCastException
+            (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a ""})))
+      (is (thrown?
+            ClassCastException
+            (map->RecordToTestLongHint {:a ""})))
+      (is (thrown?
+            ClassCastException
+            (->RecordToTestLongHint "")))))
+  (testing "that primitive hinting requiring coercion works as expected"
+    (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create.e {:a (byte 42)})))
+    (is (= (RecordToTestByteHint. 42) (map->RecordToTestByteHint {:a (byte 42)})))
+    (is (= (RecordToTestByteHint. 42) (->RecordToTestByteHint (byte 42))))
+    (is (= (.-a (TypeToTestByteHint. 42)) (.-a (->TypeToTestByteHint (byte 42))))))
+  (testing "that primitive hinting for non-numerics works as expected"
+    (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint{:a true}))
+    (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint[true]))
+    (is (= (RecordToTestBoolHint. true) (clojure.test-clojure.protocols.RecordToTestBoolHint/create.e {:a true})))
+    (is (= (RecordToTestBoolHint. true) (map->RecordToTestBoolHint {:a true})))
+    (is (= (RecordToTestBoolHint. true) (->RecordToTestBoolHint true))))
+  (testing "covariant hints -- deferred"))
 
 ;; (deftest reify-test
 ;;   (testing "of an interface"

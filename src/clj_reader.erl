@@ -1215,7 +1215,12 @@ read_record(Symbol, Form, State) ->
                       , location(State)
                       ),
 
-  Type = erlang:binary_to_existing_atom(clj_core:str(Symbol), utf8),
+  Type = try erlang:binary_to_existing_atom(clj_core:str(Symbol), utf8)
+         catch throw:badarg ->
+             clj_utils:error( [Symbol, <<" is not loaded or doesn't exist">>]
+                            , location(State)
+                            )
+         end,
 
   Record =
     case clj_core:'vector?'(Form) of
