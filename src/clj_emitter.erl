@@ -101,7 +101,6 @@ ast(#{op := do} = Expr, State) ->
 ast(#{op := def} = Expr, State) ->
   #{ var  := Var
    , init := InitExpr
-   , meta := _MetaExpr
    , env  := Env
    } = Expr,
   Module  = 'clojerl.Var':module(Var),

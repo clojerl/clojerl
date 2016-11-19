@@ -137,7 +137,7 @@
 (defmethod print-dup clojerl.Cons [o w] (print-method o w))
 (defmethod print-dup clojerl.LazySeq [o w] (print-method o w))
 
-(def ^{:tag String
+(def ^{:tag clojerl.String
        :doc "Returns escape string for char or nil if none"
        :added "1.0"}
   char-escape-string
@@ -149,7 +149,7 @@
      \formfeed "\\f"
      \backspace "\\b"})
 
-(defmethod print-method clojerl.String [^String s, ^Writer w]
+(defmethod print-method clojerl.String [^clojerl.String s, ^Writer w]
   (if (or *print-dup* *print-readably*)
     (do (write w \")
       (dotimes [n (count s)]

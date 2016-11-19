@@ -84,7 +84,7 @@
                               (meta (var f)))
            {:name foo :arglists ([a]) :doc "method with one arg"} foo
            {:name bar :arglists ([a b]) :doc "method with two args"} bar
-           {:name baz :arglists ([a] [a b]) :doc "method with multiple arities" :tag String} baz
+           {:name baz :arglists ([a] [a b]) :doc "method with multiple arities" :tag clojerl.String} baz
            {:name with-quux :arglists ([a]) :doc "method name with a hyphen"} with-quux)))
   (testing "protocol fns throw IllegalArgumentException if no impl matches"
     (is (thrown-with-msg?
@@ -257,10 +257,10 @@
 (defrecord RecordToTestStatics2 [a b])
 (defrecord RecordToTestStatics3 [a b c])
 (defrecord RecordToTestBasis [a b c])
-(defrecord RecordToTestBasisHinted [^String a ^Long b c])
+(defrecord RecordToTestBasisHinted [^clojerl.String a ^Long b c])
 (defrecord RecordToTestHugeBasis [a b c d e f g h i j k l m n o p q r s t u v w x y z])
 (defrecord TypeToTestBasis [a b c])
-(defrecord TypeToTestBasisHinted [^String a ^Long b c])
+(defrecord TypeToTestBasisHinted [^clojerl.String a ^Long b c])
 
 (deftest test-statics
   (testing "that a record has its generated static methods"
@@ -289,11 +289,11 @@
       (is (= '[a b c] rb))
       (is (= '[a b c d e f g h i j k l m n o p q r s t u v w x y z] rhg))
       (testing "that record basis hinting looks as we expect"
-        (is (= (:tag (meta (rbh 0))) 'String))
+        (is (= (:tag (meta (rbh 0))) 'clojerl.String))
         (is (= (:tag (meta (rbh 1))) 'Long))
         (is (nil? (:tag (meta (rbh 2))))))
       (testing "that type basis hinting looks as we expect"
-        (is (= (:tag (meta (tbh 0))) 'String))
+        (is (= (:tag (meta (tbh 0))) 'clojerl.String))
         (is (= (:tag (meta (tbh 1))) 'Long))
         (is (nil? (:tag (meta (tbh 2)))))))))
 
@@ -519,7 +519,7 @@
 (defrecord RecordToTestLongHint [^long a])
 (defrecord RecordToTestByteHint [^byte a])
 (defrecord RecordToTestBoolHint [^boolean a])
-(defrecord RecordToTestCovariantHint [^String a]) ;; same for arrays also
+(defrecord RecordToTestCovariantHint [^clojerl.String a]) ;; same for arrays also
 (deftype TypeToTestLongHint [^long a])
 (deftype TypeToTestByteHint [^byte a])
 
@@ -624,7 +624,7 @@
 ;;       (let [r (reify
 ;;                ExampleInterface
 ;;                (hinted [_ ^int i] (inc i))
-;;                (hinted [_ ^String s] (str s s)))]
+;;                (hinted [_ ^clojerl.String s] (str s s)))]
 ;;         (is (= 2 (.hinted r 1)))
 ;;         (is (= "xoxo" (.hinted r "xo")))))))
 

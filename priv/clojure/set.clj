@@ -11,7 +11,7 @@
        clojure.set)
 
 (defn- bubble-max-key [k coll]
-  "Move a maximal element of coll according to fn k (which returns a number) 
+  "Move a maximal element of coll according to fn k (which returns a number)
    to the front of coll."
   (let [max (apply max-key k coll)]
     (cons max (remove #(identical? max %) coll))))
@@ -41,7 +41,7 @@
 		     result
                      (disj result item)))
 	       s1 s1)))
-  ([s1 s2 & sets] 
+  ([s1 s2 & sets]
      (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
 
@@ -49,15 +49,15 @@
   "Return a set that is the first set without elements of the remaining sets"
   {:added "1.0"}
   ([s1] s1)
-  ([s1 s2] 
+  ([s1 s2]
      (if (< (count s1) (count s2))
-       (reduce (fn [result item] 
-                   (if (contains? s2 item) 
-                     (disj result item) 
+       (reduce (fn [result item]
+                   (if (contains? s2 item)
+                     (disj result item)
                      result))
                s1 s1)
        (reduce disj s1 s2)))
-  ([s1 s2 & sets] 
+  ([s1 s2 & sets]
      (reduce difference s1 (conj sets s2))))
 
 
@@ -78,11 +78,11 @@
   "Returns the map with the keys in kmap renamed to the vals in kmap"
   {:added "1.0"}
   [map kmap]
-    (reduce 
+    (reduce
      (fn [m [old new]]
        (if (contains? map old)
          (assoc m new (get map old))
-         m)) 
+         m))
      (apply dissoc map (keys kmap)) kmap))
 
 (defn rename
@@ -101,7 +101,7 @@
        (let [ik (select-keys x ks)]
          (assoc m ik (conj (get m ik #{}) x))))
      {} xrel))
-   
+
 (defn map-invert
   "Returns the map with the vals mapped to the keys."
   {:added "1.0"}
@@ -138,18 +138,18 @@
                    ret)))
              #{} s))))
 
-(defn subset? 
+(defn subset?
   "Is set1 a subset of set2?"
   {:added "1.2",
-   :tag Boolean}
+   :tag clojerl.Boolean}
   [set1 set2]
   (and (<= (count set1) (count set2))
        (every? #(contains? set2 %) set1)))
 
-(defn superset? 
+(defn superset?
   "Is set1 a superset of set2?"
   {:added "1.2",
-   :tag Boolean}
+   :tag clojerl.Boolean}
   [set1 set2]
   (and (>= (count set1) (count set2))
        (every? #(contains? set1 %) set2)))
@@ -173,4 +173,3 @@
 
 (index ys [:b])
 )
-

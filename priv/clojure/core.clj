@@ -49,7 +49,7 @@
 
 (def
   ^{:arglists '([coll])
-    :tag cojerl.ISeq
+    :tag clojerl.ISeq
     :doc "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil."
     :added "1.0"
@@ -124,7 +124,7 @@
     that implement Iterable. Note that seqs cache values, thus seq
     should not be used on any Iterable whose iterator repeatedly
     returns the same mutable object."
-    :tag clojure.lang.ISeq
+    :tag clojerl.ISeq
     :added "1.0"
     :static true}
   seq (fn ^:static seq [coll] (clj_core/seq.e coll)))
@@ -421,7 +421,7 @@
 
 (defn nil?
   "Returns true if x is nil, false otherwise."
-  {:tag Boolean
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true
    :inline (fn [x] (list 'erlang/=:=.e x nil))}
@@ -486,28 +486,28 @@
 
 (defn false?
   "Returns true if x is the value false, false otherwise."
-  {:tag Boolean,
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true}
   [x] (erlang/=:=.e x false))
 
 (defn true?
   "Returns true if x is the value true, false otherwise."
-  {:tag Boolean,
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true}
   [x] (erlang/=:=.e x true))
 
 (defn not
   "Returns true if x is logical false, false otherwise."
-  {:tag Boolean
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true}
   [x] (if x false true))
 
 (defn some?
   "Returns true if x is not nil, false otherwise."
-  {:tag Boolean
+  {:tag clojerl.Boolean
    :added "1.6"
    :static true}
   [x] (not (nil? x)))
@@ -516,13 +516,13 @@
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
   one arg, returns the concatenation of the str values of the args."
-  {:tag :clojerl.String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
-  (^:clojerl.String [] "")
-  (^:clojerl.String [^Object x]
+  (^clojerl.String [] "")
+  (^clojerl.String [^Object x]
                     (if (nil? x) "" (clj_core/str.e x)))
-  (^:clojerl.String [x & ys]
+  (^clojerl.String [x & ys]
                     ((fn [acc more]
                        (if more
                          (recur (clojerl.String/append.e acc (str (first more)))
@@ -538,7 +538,7 @@
 
 (defn symbol
   "Returns a Symbol with the given namespace and name."
-  {:tag clojure.lang.Symbol
+  {:tag clojerl.Symbol
    :added "1.0"
    :static true}
   ([name] (if (symbol? name) name (clj_core/symbol.e name)))
@@ -570,7 +570,7 @@
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
-  {:tag clojure.lang.Keyword
+  {:tag clojerl.Keyword
    :added "1.0"
    :static true}
   ([name] (cond (keyword? name) name
@@ -584,7 +584,7 @@
   exists.  This function will not intern a new keyword. If the keyword
   has not already been interned, it will return nil.  Do not use :
   in the keyword strings, it will be added automatically."
-  {:tag clojure.lang.Keyword
+  {:tag clojerl.Keyword
    :added "1.3"
    :static true}
   ([name] (cond (keyword? name) name
@@ -646,39 +646,39 @@
   [& body]
   (list 'new 'clojerl.LazySeq (list* '^{:once true} fn* [] body)))
 
-(defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
-  (throw "unimplemented chunked seq")
-  #_(clojure.lang.ChunkBuffer. capacity))
+#_((defn ^:static ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
+     (throw "unimplemented chunked seq")
+     #_(clojure.lang.ChunkBuffer. capacity))
 
-(defn ^:static chunk-append [^clojure.lang.ChunkBuffer b x]
-  (throw "unimplemented chunked seq")
-  #_(.add b x))
+   (defn ^:static chunk-append [^clojure.lang.ChunkBuffer b x]
+     (throw "unimplemented chunked seq")
+     #_(.add b x))
 
-(defn ^:static ^clojure.lang.IChunk chunk [^clojure.lang.ChunkBuffer b]
-  (throw "unimplemented chunked seq")
-  #_(.chunk b))
+   (defn ^:static ^clojure.lang.IChunk chunk [^clojure.lang.ChunkBuffer b]
+     (throw "unimplemented chunked seq")
+     #_(.chunk b))
 
-(defn ^:static  ^clojure.lang.IChunk chunk-first ^clojure.lang.IChunk [^clojure.lang.IChunkedSeq s]
-  (throw "unimplemented chunked seq")
-  #_(.chunkedFirst s))
+   (defn ^:static  ^clojure.lang.IChunk chunk-first ^clojure.lang.IChunk [^clojure.lang.IChunkedSeq s]
+     (throw "unimplemented chunked seq")
+     #_(.chunkedFirst s))
 
-(defn ^:static ^clojure.lang.ISeq chunk-rest ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
-  (throw "unimplemented chunked seq")
-  #_(.chunkedMore s))
+   #(defn ^:static ^clojerl.ISeq chunk-rest ^clojerl.ISeq [^clojure.lang.IChunkedSeq s]
+      (throw "unimplemented chunked seq")
+      #_(.chunkedMore s))
 
-(defn ^:static ^clojure.lang.ISeq chunk-next ^clojure.lang.ISeq [^clojure.lang.IChunkedSeq s]
-  (throw "unimplemented chunked seq")
-  #_(.chunkedNext s))
+   (defn ^:static ^clojerl.ISeq chunk-next ^clojerl.ISeq [^clojure.lang.IChunkedSeq s]
+     (throw "unimplemented chunked seq")
+     #_(.chunkedNext s))
 
-(defn ^:static chunk-cons [chunk rest]
-  (throw "unimplemented chunked seq")
-  #_(if (clojure.lang.Numbers/isZero (clojure.lang.RT/count chunk))
-      rest
-      (clojure.lang.ChunkedCons. chunk rest)))
+   (defn ^:static chunk-cons [chunk rest]
+     (throw "unimplemented chunked seq")
+     #_(if (clojure.lang.Numbers/isZero (clojure.lang.RT/count chunk))
+         rest
+         (clojure.lang.ChunkedCons. chunk rest)))
 
-(defn ^:static chunked-seq? [s]
-  (throw "unimplemented chunked seq")
-  #_(instance? clojure.lang.IChunkedSeq s))
+   (defn ^:static chunked-seq? [s]
+     (throw "unimplemented chunked seq")
+     #_(instance? clojure.lang.IChunkedSeq s)))
 
 (defn concat
     "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
@@ -783,7 +783,7 @@
 
 (defn not=
   "Same as (not (= obj1 obj2))"
-  {:tag Boolean
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true}
   ([x] false)
@@ -1404,7 +1404,7 @@
 
 (defn name
   "Returns the name String of a string, symbol or keyword."
-  {:tag String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
   [x]
@@ -1412,7 +1412,7 @@
 
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
-  {:tag String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
   [^clojure.lang.Named x]
@@ -2341,7 +2341,7 @@
        (throw (new IllegalStateException ~(or message "I/O in transaction")))
        (do ~@body))))
 
-(defn volatile!
+#_(defn volatile!
   "Creates and returns a Volatile with an initial value of val."
   {:added "1.7"
    :tag clojure.lang.Volatile}
@@ -2349,7 +2349,7 @@
   (throw "unimplemented volatile")
   #_(clojure.lang.Volatile. val))
 
-(defn vreset!
+#_(defn vreset!
   "Sets the value of volatile to newval without regard for the
    current value. Returns newval."
   {:added "1.7"}
@@ -2357,7 +2357,7 @@
   (throw "unimplemented volatile")
   #_(.reset vol newval))
 
-(defmacro vswap!
+#_(defmacro vswap!
   "Non-atomically swaps the value of the volatile as if:
    (apply f current-value-of-vol args). Returns the value that
    was swapped in."
@@ -2367,7 +2367,7 @@
   #_(let [v (with-meta vol {:tag 'clojure.lang.Volatile})]
     `(.reset ~v (~f (.deref ~v) ~@args))))
 
-(defn volatile?
+#_(defn volatile?
   "Returns true if x is a volatile."
   {:added "1.7"}
   [x]
@@ -2495,7 +2495,7 @@
 (defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
   false."
-  {:tag Boolean
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true}
   [pred coll]
@@ -2505,7 +2505,7 @@
    :else false))
 
 (def
- ^{:tag Boolean
+ ^{:tag clojerl.Boolean
    :doc "Returns false if (pred x) is logical true for every x in
   coll, else true."
    :arglists '([pred coll])
@@ -2524,7 +2524,7 @@
       (or (pred (first coll)) (recur pred (next coll)))))
 
 (def
- ^{:tag Boolean
+ ^{:tag clojerl.Boolean
    :doc "Returns false if (pred x) is logical true for any x in coll,
   else true."
    :arglists '([pred coll])
@@ -3293,8 +3293,8 @@
 
 (defn num
   "Coerce to Number"
-  {:tag Number
-   :inline (fn  [x] `(. clojure.lang.Numbers (num ~x)))
+  {:tag clojerl.Integer
+   :inline (fn  [x] `(if (erlang/is_number.e x) x (throw "Not a number")))
    :added "1.0"}
   [x]
   (if (erlang/is_number.e x)
@@ -3373,22 +3373,6 @@
   [n]
   (erlang/is_float.e n))
 
-(defn bigint
-  "Coerce to BigInt"
-  {:tag clojure.lang.BigInt
-   :static true
-   :added "1.3"}
-  [x]
-  (erlang/trunc.e x))
-
-(defn biginteger
-  "Coerce to BigInteger"
-  {:tag BigInteger
-   :added "1.0"
-   :static true}
-  [x]
-  (erlang/trunc.e x))
-
 (def ^:dynamic ^{:private true} print-initialized false)
 
 (defmulti print-method (fn [x writer]
@@ -3423,7 +3407,7 @@
      (recur (first more) nmore)
      (apply pr more))))
 
-(def ^:private ^String system-newline
+(def ^:private ^clojerl.String system-newline
   (let [os-family (first (os/type.e))]
     (if (= os-family :win32) "\r\n" "\n")))
 
@@ -4326,7 +4310,7 @@
                              (lazy-seq
                                (loop [~gxs ~gxs]
                                  (when-let [~gxs (seq ~gxs)]
-                                   (if false ;; (chunked-seq? ~gxs)
+                                   #_(if false (chunked-seq? ~gxs)
                                      (let [c# (chunk-first ~gxs)
                                            size# (int (count c#))
                                            ~gb (chunk-buffer size#)]
@@ -4338,9 +4322,9 @@
                                          (chunk-cons
                                            (chunk ~gb)
                                            (~giter (chunk-rest ~gxs)))
-                                         (chunk-cons (chunk ~gb) nil)))
-                                     (let [~bind (first ~gxs)]
-                                       ~(do-mod mod-pairs)))))))))))]
+                                         (chunk-cons (chunk ~gb) nil))))
+                                   (let [~bind (first ~gxs)]
+                                     ~(do-mod mod-pairs))))))))))]
     `(let [iter# ~(emit-bind (to-groups seq-exprs))]
         (iter# ~(second seq-exprs)))))
 
@@ -4371,7 +4355,7 @@
 
 (defn pr-str
   "pr to a string, returning it"
-  {:tag String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
   [& xs]
@@ -4380,7 +4364,7 @@
 
 (defn prn-str
   "prn to a string, returning it"
-  {:tag String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
   [& xs]
@@ -4389,7 +4373,7 @@
 
 (defn print-str
   "print to a string, returning it"
-  {:tag String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
   [& xs]
@@ -4398,7 +4382,7 @@
 
 (defn println-str
   "println to a string, returning it"
-  {:tag String
+  {:tag clojerl.String
    :added "1.0"
    :static true}
   [& xs]
@@ -4492,8 +4476,8 @@
    :static true}
   [dir]
   (tree-seq
-   (fn [^java.io.File f] (filelib/is_dir.e f))
-   (fn [^java.io.File d] (->> (file/list_dir.e d)
+   (fn [^erlang.io.File f] (filelib/is_dir.e f))
+   (fn [^erlang.io.File d] (->> (file/list_dir.e d)
                              second
                              (map #(filename/join.e d %))
                              seq))
@@ -4796,7 +4780,7 @@
   Returns a stateful transducer when no collection is provided."
   {:added "1.0"
    :static true}
-  ([sep]
+  #_([sep]
    (fn [rf]
      (let [started (volatile! false)]
        (fn
@@ -5222,7 +5206,7 @@
 
 (defn distinct?
   "Returns true if no two of the arguments are ="
-  {:tag Boolean
+  {:tag clojerl.Boolean
    :added "1.0"
    :static true}
   ([x] true)
@@ -5435,7 +5419,7 @@
 
 (defn- root-resource
   "Returns the root directory path for a lib"
-  {:tag String}
+  {:tag clojerl.String}
   [lib]
   (str "/"
        (-> (name lib)
@@ -5866,7 +5850,7 @@
   metadata from the name symbol.  Returns the var."
   {:added "1.0"
    :static true}
-  ([ns ^clojure.lang.Symbol name]
+  ([ns ^clojerl.Symbol name]
    (throw "unimplemented intern")
    #_(let [v (clojure.lang.Var/intern (the-ns ns) name)]
      (when (meta name) (.setMeta v (meta name)))
@@ -6709,7 +6693,7 @@
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      (if (chunked-seq? s)
+      #_(if (chunked-seq? s)
         (let [c (chunk-first s)
               size (count c)
               b (chunk-buffer size)]
@@ -6717,11 +6701,11 @@
             (let [x (f (nth c i))]
               (when-not (nil? x)
                 (chunk-append b x))))
-          (chunk-cons (chunk b) (keep f (chunk-rest s))))
-        (let [x (f (first s))]
-          (if (nil? x)
-            (keep f (rest s))
-            (cons x (keep f (rest s))))))))))
+          (chunk-cons (chunk b) (keep f (chunk-rest s)))))
+      (let [x (f (first s))]
+        (if (nil? x)
+          (keep f (rest s))
+          (cons x (keep f (rest s)))))))))
 
 (defn every-pred
   "Takes a set of predicates and returns a function f that returns true if all of its
@@ -6964,7 +6948,7 @@
   Returns a transducer when no collection is provided."
   {:added "1.7"}
   ([]
-   (fn [rf]
+   #_(fn [rf]
      (let [pv (volatile! ::none)]
        (fn
          ([] (rf))
@@ -7035,7 +7019,7 @@
   "Construct a data representation of a tagged literal from a
   tag symbol and a form."
   {:added "1.7"}
-  [^clojure.lang.Symbol tag form]
+  [^clojerl.Symbol tag form]
   (new clojerl.reader.TaggedLiteral tag form))
 
 (defn reader-conditional?
@@ -7048,7 +7032,7 @@
   "Construct a data representation of a reader conditional.
   If true, splicing? indicates read-cond-splicing."
   {:added "1.7"}
-  [form ^Boolean splicing?]
+  [form ^clojerl.Boolean splicing?]
   (new clojerl.reader.ReaderConditional form splicing?))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; data readers ;;;;;;;;;;;;;;;;;;

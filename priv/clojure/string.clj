@@ -41,7 +41,7 @@ Design notes for clojure.string:
   clojure.string
   #_(:refer-clojure :exclude (replace reverse)))
 
-(defn ^String reverse
+(defn ^clojerl.String reverse
   "Returns s with its characters reversed."
   {:added "1.2"}
   [^CharSequence s]
@@ -50,7 +50,7 @@ Design notes for clojure.string:
       lists/reverse.1
       erlang/list_to_binary.1))
 
-(defn ^String re-quote-replacement
+(defn ^clojerl.String re-quote-replacement
   "Given a replacement string that you wish to be a literal
    replacement for a pattern match in replace or replace-first, do the
    necessary escaping of special characters in the replacement."
@@ -76,7 +76,7 @@ Design notes for clojure.string:
             (append buffer (subs s index length))
             (str buffer)))))))
 
-(defn ^String replace
+(defn ^clojerl.String replace
   "Replaces all instance of match with replacement in s.
 
    match/replacement can be:
@@ -137,7 +137,7 @@ Design notes for clojure.string:
       s
       (str (subs s 0 i) replace (subs s (+ i (count match)))))))
 
-(defn ^String replace-first
+(defn ^clojerl.String replace-first
   "Replaces the first instance of match with replacement in s.
 
    match/replacement can be:
@@ -178,7 +178,7 @@ Design notes for clojure.string:
         (replace-first-by s match replacement))
       :else (throw (str "Invalid match arg: " match)))))
 
-(defn ^String join
+(defn ^clojerl.String join
   "Returns a string of all elements in coll, as returned by (seq coll),
    separated by an optional separator."
   {:added "1.2"}
@@ -187,19 +187,19 @@ Design notes for clojure.string:
   ([separator coll]
    (clojerl.String/join.e (clj_core/to_list.e coll) separator)))
 
-(defn ^String upper-case
+(defn ^clojerl.String upper-case
   "Converts string to all upper-case."
   {:added "1.2"}
   [^CharSequence s]
   (clojerl.String/to_upper.e (when s (str s))))
 
-(defn ^String lower-case
+(defn ^clojerl.String lower-case
   "Converts string to all lower-case."
   {:added "1.2"}
   [^CharSequence s]
   (clojerl.String/to_lower.e (when s (str s))))
 
-(defn ^String capitalize
+(defn ^clojerl.String capitalize
   "Converts first character of the string to upper-case, all other
   characters to lower-case."
   {:added "1.2"}
@@ -229,7 +229,7 @@ Design notes for clojure.string:
   [s]
   (vec (split s #"\r?\n")))
 
-(defn ^String trim
+(defn ^clojerl.String trim
   "Removes whitespace from both ends of string."
   {:added "1.2"}
   [s]
@@ -247,7 +247,7 @@ Design notes for clojure.string:
               (recur (inc lindex))
               (subs s lindex rindex))))))))
 
-(defn ^String triml
+(defn ^clojerl.String triml
   "Removes whitespace from the left side of string."
   {:added "1.2"}
   [^CharSequence s]
@@ -260,7 +260,7 @@ Design notes for clojure.string:
           (recur (inc index))
           (subs s index len))))))
 
-(defn ^String trimr
+(defn ^clojerl.String trimr
   "Removes whitespace from the right side of string."
   {:added "1.2"}
   [^CharSequence s]
@@ -272,7 +272,7 @@ Design notes for clojure.string:
           (recur (dec index))
           (subs s 0 index))))))
 
-(defn ^String trim-newline
+(defn ^clojerl.String trim-newline
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
   {:added "1.2"}
@@ -307,7 +307,7 @@ Design notes for clojure.string:
   [s substr]
   (clojerl.String/starts_with.e (when s (str s)) substr))
 
-(defn ^String escape
+(defn ^clojerl.String escape
   "Return a new string, using cmap to escape each character ch
    from s as follows:
 
@@ -362,7 +362,7 @@ Design notes for clojure.string:
 (defn ends-with?
   "True if s ends with substr."
   {:added "1.8"}
-  [^CharSequence s ^String substr]
+  [^CharSequence s ^clojerl.String substr]
   (clojerl.String/ends_with.e (str s) substr))
 
 (defn includes?

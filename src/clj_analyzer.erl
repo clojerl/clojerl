@@ -117,24 +117,39 @@ analyze_forms(Env, Forms) ->
 
 -spec analyze_form(clj_env:env(), any()) -> clj_env:env().
 analyze_form(Env, Form) ->
-  IsSeq = clj_core:'seq?'(Form),
-  case clj_core:type(Form) of
-    _ when IsSeq ->
+  IsSeq    = clj_core:'seq?'(Form),
+  IsSymbol = clj_core:'symbol?'(Form),
+  IsRecord = clj_core:'record?'(Form),
+  IsType   = clj_core:'type?'(Form),
+  IsVector = clj_core:'vector?'(Form),
+  IsMap    = clj_core:'map?'(Form),
+  IsSet    = clj_core:'set?'(Form),
+  IsVar    = clj_core:'var?'(Form),
+  IsTuple  = erlang:is_tuple(Form),
+  if
+    IsSeq ->
       case clj_core:'empty?'(Form) of
         true  -> analyze_const(Env, Form);
         false -> analyze_seq(Env, Form)
       end;
-    'clojerl.Symbol' ->
+    IsSymbol ->
       analyze_symbol(Env, Form);
-    'clojerl.Vector' ->
+    IsRecord ->
+      analyze_const(Env, Form);
+    IsType ->
+      analyze_const(Env, Form);
+    IsVector ->
       analyze_vector(Env, Form);
-    'clojerl.Map' ->
+    IsMap ->
       analyze_map(Env, Form);
-    'clojerl.Set' ->
+    IsSet ->
       analyze_set(Env, Form);
-    'clojerl.erlang.Tuple' when element(1, Form) =/= ?TYPE ->
+    IsTuple andalso element(1, Form) =/= ?TYPE ->
       analyze_tuple(Env, Form);
-    _ ->
+    IsVar ->
+      %% The var's metadata should already have been analyzed
+      analyze_const(Env, Form, _CheckWrappingMeta = false);
+    true ->
       analyze_const(Env, Form)
   end.
 
@@ -144,12 +159,19 @@ analyze_form(Env, Form) ->
 
 -spec analyze_const(clj_env:env(), any()) -> clj_env:env().
 analyze_const(Env, Constant) ->
+  analyze_const(Env, Constant, true).
+
+-spec analyze_const(clj_env:env(), any(), boolean()) -> clj_env:env().
+analyze_const(Env, Constant, CheckWrappingMeta) ->
   Expr = #{ op   => constant
           , env  => ?DEBUG(Env)
           , tag  => clj_core:type(Constant)
           , form => Constant
           },
-  clj_env:push_expr(Env, Expr).
+  case CheckWrappingMeta of
+    true  -> wrapping_meta(Env, Expr);
+    false -> clj_env:push_expr(Env, Expr)
+  end.
 
 %%------------------------------------------------------------------------------
 %% Analyze seq
@@ -845,6 +867,8 @@ parse_def(Env, List) ->
   ArgLists     = clj_core:get(SymbolMeta0, arglists),
   ArgListsMap  = case ArgLists of
                    ?NIL -> #{};
+                   %% TODO: using second is a workaround to not analyzing
+                   %% the var's metadata
                    ArgLists -> #{arglists => clj_core:second(ArgLists)}
                  end,
   DocstringMap = case Docstring of
@@ -917,7 +941,9 @@ parse_def(Env, List) ->
   Var1 = var_fn_info(Var, InitExpr),
   clj_namespace:update_var(Var1),
 
-  {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, VarMeta)),
+  %% TODO: the var's meta needs to be analyzed as well
+  %% Var1Meta = clj_core:meta(Var1),
+  %% {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Var1Meta)),
 
   DefExpr = #{ op      => def
              , env     => ?DEBUG(Env)
@@ -926,12 +952,11 @@ parse_def(Env, List) ->
              , tag     => maybe_type_tag(VarSymbol)
              , var     => Var1
              , init    => InitExpr
-             , meta    => MetaExpr
              , dynamic => IsDynamic
              },
 
-  Env3 = restore_def_name(Env2, Env),
-  clj_env:push_expr(Env3, DefExpr).
+  Env2 = restore_def_name(Env1, Env),
+  clj_env:push_expr(Env2, DefExpr).
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 add_def_name(Env, NameSym) ->
@@ -1837,8 +1862,8 @@ analyze_vector(Env, Vector) ->
 
 -spec analyze_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
 analyze_map(Env, Map) ->
-  Keys = clj_core:keys(Map),
-  Vals = clj_core:vals(Map),
+  Keys = clj_core:to_list(clj_core:keys(Map)),
+  Vals = clj_core:to_list(clj_core:vals(Map)),
 
   Count = clj_core:count(Map),
   ExprEnv = clj_env:context(Env, expr),

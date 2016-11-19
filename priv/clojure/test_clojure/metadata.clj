@@ -212,16 +212,16 @@
     (testing "CLJ-850 is fixed when this case passes."
       (is (= "foo"
              (eval-in-temp-ns
-              (defn f ^String [^String s ^long i] s)
+              (defn f ^clojerl.String [^clojerl.String s ^long i] s)
               (f "foo" 1)))))
     (testing "These cases should pass, even without a fix for CLJ-850."
       (is (= "foo"
              (eval-in-temp-ns
-              (defn f ^String [^String s] s)
+              (defn f ^clojerl.String [^clojerl.String s] s)
               (f "foo"))))
       (is (= 1
              (eval-in-temp-ns
-              (defn f ^long [^String s ^long i] i)
+              (defn f ^long [^clojerl.String s ^long i] i)
               (f "foo" 1))))
       (is (= 1
              (eval-in-temp-ns

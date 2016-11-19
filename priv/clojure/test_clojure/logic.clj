@@ -39,7 +39,6 @@
       (short 0)
       (int 0)
       (long 0)
-      (bigint 0)
       (float 0)
       (double 0)
 
@@ -60,7 +59,6 @@
       (short 2)
       (int 2)
       (long 2)
-      (bigint 2)
       (float 2)
       (double 2)
 
