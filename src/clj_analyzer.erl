@@ -1118,7 +1118,7 @@ parse_deftype(Env, Form) ->
   Env1        = clj_env:add_locals_scope(Env),
   Env2        = clj_env:put_locals(Env1, FieldsExprs),
 
-  %% HACK: by emitting the tyep we make the module available, which means the
+  %% HACK: by emitting the type we make the module available, which means the
   %% type gets resolved. But we remove all protocols and methods, thus
   %% generating just a dummy erlang module for the type.
   DeftypeDummyExpr = #{ op        => deftype
@@ -1398,10 +1398,9 @@ parse_dot(Env, List) ->
 -spec maybe_type_tag('clojerl.Symbol':type()) -> ?NIL | module().
 maybe_type_tag(Symbol) ->
   Meta = clj_core:meta(Symbol),
-  Tag  = clj_core:get(Meta, tag),
-  case is_maybe_type(Tag) of
-    true  -> clj_core:keyword(Tag);
-    false -> ?NIL
+  case clj_core:get(Meta, tag) of
+    ?NIL -> ?NIL;
+    Tag  -> clj_core:keyword(Tag)
   end.
 
 -spec type_tag(map()) -> ?NIL | module().
@@ -1586,22 +1585,24 @@ parse_var(Env, List) ->
 
 -spec analyze_invoke(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 analyze_invoke(Env, Form) ->
-  Env1 = analyze_form(Env, clj_core:first(Form)),
+  FSym = clj_core:first(Form),
+  {FExpr, Env1} = clj_env:pop_expr(analyze_form(Env, FSym)),
 
-  Args = clj_core:rest(Form),
-  Env2 = analyze_forms(Env1, clj_core:to_list(Args)),
-
-  ArgCount = clj_core:count(Args),
-  {ArgsExpr, Env3} = clj_env:last_exprs(Env2, ArgCount),
-  {FExpr, Env4} = clj_env:pop_expr(Env3),
+  Args     = clj_core:to_list(clj_core:rest(Form)),
+  ArgCount = length(Args),
+  {ArgsExpr, Env2} = clj_env:last_exprs( analyze_forms(Env1, Args)
+                                       , ArgCount
+                                       ),
 
   InvokeExpr = #{ op   => invoke
-                , env  => ?DEBUG(Env4)
+                , env  => ?DEBUG(Env)
                 , form => Form
+                , tag  => maps:get(tag, FExpr, ?NIL)
                 , f    => FExpr#{arity => ArgCount}
                 , args => ArgsExpr
                 },
-  clj_env:push_expr(Env4, InvokeExpr).
+
+  clj_env:push_expr(Env2, InvokeExpr).
 
 %%------------------------------------------------------------------------------
 %% Analyze symbol
@@ -1789,14 +1790,18 @@ is_maybe_type(Symbol) ->
 %%------------------------------------------------------------------------------
 
 -spec wrapping_meta(clj_env:env(), map()) -> clj_env:env().
-wrapping_meta(Env, #{form := Form} = Expr) ->
-  case clj_reader:remove_location(clj_core:meta(Form)) of
+wrapping_meta(Env, #{form := Form, tag := Tag} = Expr) ->
+  Meta = case clj_core:'meta?'(Form) of
+           true  -> clj_reader:remove_location(clj_core:meta(Form));
+           false -> ?NIL
+         end,
+  case Meta of
     Meta when Meta =/= ?NIL andalso Meta =/= #{} ->
       {MetaExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Meta)),
-
       WithMetaExpr = #{ op   => with_meta
                       , env  => ?DEBUG(Env)
                       , form => Form
+                      , tag  => Tag
                       , meta => MetaExpr
                       , expr => Expr
                       },
