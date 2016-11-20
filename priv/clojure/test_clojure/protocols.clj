@@ -140,29 +140,16 @@
 
 (deftype ExtendsTestWidget []
   ExampleProtocol)
-(deftest extends?-test
+#_(deftest extends?-test
   (reload-example-protocols)
   (testing "returns false if a type does not implement the protocol at all"
     (is (false? (extends? other/SimpleProtocol ExtendsTestWidget))))
   (testing "returns true if a type implements the protocol directly" ;; semantics changed 4/15/2010
     (is (true? (extends? ExampleProtocol ExtendsTestWidget)))))
 
-(deftype ExtendersTestWidget [])
-#_(deftest extenders-test
-  (reload-example-protocols)
-  (testing "a fresh protocol has no extenders"
-    (is (nil? (extenders ExampleProtocol))))
-  (testing "extending with no methods doesn't count!"
-    (deftype Something [])
-    (extend ::Something ExampleProtocol)
-    (is (nil? (extenders ExampleProtocol))))
-  (testing "extending a protocol (and including an impl) adds an entry to extenders"
-    (extend ExtendersTestWidget ExampleProtocol {:foo identity})
-    (is (= [ExtendersTestWidget] (extenders ExampleProtocol)))))
-
 (deftype SatisfiesTestWidget []
   ExampleProtocol)
-(deftest satisifies?-test
+#_(deftest satisifies?-test
   (reload-example-protocols)
   (let [whatzit (SatisfiesTestWidget.)]
     (testing "returns false if a type does not implement the protocol at all"
@@ -176,7 +163,7 @@
       (is (true? (satisfies? other/SimpleProtocol whatzit))))))
 
 (deftype ReExtendingTestWidget [])
-(deftest re-extending-test
+#_(deftest re-extending-test
   (reload-example-protocols)
   (extend-type ReExtendingTestWidget
     ExampleProtocol
@@ -212,37 +199,38 @@
 (deftest degenerate-defrecord-test
   (let [empty (EmptyRecord.)]
     (is (nil? (seq empty)))
-    #_(is (not (.containsValue empty :a)))))
+    (is (not (.contains_key empty :a)))))
 
-;; (deftest defrecord-interfaces-test
-;;   (testing "java.util.Map"
-;;     (let [rec (r 1 2)]
-;;       (is (= 2 (.size rec)))
-;;       (is (= 3 (.size (assoc rec :c 3))))
-;;       (is (not (.isEmpty rec)))
-;;       (is (.isEmpty (EmptyRecord.)))
-;;       (is (.containsKey rec :a))
-;;       (is (not (.containsKey rec :c)))
-;;       (is (.containsValue rec 1))
-;;       (is (not (.containsValue rec 3)))
-;;       (is (= 1 (.get rec :a)))
-;;       (is (thrown? UnsupportedOperationException (.put rec :a 1)))
-;;       (is (thrown? UnsupportedOperationException (.remove rec :a)))
-;;       (is (thrown? UnsupportedOperationException (.putAll rec {})))
-;;       (is (thrown? UnsupportedOperationException (.clear rec)))
-;;       (is (= #{:a :b} (.keySet rec)))
-;;       (is (= #{1 2} (set (.values rec))))
-;;       (is (= #{[:a 1] [:b 2]} (.entrySet rec)))
-
-;;       ))
-;;   (testing "IPersistentCollection"
-;;     (testing ".cons"
-;;       (let [rec (r 1 2)]
-;;         (are [x] (= rec (.cons rec x))
-;;              nil {})
-;;         (is (= (r 1 3) (.cons rec {:b 3})))
-;;         (is (= (r 1 4) (.cons rec [:b 4])))
-;;         (is (= (r 1 5) (.cons rec (MapEntry. :b 5))))))))
+(deftest defrecord-protocols-test
+  (testing "clojerl.Counted"
+    (let [rec (r 1 2)]
+      (is (= 2 (.count rec)))))
+  (testing "clojerl.IColl"
+    (testing ".cons"
+      (let [rec (r 1 2)]
+        (are [x] (= rec (.cons rec x))
+             nil {})
+        (is (= (r 1 3) (.cons rec {:b 3})))
+        (is (= (r 1 4) (.cons rec [:b 4]))))))
+  (testing "clojerl.IEquiv"
+    (let [rec (r 1 2)]
+      (is (false? (.equiv rec {:a 1 :b 2})))
+      (is (.equiv {:a 1 :b 2} rec))
+      (is (.equiv rec (r 1 2)))))
+  (testing "clojerl.Associated"
+    (let [rec (r 1 2)]
+      (is (.contains_key rec :a))
+      (is (= [:a 1] (.entry_at rec :a)))
+      (is (= {:a 1 :b 2 :c 3} (.assoc rec :c 3)))))
+  (testing "clojerl.Seqable"
+    (let [rec (r 1 2)]
+      (is (= #{[:a 1] [:b 2]} (set (.seq rec))))
+      (is (= #{[:a 1] [:b 2] [:c 3]} (set (.seq (assoc rec :c 3)))))))
+  (testing "clojerl.IMap"
+    (let [rec (r 1 2)]
+      (is (= #{:a :b} (set (.keys rec))))
+      (is (= #{1 2} (set (.vals rec))))
+      (is (= {:b 2} (.without rec :a))))))
 
 (defrecord RecordWithSpecificFieldNames [this that k m o])
 (deftest defrecord-with-specific-field-names
@@ -424,7 +412,9 @@
 
 (defrecord RecordToTestLiterals [a])
 (defrecord TestNode [v l r])
-(deftype TypeToTestLiterals [a])
+(deftype TypeToTestLiterals [a]
+  clojerl.Stringable
+  (str [_] (str "#TypeToTestLiterals[" a "]")))
 (def lang-str "en")
 (deftest exercise-literals
   (testing "that ctor literals can be used in common 'places'"
@@ -492,16 +482,16 @@
           (read-string "#clojerl.String[\"\" \"\" \"\" \"\"]")))
     (is (thrown? :error (read-string "#java.util.Nachos(\"en\")")))))
 
-;; (defrecord RecordToTestPrinting [a b])
-;; (deftest defrecord-printing
-;;   (testing "that the default printer gives the proper representation"
-;;     (let [r   (RecordToTestPrinting. 1 2)]
-;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
-;;              (pr-str r)))
-;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
-;;              (binding [*print-dup* true] (pr-str r))))
-;;       (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
-;;              (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
+(defrecord RecordToTestPrinting [a b])
+(deftest defrecord-printing
+  (testing "that the default printer gives the proper representation"
+    (let [r   (RecordToTestPrinting. 1 2)]
+      (is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+             (pr-str r)))
+      #_(is (= "#clojure.test-clojure.protocols.RecordToTestPrinting[1, 2]"
+             (binding [*print-dup* true] (pr-str r))))
+      #_(is (= "#clojure.test-clojure.protocols.RecordToTestPrinting{:a 1, :b 2}"
+             (binding [*print-dup* true *verbose-defrecords* true] (pr-str r)))))))
 
 (defrecord RecordToTest__ [__a ___b])
 (defrecord TypeToTest__   [__a ___b])
@@ -531,26 +521,7 @@
     (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create.e {:a 42})))
     (is (= (RecordToTestLongHint. 42) (map->RecordToTestLongHint {:a 42})))
     (is (= (RecordToTestLongHint. 42) (->RecordToTestLongHint 42)))
-    (is (= (.-a (TypeToTestLongHint. 42)) (.-a (->TypeToTestLongHint (long 42)))))
-    #_(testing "that invalid primitive types on hinted defrecord fields fails"
-      (is (thrown?
-            ClassCastException
-            (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint{:a \"\"}")))
-      (is (thrown?
-            IllegalArgumentException
-            (read-string "#clojure.test-clojure.protocols.RecordToTestLongHint[\"\"]")))
-      (is (thrown?
-            IllegalArgumentException
-            (read-string "#clojure.test-clojure.protocols.TypeToTestLongHint[\"\"]")))
-      (is (thrown?
-            ClassCastException
-            (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a ""})))
-      (is (thrown?
-            ClassCastException
-            (map->RecordToTestLongHint {:a ""})))
-      (is (thrown?
-            ClassCastException
-            (->RecordToTestLongHint "")))))
+    (is (= (.-a (TypeToTestLongHint. 42)) (.-a (->TypeToTestLongHint (long 42))))))
   (testing "that primitive hinting requiring coercion works as expected"
     (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create.e {:a (byte 42)})))
     (is (= (RecordToTestByteHint. 42) (map->RecordToTestByteHint {:a (byte 42)})))
@@ -563,72 +534,6 @@
     (is (= (RecordToTestBoolHint. true) (map->RecordToTestBoolHint {:a true})))
     (is (= (RecordToTestBoolHint. true) (->RecordToTestBoolHint true))))
   (testing "covariant hints -- deferred"))
-
-;; (deftest reify-test
-;;   (testing "of an interface"
-;;     (let [s :foo
-;;           r (reify
-;;              java.util.List
-;;              (contains [_ o] (= s o)))]
-;;       (testing "implemented methods"
-;;         (is (true? (.contains r :foo)))
-;;         (is (false? (.contains r :bar))))
-;;       (testing "unimplemented methods"
-;;         (is (thrown? AbstractMethodError (.add r :baz))))))
-;;   (testing "of two interfaces"
-;;     (let [r (reify
-;;              java.util.List
-;;              (contains [_ o] (= :foo o))
-;;              java.util.Collection
-;;              (isEmpty [_] false))]
-;;       (is (true? (.contains r :foo)))
-;;       (is (false? (.contains r :bar)))
-;;       (is (false? (.isEmpty r)))))
-;;   (testing "you can't define a method twice"
-;;     (is (thrown? Exception
-;;          (eval '(reify
-;;                  java.util.List
-;;                  (size [_] 10)
-;;                  java.util.Collection
-;;                  (size [_] 20))))))
-;;   (testing "you can't define a method not on an interface/protocol/j.l.Object"
-;;     (is (thrown? Exception
-;;          (eval '(reify java.util.List (foo [_]))))))
-;;   (testing "of a protocol"
-;;     (let [r (reify
-;;              ExampleProtocol
-;;              (bar [this o] o)
-;;              (baz [this] 1)
-;;              (baz [this o] 2))]
-;;       (= :foo (.bar r :foo))
-;;       (= 1 (.baz r))
-;;       (= 2 (.baz r nil))))
-;;   (testing "destructuring in method def"
-;;     (let [r (reify
-;;              ExampleProtocol
-;;              (bar [this [_ _ item]] item))]
-;;       (= :c (.bar r [:a :b :c]))))
-;;   (testing "methods can recur"
-;;     (let [r (reify
-;;              java.util.List
-;;              (get [_ index]
-;;                   (if (zero? index)
-;;                     :done
-;;                     (recur (dec index)))))]
-;;       (is (= :done (.get r 0)))
-;;       (is (= :done (.get r 1)))))
-;;   (testing "disambiguating with type hints"
-;;     (testing "you must hint an overloaded method"
-;;       (is (thrown? Exception
-;;             (eval '(reify clojure.test-clojure.protocols.examples.ExampleInterface (hinted [_ o]))))))
-;;     (testing "hinting"
-;;       (let [r (reify
-;;                ExampleInterface
-;;                (hinted [_ ^int i] (inc i))
-;;                (hinted [_ ^clojerl.String s] (str s s)))]
-;;         (is (= 2 (.hinted r 1)))
-;;         (is (= "xoxo" (.hinted r "xo")))))))
-
 
 ; see CLJ-845
 (defprotocol SyntaxQuoteTestProtocol
