@@ -16,20 +16,20 @@
 
 -spec read(type()) -> binary() | eof.
 read(Reader) ->
-  'clojerl.protocol':resolve(?MODULE, read, Reader).
+  clj_protocol:resolve(?MODULE, read, Reader).
 
 -spec read(type(), integer()) -> binary() | eof.
 read(Reader, Length) ->
-  'clojerl.protocol':resolve(?MODULE, read, Reader, Length).
+  clj_protocol:resolve(?MODULE, read, Reader, Length).
 
 -spec read_line(type()) -> binary() | eof.
 read_line(Reader) ->
-  'clojerl.protocol':resolve(?MODULE, read_line, Reader).
+  clj_protocol:resolve(?MODULE, read_line, Reader).
 
 -spec skip(type(), integer()) -> integer() | eof.
 skip(Reader, N) ->
-  'clojerl.protocol':resolve(?MODULE, skip, Reader, N).
+  clj_protocol:resolve(?MODULE, skip, Reader, N).
 
 -spec unread(type(), binary()) -> type().
 unread(Reader, Ch) ->
-  'clojerl.protocol':resolve(?MODULE, unread, Reader, Ch).
+  clj_protocol:resolve(?MODULE, unread, Reader, Ch).

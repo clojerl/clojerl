@@ -11,8 +11,8 @@
 
 -spec seq(any()) -> type().
 seq(Seqable) ->
-  'clojerl.protocol':resolve(?MODULE, seq, Seqable).
+  clj_protocol:resolve(?MODULE, seq, Seqable).
 
 -spec to_list(any()) -> list().
 to_list(Seqable) ->
-  'clojerl.protocol':resolve(?MODULE, to_list, Seqable).
+  clj_protocol:resolve(?MODULE, to_list, Seqable).

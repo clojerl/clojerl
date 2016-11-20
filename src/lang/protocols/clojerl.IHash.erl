@@ -11,4 +11,4 @@
 
 -spec hash(type()) -> any().
 hash(X) ->
-  'clojerl.protocol':resolve(?MODULE, hash, X).
+  clj_protocol:resolve(?MODULE, hash, X).

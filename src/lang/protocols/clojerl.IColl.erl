@@ -12,8 +12,8 @@
 
 -spec cons(type(), any()) -> type().
 cons(Coll, Item) ->
-  'clojerl.protocol':resolve(?MODULE, cons, Coll, Item).
+  clj_protocol:resolve(?MODULE, cons, Coll, Item).
 
 -spec empty(type()) -> any().
 empty(Coll) ->
-  'clojerl.protocol':resolve(?MODULE, empty, Coll).
+  clj_protocol:resolve(?MODULE, empty, Coll).

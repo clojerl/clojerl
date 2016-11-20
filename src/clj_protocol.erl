@@ -1,4 +1,4 @@
--module('clojerl.protocol').
+-module(clj_protocol).
 
 -include("clojerl.hrl").
 

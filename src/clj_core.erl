@@ -264,7 +264,7 @@ keyword(Namespace, Name) ->
 
 -spec 'satisfies?'(atom(), atom()) -> boolean().
 'satisfies?'(Protocol, Type) ->
-  'clojerl.protocol':'satisfies?'(Protocol, Type).
+  clj_protocol:'satisfies?'(Protocol, Type).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->

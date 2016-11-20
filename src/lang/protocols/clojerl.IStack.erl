@@ -12,8 +12,8 @@
 
 -spec peek(type()) -> any().
 peek(Stack) ->
-  'clojerl.protocol':resolve(?MODULE, peek, Stack).
+  clj_protocol:resolve(?MODULE, peek, Stack).
 
 -spec pop(type()) -> any().
 pop(Stack) ->
-  'clojerl.protocol':resolve(?MODULE, pop, Stack).
+  clj_protocol:resolve(?MODULE, pop, Stack).
