@@ -357,13 +357,10 @@ ast(#{op := defprotocol} = Expr, State) ->
 %% extend_type
 %%------------------------------------------------------------------------------
 ast(#{op := extend_type} = Expr, State) ->
-  #{ op    := extend_type
-   , type  := #{type := TypeSym}
+  #{ type  := #{type := TypeSym}
    , impls := Impls
    , env   := Env
    } = Expr,
-
-  ForceRemote = maps:get(force_remote_invoke, State),
 
   EmitProtocolFun =
     fun(#{type := ProtoSym} = Proto, StateAcc) ->
@@ -392,6 +389,8 @@ ast(#{op := extend_type} = Expr, State) ->
 
         StateAcc2
     end,
+
+  ForceRemote = maps:get(force_remote_invoke, State),
 
   %% We force remote calls for all functions since the function will
   %% live in its own module, but is analyzed in the context of the
