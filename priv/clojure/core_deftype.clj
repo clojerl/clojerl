@@ -534,10 +534,18 @@
       (apply concat)))
 
 (defmacro extend-type
-  "A macro that expands into an extend call. Useful when you are
-  supplying the definitions explicitly inline, extend-type
-  automatically creates the maps required by extend.  Propagates the
+  "Extend a type to a series of protocols. Useful when you are
+  supplying the definitions explicitly inline.  Propagates the
   class as a type hint on the first argument of all fns.
+
+  type-sym may be
+
+   * default, meaning the definitions will apply for any value,
+     unless an extend-type exists for one of the more specific
+     cases below.
+   * nil, meaning the definitions will apply for the nil value.
+   * any of the types implemented in Erlang (e.g. clojerl.String).
+   * a type defined by deftype or defrecord.
 
   (extend-type MyType
     Countable
@@ -546,8 +554,8 @@
       (bar [x y] ...)
       (baz ([x] ...) ([x y & zs] ...)))"
   {:added "1.2"}
-  [t & specs]
-  `(extend-type* ~t ~@(normalize-methods specs)))
+  [type-sym & specs]
+  `(extend-type* ~type-sym ~@(normalize-methods specs)))
 
 (defn- emit-extend-protocol [p specs]
   (let [impls (parse-impls specs)]

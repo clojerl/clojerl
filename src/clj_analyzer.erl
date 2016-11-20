@@ -1269,7 +1269,14 @@ parse_extend_type(Env, List) ->
 
   Type = case Type0 of
            ?NIL -> clj_core:symbol(atom_to_binary(?NIL_TYPE, utf8));
-           _    -> Type0
+           _    ->
+             IsSymbol = clj_core:'symbol?'(Type0),
+             case clj_core:str(Type0) of
+               <<"default">> when IsSymbol ->
+                 clj_core:symbol(atom_to_binary(?DEFAULT_TYPE, utf8));
+               _  ->
+                 Type0
+             end
          end,
   { #{op := TypeOp} = TypeExpr
   , Env2

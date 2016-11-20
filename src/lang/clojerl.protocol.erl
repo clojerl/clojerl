@@ -1,5 +1,7 @@
 -module('clojerl.protocol').
 
+-include("clojerl.hrl").
+
 -export([ resolve/3
         , resolve/4
         , resolve/5
@@ -61,13 +63,29 @@ resolve_impl_cache(Protocol, Function, Type, Arity) ->
   Key = {resolve_impl, Protocol, Function, Type, Arity},
   case erlang:get(Key) of
     undefined ->
-      Value = resolve_impl(Protocol, Function, Type, Arity),
+      Value = case resolve_impl(Protocol, Function, Type, Arity) of
+                undefined ->
+                  resolve_impl(Protocol, Function, ?DEFAULT_TYPE, Arity);
+                Fun ->
+                  Fun
+              end,
+
+      clj_utils:error_when( Value =:= undefined
+                          , [ <<"No implementation of method: ">>
+                            , Function
+                            , <<" of protocol: ">>
+                            , Protocol
+                            , <<" found for type: ">>
+                            , Type
+                            ]),
+
       erlang:put(Key, {ok, Value}),
       Value;
     {ok, Value} -> Value
   end.
 
--spec resolve_impl(atom(), atom(), atom(), integer()) -> {module(), atom()}.
+-spec resolve_impl(atom(), atom(), atom(), integer()) ->
+  function() | undefined.
 resolve_impl(Protocol, Function, Type, Arity) ->
   case erlang:function_exported(Type, Function, Arity) of
     true  ->
@@ -78,13 +96,7 @@ resolve_impl(Protocol, Function, Type, Arity) ->
         {module, ImplModule} ->
           erlang:make_fun(ImplModule, Function, Arity);
         _ ->
-          clj_utils:error([ <<"No implementation of method: ">>
-                          , Function
-                          , <<" of protocol: ">>
-                          , Protocol
-                          , <<" found for type: ">>
-                          , Type
-                          ])
+          undefined
       end
   end.
 
