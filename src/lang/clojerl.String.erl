@@ -35,12 +35,14 @@
 substring(Str, Start, End) when is_binary(Str), Start =< End, Start >= 0 ->
   do_substring(Str, Start, End, 0, <<>>).
 
--spec do_substring(binary(), integer(), integer(), integer(), integer()) -> binary().
+-spec do_substring(binary(), integer(), integer(), integer(), integer()) ->
+  binary().
 do_substring(_Str, _Start, End, End, Acc) ->
   Acc;
 do_substring(<<>>, _Start, _End, _Index, Acc) ->
   Acc;
-do_substring(<<Ch/utf8, Str/binary>>, Start, End, Index, Acc) when Index >= Start ->
+do_substring(<<Ch/utf8, Str/binary>>, Start, End, Index, Acc)
+  when Index >= Start ->
   do_substring(Str, Start, End, Index + 1, <<Acc/binary, Ch/utf8>>);
 do_substring(<<_/utf8, Str/binary>>, Start, End, Index, Acc) ->
   do_substring(Str, Start, End, Index + 1, Acc).

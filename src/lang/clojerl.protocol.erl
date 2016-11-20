@@ -41,7 +41,8 @@ resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4) ->
   F    = resolve_impl_cache(Protocol, Function, Type, 5),
   F(Head, Arg1, Arg2, Arg3, Arg4).
 
--spec resolve(atom(), atom(), any(), any(), any(), any(), any(), any()) -> any().
+-spec resolve(atom(), atom(), any(), any(), any(), any(), any(), any()) ->
+  any().
 resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5) ->
   Type = clj_core:type(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 6),
