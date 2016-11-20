@@ -98,7 +98,7 @@
   "Turn on all warning flags, and test that error message prints
    correctly for all semi-reasonable bindings of *err*."
   [msg-re form]
-  `(binding [*warn-on-reflection* true]
+  `(binding [*warn-on-infer* true]
     (is (re-matches ~msg-re (with-err-string-writer (eval-in-temp-ns ~form))))
     (is (re-matches ~msg-re (with-err-print-writer (eval-in-temp-ns ~form))))))
 
@@ -106,6 +106,8 @@
   "Turn on all warning flags, and test that reflection does not occur
    (as identified by messages to *err*)."
   [form]
-  `(binding [*warn-on-reflection* true]
-     (is (nil? (re-find #"^Reflection warning" (with-err-string-writer (eval-in-temp-ns ~form)))))
-     (is (nil? (re-find #"^Reflection warning" (with-err-print-writer (eval-in-temp-ns ~form)))))))
+  `(binding [*warn-on-infer* true]
+     (is (nil? (re-find #"^Cannot infer target type"
+                        (with-err-string-writer (eval-in-temp-ns ~form)))))
+     (is (nil? (re-find #"^Cannot infer target type"
+                        (with-err-print-writer (eval-in-temp-ns ~form)))))))

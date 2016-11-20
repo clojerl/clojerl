@@ -60,7 +60,7 @@
 
 (defmacro with-bindings
   "Executes body in the context of thread-local bindings for several vars
-  that often need to be set!: *ns* *warn-on-reflection* *math-context*
+  that often need to be set!: *ns* *warn-on-infer* *math-context*
   *print-meta* *print-length* *print-level* *compile-path*
   *command-line-args* *1 *2 *3 *e"
   [& body]
@@ -69,7 +69,7 @@
              *print-length* *print-length*
              *print-level* *print-level*
              *read-eval* *read-eval*
-             *warn-on-type-resolution* *warn-on-type-resolution*
+             *warn-on-infer* *warn-on-infer*
              *data-readers* *data-readers*
              *default-data-reader-fn* *default-data-reader-fn*
              ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
