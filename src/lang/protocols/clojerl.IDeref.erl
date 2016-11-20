@@ -11,4 +11,4 @@
 
 -spec deref(type()) -> any().
 deref(Ref) ->
-  'clojerl.protocol':resolve(?MODULE, deref, Ref).
+  clj_protocol:resolve(?MODULE, deref, Ref).

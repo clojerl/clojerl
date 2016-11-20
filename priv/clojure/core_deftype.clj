@@ -423,9 +423,9 @@
   `(defn ~(with-meta name (assoc sig :protocol iname))
      ~@(map (fn [args]
               `(~args
-                (clojerl.protocol/resolve.e ~(keyword iname)
-                                            ~(keyword name)
-                                            ~@args)))
+                (clj_protocol/resolve.e ~(keyword iname)
+                                        ~(keyword name)
+                                        ~@args)))
             arglists)))
 
 (defn- emit-protocol [name opts+sigs]

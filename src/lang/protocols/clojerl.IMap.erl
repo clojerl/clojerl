@@ -13,12 +13,12 @@
 
 -spec keys(type()) -> list().
 keys(Map) ->
-  'clojerl.protocol':resolve(?MODULE, keys, Map).
+  clj_protocol:resolve(?MODULE, keys, Map).
 
 -spec vals(type()) -> list().
 vals(Map) ->
-  'clojerl.protocol':resolve(?MODULE, vals, Map).
+  clj_protocol:resolve(?MODULE, vals, Map).
 
 -spec without(type(), any()) -> type().
 without(Map, Key) ->
-  'clojerl.protocol':resolve(?MODULE, without, Map, Key).
+  clj_protocol:resolve(?MODULE, without, Map, Key).

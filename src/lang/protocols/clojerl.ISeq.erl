@@ -13,12 +13,12 @@
 
 -spec first(type()) -> any().
 first(Seq) ->
-  'clojerl.protocol':resolve(?MODULE, first, Seq).
+  clj_protocol:resolve(?MODULE, first, Seq).
 
 -spec next(type()) -> type().
 next(Seq) ->
-  'clojerl.protocol':resolve(?MODULE, next, Seq).
+  clj_protocol:resolve(?MODULE, next, Seq).
 
 -spec more(type()) -> type().
 more(Seq) ->
-  'clojerl.protocol':resolve(?MODULE, more, Seq).
+  clj_protocol:resolve(?MODULE, more, Seq).

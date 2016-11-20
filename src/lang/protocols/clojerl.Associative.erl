@@ -15,12 +15,12 @@
 
 -spec contains_key(type(), any()) -> boolean().
 contains_key(Assoc, Key) ->
-  'clojerl.protocol':resolve(?MODULE, contains_key, Assoc, Key).
+  clj_protocol:resolve(?MODULE, contains_key, Assoc, Key).
 
 -spec entry_at(type(), any()) -> boolean().
 entry_at(Assoc, Key) ->
-  'clojerl.protocol':resolve(?MODULE, entry_at, Assoc, Key).
+  clj_protocol:resolve(?MODULE, entry_at, Assoc, Key).
 
 -spec assoc(type(), any(), any()) -> boolean().
 assoc(Assoc, Key, Value) ->
-  'clojerl.protocol':resolve(?MODULE, assoc, Assoc, Key, Value).
+  clj_protocol:resolve(?MODULE, assoc, Assoc, Key, Value).

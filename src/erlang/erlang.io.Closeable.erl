@@ -10,4 +10,4 @@
 
 -spec close(type()) -> ?NIL.
 close(X) ->
-  'clojerl.protocol':resolve(?MODULE, close, X).
+  clj_protocol:resolve(?MODULE, close, X).

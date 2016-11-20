@@ -366,7 +366,7 @@ ast(#{op := extend_type} = Expr, State) ->
     fun(#{type := ProtoSym} = Proto, StateAcc) ->
         ProtoBin = clj_core:str(ProtoSym),
         TypeBin  = clj_core:str(TypeSym),
-        Module   = 'clojerl.protocol':impl_module(ProtoBin, TypeBin),
+        Module   = clj_protocol:impl_module(ProtoBin, TypeBin),
 
         clj_module:ensure_loaded(Module, file_from(Env)),
 

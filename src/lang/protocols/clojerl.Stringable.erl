@@ -10,4 +10,4 @@
 -callback str(any()) -> type().
 
 -spec str(any()) -> type().
-str(X) -> 'clojerl.protocol':resolve(?MODULE, str, X).
+str(X) -> clj_protocol:resolve(?MODULE, str, X).

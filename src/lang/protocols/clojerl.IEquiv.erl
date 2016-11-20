@@ -11,4 +11,4 @@
 
 -spec equiv(type(), type()) -> type().
 equiv(X, Y) ->
-  'clojerl.protocol':resolve(?MODULE, equiv, X, Y).
+  clj_protocol:resolve(?MODULE, equiv, X, Y).

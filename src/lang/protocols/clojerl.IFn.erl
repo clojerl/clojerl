@@ -11,4 +11,4 @@
 
 -spec apply(type(), any()) -> any().
 apply(Fn, Args) ->
-  'clojerl.protocol':resolve(?MODULE, apply, Fn, Args).
+  clj_protocol:resolve(?MODULE, apply, Fn, Args).
