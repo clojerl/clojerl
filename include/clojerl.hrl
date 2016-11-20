@@ -13,6 +13,9 @@
 -define(NIL, undefined).
 -define(NIL_TYPE, 'clojerl.Nil').
 
+%% default type for protocol
+-define(DEFAULT_TYPE, 'clojerl.Default').
+
 %% Reader constants
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).
