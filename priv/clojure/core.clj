@@ -5952,7 +5952,7 @@
   none were supplied"
   {:added "1.0"})
 
-(add-doc-and-meta *warn-on-reflection*
+(add-doc-and-meta *warn-on-infer*
   "When set to true, the compiler will emit warnings when reflection is
   needed to resolve Java method calls or field accesses.
 

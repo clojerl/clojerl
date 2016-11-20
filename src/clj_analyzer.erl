@@ -1402,18 +1402,13 @@ parse_dot(Env, List) ->
                          , module   => Module
                          , function => Function
                          },
+      WarnOnInferVar  = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                                                  , <<"*warn-on-infer*">>
+                                                  ),
 
-      WarnOnTypeResolutionVar =
-        'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
-                                  , <<"*warn-on-type-resolution*">>
-                                  ),
-
-      clj_utils:warn_when( clj_core:deref(WarnOnTypeResolutionVar)
+      clj_utils:warn_when( clj_core:deref(WarnOnInferVar)
                            andalso Module =:= ?NIL
-                         , [ <<"Performance warning: could not ">>
-                           , <<"resolve type at compile-time for ">>
-                           , List
-                           ]
+                         , [<<"Cannot infer target type for">>, List]
                          , clj_env:location(Env)
                          ),
 
