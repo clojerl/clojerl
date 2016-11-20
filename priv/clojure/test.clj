@@ -335,7 +335,7 @@
 (defn- file-and-line
   {:deprecated "1.8"}
   [^Throwable exception depth]
-  (let [stacktrace (erlang/get_stacktrace.e)]
+  (let [stacktrace (stack/get-stacktrace)]
     (if (< depth (count stacktrace))
       (let [^StackTraceElement s (nth stacktrace depth)]
         {:file (stack/filename s) :line (stack/line-num s)})
@@ -360,9 +360,10 @@
     :fail (merge (stacktrace-file-and-line (drop-while
                                              #(let [cl-name (stack/module %)]
                                                 (or (str/starts-with? cl-name "erlang")
-                                                    (str/starts-with? cl-name "clojure.test")))
-                                             (erlang/get_stacktrace.e))) m)
-    :error (merge (stacktrace-file-and-line (erlang/get_stacktrace.e)) m)
+                                                    (= cl-name "clojure.test")
+                                                    (str/starts-with? cl-name "clojure.stacktrace")))
+                                             (stack/get-stacktrace true))) m)
+    :error (merge (stacktrace-file-and-line (stack/get-stacktrace)) m)
     m)))
 
 (defmethod report :default [m]
@@ -389,9 +390,8 @@
    (println "expected:" (pr-str (:expected m)))
    (print "  actual: ")
    (let [actual (:actual m)]
-     (if (instance? :Throwable actual)
-       (stack/print-cause-trace actual *stack-trace-depth*)
-       (prn actual)))))
+     (prn actual)
+     (stack/print-stack-trace (stack/get-stacktrace) *stack-trace-depth*))))
 
 (defmethod report :summary [m]
   (with-test-out

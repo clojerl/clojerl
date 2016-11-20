@@ -26,12 +26,12 @@
 -type config() :: list().
 -type result() :: {comments, string()}.
 
--vars(#{<<"forty-two">> => { ?TYPE
-                           , 'clojerl.Var'
-                           , {<<"clojerl_Var_SUITE">>, <<"forty-two">>}
-                           , #{}
-                           }
-       }).
+-mappings(#{<<"forty-two">> => { ?TYPE
+                               , 'clojerl.Var'
+                               , {<<"clojerl_Var_SUITE">>, <<"forty-two">>}
+                               , #{}
+                               }
+           }).
 
 -spec all() -> [atom()].
 all() ->

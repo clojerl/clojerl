@@ -553,22 +553,27 @@ register_gensym(Symbol) ->
 
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
-  case clj_namespace:find_var(Symbol) of
-    ?NIL ->
-      case clj_core:namespace(Symbol) of
+  case binary:match(clj_core:str(Symbol), <<"\.">>) of
+    nomatch ->
+      case clj_namespace:find_var(Symbol) of
         ?NIL ->
-          CurrentNs = clj_namespace:current(),
-          NameSym   = clj_namespace:name(CurrentNs),
-          Namespace = clj_core:name(NameSym),
-          Name      = clj_core:name(Symbol),
-          clj_core:symbol(Namespace, Name);
-        _ ->
-          Symbol
+          case clj_core:namespace(Symbol) of
+            ?NIL ->
+              CurrentNs = clj_namespace:current(),
+              NameSym   = clj_namespace:name(CurrentNs),
+              Namespace = clj_core:name(NameSym),
+              Name      = clj_core:name(Symbol),
+              clj_core:symbol(Namespace, Name);
+            _ ->
+              Symbol
+          end;
+        Var ->
+          Namespace = clj_core:namespace(Var),
+          Name      = clj_core:name(Var),
+          clj_core:symbol(Namespace, Name)
       end;
-    Var ->
-      Namespace = clj_core:namespace(Var),
-      Name      = clj_core:name(Var),
-      clj_core:symbol(Namespace, Name)
+    _ ->
+      Symbol
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->
@@ -1178,6 +1183,81 @@ read_tagged(State) ->
                       , location(State)
                       ),
 
+  {Form, State2} = read_pop_one(State1),
+  case erlang:get(supress_read) of
+    true ->
+      push_form(tagged_literal(Symbol, Form), State2);
+    _ ->
+      case 'clojerl.String':contains(clj_core:name(Symbol), <<".">>) of
+        true  -> read_record(Symbol, Form, State2);
+        false -> read_tagged(Symbol, Form, location(State), State2)
+      end
+  end.
+
+-spec read_record('clojerl.Symbol':type(), any(), state()) -> state().
+read_record(Symbol, Form, State) ->
+  ReadEvalVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
+                                          , <<"*read-eval*">>
+                                          ),
+
+  clj_utils:error_when( not clj_core:boolean(clj_core:deref(ReadEvalVar))
+                      , <<"Record construction syntax can only be used "
+                          "when *read-eval* == true">>
+                      , location(State)
+                      ),
+
+  clj_utils:error_when( not clj_core:'vector?'(Form)
+                        andalso not clj_core:'map?'(Form)
+                      , [ <<"Unreadable constructor form starting with \"#">>
+                        , Symbol
+                        , <<"\"">>
+                        ]
+                      , location(State)
+                      ),
+
+  Type = try erlang:binary_to_existing_atom(clj_core:str(Symbol), utf8)
+         catch throw:badarg ->
+             clj_utils:error( [Symbol, <<" is not loaded or doesn't exist">>]
+                            , location(State)
+                            )
+         end,
+
+  Record =
+    case clj_core:'vector?'(Form) of
+      true  ->
+        ArgCount = clj_core:count(Form),
+        Exported = erlang:function_exported(Type, ?CONSTRUCTOR, ArgCount),
+
+        clj_utils:error_when( not Exported
+                          , [ <<"Unexpected number of constructor ">>
+                            , <<"arguments to ">>, Symbol
+                            , <<": got ">>, ArgCount
+                            ]
+                            , location(State)
+                            ),
+
+        erlang:apply(Type, ?CONSTRUCTOR, clj_core:to_list(Form));
+      false ->
+        Keys        = clj_core:to_list(clj_core:keys(Form)),
+        NotKwFun    = fun(X) -> not clj_core:'keyword?'(X) end,
+        NonKeywords = lists:filter(NotKwFun, Keys),
+
+        clj_utils:error_when( NonKeywords =/= []
+                            , [ <<"Unreadable defrecord form: key must ">>
+                              , <<"be of type clojerl.Keyword, got ">>
+                              , clj_core:first(NonKeywords)
+                              ]
+                            , location(State)
+                            ),
+
+        erlang:apply(Type, create, [Form])
+      end,
+
+  push_form(Record, State).
+
+-spec read_tagged('clojerl.Symbol':type(), any(), any(), state()) ->
+  state().
+read_tagged(Symbol, Form, Location, State) ->
   DataReadersVar        = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                                                     , <<"*data-readers*">>
                                                     ),
@@ -1206,24 +1286,16 @@ read_tagged(State) ->
                            false -> {true, clj_core:deref(DefaultReaderFunVar)}
                          end,
 
-  {Form, State2} = read_pop_one(State1),
-  case erlang:get(supress_read) of
-    true ->
-      push_form(tagged_literal(Symbol, Form), State2);
-    _ ->
-      clj_utils:error_when( Reader2 =:= ?NIL
-                          , [<<"No reader function for tag ">>, Symbol]
-                          , location(State)
-                          ),
+  clj_utils:error_when( Reader2 =:= ?NIL
+                      , [<<"No reader function for tag ">>, Symbol]
+                      , Location
+                      ),
 
-      ReadForm = case IsDefault of
-                   true ->
-                     clj_core:apply(Reader2, [Symbol, Form]);
-                   false ->
-                     clj_core:apply(Reader2, [Form])
-                 end,
-      push_form(ReadForm, State2)
-    end.
+  ReadForm = case IsDefault of
+               true  -> clj_core:apply(Reader2, [Symbol, Form]);
+               false -> clj_core:apply(Reader2, [Form])
+             end,
+  push_form(ReadForm, State).
 
 -spec tagged_literal(any(), any()) -> 'clojerl.reader.Taggedliteral':type().
 tagged_literal(Tag, Form) ->

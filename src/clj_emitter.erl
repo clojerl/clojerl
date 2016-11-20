@@ -101,7 +101,6 @@ ast(#{op := do} = Expr, State) ->
 ast(#{op := def} = Expr, State) ->
   #{ var  := Var
    , init := InitExpr
-   , meta := _MetaExpr
    , env  := Env
    } = Expr,
   Module  = 'clojerl.Var':module(Var),
@@ -130,7 +129,7 @@ ast(#{op := def} = Expr, State) ->
 
   ValFunAst = function_form(ValName, VarAnno, [], ValAst),
 
-  clj_module:add_vars(Module, [Var]),
+  clj_module:add_mappings(Module, [Var]),
   clj_module:add_functions(Module, [ValFunAst]),
   clj_module:add_exports(Module, [{ValName, 0}]),
 
@@ -142,6 +141,15 @@ ast(#{op := import} = Expr, State) ->
   #{ typename := Typename
    , env      := Env
    } = Expr,
+
+  Parts   = binary:split(Typename, <<".">>, [global]),
+  SymName = lists:last(Parts),
+  NsName  = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
+  Module  = binary_to_atom(NsName, utf8),
+
+  clj_module:ensure_loaded(Module, file_from(Env)),
+  %% Add the mapping from type name symbol to fully qualified symbol
+  clj_module:add_mappings(Module, [{SymName, clj_core:symbol(Typename)}]),
 
   TypenameAst = cerl:abstract(Typename),
   Anno        = anno_from(Env),
@@ -164,7 +172,7 @@ ast(#{op := type} = Expr, State) ->
 %% new
 %%------------------------------------------------------------------------------
 ast(#{op := new} = Expr, State) ->
-  #{ type := #{op := type, type := TypeSym}
+  #{ type := TypeExpr
    , args := ArgsExprs
    , env  := Env
    } = Expr,
@@ -173,9 +181,11 @@ ast(#{op := new} = Expr, State) ->
                               , length(ArgsExprs)
                               ),
 
-  TypeModule = sym_to_kw(TypeSym),
+  {TypeAst, State2}  = pop_ast(ast(TypeExpr, State1)),
+  TypeModule         = cerl:concrete(TypeAst),
+
   Ast = call_mfa(TypeModule, ?CONSTRUCTOR, ArgsAsts, anno_from(Env)),
-  push_ast(Ast, State1);
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% deftype
 %%------------------------------------------------------------------------------
@@ -193,11 +203,11 @@ ast(#{op := deftype} = Expr, State0) ->
   ok     = clj_module:ensure_loaded(Module, file_from(Env)),
 
   %% Attributes
-  Attributes     = [ { cerl:ann_c_atom(Anno, behavior)
-                     , cerl:ann_abstract(Anno, [sym_to_kw(ProtocolName)])
-                     }
-                     || #{type := ProtocolName} <- ProtocolsExprs
-                   ],
+  Attributes = [ { cerl:ann_c_atom(Anno, behavior)
+                 , cerl:ann_abstract(Anno, [sym_to_kw(ProtocolName)])
+                 }
+                 || #{type := ProtocolName} <- ProtocolsExprs
+               ],
 
   %% Functions
   {AllFieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
@@ -209,7 +219,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   %% Expand the first argument to pattern match on all fields so that they are
   %% available in the functions scope.
-  TypeTupleAst = type_tuple(Module, AllFieldsAsts, [], match),
+  TypeTupleAst = type_tuple(Module, Anno, AllFieldsAsts, [], match),
   MethodsAsts1 = lists:map( fun(F) ->
                                 expand_first_argument(F, TypeTupleAst)
                             end
@@ -218,8 +228,8 @@ ast(#{op := deftype} = Expr, State0) ->
 
   %% Predicate function to check if a field is one of the hidden record fields.
   IsRecordFld = fun(Field) ->
-                    FieldName = cerl:var_name(Field),
-                    not (FieldName =:= '__meta' orelse FieldName =:= '__extmap')
+                    FieldName = atom_to_binary(cerl:var_name(Field), utf8),
+                    not lists:member(FieldName, hidden_fields())
                   end,
   {FieldsAsts, HiddenFieldsAsts} = lists:partition(IsRecordFld, AllFieldsAsts),
 
@@ -234,7 +244,7 @@ ast(#{op := deftype} = Expr, State0) ->
                                   , AllFieldsAsts
                                   , HiddenFieldsAsts
                                   ),
-  %% When there are hidden fields we assume  it is a record, so we also want
+  %% When there are hidden fields we assume it is a record, so we also want
   %% to create:
   %%   - a constructor function that includes the hidden fields.
   %%   - a create/1 function that takes a map.
@@ -247,6 +257,9 @@ ast(#{op := deftype} = Expr, State0) ->
                                          , AllFieldsAsts
                                          , HiddenFieldsAsts
                                          )
+                      , get_basis_function( Anno
+                                          , FieldsExprs
+                                          )
                       ]
               end,
 
@@ -258,6 +271,7 @@ ast(#{op := deftype} = Expr, State0) ->
                      _  -> [ CtorExport
                            , {?CONSTRUCTOR, length(AllFieldsAsts)}
                            , {create, 1}
+                           , {get_basis, 0}
                            ]
                    end,
   AccessorsExports = lists:map( fun(FieldAst) ->
@@ -290,9 +304,10 @@ ast(#{op := method} = Expr, State0) ->
    } = Expr,
 
   {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
-  Args = cerl:clause_pats(ClauseAst),
-  Body = cerl:clause_body(ClauseAst),
-  FunAst = function_form(sym_to_kw(Name), anno_from(Env), Args, Body),
+  Args    = cerl:clause_pats(ClauseAst),
+  Body    = cerl:clause_body(ClauseAst),
+  NameSym = clj_core:name(Name),
+  FunAst  = function_form(sym_to_kw(NameSym), anno_from(Env), Args, Body),
 
   push_ast(FunAst, State1);
 %%------------------------------------------------------------------------------
@@ -332,19 +347,20 @@ ast(#{op := defprotocol} = Expr, State) ->
   Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
   clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
 
+  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  ok     = clj_module:remove(Module),
+
   Ast = cerl:ann_abstract(Anno, NameSym),
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
 %% extend_type
 %%------------------------------------------------------------------------------
 ast(#{op := extend_type} = Expr, State) ->
-  #{ op    := extend_type
-   , type  := #{type := TypeSym}
+  #{ type  := #{type := TypeSym}
    , impls := Impls
    , env   := Env
    } = Expr,
-
-  ForceRemote = maps:get(force_remote_invoke, State),
 
   EmitProtocolFun =
     fun(#{type := ProtoSym} = Proto, StateAcc) ->
@@ -363,6 +379,7 @@ ast(#{op := extend_type} = Expr, State) ->
         %% Exports
         Exports = lists:map(fun function_signature/1, FunctionsAsts),
 
+        clj_module:remove_all_functions(Module),
         clj_module:add_exports(Module, Exports),
         clj_module:add_functions(Module, FunctionsAsts),
 
@@ -372,6 +389,8 @@ ast(#{op := extend_type} = Expr, State) ->
 
         StateAcc2
     end,
+
+  ForceRemote = maps:get(force_remote_invoke, State),
 
   %% We force remote calls for all functions since the function will
   %% live in its own module, but is analyzed in the context of the
@@ -441,6 +460,7 @@ ast(#{op := invoke} = Expr, State) ->
                           ),
 
   case FExpr of
+    %% Var
     #{op := var, var := Var, form := Symbol} ->
       VarMeta = clj_core:meta(Var),
       Module  = 'clojerl.Var':module(Var),
@@ -471,15 +491,48 @@ ast(#{op := invoke} = Expr, State) ->
         end,
 
       push_ast(Ast, State1);
+    %% Erlang Function
     #{ op       := erl_fun
      , module   := Module
      , function := Function
-     , env      := Env
+     , env      := EnvErlFun
      } ->
+      AnnoErlFun = anno_from(EnvErlFun),
+      Ast = call_mfa(Module, Function, Args, AnnoErlFun),
 
-      Anno = anno_from(Env),
-      Ast  = call_mfa(Module, Function, Args, Anno),
       push_ast(Ast, State);
+    %% Resolve Target Type
+    #{ op       := resolve_type
+     , module   := Module
+     , function := Function
+     } ->
+      ArgCount   = length(Args),
+      TargetAst  = erlang:hd(Args),
+      case Module of
+        ?NIL ->
+          FVarAst    = new_c_var(Anno),
+          ModuleAst  = call_mfa(clj_core, type, [TargetAst], Anno),
+          ResolveAst = call_mfa( erlang
+                               , make_fun
+                               , [ ModuleAst
+                                 , cerl:ann_c_atom(Anno, Function)
+                                 , cerl:ann_abstract(Anno, ArgCount)
+                                 ]
+                               , Anno
+                               ),
+
+          Ast = cerl:ann_c_let( Anno
+                              , [FVarAst]
+                              , ResolveAst
+                              , cerl:ann_c_apply(Anno, FVarAst, Args)
+                              ),
+
+          push_ast(Ast, State);
+        Module ->
+          Ast = call_mfa(Module, Function, Args, Anno),
+          push_ast(Ast, State)
+      end;
+    %% Apply Fn
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),
@@ -888,6 +941,12 @@ do_list_ast([], Tail) ->
 do_list_ast([H | Hs], Tail) ->
   cerl:c_cons(H, do_list_ast(Hs, Tail)).
 
+%% ----- deftype -------
+
+-spec hidden_fields() -> [binary()].
+hidden_fields() ->
+  [<<"__extmap">>, <<"__meta">>].
+
 %% @doc Replaces the first argument of a function with a pattern match.
 %%
 %% This function is used for deftype methods so that the fields are available
@@ -914,7 +973,12 @@ expand_first_argument( {FNameAst, FunAst}
 -spec constructor_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
-  TupleAst    = type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, create),
+  TupleAst    = type_tuple( Typename
+                          , Anno
+                          , AllFieldsAsts
+                          , HiddenFieldsAsts
+                          , create
+                          ),
   function_form(?CONSTRUCTOR, Anno, FieldsAsts, TupleAst).
 
 %% @doc Builds an accessor function for the specified type and field.
@@ -924,7 +988,7 @@ constructor_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
 accessor_function(Typename, FieldAst) ->
   Anno         = cerl:get_ann(FieldAst),
   FieldName    = cerl:var_name(FieldAst),
-  TupleAst     = type_tuple(Typename, [FieldAst], [], match),
+  TupleAst     = type_tuple(Typename, Anno, [FieldAst], [], match),
   AccessorName = field_fun_name(FieldName),
   ClauseAst    = cerl:ann_c_clause(Anno, [TupleAst], FieldAst),
   {Vars, CaseAst} = case_from_clauses(Anno, [ClauseAst]),
@@ -932,13 +996,11 @@ accessor_function(Typename, FieldAst) ->
 
 -spec creation_function(atom(), erl_anno:anno(), [ast()], [ast()]) -> ast().
 creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
-  MapVarAst    = new_c_var(Anno),
-  GetAstFun    = fun(FName) ->
-                     ArgsAst = [ MapVarAst
-                               , cerl:ann_c_atom(Anno, FName)
-                               ],
-                     call_mfa(clj_core, get, ArgsAst, Anno)
-                 end,
+  MapVarAst     = new_c_var(Anno),
+  GetAstFun     = fun(FName) ->
+                      ArgsAst = [MapVarAst, cerl:ann_c_atom(Anno, FName)],
+                      call_mfa(clj_core, get, ArgsAst, Anno)
+                  end,
 
   DissocFoldFun = fun(FieldAst, MapAst) ->
                       FName = cerl:var_name(FieldAst),
@@ -956,6 +1018,7 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
   MergeCallAst  = call_mfa(clj_core, merge, [ArgsListAst], Anno),
 
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
+  NilOrExtMapAst= call_mfa(clj_core, seq_or_else, [ExtMapAst], Anno),
 
   AssocAtom     = cerl:c_atom(assoc),
   NilAtom       = cerl:c_atom(?NIL),
@@ -963,7 +1026,7 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
                       FieldName = cerl:var_name(FieldAst),
                       Value = case lists:member(FieldAst, HiddenFieldsAsts) of
                                 true when FieldName =:= '__extmap' ->
-                                  ExtMapAst;
+                                  NilOrExtMapAst;
                                 true ->
                                   NilAtom;
                                 false ->
@@ -982,15 +1045,35 @@ creation_function(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts) ->
 
   function_form(create, Anno, [MapVarAst], TupleAst).
 
+-spec get_basis_function([any()], [map()]) -> ast().
+get_basis_function(Anno, FieldsExprs) ->
+  FilterMapFun   = fun(#{name := NameSym}) ->
+                       NameBin = clj_core:name(NameSym),
+                       case lists:member(NameBin, hidden_fields()) of
+                         true  -> false;
+                         false -> {true, cerl:ann_abstract(Anno, NameSym)}
+                       end
+                   end,
+  FieldNamesAsts = lists:filtermap(FilterMapFun, FieldsExprs),
+  ListAst        = list_ast(FieldNamesAsts),
+  VectorAst      = call_mfa('clojerl.Vector', ?CONSTRUCTOR, [ListAst], Anno),
+
+  function_form(get_basis, Anno, [], VectorAst).
+
 -spec field_fun_name(atom()) -> atom().
 field_fun_name(FieldName) when is_atom(FieldName) ->
   list_to_atom("-" ++ atom_to_list(FieldName)).
 
 %% @doc Builds a tuple abstract form tagged with atom ?TYPE which is used
 %%      to build Clojerl data types.
--spec type_tuple(atom(), [cerl:cerl()], [cerl:cerl()], create | match) ->
+-spec type_tuple( atom()
+                , [cerl:cerl()]
+                , [cerl:cerl()]
+                , [cerl:cerl()]
+                , create | match
+                ) ->
   cerl:cerl().
-type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
+type_tuple(Typename, Anno, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
   {MapFieldType, InfoAst} = case TupleType of
                               create -> {assoc, cerl:c_atom(?NIL)};
                               match  -> {exact, new_c_var([])}
@@ -1005,7 +1088,7 @@ type_tuple(Typename, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
                                 _ ->
                                   FieldAst
                               end,
-                      cerl:ann_c_map_pair( 0
+                      cerl:ann_c_map_pair( Anno
                                          , cerl:c_atom(MapFieldType)
                                          , cerl:c_atom(FieldName)
                                          , Value
@@ -1026,6 +1109,8 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
                , InfoAst
                ]).
 
+%% ----- Functions -------
+
 -spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) -> cerl:cerl().
 function_form(Name, Anno, Args, Body) when is_atom(Name) ->
   EvalName = cerl:c_fname(Name, length(Args)),
@@ -1035,6 +1120,8 @@ function_form(Name, Anno, Args, Body) when is_atom(Name) ->
 -spec function_signature(ast()) -> {atom(), arity()}.
 function_signature({FName, _}) ->
   {cerl:fname_id(FName), cerl:fname_arity(FName)}.
+
+%% ----- Methods -------
 
 -spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
 method_to_function_clause(MethodExpr, State) ->
@@ -1142,6 +1229,8 @@ case_from_clauses(Anno, [ClauseAst | _] = ClausesAst) ->
   CaseAst = cerl:ann_c_case(Anno, cerl:c_values(Vars), ClausesAst),
   {Vars, CaseAst}.
 
+%% ----- letrec -------
+
 -spec letrec_defs([ast()], [ast()], state()) ->
   {[{cerl:cerl(), cerl:cerl()}], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
@@ -1182,7 +1271,7 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
 
   {lists:zip(FNamesAsts, FnsAsts), State2}.
 
-%% Push & pop asts
+%% ----- Push & pop asts -------
 
 -spec push_ast(ast(), state()) -> state().
 push_ast(Ast, State = #{asts := Asts}) ->
@@ -1197,7 +1286,7 @@ pop_ast(State = #{asts := Asts}, N) ->
   {ReturnAsts, RestAsts} = lists:split(N, Asts),
   {lists:reverse(ReturnAsts), State#{asts => RestAsts}}.
 
-%% Lexical renames
+%% ----- Lexical renames -------
 
 -spec add_lexical_renames_scope(state()) -> state().
 add_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
@@ -1260,6 +1349,8 @@ do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= ?NIL ->
 do_shadow_depth(_, Depth) ->
   Depth.
 
+%% ----- Vars -------
+
 -spec var_val_function(ast(), ast(), erl_anno:anno()) -> ast().
 var_val_function(Val, VarAst, Anno) ->
   TestAst            = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
@@ -1272,6 +1363,8 @@ var_val_function(Val, VarAst, Anno) ->
   ValueClauseAst = cerl:ann_c_clause(Anno, [TupleAst], XVar),
 
   cerl:ann_c_case(Anno, TestAst, [NilClauseAst, ValueClauseAst]).
+
+%% ----- Annotations -------
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->
@@ -1287,8 +1380,11 @@ anno_from(Env) ->
       ]
   end.
 
+%% ----- Misc -------
+
 -spec sym_to_kw('clojerl.Symbol':type()) -> atom().
-sym_to_kw(Symbol) -> binary_to_atom(clj_core:str(Symbol), utf8).
+sym_to_kw(Symbol) ->
+  binary_to_atom(clj_core:str(Symbol), utf8).
 
 -spec default_compiler_options() -> clj_compiler:opts().
 default_compiler_options() ->

@@ -1,4 +1,4 @@
-(ns clojure.test-clojure.protocols.examples)
+(ns examples.protocols)
 
 (defprotocol ExampleProtocol
   "example protocol used by clojure tests"

@@ -17,11 +17,13 @@
         , update_var/2
         , find_var/1
         , find_var/2
+        , find_mapping/2
         , get_mappings/1
         , get_aliases/1
 
         , refer/3
         , import_type/1
+        , import_type/2
         , unmap/2
         , add_alias/3
         , remove_alias/2
@@ -61,9 +63,9 @@ current(#namespace{} = Ns) ->
 -spec all() -> namespace().
 all() -> ets:tab2list(?MODULE).
 
-%% @doc Tries to get the vars from the module associated to the
+%% @doc Tries to get the mappings from the module associated to the
 %%      namespace. If the module is not found or if it doesn't
-%%      have a 'vars' attribute, then nil is returned.
+%%      have a 'mappings' attribute, then nil is returned.
 -spec find('clojerl.Symbol':type()) -> namespace() | ?NIL.
 find(Name) ->
   case get(?MODULE, clj_core:str(Name)) of
@@ -78,21 +80,34 @@ find_var(Symbol) ->
 
 -spec find_var(namespace(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | ?NIL.
-find_var(DefaultNs, Symbol) ->
-  Ns = case clj_core:namespace(Symbol) of
-         ?NIL -> DefaultNs;
-         NsStr     ->
-           NsSym = clj_core:symbol(NsStr),
-           case find(NsSym) of
-             ?NIL -> alias(current(), NsSym);
-             NsTemp    -> NsTemp
-           end
-       end,
-  case Ns of
+find_var(Ns, Symbol) ->
+  Var = find_mapping(Ns, Symbol),
+  case clj_core:'var?'(Var) of
+    true  -> Var;
+    false -> ?NIL
+  end.
+
+-spec find_mapping(namespace(), 'clojerl.Symbol':type()) ->
+  'clojerl.Var':type() | 'clojerl.Symbol':type() | ?NIL.
+find_mapping(DefaultNs, Symbol) ->
+  case resolve_ns(DefaultNs, Symbol) of
     ?NIL -> ?NIL;
     Ns ->
       NameSym = clj_core:symbol(clj_core:name(Symbol)),
       mapping(Ns, NameSym)
+  end.
+
+-spec resolve_ns(namespace(), 'clojerl.Symbol':type()) ->
+  namespace() | ?NIL.
+resolve_ns(DefaultNs, Symbol) ->
+  case clj_core:namespace(Symbol) of
+    ?NIL  -> DefaultNs;
+    NsStr ->
+      NsSym = clj_core:symbol(NsStr),
+      case find(NsSym) of
+        ?NIL -> alias(DefaultNs, NsSym);
+        Ns   -> Ns
+      end
   end.
 
 -spec find_or_create('clojerl.Symbol':type()) -> namespace().
@@ -152,16 +167,33 @@ refer(Ns, Sym, Var) ->
 
 -spec import_type(binary()) -> namespace().
 import_type(TypeName) ->
+  import_type(TypeName, true).
+
+-spec import_type(binary(), boolean()) -> namespace().
+import_type(TypeName, CheckLoaded) ->
   Type = binary_to_atom(TypeName, utf8),
-  clj_utils:error_when( {module, Type} =/= code:ensure_loaded(Type)
+  clj_utils:error_when( CheckLoaded
+                        andalso {module, Type} =/= code:ensure_loaded(Type)
                       , [ <<"Type '">>, Type, <<"' could not be loaded. ">>]
                       ),
 
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
   Sym     = clj_core:symbol(SymName),
   TypeSym = clj_core:symbol(TypeName),
+  Ns      = current(),
+  Exists  = mapping(Ns, Sym),
 
-  gen_server:call(?MODULE, {intern, current(), Sym, TypeSym}).
+  clj_utils:error_when( Exists =/= ?NIL
+                        andalso not clj_core:equiv(Exists, TypeSym)
+                      , [ Sym
+                        , <<" already refers to: ">>
+                        , Exists
+                        , <<" in namespace: ">>
+                        , name(Ns)
+                        ]
+                      ),
+
+  gen_server:call(?MODULE, {intern, Ns, Sym, TypeSym}).
 
 -spec unmap(namespace(), 'clojerl.Symbol':type()) -> namespace().
 unmap(Ns, Sym) ->
@@ -309,23 +341,23 @@ load(Name) ->
   NameStr = clj_core:name(Name),
   Module  = binary_to_atom(NameStr, utf8),
 
-  Vars = case code:ensure_loaded(Module) of
-           {module, _} ->
-             Attrs = Module:module_info(attributes),
-             case lists:keyfind(vars, 1, Attrs) of
-               {vars, [VarsMap]} -> maps:values(VarsMap);
-               false             -> ?NIL
-             end;
-           {error, _} -> ?NIL
-         end,
+  Mappings = case code:ensure_loaded(Module) of
+               {module, _} ->
+                 Attrs = Module:module_info(attributes),
+                 case lists:keyfind(mappings, 1, Attrs) of
+                   {mappings, [Map]} -> Map;
+                   false             -> ?NIL
+                 end;
+               {error, _} -> ?NIL
+             end,
 
-  case Vars of
+  case Mappings of
     ?NIL -> ?NIL;
     _ ->
-      UpdateVarFun = fun(Var, Ns = #namespace{mappings = Mappings}) ->
-                         save(Mappings, {clj_core:name(Var), Var}),
-                         Ns
-                     end,
-
-      lists:foldl(UpdateVarFun, new(Name), Vars)
+      Ns = new(Name),
+      SaveFun = fun(K, V) ->
+                    save(Ns#namespace.mappings, {K, V})
+                end,
+      maps:map(SaveFun, Mappings),
+      Ns
   end.

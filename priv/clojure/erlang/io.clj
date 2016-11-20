@@ -19,8 +19,8 @@
 
 (defprotocol ^{:added "1.2"} Coercions
   "Coerce between various 'resource-namish' things."
-  (^{:tag java.io.File, :added "1.2"} as-file [x] "Coerce argument to a file.")
-  (^{:tag java.net.URL, :added "1.2"} as-url [x] "Coerce argument to a URL."))
+  (^{:tag erlang.io.File, :added "1.2"} as-file [x] "Coerce argument to a file.")
+  (^{:tag clojerl.String, :added "1.2"} as-url [x] "Coerce argument to a URL."))
 
 (defn- url-encode [uri]
   (http_uri/encode.e (erlang/binary_to_list.e uri)))
@@ -68,7 +68,7 @@
   (^{:added "1.2"} make-reader [x opts] "Creates a BufferedReader. See also IOFactory docs.")
   (^{:added "1.2"} make-writer [x opts] "Creates a BufferedWriter. See also IOFactory docs."))
 
-(defn ^Reader reader
+(defn ^erlang.io.IReader reader
   "Attempts to coerce its argument into an open java.io.Reader.
    Default implementations always return a java.io.BufferedReader.
 
@@ -86,7 +86,7 @@
   [x & opts]
   (make-reader x (when opts (apply hash-map opts))))
 
-(defn ^Writer writer
+(defn ^erlang.io.IWriter writer
   "Attempts to coerce its argument into an open java.io.Writer.
    Default implementations always return a java.io.BufferedWriter.
 
@@ -103,10 +103,10 @@
   [x & opts]
   (make-writer x (when opts (apply hash-map opts))))
 
-(defn- ^Boolean append? [opts]
+(defn- ^clojerl.Boolean append? [opts]
   (boolean (:append opts)))
 
-(defn- ^String encoding [opts]
+(defn- ^clojerl.String encoding [opts]
   (or (:encoding opts) "UTF-8"))
 
 (defn- buffer-size [opts]
@@ -182,7 +182,7 @@
   [input output & opts]
   (do-copy input output (when opts (apply hash-map opts))))
 
-(defn ^String as-relative-path
+(defn ^clojerl.String as-relative-path
   "Take an as-file-able thing and return a string if it is
    a relative path, else IllegalArgumentException."
   {:added "1.2"}

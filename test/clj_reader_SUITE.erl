@@ -527,6 +527,13 @@ syntax_quote(ReadFun) ->
                        , ListHelloWorldCheck
                        ),
 
+  ct:comment("Syntax quote a symbol with dots"),
+  HelloWorldWithDot = ReadFun(<<"`hello.world">>),
+  HelloWorldWithDotCheck = ReadFun(<<"(quote hello.world)">>),
+  true = clj_core:equiv( clj_core:second(HelloWorldWithDot)
+                       , HelloWorldWithDotCheck
+                       ),
+
   {comments, ""}.
 
 unquote(Config) when is_list(Config) ->

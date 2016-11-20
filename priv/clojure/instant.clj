@@ -30,10 +30,10 @@
 ;;; ------------------------------------------------------------------------
 ;;; parser implementation
 
-(defn- parse-int [^String s]
+(defn- parse-int [^clojerl.String s]
   (erlang/binary_to_integer.e s))
 
-(defn- zero-fill-right [^String s width]
+(defn- zero-fill-right [^clojerl.String s width]
   (cond (= width (count s)) s
         (< width (count s)) (subs s 0 width)
         :else (loop [b (new erlang.io.StringWriter s)]

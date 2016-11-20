@@ -41,7 +41,8 @@ resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4) ->
   F    = resolve_impl_cache(Protocol, Function, Type, 5),
   F(Head, Arg1, Arg2, Arg3, Arg4).
 
--spec resolve(atom(), atom(), any(), any(), any(), any(), any(), any()) -> any().
+-spec resolve(atom(), atom(), any(), any(), any(), any(), any(), any()) ->
+  any().
 resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5) ->
   Type = clj_core:type(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 6),
@@ -77,9 +78,12 @@ resolve_impl(Protocol, Function, Type, Arity) ->
         {module, ImplModule} ->
           erlang:make_fun(ImplModule, Function, Arity);
         _ ->
-          clj_utils:error([ Type, <<" doesn't implement function ">>
-                          , Function, <<" of arity ">>, Arity
-                          , <<" in protocol ">>, Protocol
+          clj_utils:error([ <<"No implementation of method: ">>
+                          , Function
+                          , <<" of protocol: ">>
+                          , Protocol
+                          , <<" found for type: ">>
+                          , Type
                           ])
       end
   end.

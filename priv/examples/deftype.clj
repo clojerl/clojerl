@@ -1,4 +1,5 @@
-(ns examples.deftype)
+(ns examples.deftype
+  (:require [examples.protocols :as other]))
 
 (deftype SomeType [value1 value2]
   clojerl.IHash
@@ -43,3 +44,9 @@
 
 (prn (foo (new SomeRecord 1 2)))
 (prn (bar (new SomeRecord 1 2)))
+
+other/ExampleProtocol
+
+(prn #examples.deftype.SomeRecord{:x 1 :y 2})
+(prn #examples.deftype.SomeRecord[1 2])
+(prn (SomeRecord/create.e {:x 1 :y 2}))

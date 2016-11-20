@@ -56,7 +56,8 @@ compile_file(_Config) ->
   check_var_value(<<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile a non-existen file"),
-  NotExistsPath = clj_test_utils:relative_path(<<"priv/examples/abcdef_42.clj">>),
+  NotExistsPath =
+    clj_test_utils:relative_path(<<"priv/examples/abcdef_42.clj">>),
   ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
        catch _:_ -> ok end,
 

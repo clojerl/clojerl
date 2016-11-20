@@ -1,4 +1,5 @@
 :name "clojerl"
+:start-command "erl -sname clojerl-edts -pa priv -pa ebin -s clojerl"
 :node-name "clojerl-edts"
 :node-sname "clojerl-edts"
 :lib-dirs '("src" "test")

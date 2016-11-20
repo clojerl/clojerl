@@ -80,7 +80,7 @@
   "Evaluate with err pointing to a temporary PrintWriter, and
    return err contents as a string."
   [& body]
-  `(let [s# (new ~'erlang.io.StringWriter)]
+  `(let [s# (new erlang.io.StringWriter)]
      (binding [*err* s#]
        ~@body
        (str s#))))
@@ -89,7 +89,7 @@
   "Evaluate with err pointing to a temporary StringWriter, and
    return err contents as a string."
   [& body]
-  `(let [s# (new ~'erlang.io.StringWriter)]
+  `(let [s# (new erlang.io.StringWriter)]
      (binding [*err* s#]
        ~@body
        (str s#))))

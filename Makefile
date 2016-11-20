@@ -27,6 +27,7 @@ generate-spec:
 coverage-results:
 	@erl -noshell -pa ebin -eval 'cover_report:report(), halt(0).' -env COVER_SPEC '${COVER_SPEC}'
 
+tests-shell: SHELL_OPTS = -name ${PROJECT}-test-shell@`hostname` -setcookie clojerl -s ${PROJECT}
 tests-shell: test-build
 	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}
 

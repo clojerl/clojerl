@@ -29,8 +29,11 @@ run(_Config) ->
   PrivPath = clj_test_utils:relative_path(<<"priv/">>),
   true     = code:add_path(binary_to_list(PrivPath)),
 
+
   compile(<<"priv/clojure/core.clj">>),
   compile(<<"priv/clojure/main.clj">>),
+  'clojure.core':'in-ns'(clj_core:gensym(<<"temp-ns">>)),
+  'clojure.core':'use'([clj_core:symbol(<<"clojure.core">>)]),
   compile(<<"priv/examples/run_tests.clj">>),
 
   TestsPath = clj_test_utils:relative_path(<<"priv/clojure/test_clojure/">>),
@@ -43,4 +46,5 @@ run(_Config) ->
 %%------------------------------------------------------------------------------
 
 compile(Path) ->
-  clj_compiler:compile_file(clj_test_utils:relative_path(Path)).
+  RelativePath = clj_test_utils:relative_path(Path),
+  clj_compiler:compile_file(RelativePath, #{time => true}).

@@ -31,6 +31,7 @@
 -type multifn() :: #multifn{}.
 
 -define(METHODS, ?MODULE).
+-define(METHODS_HEIR, 'clojerl.MultiFn.Heir').
 
 %%------------------------------------------------------------------------------
 %% API
@@ -82,8 +83,9 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-  ets:new(?METHODS, [named_table, set, protected, {keypos, 2}]),
-  {ok, ?NIL}.
+  {Pid, Ref} = init_heir(),
+  ok         = init_ets(Pid),
+  {ok, Ref}.
 
 handle_call({add_method, Name, Value, Hash, Method}, _From, State) ->
   #multifn{} = new_method(Name, Value, Hash, Method),
@@ -98,6 +100,10 @@ handle_call({remove_method, Name, Hash}, _From, State) ->
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
+handle_info({'DOWN', Ref, process, _Pid, _Reason}, Ref) ->
+  {NewPid, NewRef} = init_heir(),
+  true       = ets:setopts(?METHODS, {heir, NewPid, undefined}),
+  {noreply, NewRef};
 handle_info(_Msg, State) ->
   {noreply, State}.
 
@@ -110,6 +116,38 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
+
+-spec init_heir() -> ok.
+init_heir() ->
+  case erlang:whereis(?METHODS_HEIR) of
+    undefined ->
+      {Pid, Ref}  = spawn_monitor(fun() -> heir_loop(heir) end),
+      true = erlang:register(?METHODS_HEIR, Pid),
+      {Pid, Ref};
+    Pid ->
+      {Pid, erlang:monitor(process, Pid)}
+  end.
+
+-spec heir_loop(owner | heir) -> ok.
+heir_loop(State) ->
+  receive
+    {'ETS-TRANSFER', ?METHODS, _FromPid, _HeirData} ->
+      heir_loop(owner);
+    {transfer, Pid} when State =:= owner->
+      true = ets:give_away(?METHODS, Pid, undefined),
+      heir_loop(heir)
+  end.
+
+-spec init_ets(pid()) -> ok.
+init_ets(Pid) ->
+  case ets:info(?METHODS) of
+    undefined ->
+      Opts = [named_table, set, protected, {keypos, 2}, {heir, Pid, undefined}],
+      ets:new(?METHODS, Opts);
+    _ ->
+      Pid ! {transfer, self()}
+  end,
+  ok.
 
 -spec new_method(binary(), any(), integer(), any()) -> multifn().
 new_method(Name, Value, Hash, Method) ->

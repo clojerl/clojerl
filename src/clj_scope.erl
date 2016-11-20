@@ -65,13 +65,16 @@ do_get(Scope = #{mappings := Mappings}, Key) ->
   end.
 
 %% @private
--spec do_update(scope() | ?NIL, any(), any()) -> scope().
-do_update(?NIL, K, _) ->
-  throw({not_found, K});
+-spec do_update(scope() | ?NIL, any(), any()) -> scope() | not_found.
+do_update(?NIL, _K, _V) ->
+  not_found;
 do_update(Scope = #{mappings := Mappings, parent := Parent}, K, V) ->
   case maps:is_key(K, Mappings) of
     true ->
       Scope#{mappings => Mappings#{K => V}};
     false ->
-      Scope#{parent => do_update(Parent, K, V)}
+      case do_update(Parent, K, V) of
+        not_found -> not_found;
+        NewParent -> Scope#{parent => NewParent}
+      end
   end.

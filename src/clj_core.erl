@@ -2,42 +2,42 @@
 
 -include("clojerl.hrl").
 
--export([
-         type/1,
-         load/1, load/2,
-         count/1, nth/2, nth/3,
-         'empty?'/1, empty/1,
-         seq/1, to_list/1,
-         equiv/2,
-         conj/2, disj/2,
-         cons/2,
-         first/1, next/1, rest/1,
-         second/1, third/1, fourth/1,
-         peek/1, pop/1,
-         name/1, namespace/1,
-         symbol/1, symbol/2,
-         keyword/1, keyword/2,
-         'satisfies?'/2,
-         'coll?'/1, 'sequential?'/1, 'associative?'/1, 'seq?'/1,
-         'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1,
-         'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1,
-         'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1, 'var?'/1,
-         deref/1, 'set!'/2,
-         meta/1, with_meta/2, 'meta?'/1,
-         get/2, get/3,
-         assoc/3, dissoc/2, find/2,
-         merge/1,
-         'contains?'/2,
-         boolean/1,
-         byte/1, char/1, short/1,
-         str/1,
-         list/1, vector/1, hash_map/1, hash_set/1,
-         subvec/3,
-         keys/1, vals/1,
-         'even?'/1,
-         apply/2,
-         next_id/0,
-         gensym/0, gensym/1
+-export([ type/1
+        , load/1, load/2
+        , count/1, nth/2, nth/3
+        , 'empty?'/1, empty/1
+        , seq/1, seq_or_else/1, to_list/1
+        , equiv/2
+        , conj/2, disj/2
+        , cons/2
+        , first/1, next/1, rest/1
+        , second/1, third/1, fourth/1
+        , peek/1, pop/1
+        , name/1, namespace/1
+        , symbol/1, symbol/2
+        , keyword/1, keyword/2
+        , 'satisfies?'/2
+        , 'coll?'/1, 'sequential?'/1, 'associative?'/1, 'seq?'/1
+        , 'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1
+        , 'record?'/1, 'type?'/1
+        , 'symbol?'/1, 'keyword?'/1, 'number?'/1, 'char?'/1
+        , 'string?'/1, 'nil?'/1, 'boolean?'/1, 'regex?'/1, 'var?'/1
+        , deref/1, 'set!'/2
+        , meta/1, with_meta/2, 'meta?'/1
+        , get/2, get/3
+        , assoc/3, dissoc/2, find/2
+        , merge/1
+        , 'contains?'/2
+        , boolean/1
+        , byte/1, char/1, short/1
+        , str/1
+        , list/1, vector/1, hash_map/1, hash_set/1
+        , subvec/3
+        , keys/1, vals/1
+        , 'even?'/1
+        , apply/2
+        , next_id/0
+        , gensym/0, gensym/1
         ]).
 
 -spec type(any()) -> atom().
@@ -142,9 +142,16 @@ nth_from(Coll, N, NotFound) ->
 empty(Coll) ->
   'clojerl.IColl':empty(Coll).
 
--spec seq(any()) -> list() | ?NIL.
+-spec seq(any()) -> any() | ?NIL.
 seq(Seqable) ->
   'clojerl.Seqable':seq(Seqable).
+
+-spec seq_or_else(any()) -> any() | ?NIL.
+seq_or_else(Seqable) ->
+  case seq(Seqable) of
+    ?NIL -> ?NIL;
+    _    -> Seqable
+  end.
 
 -spec to_list(any()) -> list().
 to_list(?NIL) -> [];
@@ -290,6 +297,14 @@ keyword(Namespace, Name) ->
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
   'satisfies?'('clojerl.ISet', type(X)).
+
+-spec 'record?'(any()) -> boolean().
+'record?'(X) ->
+  'satisfies?'('clojerl.IRecord', type(X)).
+
+-spec 'type?'(any()) -> boolean().
+'type?'(X) ->
+  'satisfies?'('clojerl.IType', type(X)).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->

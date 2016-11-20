@@ -68,12 +68,14 @@
              *print-meta* *print-meta*
              *print-length* *print-length*
              *print-level* *print-level*
-             ;;*data-readers* *data-readers*
-             ;;*default-data-reader-fn* *default-data-reader-fn*
+             *read-eval* *read-eval*
+             *warn-on-type-resolution* *warn-on-type-resolution*
+             *data-readers* *data-readers*
+             *default-data-reader-fn* *default-data-reader-fn*
              ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
              *command-line-args* *command-line-args*
              *assert* *assert*
-             *in* (new ~'erlang.io.PushbackReader *in*)
+             *in* (new erlang.io.PushbackReader *in*)
              *1 nil
              *2 nil
              *3 nil
@@ -258,7 +260,7 @@ by default when a new command-line REPL is started."} repl-requires
 (defn load-script
   "Loads Clojure source from a file or resource given its path. Paths
   beginning with @ or @/ are considered relative to classpath."
-  [^String path]
+  [^clojerl.String path]
   (clj_compiler/compile_file.e path))
 
 (defn- init-opt
@@ -307,7 +309,7 @@ by default when a new command-line REPL is started."} repl-requires
   present"
   [[_ & args] inits]
   (when-not (some #(= eval-opt (init-dispatch (first %))) inits)
-    (println "Clojure" "1.8.0" #_(clojure-version)))
+    (println "Clojure"  (clojure-version)))
   (repl :init (fn []
                 (initialize args inits)
                 (apply require repl-requires)))

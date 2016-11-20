@@ -14,7 +14,7 @@
   "Convert a Clojure namespace name to a legal Java package name."
   {:added "1.2"}
   [ns]
-  (binary/replace.e (-> ns ns-name str) \- \_))
+  (-> ns ns-name str))
 
 (defn munge [s] s)
 
@@ -179,6 +179,7 @@
         docstring (str "Positional factory function for class " classname ".")]
     `(defn ~fn-name
        ~docstring
+       {:tag ~classname}
        [~@field-args ~@(if (seq over) '[& overage] [])]
        ~(if (seq over)
           `(if (= (count ~'overage) ~over-count)
@@ -186,7 +187,7 @@
                   ~@field-args
                   ~@(for [i (range 0 (count over))]
                       (list `nth 'overage i)))
-             (throw (str "Arity exception: " (+ ~arg-count (count ~'overage)) (name '~fn-name))))
+             (throw (str "Arity exception: " (+ ~arg-count (count ~'overage)) " " (name '~fn-name))))
           `(new ~classname ~@field-args)))))
 
 (defn- validate-fields
@@ -301,7 +302,7 @@
   {:added "1.6"
    :static true}
   [x]
-  (instance? :clojerl.IRecord x))
+  (satisfies? clojerl.IRecord x))
 
 (defn- emit-deftype*
   "Do not use this directly - use deftype"
@@ -394,8 +395,11 @@
   (and (clj_module/is_clojure.e maybe-p)
        (clj_module/is_protocol.e maybe-p)))
 
-(defn- implements? [protocol atype]
-  (satisfies? protocol atype))
+(defn extends?
+  "Returns true if atype extends protocol"
+  {:added "1.2"}
+  [protocol atype]
+  (clj_core/satisfies?.e protocol atype))
 
 #_(defn extenders
   "Returns a collection of the types explicitly extending protocol"
@@ -415,13 +419,14 @@
                      (str "function " v))))))))
 
 (defn- emit-protocol-function
-  [iname {name :name arglists :arglists :as sigs}]
-  (map (fn [args]
-         `(defn ~(vary-meta name assoc :protocol iname) ~args
-            (clojerl.protocol/resolve.e ~(keyword iname)
-                                        ~(keyword name)
-                                        ~@args)))
-       arglists))
+  [iname {name :name arglists :arglists :as sig}]
+  `(defn ~(with-meta name (assoc sig :protocol iname))
+     ~@(map (fn [args]
+              `(~args
+                (clojerl.protocol/resolve.e ~(keyword iname)
+                                            ~(keyword name)
+                                            ~@args)))
+            arglists)))
 
 (defn- emit-protocol [name opts+sigs]
   (let [iname (symbol (str (munge (namespace-munge *ns*)) "." (munge name)))
@@ -458,8 +463,9 @@
        ~(when sigs
           `(#'assert-same-protocol '~iname
                                    '~(clj_core/to_list.e (map :name (vals sigs)))))
-       ~@(mapcat (partial emit-protocol-function iname) (vals sigs))
+       ~@(map (partial emit-protocol-function iname) (vals sigs))
        (~'defprotocol* ~iname ~@meths)
+       (import* ~(str iname))
        '~name)))
 
 (defmacro defprotocol
