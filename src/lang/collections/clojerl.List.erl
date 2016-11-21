@@ -89,7 +89,6 @@ reduce(#?TYPE{name = ?M, data = [First | Rest]}, F) ->
   do_reduce(F, First, Rest).
 
 reduce(#?TYPE{name = ?M, data = List}, F, Init) ->
-  lists:foldl(F, Init, List),
   do_reduce(F, Init, List).
 
 do_reduce(F, Acc, [First | Items]) ->
