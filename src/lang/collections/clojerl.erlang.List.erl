@@ -43,7 +43,8 @@ count(Items) -> length(Items).
 
 hash(List) -> clj_murmur3:ordered(List).
 
-reduce([], _F) -> ?NIL;
+reduce([], F) ->
+  clj_core:apply(F, []);
 reduce([First | Rest], F) ->
   do_reduce(F, First, Rest).
 
