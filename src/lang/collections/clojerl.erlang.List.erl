@@ -48,7 +48,6 @@ reduce([First | Rest], F) ->
   do_reduce(F, First, Rest).
 
 reduce(List, F, Init) ->
-  lists:foldl(F, Init, List),
   do_reduce(F, Init, List).
 
 do_reduce(F, Acc, [First | Items]) ->

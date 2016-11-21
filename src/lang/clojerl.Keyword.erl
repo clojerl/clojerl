@@ -72,13 +72,16 @@ find(Namespace, Name) ->
 
 %% clojerl.IFn
 
-apply(Keyword, [Map]) ->
-  clj_core:get(Map, Keyword);
-apply(Keyword, [Map, NotFound]) ->
-  clj_core:get(Map, Keyword, NotFound);
-apply(_, Args) ->
-  CountBin = integer_to_binary(length(Args)),
-  throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>).
+apply(Keyword, Args) ->
+  case clj_core:to_list(Args) of
+    [Map] ->
+      clj_core:get(Map, Keyword);
+    [Map, NotFound] ->
+      clj_core:get(Map, Keyword, NotFound);
+    _ ->
+      CountBin = integer_to_binary(length(Args)),
+      throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>)
+  end.
 
 %% clojerl.IHash
 
