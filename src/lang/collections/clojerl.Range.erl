@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Seqable').
@@ -22,6 +23,9 @@
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
+        ]).
+-export([ reduce/2
+        , reduce/3
         ]).
 -export([ first/1
         , next/1
@@ -72,6 +76,27 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 
 with_meta(#?TYPE{name = ?M, info = Info} = Range, Metadata) ->
   Range#?TYPE{info = Info#{meta => Metadata}}.
+
+reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F) when
+    Step >= 0, Start + Step >= End;
+    Step < 1, Start + Step =< End ->
+  clj_core:apply(F, []);
+reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F) ->
+  do_reduce(F, Start, Start + Step, End, Step).
+
+reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, _F, Init) when
+    Step >= 0, Start + Step >= End;
+    Step < 1, Start + Step =< End ->
+  Init;
+reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F, Init) ->
+  do_reduce(F, Init, Start, End, Step).
+
+do_reduce(_F, Acc, Start, End, Step) when
+    Step >= 0, Start + Step > End;
+    Step < 1, Start + Step < End ->
+  Acc;
+do_reduce(F, Acc, Start, End, Step) ->
+  do_reduce(F, clj_core:apply(F, [Acc, Start]), Start + Step, End, Step).
 
 first(#?TYPE{name = ?M, data = {Start, _, _}}) -> Start.
 
