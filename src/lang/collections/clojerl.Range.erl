@@ -36,8 +36,8 @@
 -type type() :: #?TYPE{}.
 
 -spec ?CONSTRUCTOR(integer(), integer(), integer()) -> type().
-?CONSTRUCTOR(Start, End, Step) when Step >= 0, End < Start;
-                                    Step < 0, Start < End ->
+?CONSTRUCTOR(Start, End, Step) when Step >= 0, End =< Start;
+                                    Step < 0, Start =< End ->
   [];
 ?CONSTRUCTOR(Start, End, Step) ->
   #?TYPE{data = {Start, End, Step}}.
@@ -47,7 +47,7 @@
 %%------------------------------------------------------------------------------
 
 count(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
-  (End - Start + Step) div Step.
+  (End - Start + Step) div Step - 1.
 
 cons(#?TYPE{name = ?M} = Range, X) ->
   'clojerl.Cons':?CONSTRUCTOR(X, Range).
@@ -76,15 +76,15 @@ with_meta(#?TYPE{name = ?M, info = Info} = Range, Metadata) ->
 first(#?TYPE{name = ?M, data = {Start, _, _}}) -> Start.
 
 next(#?TYPE{name = ?M, data = {Start, End, Step}}) when
-    Step >= 0, Start + Step > End;
-    Step < 1, Start + Step < End ->
+    Step >= 0, Start + Step >= End;
+    Step < 1, Start + Step =< End ->
   ?NIL;
 next(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
 
 more(#?TYPE{name = ?M, data = {Start, End, Step}}) when
-    Step >= 0, Start + Step > End;
-    Step < 1, Start + Step < End ->
+    Step >= 0, Start + Step >= End;
+    Step < 1, Start + Step =< End ->
   [];
 more(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
@@ -94,8 +94,10 @@ more(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
 seq(#?TYPE{name = ?M, data = {Start, Start, _}}) -> ?NIL;
 seq(#?TYPE{name = ?M} = Seq) -> Seq.
 
-to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
-  lists:seq(Start, End, Step).
+to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) when Step >= 0 ->
+  lists:seq(Start, End - 1, Step);
+to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) when Step < 0 ->
+  lists:seq(Start, End + 1, Step).
 
 str(#?TYPE{name = ?M} = Range) ->
   ItemsStrs = lists:map(fun clj_core:str/1, to_list(Range)),

@@ -35,8 +35,8 @@ init_per_suite(Config) ->
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Range = 'clojerl.Range':?CONSTRUCTOR(1, 3, 1),
-  [1, 2, 3] = clj_core:to_list(Range),
+  Range = 'clojerl.Range':?CONSTRUCTOR(0, 3, 1),
+  [0, 1, 2] = clj_core:to_list(Range),
 
   [] = 'clojerl.Range':?CONSTRUCTOR(2, 1, 1),
 
@@ -44,41 +44,41 @@ new(_Config) ->
 
 -spec count(config()) -> result().
 count(_Config) ->
-  Range = 'clojerl.Range':?CONSTRUCTOR(1, 10, 1),
+  Range = 'clojerl.Range':?CONSTRUCTOR(0, 10, 1),
   10 = clj_core:count(Range),
 
-  Range2 = 'clojerl.Range':?CONSTRUCTOR(1, 10, 2),
+  Range2 = 'clojerl.Range':?CONSTRUCTOR(0, 10, 2),
   5 = clj_core:count(Range2),
 
-  Range3 = 'clojerl.Range':?CONSTRUCTOR(10, 1, -1),
+  Range3 = 'clojerl.Range':?CONSTRUCTOR(10, 0, -1),
   10 = clj_core:count(Range3),
 
-  Range4 = 'clojerl.Range':?CONSTRUCTOR(10, 1, -2),
+  Range4 = 'clojerl.Range':?CONSTRUCTOR(10, 0, -2),
   5 = clj_core:count(Range4),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Range = 'clojerl.Range':?CONSTRUCTOR(1, 5, 1),
-  <<"(1 2 3 4 5)">> = clj_core:str(Range),
+  Range = 'clojerl.Range':?CONSTRUCTOR(0, 5, 1),
+  <<"(0 1 2 3 4)">> = clj_core:str(Range),
 
-  Range2 = 'clojerl.Range':?CONSTRUCTOR(5, 1, 1),
+  Range2 = 'clojerl.Range':?CONSTRUCTOR(5, 0, 1),
   <<"()">> = clj_core:str(Range2),
 
   {comments, ""}.
 
 -spec is_sequential(config()) -> result().
 is_sequential(_Config) ->
-  Range = 'clojerl.Range':?CONSTRUCTOR(1, 3, 1),
+  Range = 'clojerl.Range':?CONSTRUCTOR(0, 3, 1),
   true = clj_core:'sequential?'(Range),
 
   {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  Range1 = 'clojerl.Range':?CONSTRUCTOR(1, 3, 1),
-  Range2 = 'clojerl.Range':?CONSTRUCTOR(3, 1, -1),
+  Range1 = 'clojerl.Range':?CONSTRUCTOR(0, 3, 1),
+  Range2 = 'clojerl.Range':?CONSTRUCTOR(3, 0, -1),
 
   Hash1 = 'clojerl.IHash':hash(Range1),
   Hash2 = 'clojerl.IHash':hash(Range2),
@@ -89,12 +89,12 @@ hash(_Config) ->
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Range1 = 'clojerl.Range':?CONSTRUCTOR(1, 3, 1),
-  1 = clj_core:first(Range1),
-  [2, 3] = clj_core:to_list(clj_core:next(Range1)),
-  [2, 3] = clj_core:to_list(clj_core:rest(Range1)),
+  Range1 = 'clojerl.Range':?CONSTRUCTOR(0, 3, 1),
+  0 = clj_core:first(Range1),
+  [1, 2] = clj_core:to_list(clj_core:next(Range1)),
+  [1, 2] = clj_core:to_list(clj_core:rest(Range1)),
 
-  Range2 = 'clojerl.Range':?CONSTRUCTOR(1, 1, 1),
+  Range2 = 'clojerl.Range':?CONSTRUCTOR(1, 2, 1),
   1 = clj_core:first(Range2),
   ?NIL = clj_core:next(Range2),
   [] = clj_core:to_list(clj_core:rest(Range2)),
@@ -108,7 +108,7 @@ seq(_Config) ->
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  Range = 'clojerl.Range':?CONSTRUCTOR(1, 3, 1),
+  Range = 'clojerl.Range':?CONSTRUCTOR(0, 3, 1),
 
   ct:comment("Check that lists with the same elements are equivalent"),
   Range1 = clj_core:with_meta(Range, #{a => 1}),
@@ -120,7 +120,7 @@ equiv(_Config) ->
   false  = clj_core:equiv(Range1, Range3),
 
   ct:comment("A clojerl.List and an clojerl.erlang.List"),
-  true  = clj_core:equiv(Range, [1, 2, 3]),
+  true  = clj_core:equiv(Range, [0, 1, 2]),
   false = clj_core:equiv(Range, [1, 2, 3, a]),
 
   ct:comment("A clojerl.List and something else"),
@@ -131,7 +131,7 @@ equiv(_Config) ->
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  OneRange = 'clojerl.Range':?CONSTRUCTOR(2, 1, -1),
+  OneRange = 'clojerl.Range':?CONSTRUCTOR(2, 0, -1),
 
   ct:comment("Conj an element to a range"),
   ThreeList = clj_core:conj(OneRange, 3),
