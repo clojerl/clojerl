@@ -79,7 +79,11 @@ reduce(#?TYPE{name = ?M, data = {First, Rest}}, F, Init) ->
   do_reduce(F, Init, clj_core:conj(clj_core:to_list(Rest), First)).
 
 do_reduce(F, Acc, [First | Items]) ->
-  do_reduce(F, clj_core:apply(F, [Acc, First]), Items);
+  Val = clj_core:apply(F, [Acc, First]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, Items)
+  end;
 do_reduce(_F, Acc, []) ->
   Acc.
 

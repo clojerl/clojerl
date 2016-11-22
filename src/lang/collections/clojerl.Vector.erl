@@ -138,15 +138,10 @@ with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
 
 reduce(#?TYPE{name = ?M, data = Array}, F) ->
   case array:size(Array) of
-    0 -> clj_core:apply(F, []);
-    _ ->
-      Fold = fun
-               (I, Item, Acc) when I > 0 ->
-                 clj_core:apply(F, [Acc, Item]);
-               (0, _Item, Acc) ->
-                 Acc
-             end,
-      array:foldl(Fold, array:get(0, Array), Array)
+    0    -> clj_core:apply(F, []);
+    Size ->
+      Init = array:get(0, Array),
+      do_reduce(F, Init, 1, Size, Array)
   end.
 
 reduce(#?TYPE{name = ?M, data = Array}, F, Init) ->
@@ -154,6 +149,15 @@ reduce(#?TYPE{name = ?M, data = Array}, F, Init) ->
              clj_core:apply(F, [Acc, Item])
          end,
   array:foldl(Fold, Init, Array).
+
+do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
+  Val = clj_core:apply(F, [Acc, array:get(Index, Array)]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, Index + 1, Size, Array)
+  end;
+do_reduce(_F, Acc, _Index, _Size, _Array) ->
+  Acc.
 
 %% clojerl.ISequential
 

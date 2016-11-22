@@ -96,7 +96,11 @@ do_reduce(_F, Acc, Start, End, Step) when
     Step < 1, Start + Step < End ->
   Acc;
 do_reduce(F, Acc, Start, End, Step) ->
-  do_reduce(F, clj_core:apply(F, [Acc, Start]), Start + Step, End, Step).
+  Val = clj_core:apply(F, [Acc, Start]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, Start + Step, End, Step)
+  end.
 
 first(#?TYPE{name = ?M, data = {Start, _, _}}) -> Start.
 

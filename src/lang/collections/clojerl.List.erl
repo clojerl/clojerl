@@ -83,8 +83,8 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
-reduce(#?TYPE{name = ?M, data = []}, _F) ->
-  ?NIL;
+reduce(#?TYPE{name = ?M, data = []}, F) ->
+  clj_core:apply(F, []);
 reduce(#?TYPE{name = ?M, data = [First | Rest]}, F) ->
   do_reduce(F, First, Rest).
 
@@ -92,7 +92,11 @@ reduce(#?TYPE{name = ?M, data = List}, F, Init) ->
   do_reduce(F, Init, List).
 
 do_reduce(F, Acc, [First | Items]) ->
-  do_reduce(F, clj_core:apply(F, [Acc, First]), Items);
+  Val = clj_core:apply(F, [Acc, First]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, Items)
+  end;
 do_reduce(_F, Acc, []) ->
   Acc.
 
