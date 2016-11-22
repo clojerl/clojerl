@@ -12,8 +12,11 @@
         , seq/1
         , equiv/1
         , cons/1
+        , reduce/1
         , complete_coverage/1
         ]).
+
+-clojure(true).
 
 -type config() :: list().
 -type result() :: {comments, string()}.
@@ -83,7 +86,9 @@ hash(_Config) ->
 seq(_Config) ->
   Cons = range(1, 3),
   1 = clj_core:first(Cons),
+  2 = clj_core:first(clj_core:rest(Cons)),
   2 = clj_core:first(clj_core:next(Cons)),
+  3 = clj_core:first(clj_core:rest(clj_core:rest(Cons))),
   3 = clj_core:first(clj_core:next(clj_core:next(Cons))),
 
   Cons1     = range(1, 1),
@@ -131,6 +136,27 @@ cons(_Config) ->
 
   3    = clj_core:count(ThreeList),
   true = clj_core:equiv(clj_core:to_list(ThreeList), [0, 1, 2]),
+
+  {comments, ""}.
+
+-spec reduce(config()) -> result().
+reduce(_Config) ->
+  PlusFun = fun
+              ([]) -> 0;
+              ([X, Y]) -> X + Y
+            end,
+
+  TenCons = range(1, 10),
+  55 = 'clojerl.IReduce':reduce(TenCons, PlusFun),
+  60 = 'clojerl.IReduce':reduce(TenCons, PlusFun, 5),
+
+  PlusMaxFun = fun
+                 ([]) -> 0;
+                 ([X, Y]) when X < 10 -> X + Y;
+                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+            end,
+  Reduced = 'clojerl.IReduce':reduce(TenCons, PlusMaxFun),
+  10 = clj_core:deref(Reduced),
 
   {comments, ""}.
 
