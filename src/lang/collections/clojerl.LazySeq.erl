@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.Seqable').
@@ -22,6 +23,9 @@
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
+        ]).
+-export([ reduce/2
+        , reduce/3
         ]).
 -export([ first/1
         , next/1
@@ -72,6 +76,30 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 
 with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
+
+reduce(#?TYPE{name = ?M} = LazySeq, F) ->
+  case seq(LazySeq) of
+    ?NIL -> clj_core:apply(F, []);
+    Seq  ->
+      Init = 'clojerl.ISeq':first(Seq),
+      Next = 'clojerl.ISeq':next(Seq),
+      do_reduce(F, Init, Next)
+  end.
+
+reduce(#?TYPE{name = ?M} = LazySeq, F, Init) ->
+  do_reduce(F, Init, LazySeq).
+
+do_reduce(F, Acc, #?TYPE{name = ?M} = LazySeq) ->
+  do_reduce(F, Acc, seq(LazySeq));
+do_reduce(F, Acc, Seq) when Seq =/= ?NIL ->
+  First = 'clojerl.ISeq':first(Seq),
+  Val   = clj_core:apply(F, [Acc, First]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, 'clojerl.ISeq':next(Seq))
+  end;
+do_reduce(_F, Acc, _Seq) ->
+  Acc.
 
 first(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of

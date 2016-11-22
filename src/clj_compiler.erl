@@ -339,10 +339,12 @@ eval_expressions(Expressions) ->
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
   {ok, _, Binary} = compile:forms(EvalModule, [clint, from_core]),
   code:load_binary(ModuleName, "", Binary),
-  Value = ModuleName:eval(),
-  code:purge(ModuleName),
-  code:delete(ModuleName),
-  Value.
+  try
+    ModuleName:eval()
+  after
+    code:purge(ModuleName),
+    code:delete(ModuleName)
+  end.
 
 -spec eval_module([cerl:cerl()]) -> {module(), cerl:c_module()}.
 eval_module(Expressions) ->

@@ -190,8 +190,8 @@ cons(Item, ?NIL) ->
   list([Item]);
 cons(Item, Seq) ->
   case 'seq?'(Seq) of
-    true  -> 'clojerl.IColl':cons(Seq, Item);
-    false -> 'clojerl.IColl':cons(to_list(Seq), Item)
+    true  -> 'clojerl.Cons':?CONSTRUCTOR(Item, Seq);
+    false -> 'clojerl.Cons':?CONSTRUCTOR(Item, seq(Seq))
   end.
 
 -spec first(any()) -> any().

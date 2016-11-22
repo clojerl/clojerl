@@ -16,9 +16,12 @@
         , cons/1
         , subvec/1
         , stack/1
+        , reduce/1
         , associative/1
         , complete_coverage/1
         ]).
+
+-clojure(true).
 
 -type config() :: list().
 -type result() :: {comments, string()}.
@@ -207,6 +210,31 @@ stack(_Config) ->
   TwoVector   = clj_core:vector([1, 2]),
   2         = clj_core:peek(TwoVector),
   true      = clj_core:equiv(clj_core:pop(TwoVector), OneVector),
+
+  {comments, ""}.
+
+-spec reduce(config()) -> result().
+reduce(_Config) ->
+  PlusFun = fun
+              ([]) -> 0;
+              ([X, Y]) -> X + Y
+            end,
+  EmptyVector = clj_core:vector([]),
+
+  0  = 'clojerl.IReduce':reduce(EmptyVector, PlusFun),
+  42 = 'clojerl.IReduce':reduce(EmptyVector, PlusFun, 42),
+
+  TenVector = clj_core:vector(lists:seq(1, 10)),
+  55 = 'clojerl.IReduce':reduce(TenVector, PlusFun),
+  60 = 'clojerl.IReduce':reduce(TenVector, PlusFun, 5),
+
+  PlusMaxFun = fun
+                 ([]) -> 0;
+                 ([X, Y]) when X < 10 -> X + Y;
+                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+            end,
+  Reduced = 'clojerl.IReduce':reduce(TenVector, PlusMaxFun),
+  10 = clj_core:deref(Reduced),
 
   {comments, ""}.
 

@@ -10,6 +10,7 @@
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.IReduce').
 -behavior('clojerl.Indexed').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
@@ -33,6 +34,9 @@
         ]).
 -export([ meta/1
         , with_meta/2
+        ]).
+-export([ reduce/2
+        , reduce/3
         ]).
 -export(['_'/1]).
 -export([ nth/2
@@ -129,6 +133,33 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 
 with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
   Vector#?TYPE{info = Info#{meta => Metadata}}.
+
+%% clojerl.IReduce
+
+reduce(#?TYPE{name = ?M, data = Array}, F) ->
+  case array:size(Array) of
+    0    -> clj_core:apply(F, []);
+    Size ->
+      Init = array:get(0, Array),
+      do_reduce(F, Init, 1, Size, Array)
+  end.
+
+reduce(#?TYPE{name = ?M, data = Array}, F, Init) ->
+  Fold = fun(_, Item, Acc) ->
+             clj_core:apply(F, [Acc, Item])
+         end,
+  array:foldl(Fold, Init, Array).
+
+do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
+  Val = clj_core:apply(F, [Acc, array:get(Index, Array)]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, Index + 1, Size, Array)
+  end;
+do_reduce(_F, Acc, _Index, _Size, _Array) ->
+  Acc.
+
+%% clojerl.ISequential
 
 '_'(_) -> ?NIL.
 

@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
@@ -23,6 +24,9 @@
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
+        ]).
+-export([ reduce/2
+        , reduce/3
         ]).
 -export([ first/1
         , next/1
@@ -43,7 +47,9 @@
 ?CONSTRUCTOR(Items) when is_list(Items) ->
   #?TYPE{data = Items};
 ?CONSTRUCTOR(?NIL) ->
-  #?TYPE{data = []}.
+  #?TYPE{data = []};
+?CONSTRUCTOR(Items) ->
+  #?TYPE{data = clj_core:to_list(Items)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -76,6 +82,23 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 
 with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
+
+reduce(#?TYPE{name = ?M, data = []}, F) ->
+  clj_core:apply(F, []);
+reduce(#?TYPE{name = ?M, data = [First | Rest]}, F) ->
+  do_reduce(F, First, Rest).
+
+reduce(#?TYPE{name = ?M, data = List}, F, Init) ->
+  do_reduce(F, Init, List).
+
+do_reduce(F, Acc, [First | Items]) ->
+  Val = clj_core:apply(F, [Acc, First]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(F, Val, Items)
+  end;
+do_reduce(_F, Acc, []) ->
+  Acc.
 
 first(#?TYPE{name = ?M, data = []}) -> ?NIL;
 first(#?TYPE{name = ?M, data = [First | _]}) -> First.
