@@ -77,17 +77,9 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 with_meta(#?TYPE{name = ?M, info = Info} = Range, Metadata) ->
   Range#?TYPE{info = Info#{meta => Metadata}}.
 
-reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F) when
-    Step >= 0, Start + Step >= End;
-    Step < 1, Start + Step =< End ->
-  clj_core:apply(F, []);
 reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F) ->
   do_reduce(F, Start, Start + Step, End, Step).
 
-reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, _F, Init) when
-    Step >= 0, Start + Step >= End;
-    Step < 1, Start + Step =< End ->
-  Init;
 reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F, Init) ->
   do_reduce(F, Init, Start, End, Step).
 
@@ -120,7 +112,6 @@ more(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
 
 '_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M, data = {Start, Start, _}}) -> ?NIL;
 seq(#?TYPE{name = ?M} = Seq) -> Seq.
 
 to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) when Step >= 0 ->

@@ -12,8 +12,11 @@
         , seq/1
         , equiv/1
         , cons/1
+        , reduce/1
         , complete_coverage/1
         ]).
+
+-clojure(true).
 
 -type config() :: list().
 -type result() :: {comments, string()}.
@@ -144,6 +147,31 @@ cons(_Config) ->
 
   4    = clj_core:count(FourList),
   true = clj_core:equiv(FourList, [4, 3, 2, 1]),
+
+  {comments, ""}.
+
+-spec reduce(config()) -> result().
+reduce(_Config) ->
+  PlusFun = fun
+              ([]) -> 0;
+              ([X, Y]) -> X + Y
+            end,
+  EmptyRange = 'clojerl.Range':?CONSTRUCTOR(2, 2, 0),
+
+  0  = 'clojerl.IReduce':reduce(EmptyRange, PlusFun),
+  42 = 'clojerl.IReduce':reduce(EmptyRange, PlusFun, 42),
+
+  TenRange = 'clojerl.Range':?CONSTRUCTOR(1, 11, 1),
+  55 = 'clojerl.IReduce':reduce(TenRange, PlusFun),
+  60 = 'clojerl.IReduce':reduce(TenRange, PlusFun, 5),
+
+  PlusMaxFun = fun
+                 ([]) -> 0;
+                 ([X, Y]) when X < 10 -> X + Y;
+                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+            end,
+  Reduced = 'clojerl.IReduce':reduce(TenRange, PlusMaxFun),
+  10 = clj_core:deref(Reduced),
 
   {comments, ""}.
 
