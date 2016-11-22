@@ -13,8 +13,11 @@
         , equiv/1
         , cons/1
         , stack/1
+        , reduce/1
         , complete_coverage/1
         ]).
+
+-clojure(true).
 
 -type config() :: list().
 -type result() :: {comments, string()}.
@@ -166,6 +169,31 @@ stack(_Config) ->
   TwoList   = [2, 1],
   2         = clj_core:peek(TwoList),
   OneList = clj_core:pop(TwoList),
+
+  {comments, ""}.
+
+-spec reduce(config()) -> result().
+reduce(_Config) ->
+  PlusFun = fun
+              ([]) -> 0;
+              ([X, Y]) -> X + Y
+            end,
+  EmptyList = [],
+
+  0  = 'clojerl.IReduce':reduce(EmptyList, PlusFun),
+  42 = 'clojerl.IReduce':reduce(EmptyList, PlusFun, 42),
+
+  TenList = lists:seq(1, 10),
+  55 = 'clojerl.IReduce':reduce(TenList, PlusFun),
+  60 = 'clojerl.IReduce':reduce(TenList, PlusFun, 5),
+
+  PlusMaxFun = fun
+                 ([]) -> 0;
+                 ([X, Y]) when X < 10 -> X + Y;
+                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+            end,
+  Reduced = 'clojerl.IReduce':reduce(TenList, PlusMaxFun),
+  10 = clj_core:deref(Reduced),
 
   {comments, ""}.
 
