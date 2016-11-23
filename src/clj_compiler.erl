@@ -12,6 +12,8 @@
         , eval/1
         , eval/2
         , eval/3
+        , eval_expressions/1
+        , eval_expressions/2
         , compile_forms/2
         ]).
 
@@ -152,9 +154,9 @@ eval(Form, Opts, Env) ->
 eval1(Form, Opts, Env) ->
   ProcDict = erlang:get(),
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
-  {Exprs, Forms, Env1} = run_monitored(DoEval),
+  {Exprs, Modules, Env1} = run_monitored(DoEval),
 
-  lists:foreach(compile_forms_fun(Opts), Forms),
+  lists:foreach(compile_forms_fun(Opts), Modules),
   Value = eval_expressions(Exprs),
 
   {Value, Env1}.
@@ -330,11 +332,19 @@ add_core_code(BeamBinary, CoreModule) ->
 
 -spec eval_expressions([cerl:cerl()]) -> [any()].
 eval_expressions(Expressions) ->
+  eval_expressions(Expressions, true).
+
+-spec eval_expressions([cerl:cerl()], boolean()) -> [any()].
+eval_expressions(Expressions, ReplaceCalls) ->
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
   CurrentNsAtom = binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
-  ReplacedExprs = [clj_module:replace_calls(Expr, CurrentNsAtom)
-                   || Expr <- Expressions],
+  ReplacedExprs = case ReplaceCalls of
+                    true  -> [ clj_module:replace_calls(Expr, CurrentNsAtom)
+                               || Expr <- Expressions
+                             ];
+                    false -> Expressions
+                  end,
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
   {ok, _, Binary} = compile:forms(EvalModule, [clint, from_core]),

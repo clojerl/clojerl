@@ -424,7 +424,7 @@
   {:tag clojerl.Boolean
    :added "1.0"
    :static true
-   :inline (fn [x] (list 'erlang/=:=.e x nil))}
+   :inline '(fn [x] (list 'erlang/=:=.e x nil))}
   [x] (erlang/=:=.e x nil))
 
 (def
@@ -739,7 +739,7 @@
 
 (defn identical?
   "Tests if 2 arguments are the same object"
-  {:inline (fn [x y] `(erlang/=:=.e ~x ~y))
+  {:inline '(fn [x y] `(erlang/=:=.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x y] (erlang/=:=.e x y)))
@@ -751,7 +751,7 @@
   numbers and collections in a type-independent manner.  Clojure's immutable data
   structures define equals() (and thus =) as a value, not an identity,
   comparison."
-  {:inline (fn [x y] `(clj_core/equiv.e ~x ~y))
+  {:inline '(fn [x y] `(clj_core/equiv.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -769,7 +769,7 @@
   x.equals(y) except it also works for nil. Boxed numbers must have
   same type. Clojure's immutable data structures define equals() (and
   thus =) as a value, not an identity, comparison."
-  {:inline (fn [x y] `(. clojure.lang.Util equals ~x ~y))
+  {:inline '(fn [x y] `(. clojure.lang.Util equals ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -798,7 +798,7 @@
   compares numbers and collections in a type-independent manner. x
   must implement Comparable"
   {
-   :inline (fn [x y] `(. clojure.lang.Util compare ~x ~y))
+   :inline '(fn [x y] `(. clojure.lang.Util compare ~x ~y))
    :added "1.0"}
   [x y]
   (clj_utils/compare.e x y))
@@ -830,20 +830,20 @@
 ;;;;;;;;;;;;;;;;;;; sequence fns  ;;;;;;;;;;;;;;;;;;;;;;;
 (defn zero?
   "Returns true if num is zero, else false"
-  {:inline (fn [x] `(erlang/==.e ~x 0))
+  {:inline '(fn [x] `(erlang/==.e ~x 0))
    :added "1.0"}
   [x] (erlang/==.e x 0))
 
 (defn count
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Java Collections and Maps"
-  {:inline (fn  [x] `(clj_core/count.e ~x))
+  {:inline '(fn  [x] `(clj_core/count.e ~x))
    :added "1.0"}
   [coll] (clj_core/count.e coll))
 
 (defn int
   "Coerce to int"
-  {:inline (fn  [x] `(erlang/trunc.e ~x))
+  {:inline '(fn  [x] `(erlang/trunc.e ~x))
    :added "1.0"}
   [x] (erlang/trunc.e x))
 
@@ -852,7 +852,7 @@
   bounds, nth throws an exception unless not-found is supplied.  nth
   also works for strings, Java arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
-  {:inline (fn  [c i & nf] `(clj_core/nth.e ~c ~i ~@nf))
+  {:inline '(fn  [c i & nf] `(clj_core/nth.e ~c ~i ~@nf))
    :inline-arities #{2 3}
    :added "1.0"}
   ([coll index] (clj_core/nth.e coll index))
@@ -861,7 +861,7 @@
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
-  {:inline (fn [x y] `(erlang/<.e ~x ~y))
+  {:inline '(fn [x y] `(erlang/<.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -876,14 +876,14 @@
 (defn inc'
   "Returns a number one greater than num. Supports arbitrary precision.
   See also: inc"
-  {:inline (fn [x] `(erlang/+.e ~x 1))
+  {:inline '(fn [x] `(erlang/+.e ~x 1))
    :added "1.0"}
   [x] (erlang/+.e x 1))
 
 (defn inc
   "Returns a number one greater than num. Does not auto-promote
   longs, will throw on overflow. See also: inc'"
-  {:inline (fn [x] `(inc' ~x))
+  {:inline '(fn [x] `(inc' ~x))
    :added "1.2"}
   [x] (inc' x))
 
@@ -925,8 +925,8 @@
 (defn +'
   "Returns the sum of nums. (+) returns 0. Supports arbitrary precision.
   See also: +"
-  {:inline (nary-inline 'erlang/+.e)
-   :inline-arities >1?
+  {:inline '(nary-inline 'erlang/+.e)
+   :inline-arities '>1?
    :added "1.0"}
   ([] 0)
   ([x] x)
@@ -937,8 +937,8 @@
 (defn +
   "Returns the sum of nums. (+) returns 0. Does not auto-promote
   longs, will throw on overflow. See also: +'"
-  {:inline (nary-inline 'add)
-   :inline-arities >1?
+  {:inline '(nary-inline 'add)
+   :inline-arities '>1?
    :added "1.2"}
   ([] 0)
   ([x] x)
@@ -949,8 +949,8 @@
 (defn *'
   "Returns the product of nums. (*) returns 1. Supports arbitrary precision.
   See also: *"
-  {:inline (nary-inline 'erlang/*.e)
-   :inline-arities >1?
+  {:inline '(nary-inline 'erlang/*.e)
+   :inline-arities '>1?
    :added "1.0"}
   ([] 1)
   ([x] x)
@@ -961,8 +961,8 @@
 (defn *
   "Returns the product of nums. (*) returns 1. Does not auto-promote
   longs, will throw on overflow. See also: *'"
-  {:inline (nary-inline 'multiply)
-   :inline-arities >1?
+  {:inline '(nary-inline 'multiply)
+   :inline-arities '>1?
    :added "1.2"}
   ([] 1)
   ([x] x)
@@ -973,8 +973,8 @@
 (defn /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
-  {:inline (nary-inline 'divide)
-   :inline-arities >1?
+  {:inline '(nary-inline 'divide)
+   :inline-arities '>1?
    :added "1.0"}
   ([x] (/ 1 x))
   ([x y] (erlang//.e x y))
@@ -985,8 +985,8 @@
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result. Supports arbitrary precision.
   See also: -"
-  {:inline (nary-inline 'erlang/-.e)
-   :inline-arities >0?
+  {:inline '(nary-inline 'erlang/-.e)
+   :inline-arities '>0?
    :added "1.0"}
   ([x] (erlang/-.e x))
   ([x y] (erlang/-.e x y))
@@ -997,8 +997,8 @@
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result. Does not auto-promote
   longs, will throw on overflow. See also: -'"
-  {:inline (nary-inline 'minus)
-   :inline-arities >0?
+  {:inline '(nary-inline 'minus)
+   :inline-arities '>0?
    :added "1.2"}
   ([x] (-' x))
   ([x y] (-' x y))
@@ -1008,7 +1008,7 @@
 (defn <=
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
-  {:inline (fn [x y] `(erlang/=<.e ~x ~y))
+  {:inline '(fn [x y] `(erlang/=<.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -1023,7 +1023,7 @@
 (defn >
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
-  {:inline (fn [x y] `(erlang/>.e ~x ~y))
+  {:inline '(fn [x y] `(erlang/>.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -1038,7 +1038,7 @@
 (defn >=
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
-  {:inline (fn [x y] `(erlang/>=.e ~x ~y))
+  {:inline '(fn [x y] `(erlang/>=.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -1053,7 +1053,7 @@
 (defn ==
   "Returns non-nil if nums all have the equivalent
   value (type-independent), otherwise false"
-  {:inline (fn [x y] `(erlang/==.e ~x ~y))
+  {:inline '(fn [x y] `(erlang/==.e ~x ~y))
    :inline-arities #{2}
    :added "1.0"}
   ([x] true)
@@ -1068,8 +1068,8 @@
 (defn max
   "Returns the greatest of the nums."
   {:added "1.0"
-   :inline-arities >1?
-   :inline (nary-inline 'max)}
+   :inline-arities '>1?
+   :inline '(nary-inline 'max)}
   ([x] x)
   ([x y] (if (< x y) y x))
   ([x y & more]
@@ -1078,8 +1078,8 @@
 (defn min
   "Returns the least of the nums."
   {:added "1.0"
-   :inline-arities >1?
-   :inline (nary-inline 'min)}
+   :inline-arities '>1?
+   :inline '(nary-inline 'min)}
   ([x] x)
   ([x y] (if (> x y) y x))
   ([x y & more]
@@ -1088,26 +1088,26 @@
 (defn dec'
   "Returns a number one less than num. Supports arbitrary precision.
   See also: dec"
-  {:inline (fn [x] `(erlang/-.e ~x 1))
+  {:inline '(fn [x] `(erlang/-.e ~x 1))
    :added "1.0"}
   [x] (erlang/-.e x 1))
 
 (defn dec
   "Returns a number one less than num. Does not auto-promote
   longs, will throw on overflow. See also: dec'"
-  {:inline (fn [x] `(erlang/-.e ~x 1))
+  {:inline '(fn [x] `(erlang/-.e ~x 1))
    :added "1.2"}
   [x] (erlang/-.e x 1))
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
-  {:inline (fn [x] `(> ~x 0))
+  {:inline '(fn [x] `(> ~x 0))
    :added "1.0"}
   [x] (> x 0))
 
 (defn neg?
   "Returns true if num is less than zero, else false"
-  {:inline (fn [x] `(< ~x 0))
+  {:inline '(fn [x] `(< ~x 0))
    :added "1.0"}
   [x] (< x 0))
 
@@ -1115,7 +1115,7 @@
   "quot[ient] of dividing numerator by denominator."
   {:added "1.0"
    :static true
-   :inline (fn [x y] `(erlang/trunc.e (/ ~x ~y)))}
+   :inline '(fn [x y] `(erlang/trunc.e (/ ~x ~y)))}
   [num div]
   (erlang/trunc.e (/ num div)))
 
@@ -1123,7 +1123,7 @@
   "remainder of dividing numerator by denominator."
   {:added "1.0"
    :static true
-   :inline (fn [x y] `(erlang/rem.e ~x ~y))}
+   :inline '(fn [x y] `(erlang/rem.e ~x ~y))}
   [num div]
   (erlang/rem.e num div))
 
@@ -1131,15 +1131,15 @@
 
 (defn bit-not
   "Bitwise complement"
-  {:inline (fn [x] `(erlang/bnot.e ~x))
+  {:inline '(fn [x] `(erlang/bnot.e ~x))
    :added "1.0"}
   [x] (erlang/bnot.e x))
 
 
 (defn bit-and
   "Bitwise and"
-   {:inline (nary-inline 'and)
-    :inline-arities >1?
+   {:inline '(nary-inline 'and)
+    :inline-arities '>1?
     :added "1.0"}
    ([x y] (erlang/band.e x y))
    ([x y & more]
@@ -1147,8 +1147,8 @@
 
 (defn bit-or
   "Bitwise or"
-  {:inline (nary-inline 'or)
-   :inline-arities >1?
+  {:inline '(nary-inline 'or)
+   :inline-arities '>1?
    :added "1.0"}
   ([x y] (erlang/bor.e x y))
   ([x y & more]
@@ -1156,8 +1156,8 @@
 
 (defn bit-xor
   "Bitwise exclusive or"
-  {:inline (nary-inline 'xor)
-   :inline-arities >1?
+  {:inline '(nary-inline 'xor)
+   :inline-arities '>1?
    :added "1.0"}
   ([x y] (erlang/bxor.e x y))
   ([x y & more]
@@ -1165,8 +1165,8 @@
 
 (defn bit-and-not
   "Bitwise and with complement"
-  {:inline (nary-inline 'andNot)
-   :inline-arities >1?
+  {:inline '(nary-inline 'andNot)
+   :inline-arities '>1?
    :added "1.0"
    :static true}
   ([x y] (bit-not (bit-and x y)))
@@ -1205,19 +1205,19 @@
 
 (defn bit-shift-left
   "Bitwise shift left"
-  {:inline (fn [x n] `(erlang/bsl.e ~x ~n))
+  {:inline '(fn [x n] `(erlang/bsl.e ~x ~n))
    :added "1.0"}
   [x n] (erlang/bsl.e x n))
 
 (defn bit-shift-right
   "Bitwise shift right"
-  {:inline (fn [x n] `(erlang/bsr.e ~x ~n))
+  {:inline '(fn [x n] `(erlang/bsr.e ~x ~n))
    :added "1.0"}
   [x n] (erlang/bsr.e x n))
 
 (defn unsigned-bit-shift-right
   "Bitwise shift right, without sign-extension."
-  {:inline (fn [x n] `(erlang/bsr.e ~x ~n))
+  {:inline '(fn [x n] `(erlang/bsr.e ~x ~n))
    :added "1.6"}
   [x n]
   (throw "unsupported unsigned operation"))
@@ -1309,7 +1309,7 @@
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
-  {:inline (fn  [m k & nf] `(clj_core/get.e ~m ~k ~@nf))
+  {:inline '(fn  [m k & nf] `(clj_core/get.e ~m ~k ~@nf))
    :inline-arities #{2 3}
    :added "1.0"}
   ([map key]
@@ -2655,7 +2655,7 @@
 
 (defn reduced?
   "Returns true if x is the result of a call to reduced"
-  {:inline (fn [x] `(clj_core/is_reduced.e ~x ))
+  {:inline '(fn [x] `(clj_core/is_reduced.e ~x ))
    :inline-arities #{1}
    :added "1.5"}
   [x]
@@ -3294,7 +3294,7 @@
 (defn num
   "Coerce to Number"
   {:tag clojerl.Integer
-   :inline (fn  [x] `(if (erlang/is_number.e x) x (throw "Not a number")))
+   :inline '(fn  [x] `(if (erlang/is_number.e x) x (throw "Not a number")))
    :added "1.0"}
   [x]
   (if (erlang/is_number.e x)
@@ -3303,49 +3303,49 @@
 
 (defn long
   "Coerce to long"
-  {:inline (fn  [x] `(erlang/trunc.e ~x))
+  {:inline '(fn  [x] `(erlang/trunc.e ~x))
    :added "1.0"}
   [x]
   (erlang/trunc.e x))
 
 (defn float
   "Coerce to float"
-  {:inline (fn  [x] `(erlang/float.e ~x))
+  {:inline '(fn  [x] `(erlang/float.e ~x))
    :added "1.0"}
   [x]
   (erlang/float.e x))
 
 (defn double
   "Coerce to double"
-  {:inline (fn  [x] `(erlang/float.e ~x))
+  {:inline '(fn  [x] `(erlang/float.e ~x))
    :added "1.0"}
   [^Number x]
   (erlang/float.e x))
 
 (defn short
   "Coerce to short"
-  {:inline (fn  [x] `(clj_core/short.e x))
+  {:inline '(fn  [x] `(clj_core/short.e x))
    :added "1.0"}
   [^Number x]
   (clj_core/short.e x))
 
 (defn byte
   "Coerce to byte"
-  {:inline (fn  [x] `(clj_core/byte.e x))
+  {:inline '(fn  [x] `(clj_core/byte.e x))
    :added "1.0"}
   [^Number x]
   (clj_core/byte.e x))
 
 (defn char
   "Coerce to char"
-  {:inline (fn  [x] `(clj_core/to_char.e x))
+  {:inline '(fn  [x] `(clj_core/to_char.e x))
    :added "1.1"}
   [x]
   (clj_core/char.e x))
 
 (defn boolean
   "Coerce to boolean"
-  {:inline (fn  [x] `(clj_core/boolean.e ~x))
+  {:inline '(fn  [x] `(clj_core/boolean.e ~x))
    :added "1.0"}
   [x] (clj_core/boolean.e x))
 
@@ -3585,21 +3585,21 @@
   (defn alength
     "Returns the length of the Java array. Works on arrays of all
   types."
-    {:inline (fn [a] `(. clojure.lang.RT (alength ~a)))
+    {:inline '(fn [a] `(. clojure.lang.RT (alength ~a)))
      :added "1.0"}
     [array] (. clojure.lang.RT (alength array)))
 
   (defn aclone
     "Returns a clone of the Java array. Works on arrays of known
   types."
-    {:inline (fn [a] `(. clojure.lang.RT (aclone ~a)))
+    {:inline '(fn [a] `(. clojure.lang.RT (aclone ~a)))
      :added "1.0"}
     [array] (. clojure.lang.RT (aclone array)))
 
   (defn aget
     "Returns the value at the index/indices. Works on Java arrays of all
   types."
-    {:inline (fn [a i] `(. clojure.lang.RT (aget ~a (int ~i))))
+    {:inline '(fn [a i] `(. clojure.lang.RT (aget ~a (int ~i))))
      :inline-arities #{2}
      :added "1.0"}
     ([array idx]
@@ -3610,7 +3610,7 @@
   (defn aset
     "Sets the value at the index/indices. Works on Java arrays of
   reference types. Returns val."
-    {:inline (fn [a i v] `(. clojure.lang.RT (aset ~a (int ~i) ~v)))
+    {:inline '(fn [a i v] `(. clojure.lang.RT (aset ~a (int ~i) ~v)))
      :inline-arities #{3}
      :added "1.0"}
     ([array idx val]
@@ -4807,7 +4807,7 @@
   (let [[pre-args [args expr]] (split-with (comp not vector?) decl)]
     `(do
        (defn ~name ~@pre-args ~args ~(apply (eval (list `fn args expr)) args))
-       (alter-meta! (var ~name) assoc :inline (fn ~name ~args ~expr))
+       (alter-meta! (var ~name) assoc :inline '(fn ~name ~args ~expr))
        (var ~name))))
 
 (defn empty
@@ -4848,7 +4848,7 @@
 
     (defn float-array
       "Creates an array of floats"
-      {:inline (fn [& args] `(. clojure.lang.Numbers float_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers float_array ~@args))
        :inline-arities #{1 2}
        :added "1.0"}
       ([size-or-seq] (. clojure.lang.Numbers float_array size-or-seq))
@@ -4856,7 +4856,7 @@
 
     (defn boolean-array
       "Creates an array of booleans"
-      {:inline (fn [& args] `(. clojure.lang.Numbers boolean_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers boolean_array ~@args))
        :inline-arities #{1 2}
        :added "1.1"}
       ([size-or-seq] (. clojure.lang.Numbers boolean_array size-or-seq))
@@ -4864,7 +4864,7 @@
 
     (defn byte-array
       "Creates an array of bytes"
-      {:inline (fn [& args] `(. clojure.lang.Numbers byte_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers byte_array ~@args))
        :inline-arities #{1 2}
        :added "1.1"}
       ([size-or-seq] (. clojure.lang.Numbers byte_array size-or-seq))
@@ -4872,7 +4872,7 @@
 
     (defn char-array
       "Creates an array of chars"
-      {:inline (fn [& args] `(. clojure.lang.Numbers char_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers char_array ~@args))
        :inline-arities #{1 2}
        :added "1.1"}
       ([size-or-seq] (. clojure.lang.Numbers char_array size-or-seq))
@@ -4880,7 +4880,7 @@
 
     (defn short-array
       "Creates an array of shorts"
-      {:inline (fn [& args] `(. clojure.lang.Numbers short_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers short_array ~@args))
        :inline-arities #{1 2}
        :added "1.1"}
       ([size-or-seq] (. clojure.lang.Numbers short_array size-or-seq))
@@ -4888,7 +4888,7 @@
 
     (defn double-array
       "Creates an array of doubles"
-      {:inline (fn [& args] `(. clojure.lang.Numbers double_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers double_array ~@args))
        :inline-arities #{1 2}
        :added "1.0"}
       ([size-or-seq] (. clojure.lang.Numbers double_array size-or-seq))
@@ -4896,14 +4896,14 @@
 
     (defn object-array
       "Creates an array of objects"
-      {:inline (fn [arg] `(. clojure.lang.RT object_array ~arg))
+      {:inline '(fn [arg] `(. clojure.lang.RT object_array ~arg))
        :inline-arities #{1}
        :added "1.2"}
       ([size-or-seq] (. clojure.lang.RT object_array size-or-seq)))
 
     (defn int-array
       "Creates an array of ints"
-      {:inline (fn [& args] `(. clojure.lang.Numbers int_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers int_array ~@args))
        :inline-arities #{1 2}
        :added "1.0"}
       ([size-or-seq] (. clojure.lang.Numbers int_array size-or-seq))
@@ -4911,7 +4911,7 @@
 
     (defn long-array
       "Creates an array of longs"
-      {:inline (fn [& args] `(. clojure.lang.Numbers long_array ~@args))
+      {:inline '(fn [& args] `(. clojure.lang.Numbers long_array ~@args))
        :inline-arities #{1 2}
        :added "1.0"}
       ([size-or-seq] (. clojure.lang.Numbers long_array size-or-seq))
