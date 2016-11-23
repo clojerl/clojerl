@@ -123,6 +123,7 @@ analyze_form(Env, Form) ->
   IsType   = clj_core:'type?'(Form),
   IsVector = clj_core:'vector?'(Form),
   IsMap    = clj_core:'map?'(Form),
+  IsErlMap = is_map(Form),
   IsSet    = clj_core:'set?'(Form),
   IsVar    = clj_core:'var?'(Form),
   IsTuple  = erlang:is_tuple(Form),
@@ -140,6 +141,8 @@ analyze_form(Env, Form) ->
       analyze_const(Env, Form);
     IsVector ->
       analyze_vector(Env, Form);
+    IsErlMap ->
+      analyze_erl_map(Env, Form);
     IsMap ->
       analyze_map(Env, Form);
     IsSet ->
@@ -964,7 +967,7 @@ process_var_meta(Env, Var) ->
                       , clj_env:location(Env)
                       ),
 
-  'clojerl.Map':to_erl_map(VarMeta).
+  VarMeta.
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 add_def_name(Env, NameSym) ->
@@ -1884,6 +1887,33 @@ analyze_map(Env, Map) ->
   {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
 
   MapExpr = #{ op   => map
+             , env  => ?DEBUG(Env4)
+             , form => Map
+             , tag  => 'clojerl.Map'
+             , keys => KeysExpr
+             , vals => ValsExpr
+             },
+
+  wrapping_meta(Env4, MapExpr).
+
+%%------------------------------------------------------------------------------
+%% Analyze Erlang map
+%%------------------------------------------------------------------------------
+
+-spec analyze_erl_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
+analyze_erl_map(Env, Map) ->
+  Keys  = maps:keys(Map),
+  Vals  = maps:values(Map),
+
+  Count = maps:size(Map),
+  ExprEnv = clj_env:context(Env, expr),
+
+  Env1 = analyze_forms(ExprEnv, Keys),
+  {KeysExpr, Env2} = clj_env:last_exprs(Env1, Count),
+  Env3 = analyze_forms(Env2, Vals),
+  {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
+
+  MapExpr = #{ op   => erl_map
              , env  => ?DEBUG(Env4)
              , form => Map
              , tag  => 'clojerl.Map'
