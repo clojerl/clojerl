@@ -597,7 +597,8 @@
   [& body]
   (list 'new 'clojerl.LazySeq (list* '^{:once true} fn* [] body)))
 
-#_((defn ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
+#_(
+   (defn ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
      (throw "unimplemented chunked seq")
      #_(clojure.lang.ChunkBuffer. capacity))
 
@@ -705,24 +706,6 @@
      (if (next more)
        (recur y (first more) (next more))
        (clj_core/equiv.e y (first more)))
-     false)))
-
-;equals-based
-#_(defn =
-  "Equality. Returns true if x equals y, false if not. Same as Java
-  x.equals(y) except it also works for nil. Boxed numbers must have
-  same type. Clojure's immutable data structures define equals() (and
-  thus =) as a value, not an identity, comparison."
-  {:inline '(fn [x y] `(. clojure.lang.Util equals ~x ~y))
-   :inline-arities #{2}
-   :added "1.0"}
-  ([x] true)
-  ([x y] (clojure.lang.Util/equals x y))
-  ([x y & more]
-   (if (= x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (= y (first more)))
      false)))
 
 (defn not=
@@ -3309,128 +3292,6 @@
                " msecs"))
      ret#))
 
-
-#_(
-   (import '(java.lang.reflect Array))
-
-  (defn alength
-    "Returns the length of the Java array. Works on arrays of all
-  types."
-    {:inline '(fn [a] `(. clojure.lang.RT (alength ~a)))
-     :added "1.0"}
-    [array] (. clojure.lang.RT (alength array)))
-
-  (defn aclone
-    "Returns a clone of the Java array. Works on arrays of known
-  types."
-    {:inline '(fn [a] `(. clojure.lang.RT (aclone ~a)))
-     :added "1.0"}
-    [array] (. clojure.lang.RT (aclone array)))
-
-  (defn aget
-    "Returns the value at the index/indices. Works on Java arrays of all
-  types."
-    {:inline '(fn [a i] `(. clojure.lang.RT (aget ~a (int ~i))))
-     :inline-arities #{2}
-     :added "1.0"}
-    ([array idx]
-     (clojure.lang.Reflector/prepRet (.getComponentType (class array)) (. Array (get array idx))))
-    ([array idx & idxs]
-     (apply aget (aget array idx) idxs)))
-
-  (defn aset
-    "Sets the value at the index/indices. Works on Java arrays of
-  reference types. Returns val."
-    {:inline '(fn [a i v] `(. clojure.lang.RT (aset ~a (int ~i) ~v)))
-     :inline-arities #{3}
-     :added "1.0"}
-    ([array idx val]
-     (. Array (set array idx val))
-     val)
-    ([array idx idx2 & idxv]
-     (apply aset (aget array idx) idx2 idxv)))
-
-  (defmacro
-    ^{:private true}
-    def-aset [name method coerce]
-    `(defn ~name
-       {:arglists '([~'array ~'idx ~'val] [~'array ~'idx ~'idx2 & ~'idxv])}
-       ([array# idx# val#]
-        (. Array (~method array# idx# (~coerce val#)))
-        val#)
-       ([array# idx# idx2# & idxv#]
-        (apply ~name (aget array# idx#) idx2# idxv#))))
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of int. Returns val."
-      :added "1.0"}
-    aset-int setInt int)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of long. Returns val."
-      :added "1.0"}
-    aset-long setLong long)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of boolean. Returns val."
-      :added "1.0"}
-    aset-boolean setBoolean boolean)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of float. Returns val."
-      :added "1.0"}
-    aset-float setFloat float)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of double. Returns val."
-      :added "1.0"}
-    aset-double setDouble double)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of short. Returns val."
-      :added "1.0"}
-    aset-short setShort short)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of byte. Returns val."
-      :added "1.0"}
-    aset-byte setByte byte)
-
-  (def-aset
-    ^{:doc "Sets the value at the index/indices. Works on arrays of char. Returns val."
-      :added "1.0"}
-    aset-char setChar char)
-
-  (defn make-array
-    "Creates and returns an array of instances of the specified class of
-  the specified dimension(s).  Note that a class object is required.
-  Class objects can be obtained by using their imported or
-  fully-qualified name.  Class objects for the primitive types can be
-  obtained using, e.g., Integer/TYPE."
-    {:added "1.0"}
-    ([^Class type len]
-     (. Array (newInstance type (int len))))
-    ([^Class type dim & more-dims]
-     (let [dims (cons dim more-dims)
-           ^"[I" dimarray (make-array (. Integer TYPE)  (count dims))]
-       (dotimes [i (alength dimarray)]
-         (aset-int dimarray i (nth dims i)))
-       (. Array (newInstance type dimarray)))))
-
-  (defn to-array-2d
-    "Returns a (potentially-ragged) 2-dimensional array of Objects
-  containing the contents of coll, which can be any Collection of any
-  Collection."
-    {:tag "[[Ljava.lang.Object;"
-     :added "1.0"}
-    [^java.util.Collection coll]
-    (let [ret (make-array (. Class (forName "[Ljava.lang.Object;")) (. coll (size)))]
-      (loop [i 0 xs (seq coll)]
-        (when xs
-          (aset ret i (to-array (first xs)))
-          (recur (inc i) (next xs))))
-      ret)))
-
 (defn macroexpand-1
   "If form represents a macro form, returns its expansion,
   else returns form."
@@ -4332,23 +4193,7 @@
   (throw "unsupported refs")
   #_`(sync nil ~@exprs))
 
-#_ ((defmacro with-precision
-      "Sets the precision and rounding mode to be used for BigDecimal operations.
-
-  Usage: (with-precision 10 (/ 1M 3))
-  or:    (with-precision 10 :rounding HALF_DOWN (/ 1M 3))
-
-  The rounding mode is one of CEILING, FLOOR, HALF_UP, HALF_DOWN,
-  HALF_EVEN, UP, DOWN and UNNECESSARY; it defaults to HALF_UP."
-      {:added "1.0"}
-      [precision & exprs]
-      (let [[body rm] (if (= (first exprs) :rounding)
-                        [(next (next exprs))
-                         `((. java.math.RoundingMode ~(second exprs)))]
-                        [exprs nil])]
-        `(binding [*math-context* (java.math.MathContext. ~precision ~@rm)]
-           ~@body)))
-
+#_ (
     (defn mk-bound-fn
       {:private true}
       [^clojure.lang.Sorted sc test key]
@@ -4469,165 +4314,12 @@
   ([sep coll]
    (drop 1 (interleave (repeat sep) coll))))
 
-#_(defmacro definline
-  "Experimental - like defmacro, except defines a named function whose
-  body is the expansion, calls to which may be expanded inline as if
-  it were a macro. Cannot be used with variadic (&) args."
-  {:added "1.0"}
-  [name & decl]
-  (let [[pre-args [args expr]] (split-with (comp not vector?) decl)]
-    `(do
-       (defn ~name ~@pre-args ~args ~(apply (eval (list `fn args expr)) args))
-       (alter-meta! (var ~name) assoc :inline '(fn ~name ~args ~expr))
-       (var ~name))))
-
 (defn empty
   "Returns an empty collection of the same category as coll, or nil"
   {:added "1.0"}
   [coll]
   (when (satisfies? clojerl.IColl coll)
     (clj_core/empty.e coll)))
-
-#_ ((defmacro amap
-      "Maps an expression across an array a, using an index named idx, and
-  return value named ret, initialized to a clone of a, then setting
-  each element of ret to the evaluation of expr, returning the new
-  array ret."
-      {:added "1.0"}
-      [a idx ret expr]
-      `(let [a# ~a
-             ~ret (aclone a#)]
-         (loop  [~idx 0]
-           (if (< ~idx  (alength a#))
-             (do
-               (aset ~ret ~idx ~expr)
-               (recur (inc ~idx)))
-             ~ret))))
-
-    (defmacro areduce
-      "Reduces an expression across an array a, using an index named idx,
-  and return value named ret, initialized to init, setting ret to the
-  evaluation of expr at each step, returning ret."
-      {:added "1.0"}
-      [a idx ret init expr]
-      `(let [a# ~a l# (alength a#)]
-         (loop  [~idx 0 ~ret ~init]
-           (if (< ~idx l#)
-             (recur (inc-int ~idx) ~expr)
-             ~ret))))
-
-    (defn float-array
-      "Creates an array of floats"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers float_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.0"}
-      ([size-or-seq] (. clojure.lang.Numbers float_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers float_array size init-val-or-seq)))
-
-    (defn boolean-array
-      "Creates an array of booleans"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers boolean_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.1"}
-      ([size-or-seq] (. clojure.lang.Numbers boolean_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers boolean_array size init-val-or-seq)))
-
-    (defn byte-array
-      "Creates an array of bytes"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers byte_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.1"}
-      ([size-or-seq] (. clojure.lang.Numbers byte_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers byte_array size init-val-or-seq)))
-
-    (defn char-array
-      "Creates an array of chars"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers char_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.1"}
-      ([size-or-seq] (. clojure.lang.Numbers char_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers char_array size init-val-or-seq)))
-
-    (defn short-array
-      "Creates an array of shorts"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers short_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.1"}
-      ([size-or-seq] (. clojure.lang.Numbers short_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers short_array size init-val-or-seq)))
-
-    (defn double-array
-      "Creates an array of doubles"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers double_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.0"}
-      ([size-or-seq] (. clojure.lang.Numbers double_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers double_array size init-val-or-seq)))
-
-    (defn object-array
-      "Creates an array of objects"
-      {:inline '(fn [arg] `(. clojure.lang.RT object_array ~arg))
-       :inline-arities #{1}
-       :added "1.2"}
-      ([size-or-seq] (. clojure.lang.RT object_array size-or-seq)))
-
-    (defn int-array
-      "Creates an array of ints"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers int_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.0"}
-      ([size-or-seq] (. clojure.lang.Numbers int_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers int_array size init-val-or-seq)))
-
-    (defn long-array
-      "Creates an array of longs"
-      {:inline '(fn [& args] `(. clojure.lang.Numbers long_array ~@args))
-       :inline-arities #{1 2}
-       :added "1.0"}
-      ([size-or-seq] (. clojure.lang.Numbers long_array size-or-seq))
-      ([size init-val-or-seq] (. clojure.lang.Numbers long_array size init-val-or-seq)))
-
-    (definline booleans
-      "Casts to boolean[]"
-      {:added "1.1"}
-      [xs] `(. clojure.lang.Numbers booleans ~xs))
-
-    (definline bytes
-      "Casts to bytes[]"
-      {:added "1.1"}
-      [xs] `(. clojure.lang.Numbers bytes ~xs))
-
-    (definline chars
-      "Casts to chars[]"
-      {:added "1.1"}
-      [xs] `(. clojure.lang.Numbers chars ~xs))
-
-    (definline shorts
-      "Casts to shorts[]"
-      {:added "1.1"}
-      [xs] `(. clojure.lang.Numbers shorts ~xs))
-
-    (definline floats
-      "Casts to float[]"
-      {:added "1.0"}
-      [xs] `(. clojure.lang.Numbers floats ~xs))
-
-    (definline ints
-      "Casts to int[]"
-      {:added "1.0"}
-      [xs] `(. clojure.lang.Numbers ints ~xs))
-
-    (definline doubles
-      "Casts to double[]"
-      {:added "1.0"}
-      [xs] `(. clojure.lang.Numbers doubles ~xs))
-
-    (definline longs
-      "Casts to long[]"
-      {:added "1.0"}
-      [xs] `(. clojure.lang.Numbers longs ~xs)))
-
-#_(import '(java.util.concurrent BlockingQueue LinkedBlockingQueue))
 
 (defn seque
   "Creates a queued seq on another (presumably lazy) seq s. The queued
@@ -4679,26 +4371,6 @@
   "Returns true if x is an instance of Class"
   {:added "1.0"}
   [x]
-  (throw "unsupported class"))
-
-(defn- is-annotation? [c]
-  (throw "unsupported class"))
-
-(defn- is-runtime-annotation? [^Class c]
-  (throw "unsupported class"))
-
-(defn- descriptor [^Class c]
-  (throw "unsupported class"))
-
-(declare process-annotation)
-(defn- add-annotation [^clojure.asm.AnnotationVisitor av name v]
-  (throw "unsupported class"))
-
-(defn- process-annotation [av v]
-  (throw "unsupported class"))
-
-(defn- add-annotations
-  [& _]
   (throw "unsupported class"))
 
 (defn alter-var-root
