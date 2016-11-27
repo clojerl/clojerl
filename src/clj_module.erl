@@ -152,7 +152,7 @@ fake_fun(ModuleName, Function, Arity) ->
 replace_calls( #c_call{ module = ModuleAst
                       , name   = FunctionAst
                       , args   = ArgsAsts
-                      , anno   = Anno
+                      , anno   = Ann
                       }
              , CurrentModule
              ) ->
@@ -162,26 +162,26 @@ replace_calls( #c_call{ module = ModuleAst
   Module = cerl:concrete(ModuleAst),
   case is_loaded(Module) of
     true  ->
-      fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts);
+      fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts);
     false ->
       ArgsAsts1 = replace_calls(ArgsAsts, CurrentModule),
-      cerl:ann_c_call(Anno, ModuleAst, FunctionAst, ArgsAsts1)
+      cerl:ann_c_call(Ann, ModuleAst, FunctionAst, ArgsAsts1)
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
 replace_calls(#c_apply{ op   = #c_var{name = {_, _}} = FNameAst
                       , args = ArgsAsts
-                      , anno = Anno
+                      , anno = Ann
                       }
              , Module) ->
-  case lists:member(local, Anno) of
+  case lists:member(local, Ann) of
     true ->
       ArgsAsts1 = replace_calls(ArgsAsts, Module),
-      cerl:ann_c_apply(Anno, FNameAst, ArgsAsts1);
+      cerl:ann_c_apply(Ann, FNameAst, ArgsAsts1);
     false ->
-      ModuleAst   = cerl:ann_c_atom(Anno, Module),
-      FunctionAst = cerl:ann_c_atom(Anno, cerl:fname_id(FNameAst)),
-      fake_fun_call(Anno, Module, ModuleAst, FunctionAst, ArgsAsts)
+      ModuleAst   = cerl:ann_c_atom(Ann, Module),
+      FunctionAst = cerl:ann_c_atom(Ann, cerl:fname_id(FNameAst)),
+      fake_fun_call(Ann, Module, ModuleAst, FunctionAst, ArgsAsts)
   end;
 replace_calls(Ast, Module) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
@@ -190,28 +190,28 @@ replace_calls(Asts, Module) when is_list(Asts) ->
 replace_calls(Ast, _) ->
   Ast.
 
--spec fake_fun_call( cerl:anno()
+-spec fake_fun_call( [term()]
                    , module()
                    , cerl:cerl()
                    , cerl:cerl()
                    , [cerl:cerl()]
                    ) -> cerl:cerl().
-fake_fun_call(Anno, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
+fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
   Args1    = replace_calls(ArgsAsts, CurrentModule),
   Arity    = length(ArgsAsts),
   CallArgs = [ ModuleAst
              , FunctionAst
-             , cerl:ann_c_int(Anno, Arity)
+             , cerl:ann_c_int(Ann, Arity)
              ],
-  CallAst  = cerl:ann_c_call( Anno
+  CallAst  = cerl:ann_c_call( Ann
                             , cerl:c_atom(?MODULE)
                             , cerl:c_atom(fake_fun)
                             , CallArgs
                             ),
-  VarAst   = clj_emitter:new_c_var(Anno),
-  ApplyAst = cerl:ann_c_apply(Anno, VarAst, Args1),
+  VarAst   = clj_emitter:new_c_var(Ann),
+  ApplyAst = cerl:ann_c_apply(Ann, VarAst, Args1),
 
-  cerl:ann_c_let(Anno, [VarAst], CallAst, ApplyAst).
+  cerl:ann_c_let(Ann, [VarAst], CallAst, ApplyAst).
 
 -spec add_mappings(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
 add_mappings(ModuleName, Mappings) when is_atom(ModuleName)  ->
