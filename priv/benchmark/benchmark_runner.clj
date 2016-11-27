@@ -131,7 +131,7 @@
 
   (println ";;; reader")
   (def strings
-    (take 10 (iterate (fn [s] (str s "string")) "string")))
+    (into [] (take 10 (iterate (fn [s] (str s "string")) "string"))))
 
   (def big-str-data
     (pr-str {:nils (repeat 10 nil)
@@ -142,9 +142,9 @@
              :symbols (map symbol strings)
              :strings strings}))
 
-  ;; (simple-benchmark [s "{:foo [1 2 3]}"] (reader/read-string s) 1000)
-  ;; (simple-benchmark [s big-str-data] (reader/read-string s) 1000)
-  ;; (println)
+  (simple-benchmark [s "{:foo [1 2 3]}"] (read-string s) 1000)
+  (simple-benchmark [s big-str-data] (read-string s) 1000)
+  (println)
 
   (println ";;; range")
   (simple-benchmark [r (range 1000000)] (last r) 1)
@@ -156,13 +156,14 @@
      (when (< i n)
        (lazy-seq
         (cons i (ints-seq (inc i) n))))))
-  (def r (ints-seq 1000000))
-  (println ";;; lazy-seq")
-  (println ";;; first run")
-  (simple-benchmark [r r] (last r) 1)
-  (println ";;; second run")
-  (simple-benchmark [r r] (last r) 1)
-  (println)
+
+  (let [r (ints-seq 1000000)]
+    (println ";;; lazy-seq")
+    (println ";;; first run")
+    (simple-benchmark [r r] (last r) 1)
+    (println ";;; second run")
+    (simple-benchmark [r r] (last r) 1)
+    (println))
 
   (println ";;; comprehensions")
   (simple-benchmark [xs (range 512)] (last (for [x xs y xs] (+ x y))) 1)
