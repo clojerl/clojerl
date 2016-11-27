@@ -899,14 +899,11 @@ parse_def(Env, List) ->
                       ),
 
   QuoteSym     = clj_core:symbol(<<"quote">>),
-  QuoteFun     = fun(Symbol) ->
-                     clj_core:list([QuoteSym, Symbol])
-                 end,
   NameBin      = clj_core:name(VarSymbol),
   VarMeta      = clj_core:merge([ clj_core:meta(Var0)
                                 , SymbolMeta
-                                , #{ ns   => QuoteFun(VarNsSym)
-                                   , name => QuoteFun(clj_core:symbol(NameBin))
+                                , #{ ns   => [QuoteSym, VarNsSym]
+                                   , name => [QuoteSym, clj_core:symbol(NameBin)]
                                    }
                                 ]),
   Var          = clj_core:with_meta(Var0, VarMeta),
