@@ -633,7 +633,7 @@
   (when *load-tests*
     (let [test-var-name (symbol (str (ns-name *ns*)) (str name "__test"))]
       `(do
-         (def ~(vary-meta name assoc :test test-var-name)
+         (def ~(vary-meta name assoc :test (list 'quote test-var-name))
            (fn [] (test-var (var ~name))))
          (defn- ~test-var-name [] ~@body)))))
 
@@ -644,7 +644,7 @@
   (when *load-tests*
     (let [test-var-name (symbol (str name "__private-test"))]
       `(do
-         (def ~(vary-meta name assoc :test test-var-name :private true)
+         (def ~(vary-meta name assoc :test (list 'quote test-var-name) :private true)
            (fn [] (test-var (var ~name))))
          (defn- ~test-var-name [] ~@body)))))
 

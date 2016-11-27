@@ -35,6 +35,10 @@
         , bench/4
 
         , code_from_binary/1
+
+        , floor/1
+        , ceil/1
+        , signum/1
         ]).
 
 -define(INT_PATTERN,
@@ -450,3 +454,27 @@ location_to_binary(#{line := Line, column := Col} = Location)
   location_to_binary(Location#{file => ?NIL});
 location_to_binary(_) ->
   <<"?:?:?: ">>.
+
+-spec floor(number()) -> number().
+floor(X) when X < 0 ->
+  T = trunc(X),
+  case X - T == 0 of
+    true  -> T;
+    false -> T - 1
+  end;
+floor(X) ->
+  trunc(X).
+
+-spec ceil(number()) -> number().
+ceil(X) when X < 0 ->
+  trunc(X);
+ceil(X) ->
+  T = trunc(X),
+  case X - T == 0 of
+    true  -> T;
+    false -> T + 1
+  end.
+
+-spec signum(number()) -> number().
+signum(X) when X < 0 -> -1;
+signum(X) when X >= 0 -> 1.

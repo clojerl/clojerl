@@ -123,6 +123,7 @@ analyze_form(Env, Form) ->
   IsType   = clj_core:'type?'(Form),
   IsVector = clj_core:'vector?'(Form),
   IsMap    = clj_core:'map?'(Form),
+  IsErlMap = is_map(Form),
   IsSet    = clj_core:'set?'(Form),
   IsVar    = clj_core:'var?'(Form),
   IsTuple  = erlang:is_tuple(Form),
@@ -140,6 +141,8 @@ analyze_form(Env, Form) ->
       analyze_const(Env, Form);
     IsVector ->
       analyze_vector(Env, Form);
+    IsErlMap ->
+      analyze_erl_map(Env, Form);
     IsMap ->
       analyze_map(Env, Form);
     IsSet ->
@@ -864,13 +867,6 @@ parse_def(Env, List) ->
   Docstring    = validate_def_args(Env, List),
   VarSymbol0   = clj_core:second(List),
   SymbolMeta0  = clj_core:meta(VarSymbol0),
-  ArgLists     = clj_core:get(SymbolMeta0, arglists),
-  ArgListsMap  = case ArgLists of
-                   ?NIL -> #{};
-                   %% TODO: using second is a workaround to not analyzing
-                   %% the var's metadata
-                   ArgLists -> #{arglists => clj_core:second(ArgLists)}
-                 end,
   DocstringMap = case Docstring of
                    ?NIL -> #{};
                    Docstring -> #{doc => Docstring}
@@ -878,8 +874,7 @@ parse_def(Env, List) ->
 
   LocationInfo = clj_env:get(Env, location),
 
-  SymbolMeta   = clj_core:merge([ ArgListsMap
-                                , DocstringMap
+  SymbolMeta   = clj_core:merge([ DocstringMap
                                 , SymbolMeta0
                                 , LocationInfo
                                 ]),
@@ -903,17 +898,16 @@ parse_def(Env, List) ->
                       , clj_env:location(Env)
                       ),
 
-  NameBin       = clj_core:name(VarSymbol),
-  VarMeta       = clj_core:merge([ clj_core:meta(Var0)
-                                 , SymbolMeta
-                                 , #{ ns   => VarNsSym
-                                    , name => clj_core:symbol(NameBin)
-                                    }
-                                 , ArgListsMap
-                                 ]),
-  Var           = clj_core:with_meta(Var0, VarMeta),
-
-  IsDynamic     = 'clojerl.Var':is_dynamic(Var),
+  QuoteSym     = clj_core:symbol(<<"quote">>),
+  NameBin      = clj_core:name(VarSymbol),
+  VarMeta      = clj_core:merge([ clj_core:meta(Var0)
+                                , SymbolMeta
+                                , #{ ns   => [QuoteSym, VarNsSym]
+                                   , name => [QuoteSym, clj_core:symbol(NameBin)]
+                                   }
+                                ]),
+  Var          = clj_core:with_meta(Var0, VarMeta),
+  IsDynamic    = 'clojerl.Var':is_dynamic(Var),
 
   NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
   clj_utils:warn_when( not NoWarnDynamic
@@ -935,28 +929,42 @@ parse_def(Env, List) ->
             _ -> ?UNBOUND
           end,
 
-  ExprEnv = add_def_name(clj_env:context(Env, expr), VarSymbol),
+  ExprEnv  = add_def_name(clj_env:context(Env, expr), VarSymbol),
   {InitExpr, Env1} = clj_env:pop_expr(analyze_form(ExprEnv, Init)),
 
-  Var1 = var_fn_info(Var, InitExpr),
-  clj_namespace:update_var(Var1),
-
-  %% TODO: the var's meta needs to be analyzed as well
-  %% Var1Meta = clj_core:meta(Var1),
-  %% {MetaExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Var1Meta)),
+  Var1     = var_fn_info(Var, InitExpr),
+  VarMeta1 = process_var_meta(Env, Var1),
+  Var2     = 'clojerl.Var':with_meta(Var1, VarMeta1),
+  clj_namespace:update_var(Var2),
 
   DefExpr = #{ op      => def
              , env     => ?DEBUG(Env)
              , form    => List
              , name    => VarSymbol
              , tag     => maybe_type_tag(VarSymbol)
-             , var     => Var1
+             , var     => Var2
              , init    => InitExpr
              , dynamic => IsDynamic
              },
 
   Env2 = restore_def_name(Env1, Env),
   clj_env:push_expr(Env2, DefExpr).
+
+process_var_meta(Env, Var) ->
+  Env1    = analyze_form(Env, clj_core:meta(Var)),
+  Env2    = clj_emitter:emit(Env1),
+  {Exprs, _Env3} = clj_emitter:remove_state(Env2),
+  VarMeta = clj_compiler:eval_expressions(Exprs, false),
+
+  clj_utils:error_when( not cerl:is_literal_term(VarMeta)
+                      , [ <<"Metadata for var ">>
+                        , Var
+                        , <<" can only contains literals">>
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  VarMeta.
 
 -spec add_def_name(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 add_def_name(Env, NameSym) ->
@@ -1876,6 +1884,33 @@ analyze_map(Env, Map) ->
   {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
 
   MapExpr = #{ op   => map
+             , env  => ?DEBUG(Env4)
+             , form => Map
+             , tag  => 'clojerl.Map'
+             , keys => KeysExpr
+             , vals => ValsExpr
+             },
+
+  wrapping_meta(Env4, MapExpr).
+
+%%------------------------------------------------------------------------------
+%% Analyze Erlang map
+%%------------------------------------------------------------------------------
+
+-spec analyze_erl_map(clj_env:env(), 'clojerl.Map':type()) -> clj_env:env().
+analyze_erl_map(Env, Map) ->
+  Keys  = maps:keys(Map),
+  Vals  = maps:values(Map),
+
+  Count = maps:size(Map),
+  ExprEnv = clj_env:context(Env, expr),
+
+  Env1 = analyze_forms(ExprEnv, Keys),
+  {KeysExpr, Env2} = clj_env:last_exprs(Env1, Count),
+  Env3 = analyze_forms(Env2, Vals),
+  {ValsExpr, Env4} = clj_env:last_exprs(Env3, Count),
+
+  MapExpr = #{ op   => erl_map
              , env  => ?DEBUG(Env4)
              , form => Map
              , tag  => 'clojerl.Map'

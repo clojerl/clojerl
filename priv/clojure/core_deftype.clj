@@ -420,7 +420,7 @@
 
 (defn- emit-protocol-function
   [iname {name :name arglists :arglists :as sig}]
-  `(defn ~(with-meta name (assoc sig :protocol iname))
+  `(defn ~(with-meta name (assoc sig :protocol (list 'quote iname)))
      ~@(map (fn [args]
               `(~args
                 (clj_protocol/resolve.e ~(keyword iname)

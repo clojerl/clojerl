@@ -84,7 +84,7 @@
                               (meta (var f)))
            {:name foo :arglists ([a]) :doc "method with one arg"} foo
            {:name bar :arglists ([a b]) :doc "method with two args"} bar
-           {:name baz :arglists ([a] [a b]) :doc "method with multiple arities" :tag clojerl.String} baz
+           {:name baz :arglists ([a] [a b]) :doc "method with multiple arities" :tag :clojerl.String} baz
            {:name with-quux :arglists ([a]) :doc "method name with a hyphen"} with-quux)))
   (testing "protocol fns throw IllegalArgumentException if no impl matches"
     (is (thrown-with-msg?

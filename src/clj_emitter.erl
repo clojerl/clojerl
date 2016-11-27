@@ -620,6 +620,29 @@ ast(#{op := map} = Expr, State) ->
 
   Ast = call_mfa('clojerl.Map', ?CONSTRUCTOR, [ListItems], anno_from(Env)),
   push_ast(Ast, State2);
+ast(#{op := erl_map} = Expr, State) ->
+  #{ keys := KeysExprs
+   , vals := ValsExprs
+   , env  := Env
+   } = Expr,
+
+  {Keys, State1} = pop_ast( lists:foldl(fun ast/2, State, KeysExprs)
+                          , length(KeysExprs)
+                          ),
+  {Vals, State2} = pop_ast( lists:foldl(fun ast/2, State1, ValsExprs)
+                          , length(ValsExprs)
+                          ),
+  PairUp = fun
+             PairUp([], [], Pairs) ->
+               Pairs;
+             PairUp([H1 | Tail1], [H2 | Tail2], Pairs) ->
+               PairUp(Tail1, Tail2, [cerl:c_map_pair(H1, H2) | Pairs])
+           end,
+
+  PairsAsts = PairUp(Keys, Vals, []),
+
+  Ast = cerl:ann_c_map(anno_from(Env), PairsAsts),
+  push_ast(Ast, State2);
 ast(#{op := set} = Expr, State) ->
   #{ items := ItemsExprs
    , env   := Env
