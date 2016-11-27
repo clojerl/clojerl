@@ -125,10 +125,10 @@ specified.
            (divisible? year 400))))
 
 (def ^:private days-in-month
-     (let [dim-norm [nil 31 28 31 30 31 30 31 31 30 31 30 31]
-           dim-leap [nil 31 29 31 30 31 30 31 31 30 31 30 31]]
-       (fn [month leap-year?]
-         ((if leap-year? dim-leap dim-norm) month))))
+  (fn [month leap-year?]
+    (let [dim-norm [nil 31 28 31 30 31 30 31 31 30 31 30 31]
+          dim-leap [nil 31 29 31 30 31 30 31 31 30 31 30 31]]
+      ((if leap-year? dim-leap dim-norm) month))))
 
 (defn validated
   "Return a function which constructs and instant by calling constructor

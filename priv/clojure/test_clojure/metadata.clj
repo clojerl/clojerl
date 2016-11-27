@@ -31,13 +31,13 @@
   (require ns))
 
 (def public-vars
-  (mapcat #(vals (ns-publics %)) public-namespaces))
+  (into [] (mapcat #(vals (ns-publics %)) public-namespaces)))
 
 (def public-vars-with-docstrings
-  (filter (comp :doc meta) public-vars))
+  (into [] (filter (comp :doc meta) public-vars)))
 
 (def public-vars-with-docstrings-not-generated
-  (remove #(re-find #"^->[A-Z]" (name %)) public-vars-with-docstrings))
+  (into [] (remove #(re-find #"^->[A-Z]" (name %)) public-vars-with-docstrings)))
 
 (deftest public-vars-with-docstrings-have-added
   (is (= [] (remove (comp :added meta) public-vars-with-docstrings-not-generated))))
