@@ -313,7 +313,7 @@ compile_forms(Module, Opts) ->
   ok       = maybe_output_erl(Module, Opts),
   ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
 
-  {ok, _, BeamBinary} = compile:forms(Module, ErlFlags),
+  {ok, _, BeamBinary} = compile:noenv_forms(Module, ErlFlags),
 
   Name     = cerl:atom_val(cerl:module_name(Module)),
   BeamPath = maybe_output_beam(Name, add_core_code(BeamBinary, Module), Opts),
@@ -347,7 +347,7 @@ eval_expressions(Expressions, ReplaceCalls) ->
                   end,
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
-  {ok, _, Binary} = compile:forms(EvalModule, [clint, from_core]),
+  {ok, _, Binary} = compile:noenv_forms(EvalModule, [clint, from_core]),
   code:load_binary(ModuleName, "", Binary),
   try
     ModuleName:eval()
