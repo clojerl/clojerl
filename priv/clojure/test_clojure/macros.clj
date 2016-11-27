@@ -68,7 +68,7 @@
       (is (= {:bar :baz} (meta (second expanded))))
       (is (= {:foo :bar} (meta (last (second expanded))))))))
 
-(def constantly-nil (constantly nil))
+(def constantly-nil (fn [& _] nil))
 
 (deftest some->test
   (is (nil? (some-> nil)))

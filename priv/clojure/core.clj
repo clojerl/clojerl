@@ -2290,7 +2290,7 @@
   coll, else true."
    :arglists '([pred coll])
    :added "1.0"}
- not-every? (comp not every?))
+ not-every? (fn [pred coll] (not (every? pred coll))))
 
 (defn some
   "Returns the first logical true value of (pred x) for any x in coll,
@@ -2308,7 +2308,7 @@
   else true."
    :arglists '([pred coll])
    :added "1.0"}
- not-any? (comp not some))
+  not-any? (fn [pred coll] (not (some pred coll))))
 
 ;will be redefed later with arg checks
 (defmacro dotimes

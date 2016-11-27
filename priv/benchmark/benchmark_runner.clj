@@ -94,8 +94,6 @@
   ;; (simple-benchmark [coll (array-map :foo 1) ks [:foo]] (update-in coll ks inc) 1000000)
   (println)
 
-  (def data-atom (atom {:x 0}))
-
   (println ";;; map / record ops")
   (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
   (simple-benchmark [coll {'foo 1 'bar 2}] (get coll 'foo) 1000000)

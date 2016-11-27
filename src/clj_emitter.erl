@@ -118,12 +118,26 @@ ast(#{op := def} = Expr, State) ->
         , add_functions(Module, Name, VarAnno, FnExpr, State)
         };
       _ ->
-        {V, S} = pop_ast(ast(InitExpr, State)),
+        {InitAst0, StateTemp} = pop_ast(ast(InitExpr, State)),
+        InitAst = case cerl:is_literal(InitAst0) of
+                     true  -> InitAst0;
+                     false ->
+                      InitAst00 = clj_compiler:eval_expressions([InitAst0]),
+                      clj_utils:error_when( not cerl:is_literal_term(InitAst00)
+                                          , [ <<"Init value for ">>, Var
+                                            , <<" is not a literal: ">>
+                                            , InitAst00
+                                            ]
+                                          , clj_env:location(Env)
+                                          ),
+                      cerl:abstract(InitAst00)
+                   end,
+
         %% If the var is dynamic then the body of the val function needs
         %% to take this into account.
         case 'clojerl.Var':is_dynamic(Var) of
-          true  -> {var_val_function(V, VarAst, VarAnno), S};
-          false -> {V, S}
+          true  -> {var_val_function(InitAst, VarAst, VarAnno), StateTemp};
+          false -> {InitAst, StateTemp}
         end
     end,
 
@@ -1375,11 +1389,11 @@ do_shadow_depth(_, Depth) ->
 %% ----- Vars -------
 
 -spec var_val_function(ast(), ast(), erl_anno:anno()) -> ast().
-var_val_function(Val, VarAst, Anno) ->
-  TestAst            = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
+var_val_function(ValAst, VarAst, Anno) ->
+  TestAst        = call_mfa('clojerl.Var', dynamic_binding, [VarAst], Anno),
 
   NilAtom        = cerl:ann_c_atom(Anno, ?NIL),
-  NilClauseAst   = cerl:ann_c_clause(Anno, [NilAtom], Val),
+  NilClauseAst   = cerl:ann_c_clause(Anno, [NilAtom], ValAst),
 
   XVar           = new_c_var(Anno),
   TupleAst       = cerl:ann_c_tuple(Anno, [cerl:c_atom(ok), XVar]),
