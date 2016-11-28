@@ -1,6 +1,7 @@
 -module(clojerl_MultiFn_SUITE).
 
 -include("clojerl.hrl").
+-include("clj_test_utils.hrl").
 
 -export([ all/0
         , init_per_suite/1
@@ -15,25 +16,11 @@
         , complete_coverage/1
         ]).
 
--type config() :: list().
--type result() :: {comments, string()}.
-
 -spec all() -> [atom()].
-all() ->
-  ExcludedFuns = [ init_per_suite
-                 , end_per_suite
-                 , init_per_testcase
-                 , end_per_testcase
-                 , all
-                 , module_info
-                 ],
-  Exports = ?MODULE:module_info(exports),
-  [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
-init_per_suite(Config) ->
-  application:ensure_all_started(clojerl),
-  Config.
+init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
 
 -spec init_per_testcase(atom(), config()) -> config().
 init_per_testcase(_, Config) ->

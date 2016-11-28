@@ -1,0 +1,2 @@
+-type config() :: list().
+-type result() :: {comments, string()}.

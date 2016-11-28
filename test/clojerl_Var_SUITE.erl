@@ -1,6 +1,7 @@
 -module(clojerl_Var_SUITE).
 
 -include("clojerl.hrl").
+-include("clj_test_utils.hrl").
 
 -export([all/0, init_per_suite/1]).
 
@@ -23,9 +24,6 @@
         , complete_coverage/1
         ]).
 
--type config() :: list().
--type result() :: {comments, string()}.
-
 -mappings(#{<<"forty-two">> => { ?TYPE
                                , 'clojerl.Var'
                                , {<<"clojerl_Var_SUITE">>, <<"forty-two">>}
@@ -34,20 +32,11 @@
            }).
 
 -spec all() -> [atom()].
-all() ->
-  ExcludedFuns = [ init_per_suite
-                 , end_per_suite
-                 , all
-                 , module_info
-                 , 'forty-two'
-                 ],
-  Exports = ?MODULE:module_info(exports),
-  [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+all() -> clj_test_utils:all(?MODULE, ['forty-two']).
 
 -spec init_per_suite(config()) -> config().
-init_per_suite(Config) ->
-  application:ensure_all_started(clojerl),
-  Config.
+init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
+
 
 %%------------------------------------------------------------------------------
 %% Test Cases

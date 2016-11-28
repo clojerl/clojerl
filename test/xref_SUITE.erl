@@ -1,19 +1,11 @@
 -module(xref_SUITE).
 
--type config() :: proplists:proplist().
+-include("clj_test_utils.hrl").
 
--export(
-   [
-    all/0,
-    xref/1
-   ]
-  ).
+-export([all/0, xref/1]).
 
 -spec all() -> [atom()].
-all() ->
-  ExcludedFuns = [all, module_info],
-  Exports = ?MODULE:module_info(exports),
-  [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+all() -> clj_test_utils:all(?MODULE).
 
 -spec xref(config()) -> {comment, []}.
 xref(_Config) ->

@@ -1,5 +1,7 @@
 -module(clojerl_erlang_Fn_SUITE).
 
+-include("clj_test_utils.hrl").
+
 -export([all/0, init_per_suite/1]).
 
 -export([ apply/1
@@ -7,19 +9,11 @@
         , str/1
         ]).
 
--type config() :: list().
--type result() :: {comments, string()}.
-
 -spec all() -> [atom()].
-all() ->
-  ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
-  Exports = ?MODULE:module_info(exports),
-  [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
-init_per_suite(Config) ->
-  ok = clojerl:start(),
-  Config.
+init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
 
 %%------------------------------------------------------------------------------
 %% Test Cases

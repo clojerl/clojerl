@@ -1,6 +1,7 @@
 -module(erlang_io_File_SUITE).
 
 -include("clojerl.hrl").
+-include("clj_test_utils.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 
@@ -12,18 +13,12 @@
         , complete_coverage/1
         ]).
 
--type config() :: list().
--type result() :: {comments, string()}.
-
 -spec all() -> [atom()].
-all() ->
-  ExcludedFuns = [init_per_suite, end_per_suite, all, module_info],
-  Exports = ?MODULE:module_info(exports),
-  [F || {F, 1} <- Exports, not lists:member(F, ExcludedFuns)].
+all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
-init_per_suite(Config) ->
-  application:ensure_all_started(clojerl),
+init_per_suite(Config0) ->
+  Config = clj_test_utils:init_per_suite(Config0),
   file:write_file(<<"tmp">>, <<"Hello world!\nHow are you?\r\n">>),
   Config.
 
