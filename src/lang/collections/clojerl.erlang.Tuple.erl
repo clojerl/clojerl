@@ -35,7 +35,7 @@ equiv(X, Y) when is_tuple(X), is_tuple(Y) ->
   end;
 equiv(X, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(to_list(X), Y);
+    true  -> 'clojerl.erlang.List':equiv(to_list(X), Y);
     false -> false
   end.
 
