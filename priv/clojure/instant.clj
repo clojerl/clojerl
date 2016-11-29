@@ -236,8 +236,8 @@ milliseconds since the epoch, UTC."
    offset-sign offset-hours offset-minutes]
   (let [offset-secs (+ (* offset-sign offset-hours 60 60)
                        (* offset-sign offset-minutes 60))
-        datetime #[#[years months days]
-                   #[hours minutes seconds]]
+        datetime #erl [#erl [years months days]
+                       #erl [hours minutes seconds]]
         greg-seconds (calendar/datetime_to_gregorian_seconds.e datetime)]
     (calendar/gregorian_seconds_to_datetime.e (- greg-seconds offset-secs))))
 

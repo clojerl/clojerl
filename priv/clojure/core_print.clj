@@ -185,4 +185,4 @@
 
 (defmethod print-method clojerl.erlang.Tuple [s, ^Writer w]
   (print-meta s w)
-  (print-sequential "#[" pr-on " " "]" (seq s) w))
+  (print-sequential "#erl [" pr-on " " "]" (seq s) w))

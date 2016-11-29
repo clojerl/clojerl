@@ -63,7 +63,7 @@ Design notes for clojure.string:
   (with-open [buffer (new erlang.io.StringWriter)]
     (let [append erlang.io.StringWriter/write.2
           length (count s)
-          matches (re-run re s :global #[:capture :all :index])]
+          matches (re-run re s :global #erl [:capture :all :index])]
       (loop [index 0
              [[[i len] :as m] & ms] matches]
         (if m
@@ -104,7 +104,7 @@ Design notes for clojure.string:
   [s match replacement]
   (let [s (when s (str s))
         replace erlang.util.Regex/replace.4
-        opts (clj_core/to_list.e [:global])]
+        opts '#erl (:global)]
     (cond
       (string? match) (replace match s (str replacement) opts)
       (regex? match) (if (or (string? replacement)
@@ -118,7 +118,7 @@ Design notes for clojure.string:
   (with-open [buffer (new erlang.io.StringWriter)]
     (let [append erlang.io.StringWriter/write.2
           length (count s)
-          [[i len] :as matches] (re-run re s #[:capture :all :index])
+          [[i len] :as matches] (re-run re s #erl [:capture :all :index])
           matches (map (fn [[i len]] (subs s i (+ i len))) matches)
           matches (if (= (count matches) 1) (first matches) matches)]
       (if i
@@ -166,7 +166,7 @@ Design notes for clojure.string:
   [s match replacement]
   (let [s (when s (str s))
         replace erlang.util.Regex/replace.4
-        opts (clj_core/to_list.e [])]
+        opts #erl ()]
     (cond
       (or (string? match)
           (instance? :erlang.io.StringWriter match))
@@ -217,11 +217,11 @@ Design notes for clojure.string:
   ([s re]
    (vec (erlang.util.Regex/split.e re
                                   (when s (str s))
-                                  (clj_core/to_list.e []))))
+                                  #erl ())))
   ([s re limit]
    (vec (erlang.util.Regex/split.e re
                                    (when s (str s))
-                                   (clj_core/to_list.e [:global #[:match_limit limit]])))))
+                                   (clj_core/to_list.e [:global #erl [:match_limit limit]])))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."
