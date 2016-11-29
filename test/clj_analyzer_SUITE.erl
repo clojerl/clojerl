@@ -718,10 +718,9 @@ set(_Config) ->
 tuple(_Config) ->
   #{ op    := tuple
    , items := [_, _]
-   } = analyze_one(<<"#[:name :lastname]">>),
+   } = analyze_one(<<"#erl [:name :lastname]">>),
 
   {comments, ""}.
-
 
 -spec throw(config()) -> result().
 throw(_Config) ->
