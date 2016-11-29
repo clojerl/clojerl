@@ -40,7 +40,7 @@ equiv(X, Y) ->
   end.
 
 %% @private
-do_equiv(_, _, Size, Size) -> true;
+do_equiv(_, _, Size, Index) when Size < Index -> true;
 do_equiv(X, Y, Size, Index) ->
   case clj_core:equiv(element(Index, X), element(Index, Y)) of
     false -> false;
