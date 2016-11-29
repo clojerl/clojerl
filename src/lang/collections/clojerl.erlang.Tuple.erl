@@ -69,4 +69,4 @@ str(Tuple) when is_tuple(Tuple) ->
   Items     = tuple_to_list(Tuple),
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs      = 'clojerl.String':join(ItemsStrs, <<", ">>),
-  <<"#[", Strs/binary, "]">>.
+  <<"#erl[", Strs/binary, "]">>.
