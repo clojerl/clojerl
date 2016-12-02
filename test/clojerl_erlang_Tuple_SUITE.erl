@@ -102,10 +102,10 @@ seq(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Tuple = {1, 2, 3, 4},
-  <<"#[1, 2, 3, 4]">> = clj_core:str(Tuple),
+  <<"#erl[1, 2, 3, 4]">> = clj_core:str(Tuple),
 
   EmptyTuple = {},
-  <<"#[]">> = clj_core:str(EmptyTuple),
+  <<"#erl[]">> = clj_core:str(EmptyTuple),
 
   {comments, ""}.
 

@@ -893,7 +893,6 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $( -> read_fn(consume_char(State));
     $= -> read_eval(NewState);
     ${ -> read_set(NewState);
-    $[ -> read_tuple(NewState);
     $" -> read_regex(NewState);
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
@@ -976,22 +975,6 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
   SetWithMeta = clj_core:with_meta(Set, file_location_meta(State0)),
 
   State2#{forms => [SetWithMeta | Forms]}.
-
-%%------------------------------------------------------------------------------
-%% #[] tuple
-%%------------------------------------------------------------------------------
-
--spec read_tuple(state()) -> state().
-read_tuple(#{forms := Forms, loc := Loc} = State0) ->
-  State  = add_scope(State0),
-  State1 = read_until($], location_started(State#{forms => []}, Loc)),
-  State2 = remove_scope(State1),
-  #{forms := ReversedItems} = State2,
-
-  Items = lists:reverse(ReversedItems),
-  Tuple = erlang:list_to_tuple(Items),
-
-  State2#{forms => [Tuple | Forms]}.
 
 %%------------------------------------------------------------------------------
 %% #"" regex
@@ -1184,15 +1167,39 @@ read_tagged(State) ->
                       ),
 
   {Form, State2} = read_pop_one(State1),
-  case erlang:get(supress_read) of
-    true ->
-      push_form(tagged_literal(Symbol, Form), State2);
+  case 'clojerl.Symbol':str(Symbol) of
+    <<"erl">> -> erlang_literal(Form, State2);
     _ ->
-      case 'clojerl.String':contains(clj_core:name(Symbol), <<".">>) of
-        true  -> read_record(Symbol, Form, State2);
-        false -> read_tagged(Symbol, Form, location(State), State2)
+      case erlang:get(supress_read) of
+        true ->
+          push_form(tagged_literal(Symbol, Form), State2);
+        _ ->
+          case 'clojerl.String':contains(clj_core:name(Symbol), <<".">>) of
+            true  -> read_record(Symbol, Form, State2);
+            false -> read_tagged(Symbol, Form, location(State), State2)
+          end
       end
   end.
+
+-spec erlang_literal(any(), state()) -> state().
+erlang_literal(Form, State) ->
+  IsList   = clj_core:'list?'(Form),
+  IsMap    = clj_core:'map?'(Form),
+  IsVector = clj_core:'vector?'(Form),
+  IsString = clj_core:'string?'(Form),
+
+  Value    = if
+               IsList   -> clj_core:to_list(Form);
+               IsMap    -> 'clojerl.Map':to_erl_map(Form);
+               IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
+               IsString -> unicode:characters_to_list(Form);
+               true     -> clj_utils:error(<<"Can only have list, map, tuple "
+                                             "or Erlang string literals">>
+                                          , location(State)
+                                          )
+             end,
+
+  push_form(Value, State).
 
 -spec read_record('clojerl.Symbol':type(), any(), state()) -> state().
 read_record(Symbol, Form, State) ->

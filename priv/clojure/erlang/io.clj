@@ -113,8 +113,8 @@
   (or (:buffer-size opts) 1024))
 
 (defn file-encoding [opts]
-  #[:encoding
-    (if (= "latin1" (:encoding opts)) :latin1 :utf8)])
+  #erl [:encoding
+        (if (= "latin1" (:encoding opts)) :latin1 :utf8)])
 
 (defn file-open [path modes]
   (erlang.io.File/open.e path (clj_core/to_list.1 modes)))

@@ -33,7 +33,7 @@
     discard/1,
     'cond'/1,
     unsupported_reader/1,
-    tuple/1,
+    erl_literals/1,
     tagged/1
    ]
   ).
@@ -1013,15 +1013,16 @@ unsupported_reader(ReadFun) ->
 
   {comments, ""}.
 
-tuple(Config) when is_list(Config) ->
-  tuple(fun read/1),
-  tuple(fun read_io/1);
-tuple(ReadFun) ->
+erl_literals(Config) when is_list(Config) ->
+  erl_literals(fun read/1),
+  erl_literals(fun read_io/1);
+erl_literals(ReadFun) ->
+  %% Tuple
   ct:comment("Read an empty tuple"),
-  {} = ReadFun(<<"#[]">>),
+  {} = ReadFun(<<"#erl []">>),
 
   ct:comment("Read a tuple with a single element"),
-  {42} = ReadFun(<<"#[42]">>),
+  {42} = ReadFun(<<"#erl [42]">>),
 
   ct:comment("Read a tuple with many elements"),
   HelloKeyword = clj_core:keyword(<<"hello">>),
@@ -1030,13 +1031,50 @@ tuple(ReadFun) ->
   , HelloKeywordCheck
   , 2.5
   , WorldSymbolCheck
-  } = ReadFun(<<"#[42, :hello, 2.5, world]">>),
+  } = ReadFun(<<"#erl [42, :hello, 2.5, world]">>),
   true = clj_core:equiv(HelloKeyword, HelloKeywordCheck),
   true = clj_core:equiv(WorldSymbol, WorldSymbolCheck),
 
   ct:comment("Read a tuple whose first element is an keyword"),
-  T = ReadFun(<<"#[:random, :hello, 2.5, 'world]">>),
+  T = ReadFun(<<"#erl [:random, :hello, 2.5, 'world]">>),
   'clojerl.erlang.Tuple' = clj_core:type(T),
+
+  %% List
+  ct:comment("Read an empty list"),
+  [] = ReadFun(<<"#erl ()">>),
+
+  ct:comment("Read a list with a single element"),
+  [42] = ReadFun(<<"#erl (42)">>),
+
+  ct:comment("Read a tuple with many elements"),
+  [ 42
+  , HelloKeywordCheckList
+  , 2.5
+  , WorldSymbolCheckList
+  ] = ReadFun(<<"#erl (42, :hello, 2.5, world)">>),
+  true = clj_core:equiv(HelloKeyword, HelloKeywordCheckList),
+  true = clj_core:equiv(WorldSymbol, WorldSymbolCheckList),
+
+  %% Map
+  ct:comment("Read an empty map"),
+  #{} = ReadFun(<<"#erl {}">>),
+
+  ct:comment("Read a map with a single entry"),
+  #{42 := 'forty-two'} = ReadFun(<<"#erl {42 :forty-two}">>),
+
+  ct:comment("Read a map with many entries"),
+  #{ 42  := HelloKeywordCheckMap
+   , 2.5 := WorldSymbolCheckMap
+   } = ReadFun(<<"#erl {42, :hello, 2.5, world}">>),
+  true = clj_core:equiv(HelloKeyword, HelloKeywordCheckMap),
+  true = clj_core:equiv(WorldSymbol, WorldSymbolCheckMap),
+
+  %% String
+  ct:comment("Read an string map"),
+  "" = ReadFun(<<"#erl \"\"">>),
+
+  ct:comment("Read a non-empty string"),
+  "Hello there!" = ReadFun(<<"#erl \"Hello there!\"">>),
 
   {comments, ""}.
 

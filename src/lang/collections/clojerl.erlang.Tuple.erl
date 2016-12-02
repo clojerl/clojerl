@@ -35,12 +35,12 @@ equiv(X, Y) when is_tuple(X), is_tuple(Y) ->
   end;
 equiv(X, Y) ->
   case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(to_list(X), Y);
+    true  -> 'clojerl.erlang.List':equiv(to_list(X), Y);
     false -> false
   end.
 
 %% @private
-do_equiv(_, _, Size, Size) -> true;
+do_equiv(_, _, Size, Index) when Size < Index -> true;
 do_equiv(X, Y, Size, Index) ->
   case clj_core:equiv(element(Index, X), element(Index, Y)) of
     false -> false;
@@ -69,4 +69,4 @@ str(Tuple) when is_tuple(Tuple) ->
   Items     = tuple_to_list(Tuple),
   ItemsStrs = lists:map(fun clj_core:str/1, Items),
   Strs      = 'clojerl.String':join(ItemsStrs, <<", ">>),
-  <<"#[", Strs/binary, "]">>.
+  <<"#erl[", Strs/binary, "]">>.

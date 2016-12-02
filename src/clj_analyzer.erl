@@ -916,7 +916,7 @@ parse_def(Env, List) ->
                      , [ <<"Warning: ">>
                        , NameBin
                        , <<" is not dynamic but its name"
-                           " suggests otherwise.~n">>
+                           " suggests otherwise.">>
                        ]
                      , clj_env:location(Env)
                      ),

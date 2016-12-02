@@ -4091,7 +4091,7 @@
   Uses re-groups to return the groups."
   {:added "1.0"}
   [re s]
-  (let [matches (re-run re s #[:capture :all :binary])]
+  (let [matches (re-run re s #erl [:capture :all :binary])]
     (if (= (count matches) 1)
       (first matches)
       matches)))
@@ -4101,7 +4101,7 @@
   {:added "1.0"}
   [re s]
   (let [match-data (re-find re s)
-        [idx len]  (first (re-run re s #[:capture :first :index]))
+        [idx len]  (first (re-run re s #erl [:capture :first :index]))
         match-str  (if (seq? match-data) (first match-data) match-data)
         len        (if (and (zero? len) (not (seq s))) 1 len)
         post-match (when idx (subs s (+ idx len)))]
@@ -4751,8 +4751,8 @@
   [lib]
   (str "/"
        (-> (name lib)
-           (binary/replace.e "." "/" (clj_core/to_list.e [:global]))
-           (binary/replace.e "-" "_" (clj_core/to_list.e [:global])))))
+           (binary/replace.e "." "/" '#erl (:global))
+           (binary/replace.e "-" "_" '#erl (:global)))))
 
 (defn- index-of [s x]
   (let [matches (binary/matches.e s x)]
