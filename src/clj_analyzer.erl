@@ -432,7 +432,6 @@ analyze_fn_method(Env0, List, LoopId, AnalyzeBody) ->
                     andalso clj_core:get(MaybeGuard, 'when') =/= ?NIL
                   of
                     true ->
-                      %% io:format("~p~n", [ParamsExprs]),
                       When = clj_core:get(MaybeGuard, 'when'),
                       {When, clj_core:rest(clj_core:rest(List))};
                     false ->

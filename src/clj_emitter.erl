@@ -692,24 +692,29 @@ ast(#{op := 'if'} = Expr, State) ->
 
   Ann = ann_from(Env),
 
+  %% Test
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
-  TrueAtom       = cerl:ann_c_atom(Ann, true),
+  %% Then
+  False      = cerl:ann_c_atom(Ann, false),
+  Nil        = cerl:ann_c_atom(Ann, ?NIL),
+  ThenVar    = new_c_var(Ann),
+  ThenGuard  = call_mfa( erlang
+                           , 'and'
+                           , [ call_mfa(erlang, '=/=', [ThenVar, False], Ann)
+                             , call_mfa(erlang, '=/=', [ThenVar, Nil], Ann)
+                             ]
+                           , Ann
+                           ),
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause     = cerl:ann_c_clause(Ann, [TrueAtom], ThenAst),
+  ThenClause = cerl:ann_c_clause(Ann, [ThenVar], ThenGuard, ThenAst),
 
-  FalseAtom      = cerl:ann_c_atom(Ann, false),
+  %% Else
+  ElseVar    = new_c_var(Ann),
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause    = cerl:ann_c_clause(Ann, [FalseAtom], ElseAst),
+  ElseClause = cerl:ann_c_clause(Ann, [ElseVar], ElseAst),
 
-  NilAtom        = cerl:ann_c_atom(Ann, ?NIL),
-  NilClause      = cerl:ann_c_clause(Ann, [NilAtom], FalseAtom),
-  FalseBoolClause= cerl:ann_c_clause(Ann, [FalseAtom], FalseAtom),
-  TrueBoolClause = cerl:ann_c_clause(Ann, [new_c_var(Ann)], TrueAtom),
-  BoolClauses    = [NilClause, FalseBoolClause, TrueBoolClause],
-  TestBoolean    = cerl:ann_c_case(Ann, TestAst, BoolClauses),
-
-  Ast = cerl:ann_c_case(Ann, TestBoolean, [TrueClause, FalseClause]),
+  Ast = cerl:ann_c_case(Ann, TestAst, [ThenClause, ElseClause]),
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% case
