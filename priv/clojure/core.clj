@@ -3734,6 +3734,7 @@
                         conds (or conds (meta params))
                         pre (:pre conds)
                         post (:post conds)
+                        when (:when conds)
                         body (if post
                                `((let [~'% ~(if (< 1 (count body))
                                               `(do ~@body)
@@ -3744,6 +3745,9 @@
                         body (if pre
                                (concat (map (fn* [c] `(assert ~c)) pre)
                                        body)
+                               body)
+                        body (if when
+                               (cons {:when when} body)
                                body)]
                     (maybe-destructured params body)))
         new-sigs (map psig sigs)]
