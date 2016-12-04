@@ -555,6 +555,22 @@ ast(#{op := invoke} = Expr, State) ->
       push_ast(Ast, State2)
   end;
 %%------------------------------------------------------------------------------
+%% fn, invoke, erl_fun
+%%------------------------------------------------------------------------------
+ast(#{op := guard} = Expr, State) ->
+  #{ env        := Env
+   , logical_op := LogicalOp
+   , operands   := OperandsExprs
+   } = Expr,
+
+  {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, OperandsExprs)
+                          , length(OperandsExprs)
+                          ),
+
+  Ast = call_mfa(erlang, LogicalOp, Args, ann_from(Env)),
+
+  push_ast(Ast, State1);
+%%------------------------------------------------------------------------------
 %% letfn
 %%------------------------------------------------------------------------------
 ast(#{op := letfn} = Expr, State) ->
@@ -1255,10 +1271,15 @@ add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
 
 -spec body_from_clauses([term()], [cerl:c_clause()]) ->
   {[cerl:c_var()], cerl:cerl()}.
-body_from_clauses(_Ann, [ClauseAst]) ->
-  Patterns = cerl:clause_pats(ClauseAst),
-  BodyAst  = cerl:clause_body(ClauseAst),
-  {Patterns, BodyAst};
+body_from_clauses(Ann, [ClauseAst]) ->
+  case cerl:clause_guard(ClauseAst) =:= cerl:c_atom(true) of
+    true  ->
+      Patterns = cerl:clause_pats(ClauseAst),
+      BodyAst  = cerl:clause_body(ClauseAst),
+      {Patterns, BodyAst};
+    false ->
+      case_from_clauses(Ann, [ClauseAst])
+  end;
 body_from_clauses(Ann, ClauseAsts) ->
   case_from_clauses(Ann, ClauseAsts).
 
