@@ -33,3 +33,16 @@
 (assert (clj_core/equiv.e (simple-or-guard 3) :integer-or-binary))
 (assert (clj_core/equiv.e (simple-or-guard "three") :integer-or-binary))
 (assert (try (simple-or-guard :three) false (catch _ e true)))
+
+(def nested-and-or
+  (fn* [x] {:when [:and [:or (erlang/is_integer.e x)
+                             (erlang/is_float.e x)]
+                        (erlang/>.e x 1)]}
+   :integer-or-float-more-than-1))
+
+(assert (clj_core/equiv.e (nested-and-or 3) :integer-or-float-more-than-1))
+(assert (clj_core/equiv.e (nested-and-or 3.0) :integer-or-float-more-than-1))
+(assert (try (nested-and-or 1) false (catch _ e true)))
+(assert (try (nested-and-or 1.0) false (catch _ e true)))
+(assert (try (nested-and-or "one") false (catch _ e true)))
+(assert (try (nested-and-or :one) false (catch _ e true)))
