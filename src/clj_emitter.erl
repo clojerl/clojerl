@@ -312,7 +312,7 @@ ast(#{op := deftype} = Expr, State0) ->
 %%------------------------------------------------------------------------------
 %% methods
 %%------------------------------------------------------------------------------
-ast(#{op := method} = Expr, State0) ->
+ast(#{op := fn_method} = Expr, State0) ->
   #{ name := Name
    , env  := Env
    } = Expr,
@@ -1171,8 +1171,10 @@ method_to_case_clause(MethodExpr, State) ->
 -spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
   ast().
 method_to_clause(MethodExpr, State0, ClauseFor) ->
-  #{ params := ParamsExprs
+  #{ op     := fn_method
+   , params := ParamsExprs
    , body   := BodyExpr
+   , guard  := GuardExpr
    , env    := Env
    } = MethodExpr,
 
@@ -1200,11 +1202,13 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(Args)]
           end,
 
-  Clause = cerl:ann_c_clause(ann_from(Env), Args1, Body),
+  {Guard, State3} = pop_ast(ast(GuardExpr, State2)),
 
-  State3 = remove_lexical_renames_scope(State2),
+  Clause = cerl:ann_c_clause(ann_from(Env), Args1, Guard, Body),
 
-  push_ast(Clause, State3).
+  State4 = remove_lexical_renames_scope(State3),
+
+  push_ast(Clause, State4).
 
 -spec call_mfa(module(), atom(), list(), [term()]) -> ast().
 call_mfa(Module, Function, Args, Ann) ->
