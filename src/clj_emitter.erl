@@ -555,22 +555,6 @@ ast(#{op := invoke} = Expr, State) ->
       push_ast(Ast, State2)
   end;
 %%------------------------------------------------------------------------------
-%% fn, invoke, erl_fun
-%%------------------------------------------------------------------------------
-ast(#{op := guard} = Expr, State) ->
-  #{ env        := Env
-   , logical_op := LogicalOp
-   , operands   := OperandsExprs
-   } = Expr,
-
-  {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, OperandsExprs)
-                          , length(OperandsExprs)
-                          ),
-
-  Ast = call_mfa(erlang, LogicalOp, Args, ann_from(Env)),
-
-  push_ast(Ast, State1);
-%%------------------------------------------------------------------------------
 %% letfn
 %%------------------------------------------------------------------------------
 ast(#{op := letfn} = Expr, State) ->
@@ -708,7 +692,8 @@ ast(#{op := 'if'} = Expr, State) ->
 
   Ann = ann_from(Env),
 
-  {Test, State1} = pop_ast(ast(TestExpr, State)),
+  {TestAst, State1} = pop_ast(ast(TestExpr, State)),
+
   TrueAtom       = cerl:ann_c_atom(Ann, true),
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
   TrueClause     = cerl:ann_c_clause(Ann, [TrueAtom], ThenAst),
@@ -717,7 +702,13 @@ ast(#{op := 'if'} = Expr, State) ->
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
   FalseClause    = cerl:ann_c_clause(Ann, [FalseAtom], ElseAst),
 
-  TestBoolean    = call_mfa(clj_core, boolean, [Test], Ann),
+  NilAtom        = cerl:ann_c_atom(Ann, ?NIL),
+  NilClause      = cerl:ann_c_clause(Ann, [NilAtom], FalseAtom),
+  FalseBoolClause= cerl:ann_c_clause(Ann, [FalseAtom], FalseAtom),
+  TrueBoolClause = cerl:ann_c_clause(Ann, [new_c_var(Ann)], TrueAtom),
+  BoolClauses    = [NilClause, FalseBoolClause, TrueBoolClause],
+  TestBoolean    = cerl:ann_c_case(Ann, TestAst, BoolClauses),
+
   Ast = cerl:ann_c_case(Ann, TestBoolean, [TrueClause, FalseClause]),
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------

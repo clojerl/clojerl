@@ -458,7 +458,7 @@ analyze_fn_method(Env0, List, LoopId, AnalyzeBody) ->
 
   {GuardExpr, Env4} =
     case AnalyzeBody of
-      true  -> clj_env:pop_expr(parse_guard(Env3, Guard));
+      true  -> clj_env:pop_expr(analyze_form(Env3, Guard));
       false -> clj_env:pop_expr(analyze_const(Env3, true))
     end,
 
@@ -479,34 +479,6 @@ analyze_fn_method(Env0, List, LoopId, AnalyzeBody) ->
   Env6 = clj_env:put(Env5, loop_locals, OldLoopLocals),
   Env7 = clj_env:remove_locals_scope(Env6),
   clj_env:push_expr(Env7, FnMethodExpr).
-
--spec parse_guard(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
-parse_guard(Env, Guard) ->
-  case clj_core:'vector?'(Guard) of
-    false -> analyze_form(Env, Guard);
-    true  ->
-      LogicalOp = clj_core:first(Guard),
-      clj_utils:error_when( LogicalOp =/= 'or' andalso LogicalOp =/= 'and'
-                          ,  [<<"Invalid guard operation: ">>, LogicalOp]
-                          , clj_env:location(Env)
-                          ),
-
-      RestList = clj_core:to_list(clj_core:rest(Guard)),
-      Env1 = lists:foldl( fun(Item, EnvAcc) -> parse_guard(EnvAcc, Item) end
-                        , Env
-                        , RestList
-                        ),
-      {OperandsExprs, Env2} = clj_env:last_exprs(Env1, length(RestList)),
-
-      GuardExpr = #{ op         => guard
-                   , env        => Env
-                   , form       => Guard
-                   , logical_op => LogicalOp
-                   , operands   => OperandsExprs
-                   },
-
-      clj_env:push_expr(Env2, GuardExpr)
-  end.
 
 -spec analyze_method_params(clj_env:env(), ['clojerl.Symbol':type()]) ->
   [any()].
