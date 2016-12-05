@@ -1588,9 +1588,11 @@ parse_try(Env, List) ->
 
 -spec parse_catch(clj_env:env(), 'clojerl.List':type()) -> clj_env:env().
 parse_catch(Env, List) ->
-  ErrType = clj_core:second(List),
-  ErrName = clj_core:third(List),
-  Body    = lists:sublist(clj_core:to_list(List), 4, clj_core:count(List)),
+  [ _ %% catch
+  , ErrType
+  , ErrName
+  | GuardAndBody
+  ] = clj_core:to_list(List),
 
   clj_utils:error_when( not is_valid_bind_symbol(ErrName)
                       , [<<"Bad binding form: ">>, ErrName]
@@ -1611,17 +1613,20 @@ parse_catch(Env, List) ->
            },
 
   Env2 = clj_env:put_locals(Env1, [Local]),
-  {BodyExpr, Env3} = clj_env:pop_expr(analyze_body(Env2, Body)),
+  {_, Guard, Body}  = check_guard(GuardAndBody),
+  {GuardExpr, Env3} = clj_env:pop_expr(analyze_form(Env2, Guard)),
+  {BodyExpr, Env4}  = clj_env:pop_expr(analyze_body(Env3, Body)),
 
   CatchExpr = #{ op    => 'catch'
                , env   => ?DEBUG(Env1)
                , class => ErrType
                , local => Local
                , form  => List
+               , guard => GuardExpr
                , body  => BodyExpr
                },
 
-  clj_env:push_expr(Env3, CatchExpr).
+  clj_env:push_expr(Env4, CatchExpr).
 
 -spec is_valid_error_type(any()) -> boolean().
 is_valid_error_type(error) -> true;

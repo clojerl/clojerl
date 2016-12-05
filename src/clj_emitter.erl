@@ -936,6 +936,7 @@ ast(#{op := 'catch'} = Expr, State) ->
   #{ class := ErrType
    , local := Local
    , body  := BodyExpr
+   , guard := GuardExpr
    , env   := Env
    } = Expr,
 
@@ -952,11 +953,12 @@ ast(#{op := 'catch'} = Expr, State) ->
                       , NameAst
                       , new_c_var(Ann)
                       ],
-  {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
+  {Guard, State2}   = pop_ast(ast(GuardExpr, State1)),
+  {Body, State3}    = pop_ast(ast(BodyExpr, State2)),
 
-  Ast = cerl:ann_c_clause(Ann, VarsAsts, Body),
+  Ast = cerl:ann_c_clause(Ann, VarsAsts, Guard, Body),
 
-  push_ast(Ast, State2);
+  push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% on_load
 %%------------------------------------------------------------------------------

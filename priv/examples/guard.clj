@@ -91,3 +91,19 @@
 (assert (clj_core/equiv.e (simple-case 2) :two))
 (assert (clj_core/equiv.e (simple-case 3) :default))
 (assert (clj_core/equiv.e (simple-case "hello") :default))
+
+(def simple-try-catch
+  (fn* [x]
+       (try
+         (throw x)
+         (catch _ e {:when (erlang/=:=.e e 1)}
+           :one)
+         (catch _ e {:when (erlang/=:=.e e 2)}
+           :two)
+         (catch _ e
+           :default))))
+
+(assert (clj_core/equiv.e (simple-try-catch 1) :one))
+(assert (clj_core/equiv.e (simple-try-catch 2) :two))
+(assert (clj_core/equiv.e (simple-try-catch 3) :default))
+(assert (clj_core/equiv.e (simple-try-catch "hello") :default))
