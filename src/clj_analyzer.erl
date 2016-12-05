@@ -894,16 +894,17 @@ parse_patterns_bodies(Env0, [Pat, GuardOrBody | Rest0], PatternBodyPairs) ->
 
 -spec parse_pattern(clj_env:env(), any()) -> clj_env:env().
 parse_pattern(Env, Form) ->
-  IsSymbol = clj_core:'symbol?'(Form),
-  Ast = if
-          IsSymbol ->
-            #{ op   => local
+  case clj_core:'symbol?'(Form) of
+    true ->
+      Ast = #{ op   => local
              , env  => ?DEBUG(Env)
              , name => Form
              , tag  => maybe_type_tag(Form)
-             }
-        end,
-  clj_env:push_expr(Env, Ast).
+             },
+      clj_env:push_expr(Env, Ast);
+    false ->
+      analyze_form(Env, Form)
+  end.
 
 %%------------------------------------------------------------------------------
 %% Parse def
