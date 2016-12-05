@@ -728,14 +728,21 @@ ast(#{op := 'case'} = Expr, State) ->
 
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
-  ClauseFun = fun({PatternExpr, BodyExpr}, StateAcc) ->
-                  EnvPattern  = maps:get(env, PatternExpr),
-                  AnnPattern  = ann_from(EnvPattern),
-                  {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
-                  {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
-                  ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Body),
-                  push_ast(ClauseAst, StateAcc2)
-              end,
+  ClauseFun =
+    fun({PatternExpr, BodyExpr}, StateAcc) ->
+        #{ env   := EnvPattern
+         , guard := GuardExpr
+         } = PatternExpr,
+
+        AnnPattern  = ann_from(EnvPattern),
+
+        {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
+        {Guard, StateAcc2}   = pop_ast(ast(GuardExpr, StateAcc1)),
+        {Body, StateAcc3}    = pop_ast(ast(BodyExpr, StateAcc2)),
+
+        ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Guard, Body),
+        push_ast(ClauseAst, StateAcc3)
+    end,
 
   State2 = lists:foldl(ClauseFun, State1, ClausesExprs),
   {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),

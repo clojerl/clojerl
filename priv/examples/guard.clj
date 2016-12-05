@@ -75,3 +75,19 @@
 (assert (try (nested-and-or 1.0) false (catch _ e true)))
 (assert (try (nested-and-or "one") false (catch _ e true)))
 (assert (try (nested-and-or :one) false (catch _ e true)))
+
+(def simple-case
+  (fn* [x]
+       (case x
+         _ {:when (erlang/=:=.e x 1)}
+         :one
+
+         _ {:when (erlang/=:=.e x 2)}
+         :two
+
+         :default)))
+
+(assert (clj_core/equiv.e (simple-case 1) :one))
+(assert (clj_core/equiv.e (simple-case 2) :two))
+(assert (clj_core/equiv.e (simple-case 3) :default))
+(assert (clj_core/equiv.e (simple-case "hello") :default))

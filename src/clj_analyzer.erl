@@ -426,22 +426,15 @@ analyze_fn_method(Env0, List, LoopId, AnalyzeBody) ->
 
   ParamsExprs = analyze_method_params(Env2, IsVariadic, Arity, ParamsNames),
 
-  MaybeGuard  = clj_core:second(List),
-  {Guard, Body} = case
-                    clj_core:'map?'(MaybeGuard)
-                    andalso clj_core:get(MaybeGuard, 'when') =/= ?NIL
-                  of
-                    true ->
-                      When = clj_core:get(MaybeGuard, 'when'),
-                      {When, clj_core:rest(clj_core:rest(List))};
-                    false ->
-                      {true, clj_core:rest(List)}
-                  end,
-
   FixedArity  = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
   OldLoopId     = clj_env:get(Env2, loop_id),
   OldLoopLocals = clj_env:get(Env2, loop_locals),
+
+  {_, Guard, Body} = case AnalyzeBody of
+                       true  -> check_guard(clj_core:rest(List));
+                       false -> {false, true, List}
+                     end,
 
   {BodyExpr, Env3} =
     case AnalyzeBody of
@@ -537,6 +530,16 @@ is_valid_bind_symbol(X) ->
   clj_core:'symbol?'(X)
     andalso not clj_core:boolean(clj_core:namespace(X))
     andalso nomatch == re:run(clj_core:name(X), <<"\\.">>).
+
+-spec check_guard(any()) -> {boolean(), any(), any()}.
+check_guard(List) ->
+  Form = clj_core:first(List),
+  case clj_core:'map?'(Form) andalso clj_core:get(Form, 'when') of
+    X when X =:= false orelse X =:= ?NIL ->
+      {false, true, List};
+    Guard ->
+      {true, Guard, clj_core:rest(List)}
+  end.
 
 %%------------------------------------------------------------------------------
 %% Parse do
@@ -868,13 +871,39 @@ parse_patterns_bodies(Env, [Default], PatternBodyPairs) ->
   , DefaultExpr
   , Env1
   };
-parse_patterns_bodies(Env, [Pat, Body | Rest], PatternBodyPairs) ->
-  {PatternExpr, Env1} = clj_env:pop_expr(analyze_form(Env, Pat)),
-  {BodyExpr, Env2} = clj_env:pop_expr(analyze_form(Env1, Body)),
-  parse_patterns_bodies( Env2
-                      , Rest
-                      , [{PatternExpr, BodyExpr} | PatternBodyPairs]
-                      ).
+parse_patterns_bodies(Env0, [Pat, GuardOrBody | Rest0], PatternBodyPairs) ->
+  {IsGuard, Guard, _} = check_guard([GuardOrBody]),
+  {Body, Rest} = case IsGuard of
+                   true ->
+                     [BodyTemp | RestTemp] = Rest0,
+                     {BodyTemp, RestTemp};
+                   false ->
+                     {GuardOrBody, Rest0}
+                 end,
+  {PatternExpr, Env1} = clj_env:pop_expr(parse_pattern(Env0, Pat)),
+  {GuardExpr, Env2}   = clj_env:pop_expr(analyze_form(Env1, Guard)),
+  {BodyExpr, Env3}    = clj_env:pop_expr(analyze_form(Env2, Body)),
+
+  parse_patterns_bodies( Env3
+                       , Rest
+                       , [{ PatternExpr#{guard => GuardExpr}
+                          , BodyExpr
+                          } | PatternBodyPairs
+                         ]
+                       ).
+
+-spec parse_pattern(clj_env:env(), any()) -> clj_env:env().
+parse_pattern(Env, Form) ->
+  IsSymbol = clj_core:'symbol?'(Form),
+  Ast = if
+          IsSymbol ->
+            #{ op   => local
+             , env  => ?DEBUG(Env)
+             , name => Form
+             , tag  => maybe_type_tag(Form)
+             }
+        end,
+  clj_env:push_expr(Env, Ast).
 
 %%------------------------------------------------------------------------------
 %% Parse def
