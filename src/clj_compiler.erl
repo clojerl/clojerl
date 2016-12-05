@@ -347,6 +347,7 @@ eval_expressions(Expressions, ReplaceCalls) ->
                   end,
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
+  %% io:format("===== Eval ====~n~s~n", [core_pp:format(EvalModule)]),
   {ok, _, Binary} = compile:noenv_forms(EvalModule, [clint, from_core]),
   code:load_binary(ModuleName, "", Binary),
   try
@@ -403,7 +404,7 @@ maybe_output_erl(_, _) ->
 
 -spec maybe_output_beam(atom(), binary(), options()) -> string().
 maybe_output_beam(Name, BeamBinary, #{output_dir := OutputDir} = Opts) ->
-  ensure_output_dir(Opts),
+  ok           = ensure_output_dir(Opts),
   NameBin      = atom_to_binary(Name, utf8),
   BeamFilename = <<NameBin/binary, ".beam">>,
   BeamPath     = filename:join([OutputDir, BeamFilename]),

@@ -312,7 +312,7 @@ ast(#{op := deftype} = Expr, State0) ->
 %%------------------------------------------------------------------------------
 %% methods
 %%------------------------------------------------------------------------------
-ast(#{op := method} = Expr, State0) ->
+ast(#{op := fn_method} = Expr, State0) ->
   #{ name := Name
    , env  := Env
    } = Expr,
@@ -692,17 +692,29 @@ ast(#{op := 'if'} = Expr, State) ->
 
   Ann = ann_from(Env),
 
-  {Test, State1} = pop_ast(ast(TestExpr, State)),
-  TrueAtom       = cerl:ann_c_atom(Ann, true),
+  %% Test
+  {TestAst, State1} = pop_ast(ast(TestExpr, State)),
+
+  %% Then
+  False      = cerl:ann_c_atom(Ann, false),
+  Nil        = cerl:ann_c_atom(Ann, ?NIL),
+  ThenVar    = new_c_var(Ann),
+  ThenGuard  = call_mfa( erlang
+                           , 'and'
+                           , [ call_mfa(erlang, '=/=', [ThenVar, False], Ann)
+                             , call_mfa(erlang, '=/=', [ThenVar, Nil], Ann)
+                             ]
+                           , Ann
+                           ),
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  TrueClause     = cerl:ann_c_clause(Ann, [TrueAtom], ThenAst),
+  ThenClause = cerl:ann_c_clause(Ann, [ThenVar], ThenGuard, ThenAst),
 
-  FalseAtom      = cerl:ann_c_atom(Ann, false),
+  %% Else
+  ElseVar    = new_c_var(Ann),
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  FalseClause    = cerl:ann_c_clause(Ann, [FalseAtom], ElseAst),
+  ElseClause = cerl:ann_c_clause(Ann, [ElseVar], ElseAst),
 
-  TestBoolean    = call_mfa(clj_core, boolean, [Test], Ann),
-  Ast = cerl:ann_c_case(Ann, TestBoolean, [TrueClause, FalseClause]),
+  Ast = cerl:ann_c_case(Ann, TestAst, [ThenClause, ElseClause]),
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% case
@@ -716,14 +728,21 @@ ast(#{op := 'case'} = Expr, State) ->
 
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
-  ClauseFun = fun({PatternExpr, BodyExpr}, StateAcc) ->
-                  EnvPattern  = maps:get(env, PatternExpr),
-                  AnnPattern  = ann_from(EnvPattern),
-                  {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
-                  {Body, StateAcc2}    = pop_ast(ast(BodyExpr, StateAcc1)),
-                  ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Body),
-                  push_ast(ClauseAst, StateAcc2)
-              end,
+  ClauseFun =
+    fun({PatternExpr, BodyExpr}, StateAcc) ->
+        #{ env   := EnvPattern
+         , guard := GuardExpr
+         } = PatternExpr,
+
+        AnnPattern  = ann_from(EnvPattern),
+
+        {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
+        {Guard, StateAcc2}   = pop_ast(ast(GuardExpr, StateAcc1)),
+        {Body, StateAcc3}    = pop_ast(ast(BodyExpr, StateAcc2)),
+
+        ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Guard, Body),
+        push_ast(ClauseAst, StateAcc3)
+    end,
 
   State2 = lists:foldl(ClauseFun, State1, ClausesExprs),
   {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
@@ -917,6 +936,7 @@ ast(#{op := 'catch'} = Expr, State) ->
   #{ class := ErrType
    , local := Local
    , body  := BodyExpr
+   , guard := GuardExpr
    , env   := Env
    } = Expr,
 
@@ -933,11 +953,12 @@ ast(#{op := 'catch'} = Expr, State) ->
                       , NameAst
                       , new_c_var(Ann)
                       ],
-  {Body, State2}    = pop_ast(ast(BodyExpr, State1)),
+  {Guard, State2}   = pop_ast(ast(GuardExpr, State1)),
+  {Body, State3}    = pop_ast(ast(BodyExpr, State2)),
 
-  Ast = cerl:ann_c_clause(Ann, VarsAsts, Body),
+  Ast = cerl:ann_c_clause(Ann, VarsAsts, Guard, Body),
 
-  push_ast(Ast, State2);
+  push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% on_load
 %%------------------------------------------------------------------------------
@@ -1171,8 +1192,10 @@ method_to_case_clause(MethodExpr, State) ->
 -spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
   ast().
 method_to_clause(MethodExpr, State0, ClauseFor) ->
-  #{ params := ParamsExprs
+  #{ op     := fn_method
+   , params := ParamsExprs
    , body   := BodyExpr
+   , guard  := GuardExpr
    , env    := Env
    } = MethodExpr,
 
@@ -1200,11 +1223,13 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(Args)]
           end,
 
-  Clause = cerl:ann_c_clause(ann_from(Env), Args1, Body),
+  {Guard, State3} = pop_ast(ast(GuardExpr, State2)),
 
-  State3 = remove_lexical_renames_scope(State2),
+  Clause = cerl:ann_c_clause(ann_from(Env), Args1, Guard, Body),
 
-  push_ast(Clause, State3).
+  State4 = remove_lexical_renames_scope(State3),
+
+  push_ast(Clause, State4).
 
 -spec call_mfa(module(), atom(), list(), [term()]) -> ast().
 call_mfa(Module, Function, Args, Ann) ->
@@ -1251,10 +1276,15 @@ add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
 
 -spec body_from_clauses([term()], [cerl:c_clause()]) ->
   {[cerl:c_var()], cerl:cerl()}.
-body_from_clauses(_Ann, [ClauseAst]) ->
-  Patterns = cerl:clause_pats(ClauseAst),
-  BodyAst  = cerl:clause_body(ClauseAst),
-  {Patterns, BodyAst};
+body_from_clauses(Ann, [ClauseAst]) ->
+  case cerl:clause_guard(ClauseAst) =:= cerl:c_atom(true) of
+    true  ->
+      Patterns = cerl:clause_pats(ClauseAst),
+      BodyAst  = cerl:clause_body(ClauseAst),
+      {Patterns, BodyAst};
+    false ->
+      case_from_clauses(Ann, [ClauseAst])
+  end;
 body_from_clauses(Ann, ClauseAsts) ->
   case_from_clauses(Ann, ClauseAsts).
 
