@@ -533,11 +533,15 @@ is_valid_bind_symbol(X) ->
 -spec check_guard(any()) -> {boolean(), any(), any()}.
 check_guard(List) ->
   Form = clj_core:first(List),
-  case clj_core:'map?'(Form) andalso clj_core:get(Form, 'when') of
-    X when X =:= false orelse X =:= ?NIL ->
-      {false, true, List};
-    Guard ->
-      {true, Guard, clj_core:rest(List)}
+  case clj_core:'map?'(Form) of
+    true ->
+      Ref = make_ref(),
+      case clj_core:get(Form, 'when', Ref) of
+        Ref   -> {false, true, List};
+        Guard -> {true, Guard, clj_core:rest(List)}
+      end;
+    false ->
+      {false, true, List}
   end.
 
 %%------------------------------------------------------------------------------

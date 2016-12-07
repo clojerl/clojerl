@@ -339,8 +339,9 @@ fn(_Config) ->
     methods := [Fn5Method1]
    } = analyze_one(<<"(fn* ([x & z] x z))">>),
 
-  #{op     := fn_method,
-    params := [Fn5Param1, Fn5Param2]
+  #{ op     := fn_method
+   , params := [Fn5Param1, Fn5Param2]
+   , guard  := #{op := constant, form := true}
    } = Fn5Method1,
 
   #{ op   := binding
@@ -354,6 +355,21 @@ fn(_Config) ->
    , 'variadic?' := true
    } = Fn5Param2,
   true = clj_core:equiv(ZSymbol, ZSymbolCheck2),
+
+  ct:comment("fn with guards"),
+  #{ op      := fn
+   , methods := [Fn6Method1, Fn6Method2]
+   } = analyze_one(<<"(fn* ([x] {:when false} x) ([y] {:when true} y))">>),
+
+  #{ op     := fn_method
+   , params := [_]
+   , guard  := #{op := constant, form := false}
+   } = Fn6Method1,
+
+  #{ op     := fn_method
+   , params := [_]
+   , guard  := #{op := constant, form := true}
+   } = Fn6Method2,
 
   ct:comment("fn with two variadic methods"),
   ok = try analyze_one(<<"(fn* ([a b & _] b) ([x & z] x z))">>), error
@@ -504,6 +520,26 @@ do(_Config) ->
    } = analyze_one(<<"(case* true true 1 false 0 :default)">>),
 
   true = DefaultExpr =/= ?NIL,
+
+  ct:comment("case with guards"),
+  #{ op      := 'case'
+   , test    := #{op := constant}
+   , clauses := [{Pattern1, _}, {Pattern2, _}]
+   , default := DefaultExpr2
+   } = analyze_one(<<"(case* true "
+                     "  true {:when false} 1 "
+                     "  x    {:when true} 0 "
+                     "  :default)">>),
+
+  #{ op    := constant
+   , guard := #{op := constant, form := false}
+   } = Pattern1,
+
+  #{ op    := local
+   , guard := #{op := constant, form := true}
+   } = Pattern2,
+
+  true = DefaultExpr2 =/= ?NIL,
 
   {comments, ""}.
 
@@ -818,12 +854,14 @@ throw(_Config) ->
    , local := #{op := binding, name := ErrName2_1}
    , class := error
    , body  := #{op := do}
+   , guard := #{op := constant, form := true}
    } = Catch2_1,
 
   #{ op    := 'catch'
    , local := #{op := binding, name := ErrName2_2}
    , class := throw
    , body  := #{op := do}
+   , guard := #{op := constant, form := true}
    } = Catch2_2,
 
   true = clj_core:equiv(ErrName2_1, clj_core:symbol(<<"err-1">>)),
@@ -876,6 +914,16 @@ throw(_Config) ->
 
   true = clj_core:equiv(ErrName5_1, clj_core:symbol(<<"e">>)),
   true = clj_core:equiv(UnderscoreSym, clj_core:symbol(<<"_">>)),
+
+  ct:comment("try, catch with guards"),
+  #{ op      := 'try'
+   , catches := [Catch6_1]
+   , finally := ?NIL
+   } = analyze_one(<<"(try 1 (catch _ e {:when false} e))">>),
+
+  #{ op    := 'catch'
+   , guard := #{op := constant, form := false}
+   } = Catch6_1,
 
   ct:comment("try, catch with invalid value"),
   ok = try analyze_one(<<"(try 1 (catch bla e e))">>), error
@@ -1153,6 +1201,16 @@ dot(_Config) ->
                  , timeout := #{op := constant, form := 0}
                  }
    } = analyze_one(<<"(receive* 1 :one 2 :two (after 0 1))">>),
+
+  ct:comment("receive with guards"),
+  #{ op      := 'receive'
+   , clauses := [{Pattern1, _}, _]
+   , 'after' := ?NIL
+   } = analyze_one(<<"(receive* 1 {:when false} :one 2 :two)">>),
+
+  #{ op    := constant
+   , guard := #{op := constant, form := false}
+   } = Pattern1,
 
   ct:comment("No forms allowed after 'after'"),
   ok = try analyze_one(<<"(receive* (after 0 1) 1)">>), error
