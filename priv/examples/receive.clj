@@ -15,7 +15,11 @@
      _
      (loop state))))
 
-(let [x (erlang/spawn.e :examples.receive :loop '#erl (42))]
+(def spawn
+  (fn* [f & args]
+       (erlang/spawn.e :clj_core :apply (clj_core/to_list.e [f args]))))
+
+(let [x (spawn loop 42)]
   (erlang/send.e x :inc)
   (erlang/send.e x :inc)
   (erlang/send.e x :inc)
