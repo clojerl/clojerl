@@ -255,8 +255,8 @@ parse_fn(List, Env) ->
 
   Env0 = clj_env:add_locals_scope(Env),
 
-  %% Add the name of the fn as a local
-  LocalExpr     = #{ op   => local
+  %% Add the name of the fn as a local binding
+  LocalExpr     = #{ op   => binding
                    , env  => Env
                    , name => NameSym
                    , tag  => maybe_type_tag(NameSym)
@@ -788,7 +788,7 @@ parse_letfn(Form, Env0) ->
   Env  = clj_env:add_locals_scope(Env0),
 
   BindingFun = fun(FnName) ->
-                   #{ op     => local
+                   #{ op     => binding
                     , env    => Env
                     , name   => FnName
                     , tag    => maybe_type_tag(FnName)
@@ -899,7 +899,7 @@ parse_patterns_bodies([Pat, GuardOrBody | Rest0], PatternBodyPairs, Env0) ->
 parse_pattern(Form, Env) ->
   case clj_core:'symbol?'(Form) of
     true ->
-      Ast = #{ op   => local
+      Ast = #{ op   => binding
              , env  => Env
              , name => Form
              , tag  => maybe_type_tag(Form)
@@ -1709,7 +1709,7 @@ analyze_symbol(Symbol, Env) ->
                      , clj_env:get(location, Env)
                      );
     {{local, Local}, Env1} ->
-      clj_env:push_expr(Local#{op => local, env => Env}, Env1);
+      clj_env:push_expr(Local#{env => Env}, Env1);
     {{erl_fun, Module, Function, Arity}, Env1} ->
       FunExpr = erl_fun_expr(Symbol, Module, Function, Arity, Env1),
       clj_env:push_expr(FunExpr, Env1);

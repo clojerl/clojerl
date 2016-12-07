@@ -254,7 +254,7 @@ fn(_Config) ->
   ct:comment("named fn with one param and one method"),
   #{op      := fn,
     methods := [Fn2Method1],
-    local   := #{op := local, name := HelloSymbol}
+    local   := #{op := binding, name := HelloSymbol}
    } = analyze_one(<<"(fn* hello [x] x)">>),
 
   true = clj_core:equiv(HelloSymbol, clj_core:symbol(<<"hello">>)),
@@ -536,7 +536,7 @@ do(_Config) ->
    , guard := #{op := constant, form := false}
    } = Pattern1,
 
-  #{ op    := local
+  #{ op    := binding
    , guard := #{op := constant, form := true}
    } = Pattern2,
 
@@ -575,7 +575,7 @@ do(_Config) ->
   #{ statements := [_]
    , ret        := #{op := ReturnExprOp2}
    } = Body2,
-  local = ReturnExprOp2,
+  binding = ReturnExprOp2,
 
   ct:comment("let with bindings and a single return expression body"),
   #{ op := 'let'
@@ -586,7 +586,7 @@ do(_Config) ->
   #{ statements := []
    , ret        := #{op := ReturnExprOp3}
    } = Body3,
-  local = ReturnExprOp3,
+  binding = ReturnExprOp3,
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)

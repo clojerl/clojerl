@@ -68,12 +68,6 @@ ast(#{op := binding} = Expr, State) ->
   Ast     = cerl:ann_c_var(ann_from(Env), binary_to_atom(NameBin, utf8)),
 
   push_ast(Ast, State);
-ast(#{op := local} = Expr, State) ->
-  #{env := Env} = Expr,
-  NameBin = get_lexical_rename(Expr, State),
-  Ast     = cerl:ann_c_var(ann_from(Env), binary_to_atom(NameBin, utf8)),
-
-  push_ast(Ast, State);
 %%------------------------------------------------------------------------------
 %% do
 %%------------------------------------------------------------------------------
