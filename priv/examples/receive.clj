@@ -1,0 +1,30 @@
+(ns examples.receive)
+
+(def loop
+  (fn* [state]
+    (receive*
+     x {:when (erlang/=:=.e x :inc)}
+     (-> state inc loop)
+
+     x {:when (erlang/=:=.e x :dec)}
+     (-> state dec loop)
+
+     x {:when (erlang/=:=.e x :print)}
+     (loop (doto state prn))
+
+     _
+     (loop state))))
+
+(def spawn
+  (fn* [f & args]
+       (erlang/spawn.e :clj_core :apply (clj_core/to_list.e [f args]))))
+
+(let [x (spawn loop 42)]
+  (erlang/send.e x :inc)
+  (erlang/send.e x :inc)
+  (erlang/send.e x :inc)
+  (erlang/send.e x :print)
+  (erlang/send.e x :dec)
+  (erlang/send.e x :dec)
+  (erlang/send.e x :dec)
+  (erlang/send.e x :print))

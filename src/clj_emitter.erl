@@ -728,23 +728,7 @@ ast(#{op := 'case'} = Expr, State) ->
 
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
-  ClauseFun =
-    fun({PatternExpr, BodyExpr}, StateAcc) ->
-        #{ env   := EnvPattern
-         , guard := GuardExpr
-         } = PatternExpr,
-
-        AnnPattern  = ann_from(EnvPattern),
-
-        {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
-        {Guard, StateAcc2}   = pop_ast(ast(GuardExpr, StateAcc1)),
-        {Body, StateAcc3}    = pop_ast(ast(BodyExpr, StateAcc2)),
-
-        ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Guard, Body),
-        push_ast(ClauseAst, StateAcc3)
-    end,
-
-  State2 = lists:foldl(ClauseFun, State1, ClausesExprs),
+  State2 = lists:foldl(fun clause/2, State1, ClausesExprs),
   {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
 
   {ClausesAsts, State4} =
@@ -960,6 +944,32 @@ ast(#{op := 'catch'} = Expr, State) ->
 
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
+%% receive
+%%------------------------------------------------------------------------------
+ast(#{op := 'receive'} = Expr, State0) ->
+  #{ env     := Env
+   , clauses := ClausesExprs
+   , 'after' := AfterExpr
+   } = Expr,
+
+  Ann    = ann_from(Env),
+  State1 = lists:foldl(fun clause/2, State0, ClausesExprs),
+  {ClausesAsts, State2} = pop_ast(State1, length(ClausesExprs)),
+
+  case AfterExpr of
+    ?NIL ->
+      Ast = cerl:ann_c_receive(Ann, ClausesAsts),
+      push_ast(Ast, State2);
+    #{ op      := 'after'
+     , timeout := TimeoutExpr
+     , body    := BodyExpr
+     } ->
+      {TimeoutAst, State3} = pop_ast(ast(TimeoutExpr, State2)),
+      {BodyAst, State4}    = pop_ast(ast(BodyExpr, State3)),
+      Ast = cerl:ann_c_receive(Ann, ClausesAsts, TimeoutAst, BodyAst),
+      push_ast(Ast, State4)
+  end;
+%%------------------------------------------------------------------------------
 %% on_load
 %%------------------------------------------------------------------------------
 ast(#{op := on_load} = Expr, State) ->
@@ -1166,6 +1176,22 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
                , DataAst
                , InfoAst
                ]).
+
+%% ----- Case and receive Clauses -------
+
+clause({PatternExpr, BodyExpr}, StateAcc) ->
+  #{ env   := EnvPattern
+   , guard := GuardExpr
+   } = PatternExpr,
+
+  AnnPattern  = ann_from(EnvPattern),
+
+  {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
+  {Guard, StateAcc2}   = pop_ast(ast(GuardExpr, StateAcc1)),
+  {Body, StateAcc3}    = pop_ast(ast(BodyExpr, StateAcc2)),
+
+  ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Guard, Body),
+  push_ast(ClauseAst, StateAcc3).
 
 %% ----- Functions -------
 

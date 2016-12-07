@@ -18,6 +18,7 @@
         , 'if'/1
         , 'case'/1
         , 'let'/1
+        , letfn/1
         , loop/1
         , invoke/1
         , symbol/1
@@ -34,7 +35,10 @@
         , deftype/1
         , defprotocol/1
         , extend_type/1
+        , dot/1
+        , 'receive'/1
         , on_load/1
+        , macroexpand/1
         ]).
 
 -spec all() -> [atom()].
@@ -335,8 +339,9 @@ fn(_Config) ->
     methods := [Fn5Method1]
    } = analyze_one(<<"(fn* ([x & z] x z))">>),
 
-  #{op     := fn_method,
-    params := [Fn5Param1, Fn5Param2]
+  #{ op     := fn_method
+   , params := [Fn5Param1, Fn5Param2]
+   , guard  := #{op := constant, form := true}
    } = Fn5Method1,
 
   #{ op   := binding
@@ -350,6 +355,21 @@ fn(_Config) ->
    , 'variadic?' := true
    } = Fn5Param2,
   true = clj_core:equiv(ZSymbol, ZSymbolCheck2),
+
+  ct:comment("fn with guards"),
+  #{ op      := fn
+   , methods := [Fn6Method1, Fn6Method2]
+   } = analyze_one(<<"(fn* ([x] {:when false} x) ([y] {:when true} y))">>),
+
+  #{ op     := fn_method
+   , params := [_]
+   , guard  := #{op := constant, form := false}
+   } = Fn6Method1,
+
+  #{ op     := fn_method
+   , params := [_]
+   , guard  := #{op := constant, form := true}
+   } = Fn6Method2,
 
   ct:comment("fn with two variadic methods"),
   ok = try analyze_one(<<"(fn* ([a b & _] b) ([x & z] x z))">>), error
@@ -501,6 +521,26 @@ do(_Config) ->
 
   true = DefaultExpr =/= ?NIL,
 
+  ct:comment("case with guards"),
+  #{ op      := 'case'
+   , test    := #{op := constant}
+   , clauses := [{Pattern1, _}, {Pattern2, _}]
+   , default := DefaultExpr2
+   } = analyze_one(<<"(case* true "
+                     "  true {:when false} 1 "
+                     "  x    {:when true} 0 "
+                     "  :default)">>),
+
+  #{ op    := constant
+   , guard := #{op := constant, form := false}
+   } = Pattern1,
+
+  #{ op    := local
+   , guard := #{op := constant, form := true}
+   } = Pattern2,
+
+  true = DefaultExpr2 =/= ?NIL,
+
   {comments, ""}.
 
 -spec 'let'(config()) -> result().
@@ -568,6 +608,40 @@ do(_Config) ->
              "forms in binding vector, had: 3">> = Reason3,
            ok
        end,
+
+  {comments, ""}.
+
+-spec letfn(config()) -> result().
+letfn(_Config) ->
+  ct:comment("letfn with zero bindings or body"),
+  #{ op   := letfn
+   , vars := []
+   , fns  := []
+   } = analyze_one(<<"(letfn* [])">>),
+
+  ct:comment("letfn with one binding"),
+  #{ op   := letfn
+   , vars := Vars1
+   , fns  := Fns1
+   } = analyze_one(<<"(letfn* [a (fn* [] :a)] a)">>),
+  1 = length(Vars1),
+  1 = length(Fns1),
+
+  ct:comment("letfn with two bindings"),
+  #{ op   := letfn
+   , vars := Vars2
+   , fns  := Fns2
+   } = analyze_one(<<"(letfn* [a (fn* [] :a) b (fn* [] :b)] [a b])">>),
+  2 = length(Vars2),
+  2 = length(Fns2),
+
+  ct:comment("letfn with two mutually recursive fns"),
+  #{ op   := letfn
+   , vars := Vars3
+   , fns  := Fns3
+   } = analyze_one(<<"(letfn* [a (fn* [] b) b (fn* [] a)] [a b])">>),
+  2 = length(Vars3),
+  2 = length(Fns3),
 
   {comments, ""}.
 
@@ -780,12 +854,14 @@ throw(_Config) ->
    , local := #{op := binding, name := ErrName2_1}
    , class := error
    , body  := #{op := do}
+   , guard := #{op := constant, form := true}
    } = Catch2_1,
 
   #{ op    := 'catch'
    , local := #{op := binding, name := ErrName2_2}
    , class := throw
    , body  := #{op := do}
+   , guard := #{op := constant, form := true}
    } = Catch2_2,
 
   true = clj_core:equiv(ErrName2_1, clj_core:symbol(<<"err-1">>)),
@@ -838,6 +914,16 @@ throw(_Config) ->
 
   true = clj_core:equiv(ErrName5_1, clj_core:symbol(<<"e">>)),
   true = clj_core:equiv(UnderscoreSym, clj_core:symbol(<<"_">>)),
+
+  ct:comment("try, catch with guards"),
+  #{ op      := 'try'
+   , catches := [Catch6_1]
+   , finally := ?NIL
+   } = analyze_one(<<"(try 1 (catch _ e {:when false} e))">>),
+
+  #{ op    := 'catch'
+   , guard := #{op := constant, form := false}
+   } = Catch6_1,
 
   ct:comment("try, catch with invalid value"),
   ok = try analyze_one(<<"(try 1 (catch bla e e))">>), error
@@ -1054,12 +1140,116 @@ extend_type(_Config) ->
 
   {comments, ""}.
 
+-spec dot(config()) -> result().
+dot(_Config) ->
+  ct:comment("Simple function call"),
+  #{ op   := invoke
+   } = analyze_one(<<"(. clojerl.String foo)">>),
+
+  #{ op   := invoke
+   } = analyze_one(<<"(. clojerl.String (foo))">>),
+
+  #{ op   := invoke
+   } = analyze_one(<<"(. clojerl.String foo 1 2)">>),
+
+  #{ op   := 'let'
+   , body := #{ op := do, ret := #{op := invoke}}
+   } = analyze_one(<<"(let* [x 1] (. x foo))">>),
+
+  ct:comment("Require at least 3 forms"),
+  ok = try analyze_one(<<"(. a)">>), error
+       catch _:Message ->
+           {match, _} = re:run(Message, "Malformed member expression"),
+           ok
+       end,
+
+  ct:comment("Require only 3 args when the third is a list"),
+  ok = try analyze_one(<<"(. clojerl.String (foo) bar)">>), error
+       catch _:Message2 ->
+           {match, _} = re:run(Message2, "expected single list"),
+           ok
+       end,
+
+  {comments, ""}.
+
+-spec 'receive'(config()) -> result().
+'receive'(_Config) ->
+  ct:comment("receive with no clauses"),
+  #{ op      := 'receive'
+   , clauses := []
+   , 'after' := #{ op      := 'after'
+                 , timeout := #{op := constant, form := 0}
+                 }
+   } = analyze_one(<<"(receive* (after 0 :bye))">>),
+
+  ct:comment("receive with no after and 1 clause"),
+  #{ op      := 'receive'
+   , clauses := [_]
+   , 'after' := ?NIL
+   } = analyze_one(<<"(receive* 1 :one)">>),
+
+  ct:comment("receive with no after and 2 clauses"),
+  #{ op      := 'receive'
+   , clauses := [_, _]
+   , 'after' := ?NIL
+   } = analyze_one(<<"(receive* 1 :one 2 :two)">>),
+
+  ct:comment("receive with 2 clauses and after"),
+  #{ op      := 'receive'
+   , clauses := [_, _]
+   , 'after' := #{ op      := 'after'
+                 , timeout := #{op := constant, form := 0}
+                 }
+   } = analyze_one(<<"(receive* 1 :one 2 :two (after 0 1))">>),
+
+  ct:comment("receive with guards"),
+  #{ op      := 'receive'
+   , clauses := [{Pattern1, _}, _]
+   , 'after' := ?NIL
+   } = analyze_one(<<"(receive* 1 {:when false} :one 2 :two)">>),
+
+  #{ op    := constant
+   , guard := #{op := constant, form := false}
+   } = Pattern1,
+
+  ct:comment("No forms allowed after 'after'"),
+  ok = try analyze_one(<<"(receive* (after 0 1) 1)">>), error
+       catch _:Message ->
+           {match, _} = re:run(Message, "Only one after"),
+           ok
+       end,
+
+  ct:comment("Uneven number of forms for clauses"),
+  ok = try analyze_one(<<"(receive* 1 :one 2 (after 0 1))">>), error
+       catch _:Message2 ->
+           {match, _} = re:run(Message2, "Expected an even number"),
+           ok
+       end,
+
+  {comments, ""}.
+
 -spec on_load(config()) -> result().
 on_load(_Config) ->
   ct:comment("erl-on-load*"),
   #{ op   := on_load
    , body := #{op := do, ret := #{op := constant, form := 1}}
    } = analyze_one(<<"(erl-on-load* 1)">>),
+
+  {comments, ""}.
+
+-spec macroexpand(config()) -> result().
+macroexpand(_Config) ->
+  ct:comment("dot syntax"),
+
+  List1          = clj_reader:read(<<"(.foo bar 1)">>),
+  ExpandedCheck1 = clj_reader:read(<<"(. bar foo 1)">>),
+  Expanded1      = clj_analyzer:macroexpand_1(clj_env:default(), List1),
+  true           = clj_core:equiv(Expanded1, ExpandedCheck1),
+
+  List2          = clj_reader:read(<<"(Bar. :one \"two\")">>),
+  ExpandedCheck2 = clj_reader:read(<<"(new Bar :one \"two\")">>),
+  Expanded2      = clj_analyzer:macroexpand_1(clj_env:default(), List2),
+  true           = clj_core:equiv(Expanded2, ExpandedCheck2),
 
   {comments, ""}.
 
