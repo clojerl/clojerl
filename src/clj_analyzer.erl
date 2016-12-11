@@ -408,12 +408,12 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
                       ),
 
   ParamsList = clj_core:to_list(Params),
-  clj_utils:error_when( not lists:all(fun is_valid_bind_symbol/1, ParamsList)
-                      , [ <<"Params must be valid binding symbols, had: ">>
-                        , Params
-                        ]
-                      , clj_env:location(Env0)
-                      ),
+  %% clj_utils:error_when( not lists:all(fun is_valid_bind_symbol/1, ParamsList)
+  %%                     , [ <<"Params must be valid binding symbols, had: ">>
+  %%                       , Params
+  %%                       ]
+  %%                     , clj_env:location(Env0)
+  %%                     ),
 
   IsNotAmpersandFun = fun(X) -> clj_core:str(X) =/= <<"&">> end,
   ParamsNames       = lists:filter(IsNotAmpersandFun, ParamsList),
@@ -897,8 +897,9 @@ parse_patterns_bodies([Pat, GuardOrBody | Rest0], PatternBodyPairs, Env0) ->
 
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
-  case clj_core:'symbol?'(Form) of
-    true ->
+  IsSymbol = clj_core:'symbol?'(Form),
+  if
+    IsSymbol ->
       Ast = #{ op   => binding
              , env  => Env
              , name => Form
@@ -906,7 +907,21 @@ parse_pattern(Form, Env) ->
              },
       Env1 = clj_env:put_local(Form, Ast, Env),
       clj_env:push_expr(Ast, Env1);
-    false ->
+    is_map(Form) ->
+      Keys = maps:keys(Form),
+      Vals = maps:values(Form),
+      {KeysExprs, Env1} = lists:foldl(fun parse_pattern/2, Env, Keys),
+      {ValsExprs, Env2} = lists:foldl(fun parse_pattern/2, Env1, Vals),
+      Ast = #{ op   => erl_map
+             , env  => Env
+             , form => Form
+             , tag  => 'clojerl.erlang.Map'
+             , keys => KeysExprs
+             , vals => ValsExprs
+             },
+      Env3 = clj_env:put_local(Form, Ast, Env2),
+      clj_env:push_expr(Ast, Env3);
+    true ->
       analyze_form(Form, Env)
   end.
 
@@ -1969,7 +1984,7 @@ analyze_erl_map(Map, Env) ->
   MapExpr = #{ op   => erl_map
              , env  => Env4
              , form => Map
-             , tag  => 'clojerl.Map'
+             , tag  => 'clojerl.erlang.Map'
              , keys => KeysExpr
              , vals => ValsExpr
              },
