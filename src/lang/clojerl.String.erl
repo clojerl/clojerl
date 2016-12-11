@@ -21,6 +21,7 @@
         , to_upper/1
         , to_lower/1
         , is_whitespace/1
+        , is_printable/1
         ]).
 
 -export([count/1]).
@@ -132,6 +133,10 @@ to_lower(Str) when is_binary(Str) ->
 is_whitespace(Str) ->
   Regex = <<"[\\s\\t\\x0B\\x1C\\x1D\\x1E\\x1F\\x{2000}\\x{2002}]">>,
   match =:= re:run(Str, Regex, [{capture, none}, unicode]).
+
+-spec is_printable(binary()) -> boolean().
+is_printable(Str) ->
+  io_lib:printable_list(binary_to_list(Str)).
 
 %%------------------------------------------------------------------------------
 %% Protocols

@@ -27,12 +27,9 @@
         , nth/2
         , nth/3
 
-        , trace_while/4
         , time/1
         , time/2
         , time/3
-        , bench/3
-        , bench/4
 
         , code_from_binary/1
 
@@ -251,33 +248,6 @@ group_by(GroupBy, List) ->
   ReverseValue = fun(_, V) -> lists:reverse(V) end,
   maps:map(ReverseValue, Map).
 
--spec trace_while(string(), function(), [module()], timeout()) -> ok.
-trace_while(Filename, Fun, Modules, Timeout) ->
-  Self = self(),
-  F = fun() ->
-          Self ! start,
-          Fun(),
-          Self ! stop
-      end,
-  spawn(F),
-
-  receive start -> ok
-  after 1000 -> throw(<<"Fun never started">>)
-  end,
-
-  {{Y, M, D}, {Hours, Mins, Secs}} = calendar:local_time(),
-  FilenameUnique = io_lib:format( "~s-~p-~p-~p-~p-~p-~p"
-                                , [Filename, Y, M, D, Hours, Mins, Secs]
-                                ),
-  eep:start_file_tracing(FilenameUnique, [], Modules),
-
-  receive stop -> ok
-  after Timeout -> ok
-  end,
-
-  eep:stop_tracing(),
-  eep:convert_tracing(FilenameUnique).
-
 -spec time(function()) -> ok.
 time(Fun) when is_function(Fun) ->
   time("Time", Fun).
@@ -291,25 +261,6 @@ time(Label, Fun, Args) ->
   {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
   io:format("~s: ~p ms~n", [Label, T / 1000]),
   V.
-
-bench(Name, Fun, Trials) ->
-  bench(Name, Fun, [], Trials).
-
-bench(Name, Fun, Args, Trials) ->
-    print_result(Name, repeat_tc(Fun, Args, Trials)).
-
-repeat_tc(Fun, Args, Trials) ->
-  Repeat = fun
-             R(0) -> ok;
-             R(N) -> apply(Fun, Args), R(N - 1)
-           end,
-
-    {Time, _} = timer:tc(fun() -> Repeat(Trials) end),
-    {Time, Trials}.
-
-print_result(Name, {Time, Trials}) ->
-    io:format("~s: ~.3f ms (~.2f per second)~n",
-              [Name, (Time / 1000) / Trials, Trials / (Time / 1000000)]).
 
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
 code_from_binary(Name) when is_atom(Name) ->
