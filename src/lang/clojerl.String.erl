@@ -97,7 +97,7 @@ last_index_of(Str, Value) ->
 last_index_of(<<>>, _Value, _FromIndex) ->
   -1;
 last_index_of(Str, Value, FromIndex) ->
-  Length = erlang:size(Str) - FromIndex,
+  Length = count(Str) - FromIndex,
   case binary:matches(Str, Value, [{scope, {FromIndex, Length}}]) of
     [] -> -1;
     Matches ->
@@ -123,11 +123,13 @@ char_at(<<_/utf8, Str/binary>>, Index) when Index >= 0->
 
 -spec to_upper(binary()) -> binary().
 to_upper(Str) when is_binary(Str) ->
-  list_to_binary(string:to_upper(binary_to_list(Str))).
+  List = unicode:characters_to_list(Str),
+  unicode:characters_to_binary(string:to_upper(List)).
 
 -spec to_lower(binary()) -> binary().
 to_lower(Str) when is_binary(Str) ->
-  list_to_binary(string:to_lower(binary_to_list(Str))).
+  List = unicode:characters_to_list(Str),
+  unicode:characters_to_binary(string:to_lower(List)).
 
 -spec is_whitespace(binary()) -> boolean().
 is_whitespace(Str) ->
@@ -136,7 +138,7 @@ is_whitespace(Str) ->
 
 -spec is_printable(binary()) -> boolean().
 is_printable(Str) ->
-  io_lib:printable_list(binary_to_list(Str)).
+  io_lib:printable_list(unicode:characters_to_list(Str)).
 
 %%------------------------------------------------------------------------------
 %% Protocols

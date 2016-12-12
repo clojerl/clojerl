@@ -184,11 +184,11 @@ fake_io_loop() ->
 fake_reply({get_chars, _, _, 42}) ->
   eof;
 fake_reply({get_chars, _, _, N}) ->
-  lists:flatten(repeat("a", N));
+  list_to_binary(lists:flatten(repeat("a", N)));
 fake_reply({get_line, _, _}) ->
-  "get_line";
+  <<"get_line">>;
 fake_reply({get_until, _, _, _, _, _}) ->
-  "get_until".
+  <<"get_until">>.
 
 -spec repeat(string(), integer()) -> iolist().
 repeat(X, N) ->

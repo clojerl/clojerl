@@ -117,24 +117,24 @@ read(IO) ->
 
 read(IO, Length)
   when IO =:= standard_io; IO =:= standard_error ->
-  maybe_binary(io:get_chars(IO, "", Length));
+  io:get_chars(IO, "", Length);
 read(Name, Length) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
     _ ->
-      maybe_binary(io:get_chars(Name, "", Length))
+      io:get_chars(Name, "", Length)
   end.
 
 read_line(IO)
   when IO =:= standard_io; IO =:= standard_error ->
-  maybe_binary(io:request(IO, {get_line, unicode, ""}));
+  io:request(IO, {get_line, unicode, ""});
 read_line(Name) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
     _ ->
-      maybe_binary(io:request(Name, {get_line, unicode, ""}))
+      io:request(Name, {get_line, unicode, ""})
   end.
 
 skip(_IO, _Length) ->
@@ -144,14 +144,10 @@ unread(_IO, _Ch) ->
   TypeName = atom_to_binary(?MODULE, utf8),
   error(<<"Unsupported operation: unread for ", TypeName/binary>>).
 
--spec maybe_binary(eof | string()) -> eof | binary().
-maybe_binary(eof) -> eof;
-maybe_binary(List) when is_list(List) -> list_to_binary(List).
-
 %% erlang.io.IWriter
 
-write(Name, Str) when is_atom(Name) ->
-  write(Name, "~s", [Str]).
+write(Name, Str) when is_atom(Name), is_binary(Str) ->
+  io:put_chars(Name, Str).
 
 write(IO, Format, Values)
   when IO =:= standard_io; IO =:= standard_error ->
