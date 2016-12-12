@@ -1070,11 +1070,11 @@ erl_literals(ReadFun) ->
   true = clj_core:equiv(WorldSymbol, WorldSymbolCheckMap),
 
   %% String
-  ct:comment("Read an string map"),
-  "" = ReadFun(<<"#erl \"\"">>),
+  ct:comment("Read a string"),
+  "" = clj_core:second(ReadFun(<<"#erl \"\"">>)),
 
   ct:comment("Read a non-empty string"),
-  "Hello there!" = ReadFun(<<"#erl \"Hello there!\"">>),
+  "Hello there!" = clj_core:second(ReadFun(<<"#erl \"Hello there!\"">>)),
 
   {comments, ""}.
 

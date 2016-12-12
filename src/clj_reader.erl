@@ -1188,16 +1188,20 @@ erlang_literal(Form, State) ->
   IsVector = clj_core:'vector?'(Form),
   IsString = clj_core:'string?'(Form),
 
-  Value    = if
-               IsList   -> clj_core:to_list(Form);
-               IsMap    -> 'clojerl.Map':to_erl_map(Form);
-               IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
-               IsString -> unicode:characters_to_list(Form);
-               true     -> clj_utils:error(<<"Can only have list, map, tuple "
-                                             "or Erlang string literals">>
-                                          , location(State)
-                                          )
-             end,
+  Value    =
+    if
+      IsList   -> clj_core:to_list(Form);
+      IsMap    -> 'clojerl.Map':to_erl_map(Form);
+      IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
+      IsString -> clj_core:list( [ clj_core:symbol(<<"quote">>)
+                                 , unicode:characters_to_list(Form)
+                                 ]
+                               );
+      true     -> clj_utils:error(<<"Can only have list, map, tuple "
+                                    "or Erlang string literals">>
+                                 , location(State)
+                                 )
+    end,
 
   push_form(Value, State).
 
