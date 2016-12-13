@@ -760,7 +760,7 @@ read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
     end,
   Char =
     case Token of
-      Ch when size(Ch) == 1 -> Ch;
+      <<_/utf8>> -> Token;
       <<"newline">> -> $\n;
       <<"space">> -> $ ;
       <<"tab">> -> $\t;
