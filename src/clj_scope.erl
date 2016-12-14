@@ -28,52 +28,52 @@ new(Parent) ->
 parent(?NIL)  -> ?NIL;
 parent(Scope) -> maps:get(parent, Scope).
 
--spec get(scope(), any()) -> any().
-get(Scope, Key) ->
-  do_get(Scope, Key).
+-spec get(any(), scope()) -> any().
+get(Key, Scope) ->
+  do_get(Key, Scope).
 
--spec put(scope(), any(), any()) -> scope().
-put(Scope = #{mappings := Mappings}, Key, Value) ->
+-spec put(any(), any(), scope()) -> scope().
+put(Key, Value, Scope = #{mappings := Mappings}) ->
   Scope#{mappings => Mappings#{Key => Value}}.
 
--spec update(scope(), any(), any()) -> scope().
-update(Scope, Key, Value) ->
-  do_update(Scope, Key, Value).
+-spec update(any(), any(), scope()) -> scope().
+update(Key, Value, Scope) ->
+  do_update(Key, Value, Scope).
 
--spec to_map(scope(), function()) -> any().
-to_map(Scope, Fun) ->
-  do_to_map(Scope, Fun, #{}).
+-spec to_map(function(), scope()) -> any().
+to_map(Fun, Scope) ->
+  do_to_map(Fun, #{}, Scope).
 
 %% @private
--spec do_to_map(scope() | ?NIL, function(), map()) -> map().
-do_to_map(?NIL, _, Map) ->
+-spec do_to_map(function(), map(), scope() | ?NIL) -> map().
+do_to_map(_, Map, ?NIL) ->
   Map;
-do_to_map(#{parent := Parent, mappings := Mappings}, Fun, Map) ->
+do_to_map(Fun, Map, #{parent := Parent, mappings := Mappings}) ->
   Mappings1 = maps:map(Fun, Mappings),
-  do_to_map(Parent, Fun, maps:merge(Mappings1, Map)).
+  do_to_map(Fun, maps:merge(Mappings1, Map), Parent).
 
 %% @private
--spec do_get(scope() | ?NIL, any()) -> any().
-do_get(?NIL, _) ->
+-spec do_get(any(), scope() | ?NIL) -> any().
+do_get(_, ?NIL) ->
   ?NIL;
-do_get(Scope = #{mappings := Mappings}, Key) ->
+do_get(Key, Scope = #{mappings := Mappings}) ->
   case maps:is_key(Key, Mappings) of
     false ->
-      do_get(parent(Scope), Key);
+      do_get(Key, parent(Scope));
     true ->
       maps:get(Key, Mappings)
   end.
 
 %% @private
--spec do_update(scope() | ?NIL, any(), any()) -> scope() | not_found.
-do_update(?NIL, _K, _V) ->
+-spec do_update(any(), any(), scope() | ?NIL) -> scope() | not_found.
+do_update(_K, _V, ?NIL) ->
   not_found;
-do_update(Scope = #{mappings := Mappings, parent := Parent}, K, V) ->
+do_update(K, V, Scope = #{mappings := Mappings, parent := Parent}) ->
   case maps:is_key(K, Mappings) of
     true ->
       Scope#{mappings => Mappings#{K => V}};
     false ->
-      case do_update(Parent, K, V) of
+      case do_update(K, V, Parent) of
         not_found -> not_found;
         NewParent -> Scope#{parent => NewParent}
       end

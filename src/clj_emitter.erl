@@ -17,20 +17,20 @@
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
-  State       = clj_env:get(Env, emitter, initial_state()),
+  State       = clj_env:get(emitter, initial_state(), Env),
   erlang:put(local_var_counter, 0),
-  clj_env:put(Env, emitter, ast(Expr, State)).
+  clj_env:put(emitter, ast(Expr, State), Env).
 
 -spec remove_state(clj_env:env()) ->
   { [cerl:cerl()]
   , clj_env:env()
   }.
 remove_state(Env) ->
-  State = clj_env:get(Env, emitter, initial_state()),
+  State = clj_env:get(emitter, initial_state(), Env),
   Exprs = lists:reverse(maps:get(asts, State)),
 
   { Exprs
-  , clj_env:remove(Env, emitter)
+  , clj_env:remove(emitter, Env)
   }.
 
 -spec initial_state() -> state().
@@ -302,7 +302,7 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Module, Exports),
   clj_module:add_functions(Module, Functions),
 
-  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+  Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
   Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
   ok     = clj_module:remove(Module),
 
@@ -361,7 +361,7 @@ ast(#{op := defprotocol} = Expr, State) ->
   Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
   clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
 
-  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+  Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
   Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
   ok     = clj_module:remove(Module),
 
@@ -397,7 +397,7 @@ ast(#{op := extend_type} = Expr, State) ->
         clj_module:add_exports(Module, Exports),
         clj_module:add_functions(Module, FunctionsAsts),
 
-        Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+        Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
         Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
         ok     = clj_module:remove(Module),
 
@@ -1403,7 +1403,7 @@ get_lexical_rename(BindingExpr, State) ->
                 0 -> maps:get(name, BindingExpr);
                 _ ->
                   Code = hash_scope(BindingExpr),
-                  clj_scope:get(Renames, Code)
+                  clj_scope:get(Code, Renames)
               end,
 
   clj_core:str(RenameSym).
@@ -1419,7 +1419,7 @@ put_lexical_rename(BindingExpr, State) ->
   NameBin = clj_core:name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
 
-  NewRenames = clj_scope:put(Renames, Code, clj_core:gensym(ShadowName)),
+  NewRenames = clj_scope:put(Code, clj_core:gensym(ShadowName), Renames),
 
   State#{lexical_renames => NewRenames}.
 

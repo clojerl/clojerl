@@ -1481,11 +1481,11 @@ push_pending_form(Form, #{pending_forms := Forms} = State) ->
 
 -spec scope_get(atom(), state()) -> state().
 scope_get(Name, #{bindings := Bindings} = _State) ->
-  clj_scope:get(Bindings, Name).
+  clj_scope:get(Name, Bindings).
 
 -spec scope_put(atom(), any(), state()) -> state().
 scope_put(Name, Value, #{bindings := Bindings} = State) ->
-  State#{bindings => clj_scope:put(Bindings, Name, Value)}.
+  State#{bindings => clj_scope:put(Name, Value, Bindings)}.
 
 -spec add_scope(state()) -> state().
 add_scope(#{bindings := Bindings} = State) ->

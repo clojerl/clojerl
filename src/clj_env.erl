@@ -45,34 +45,33 @@ default() ->
 -spec context(env()) -> context().
 context(#{context := Ctx}) -> Ctx.
 
--spec context(env(), context()) -> env().
-context(Env, Ctx) -> Env#{context => Ctx}.
+-spec context(context(), env()) -> env().
+context(Ctx, Env) -> Env#{context => Ctx}.
 
 -spec location(env()) -> ?NIL | clj_reader:location().
 location(#{location := Location}) ->
   Location.
 
--spec location(env(), ?NIL | clj_reader:location()) -> env().
-location(Env, Location) ->
+-spec location(?NIL | clj_reader:location(), env()) -> env().
+location(Location, Env) ->
   Env#{location => Location}.
 
--spec maybe_update_location(env(), ?NIL | map()) -> env().
-maybe_update_location(Env, ?NIL) ->
+-spec maybe_update_location(?NIL | map(), env()) -> env().
+maybe_update_location(?NIL, Env) ->
   Env;
-maybe_update_location(Env, Location) ->
+maybe_update_location(Location, Env) ->
   Env#{location => Location}.
 
-
--spec push_expr(env(), map()) -> env().
-push_expr(Env = #{exprs := Exprs}, Expr) ->
+-spec push_expr(map(), env()) -> env().
+push_expr(Expr, Env = #{exprs := Exprs}) ->
   Env#{exprs => [Expr | Exprs]}.
 
 -spec pop_expr(env()) -> env().
 pop_expr(Env = #{exprs := [H | Exprs]}) ->
   {H, Env#{exprs => Exprs}}.
 
--spec last_exprs(env(), integer()) -> {[any()], env()}.
-last_exprs(Env = #{exprs := AllExprs}, N) when N >= 0 ->
+-spec last_exprs(integer(), env()) -> {[any()], env()}.
+last_exprs(N, Env = #{exprs := AllExprs}) when N >= 0 ->
   Exprs = lists:sublist(AllExprs, N),
   RestExprs = lists:sublist(AllExprs, N + 1, length(AllExprs)),
   {lists:reverse(Exprs),
@@ -89,34 +88,34 @@ add_locals_scope(Env = #{locals := ParentLocals}) ->
 remove_locals_scope(Env = #{locals := Locals}) ->
   Env#{locals => clj_scope:parent(Locals)}.
 
--spec get_local(env(), 'clojerl.Symbol':type()) -> any().
-get_local(_Env = #{locals := Locals}, Sym) ->
-  clj_scope:get(Locals, clj_core:str(Sym)).
+-spec get_local('clojerl.Symbol':type(), env()) -> any().
+get_local(Sym, _Env = #{locals := Locals}) ->
+  clj_scope:get(clj_core:str(Sym), Locals).
 
--spec put_local(env(), 'clojerl.Symbol':type(), any()) -> env().
-put_local(Env = #{locals := Locals}, Sym, Local) ->
-  Env#{locals => clj_scope:put(Locals, clj_core:str(Sym), Local)}.
+-spec put_local('clojerl.Symbol':type(), any(), env()) -> env().
+put_local(Sym, Local, Env = #{locals := Locals}) ->
+  Env#{locals => clj_scope:put(clj_core:str(Sym), Local, Locals)}.
 
--spec put_locals(env(), [map()]) -> env().
-put_locals(Env, Locals) ->
+-spec put_locals([map()], env()) -> env().
+put_locals(Locals, Env) ->
   PutLocalFun = fun(Local, EnvAcc) ->
                     Name = maps:get(name, Local),
-                    put_local(EnvAcc, Name, Local)
+                    put_local(Name, Local, EnvAcc)
                 end,
   lists:foldl(PutLocalFun, Env, Locals).
 
--spec get(env(), atom()) -> any().
-get(Env, Name) ->
-  get(Env, Name, ?NIL).
+-spec get(atom(), env()) -> any().
+get(Name, Env) ->
+  get(Name, ?NIL, Env).
 
--spec get(env(), atom(), any()) -> any().
-get(Env, Name, Default) ->
+-spec get(atom(), any(), env()) -> any().
+get(Name, Default, Env) ->
   maps:get(Name, Env, Default).
 
--spec put(env(), atom(), any()) -> any().
-put(Env, Name, Value) ->
+-spec put(atom(), any(), env()) -> any().
+put(Name, Value, Env) ->
   maps:put(Name, Value, Env).
 
--spec remove(env(), atom()) -> ok.
-remove(Env, Name) ->
+-spec remove(atom(), env()) -> ok.
+remove(Name, Env) ->
   maps:remove(Name, Env).
