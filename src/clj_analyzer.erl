@@ -1101,7 +1101,7 @@ lookup_var(VarSymbol, true = _CreateNew) ->
 
   case clj_core:equiv(CurrentNsSym, NsSym) of
     Equal when Equal; NsSym == ?NIL ->
-      clj_namespace:intern(CurrentNs, NameSym),
+      clj_namespace:intern(NameSym, CurrentNs),
       lookup_var(VarSymbol, false);
     false ->
       lookup_var(VarSymbol, false)
@@ -1776,7 +1776,7 @@ resolve(Symbol, CheckPrivate, Env) ->
   CurrentNs = clj_namespace:current(),
   Local     = clj_env:get_local(Symbol, Env),
   NsStr     = clj_core:namespace(Symbol),
-  MappedVal = clj_namespace:find_mapping(CurrentNs, Symbol),
+  MappedVal = clj_namespace:find_mapping(Symbol, CurrentNs),
 
   if
     Local =/= ?NIL ->
