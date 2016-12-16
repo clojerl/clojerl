@@ -103,9 +103,9 @@ push_bindings(BindingsMap) ->
   Bindings      = get_bindings(),
   NewBindings   = clj_scope:new(Bindings),
   AddBindingFun = fun(K, Acc) ->
-                      clj_scope:put( Acc
-                                   , clj_core:str(K)
+                      clj_scope:put( clj_core:str(K)
                                    , {ok, clj_core:get(BindingsMap, K)}
+                                   , Acc
                                    )
                   end,
   NewBindings1  = lists:foldl( AddBindingFun
@@ -135,7 +135,7 @@ get_bindings_map() ->
     ?NIL -> #{};
     Bindings  ->
       UnwrapFun = fun(_, {ok, X}) -> X end,
-      clj_scope:to_map(Bindings, UnwrapFun)
+      clj_scope:to_map(UnwrapFun, Bindings)
   end.
 
 -spec reset_bindings(clj_scope:scope()) -> ok.
@@ -145,7 +145,7 @@ reset_bindings(Bindings) ->
 -spec dynamic_binding('clojerl.Var':type()) -> any().
 dynamic_binding(Var) ->
   Key = clj_core:str(Var),
-  clj_scope:get(get_bindings(), Key).
+  clj_scope:get(Key, get_bindings()).
 
 -spec dynamic_binding('clojerl.Var':type(), any()) -> any().
 dynamic_binding(Var, Value) ->
@@ -155,9 +155,9 @@ dynamic_binding(Var, Value) ->
       dynamic_binding(Var, Value);
     Bindings  ->
       Key = clj_core:str(Var),
-      NewBindings = case clj_scope:update(Bindings, Key, {ok, Value}) of
+      NewBindings = case clj_scope:update(Key, {ok, Value}, Bindings) of
                       not_found ->
-                        clj_scope:put(Bindings, Key, {ok, Value});
+                        clj_scope:put(Key, {ok, Value}, Bindings);
                       NewBindingsTemp ->
                         NewBindingsTemp
                     end,

@@ -100,11 +100,11 @@ get_forms(ModuleName) when is_atom(ModuleName) ->
   to_forms(get(?MODULE, ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
--spec ensure_loaded(atom(), binary()) -> ok.
-ensure_loaded(Name, Source) ->
+-spec ensure_loaded(binary(), module()) -> ok.
+ensure_loaded(Source, Name) ->
   case is_loaded(Name) of
     true  -> ok;
-    false -> load(Name, Source), ok
+    false -> load(Source, Name), ok
   end.
 
 %% @doc Remove the module from the loaded modules in clj_module.
@@ -136,7 +136,7 @@ fake_fun(ModuleName, Function, Arity) ->
       FA     = {Function, Arity},
       case ets:lookup(Module#module.fake_funs, FA) of
         [] ->
-          Fun = build_fake_fun(Module, Function, Arity),
+          Fun = build_fake_fun(Function, Arity, Module),
           save(Module#module.fake_funs, {FA, Fun}),
           Fun;
         [{_, Fun}] ->
@@ -213,10 +213,11 @@ fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
 
   cerl:ann_c_let(Ann, [VarAst], CallAst, ApplyAst).
 
--spec add_mappings(module() | clj_module(), ['clojerl.Var':type()]) -> clj_module().
-add_mappings(ModuleName, Mappings) when is_atom(ModuleName)  ->
-  add_mappings(get(?MODULE, ModuleName), Mappings);
-add_mappings(Module, Mappings) ->
+-spec add_mappings(['clojerl.Var':type()], module() | clj_module()) ->
+  clj_module().
+add_mappings(Mappings, ModuleName) when is_atom(ModuleName)  ->
+  add_mappings(Mappings, get(?MODULE, ModuleName));
+add_mappings(Mappings, Module) ->
   AddFun = fun
              ({K, V}) ->
                save(Module#module.mappings, {K, V});
@@ -227,36 +228,36 @@ add_mappings(Module, Mappings) ->
   lists:foreach(AddFun, Mappings),
   Module.
 
--spec add_attributes(clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
+-spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module()) ->
   clj_module().
-add_attributes(ModuleName, Attrs) when is_atom(ModuleName)  ->
-  add_attributes(get(?MODULE, ModuleName), Attrs);
-add_attributes(Module, []) ->
+add_attributes(Attrs, ModuleName) when is_atom(ModuleName)  ->
+  add_attributes(Attrs, get(?MODULE, ModuleName));
+add_attributes([], Module) ->
   Module;
-add_attributes(Module, Attrs) ->
+add_attributes(Attrs, Module) ->
   AddAttr = fun(E) -> save(Module#module.attrs, {E}) end,
   ok = lists:foreach(AddAttr, Attrs),
   Module.
 
--spec add_exports(clj_module(), [{atom(), non_neg_integer()}]) ->
+-spec add_exports([{atom(), non_neg_integer()}], clj_module()) ->
   clj_module().
-add_exports(ModuleName, Exports) when is_atom(ModuleName)  ->
-  add_exports(get(?MODULE, ModuleName), Exports);
-add_exports(Module, Exports) ->
+add_exports(Exports, ModuleName) when is_atom(ModuleName)  ->
+  add_exports(Exports, get(?MODULE, ModuleName));
+add_exports(Exports, Module) ->
   AddExport = fun(E) ->
                   save(Module#module.exports, {E})
               end,
   ok = lists:foreach(AddExport, Exports),
   Module.
 
--spec add_functions(module() | clj_module(), [{cerl:cerl(), cerl:cerl()}]) ->
+-spec add_functions([{cerl:cerl(), cerl:cerl()}], module() | clj_module()) ->
   clj_module().
-add_functions(ModuleName, Funs) when is_atom(ModuleName)  ->
-  add_functions(get(?MODULE, ModuleName), Funs);
-add_functions(Module, Funs) ->
+add_functions(Funs, ModuleName) when is_atom(ModuleName)  ->
+  add_functions(Funs, get(?MODULE, ModuleName));
+add_functions(Funs, Module) ->
   SaveFun = fun(F) ->
                 FunctionId  = function_id(F),
-                ok          = delete_fake_fun(Module, FunctionId),
+                ok          = delete_fake_fun(FunctionId, Module),
                 save(Module#module.funs, {FunctionId, F})
             end,
   lists:foreach(SaveFun, Funs),
@@ -271,11 +272,11 @@ remove_all_functions(Module) ->
   true = ets:delete_all_objects(Module#module.exports),
   Module.
 
--spec add_on_load(module() | clj_module(), cerl:cerl()) ->
+-spec add_on_load(cerl:cerl(), module() | clj_module()) ->
   clj_module().
-add_on_load(ModuleName, Expr) when is_atom(ModuleName) ->
-  add_on_load(get(?MODULE, ModuleName), Expr);
-add_on_load(Module, Expr) ->
+add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
+  add_on_load(Expr, get(?MODULE, ModuleName));
+add_on_load(Expr, Module) ->
   save(Module#module.on_load, {Expr, Expr}),
   Module.
 
@@ -382,14 +383,14 @@ cleanup() ->
 %% if the module's binary is not found, which is interpreted as if the
 %% module is new.
 %% @end
--spec load(atom(), binary()) -> ok | {error, term()}.
-load(Name, Source) when is_binary(Source) ->
+-spec load(binary(), module()) -> ok | {error, term()}.
+load(Source, Name) when is_binary(Source) ->
   SourceStr = binary_to_list(Source),
   Module = case code:ensure_loaded(Name) of
              {module, Name} ->
-               new(clj_utils:code_from_binary(Name), SourceStr);
+               new(SourceStr, clj_utils:code_from_binary(Name));
              {error, _} ->
-               new(Name, SourceStr)
+               new(SourceStr, Name)
            end,
   ok = gen_server:call(?MODULE, {load, Module}),
   Module.
@@ -399,8 +400,8 @@ is_loaded(Name) ->
   ets:member(?MODULE, Name).
 
 %% @private
--spec build_fake_fun(clj_module(), atom(), integer()) -> function().
-build_fake_fun(Module, Function, Arity) ->
+-spec build_fake_fun(atom(), integer(), clj_module()) -> function().
+build_fake_fun(Function, Arity, Module) ->
   {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
 
   {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),
@@ -430,8 +431,8 @@ build_fake_fun(Module, Function, Arity) ->
 %% This is used so that they can be replaced with new ones, when
 %% redifining a function, for example.
 %% @end
--spec delete_fake_fun(clj_module(), function_id()) -> ok.
-delete_fake_fun(Module, FunctionId) ->
+-spec delete_fake_fun(function_id(), clj_module()) -> ok.
+delete_fake_fun(FunctionId, Module) ->
   true = ets:delete(Module#module.fake_funs, FunctionId),
   ok.
 
@@ -483,8 +484,8 @@ to_forms(#module{} = Module) ->
 
 add_module_info_functions(Module) ->
   {_, Funs} = module_info_funs(Module#module.name),
-  add_functions(Module, Funs),
-  add_exports(Module, [{module_info, 0}, {module_info, 1}]).
+  add_functions(Funs, Module),
+  add_exports([{module_info, 0}, {module_info, 1}], Module).
 
 -spec module_info_funs(module()) -> {[cerl:cerl()], [cerl:cerl()]}.
 module_info_funs(Name) ->
@@ -539,11 +540,11 @@ save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
 
--spec new(atom(), string()) -> ok | {error, term()}.
-new(Name, Source) when is_atom(Name), is_list(Source) ->
+-spec new(string(), atom() | cerl:c_module()) -> ok | {error, term()}.
+new(Source, Name) when is_atom(Name), is_list(Source) ->
   FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
   new(cerl:c_module(cerl:c_atom(Name), [], [FileAttr], []));
-new(#c_module{attrs = Attrs} = CoreModule, Source) when is_list(Source) ->
+new(Source, #c_module{attrs = Attrs} = CoreModule) when is_list(Source) ->
   FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
   new(CoreModule#c_module{attrs = [FileAttr | Attrs]}).
 
@@ -577,9 +578,9 @@ new(CoreModule) ->
                   , attrs        = ets:new(attributes, TableOpts)
                   },
 
-  Module = add_functions(Module, Funs),
-  Module = add_mappings(Module, maps:to_list(Mappings)),
-  Module = add_attributes(Module, Attrs),
+  Module = add_functions(Funs, Module),
+  Module = add_mappings(maps:to_list(Mappings), Module),
+  Module = add_attributes(Attrs, Module),
 
   %% Remove the on_load function and all its contents.
   %% IMPORTANT: This means that whenever a namespace is recompiled all
@@ -588,7 +589,7 @@ new(CoreModule) ->
   OnLoadId = {?ON_LOAD_FUNCTION, 0},
   true     = ets:delete(Module#module.funs, OnLoadId),
 
-  add_exports(Module, Exports).
+  add_exports(Exports, Module).
 
 -spec function_id({cerl:cerl(), cerl:cerl()}) -> function_id().
 function_id({Name, _}) ->

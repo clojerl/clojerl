@@ -17,20 +17,20 @@
 -spec emit(clj_env:env()) -> clj_env:env().
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
-  State       = clj_env:get(Env, emitter, initial_state()),
+  State       = clj_env:get(emitter, initial_state(), Env),
   erlang:put(local_var_counter, 0),
-  clj_env:put(Env, emitter, ast(Expr, State)).
+  clj_env:put(emitter, ast(Expr, State), Env).
 
 -spec remove_state(clj_env:env()) ->
   { [cerl:cerl()]
   , clj_env:env()
   }.
 remove_state(Env) ->
-  State = clj_env:get(Env, emitter, initial_state()),
+  State = clj_env:get(emitter, initial_state(), Env),
   Exprs = lists:reverse(maps:get(asts, State)),
 
   { Exprs
-  , clj_env:remove(Env, emitter)
+  , clj_env:remove(emitter, Env)
   }.
 
 -spec initial_state() -> state().
@@ -107,7 +107,7 @@ ast(#{op := def} = Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
-  ok      = clj_module:ensure_loaded(Module, file_from(Env)),
+  ok      = clj_module:ensure_loaded(file_from(Env), Module),
   VarAst  = cerl:abstract(Var),
   VarAnn  = ann_from(Env),
 
@@ -143,9 +143,9 @@ ast(#{op := def} = Expr, State) ->
 
   ValFunAst = function_form(ValName, VarAnn, [], ValAst),
 
-  clj_module:add_mappings(Module, [Var]),
-  clj_module:add_functions(Module, [ValFunAst]),
-  clj_module:add_exports(Module, [{ValName, 0}]),
+  clj_module:add_mappings([Var], Module),
+  clj_module:add_functions([ValFunAst], Module),
+  clj_module:add_exports([{ValName, 0}], Module),
 
   push_ast(VarAst, State1);
 %%------------------------------------------------------------------------------
@@ -161,9 +161,9 @@ ast(#{op := import} = Expr, State) ->
   NsName  = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
   Module  = binary_to_atom(NsName, utf8),
 
-  clj_module:ensure_loaded(Module, file_from(Env)),
+  clj_module:ensure_loaded(file_from(Env), Module),
   %% Add the mapping from type name symbol to fully qualified symbol
-  clj_module:add_mappings(Module, [{SymName, clj_core:symbol(Typename)}]),
+  clj_module:add_mappings([{SymName, clj_core:symbol(Typename)}], Module),
 
   TypenameAst = cerl:abstract(Typename),
   Ann         = ann_from(Env),
@@ -214,7 +214,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   Module = sym_to_kw(TypeSym),
   Ann    = ann_from(Env),
-  ok     = clj_module:ensure_loaded(Module, file_from(Env)),
+  ok     = clj_module:ensure_loaded(file_from(Env), Module),
 
   %% Attributes
   Attributes = [ { cerl:ann_c_atom(Ann, behavior)
@@ -298,11 +298,11 @@ ast(#{op := deftype} = Expr, State0) ->
   Exports   = MethodsExports ++ CtorsExports ++ AccessorsExports,
   Functions = CtorsAsts ++ AccessorsAsts ++ MethodsAsts1,
 
-  clj_module:add_attributes(Module, Attributes),
-  clj_module:add_exports(Module, Exports),
-  clj_module:add_functions(Module, Functions),
+  clj_module:add_attributes(Attributes, Module),
+  clj_module:add_exports(Exports, Module),
+  clj_module:add_functions(Functions, Module),
 
-  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+  Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
   Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
   ok     = clj_module:remove(Module),
 
@@ -334,7 +334,7 @@ ast(#{op := defprotocol} = Expr, State) ->
    } = Expr,
 
   Module = sym_to_kw(NameSym),
-  ok     = clj_module:ensure_loaded(Module, file_from(Env)),
+  ok     = clj_module:ensure_loaded(file_from(Env), Module),
   Ann    = ann_from(Env),
 
   TermType = cerl:ann_abstract(Ann, {type, Ann, term, []}),
@@ -359,9 +359,9 @@ ast(#{op := defprotocol} = Expr, State) ->
 
   ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:c_atom(true)},
   Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
-  clj_module:add_attributes(Module, [ProtocolAttr | Attributes]),
+  clj_module:add_attributes([ProtocolAttr | Attributes], Module),
 
-  Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+  Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
   Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
   ok     = clj_module:remove(Module),
 
@@ -382,7 +382,7 @@ ast(#{op := extend_type} = Expr, State) ->
         TypeBin  = clj_core:str(TypeSym),
         Module   = clj_protocol:impl_module(ProtoBin, TypeBin),
 
-        clj_module:ensure_loaded(Module, file_from(Env)),
+        clj_module:ensure_loaded(file_from(Env), Module),
 
         MethodsExprs = maps:get(Proto, Impls),
 
@@ -394,10 +394,10 @@ ast(#{op := extend_type} = Expr, State) ->
         Exports = lists:map(fun function_signature/1, FunctionsAsts),
 
         clj_module:remove_all_functions(Module),
-        clj_module:add_exports(Module, Exports),
-        clj_module:add_functions(Module, FunctionsAsts),
+        clj_module:add_exports(Exports, Module),
+        clj_module:add_functions(FunctionsAsts, Module),
 
-        Opts   = clj_env:get(Env, compiler_opts, default_compiler_options()),
+        Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
         Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
         ok     = clj_module:remove(Module),
 
@@ -980,7 +980,7 @@ ast(#{op := on_load} = Expr, State) ->
   CurrentNs  = clj_namespace:current(),
   NameSym    = clj_namespace:name(CurrentNs),
   ModuleName = binary_to_atom(clj_core:name(NameSym), utf8),
-  clj_module:add_on_load(ModuleName, Ast),
+  clj_module:add_on_load(Ast, ModuleName),
 
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -1277,7 +1277,7 @@ add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
   GroupedMethods = group_methods(Methods),
 
   ExportFun = fun(Arity) ->
-                  clj_module:add_exports(Module, [{Name, Arity}])
+                  clj_module:add_exports([{Name, Arity}], Module)
               end,
 
   lists:foreach(ExportFun, maps:keys(GroupedMethods)),
@@ -1293,7 +1293,7 @@ add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
         {Vars, CaseAst} = body_from_clauses(Ann, ClausesAst),
         FunAst = function_form(Name, Ann, Vars, CaseAst),
 
-        clj_module:add_functions(Module, [FunAst]),
+        clj_module:add_functions([FunAst], Module),
 
         StateAcc2
     end,
@@ -1403,7 +1403,7 @@ get_lexical_rename(BindingExpr, State) ->
                 0 -> maps:get(name, BindingExpr);
                 _ ->
                   Code = hash_scope(BindingExpr),
-                  clj_scope:get(Renames, Code)
+                  clj_scope:get(Code, Renames)
               end,
 
   clj_core:str(RenameSym).
@@ -1419,7 +1419,7 @@ put_lexical_rename(BindingExpr, State) ->
   NameBin = clj_core:name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
 
-  NewRenames = clj_scope:put(Renames, Code, clj_core:gensym(ShadowName)),
+  NewRenames = clj_scope:put(Code, clj_core:gensym(ShadowName), Renames),
 
   State#{lexical_renames => NewRenames}.
 

@@ -3297,7 +3297,7 @@
   else returns form."
   {:added "1.0"}
   [form]
-  (clj_analyzer/macroexpand_1.e nil form))
+  (clj_analyzer/macroexpand_1.e form nil))
 
 (defn macroexpand
   "Repeatedly calls macroexpand-1 on form until it no longer
@@ -3398,7 +3398,7 @@
   "Removes the mappings for the symbol from the namespace."
   {:added "1.0"}
   [ns sym]
-  (clj_namespace/unmap.e (the-ns ns) sym))
+  (clj_namespace/unmap.e sym (the-ns ns)))
 
 ;(defn export [syms]
 ;  (doseq [sym syms]
@@ -3468,7 +3468,7 @@
             (throw (if (get (ns-interns ns) name)
                      (str name " is not public")
                      (str name " does not exist"))))
-          (clj_namespace/refer.e *ns* (or (rename sym) sym) v))))))
+          (clj_namespace/refer.e (or (rename sym) sym) v *ns*))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -3486,7 +3486,7 @@
   to calling this directly."
   {:added "1.0"}
   [alias namespace-sym]
-  (clj_namespace/add_alias.e *ns* alias (the-ns namespace-sym)))
+  (clj_namespace/add_alias.e alias (the-ns namespace-sym) *ns*))
 
 (defn ns-aliases
   "Returns a map of the aliases for the namespace."
@@ -3498,7 +3498,7 @@
   "Removes the alias for the symbol from the namespace."
   {:added "1.0"}
   [ns sym]
-  (clj_namespace/remove_alias.e (the-ns ns) sym))
+  (clj_namespace/remove_alias.e sym (the-ns ns)))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
@@ -3577,7 +3577,7 @@
    (ns-resolve ns nil sym))
   ([ns env sym]
    (when-not (contains? env sym)
-     (clj_namespace/find_var.e (the-ns ns) sym))))
+     (clj_namespace/find_var.e sym (the-ns ns)))))
 
 (defn resolve
   "same as (ns-resolve *ns* symbol) or (ns-resolve *ns* &env symbol)"

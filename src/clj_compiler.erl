@@ -113,7 +113,7 @@ compile(Src, Opts) when is_binary(Src) ->
 -spec load_file(binary()) -> any().
 load_file(Path) ->
   Env = compile_file(Path),
-  clj_env:get(Env, eval).
+  clj_env:get(eval, Env).
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
@@ -196,8 +196,8 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
-  Env      = clj_env:put(Env0, clj_flags, CljFlags),
-  Env1     = clj_env:put(Env, compiler_opts, Opts),
+  Env      = clj_env:put(clj_flags, CljFlags, Env0),
+  Env1     = clj_env:put(compiler_opts, Opts, Env),
   EmitEval = case Opts0 of
                #{time := true} ->
                  fun() ->
@@ -229,7 +229,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
           %% Compile all modules
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
-          Env4 = clj_env:remove(Env3, clj_flags),
+          Env4 = clj_env:remove(clj_flags, Env3),
           {shutdown, Env4}
         catch
           Kind:Error ->
@@ -249,16 +249,16 @@ do_eval(Form, Opts0, Env0) ->
   EvalFun =
     fun() ->
         try
-          Env  = clj_env:put(Env0, clj_flags, CljFlags),
+          Env  = clj_env:put(clj_flags, CljFlags, Env0),
           %% Emit & eval form and keep the resulting value
-          Env1 = clj_analyzer:analyze(Env, Form),
+          Env1 = clj_analyzer:analyze(Form, Env),
           Env2 = clj_emitter:emit(Env1),
           {Exprs, Env3} = clj_emitter:remove_state(Env2),
 
           { shutdown
           , { Exprs
             , clj_module:all_forms()
-            , clj_env:remove(Env3, clj_flags)
+            , clj_env:remove(clj_flags, Env3)
             }
           }
         catch
@@ -273,7 +273,7 @@ do_eval(Form, Opts0, Env0) ->
 
 -spec check_flag(clj_flag(), clj_env:env()) -> boolean().
 check_flag(Flag, Env) ->
-  case clj_env:get(Env, clj_flags) of
+  case clj_env:get(clj_flags, Env) of
     CljFlags when is_list(CljFlags) ->
       lists:member(Flag, CljFlags);
     ?NIL ->
@@ -290,11 +290,11 @@ ensure_output_dir(_) ->
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
 emit_eval_form(Form, Env) ->
-  Env1  = clj_analyzer:analyze(Env, Form),
+  Env1  = clj_analyzer:analyze(Form, Env),
   Env2  = clj_emitter:emit(Env1),
   {Exprs, Env3} = clj_emitter:remove_state(Env2),
   Value = eval_expressions(Exprs),
-  clj_env:put(Env3, eval, Value).
+  clj_env:put(eval, Value, Env3).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->

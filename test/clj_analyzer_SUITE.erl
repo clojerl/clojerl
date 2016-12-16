@@ -1243,12 +1243,12 @@ macroexpand(_Config) ->
 
   List1          = clj_reader:read(<<"(.foo bar 1)">>),
   ExpandedCheck1 = clj_reader:read(<<"(. bar foo 1)">>),
-  Expanded1      = clj_analyzer:macroexpand_1(clj_env:default(), List1),
+  Expanded1      = clj_analyzer:macroexpand_1(List1, clj_env:default()),
   true           = clj_core:equiv(Expanded1, ExpandedCheck1),
 
   List2          = clj_reader:read(<<"(Bar. :one \"two\")">>),
   ExpandedCheck2 = clj_reader:read(<<"(new Bar :one \"two\")">>),
-  Expanded2      = clj_analyzer:macroexpand_1(clj_env:default(), List2),
+  Expanded2      = clj_analyzer:macroexpand_1(List2, clj_env:default()),
   true           = clj_core:equiv(Expanded2, ExpandedCheck2),
 
   {comments, ""}.
@@ -1259,13 +1259,11 @@ macroexpand(_Config) ->
 
 analyze_one(Src) ->
   Form = clj_reader:read(Src),
-  NewEnv = clj_analyzer:analyze(clj_env:default(), Form),
+  NewEnv = clj_analyzer:analyze(Form, clj_env:default()),
   {Expr, _} = clj_env:pop_expr(NewEnv),
   Expr.
 
 analyze_all(Src) ->
-  Fun = fun(Form, EnvAcc) ->
-            clj_analyzer:analyze(EnvAcc, Form)
-        end,
-  Env = clj_reader:read_fold(Fun, Src, #{}, clj_env:default()),
+  EnvDefault = clj_env:default(),
+  Env = clj_reader:read_fold(fun clj_analyzer:analyze/2, Src, #{}, EnvDefault),
   clj_env:exprs(Env).
