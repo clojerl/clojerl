@@ -1169,6 +1169,7 @@ read_tagged(State) ->
   {Form, State2} = read_pop_one(State1),
   case 'clojerl.Symbol':str(Symbol) of
     <<"erl">> -> erlang_literal(Form, State2);
+    <<"bin">> -> erlang_binary(Form, State2);
     _ ->
       case erlang:get(supress_read) of
         true ->
@@ -1204,6 +1205,17 @@ erlang_literal(Form, State) ->
     end,
 
   push_form(Value, State).
+
+-spec erlang_binary(any(), state()) -> state().
+erlang_binary(Form, State) ->
+  clj_utils:error_when( not clj_core:'vector?'(Form)
+                      , <<"Binary expressions should be enclosed by a vector">>
+                      , location(State)
+                      ),
+
+  ErlBinarySym = clj_core:symbol(<<"erl-binary*">>),
+  List         = clj_core:list([ErlBinarySym | clj_core:to_list(Form)]),
+  push_form(List, State).
 
 -spec read_record('clojerl.Symbol':type(), any(), state()) -> state().
 read_record(Symbol, Form, State) ->

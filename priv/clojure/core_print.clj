@@ -152,15 +152,17 @@
 (defmethod print-method clojerl.String [^clojerl.String s, ^Writer w]
   (if (or *print-dup* *print-readably*)
     (let [printable? (clojerl.String/is_printable.e s)]
-      (write w (if printable? \" "#<non-printable "))
+      (write w (if printable? \" "#bin["))
       (if printable?
-        (dotimes [n (count s)]
+        (dotimes [n (.count s)]
           (let [c (clojerl.String/char_at.e s n)
                 e (char-escape-string c)]
             (if e (write w e) (write w c))))
-        (doseq [c (erlang/binary_to_list.e s)]
-          (write w (str " " c))))
-      (write w (if printable? \" " >")))
+        (->> (erlang/binary_to_list.e s)
+             (interpose " ")
+             (apply str)
+             (write w)))
+      (write w (if printable? \" "]")))
     (write w s))
   nil)
 

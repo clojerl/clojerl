@@ -91,6 +91,7 @@ special_forms() ->
    , <<"var">>          => fun parse_var/2
 
    , <<"receive*">>     => fun parse_receive/2
+   , <<"erl-binary*">>  => fun parse_erlang_binary/2
    , <<"erl-on-load*">> => fun parse_on_load/2
 
    , <<"import*">>      => fun parse_import/2
@@ -2088,6 +2089,73 @@ parse_after(List, Env) ->
                },
 
   clj_env:push_expr(AfterExpr, Env2).
+
+%%------------------------------------------------------------------------------
+%% Erlang binary
+%%------------------------------------------------------------------------------
+
+-spec parse_erlang_binary(any(), clj_env:env()) ->
+  clj_env:env().
+parse_erlang_binary(List, Env0) ->
+  [ _ %% erl-binary*
+  | Segments
+  ] = clj_core:to_list(List),
+
+  Env1 = lists:foldl(fun parse_segment/2, Env0, Segments),
+  {SegmentsExprs, Env2} = clj_env:last_exprs(length(Segments), Env1),
+
+  BinaryExpr = #{ op       => erl_binary
+                , env      => Env0
+                , form     => List
+                , segments => SegmentsExprs
+                },
+
+  clj_env:push_expr(BinaryExpr, Env2).
+
+-spec parse_segment(any(), clj_env:env()) ->
+  clj_env:env().
+parse_segment(Segment0, Env) ->
+  Segment = case clj_core:'vector?'(Segment0) of
+              true  -> clj_core:to_list(Segment0);
+              false -> Segment0
+            end,
+  Value = parse_segment_value(Segment, Env),
+  {Size, Unit} = parse_segment_size(Segment, Env),
+  Type  = parse_segment_type(Segment, Env),
+  Flags = parse_segment_flags(Segment, Env),
+  SegmentExpr = #{ op    => binary_segment
+                 , env   => Env
+                 , form  => Segment
+                 , value => Value
+                 , size  => Size
+                 , unit  => Unit
+                 , type  => Type
+                 , flags => Flags
+                 },
+
+  clj_env:push_expr(SegmentExpr, Env).
+
+-spec parse_segment_value(any(), clj_env:env()) -> any().
+parse_segment_value([Value | _], Env) ->
+  parse_segment_value(Value, Env);
+parse_segment_value(Value, _Env) when is_binary(Value); is_integer(Value) ->
+  Value;
+parse_segment_value(Value, Env) ->
+  case clj_core:'symbol?'(Value) of
+    true  -> resolve(Value, Env);
+    false -> clj_utils:error(<<"Invalid value">>, clj_env:location(Env))
+  end.
+
+-spec parse_segment_size(any(), clj_env:env()) -> any().
+parse_segment_size(_, _Env) ->
+  {8, 1}.
+
+-spec parse_segment_type(any(), clj_env:env()) -> any().
+parse_segment_type(_, _Env) ->
+  integer.
+
+parse_segment_flags(_, _Env) ->
+  [unsigned, big].
 
 %%------------------------------------------------------------------------------
 %% On load
