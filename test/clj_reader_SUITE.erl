@@ -5,38 +5,36 @@
 
 -export([all/0, init_per_suite/1]).
 
--export(
-   [
-    eof/1,
-    number/1,
-    string/1,
-    keyword/1,
-    symbol/1,
-    comment/1,
-    quote/1,
-    deref/1,
-    meta/1,
-    syntax_quote/1,
-    unquote/1,
-    list/1,
-    vector/1,
-    map/1,
-    set/1,
-    unmatched_delim/1,
-    char/1,
-    arg/1,
-    fn/1,
-    eval/1,
-    var/1,
-    regex/1,
-    unreadable_form/1,
-    discard/1,
-    'cond'/1,
-    unsupported_reader/1,
-    erl_literals/1,
-    tagged/1
-   ]
-  ).
+-export([ eof/1
+        , number/1
+        , string/1
+        , keyword/1
+        , symbol/1
+        , comment/1
+        , quote/1
+        , deref/1
+        , meta/1
+        , syntax_quote/1
+        , unquote/1
+        , list/1
+        , vector/1
+        , map/1
+        , set/1
+        , unmatched_delim/1
+        , char/1
+        , arg/1
+        , fn/1
+        , eval/1
+        , var/1
+        , regex/1
+        , unreadable_form/1
+        , discard/1
+        , 'cond'/1
+        , unsupported_reader/1
+        , erl_literals/1
+        , erl_binary/1
+        , tagged/1
+        ]).
 
 -spec all() -> [atom()].
 all() -> clj_test_utils:all(?MODULE).
@@ -1075,6 +1073,27 @@ erl_literals(ReadFun) ->
 
   ct:comment("Read a non-empty string"),
   "Hello there!" = clj_core:second(ReadFun(<<"#erl \"Hello there!\"">>)),
+
+  ct:comment("Try to read an integer"),
+  ok = try ReadFun(<<"#erl 1">>), error
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+erl_binary(Config) when is_list(Config) ->
+  erl_binary(fun read/1),
+  erl_binary(fun read_io/1);
+erl_binary(ReadFun) ->
+  ErlBinarySym = clj_core:symbol(<<"erl-binary*">>),
+  EmptyBinary  = clj_core:list([ErlBinarySym]),
+
+  ct:comment("Read an empty binary"),
+  true = clj_core:equiv(ReadFun(<<"#bin[]">>), EmptyBinary),
+
+  ct:comment("Read a single integer"),
+  SingleIntBinary = clj_core:list([ErlBinarySym, 64]),
+  true = clj_core:equiv(ReadFun(<<"#bin[64]">>), SingleIntBinary),
 
   {comments, ""}.
 
