@@ -997,25 +997,31 @@ ast(#{op := erl_binary} = Expr, State) ->
   Ast    = cerl:ann_c_binary(Ann, SegmentsAsts),
 
   push_ast(Ast, State2);
-ast(#{op := binary_segment} = Expr, State) ->
+ast(#{op := binary_segment} = Expr, State0) ->
   #{ env   := Env
-   , value := Value
-   , size  := Size
-   , unit  := Unit
-   , type  := Type
-   , flags := Flags
+   , value := ValueExpr
+   , size  := SizeExpr
+   , unit  := UnitExpr
+   , type  := TypeExpr
+   , flags := FlagsExpr
    } = Expr,
+
+  {ValueAst, State1} = pop_ast(ast(ValueExpr, State0)),
+  {TypeAst, State2}  = pop_ast(ast(TypeExpr, State1)),
+  {SizeAst, State3}  = pop_ast(ast(SizeExpr, State2)),
+  {UnitAst, State4}  = pop_ast(ast(UnitExpr, State3)),
+  {FlagsAst, State5} = pop_ast(ast(FlagsExpr, State4)),
 
   Ann = ann_from(Env),
   Ast = cerl:ann_c_bitstr( Ann
-                         , cerl:abstract(Value)
-                         , cerl:abstract(Size)
-                         , cerl:abstract(Unit)
-                         , cerl:abstract(Type)
-                         , cerl:abstract(Flags)
+                         , ValueAst
+                         , SizeAst
+                         , UnitAst
+                         , TypeAst
+                         , FlagsAst
                          ),
 
-  push_ast(Ast, State);
+  push_ast(Ast, State5);
 %%------------------------------------------------------------------------------
 %% Unknown op
 %%------------------------------------------------------------------------------

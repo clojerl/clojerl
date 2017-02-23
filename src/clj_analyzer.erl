@@ -2114,48 +2114,129 @@ parse_erlang_binary(List, Env0) ->
 
 -spec parse_segment(any(), clj_env:env()) ->
   clj_env:env().
-parse_segment(Segment0, Env) ->
-  Segment = case clj_core:'vector?'(Segment0) of
-              true  -> clj_core:to_list(Segment0);
-              false -> Segment0
-            end,
-  Value = parse_segment_value(Segment, Env),
-  {Size, Unit} = parse_segment_size(Segment, Env),
-  Type  = parse_segment_type(Segment, Env),
-  Flags = parse_segment_flags(Segment, Env),
+parse_segment(Segment0, Env0) ->
+  Segment = segment_to_list(Segment0),
+  clj_utils:error_when( not is_list(Segment)
+                        orelse Segment =:= []
+                      , [<<"Invalid segment: ">>, Segment]
+                      , clj_env:location(Env0)
+                      ),
+
+  [Value | Rest] = Segment,
+  Config0 = 'clojerl.Map':?CONSTRUCTOR(Rest),
+  Config  = 'clojerl.Map':to_erl_map(Config0),
+  Type    = maps:get(type, Config, integer),
+
+  {ValueExpr, Env1} = parse_segment_value(Value, Env0),
+  {TypeExpr, Env2}  = parse_segment_type(Config, Env1),
+  {SizeExpr, Env3}  = parse_segment_size(Config, Type, Env2),
+  {UnitExpr, Env4}  = parse_segment_unit(Config, Type, Env3),
+  {FlagsExpr, Env5} = parse_segment_flags(Config, Env4),
+
   SegmentExpr = #{ op    => binary_segment
-                 , env   => Env
+                 , env   => Env0
                  , form  => Segment
-                 , value => Value
-                 , size  => Size
-                 , unit  => Unit
-                 , type  => Type
-                 , flags => Flags
+                 , value => ValueExpr
+                 , size  => SizeExpr
+                 , unit  => UnitExpr
+                 , type  => TypeExpr
+                 , flags => FlagsExpr
                  },
 
-  clj_env:push_expr(SegmentExpr, Env).
+  clj_env:push_expr(SegmentExpr, Env5).
+
+-spec segment_to_list(any()) -> list() | invalid.
+segment_to_list(Binary) when is_binary(Binary) ->
+  [Binary, type,  binary];
+segment_to_list(Integer) when is_number(Integer) ->
+  [Integer, type, integer];
+segment_to_list(X) when ?IS_TYPE(X) ->
+  IsVector = clj_core:'vector?'(X),
+  IsSymbol = clj_core:'symbol?'(X),
+  if
+    IsVector -> clj_core:to_list(X);
+    IsSymbol -> [X, 1, integer];
+    true     -> invalid
+  end;
+segment_to_list(_) ->
+  invalid.
 
 -spec parse_segment_value(any(), clj_env:env()) -> any().
-parse_segment_value([Value | _], Env) ->
-  parse_segment_value(Value, Env);
-parse_segment_value(Value, _Env) when is_binary(Value); is_integer(Value) ->
-  Value;
 parse_segment_value(Value, Env) ->
-  case clj_core:'symbol?'(Value) of
-    true  -> resolve(Value, Env);
-    false -> clj_utils:error(<<"Invalid value">>, clj_env:location(Env))
-  end.
+  clj_env:pop_expr(analyze(Value, Env)).
 
--spec parse_segment_size(any(), clj_env:env()) -> any().
-parse_segment_size(_, _Env) ->
-  {8, 1}.
+-spec parse_segment_size(any(), atom(), clj_env:env()) -> any().
+parse_segment_size(Config, Type, Env) ->
+  Default = case Type of
+              binary  -> all;
+              float   -> 64;
+              integer -> 8;
+              _       -> undefined
+            end,
+  Size = maps:get(size, Config, Default),
+  clj_env:pop_expr(analyze(Size, Env)).
+
+-spec parse_segment_unit(any(), atom(), clj_env:env()) -> any().
+parse_segment_unit(Config, Type, Env) ->
+  Default = case Type of
+              binary  -> 8;
+              float   -> 1;
+              integer -> 1;
+              _       -> undefined
+            end,
+  Unit = maps:get(unit, Config, Default),
+  clj_env:pop_expr(analyze_const(Unit, Env)).
 
 -spec parse_segment_type(any(), clj_env:env()) -> any().
-parse_segment_type(_, _Env) ->
-  integer.
+parse_segment_type(Config, Env) ->
+  Type = maps:get(type, Config, integer),
+  clj_utils:error_when( not lists:member(Type, valid_segment_types())
+                      , [<<"Invalid binary segment type: ">>, Type]
+                      , clj_env:location(Env)
+                      ),
+  clj_env:pop_expr(analyze(Type, Env)).
 
-parse_segment_flags(_, _Env) ->
-  [unsigned, big].
+-spec valid_segment_types() -> [atom()].
+valid_segment_types() ->
+  [binary, integer, float, utf8, utf16, utf32].
+
+-spec parse_segment_flags(any(), clj_env:env()) -> any().
+parse_segment_flags(Config, Env) ->
+  Flags0 = maps:get(flags, Config, []),
+  Flags1 = clj_core:to_list(Flags0),
+  clj_utils:error_when( not lists:all(fun is_valid_segment_flag/1, Flags1)
+                      , [<<"Invalid binary segment flag: ">>, Flags1]
+                      , clj_env:location(Env)
+                      ),
+  Flags2 = case lists:any(fun is_segment_endianness/1, Flags1) of
+             true -> Flags1;
+             false -> [big | Flags1]
+           end,
+  Flags3 = case lists:any(fun is_segment_signedness/1, Flags2) of
+             true -> Flags2;
+             false -> [unsigned | Flags2]
+           end,
+  clj_env:pop_expr(analyze_const(Flags3, Env)).
+
+-spec is_segment_signedness(any()) -> boolean().
+is_segment_signedness(Flag) ->
+  lists:member(Flag, valid_segment_signedness()).
+
+-spec is_segment_endianness(any()) -> boolean().
+is_segment_endianness(Flag) ->
+  lists:member(Flag, valid_segment_endianness()).
+
+-spec is_valid_segment_flag(any()) -> boolean().
+is_valid_segment_flag(Flag) ->
+  is_segment_signedness(Flag) orelse is_segment_endianness(Flag).
+
+-spec valid_segment_signedness() -> [atom()].
+valid_segment_signedness() ->
+  [signed, unsigned].
+
+-spec valid_segment_endianness() -> [atom()].
+valid_segment_endianness() ->
+  [little, big, native].
 
 %%------------------------------------------------------------------------------
 %% On load
