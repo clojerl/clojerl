@@ -134,8 +134,24 @@ write(_Config) ->
   "hello world!" = lists:flatten(ct:capture_get()),
   true = erlang:unregister(leader),
 
+  ct:comment("Write to stdout with format using the default atom"),
+  Words = [<<"hello">>, <<" ">>, <<"world!">>],
+  'erlang.io.IWriter':write(standard_io, <<"~s~s~s">>, Words),
+  "hello world!" = lists:flatten(ct:capture_get()),
+
+  ct:comment("Write to stdout with format using an alias for the group leader"),
+  true = erlang:register(leader, erlang:group_leader()),
+  Words = [<<"hello">>, <<" ">>, <<"world!">>],
+  'erlang.io.IWriter':write(leader, <<"~s~s~s">>, Words),
+  "hello world!" = lists:flatten(ct:capture_get()),
+  true = erlang:unregister(leader),
+
   ct:comment("Write to a non-existing named process"),
   ok = try 'erlang.io.IWriter':write(leader, <<"hello">>), error
+       catch _:_ -> ok
+       end,
+
+  ok = try 'erlang.io.IWriter':write(leader, <<"~p">>, <<"hello">>), error
        catch _:_ -> ok
        end,
 
