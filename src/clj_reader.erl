@@ -760,7 +760,7 @@ read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
     end,
   Char =
     case Token of
-      Ch when size(Ch) == 1 -> Ch;
+      <<_/utf8>> -> Token;
       <<"newline">> -> $\n;
       <<"space">> -> $ ;
       <<"tab">> -> $\t;
@@ -1169,6 +1169,7 @@ read_tagged(State) ->
   {Form, State2} = read_pop_one(State1),
   case 'clojerl.Symbol':str(Symbol) of
     <<"erl">> -> erlang_literal(Form, State2);
+    <<"bin">> -> erlang_binary(Form, State2);
     _ ->
       case erlang:get(supress_read) of
         true ->
@@ -1188,18 +1189,33 @@ erlang_literal(Form, State) ->
   IsVector = clj_core:'vector?'(Form),
   IsString = clj_core:'string?'(Form),
 
-  Value    = if
-               IsList   -> clj_core:to_list(Form);
-               IsMap    -> 'clojerl.Map':to_erl_map(Form);
-               IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
-               IsString -> unicode:characters_to_list(Form);
-               true     -> clj_utils:error(<<"Can only have list, map, tuple "
-                                             "or Erlang string literals">>
-                                          , location(State)
-                                          )
-             end,
+  Value    =
+    if
+      IsList   -> clj_core:to_list(Form);
+      IsMap    -> 'clojerl.Map':to_erl_map(Form);
+      IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
+      IsString -> clj_core:list( [ clj_core:symbol(<<"quote">>)
+                                 , unicode:characters_to_list(Form)
+                                 ]
+                               );
+      true     -> clj_utils:error(<<"Can only have list, map, tuple "
+                                    "or Erlang string literals">>
+                                 , location(State)
+                                 )
+    end,
 
   push_form(Value, State).
+
+-spec erlang_binary(any(), state()) -> state().
+erlang_binary(Form, State) ->
+  clj_utils:error_when( not clj_core:'vector?'(Form)
+                      , <<"Binary expressions should be enclosed by a vector">>
+                      , location(State)
+                      ),
+
+  ErlBinarySym = clj_core:symbol(<<"erl-binary*">>),
+  List         = clj_core:list([ErlBinarySym | clj_core:to_list(Form)]),
+  push_form(List, State).
 
 -spec read_record('clojerl.Symbol':type(), any(), state()) -> state().
 read_record(Symbol, Form, State) ->

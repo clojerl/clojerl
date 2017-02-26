@@ -984,6 +984,45 @@ ast(#{op := on_load} = Expr, State) ->
 
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
+%% Erlang binary
+%%------------------------------------------------------------------------------
+ast(#{op := erl_binary} = Expr, State) ->
+  #{ env      := Env
+   , segments := SegmentsExprs
+   } = Expr,
+
+  Ann    = ann_from(Env),
+  State1 = lists:foldl(fun ast/2, State, SegmentsExprs),
+  {SegmentsAsts, State2} = pop_ast(State1, length(SegmentsExprs)),
+  Ast    = cerl:ann_c_binary(Ann, SegmentsAsts),
+
+  push_ast(Ast, State2);
+ast(#{op := binary_segment} = Expr, State0) ->
+  #{ env   := Env
+   , value := ValueExpr
+   , size  := SizeExpr
+   , unit  := UnitExpr
+   , type  := TypeExpr
+   , flags := FlagsExpr
+   } = Expr,
+
+  {ValueAst, State1} = pop_ast(ast(ValueExpr, State0)),
+  {TypeAst, State2}  = pop_ast(ast(TypeExpr, State1)),
+  {SizeAst, State3}  = pop_ast(ast(SizeExpr, State2)),
+  {UnitAst, State4}  = pop_ast(ast(UnitExpr, State3)),
+  {FlagsAst, State5} = pop_ast(ast(FlagsExpr, State4)),
+
+  Ann = ann_from(Env),
+  Ast = cerl:ann_c_bitstr( Ann
+                         , ValueAst
+                         , SizeAst
+                         , UnitAst
+                         , TypeAst
+                         , FlagsAst
+                         ),
+
+  push_ast(Ast, State5);
+%%------------------------------------------------------------------------------
 %% Unknown op
 %%------------------------------------------------------------------------------
 ast(#{op := Unknown}, _State) ->

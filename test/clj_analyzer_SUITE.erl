@@ -37,6 +37,7 @@
         , extend_type/1
         , dot/1
         , 'receive'/1
+        , erlang_binary/1
         , on_load/1
         , macroexpand/1
         ]).
@@ -1224,6 +1225,99 @@ dot(_Config) ->
        catch _:Message2 ->
            {match, _} = re:run(Message2, "Expected an even number"),
            ok
+       end,
+
+  {comments, ""}.
+
+-spec erlang_binary(config()) -> result().
+erlang_binary(_Config) ->
+  ct:comment("Empty erl-binary*"),
+  #{ op       := erl_binary
+   , segments := []
+   } = analyze_one(<<"(erl-binary*)">>),
+
+  ct:comment("Single integer erl-binary*"),
+  #{ op       := erl_binary
+   , segments := [IntSegmentExpr]
+   } = analyze_one(<<"(erl-binary* 64)">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = IntSegmentExpr,
+
+  ct:comment("Single float erl-binary*"),
+  #{ op       := erl_binary
+   , segments := [FloatSegmentExpr]
+   } = analyze_one(<<"(erl-binary* [1.0 :type :float])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = FloatSegmentExpr,
+
+  ct:comment("Single utf8 erl-binary*"),
+  #{ op       := erl_binary
+   , segments := [Utf8SegmentExpr]
+   } = analyze_one(<<"(erl-binary* [64 :type :utf8])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = Utf8SegmentExpr,
+
+  ct:comment("Single binary erl-binary*"),
+  #{ op       := erl_binary
+   , segments := [BinSegmentExpr0]
+   } = analyze_one(<<"(erl-binary* \"hello\")">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = BinSegmentExpr0,
+
+  #{ op       := erl_binary
+   , segments := [BinSegmentExpr1]
+   } = analyze_one(<<"(erl-binary* [\"hello\"])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = BinSegmentExpr1,
+
+  ct:comment("Single symbol erl-binary*"),
+  #{ op       := 'let'
+   , body     := #{ op  := do
+                  , ret := BinaryExpr
+                  }
+   } = analyze_one(<<"(let* [a \"hello\"] (erl-binary* a))">>),
+
+  #{ op       := erl_binary
+   , segments := [SymSegmentExpr0]
+   } = BinaryExpr,
+
+  #{ op    := binary_segment
+   , value := #{op := local}
+   } = SymSegmentExpr0,
+
+  ct:comment("Single binary with flags erl-binary*"),
+  #{ op       := erl_binary
+   , segments := [FlagsSegmentExpr0]
+   } = analyze_one(<<"(erl-binary* [\"hello\" :flags [:signed]])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = FlagsSegmentExpr0,
+
+  #{ op       := erl_binary
+   , segments := [FlagsSegmentExpr1]
+   } = analyze_one(<<"(erl-binary* [\"hello\" :flags [:little]])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = FlagsSegmentExpr1,
+
+  ok = try analyze_one(<<"(erl-binary* :hello)">>), error
+       catch _:_ -> ok
+       end,
+
+  ok = try analyze_one(<<"(erl-binary* {})">>), error
+       catch _:_ -> ok
        end,
 
   {comments, ""}.

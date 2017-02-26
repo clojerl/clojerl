@@ -134,8 +134,24 @@ write(_Config) ->
   "hello world!" = lists:flatten(ct:capture_get()),
   true = erlang:unregister(leader),
 
+  ct:comment("Write to stdout with format using the default atom"),
+  Words = [<<"hello">>, <<" ">>, <<"world!">>],
+  'erlang.io.IWriter':write(standard_io, <<"~s~s~s">>, Words),
+  "hello world!" = lists:flatten(ct:capture_get()),
+
+  ct:comment("Write to stdout with format using an alias for the group leader"),
+  true = erlang:register(leader, erlang:group_leader()),
+  Words = [<<"hello">>, <<" ">>, <<"world!">>],
+  'erlang.io.IWriter':write(leader, <<"~s~s~s">>, Words),
+  "hello world!" = lists:flatten(ct:capture_get()),
+  true = erlang:unregister(leader),
+
   ct:comment("Write to a non-existing named process"),
   ok = try 'erlang.io.IWriter':write(leader, <<"hello">>), error
+       catch _:_ -> ok
+       end,
+
+  ok = try 'erlang.io.IWriter':write(leader, <<"~p">>, <<"hello">>), error
        catch _:_ -> ok
        end,
 
@@ -184,11 +200,11 @@ fake_io_loop() ->
 fake_reply({get_chars, _, _, 42}) ->
   eof;
 fake_reply({get_chars, _, _, N}) ->
-  lists:flatten(repeat("a", N));
+  list_to_binary(lists:flatten(repeat("a", N)));
 fake_reply({get_line, _, _}) ->
-  "get_line";
+  <<"get_line">>;
 fake_reply({get_until, _, _, _, _, _}) ->
-  "get_until".
+  <<"get_until">>.
 
 -spec repeat(string(), integer()) -> iolist().
 repeat(X, N) ->

@@ -18,7 +18,7 @@ CT_OPTS = -cover ${COVER_SPEC} -erl_args -s ${PROJECT}
 
 COMPILE_FIRST = erlang/erlang.io.I* lang/protocols/*
 DIALYZER_OPTS += -I include
-SHELL_OPTS += -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync
+SHELL_OPTS += -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync +pc unicode
 
 # Generate a list of all modules for the cover.spec
 generate-spec:
@@ -27,14 +27,14 @@ generate-spec:
 coverage-results:
 	@erl -noshell -pa ebin -eval 'cover_report:report(), halt(0).' -env COVER_SPEC '${COVER_SPEC}'
 
-tests-shell: SHELL_OPTS = -name ${PROJECT}-test-shell@`hostname` -setcookie clojerl -s ${PROJECT}
+tests-shell: SHELL_OPTS = -name ${PROJECT}-test-shell@`hostname` -setcookie clojerl -s ${PROJECT} +pc unicode
 tests-shell: test-build
 	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}
 
 repl: SHELL_OPTS = -pa priv -name ${PROJECT}-repl@`hostname` -setcookie clojerl -s ${PROJECT}
-repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell
+repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: clojure.core clojure.main
 	@rlwrap erl -pa ebin -pa deps/*/ebin -pa priv ${SHELL_OPTS}
 
-shell-no-sync: SHELL_OPTS = -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT}
+shell-no-sync: SHELL_OPTS = -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} +pc unicode
 shell-no-sync: shell;

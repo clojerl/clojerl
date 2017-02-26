@@ -14,6 +14,12 @@ start() ->
 -spec start(any(), any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_Type, _Args) ->
   erlang:system_flag(backtrace_depth, 20),
+  %% Ensure encoding is unicode
+  IoOpts = [ {binary, true}
+           , {encoding, unicode}
+           ],
+  ok = io:setopts(IoOpts),
+
   {ok, _} = clojerl_sup:start_link(),
   ok = ensure_modules(),
   {ok, self()}.
