@@ -43,6 +43,7 @@
 -spec type(any()) -> atom().
 type(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
 type(X) when is_binary(X)    -> 'clojerl.String';
+type(X) when is_bitstring(X) -> 'clojerl.BitString';
 type(X) when is_integer(X)   -> 'clojerl.Integer';
 type(X) when is_float(X)     -> 'clojerl.Float';
 type(X) when is_boolean(X)   -> 'clojerl.Boolean';
