@@ -1280,6 +1280,38 @@ erlang_binary(_Config) ->
    , value := #{op := constant}
    } = BinSegmentExpr1,
 
+  ct:comment("Single symbol erl-binary*"),
+  #{ op       := 'let'
+   , body     := #{ op  := do
+                  , ret := BinaryExpr
+                  }
+   } = analyze_one(<<"(let* [a \"hello\"] (erl-binary* a))">>),
+
+  #{ op       := erl_binary
+   , segments := [SymSegmentExpr0]
+   } = BinaryExpr,
+
+  #{ op    := binary_segment
+   , value := #{op := local}
+   } = SymSegmentExpr0,
+
+  ct:comment("Single binary with flags erl-binary*"),
+  #{ op       := erl_binary
+   , segments := [FlagsSegmentExpr0]
+   } = analyze_one(<<"(erl-binary* [\"hello\" :flags [:signed]])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = FlagsSegmentExpr0,
+
+  #{ op       := erl_binary
+   , segments := [FlagsSegmentExpr1]
+   } = analyze_one(<<"(erl-binary* [\"hello\" :flags [:little]])">>),
+
+  #{ op    := binary_segment
+   , value := #{op := constant}
+   } = FlagsSegmentExpr1,
+
   ok = try analyze_one(<<"(erl-binary* :hello)">>), error
        catch _:_ -> ok
        end,
