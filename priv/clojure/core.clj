@@ -3607,14 +3607,18 @@
                          (if (seq bs)
                            (let [firstb (first bs)]
                              (cond
-                               (= firstb '&) (recur (pb ret (second bs) (list `nthnext gvec n))
+                               (= firstb '&) (recur (pb ret (second bs) (list `next gvec))
                                                     n
                                                     (nnext bs)
                                                     true)
                                (= firstb :as) (pb ret (second bs) gvec)
                                :else (if seen-rest?
                                        (throw "Unsupported binding form, only :as can follow & parameter")
-                                       (recur (pb ret firstb  (list `nth gvec n nil))
+                                       (recur (if (zero? n)
+                                                (pb (into ret [gvec (list `seq gvec)])
+                                                    firstb (list `first gvec))
+                                                (pb (into ret [gvec (list `seq (list `next gvec))])
+                                                    firstb (list `first gvec)))
                                               (inc n)
                                               (next bs)
                                               seen-rest?))))
