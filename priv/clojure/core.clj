@@ -3599,8 +3599,11 @@
         pb (fn pb [bvec b v]
              (let [pvec
                    (fn [bvec b val]
-                     (let [gvec (gensym "vec__")]
-                       (loop [ret (-> bvec (conj gvec) (conj val))
+                     (let [gvec (gensym "vec__")
+                           gvec-orig (gensym "vec__")]
+                       (loop [ret (-> bvec
+                                      (conj gvec) (conj val)
+                                      (conj gvec-orig) (conj gvec))
                               n 0
                               bs b
                               seen-rest? false]
@@ -3611,7 +3614,7 @@
                                                     n
                                                     (nnext bs)
                                                     true)
-                               (= firstb :as) (pb ret (second bs) gvec)
+                               (= firstb :as) (pb ret (second bs) gvec-orig)
                                :else (if seen-rest?
                                        (throw "Unsupported binding form, only :as can follow & parameter")
                                        (recur (if (zero? n)
