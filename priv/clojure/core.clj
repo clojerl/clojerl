@@ -3615,9 +3615,13 @@
                                :else (if seen-rest?
                                        (throw "Unsupported binding form, only :as can follow & parameter")
                                        (recur (if (zero? n)
-                                                (pb (into ret [gvec (list `seq gvec)])
+                                                (pb (-> ret
+                                                        (conj gvec)
+                                                        (conj (list `seq gvec)))
                                                     firstb (list `first gvec))
-                                                (pb (into ret [gvec (list `seq (list `next gvec))])
+                                                (pb (-> ret
+                                                        (conj gvec)
+                                                        (conj (list `seq (list `next gvec))))
                                                     firstb (list `first gvec)))
                                               (inc n)
                                               (next bs)
