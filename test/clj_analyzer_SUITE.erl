@@ -1292,7 +1292,7 @@ erlang_binary(_Config) ->
    } = BinaryExpr,
 
   #{ op    := binary_segment
-   , value := #{op := local}
+   , value := #{op := binding}
    } = SymSegmentExpr0,
 
   ct:comment("Single binary with flags erl-binary*"),
