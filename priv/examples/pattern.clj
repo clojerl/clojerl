@@ -1,3 +1,3 @@
 (ns examples.pattern)
 
-(def f (fn* [#erl {:x x}] x))
+(def f (fn* [#erl{:x x}] x))
