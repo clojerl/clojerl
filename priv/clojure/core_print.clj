@@ -50,20 +50,22 @@
         (write w begin)
         (when-let [xs (seq sequence)]
           (if (and (not *print-dup*) *print-length*)
-            (loop [[x & xs] xs
+            (loop [xs xs
                    print-length *print-length*]
-              (if (zero? print-length)
-                (write w "...")
-                (do
-                  (print-one x w)
-                  (when xs
-                    (write w sep)
-                    (recur xs (dec print-length))))))
-            (loop [[x & xs] xs]
-              (print-one x w)
-              (when xs
-                (write w sep)
-                (recur xs)))))
+              (let [[x & xs] xs]
+                (if (zero? print-length)
+                  (write w "...")
+                  (do
+                    (print-one x w)
+                    (when xs
+                      (write w sep)
+                      (recur xs (dec print-length)))))))
+            (loop [xs xs]
+              (let [[x & xs] xs]
+                (print-one x w)
+                (when xs
+                  (write w sep)
+                  (recur xs))))))
         (write w end)))))
 
 (defn- print-meta [o, w]

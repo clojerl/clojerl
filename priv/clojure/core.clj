@@ -3599,22 +3599,33 @@
         pb (fn pb [bvec b v]
              (let [pvec
                    (fn [bvec b val]
-                     (let [gvec (gensym "vec__")]
-                       (loop [ret (-> bvec (conj gvec) (conj val))
+                     (let [gvec (gensym "vec__")
+                           gvec-orig (gensym "vec__")]
+                       (loop [ret (-> bvec
+                                      (conj gvec) (conj val)
+                                      (conj gvec-orig) (conj gvec))
                               n 0
                               bs b
                               seen-rest? false]
                          (if (seq bs)
                            (let [firstb (first bs)]
                              (cond
-                               (= firstb '&) (recur (pb ret (second bs) (list `nthnext gvec n))
+                               (= firstb '&) (recur (pb ret (second bs) (list `next gvec))
                                                     n
                                                     (nnext bs)
                                                     true)
-                               (= firstb :as) (pb ret (second bs) gvec)
+                               (= firstb :as) (pb ret (second bs) gvec-orig)
                                :else (if seen-rest?
                                        (throw "Unsupported binding form, only :as can follow & parameter")
-                                       (recur (pb ret firstb  (list `nth gvec n nil))
+                                       (recur (if (zero? n)
+                                                (pb (-> ret
+                                                        (conj gvec)
+                                                        (conj (list `seq gvec)))
+                                                    firstb (list `first gvec))
+                                                (pb (-> ret
+                                                        (conj gvec)
+                                                        (conj (list `seq (list `next gvec))))
+                                                    firstb (list `first gvec)))
                                               (inc n)
                                               (next bs)
                                               seen-rest?))))
