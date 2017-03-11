@@ -408,12 +408,6 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
                       ),
 
   ParamsList = clj_core:to_list(Params),
-  %% clj_utils:error_when( not lists:all(fun is_valid_bind_symbol/1, ParamsList)
-  %%                     , [ <<"Params must be valid binding symbols, had: ">>
-  %%                       , Params
-  %%                       ]
-  %%                     , clj_env:location(Env0)
-  %%                     ),
 
   IsNotAmpersandFun = fun(X) -> clj_core:str(X) =/= <<"&">> end,
   ParamsNames       = lists:filter(IsNotAmpersandFun, ParamsList),
@@ -898,16 +892,22 @@ parse_patterns_bodies([Pat, GuardOrBody | Rest0], PatternBodyPairs, Env0) ->
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
   IsSymbol = clj_core:'symbol?'(Form),
+  IsMap    = clj_core:'map?'(Form),
   if
     IsSymbol ->
-      Ast = #{ op   => binding
-             , env  => Env
-             , name => Form
-             , tag  => maybe_type_tag(Form)
+      clj_utils:error_when( not is_valid_bind_symbol(Form)
+                          , [<<"Not a valid binding symbol, had: ">>, Form]
+                          , clj_env:location(Env)
+                          ),
+      Ast = #{ op     => binding
+             , env    => Env
+             , name   => Form
+             , tag    => maybe_type_tag(Form)
+             , shadow => clj_env:get_local(Form, Env)
              },
       Env1 = clj_env:put_local(Form, Ast, Env),
       clj_env:push_expr(Ast, Env1);
-    is_map(Form) ->
+    IsMap ->
       Keys = maps:keys(Form),
       Vals = maps:values(Form),
       {KeysExprs, Env1} = lists:foldl(fun parse_pattern/2, Env, Keys),
