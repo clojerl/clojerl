@@ -1228,7 +1228,8 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
 
 %% ----- Functions -------
 
--spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) -> cerl:cerl().
+-spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) ->
+  cerl:cerl().
 function_form(Name, Ann, Args, Body) when is_atom(Name) ->
   EvalName = cerl:c_fname(Name, length(Args)),
   EvalFun  = cerl:ann_c_fun(Ann, Args, Body),
@@ -1268,23 +1269,29 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
                           , length(ParamsExprs)
                           ),
 
+  {PatternArgs, PatternGuards, _, _} = clj_core_pattern:pattern_list(Args, []),
+
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
   ParamCount = length(ParamsExprs),
   Args1 = case ClauseFor of
             function ->
-              Args;
+              PatternArgs;
             'case' when IsVariadic, ParamCount == 1 ->
-              Args;
+              PatternArgs;
             'case' when IsVariadic ->
-              [list_ast(lists:droplast(Args), lists:last(Args))];
+              [list_ast(lists:droplast(PatternArgs), lists:last(PatternArgs))];
             'case' ->
-              [list_ast(Args)]
+              [list_ast(PatternArgs)]
           end,
 
   {Guard, State3} = pop_ast(ast(GuardExpr, State2)),
 
-  Clause = cerl:ann_c_clause(ann_from(Env), Args1, Guard, Body),
+  Clause = cerl:ann_c_clause(ann_from(Env)
+                            , Args1
+                            , PatternGuards ++ Guard
+                            , Body
+                            ),
 
   State4 = remove_lexical_renames_scope(State3),
 
