@@ -2,8 +2,6 @@
 %% catch all implementation
 -module('clojerl.Default').
 
--include("clojerl.hrl").
-
 -behavior('clojerl.Stringable').
 
 -export([str/1]).
