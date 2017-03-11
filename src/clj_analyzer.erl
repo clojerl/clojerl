@@ -477,16 +477,7 @@ analyze_method_params(ParamsNames, Env) ->
                            ) -> [any()].
 analyze_method_params(IsVariadic, Arity, ParamsNames, Env) ->
   ParamExprFun =
-    fun(Name0, {Id, MappedParams, ParamsExprs}) ->
-        %% Check if there is a another
-        Name0Bin  = clj_core:str(Name0),
-        Count     = maps:get(Name0Bin, MappedParams, -1) + 1,
-        Name      = case Count of
-                      0 -> Name0;
-                      N ->
-                        NBin = erlang:integer_to_binary(N),
-                        clj_core:symbol(<<Name0Bin/binary, NBin/binary>>)
-                    end,
+    fun(Name, {Id, ParamsExprs}) ->
         ParamExpr = #{ op          => binding
                      , env         => Env
                      , form        => Name
@@ -497,20 +488,13 @@ analyze_method_params(IsVariadic, Arity, ParamsNames, Env) ->
                      , local       => arg
                      , shadow      => clj_env:get_local(Name, Env)
                      },
-        { Id - 1
-        , MappedParams#{Name0Bin => Count}
-        , [ParamExpr | ParamsExprs]
-        }
+        {Id + 1, [ParamExpr | ParamsExprs]}
     end,
-  ParamCount = length(ParamsNames),
-  {_, _, ParamsExprs} = lists:foldl( ParamExprFun
-                                   , {ParamCount - 1, #{}, []}
-                                    %% We reverse the order so if there is
-                                    %% any repeated parameter, the last
-                                    %% is the one resolved in the body.
-                                   , lists:reverse(ParamsNames)
-                                   ),
-  ParamsExprs.
+  {_, ParamsExprs} = lists:foldl( ParamExprFun
+                                , {0, []}
+                                , ParamsNames
+                                ),
+  lists:reverse(ParamsExprs).
 
 -spec analyze_body('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_body(List, Env) ->

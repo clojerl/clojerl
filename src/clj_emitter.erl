@@ -1285,11 +1285,17 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
               [list_ast(PatternArgs)]
           end,
 
-  {Guard, State3} = pop_ast(ast(GuardExpr, State2)),
+  {Guard0, State3} = pop_ast(ast(GuardExpr, State2)),
+
+  FoldGuards = fun(PatGuard, Guard) ->
+                   Ann = cerl:get_ann(Guard),
+                   call_mfa(erlang, 'and', [PatGuard, Guard], Ann)
+               end,
+  Guard1 = lists:foldr(FoldGuards, Guard0, PatternGuards),
 
   Clause = cerl:ann_c_clause(ann_from(Env)
                             , Args1
-                            , PatternGuards ++ Guard
+                            , Guard1
                             , Body
                             ),
 
