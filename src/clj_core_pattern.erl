@@ -10,18 +10,17 @@
 
 pattern(#c_var{name='_',anno=Ann}, _) ->
   New = clj_emitter:new_c_var(Ann),
-  {#c_var{name=New},[],[New],[]};
+  {New,[],[New#c_var.name],[]};
 pattern(#c_var{name=V, anno=Ann}=Var, Ks) ->
   case is_element(V, Ks) of
     true ->
-      N = clj_emitter:new_c_var(Ann),
-      New = #c_var{name=N},
+      New = clj_emitter:new_c_var(Ann),
       Test = #c_call{anno=Ann,
                      module=#c_literal{val=erlang},
                      name=#c_literal{val='=:='},
                      args=[New,Var]},
       %% Test doesn't need protecting.
-      {New,[Test],[N],[]};
+      {New,[Test],[New#c_var.name],[]};
     false -> {Var,[],[V],[]}
   end;
 pattern(#c_cons{hd=H0,tl=T0}=Cons, Ks) ->
