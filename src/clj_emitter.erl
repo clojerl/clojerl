@@ -3,7 +3,6 @@
 -include("clojerl.hrl").
 
 -export([ emit/1
-        , remove_state/1
         , new_c_var/1
         ]).
 
@@ -14,24 +13,12 @@
                   , force_remote_invoke => boolean()
                   }.
 
--spec emit(clj_env:env()) -> clj_env:env().
+-spec emit(clj_env:env()) -> {[ast()], clj_env:env()}.
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
-  State       = clj_env:get(emitter, initial_state(), Env),
-  erlang:put(local_var_counter, 0),
-  clj_env:put(emitter, ast(Expr, State), Env).
-
--spec remove_state(clj_env:env()) ->
-  { [cerl:cerl()]
-  , clj_env:env()
-  }.
-remove_state(Env) ->
-  State = clj_env:get(emitter, initial_state(), Env),
-  Exprs = lists:reverse(maps:get(asts, State)),
-
-  { Exprs
-  , clj_env:remove(emitter, Env)
-  }.
+  State = ast(Expr, initial_state()),
+  Asts  = lists:reverse(maps:get(asts, State)),
+  {Asts, Env}.
 
 -spec initial_state() -> state().
 initial_state() ->

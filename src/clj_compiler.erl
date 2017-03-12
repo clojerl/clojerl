@@ -196,8 +196,9 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
-  Env      = clj_env:put(clj_flags, CljFlags, Env0),
-  Env1     = clj_env:put(compiler_opts, Opts, Env),
+  Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts},
+  Env1     = clj_env:push(Mapping, Env0),
+
   EmitEval = case Opts0 of
                #{time := true} ->
                  fun() ->
@@ -224,13 +225,12 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
     fun() ->
         try
           Env2 = EmitEval(),
-          {_, Env3} = clj_emitter:remove_state(Env2),
 
           %% Compile all modules
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
 
-          Env4 = clj_env:remove(clj_flags, Env3),
-          {shutdown, Env4}
+          Env3 = clj_env:pop(Env2),
+          {shutdown, Env3}
         catch
           Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
@@ -249,16 +249,15 @@ do_eval(Form, Opts0, Env0) ->
   EvalFun =
     fun() ->
         try
-          Env  = clj_env:put(clj_flags, CljFlags, Env0),
+          Env  = clj_env:push(#{clj_flags => CljFlags}, Env0),
           %% Emit & eval form and keep the resulting value
           Env1 = clj_analyzer:analyze(Form, Env),
-          Env2 = clj_emitter:emit(Env1),
-          {Exprs, Env3} = clj_emitter:remove_state(Env2),
+          {Exprs, Env2} = clj_emitter:emit(Env1),
 
           { shutdown
           , { Exprs
             , clj_module:all_forms()
-            , clj_env:remove(clj_flags, Env3)
+            , clj_env:pop(Env2)
             }
           }
         catch
@@ -290,11 +289,10 @@ ensure_output_dir(_) ->
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
 emit_eval_form(Form, Env) ->
-  Env1  = clj_analyzer:analyze(Form, Env),
-  Env2  = clj_emitter:emit(Env1),
-  {Exprs, Env3} = clj_emitter:remove_state(Env2),
+  Env1          = clj_analyzer:analyze(Form, Env),
+  {Exprs, Env2} = clj_emitter:emit(Env1),
   Value = eval_expressions(Exprs),
-  clj_env:put(eval, Value, Env3).
+  clj_env:put(eval, Value, Env2).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -320,7 +318,7 @@ compile_forms(Module, Opts) ->
       Name;
     error ->
       %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
-      %% io:format("===== Lint ====~n~p~n", [core_lint:module(Module)]),
+      io:format("===== Lint ====~n~p~n", [core_lint:module(Module)]),
       throw(error)
   end.
 
@@ -363,8 +361,8 @@ eval_expressions(Expressions, ReplaceCalls) ->
         code:delete(ModuleName)
       end;
     error ->
-      %% io:format("===== Module ====~n~s~n", [core_pp:format(EvalModule)]),
-      %% io:format("===== Lint ====~n~p~n", [core_lint:module(EvalModule)]),
+      io:format("===== Module ====~n~s~n", [core_pp:format(EvalModule)]),
+      io:format("===== Lint ====~n~p~n", [core_lint:module(EvalModule)]),
       throw(error)
   end.
 

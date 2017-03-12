@@ -6,6 +6,8 @@
         , new/1
         , parent/1
         , get/2
+        , get/3
+        , put/2
         , put/3
         , update/3
         , to_map/2
@@ -30,11 +32,22 @@ parent(Scope) -> maps:get(parent, Scope).
 
 -spec get(any(), scope()) -> any().
 get(Key, Scope) ->
-  do_get(Key, Scope).
+  get(Key, ?NIL, Scope).
+
+-spec get(any(), any(), scope()) -> any().
+get(Key, Default, Scope) ->
+  do_get(Key, Default, Scope).
 
 -spec put(any(), any(), scope()) -> scope().
 put(Key, Value, Scope = #{mappings := Mappings}) ->
   Scope#{mappings => Mappings#{Key => Value}}.
+
+-spec put(map(), scope()) -> scope().
+put(Map, Scope) ->
+  PutFun = fun(Key, Acc) ->
+               put(Key, maps:get(Key, Map), Acc)
+           end,
+  lists:foldl(PutFun, Scope, maps:keys(Map)).
 
 -spec update(any(), any(), scope()) -> scope().
 update(Key, Value, Scope) ->
@@ -53,13 +66,13 @@ do_to_map(Fun, Map, #{parent := Parent, mappings := Mappings}) ->
   do_to_map(Fun, maps:merge(Mappings1, Map), Parent).
 
 %% @private
--spec do_get(any(), scope() | ?NIL) -> any().
-do_get(_, ?NIL) ->
-  ?NIL;
-do_get(Key, Scope = #{mappings := Mappings}) ->
+-spec do_get(any(), any(), scope() | ?NIL) -> any().
+do_get(_, Default, ?NIL) ->
+  Default;
+do_get(Key, Default, Scope = #{mappings := Mappings}) ->
   case maps:is_key(Key, Mappings) of
     false ->
-      do_get(Key, parent(Scope));
+      do_get(Key, Default, parent(Scope));
     true ->
       maps:get(Key, Mappings)
   end.
