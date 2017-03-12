@@ -1462,9 +1462,8 @@ get_lexical_rename(BindingExpr, State) ->
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(#{shadow := ?NIL}, State) ->
   State;
-put_lexical_rename(BindingExpr, State) ->
+put_lexical_rename(#{name := Name} = BindingExpr, State) ->
   #{lexical_renames := Renames} = State,
-  #{name := Name} = BindingExpr,
 
   Code = hash_scope(BindingExpr),
   NameBin = clj_core:name(Name),
@@ -1472,7 +1471,9 @@ put_lexical_rename(BindingExpr, State) ->
 
   NewRenames = clj_scope:put(Code, clj_core:gensym(ShadowName), Renames),
 
-  State#{lexical_renames => NewRenames}.
+  State#{lexical_renames => NewRenames};
+put_lexical_rename(_, State) ->
+  State.
 
 -spec hash_scope(map()) -> binary().
 hash_scope(BindingExpr) ->
