@@ -634,6 +634,11 @@ ast(#{op := erl_map} = Expr, State) ->
    , env  := Env
    } = Expr,
 
+  MapPairFun = case maps:get(pattern, Expr, false) of
+                 true  -> fun cerl:c_map_pair_exact/2;
+                 false -> fun cerl:c_map_pair/2
+               end,
+
   {Keys, State1} = pop_ast( lists:foldl(fun ast/2, State, KeysExprs)
                           , length(KeysExprs)
                           ),
@@ -644,7 +649,7 @@ ast(#{op := erl_map} = Expr, State) ->
              PairUp([], [], Pairs) ->
                Pairs;
              PairUp([H1 | Tail1], [H2 | Tail2], Pairs) ->
-               PairUp(Tail1, Tail2, [cerl:c_map_pair(H1, H2) | Pairs])
+               PairUp(Tail1, Tail2, [MapPairFun(H1, H2) | Pairs])
            end,
 
   PairsAsts = PairUp(Keys, Vals, []),
