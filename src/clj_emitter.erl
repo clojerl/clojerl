@@ -63,6 +63,9 @@ ast(#{op := var} = Expr, State) ->
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
+  #{pattern := PatternExpr} = Expr,
+  ast(PatternExpr, State);
+ast(#{op := local} = Expr, State) ->
   #{env := Env} = Expr,
   NameBin = get_lexical_rename(Expr, State),
   Ast     = cerl:ann_c_var(ann_from(Env), binary_to_atom(NameBin, utf8)),
@@ -759,8 +762,8 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 
   Ann = ann_from(Env),
 
-  State00 = add_lexical_renames_scope(State0),
-  State = lists:foldl(fun put_lexical_rename/2, State00, BindingsExprs),
+  State1 = add_lexical_renames_scope(State0),
+  State2 = lists:foldl(fun put_lexical_rename/2, State1, BindingsExprs),
 
   MatchAstFun =
     fun (BindingExpr = #{init := InitExpr}, {Bindings, StateAcc}) ->
@@ -769,12 +772,11 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
         {[{Var, Init} | Bindings], StateAcc2}
     end,
 
-  {Bindings, State1} =
-    lists:foldl(MatchAstFun, {[], State}, BindingsExprs),
-  {Body, State2} = pop_ast(ast(BodyExpr, State1)),
-  FoldFun        = fun ({Var, Init}, BodyAcc) ->
-                       cerl:ann_c_let(Ann, [Var], Init, BodyAcc)
-                   end,
+  {Bindings, State3} = lists:foldl(MatchAstFun, {[], State2}, BindingsExprs),
+  {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
+  FoldFun            = fun ({Var, Init}, BodyAcc) ->
+                           cerl:ann_c_let(Ann, [Var], Init, BodyAcc)
+                       end,
 
   Ast = case {Op, Bindings} of
           {'let', []} ->
@@ -798,9 +800,9 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             lists:foldl(FoldFun, LetRecAst, Bindings)
         end,
 
-  State3 = remove_lexical_renames_scope(State2),
+  State5 = remove_lexical_renames_scope(State4),
 
-  push_ast(Ast, State3);
+  push_ast(Ast, State5);
 %%------------------------------------------------------------------------------
 %% recur
 %%------------------------------------------------------------------------------
@@ -1153,7 +1155,7 @@ creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 
 -spec get_basis_function([any()], [map()]) -> ast().
 get_basis_function(Ann, FieldsExprs) ->
-  FilterMapFun   = fun(#{name := NameSym}) ->
+  FilterMapFun   = fun(#{pattern := #{name := NameSym}}) ->
                        NameBin = clj_core:name(NameSym),
                        case lists:member(NameBin, hidden_fields()) of
                          true  -> false;
@@ -1442,18 +1444,19 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 
 %% @doc Finds and returns the name of the lexical rename.
 %%
-%% This function always returns something valid because the BindingExpr
+%% This function always returns something valid because the LocalExpr
 %% is always registered in the lexixal scope, the analyzer makes sure
 %% this happens.
 %% @end
 -spec get_lexical_rename(map(), state()) -> binary().
-get_lexical_rename(BindingExpr, State) ->
+get_lexical_rename(LocalExpr, State) ->
   #{lexical_renames := Renames} = State,
 
-  RenameSym = case shadow_depth(BindingExpr) of
-                0 -> maps:get(name, BindingExpr);
+  RenameSym = case shadow_depth(LocalExpr) of
+                0 ->
+                  maps:get(name, LocalExpr);
                 _ ->
-                  Code = hash_scope(BindingExpr),
+                  Code = hash_scope(LocalExpr),
                   clj_scope:get(Code, Renames)
               end,
 
@@ -1462,10 +1465,10 @@ get_lexical_rename(BindingExpr, State) ->
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(#{shadow := ?NIL}, State) ->
   State;
-put_lexical_rename(#{name := Name} = BindingExpr, State) ->
+put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
   #{lexical_renames := Renames} = State,
 
-  Code = hash_scope(BindingExpr),
+  Code = hash_scope(LocalExpr),
   NameBin = clj_core:name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
 
@@ -1476,15 +1479,15 @@ put_lexical_rename(_, State) ->
   State.
 
 -spec hash_scope(map()) -> binary().
-hash_scope(BindingExpr) ->
-  Depth = shadow_depth(BindingExpr),
-  #{name := Name} = BindingExpr,
+hash_scope(LocalExpr) ->
+  Depth = shadow_depth(LocalExpr),
+  #{name := Name} = LocalExpr,
   NameBin = clj_core:name(Name),
   term_to_binary({NameBin, Depth}).
 
 -spec shadow_depth(map()) -> non_neg_integer().
-shadow_depth(BindingExpr = #{shadow := _}) ->
-  do_shadow_depth(BindingExpr, 0);
+shadow_depth(LocalExpr = #{shadow := _}) ->
+  do_shadow_depth(LocalExpr, 0);
 shadow_depth(_) ->
   0.
 

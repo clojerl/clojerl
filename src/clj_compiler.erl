@@ -309,16 +309,21 @@ compile_forms_fun(Opts) ->
 
 -spec compile_forms(cerl:c_module(), options()) -> atom().
 compile_forms(Module, Opts) ->
-  %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   ok       = maybe_output_erl(Module, Opts),
   ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
 
-  {ok, _, BeamBinary} = compile:noenv_forms(Module, ErlFlags),
+  case compile:noenv_forms(Module, ErlFlags) of
+    {ok, _, Beam} ->
+      Name     = cerl:atom_val(cerl:module_name(Module)),
+      BeamPath = maybe_output_beam(Name, add_core_code(Beam, Module), Opts),
+      {module, Name} = code:load_binary(Name, BeamPath, Beam),
+      Name;
+    error ->
+      %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
+      %% io:format("===== Lint ====~n~p~n", [core_lint:module(Module)]),
+      throw(error)
+  end.
 
-  Name     = cerl:atom_val(cerl:module_name(Module)),
-  BeamPath = maybe_output_beam(Name, add_core_code(BeamBinary, Module), Opts),
-  {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
-  Name.
 
 -spec add_core_code(binary(), cerl:cerl()) -> binary().
 add_core_code(BeamBinary, CoreModule) ->
@@ -348,13 +353,19 @@ eval_expressions(Expressions, ReplaceCalls) ->
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
   %% io:format("===== Eval ====~n~s~n", [core_pp:format(EvalModule)]),
-  {ok, _, Binary} = compile:noenv_forms(EvalModule, [clint, from_core]),
-  code:load_binary(ModuleName, "", Binary),
-  try
-    ModuleName:eval()
-  after
-    code:purge(ModuleName),
-    code:delete(ModuleName)
+  case compile:noenv_forms(EvalModule, [clint, from_core]) of
+    {ok, _, Beam} ->
+      code:load_binary(ModuleName, "", Beam),
+      try
+        ModuleName:eval()
+      after
+        code:purge(ModuleName),
+        code:delete(ModuleName)
+      end;
+    error ->
+      %% io:format("===== Module ====~n~s~n", [core_pp:format(EvalModule)]),
+      %% io:format("===== Lint ====~n~p~n", [core_lint:module(EvalModule)]),
+      throw(error)
   end.
 
 -spec eval_module([cerl:cerl()]) -> {module(), cerl:c_module()}.
