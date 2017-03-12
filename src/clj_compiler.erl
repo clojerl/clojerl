@@ -61,8 +61,8 @@ compile_files(Files, Opts) when is_list(Files) ->
 -spec compile_files([file:filename_all()], options(), clj_env:env()) ->
   clj_env:env().
 compile_files(Files, Opts, Env) when is_list(Files) ->
-  Fun = fun(File, EnvAcc) -> compile_file(File, Opts, EnvAcc) end,
-  lists:foldl(Fun, Env, Files).
+  Fun = fun(File, #{env := EnvAcc}) -> compile_file(File, Opts, EnvAcc) end,
+  lists:foldl(Fun, #{env => Env}, Files).
 
 -spec compile_file(file:filename_all()) -> clj_env:env().
 compile_file(File) when is_binary(File) ->
@@ -112,8 +112,8 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->
-  Env = compile_file(Path),
-  clj_env:get(eval, Env).
+  #{eval := Value} = compile_file(Path),
+  Value.
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
@@ -198,6 +198,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
   Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts},
   Env1     = clj_env:push(Mapping, Env0),
+  State    = #{env => Env1},
 
   EmitEval = case Opts0 of
                #{time := true} ->
@@ -207,7 +208,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                                    , [ fun emit_eval_form/2
                                      , Src
                                      , RdrOpts
-                                     , Env1
+                                     , State
                                      ]
                                    )
                  end;
@@ -216,7 +217,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                      clj_reader:read_fold( fun emit_eval_form/2
                                          , Src
                                          , RdrOpts
-                                         , Env1
+                                         , State
                                          )
                  end
              end,
@@ -224,13 +225,10 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   CompileFun =
     fun() ->
         try
-          Env2 = EmitEval(),
-
+          State1 = EmitEval(),
           %% Compile all modules
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
-
-          Env3 = clj_env:pop(Env2),
-          {shutdown, Env3}
+          {shutdown, State1}
         catch
           Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
@@ -288,11 +286,12 @@ ensure_output_dir(_) ->
   ok.
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
-emit_eval_form(Form, Env) ->
+emit_eval_form(Form, #{env := Env}) ->
   Env1          = clj_analyzer:analyze(Form, Env),
   {Exprs, Env2} = clj_emitter:emit(Env1),
-  Value = eval_expressions(Exprs),
-  clj_env:put(eval, Value, Env2).
+  Value         = eval_expressions(Exprs),
+
+  #{env => Env2, eval => Value}.
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
