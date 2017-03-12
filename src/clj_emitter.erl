@@ -765,14 +765,10 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
                            cerl:ann_c_let(Ann, [Var], Init, BodyAcc)
                        end,
 
-  Ast = case {Op, Bindings} of
-          {'let', []} ->
-            Body;
-          {'let',  _} ->
-            [{Var, Init} | RestBindings] = Bindings,
-            LetInit = cerl:ann_c_let(Ann, [Var], Init, Body),
-            lists:foldl(FoldFun, LetInit, RestBindings);
-          {loop, _} ->
+  Ast = case Op of
+          'let' ->
+            lists:foldl(FoldFun, Body, Bindings);
+          loop ->
             Vars       = [V || {V, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
