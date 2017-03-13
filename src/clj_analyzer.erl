@@ -917,7 +917,7 @@ parse_pattern(Form, Env) ->
              , pattern => true
              },
       clj_env:push_expr(Ast, Env3);
-    is_tuple(Form) ->
+    is_tuple(Form), not ?IS_TYPE(Form) ->
       Vals = tuple_to_list(Form),
 
       Env1 = lists:foldl(fun parse_pattern/2, Env, Vals),

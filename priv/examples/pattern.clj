@@ -17,5 +17,5 @@
     (let* [:invalid x :hello reason])))
 
 (let* [3 (case* #erl[1 2]
-                #erl[one two] (erlang/+.e one two)
-                2 :two)])
+           #erl[one two] (erlang/+.e one two)
+           2 :two)])
