@@ -669,6 +669,17 @@ ast(#{op := tuple} = Expr, State) ->
 
   Ast = cerl:ann_c_tuple(ann_from(Env), Items),
   push_ast(Ast, State1);
+ast(#{op := erl_lint} = Expr, State) ->
+  #{ items := ItemsExprs
+   , env   := Env
+   } = Expr,
+
+  {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
+                           , length(ItemsExprs)
+                           ),
+
+  Ast = cerl:ann_make_list(ann_from(Env), Items),
+  push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% if
 %%------------------------------------------------------------------------------
@@ -754,22 +765,30 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 
   MatchAstFun =
     fun (BindingExpr = #{init := InitExpr}, {Bindings, StateAcc}) ->
-        {Var,  StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
-        {Init, StateAcc2} = pop_ast(ast(InitExpr, StateAcc1)),
-        {[{Var, Init} | Bindings], StateAcc2}
+        {Pattern, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
+        {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
+        Binding              = {cerl:type(Pattern), Pattern, Init},
+        {[Binding | Bindings], StateAcc2}
     end,
 
   {Bindings, State3} = lists:foldl(MatchAstFun, {[], State2}, BindingsExprs),
   {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
-  FoldFun            = fun ({Var, Init}, BodyAcc) ->
-                           cerl:ann_c_let(Ann, [Var], Init, BodyAcc)
-                       end,
+
+  FoldFun = fun
+              ({var, Var, Init}, BodyAcc) ->
+                cerl:ann_c_let(Ann, [Var], Init, BodyAcc);
+              ({_, Pattern, Init}, BodyAcc) ->
+                {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
+                Guard     = clj_core_pattern:fold_guards(PatGuards),
+                ClauseAst = cerl:ann_c_clause(Ann, PatArgs, Guard, BodyAcc),
+                cerl:ann_c_case(Ann, Init, [ClauseAst])
+            end,
 
   Ast = case Op of
           'let' ->
             lists:foldl(FoldFun, Body, Bindings);
           loop ->
-            Vars       = [V || {V, _} <- lists:reverse(Bindings)],
+            Vars       = [V || {_, V, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
@@ -902,7 +921,7 @@ ast(#{op := 'try'} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := 'catch'} = Expr, State) ->
   #{ class := ErrType
-   , local := Local
+   , local := PatternExpr
    , body  := BodyExpr
    , guard := GuardExpr
    , env   := Env
@@ -916,15 +935,15 @@ ast(#{op := 'catch'} = Expr, State) ->
                           ErrTypeBin = clj_core:name(ErrType),
                           cerl:ann_c_var(Ann, binary_to_atom(ErrTypeBin, utf8))
                       end,
-  {NameAst, State1} = pop_ast(ast(Local, State)),
-  VarsAsts          = [ ClassAst
-                      , NameAst
-                      , new_c_var(Ann)
-                      ],
-  {Guard, State2}   = pop_ast(ast(GuardExpr, State1)),
-  {Body, State3}    = pop_ast(ast(BodyExpr, State2)),
+  {PatternAst0, State1} = pop_ast(ast(PatternExpr, State)),
+  {Guard0, State2}      = pop_ast(ast(GuardExpr, State1)),
+  {Body, State3}        = pop_ast(ast(BodyExpr, State2)),
 
-  Ast = cerl:ann_c_clause(Ann, VarsAsts, Guard, Body),
+  {[PatternAst1], PatGuards} = clj_core_pattern:pattern_list([PatternAst0]),
+  VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
+  Guard1   = clj_core_pattern:fold_guards(Guard0, PatGuards),
+
+  Ast    = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
 
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
@@ -1259,7 +1278,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
                           , length(ParamsExprs)
                           ),
 
-  {PatternArgs, PatternGuards, _, _} = clj_core_pattern:pattern_list(Args, []),
+  {PatternArgs, PatternGuards} = clj_core_pattern:pattern_list(Args),
 
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
@@ -1277,11 +1296,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
 
   {Guard0, State3} = pop_ast(ast(GuardExpr, State2)),
 
-  FoldGuards = fun(PatGuard, Guard) ->
-                   Ann = cerl:get_ann(Guard),
-                   call_mfa(erlang, 'and', [PatGuard, Guard], Ann)
-               end,
-  Guard1 = lists:foldr(FoldGuards, Guard0, PatternGuards),
+  Guard1 = clj_core_pattern:fold_guards(Guard0, PatternGuards),
 
   Clause = cerl:ann_c_clause(ann_from(Env)
                             , Args1

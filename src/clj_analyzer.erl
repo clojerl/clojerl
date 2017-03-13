@@ -883,7 +883,6 @@ add_pattern_local(LocalExpr, Env) ->
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
   IsSymbol = clj_core:'symbol?'(Form),
-  IsMap    = clj_core:'map?'(Form),
   if
     IsSymbol ->
       clj_utils:error_when( not is_valid_bind_symbol(Form)
@@ -900,7 +899,7 @@ parse_pattern(Form, Env) ->
 
       Env1 = add_pattern_local(Ast0, Env),
       clj_env:push_expr(Ast0, Env1);
-    IsMap ->
+    is_map(Form) ->
       Keys  = maps:keys(Form),
       Vals  = maps:values(Form),
       Count = maps:size(Form),
@@ -918,6 +917,30 @@ parse_pattern(Form, Env) ->
              , pattern => true
              },
       clj_env:push_expr(Ast, Env3);
+    is_tuple(Form) ->
+      Vals = tuple_to_list(Form),
+
+      Env1 = lists:foldl(fun parse_pattern/2, Env, Vals),
+      {ValsExprs, Env2} = clj_env:last_exprs(size(Form), Env1),
+
+      Ast = #{ op      => tuple
+             , env     => Env
+             , form    => Form
+             , tag     => 'clojerl.erlang.Tuple'
+             , items   => ValsExprs
+             },
+      clj_env:push_expr(Ast, Env2);
+    is_list(Form) ->
+      Env1 = lists:foldl(fun parse_pattern/2, Env, Form),
+      {ValsExprs, Env2} = clj_env:last_exprs(length(Form), Env1),
+
+      Ast = #{ op      => erl_list
+             , env     => Env
+             , form    => Form
+             , tag     => 'clojerl.erlang.List'
+             , items   => ValsExprs
+             },
+      clj_env:push_expr(Ast, Env2);
     true ->
       analyze_form(Form, Env)
   end.
@@ -1592,11 +1615,6 @@ parse_catch(List, Env) ->
   | GuardAndBody
   ] = clj_core:to_list(List),
 
-  clj_utils:error_when( not is_valid_bind_symbol(ErrName)
-                      , [<<"Bad binding form: ">>, ErrName]
-                      , clj_env:location(Env)
-                      ),
-
   clj_utils:error_when( not is_valid_error_type(ErrType)
                       , [<<"Bad error type: ">>, ErrType]
                       , clj_env:location(Env)
@@ -1610,9 +1628,9 @@ parse_catch(List, Env) ->
            , form    => ErrName
            , pattern => ErrExpr
            },
-  Env3  = clj_env:put_locals( [ErrExpr]
-                            , clj_env:add_locals_scope(Env2)
-                            ),
+
+  LocalExprs = clj_env:get(pattern_locals, [], Env2),
+  Env3       = clj_env:put_locals(LocalExprs, clj_env:add_locals_scope(Env2)),
   {_, Guard, Body}  = check_guard(GuardAndBody),
   {GuardExpr, Env4} = clj_env:pop_expr(analyze_form(Guard, Env3)),
   {BodyExpr, Env5}  = clj_env:pop_expr(analyze_body(Body, Env4)),

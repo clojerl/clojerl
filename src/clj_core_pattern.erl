@@ -2,11 +2,36 @@
 %% in the Erlang/OTP compiler application.
 -module(clj_core_pattern).
 
--export([pattern_list/2]).
+-export([ pattern_list/1
+        , fold_guards/1
+        , fold_guards/2
+        ]).
 
 -include_lib("compiler/src/core_parse.hrl").
 
 -import(ordsets, [is_element/2, union/2, intersection/2, subtract/2]).
+
+fold_guards([]) ->
+  cerl:abstract(true);
+fold_guards([Guard0]) ->
+  Guard0;
+fold_guards([Guard0, PatternGuards]) ->
+  fold_guards(Guard0, PatternGuards).
+
+fold_guards(Guard0, PatternGuards) ->
+  FoldGuards = fun(PatGuard, Guard) ->
+                   Ann = cerl:get_ann(Guard),
+                   cerl:ann_c_call(Ann
+                                  , cerl:c_atom(erlang)
+                                  , cerl:c_atom('and')
+                                  , [PatGuard, Guard]
+                                  )
+               end,
+  lists:foldr(FoldGuards, Guard0, PatternGuards).
+
+pattern_list(Patterns) ->
+  {PatArgs, PatGuards, _, _} = pattern_list(Patterns, []),
+  {PatArgs, PatGuards}.
 
 pattern(#c_var{name='_',anno=Ann}, _) ->
   New = clj_emitter:new_c_var(Ann),
