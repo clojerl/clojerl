@@ -941,8 +941,13 @@ parse_pattern(Form, Env) ->
              , items   => ValsExprs
              },
       clj_env:push_expr(Ast, Env2);
+    is_number(Form);
+    is_boolean(Form);
+    is_atom(Form);
+    is_binary(Form) ->
+      analyze_form(Form, Env);
     true ->
-      analyze_form(Form, Env)
+      clj_utils:error([<<"Invalid pattern: ">>, Form], clj_env:location(Env))
   end.
 
 %%------------------------------------------------------------------------------
