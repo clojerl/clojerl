@@ -882,7 +882,10 @@ add_pattern_local(LocalExpr, Env) ->
 
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
-  IsSymbol = clj_core:'symbol?'(Form),
+  ErlBinary   = clj_core:symbol(<<"erl-binary*">>),
+  IsSymbol    = clj_core:'symbol?'(Form),
+  IsErlBinary = clj_core:'list?'(Form)
+    andalso clj_core:equiv(clj_core:first(Form), ErlBinary),
   if
     IsSymbol ->
       clj_utils:error_when( not is_valid_bind_symbol(Form)
@@ -945,7 +948,16 @@ parse_pattern(Form, Env) ->
     is_boolean(Form);
     is_atom(Form);
     is_binary(Form) ->
-      analyze_form(Form, Env);
+      analyze_const(Form, Env);
+    IsErlBinary ->
+      Mapping    = #{in_pattern => true, pattern_locals => []},
+      Env1       = clj_env:push(Mapping, Env),
+      Env2       = analyze_form(Form, Env1),
+      LocalExprs = clj_env:get(pattern_locals, Env2),
+      Env3       = clj_env:put_locals( lists:reverse(LocalExprs)
+                                     , clj_env:add_locals_scope(Env2)
+                                     ),
+      clj_env:pop(Env3);
     true ->
       clj_utils:error([<<"Invalid pattern: ">>, Form], clj_env:location(Env))
   end.
@@ -2175,17 +2187,23 @@ segment_to_list(X) when ?IS_TYPE(X) ->
   IsSymbol = clj_core:'symbol?'(X),
   if
     IsVector -> clj_core:to_list(X);
-    IsSymbol -> [X, 1, integer];
+    IsSymbol -> [X, size, 1, type, integer];
     true     -> invalid
   end;
 segment_to_list(_) ->
   invalid.
 
--spec parse_segment_value(any(), clj_env:env()) -> any().
+-spec parse_segment_value(any(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 parse_segment_value(Value, Env) ->
-  clj_env:pop_expr(analyze(Value, Env)).
+  Env1 = case clj_env:get(in_pattern, false, Env) of
+           true  -> parse_pattern(Value, Env);
+           false -> analyze_form(Value, Env)
+         end,
+  clj_env:pop_expr(Env1).
 
--spec parse_segment_size(any(), atom(), clj_env:env()) -> any().
+-spec parse_segment_size(any(), atom(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 parse_segment_size(Config, Type, Env) ->
   Default = case Type of
               binary  -> all;
@@ -2194,9 +2212,14 @@ parse_segment_size(Config, Type, Env) ->
               _       -> undefined
             end,
   Size = maps:get(size, Config, Default),
-  clj_env:pop_expr(analyze(Size, Env)).
+  Env1 = case clj_env:get(in_pattern, false, Env) of
+           true  -> parse_pattern(Size, Env);
+           false -> analyze_form(Size, Env)
+         end,
+  clj_env:pop_expr(Env1).
 
--spec parse_segment_unit(any(), atom(), clj_env:env()) -> any().
+-spec parse_segment_unit(any(), atom(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 parse_segment_unit(Config, Type, Env) ->
   Default = case Type of
               binary  -> 8;
@@ -2207,20 +2230,22 @@ parse_segment_unit(Config, Type, Env) ->
   Unit = maps:get(unit, Config, Default),
   clj_env:pop_expr(analyze_const(Unit, Env)).
 
--spec parse_segment_type(any(), clj_env:env()) -> any().
+-spec parse_segment_type(any(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 parse_segment_type(Config, Env) ->
   Type = maps:get(type, Config, integer),
   clj_utils:error_when( not lists:member(Type, valid_segment_types())
                       , [<<"Invalid binary segment type: ">>, Type]
                       , clj_env:location(Env)
                       ),
-  clj_env:pop_expr(analyze(Type, Env)).
+  clj_env:pop_expr(analyze_const(Type, Env)).
 
 -spec valid_segment_types() -> [atom()].
 valid_segment_types() ->
   [binary, integer, float, utf8, utf16, utf32].
 
--spec parse_segment_flags(any(), clj_env:env()) -> any().
+-spec parse_segment_flags(any(), clj_env:env()) ->
+  {any(), clj_env:env()}.
 parse_segment_flags(Config, Env) ->
   Flags0 = maps:get(flags, Config, []),
   Flags1 = clj_core:to_list(Flags0),

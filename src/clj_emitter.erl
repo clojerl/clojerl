@@ -32,6 +32,9 @@ initial_state() ->
 %%------------------------------------------------------------------------------
 
 -spec ast(map(), state()) -> {[ast()], state()}.
+ast(#{op := constant, form := Form, env := Env}, State) when is_binary(Form) ->
+  Ast = binary_literal(ann_from(Env), Form),
+  push_ast(Ast, State);
 ast(#{op := constant, form := Form, env := Env}, State) ->
   Ast = cerl:ann_abstract(ann_from(Env), Form),
   push_ast(Ast, State);
@@ -1414,6 +1417,17 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                              ),
 
   {lists:zip(FNamesAsts, FnsAsts), State2}.
+
+%% ----- Binary literal -------
+
+-spec binary_literal(any(), binary()) -> ast().
+binary_literal(Ann, Binary) ->
+  Size     = cerl:abstract(8),
+  Type     = cerl:abstract(integer),
+  Flags     = cerl:abstract([unsigned,big]),
+  Segments = [cerl:ann_c_bitstr(Ann, cerl:abstract(B), Size, Type, Flags)
+              || B <- binary_to_list(Binary)],
+  cerl:ann_c_binary(Ann, Segments).
 
 %% ----- Push & pop asts -------
 

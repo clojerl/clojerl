@@ -350,7 +350,7 @@ eval_expressions(Expressions, ReplaceCalls) ->
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
   %% io:format("===== Eval ====~n~s~n", [core_pp:format(EvalModule)]),
-  case compile:noenv_forms(EvalModule, [clint, from_core]) of
+  case compile:noenv_forms(EvalModule, [clint, from_core, return_errors]) of
     {ok, _, Beam} ->
       code:load_binary(ModuleName, "", Beam),
       try
@@ -359,10 +359,10 @@ eval_expressions(Expressions, ReplaceCalls) ->
         code:purge(ModuleName),
         code:delete(ModuleName)
       end;
-    error ->
+    {error, Errors, Warnings} ->
       io:format("===== Module ====~n~s~n", [core_pp:format(EvalModule)]),
       io:format("===== Lint ====~n~p~n", [core_lint:module(EvalModule)]),
-      throw(error)
+      error({Errors, Warnings})
   end.
 
 -spec eval_module([cerl:cerl()]) -> {module(), cerl:c_module()}.
