@@ -19,6 +19,9 @@
        104    h
        "ello" ello])
 
+(let* [#erl(a b) #erl(1 2)
+       #erl{1 2} #erl{a b}])
+
 (try
   (throw #erl[:invalid :hello])
   (catch :throw #erl[x reason]

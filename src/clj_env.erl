@@ -23,6 +23,7 @@
         , get/2
         , get/3
         , push/2
+        , update/3
         , put/3
         , pop/1
         ]).
@@ -120,6 +121,10 @@ get(Name, Default, #{mapping := Mapping}) ->
 push(Mapping, Env = #{mapping := Parent}) ->
   Child = clj_scope:new(Parent),
   Env#{mapping := clj_scope:put(Mapping, Child)}.
+
+-spec update(any(), function, env()) -> env().
+update(Name, Value, Env = #{mapping := Mapping}) ->
+  Env#{mapping := clj_scope:update(Name, Value, Mapping)}.
 
 -spec put(any(), function, env()) -> env().
 put(Name, Value, Env = #{mapping := Mapping}) ->

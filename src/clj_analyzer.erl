@@ -879,89 +879,71 @@ parse_patterns_bodies([Pat, GuardOrBody | Rest0], PatternBodyPairs, Env0) ->
 -spec add_pattern_local(any(), clj_env:env()) -> clj_env:env().
 add_pattern_local(LocalExpr, Env) ->
   PatternLocals = clj_env:get(pattern_locals, [], Env),
-  clj_env:put(pattern_locals, [LocalExpr | PatternLocals], Env).
+  clj_env:update(pattern_locals, [LocalExpr | PatternLocals], Env).
 
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
-  ErlBinary   = clj_core:symbol(<<"erl-binary*">>),
-  IsSymbol    = clj_core:'symbol?'(Form),
-  IsErlBinary = clj_core:'list?'(Form)
-    andalso clj_core:equiv(clj_core:first(Form), ErlBinary),
-  if
-    IsSymbol ->
-      clj_utils:error_when( not is_valid_bind_symbol(Form)
-                          , [<<"Not a valid binding symbol, had: ">>, Form]
-                          , clj_env:location(Env)
-                          ),
+  IsSymbol = clj_core:'symbol?'(Form),
+  First    = clj_core:'list?'(Form) andalso clj_core:str(clj_core:first(Form)),
+  Mapping  = #{in_pattern => true},
+  Env1     = clj_env:push(Mapping, Env),
+  Env2     =
+    if
+      IsSymbol ->
+        analyze_symbol(Form, Env1);
+      is_map(Form) ->
+        Keys  = maps:keys(Form),
+        Vals  = maps:values(Form),
+        Count = maps:size(Form),
 
-      Ast0 = #{ op     => local
-              , env    => Env
-              , name   => Form
-              , tag    => maybe_type_tag(Form)
-              , shadow => clj_env:get_local(Form, Env)
-              },
+        InnerEnv0 = lists:foldl(fun parse_pattern/2, Env1, Keys ++ Vals),
+        {ValsExprs, InnerEnv1} = clj_env:last_exprs(Count, InnerEnv0),
+        {KeysExprs, InnerEnv2} = clj_env:last_exprs(Count, InnerEnv1),
 
-      Env1 = add_pattern_local(Ast0, Env),
-      clj_env:push_expr(Ast0, Env1);
-    is_map(Form) ->
-      Keys  = maps:keys(Form),
-      Vals  = maps:values(Form),
-      Count = maps:size(Form),
+        Ast = #{ op      => erl_map
+               , env     => Env
+               , form    => Form
+               , tag     => 'clojerl.erlang.Map'
+               , keys    => KeysExprs
+               , vals    => ValsExprs
+               , pattern => true
+               },
+        clj_env:push_expr(Ast, InnerEnv2);
+      is_tuple(Form), not ?IS_TYPE(Form) ->
+        Vals = tuple_to_list(Form),
 
-      Env1  = lists:foldl(fun parse_pattern/2, Env, Keys ++ Vals),
-      {ValsExprs, Env2} = clj_env:last_exprs(Count, Env1),
-      {KeysExprs, Env3} = clj_env:last_exprs(Count, Env2),
+        InnerEnv0 = lists:foldl(fun parse_pattern/2, Env1, Vals),
+        {ValsExprs, InnerEnv1} = clj_env:last_exprs(size(Form), InnerEnv0),
 
-      Ast = #{ op      => erl_map
-             , env     => Env
-             , form    => Form
-             , tag     => 'clojerl.erlang.Map'
-             , keys    => KeysExprs
-             , vals    => ValsExprs
-             , pattern => true
-             },
-      clj_env:push_expr(Ast, Env3);
-    is_tuple(Form), not ?IS_TYPE(Form) ->
-      Vals = tuple_to_list(Form),
+        Ast = #{ op      => tuple
+               , env     => Env
+               , form    => Form
+               , tag     => 'clojerl.erlang.Tuple'
+               , items   => ValsExprs
+               },
+        clj_env:push_expr(Ast, InnerEnv1);
+      is_list(Form) ->
+        InnerEnv0 = lists:foldl(fun parse_pattern/2, Env1, Form),
+        {ValsExprs, InnerEnv1} = clj_env:last_exprs(length(Form), InnerEnv0),
 
-      Env1 = lists:foldl(fun parse_pattern/2, Env, Vals),
-      {ValsExprs, Env2} = clj_env:last_exprs(size(Form), Env1),
-
-      Ast = #{ op      => tuple
-             , env     => Env
-             , form    => Form
-             , tag     => 'clojerl.erlang.Tuple'
-             , items   => ValsExprs
-             },
-      clj_env:push_expr(Ast, Env2);
-    is_list(Form) ->
-      Env1 = lists:foldl(fun parse_pattern/2, Env, Form),
-      {ValsExprs, Env2} = clj_env:last_exprs(length(Form), Env1),
-
-      Ast = #{ op      => erl_list
-             , env     => Env
-             , form    => Form
-             , tag     => 'clojerl.erlang.List'
-             , items   => ValsExprs
-             },
-      clj_env:push_expr(Ast, Env2);
-    is_number(Form);
-    is_boolean(Form);
-    is_atom(Form);
-    is_binary(Form) ->
-      analyze_const(Form, Env);
-    IsErlBinary ->
-      Mapping    = #{in_pattern => true, pattern_locals => []},
-      Env1       = clj_env:push(Mapping, Env),
-      Env2       = analyze_form(Form, Env1),
-      LocalExprs = clj_env:get(pattern_locals, Env2),
-      Env3       = clj_env:put_locals( lists:reverse(LocalExprs)
-                                     , clj_env:add_locals_scope(Env2)
-                                     ),
-      clj_env:pop(Env3);
-    true ->
-      clj_utils:error([<<"Invalid pattern: ">>, Form], clj_env:location(Env))
-  end.
+        Ast = #{ op      => erl_list
+               , env     => Env
+               , form    => Form
+               , tag     => 'clojerl.erlang.List'
+               , items   => ValsExprs
+               },
+        clj_env:push_expr(Ast, InnerEnv1);
+      is_number(Form);
+      is_boolean(Form);
+      is_atom(Form);
+      is_binary(Form) ->
+        analyze_const(Form, Env1);
+      First =:= <<"erl-binary*">> orelse First =:= <<"erl-list*">> ->
+        analyze_form(Form, Env1);
+      true ->
+        clj_utils:error([<<"Invalid pattern: ">>, Form], clj_env:location(Env))
+    end,
+  clj_env:pop(Env2).
 
 %%------------------------------------------------------------------------------
 %% Parse def
@@ -1734,7 +1716,21 @@ analyze_invoke(Form, Env) ->
 
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Symbol, Env) ->
+  InPattern = clj_env:get(in_pattern, false, Env),
   case resolve(Symbol, Env) of
+    _ when InPattern ->
+      clj_utils:error_when( not is_valid_bind_symbol(Symbol)
+                          , [<<"Not a valid binding symbol, had: ">>, Symbol]
+                          , clj_env:location(Env)
+                          ),
+      Ast = #{ op     => local
+             , env    => Env
+             , name   => Symbol
+             , tag    => maybe_type_tag(Symbol)
+             , shadow => clj_env:get_local(Symbol, Env)
+             },
+      Env1 = add_pattern_local(Ast, Env),
+      clj_env:push_expr(Ast, Env1);
     {?NIL, _} ->
       clj_utils:error([ <<"Unable to resolve symbol '">>, Symbol
                       , <<"' in this context">>
