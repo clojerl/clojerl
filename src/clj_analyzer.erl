@@ -92,6 +92,7 @@ special_forms() ->
 
    , <<"receive*">>     => fun parse_receive/2
    , <<"erl-binary*">>  => fun parse_erlang_binary/2
+   , <<"erl-list*">>    => fun parse_erlang_list/2
    , <<"erl-on-load*">> => fun parse_on_load/2
 
    , <<"import*">>      => fun parse_import/2
@@ -2282,6 +2283,29 @@ valid_segment_signedness() ->
 -spec valid_segment_endianness() -> [atom()].
 valid_segment_endianness() ->
   [little, big, native].
+
+%%------------------------------------------------------------------------------
+%% Erlang list
+%%------------------------------------------------------------------------------
+
+-spec parse_erlang_list(any(), clj_env:env()) ->
+  clj_env:env().
+parse_erlang_list(List, Env0) ->
+  [ _ %% erl-list*
+  | Items
+  ] = clj_core:to_list(List),
+
+  Env1 = analyze_forms(Items, Env0),
+  {ItemsExprs, Env2} = clj_env:last_exprs(length(Items), Env1),
+
+  ListExpr = #{ op    => erl_list
+              , env   => Env0
+              , form  => List
+              , items => ItemsExprs
+              %% , tail  => TailExpr
+              },
+
+  clj_env:push_expr(ListExpr, Env2).
 
 %%------------------------------------------------------------------------------
 %% On load

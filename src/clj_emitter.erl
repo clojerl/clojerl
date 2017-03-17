@@ -672,7 +672,7 @@ ast(#{op := tuple} = Expr, State) ->
 
   Ast = cerl:ann_c_tuple(ann_from(Env), Items),
   push_ast(Ast, State1);
-ast(#{op := erl_lint} = Expr, State) ->
+ast(#{op := erl_list} = Expr, State) ->
   #{ items := ItemsExprs
    , env   := Env
    } = Expr,

@@ -1191,7 +1191,10 @@ erlang_literal(Form, State) ->
 
   Value    =
     if
-      IsList   -> clj_core:to_list(Form);
+      IsList   ->
+        ErlListSym = clj_core:symbol(<<"erl-list*">>),
+        List       = clj_core:to_list(Form),
+        clj_core:list([ErlListSym | List]);
       IsMap    -> 'clojerl.Map':to_erl_map(Form);
       IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
       IsString -> clj_core:list( [ clj_core:symbol(<<"quote">>)
