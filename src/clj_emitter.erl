@@ -673,16 +673,21 @@ ast(#{op := tuple} = Expr, State) ->
   Ast = cerl:ann_c_tuple(ann_from(Env), Items),
   push_ast(Ast, State1);
 ast(#{op := erl_list} = Expr, State) ->
-  #{ items := ItemsExprs
-   , env   := Env
+  #{ env   := Env
+   , items := ItemsExprs
+   , tail  := TailExpr
    } = Expr,
 
   {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
                            , length(ItemsExprs)
                            ),
+  {Tail, State2} = case TailExpr of
+                     undefined -> {none, State1};
+                     _ -> pop_ast(ast(TailExpr, State1))
+                   end,
 
-  Ast = cerl:ann_make_list(ann_from(Env), Items),
-  push_ast(Ast, State1);
+  Ast = cerl:ann_make_list(ann_from(Env), Items, Tail),
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% if
 %%------------------------------------------------------------------------------

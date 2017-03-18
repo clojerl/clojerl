@@ -2288,17 +2288,37 @@ valid_segment_endianness() ->
   clj_env:env().
 parse_erlang_list(List, Env0) ->
   [ _ %% erl-list*
-  | Items
+  | AllItems
   ] = clj_core:to_list(List),
 
-  Env1 = analyze_forms(Items, Env0),
-  {ItemsExprs, Env2} = clj_env:last_exprs(length(Items), Env1),
+  AmpersandSym   = clj_core:symbol(<<"&">>),
+  IsNotAmpersand = fun(X) -> not clj_core:equiv(AmpersandSym, X) end,
+  IsAmpersand    = fun(X) -> clj_core:equiv(AmpersandSym, X) end,
+  {Items, Tails} = lists:splitwith(IsNotAmpersand, AllItems),
 
-  ListExpr = #{ op    => erl_list
-              , env   => Env0
-              , form  => List
-              , items => ItemsExprs
-              %% , tail  => TailExpr
+  clj_utils:error_when( lists:any(IsAmpersand, AllItems)
+                        andalso length(Tails) =/= 2
+                      , [<<"There has to be one expression after &, got">>
+                        , length(Tails)
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  {ItemsExprs, Env1} = clj_env:last_exprs( length(Items)
+                                         , analyze_forms(Items, Env0)
+                                         ),
+  {TailExpr, Env2}   = case Tails of
+                         [_, Tail] ->
+                           clj_env:pop_expr(analyze_form(Tail, Env1));
+                         [] ->
+                           {undefined, Env1}
+                       end,
+
+  ListExpr = #{ op      => erl_list
+              , env     => Env0
+              , form    => List
+              , items   => ItemsExprs
+              , tail    => TailExpr
               },
 
   clj_env:push_expr(ListExpr, Env2).
