@@ -755,7 +755,7 @@ ast(#{op := 'case'} = Expr, State) ->
     end,
 
   Ann = ann_from(Env),
-  ClausesAsts2 = ClausesAsts1 ++ [fail_clause(TestAst, case_clause, Ann)],
+  ClausesAsts2 = ClausesAsts1 ++ [fail_clause(case_clause, Ann)],
 
   CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts2),
 
@@ -776,9 +776,11 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 
   MatchAstFun =
     fun (BindingExpr = #{init := InitExpr}, {Bindings, StateAcc}) ->
+        #{env := InitEnv}    = InitExpr,
+        AnnInit              = ann_from(InitEnv),
         {Pattern, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
         {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
-        Binding              = {cerl:type(Pattern), Pattern, Init},
+        Binding              = {cerl:type(Pattern), Pattern, Init, AnnInit},
         {[Binding | Bindings], StateAcc2}
     end,
 
@@ -786,13 +788,13 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
 
   FoldFun = fun
-              ({var, Var, Init}, BodyAcc) ->
-                cerl:ann_c_let(Ann, [Var], Init, BodyAcc);
-              ({_, Pattern, Init}, BodyAcc) ->
+              ({var, Var, Init, AnnInit}, BodyAcc) ->
+                cerl:ann_c_let(AnnInit, [Var], Init, BodyAcc);
+              ({_, Pattern, Init, AnnInit}, BodyAcc) ->
                 {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
                 Guard       = clj_core_pattern:fold_guards(PatGuards),
-                ClauseAst   = cerl:ann_c_clause(Ann, PatArgs, Guard, BodyAcc),
-                BadmatchAst = fail_clause(Init, badmatch, Ann),
+                ClauseAst   = cerl:ann_c_clause(AnnInit, PatArgs, Guard, BodyAcc),
+                BadmatchAst = fail_clause(badmatch, AnnInit),
                 cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
             end,
 
@@ -800,7 +802,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
           'let' ->
             lists:foldl(FoldFun, Body, Bindings);
           loop ->
-            Vars       = [V || {_, V, _} <- lists:reverse(Bindings)],
+            Vars       = [V || {_, V, _, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
@@ -1233,10 +1235,10 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
 
 %% ----- Case and receive Clauses -------
 
--spec fail_clause(cerl:cerl(), atom(), [any()]) -> cerl:cerl().
-fail_clause(ExprAst, Reason, Ann) ->
+-spec fail_clause(atom(), [any()]) -> cerl:cerl().
+fail_clause(Reason, Ann) ->
   VarAst      = new_c_var(Ann),
-  BadmatchAst = cerl:c_tuple([cerl:c_atom(Reason), ExprAst]),
+  BadmatchAst = cerl:c_tuple([cerl:c_atom(Reason), VarAst]),
   FailAst     = cerl:ann_c_primop(Ann, cerl:c_atom(match_fail), [BadmatchAst]),
   cerl:ann_c_clause([compiler_generated | Ann], [VarAst], FailAst).
 

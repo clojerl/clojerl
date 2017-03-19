@@ -1,5 +1,7 @@
 (ns examples.pattern)
 
+;; fn*
+
 (def f (fn* ([x x] x) ([x y] y)))
 
 (def g (fn* ([#erl{:x x} x] x)
@@ -15,9 +17,13 @@
            #erl[one two] (erlang/+.e one two)
            2 :two)])
 
+;; let* with binary patterns
+
 (let* [#bin[[h :type :utf8] [ello :type :binary]] "hello"
        104    h
        "ello" ello])
+
+;; let*
 
 (let* [#erl(a b)     #erl(1 2)
        #erl{1 2}     #erl{a b}
@@ -28,8 +34,37 @@
                               :ok)
                             (catch :error e
                               e))])
+;; catch
 
 (try
   (throw #erl[:invalid :hello])
   (catch :throw #erl[x reason]
     (let* [:invalid x :hello reason])))
+
+;; receive*
+
+(def spawn
+  (fn* [f & args]
+       (erlang/spawn.e :clj_core :apply (clj_core/to_list.e [f args]))))
+
+(def f
+  (fn* []
+    (receive*
+     #erl[:ok msg pid]
+     (erlang/send.e pid msg)
+     _
+     :ok)
+    (f)))
+
+(def receive-1 (fn* [] (receive* x x)))
+
+(let* [pid  (spawn f)
+       self (erlang/self.e)
+       _    (erlang/send.e pid #erl[:ok :foo self])
+       :foo (receive-1)
+       _    (erlang/send.e pid #erl[:ok :bar self])
+       :ok  (try
+              (let* [:foo (receive-1)]
+                :error)
+              (catch :error #erl[:badmatch _]
+                :ok))])

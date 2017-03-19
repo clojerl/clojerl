@@ -309,6 +309,7 @@ compile_forms(Module, Opts) ->
              | maps:get(erl_flags, Opts, [])
              ],
 
+  %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam, _Warnings} ->
       Name     = cerl:atom_val(cerl:module_name(Module)),
@@ -347,6 +348,7 @@ eval_expressions(Expressions, ReplaceCalls) ->
                   end,
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
+  %% io:format("===== Eval Module ====~n~s~n", [core_pp:format(EvalModule)]),
   Opts = [clint, from_core, return_errors, return_warnings],
   case compile:noenv_forms(EvalModule, Opts) of
     {ok, _, Beam, _Warnings} ->
