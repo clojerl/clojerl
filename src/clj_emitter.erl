@@ -739,7 +739,7 @@ ast(#{op := 'case'} = Expr, State) ->
   State2 = lists:foldl(fun clause/2, State1, ClausesExprs),
   {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
 
-  {ClausesAsts, State4} =
+  {ClausesAsts1, State4} =
     case DefaultExpr of
       ?NIL -> {ClausesAsts0, State3};
       _ ->
@@ -754,7 +754,10 @@ ast(#{op := 'case'} = Expr, State) ->
         {ClausesAsts0 ++ [DefaultClause], State3_1}
     end,
 
-  CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts),
+  Ann = ann_from(Env),
+  ClausesAsts2 = ClausesAsts1 ++ [fail_clause(TestAst, case_clause, Ann)],
+
+  CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts2),
 
   push_ast(CaseAst, State4);
 %%------------------------------------------------------------------------------
@@ -787,9 +790,10 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
                 cerl:ann_c_let(Ann, [Var], Init, BodyAcc);
               ({_, Pattern, Init}, BodyAcc) ->
                 {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
-                Guard     = clj_core_pattern:fold_guards(PatGuards),
-                ClauseAst = cerl:ann_c_clause(Ann, PatArgs, Guard, BodyAcc),
-                cerl:ann_c_case(Ann, Init, [ClauseAst])
+                Guard       = clj_core_pattern:fold_guards(PatGuards),
+                ClauseAst   = cerl:ann_c_clause(Ann, PatArgs, Guard, BodyAcc),
+                BadmatchAst = fail_clause(Init, badmatch, Ann),
+                cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
             end,
 
   Ast = case Op of
@@ -1229,6 +1233,15 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
 
 %% ----- Case and receive Clauses -------
 
+-spec fail_clause(cerl:cerl(), atom(), [any()]) -> cerl:cerl().
+fail_clause(ExprAst, Reason, Ann) ->
+  VarAst      = new_c_var(Ann),
+  BadmatchAst = cerl:c_tuple([cerl:c_atom(Reason), ExprAst]),
+  FailAst     = cerl:ann_c_primop(Ann, cerl:c_atom(match_fail), [BadmatchAst]),
+  cerl:ann_c_clause([compiler_generated | Ann], [VarAst], FailAst).
+
+-spec clause({clj_analyzer:expr(), clj_analyzer:expr()}, state()) ->
+  cerl:cerl().
 clause({PatternExpr, BodyExpr}, StateAcc) ->
   #{ env   := EnvPattern
    , guard := GuardExpr

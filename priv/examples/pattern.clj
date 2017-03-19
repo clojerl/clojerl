@@ -19,8 +19,15 @@
        104    h
        "ello" ello])
 
-(let* [#erl(a b) #erl(1 2)
-       #erl{1 2} #erl{a b}])
+(let* [#erl(a b)     #erl(1 2)
+       #erl{1 2}     #erl{a b}
+       tail          #erl(3 4)
+       #erl(1 2 3 4) #erl(1 2 & tail)
+       #erl[:badmatch, _] (try
+                            (let* [#erl(1 2 3) #erl(1 2 & tail)]
+                              :ok)
+                            (catch :error e
+                              e))])
 
 (try
   (throw #erl[:invalid :hello])

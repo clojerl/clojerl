@@ -40,8 +40,6 @@ default_options() ->
    , erl_flags   => [ verbose
                     %% , debug_info
                     %% Don't use these except for improving generated code
-                    %% , report_errors
-                    %% , report_warnings
                     , nowarn_unused_vars
                     , nowarn_shadow_vars
                     , nowarn_unused_record
@@ -307,18 +305,18 @@ compile_forms_fun(Opts) ->
 -spec compile_forms(cerl:c_module(), options()) -> atom().
 compile_forms(Module, Opts) ->
   ok       = maybe_output_erl(Module, Opts),
-  ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
+  ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
+             | maps:get(erl_flags, Opts, [])
+             ],
 
   case compile:noenv_forms(Module, ErlFlags) of
-    {ok, _, Beam} ->
+    {ok, _, Beam, _Warnings} ->
       Name     = cerl:atom_val(cerl:module_name(Module)),
       BeamPath = maybe_output_beam(Name, add_core_code(Beam, Module), Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam),
       Name;
-    error ->
-      %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
-      io:format("===== Lint ====~n~p~n", [core_lint:module(Module)]),
-      throw(error)
+    {error, Errors, Warnings} ->
+      error({Errors, Warnings})
   end.
 
 
@@ -349,9 +347,9 @@ eval_expressions(Expressions, ReplaceCalls) ->
                   end,
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
-  %% io:format("===== Eval ====~n~s~n", [core_pp:format(EvalModule)]),
-  case compile:noenv_forms(EvalModule, [clint, from_core, return_errors]) of
-    {ok, _, Beam} ->
+  Opts = [clint, from_core, return_errors, return_warnings],
+  case compile:noenv_forms(EvalModule, Opts) of
+    {ok, _, Beam, _Warnings} ->
       code:load_binary(ModuleName, "", Beam),
       try
         ModuleName:eval()
@@ -360,8 +358,6 @@ eval_expressions(Expressions, ReplaceCalls) ->
         code:delete(ModuleName)
       end;
     {error, Errors, Warnings} ->
-      io:format("===== Module ====~n~s~n", [core_pp:format(EvalModule)]),
-      io:format("===== Lint ====~n~p~n", [core_lint:module(EvalModule)]),
       error({Errors, Warnings})
   end.
 
