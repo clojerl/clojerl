@@ -77,3 +77,10 @@
              (erlang/+.e sum x)
              (recur xs (erlang/+.e sum x))))
        5 x])
+
+(let* [x (loop* [#erl(x & xs) #erl(1 40)
+                 sum x]
+           (if (erlang/=:=.e xs #erl())
+             (erlang/+.e sum x)
+             (recur xs (erlang/+.e sum x))))
+       42 x])
