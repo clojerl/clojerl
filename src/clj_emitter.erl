@@ -737,7 +737,7 @@ ast(#{op := 'case'} = Expr, State) ->
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
   State2 = lists:foldl(fun clause/2, State1, ClausesExprs),
-  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
+  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs), false),
 
   {ClausesAsts1, State4} =
     case DefaultExpr of
@@ -751,13 +751,14 @@ ast(#{op := 'case'} = Expr, State) ->
                                          , [DefaultVarAst]
                                          , DefaultAst
                                          ),
-        {ClausesAsts0 ++ [DefaultClause], State3_1}
+        {[DefaultClause | ClausesAsts0], State3_1}
     end,
 
   Ann = ann_from(Env),
-  ClausesAsts2 = ClausesAsts1 ++ [fail_clause(case_clause, Ann)],
+  ClausesAsts2 = [fail_clause(case_clause, Ann) | ClausesAsts1],
+  ClausesAsts3 = lists:reverse(ClausesAsts2),
 
-  CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts2),
+  CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts3),
 
   push_ast(CaseAst, State4);
 %%------------------------------------------------------------------------------
@@ -881,6 +882,7 @@ ast(#{op := 'try'} = Expr, State) ->
   {BodyAst, State1} = pop_ast(ast(BodyExpr, State)),
   {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
                              , length(CatchesExprs)
+                             , false
                              ),
 
   [_, Y, Z] = CatchVarsAsts = [ new_c_var(Ann)
@@ -892,7 +894,7 @@ ast(#{op := 'try'} = Expr, State) ->
   CatchAllClause    = cerl:ann_c_clause(Ann, CatchVarsAsts, RaiseAst),
   { ClausesVars
   , CaseAst
-  } = case_from_clauses(Ann, Catches ++ [CatchAllClause]),
+  } = case_from_clauses(Ann, lists:reverse([CatchAllClause | Catches])),
 
   {Finally, State2} = case FinallyExpr of
                         ?NIL -> {?NIL, State1};
@@ -1463,9 +1465,15 @@ pop_ast(State = #{asts := [Ast | Asts]}) ->
   {Ast, State#{asts => Asts}}.
 
 -spec pop_ast(state(), non_neg_integer()) -> {[ast()], state()}.
-pop_ast(State = #{asts := Asts}, N) ->
+pop_ast(State, N) ->
+  pop_ast(State, N, true).
+
+-spec pop_ast(state(), non_neg_integer(), boolean()) -> {[ast()], state()}.
+pop_ast(State = #{asts := Asts}, N, Reverse) ->
   {ReturnAsts, RestAsts} = lists:split(N, Asts),
-  {lists:reverse(ReturnAsts), State#{asts => RestAsts}}.
+  { case Reverse of true -> lists:reverse(ReturnAsts); false -> ReturnAsts end
+  , State#{asts => RestAsts}
+  }.
 
 %% ----- Lexical renames -------
 

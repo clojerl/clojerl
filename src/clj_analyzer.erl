@@ -1721,8 +1721,8 @@ analyze_invoke(Form, Env) ->
 -spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
 analyze_symbol(Symbol, Env) ->
   InPattern = clj_env:get(in_pattern, false, Env),
-  case resolve(Symbol, Env) of
-    _ when InPattern ->
+  case InPattern orelse resolve(Symbol, Env) of
+    true ->
       clj_utils:error_when( not is_valid_bind_symbol(Symbol)
                           , [<<"Not a valid binding symbol, had: ">>, Symbol]
                           , clj_env:location(Env)
@@ -2298,12 +2298,10 @@ parse_erlang_list(List, Env0) ->
 
   AmpersandSym   = clj_core:symbol(<<"&">>),
   IsNotAmpersand = fun(X) -> not clj_core:equiv(AmpersandSym, X) end,
-  IsAmpersand    = fun(X) -> clj_core:equiv(AmpersandSym, X) end,
   {Items, Tails} = lists:splitwith(IsNotAmpersand, AllItems),
 
-  clj_utils:error_when( lists:any(IsAmpersand, AllItems)
-                        andalso length(Tails) =/= 2
-                      , [<<"There has to be one expression after &, got">>
+  clj_utils:error_when( length(Tails) > 0 andalso length(Tails) =/= 2
+                      , [<<"There has to be one expression after &, got ">>
                         , length(Tails)
                         ]
                       , clj_env:location(Env0)
