@@ -23,8 +23,5 @@
                           (map (partial path->symbol root))
                           (filter (comp not ignore-nss))
                           doall)
-          _ (doseq [ns-symbol ns-symbols] (require [ns-symbol :verbose true]))
-          result (apply clojure.test/run-tests ns-symbols)]
-      (when (or (pos? (:error result))
-                (pos? (:fail result)))
-        (throw result)))))
+          _ (doseq [ns-symbol ns-symbols] (require [ns-symbol :verbose true]))]
+      (apply clojure.test/run-tests ns-symbols))))

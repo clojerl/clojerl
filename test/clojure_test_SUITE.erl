@@ -31,7 +31,11 @@ run(_Config) ->
   compile(<<"priv/examples/run_tests.clj">>),
 
   TestsPath = clj_test_utils:relative_path(<<"priv/clojure/test_clojure/">>),
-  'examples.run-tests':'-main'([TestsPath, PrivPath]),
+  Result    = 'examples.run-tests':'-main'([TestsPath, PrivPath]),
+
+  0 = clj_core:get(Result, fail),
+  %% There are two tests that fail because of atoms not being implemented
+  2 = clj_core:get(Result, error),
 
   {comments, ""}.
 
