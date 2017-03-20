@@ -1,6 +1,4 @@
-%% The code in this module is extracted from the v3_core module
-%% in the Erlang/OTP compiler application.
--module(clj_core_pattern).
+-module(clj_emitter_pattern).
 
 -export([ pattern_list/1
         , fold_guards/1
@@ -32,6 +30,14 @@ fold_guards(Guard0, PatternGuards) ->
 pattern_list(Patterns) ->
   {PatArgs, PatGuards, _, _} = pattern_list(Patterns, []),
   {PatArgs, PatGuards}.
+
+%% -----------------------------------------------------------------------------
+%% All of the code that follows was copied from the `v3_core'
+%% module in the Erlang/OTP `compiler' application.
+%%
+%% Given a list of patterns, it generates the guards that apply to all of
+%% them when considered together and it also transforms the patterns.
+%% -----------------------------------------------------------------------------
 
 pattern(#c_var{name='_',anno=Ann}, _) ->
   New = clj_emitter:new_c_var(Ann),

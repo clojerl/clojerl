@@ -792,8 +792,8 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
       ({var, Var, Init, AnnBinding}, BodyAcc) ->
         cerl:ann_c_let(AnnBinding, [Var], Init, BodyAcc);
       ({_, Pattern, Init, AnnBinding}, BodyAcc) ->
-        {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
-        Guard       = clj_core_pattern:fold_guards(PatGuards),
+        {PatArgs, PatGuards} = clj_emitter_pattern:pattern_list([Pattern]),
+        Guard       = clj_emitter_pattern:fold_guards(PatGuards),
         ClauseAst   = cerl:ann_c_clause(AnnBinding, PatArgs, Guard, BodyAcc),
         BadmatchAst = fail_clause(badmatch, AnnBinding),
         cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
@@ -956,9 +956,9 @@ ast(#{op := 'catch'} = Expr, State) ->
   {Guard0, State2}      = pop_ast(ast(GuardExpr, State1)),
   {Body, State3}        = pop_ast(ast(BodyExpr, State2)),
 
-  {[PatternAst1], PatGuards} = clj_core_pattern:pattern_list([PatternAst0]),
+  {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
   VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
-  Guard1   = clj_core_pattern:fold_guards(Guard0, PatGuards),
+  Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
 
   Ast    = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
 
@@ -1304,7 +1304,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
                           , length(ParamsExprs)
                           ),
 
-  {PatternArgs, PatternGuards} = clj_core_pattern:pattern_list(Args),
+  {PatternArgs, PatternGuards} = clj_emitter_pattern:pattern_list(Args),
 
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
@@ -1322,7 +1322,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
 
   {Guard0, State3} = pop_ast(ast(GuardExpr, State2)),
 
-  Guard1 = clj_core_pattern:fold_guards(Guard0, PatternGuards),
+  Guard1 = clj_emitter_pattern:fold_guards(Guard0, PatternGuards),
 
   Clause = cerl:ann_c_clause(ann_from(Env)
                             , Args1
