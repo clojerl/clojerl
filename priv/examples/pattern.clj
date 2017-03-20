@@ -68,3 +68,12 @@
                 :error)
               (catch :error #erl[:badmatch _]
                 :ok))])
+
+;; loop*
+
+(let* [x (loop* [#erl(x & xs) #erl(1 1 1 1 1)
+                 sum 0]
+           (if (erlang/=:=.e xs #erl())
+             (erlang/+.e sum x)
+             (recur xs (erlang/+.e sum x))))
+       5 x])

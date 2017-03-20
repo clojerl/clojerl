@@ -775,12 +775,12 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   State2 = lists:foldl(fun put_lexical_rename/2, State1, BindingsExprs),
 
   MatchAstFun =
-    fun (BindingExpr = #{init := InitExpr}, {Bindings, StateAcc}) ->
-        #{env := InitEnv}    = InitExpr,
-        AnnInit              = ann_from(InitEnv),
+    fun (BindingExpr, {Bindings, StateAcc}) ->
+        #{init := InitExpr, env := BindingEnv} = BindingExpr,
+        AnnBinding           = ann_from(BindingEnv),
         {Pattern, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
         {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
-        Binding              = {cerl:type(Pattern), Pattern, Init, AnnInit},
+        Binding              = {cerl:type(Pattern), Pattern, Init, AnnBinding},
         {[Binding | Bindings], StateAcc2}
     end,
 
@@ -788,13 +788,13 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
 
   FoldFun = fun
-              ({var, Var, Init, AnnInit}, BodyAcc) ->
-                cerl:ann_c_let(AnnInit, [Var], Init, BodyAcc);
-              ({_, Pattern, Init, AnnInit}, BodyAcc) ->
+              ({var, Var, Init, AnnBinding}, BodyAcc) ->
+                cerl:ann_c_let(AnnBinding, [Var], Init, BodyAcc);
+              ({_, Pattern, Init, AnnBinding}, BodyAcc) ->
                 {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
                 Guard       = clj_core_pattern:fold_guards(PatGuards),
-                ClauseAst   = cerl:ann_c_clause(AnnInit, PatArgs, Guard, BodyAcc),
-                BadmatchAst = fail_clause(badmatch, AnnInit),
+                ClauseAst   = cerl:ann_c_clause(AnnBinding, PatArgs, Guard, BodyAcc),
+                BadmatchAst = fail_clause(badmatch, AnnBinding),
                 cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
             end,
 
@@ -802,15 +802,17 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
           'let' ->
             lists:foldl(FoldFun, Body, Bindings);
           loop ->
-            Vars       = [V || {_, V, _, _} <- lists:reverse(Bindings)],
+            Patterns   = [P || {_, P, _, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
 
-            FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, length(Vars)),
-            FunAst     = cerl:ann_c_fun(Ann, Vars, Body),
+            FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, length(Patterns)),
+            ClauseAst  = cerl:ann_c_clause(Ann, Patterns, Body),
+            {Vars, CaseAst} = case_from_clauses(Ann, [ClauseAst]),
+            FunAst     = cerl:ann_c_fun(Ann, Vars, CaseAst),
             Defs       = [{FNameAst, FunAst}],
-            ApplyAst   = cerl:ann_c_apply([local | Ann], FNameAst, Vars),
+            ApplyAst   = cerl:ann_c_apply([local | Ann], FNameAst, Patterns),
             LetRecAst  = cerl:ann_c_letrec(Ann, Defs, ApplyAst),
 
             lists:foldl(FoldFun, LetRecAst, Bindings)
@@ -1273,16 +1275,16 @@ function_signature({FName, _}) ->
 
 %% ----- Methods -------
 
--spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
+-spec method_to_function_clause(clj_analyzer:expr(), state()) -> state().
 method_to_function_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, function).
 
--spec method_to_case_clause(clj_analyzer:expr(), state()) -> ast().
+-spec method_to_case_clause(clj_analyzer:expr(), state()) -> state().
 method_to_case_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, 'case').
 
 -spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
-  ast().
+  state().
 method_to_clause(MethodExpr, State0, ClauseFor) ->
   #{ op     := fn_method
    , params := ParamsExprs
@@ -1578,4 +1580,4 @@ new_c_var(Ann) ->
       end,
   erlang:put(local_var_counter, N + 1),
   Name = list_to_atom("clj " ++ integer_to_list(N)),
-  cerl:ann_c_var([generated | Ann], Name).
+  cerl:ann_c_var([compiler_generated | Ann], Name).
