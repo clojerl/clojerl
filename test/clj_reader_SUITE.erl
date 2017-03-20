@@ -1039,17 +1039,20 @@ erl_literals(ReadFun) ->
 
   %% List
   ct:comment("Read an empty list"),
-  [] = ReadFun(<<"#erl ()">>),
+  ErlListSym         = clj_core:symbol(<<"erl-list*">>),
+  [ErlListSymCheck] = clj_core:to_list(ReadFun(<<"#erl()">>)),
+  true = clj_core:equiv(ErlListSym, ErlListSymCheck),
 
   ct:comment("Read a list with a single element"),
-  [42] = ReadFun(<<"#erl (42)">>),
+  [ErlListSymCheck, 42] = clj_core:to_list(ReadFun(<<"#erl (42)">>)),
 
   ct:comment("Read a tuple with many elements"),
-  [ 42
+  [ ErlListSymCheck
+  , 42
   , HelloKeywordCheckList
   , 2.5
   , WorldSymbolCheckList
-  ] = ReadFun(<<"#erl (42, :hello, 2.5, world)">>),
+  ] = clj_core:to_list(ReadFun(<<"#erl (42, :hello, 2.5, world)">>)),
   true = clj_core:equiv(HelloKeyword, HelloKeywordCheckList),
   true = clj_core:equiv(WorldSymbol, WorldSymbolCheckList),
 

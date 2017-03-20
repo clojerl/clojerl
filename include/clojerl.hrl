@@ -9,7 +9,7 @@
                , info = #{} :: map()
                }).
 
--define(IS_TYPE(X), is_tuple(X) andalso element(1, X) == ?TYPE).
+-define(IS_TYPE(X), (is_tuple(X) andalso element(1, X) == ?TYPE)).
 
 %% nil
 -define(NIL, undefined).

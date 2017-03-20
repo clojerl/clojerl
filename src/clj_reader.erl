@@ -79,20 +79,17 @@ read_fold_loop(Fun, State) ->
 
 -spec location_meta(any()) -> location() | ?NIL.
 location_meta(X) ->
-  case clj_core:'meta?'(X) of
-    true ->
-      case clj_core:meta(X) of
-        ?NIL -> ?NIL;
-        Meta ->
-          Meta1 = add_location_field(Meta, line, #{}),
-          Meta2 = add_location_field(Meta, column, Meta1),
-          Meta3 = add_location_field(Meta, file, Meta2),
-          case Meta3 =:= #{} of
-            true  -> ?NIL;
-            false -> Meta3
-          end
-      end;
-    false -> ?NIL
+  case clj_core:'meta?'(X) andalso clj_core:meta(X) of
+    false -> ?NIL;
+    ?NIL  -> ?NIL;
+    Meta  ->
+      Meta1 = add_location_field(Meta, line, #{}),
+      Meta2 = add_location_field(Meta, column, Meta1),
+      Meta3 = add_location_field(Meta, file, Meta2),
+      case Meta3 =:= #{} of
+        true  -> ?NIL;
+        false -> Meta3
+      end
   end.
 
 -spec add_location_field(atom(), any(), map()) -> map().
@@ -298,7 +295,8 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
       %% Octal unicode
       {CodePoint, State1} = unicode_char(State, 8, 3, false),
       clj_utils:error_when( CodePoint > 8#377
-                          , <<"Octal escape sequence must be in range [0, 377]">>
+                          , <<"Octal escape sequence must be in "
+                              "range [0, 377]">>
                           , location(State1)
                           ),
       {unicode:characters_to_binary([CodePoint], utf8), State1};
@@ -553,27 +551,24 @@ register_gensym(Symbol) ->
 
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
-  case binary:match(clj_core:str(Symbol), <<"\.">>) of
-    nomatch ->
-      case clj_namespace:find_var(Symbol) of
+  HasDot = binary:match(clj_core:str(Symbol), <<"\.">>) =/= nomatch,
+  case HasDot orelse clj_namespace:find_var(Symbol) of
+    true -> Symbol;
+    ?NIL ->
+      case clj_core:namespace(Symbol) of
         ?NIL ->
-          case clj_core:namespace(Symbol) of
-            ?NIL ->
-              CurrentNs = clj_namespace:current(),
-              NameSym   = clj_namespace:name(CurrentNs),
-              Namespace = clj_core:name(NameSym),
-              Name      = clj_core:name(Symbol),
-              clj_core:symbol(Namespace, Name);
-            _ ->
-              Symbol
-          end;
-        Var ->
-          Namespace = clj_core:namespace(Var),
-          Name      = clj_core:name(Var),
-          clj_core:symbol(Namespace, Name)
+          CurrentNs = clj_namespace:current(),
+          NameSym   = clj_namespace:name(CurrentNs),
+          Namespace = clj_core:name(NameSym),
+          Name      = clj_core:name(Symbol),
+          clj_core:symbol(Namespace, Name);
+        _ ->
+          Symbol
       end;
-    _ ->
-      Symbol
+    Var ->
+      Namespace = clj_core:namespace(Var),
+      Name      = clj_core:name(Var),
+      clj_core:symbol(Namespace, Name)
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->
@@ -1166,19 +1161,17 @@ read_tagged(State) ->
                       , location(State)
                       ),
 
+  SupressRead = erlang:get(supress_read),
   {Form, State2} = read_pop_one(State1),
   case 'clojerl.Symbol':str(Symbol) of
     <<"erl">> -> erlang_literal(Form, State2);
     <<"bin">> -> erlang_binary(Form, State2);
+    _ when SupressRead =:= true ->
+      push_form(tagged_literal(Symbol, Form), State2);
     _ ->
-      case erlang:get(supress_read) of
-        true ->
-          push_form(tagged_literal(Symbol, Form), State2);
-        _ ->
-          case 'clojerl.String':contains(clj_core:name(Symbol), <<".">>) of
-            true  -> read_record(Symbol, Form, State2);
-            false -> read_tagged(Symbol, Form, location(State), State2)
-          end
+      case 'clojerl.String':contains(clj_core:name(Symbol), <<".">>) of
+        true  -> read_record(Symbol, Form, State2);
+        false -> read_tagged(Symbol, Form, location(State), State2)
       end
   end.
 
@@ -1191,7 +1184,10 @@ erlang_literal(Form, State) ->
 
   Value    =
     if
-      IsList   -> clj_core:to_list(Form);
+      IsList   ->
+        ErlListSym = clj_core:symbol(<<"erl-list*">>),
+        List       = clj_core:to_list(Form),
+        clj_core:list([ErlListSym | List]);
       IsMap    -> 'clojerl.Map':to_erl_map(Form);
       IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
       IsString -> clj_core:list( [ clj_core:symbol(<<"quote">>)

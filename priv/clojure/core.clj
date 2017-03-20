@@ -4766,8 +4766,8 @@
   [lib]
   (str "/"
        (-> (name lib)
-           (binary/replace.e "." "/" '#erl (:global))
-           (binary/replace.e "-" "_" '#erl (:global)))))
+           (binary/replace.e "." "/" #erl(:global))
+           (binary/replace.e "-" "_" #erl(:global)))))
 
 (defn- index-of [s x]
   (let [matches (binary/matches.e s x)]

@@ -1,0 +1,86 @@
+(ns examples.pattern)
+
+;; fn*
+
+(def f (fn* ([x x] x) ([x y] y)))
+
+(def g (fn* ([#erl{:x x} x] x)
+            ([_ _] :whatever)))
+
+(let* [:foo (g #erl{:x :foo} :foo)
+       :whatever (g #erl{:x :foo} :bar)
+       :whatever (g :foo :bar)
+
+       #erl{:bar bar :baz bar} #erl{:bar 1 :baz 1 :foo 2}
+
+       3 (case* #erl[1 2]
+           #erl[one two] (erlang/+.e one two)
+           2 :two)])
+
+;; let* with binary patterns
+
+(let* [#bin[[h :type :utf8] [ello :type :binary]] "hello"
+       104    h
+       "ello" ello])
+
+;; let*
+
+(let* [#erl(a b)     #erl(1 2)
+       #erl{1 2}     #erl{a b}
+       tail          #erl(3 4)
+       #erl(1 2 3 4) #erl(1 2 & tail)
+       #erl[:badmatch, _] (try
+                            (let* [#erl(1 2 3) #erl(1 2 & tail)]
+                              :ok)
+                            (catch :error e
+                              e))])
+;; catch
+
+(try
+  (throw #erl[:invalid :hello])
+  (catch :throw #erl[x reason]
+    (let* [:invalid x :hello reason])))
+
+;; receive*
+
+(def spawn
+  (fn* [f & args]
+       (erlang/spawn.e :clj_core :apply (clj_core/to_list.e [f args]))))
+
+(def f
+  (fn* []
+    (receive*
+     #erl[:ok msg pid]
+     (erlang/send.e pid msg)
+     _
+     :ok)
+    (f)))
+
+(def receive-1 (fn* [] (receive* x x)))
+
+(let* [pid  (spawn f)
+       self (erlang/self.e)
+       _    (erlang/send.e pid #erl[:ok :foo self])
+       :foo (receive-1)
+       _    (erlang/send.e pid #erl[:ok :bar self])
+       :ok  (try
+              (let* [:foo (receive-1)]
+                :error)
+              (catch :error #erl[:badmatch _]
+                :ok))])
+
+;; loop*
+
+(let* [x (loop* [#erl(x & xs) #erl(1 1 1 1 1)
+                 sum 0]
+           (if (erlang/=:=.e xs #erl())
+             (erlang/+.e sum x)
+             (recur xs (erlang/+.e sum x))))
+       5 x])
+
+(let* [x (loop* [#erl(x & xs) #erl(1 40)
+                 sum x]
+           (if (erlang/=:=.e xs #erl())
+             (erlang/+.e sum x)
+             (recur xs (erlang/+.e sum x))))
+       42 x])

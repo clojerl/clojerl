@@ -104,7 +104,7 @@ Design notes for clojure.string:
   [s match replacement]
   (let [s (when s (str s))
         replace erlang.util.Regex/replace.4
-        opts '#erl (:global)]
+        opts #erl(:global)]
     (cond
       (string? match) (replace match s (str replacement) opts)
       (regex? match) (if (or (string? replacement)

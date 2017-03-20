@@ -8,6 +8,7 @@
         , location/1
         , location/2
         , maybe_update_location/2
+
         , push_expr/2
         , pop_expr/1
         , last_exprs/2
@@ -18,10 +19,13 @@
         , get_local/2
         , put_local/3
         , put_locals/2
+
         , get/2
         , get/3
+        , push/2
+        , update/3
         , put/3
-        , remove/2
+        , pop/1
         ]).
 
 -type context() :: expr | return | statement.
@@ -40,6 +44,7 @@ default() ->
    , location   => ?NIL
    , exprs      => []
    , locals     => clj_scope:new()
+   , mapping    => clj_scope:new()
    }.
 
 -spec context(env()) -> context().
@@ -109,13 +114,22 @@ get(Name, Env) ->
   get(Name, ?NIL, Env).
 
 -spec get(atom(), any(), env()) -> any().
-get(Name, Default, Env) ->
-  maps:get(Name, Env, Default).
+get(Name, Default, #{mapping := Mapping}) ->
+  clj_scope:get(Name, Default, Mapping).
 
--spec put(atom(), any(), env()) -> any().
-put(Name, Value, Env) ->
-  maps:put(Name, Value, Env).
+-spec push(map(), env()) -> env().
+push(Mapping, Env = #{mapping := Parent}) ->
+  Child = clj_scope:new(Parent),
+  Env#{mapping := clj_scope:put(Mapping, Child)}.
 
--spec remove(atom(), env()) -> ok.
-remove(Name, Env) ->
-  maps:remove(Name, Env).
+-spec update(any(), function, env()) -> env().
+update(Name, Value, Env = #{mapping := Mapping}) ->
+  Env#{mapping := clj_scope:update(Name, Value, Mapping)}.
+
+-spec put(any(), function, env()) -> env().
+put(Name, Value, Env = #{mapping := Mapping}) ->
+  Env#{mapping := clj_scope:put(Name, Value, Mapping)}.
+
+-spec pop(env()) -> env().
+pop(Env = #{mapping := Parent}) ->
+  Env#{mapping := clj_scope:parent(Parent)}.

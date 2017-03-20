@@ -268,9 +268,9 @@ code_from_binary(Name) when is_atom(Name) ->
     {Name, Binary, _} ->
       core_from_binary(Binary);
     _ ->
-      clj_utils:error([ <<"Could not load object code for namespace: ">>
-                      , atom_to_binary(Name, utf8)
-                      ])
+      error([ <<"Could not load object code for namespace: ">>
+            , atom_to_binary(Name, utf8)
+            ])
   end.
 
 -spec core_from_binary(binary()) ->

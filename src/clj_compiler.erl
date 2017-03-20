@@ -40,8 +40,6 @@ default_options() ->
    , erl_flags   => [ verbose
                     %% , debug_info
                     %% Don't use these except for improving generated code
-                    %% , report_errors
-                    %% , report_warnings
                     , nowarn_unused_vars
                     , nowarn_shadow_vars
                     , nowarn_unused_record
@@ -61,8 +59,8 @@ compile_files(Files, Opts) when is_list(Files) ->
 -spec compile_files([file:filename_all()], options(), clj_env:env()) ->
   clj_env:env().
 compile_files(Files, Opts, Env) when is_list(Files) ->
-  Fun = fun(File, EnvAcc) -> compile_file(File, Opts, EnvAcc) end,
-  lists:foldl(Fun, Env, Files).
+  Fun = fun(File, #{env := EnvAcc}) -> compile_file(File, Opts, EnvAcc) end,
+  lists:foldl(Fun, #{env => Env}, Files).
 
 -spec compile_file(file:filename_all()) -> clj_env:env().
 compile_file(File) when is_binary(File) ->
@@ -112,8 +110,8 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->
-  Env = compile_file(Path),
-  clj_env:get(eval, Env).
+  #{eval := Value} = compile_file(Path),
+  Value.
 
 -spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
@@ -196,8 +194,10 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
-  Env      = clj_env:put(clj_flags, CljFlags, Env0),
-  Env1     = clj_env:put(compiler_opts, Opts, Env),
+  Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts},
+  Env1     = clj_env:push(Mapping, Env0),
+  State    = #{env => Env1},
+
   EmitEval = case Opts0 of
                #{time := true} ->
                  fun() ->
@@ -206,7 +206,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                                    , [ fun emit_eval_form/2
                                      , Src
                                      , RdrOpts
-                                     , Env1
+                                     , State
                                      ]
                                    )
                  end;
@@ -215,7 +215,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                      clj_reader:read_fold( fun emit_eval_form/2
                                          , Src
                                          , RdrOpts
-                                         , Env1
+                                         , State
                                          )
                  end
              end,
@@ -223,14 +223,10 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   CompileFun =
     fun() ->
         try
-          Env2 = EmitEval(),
-          {_, Env3} = clj_emitter:remove_state(Env2),
-
+          State1 = EmitEval(),
           %% Compile all modules
           lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
-
-          Env4 = clj_env:remove(clj_flags, Env3),
-          {shutdown, Env4}
+          {shutdown, State1}
         catch
           Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
@@ -249,16 +245,15 @@ do_eval(Form, Opts0, Env0) ->
   EvalFun =
     fun() ->
         try
-          Env  = clj_env:put(clj_flags, CljFlags, Env0),
+          Env  = clj_env:push(#{clj_flags => CljFlags}, Env0),
           %% Emit & eval form and keep the resulting value
           Env1 = clj_analyzer:analyze(Form, Env),
-          Env2 = clj_emitter:emit(Env1),
-          {Exprs, Env3} = clj_emitter:remove_state(Env2),
+          {Exprs, Env2} = clj_emitter:emit(Env1),
 
           { shutdown
           , { Exprs
             , clj_module:all_forms()
-            , clj_env:remove(clj_flags, Env3)
+            , clj_env:pop(Env2)
             }
           }
         catch
@@ -289,12 +284,12 @@ ensure_output_dir(_) ->
   ok.
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
-emit_eval_form(Form, Env) ->
-  Env1  = clj_analyzer:analyze(Form, Env),
-  Env2  = clj_emitter:emit(Env1),
-  {Exprs, Env3} = clj_emitter:remove_state(Env2),
-  Value = eval_expressions(Exprs),
-  clj_env:put(eval, Value, Env3).
+emit_eval_form(Form, #{env := Env}) ->
+  Env1          = clj_analyzer:analyze(Form, Env),
+  {Exprs, Env2} = clj_emitter:emit(Env1),
+  Value         = eval_expressions(Exprs),
+
+  #{env => Env2, eval => Value}.
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->
@@ -309,16 +304,22 @@ compile_forms_fun(Opts) ->
 
 -spec compile_forms(cerl:c_module(), options()) -> atom().
 compile_forms(Module, Opts) ->
-  %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   ok       = maybe_output_erl(Module, Opts),
-  ErlFlags = [from_core, clint, binary | maps:get(erl_flags, Opts, [])],
+  ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
+             | maps:get(erl_flags, Opts, [])
+             ],
 
-  {ok, _, BeamBinary} = compile:noenv_forms(Module, ErlFlags),
+  %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
+  case compile:noenv_forms(Module, ErlFlags) of
+    {ok, _, Beam, _Warnings} ->
+      Name     = cerl:atom_val(cerl:module_name(Module)),
+      BeamPath = maybe_output_beam(Name, add_core_code(Beam, Module), Opts),
+      {module, Name} = code:load_binary(Name, BeamPath, Beam),
+      Name;
+    {error, Errors, Warnings} ->
+      error({Errors, Warnings})
+  end.
 
-  Name     = cerl:atom_val(cerl:module_name(Module)),
-  BeamPath = maybe_output_beam(Name, add_core_code(BeamBinary, Module), Opts),
-  {module, Name} = code:load_binary(Name, BeamPath, BeamBinary),
-  Name.
 
 -spec add_core_code(binary(), cerl:cerl()) -> binary().
 add_core_code(BeamBinary, CoreModule) ->
@@ -347,14 +348,19 @@ eval_expressions(Expressions, ReplaceCalls) ->
                   end,
 
   {ModuleName, EvalModule} = eval_module(ReplacedExprs),
-  %% io:format("===== Eval ====~n~s~n", [core_pp:format(EvalModule)]),
-  {ok, _, Binary} = compile:noenv_forms(EvalModule, [clint, from_core]),
-  code:load_binary(ModuleName, "", Binary),
-  try
-    ModuleName:eval()
-  after
-    code:purge(ModuleName),
-    code:delete(ModuleName)
+  %% io:format("===== Eval Module ====~n~s~n", [core_pp:format(EvalModule)]),
+  Opts = [clint, from_core, return_errors, return_warnings],
+  case compile:noenv_forms(EvalModule, Opts) of
+    {ok, _, Beam, _Warnings} ->
+      code:load_binary(ModuleName, "", Beam),
+      try
+        ModuleName:eval()
+      after
+        code:purge(ModuleName),
+        code:delete(ModuleName)
+      end;
+    {error, Errors, Warnings} ->
+      error({Errors, Warnings})
   end.
 
 -spec eval_module([cerl:cerl()]) -> {module(), cerl:c_module()}.

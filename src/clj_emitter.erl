@@ -3,7 +3,6 @@
 -include("clojerl.hrl").
 
 -export([ emit/1
-        , remove_state/1
         , new_c_var/1
         ]).
 
@@ -14,24 +13,12 @@
                   , force_remote_invoke => boolean()
                   }.
 
--spec emit(clj_env:env()) -> clj_env:env().
+-spec emit(clj_env:env()) -> {[ast()], clj_env:env()}.
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
-  State       = clj_env:get(emitter, initial_state(), Env),
-  erlang:put(local_var_counter, 0),
-  clj_env:put(emitter, ast(Expr, State), Env).
-
--spec remove_state(clj_env:env()) ->
-  { [cerl:cerl()]
-  , clj_env:env()
-  }.
-remove_state(Env) ->
-  State = clj_env:get(emitter, initial_state(), Env),
-  Exprs = lists:reverse(maps:get(asts, State)),
-
-  { Exprs
-  , clj_env:remove(emitter, Env)
-  }.
+  State = ast(Expr, initial_state()),
+  Asts  = lists:reverse(maps:get(asts, State)),
+  {Asts, Env}.
 
 -spec initial_state() -> state().
 initial_state() ->
@@ -45,6 +32,9 @@ initial_state() ->
 %%------------------------------------------------------------------------------
 
 -spec ast(map(), state()) -> {[ast()], state()}.
+ast(#{op := constant, form := Form, env := Env}, State) when is_binary(Form) ->
+  Ast = binary_literal(ann_from(Env), Form),
+  push_ast(Ast, State);
 ast(#{op := constant, form := Form, env := Env}, State) ->
   Ast = cerl:ann_abstract(ann_from(Env), Form),
   push_ast(Ast, State);
@@ -63,11 +53,8 @@ ast(#{op := var} = Expr, State) ->
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
-  #{env := Env} = Expr,
-  NameBin = get_lexical_rename(Expr, State),
-  Ast     = cerl:ann_c_var(ann_from(Env), binary_to_atom(NameBin, utf8)),
-
-  push_ast(Ast, State);
+  #{pattern := PatternExpr} = Expr,
+  ast(PatternExpr, State);
 ast(#{op := local} = Expr, State) ->
   #{env := Env} = Expr,
   NameBin = get_lexical_rename(Expr, State),
@@ -640,6 +627,11 @@ ast(#{op := erl_map} = Expr, State) ->
    , env  := Env
    } = Expr,
 
+  MapPairFun = case maps:get(pattern, Expr, false) of
+                 true  -> fun cerl:c_map_pair_exact/2;
+                 false -> fun cerl:c_map_pair/2
+               end,
+
   {Keys, State1} = pop_ast( lists:foldl(fun ast/2, State, KeysExprs)
                           , length(KeysExprs)
                           ),
@@ -650,7 +642,7 @@ ast(#{op := erl_map} = Expr, State) ->
              PairUp([], [], Pairs) ->
                Pairs;
              PairUp([H1 | Tail1], [H2 | Tail2], Pairs) ->
-               PairUp(Tail1, Tail2, [cerl:c_map_pair(H1, H2) | Pairs])
+               PairUp(Tail1, Tail2, [MapPairFun(H1, H2) | Pairs])
            end,
 
   PairsAsts = PairUp(Keys, Vals, []),
@@ -680,6 +672,22 @@ ast(#{op := tuple} = Expr, State) ->
 
   Ast = cerl:ann_c_tuple(ann_from(Env), Items),
   push_ast(Ast, State1);
+ast(#{op := erl_list} = Expr, State) ->
+  #{ env   := Env
+   , items := ItemsExprs
+   , tail  := TailExpr
+   } = Expr,
+
+  {Items, State1} = pop_ast( lists:foldl(fun ast/2, State, ItemsExprs)
+                           , length(ItemsExprs)
+                           ),
+  {Tail, State2} = case TailExpr of
+                     undefined -> {none, State1};
+                     _ -> pop_ast(ast(TailExpr, State1))
+                   end,
+
+  Ast = cerl:ann_make_list(ann_from(Env), Items, Tail),
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% if
 %%------------------------------------------------------------------------------
@@ -729,9 +737,9 @@ ast(#{op := 'case'} = Expr, State) ->
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
   State2 = lists:foldl(fun clause/2, State1, ClausesExprs),
-  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs)),
+  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs), false),
 
-  {ClausesAsts, State4} =
+  {ClausesAsts1, State4} =
     case DefaultExpr of
       ?NIL -> {ClausesAsts0, State3};
       _ ->
@@ -743,10 +751,14 @@ ast(#{op := 'case'} = Expr, State) ->
                                          , [DefaultVarAst]
                                          , DefaultAst
                                          ),
-        {ClausesAsts0 ++ [DefaultClause], State3_1}
+        {[DefaultClause | ClausesAsts0], State3_1}
     end,
 
-  CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts),
+  Ann = ann_from(Env),
+  ClausesAsts2 = [fail_clause(case_clause, Ann) | ClausesAsts1],
+  ClausesAsts3 = lists:reverse(ClausesAsts2),
+
+  CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts3),
 
   push_ast(CaseAst, State4);
 %%------------------------------------------------------------------------------
@@ -760,48 +772,57 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 
   Ann = ann_from(Env),
 
-  State00 = add_lexical_renames_scope(State0),
-  State = lists:foldl(fun put_lexical_rename/2, State00, BindingsExprs),
+  State1 = add_lexical_renames_scope(State0),
+  State2 = lists:foldl(fun put_lexical_rename/2, State1, BindingsExprs),
 
   MatchAstFun =
-    fun (BindingExpr = #{init := InitExpr}, {Bindings, StateAcc}) ->
-        {Var,  StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
-        {Init, StateAcc2} = pop_ast(ast(InitExpr, StateAcc1)),
-        {[{Var, Init} | Bindings], StateAcc2}
+    fun (BindingExpr, {Bindings, StateAcc}) ->
+        #{init := InitExpr, env := BindingEnv} = BindingExpr,
+        AnnBinding           = ann_from(BindingEnv),
+        {Pattern, StateAcc1} = pop_ast(ast(BindingExpr, StateAcc)),
+        {Init, StateAcc2}    = pop_ast(ast(InitExpr, StateAcc1)),
+        Binding              = {cerl:type(Pattern), Pattern, Init, AnnBinding},
+        {[Binding | Bindings], StateAcc2}
     end,
 
-  {Bindings, State1} =
-    lists:foldl(MatchAstFun, {[], State}, BindingsExprs),
-  {Body, State2} = pop_ast(ast(BodyExpr, State1)),
-  FoldFun        = fun ({Var, Init}, BodyAcc) ->
-                       cerl:ann_c_let(Ann, [Var], Init, BodyAcc)
-                   end,
+  {Bindings, State3} = lists:foldl(MatchAstFun, {[], State2}, BindingsExprs),
+  {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
 
-  Ast = case {Op, Bindings} of
-          {'let', []} ->
-            Body;
-          {'let',  _} ->
-            [{Var, Init} | RestBindings] = Bindings,
-            LetInit = cerl:ann_c_let(Ann, [Var], Init, Body),
-            lists:foldl(FoldFun, LetInit, RestBindings);
-          {loop, _} ->
-            Vars       = [V || {V, _} <- lists:reverse(Bindings)],
+  FoldFun =
+    fun
+      ({var, Var, Init, AnnBinding}, BodyAcc) ->
+        cerl:ann_c_let(AnnBinding, [Var], Init, BodyAcc);
+      ({_, Pattern, Init, AnnBinding}, BodyAcc) ->
+        {PatArgs, PatGuards} = clj_emitter_pattern:pattern_list([Pattern]),
+        Guard       = clj_emitter_pattern:fold_guards(PatGuards),
+        ClauseAst   = cerl:ann_c_clause(AnnBinding, PatArgs, Guard, BodyAcc),
+        BadmatchAst = fail_clause(badmatch, AnnBinding),
+        cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
+    end,
+
+  Ast = case Op of
+          'let' ->
+            lists:foldl(FoldFun, Body, Bindings);
+          loop ->
+            Patterns   = [P || {_, P, _, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = binary_to_atom(clj_core:str(LoopId), utf8),
 
-            FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, length(Vars)),
-            FunAst     = cerl:ann_c_fun(Ann, Vars, Body),
+            FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, length(Patterns)),
+            ClauseAst  = cerl:ann_c_clause(Ann, Patterns, Body),
+            {Vars, CaseAst} = case_from_clauses(Ann, [ClauseAst]),
+            FunAst     = cerl:ann_c_fun(Ann, Vars, CaseAst),
             Defs       = [{FNameAst, FunAst}],
-            ApplyAst   = cerl:ann_c_apply([local | Ann], FNameAst, Vars),
+            ApplyAst   = cerl:ann_c_apply([local | Ann], FNameAst, Patterns),
             LetRecAst  = cerl:ann_c_letrec(Ann, Defs, ApplyAst),
 
             lists:foldl(FoldFun, LetRecAst, Bindings)
         end,
 
-  State3 = remove_lexical_renames_scope(State2),
+  State5 = remove_lexical_renames_scope(State4),
 
-  push_ast(Ast, State3);
+  push_ast(Ast, State5);
 %%------------------------------------------------------------------------------
 %% recur
 %%------------------------------------------------------------------------------
@@ -861,6 +882,7 @@ ast(#{op := 'try'} = Expr, State) ->
   {BodyAst, State1} = pop_ast(ast(BodyExpr, State)),
   {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
                              , length(CatchesExprs)
+                             , false
                              ),
 
   [_, Y, Z] = CatchVarsAsts = [ new_c_var(Ann)
@@ -872,7 +894,7 @@ ast(#{op := 'try'} = Expr, State) ->
   CatchAllClause    = cerl:ann_c_clause(Ann, CatchVarsAsts, RaiseAst),
   { ClausesVars
   , CaseAst
-  } = case_from_clauses(Ann, Catches ++ [CatchAllClause]),
+  } = case_from_clauses(Ann, lists:reverse([CatchAllClause | Catches])),
 
   {Finally, State2} = case FinallyExpr of
                         ?NIL -> {?NIL, State1};
@@ -918,7 +940,7 @@ ast(#{op := 'try'} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := 'catch'} = Expr, State) ->
   #{ class := ErrType
-   , local := Local
+   , local := PatternExpr
    , body  := BodyExpr
    , guard := GuardExpr
    , env   := Env
@@ -932,15 +954,15 @@ ast(#{op := 'catch'} = Expr, State) ->
                           ErrTypeBin = clj_core:name(ErrType),
                           cerl:ann_c_var(Ann, binary_to_atom(ErrTypeBin, utf8))
                       end,
-  {NameAst, State1} = pop_ast(ast(Local, State)),
-  VarsAsts          = [ ClassAst
-                      , NameAst
-                      , new_c_var(Ann)
-                      ],
-  {Guard, State2}   = pop_ast(ast(GuardExpr, State1)),
-  {Body, State3}    = pop_ast(ast(BodyExpr, State2)),
+  {PatternAst0, State1} = pop_ast(ast(PatternExpr, State)),
+  {Guard0, State2}      = pop_ast(ast(GuardExpr, State1)),
+  {Body, State3}        = pop_ast(ast(BodyExpr, State2)),
 
-  Ast = cerl:ann_c_clause(Ann, VarsAsts, Guard, Body),
+  {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
+  VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
+  Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
+
+  Ast    = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
 
   push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
@@ -1154,7 +1176,7 @@ creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 
 -spec get_basis_function([any()], [map()]) -> ast().
 get_basis_function(Ann, FieldsExprs) ->
-  FilterMapFun   = fun(#{name := NameSym}) ->
+  FilterMapFun   = fun(#{pattern := #{name := NameSym}}) ->
                        NameBin = clj_core:name(NameSym),
                        case lists:member(NameBin, hidden_fields()) of
                          true  -> false;
@@ -1218,6 +1240,15 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
 
 %% ----- Case and receive Clauses -------
 
+-spec fail_clause(atom(), [any()]) -> cerl:cerl().
+fail_clause(Reason, Ann) ->
+  VarAst      = new_c_var(Ann),
+  BadmatchAst = cerl:c_tuple([cerl:c_atom(Reason), VarAst]),
+  FailAst     = cerl:ann_c_primop(Ann, cerl:c_atom(match_fail), [BadmatchAst]),
+  cerl:ann_c_clause([compiler_generated | Ann], [VarAst], FailAst).
+
+-spec clause({clj_analyzer:expr(), clj_analyzer:expr()}, state()) ->
+  cerl:cerl().
 clause({PatternExpr, BodyExpr}, StateAcc) ->
   #{ env   := EnvPattern
    , guard := GuardExpr
@@ -1234,7 +1265,8 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
 
 %% ----- Functions -------
 
--spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) -> cerl:cerl().
+-spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) ->
+  cerl:cerl().
 function_form(Name, Ann, Args, Body) when is_atom(Name) ->
   EvalName = cerl:c_fname(Name, length(Args)),
   EvalFun  = cerl:ann_c_fun(Ann, Args, Body),
@@ -1246,16 +1278,16 @@ function_signature({FName, _}) ->
 
 %% ----- Methods -------
 
--spec method_to_function_clause(clj_analyzer:expr(), state()) -> ast().
+-spec method_to_function_clause(clj_analyzer:expr(), state()) -> state().
 method_to_function_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, function).
 
--spec method_to_case_clause(clj_analyzer:expr(), state()) -> ast().
+-spec method_to_case_clause(clj_analyzer:expr(), state()) -> state().
 method_to_case_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, 'case').
 
 -spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
-  ast().
+  state().
 method_to_clause(MethodExpr, State0, ClauseFor) ->
   #{ op     := fn_method
    , params := ParamsExprs
@@ -1274,23 +1306,31 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
                           , length(ParamsExprs)
                           ),
 
+  {PatternArgs, PatternGuards} = clj_emitter_pattern:pattern_list(Args),
+
   {Body, State2} = pop_ast(ast(BodyExpr, State1)),
 
   ParamCount = length(ParamsExprs),
   Args1 = case ClauseFor of
             function ->
-              Args;
+              PatternArgs;
             'case' when IsVariadic, ParamCount == 1 ->
-              Args;
+              PatternArgs;
             'case' when IsVariadic ->
-              [list_ast(lists:droplast(Args), lists:last(Args))];
+              [list_ast(lists:droplast(PatternArgs), lists:last(PatternArgs))];
             'case' ->
-              [list_ast(Args)]
+              [list_ast(PatternArgs)]
           end,
 
-  {Guard, State3} = pop_ast(ast(GuardExpr, State2)),
+  {Guard0, State3} = pop_ast(ast(GuardExpr, State2)),
 
-  Clause = cerl:ann_c_clause(ann_from(Env), Args1, Guard, Body),
+  Guard1 = clj_emitter_pattern:fold_guards(Guard0, PatternGuards),
+
+  Clause = cerl:ann_c_clause(ann_from(Env)
+                            , Args1
+                            , Guard1
+                            , Body
+                            ),
 
   State4 = remove_lexical_renames_scope(State3),
 
@@ -1403,6 +1443,17 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
 
   {lists:zip(FNamesAsts, FnsAsts), State2}.
 
+%% ----- Binary literal -------
+
+-spec binary_literal(any(), binary()) -> ast().
+binary_literal(Ann, Binary) ->
+  Size     = cerl:abstract(8),
+  Type     = cerl:abstract(integer),
+  Flags     = cerl:abstract([unsigned, big]),
+  Segments = [cerl:ann_c_bitstr(Ann, cerl:abstract(B), Size, Type, Flags)
+              || B <- binary_to_list(Binary)],
+  cerl:ann_c_binary(Ann, Segments).
+
 %% ----- Push & pop asts -------
 
 -spec push_ast(ast(), state()) -> state().
@@ -1414,9 +1465,15 @@ pop_ast(State = #{asts := [Ast | Asts]}) ->
   {Ast, State#{asts => Asts}}.
 
 -spec pop_ast(state(), non_neg_integer()) -> {[ast()], state()}.
-pop_ast(State = #{asts := Asts}, N) ->
+pop_ast(State, N) ->
+  pop_ast(State, N, true).
+
+-spec pop_ast(state(), non_neg_integer(), boolean()) -> {[ast()], state()}.
+pop_ast(State = #{asts := Asts}, N, Reverse) ->
   {ReturnAsts, RestAsts} = lists:split(N, Asts),
-  {lists:reverse(ReturnAsts), State#{asts => RestAsts}}.
+  { case Reverse of true -> lists:reverse(ReturnAsts); false -> ReturnAsts end
+  , State#{asts => RestAsts}
+  }.
 
 %% ----- Lexical renames -------
 
@@ -1430,18 +1487,19 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 
 %% @doc Finds and returns the name of the lexical rename.
 %%
-%% This function always returns something valid because the BindingExpr
+%% This function always returns something valid because the LocalExpr
 %% is always registered in the lexixal scope, the analyzer makes sure
 %% this happens.
 %% @end
 -spec get_lexical_rename(map(), state()) -> binary().
-get_lexical_rename(BindingExpr, State) ->
+get_lexical_rename(LocalExpr, State) ->
   #{lexical_renames := Renames} = State,
 
-  RenameSym = case shadow_depth(BindingExpr) of
-                0 -> maps:get(name, BindingExpr);
+  RenameSym = case shadow_depth(LocalExpr) of
+                0 ->
+                  maps:get(name, LocalExpr);
                 _ ->
-                  Code = hash_scope(BindingExpr),
+                  Code = hash_scope(LocalExpr),
                   clj_scope:get(Code, Renames)
               end,
 
@@ -1450,28 +1508,29 @@ get_lexical_rename(BindingExpr, State) ->
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(#{shadow := ?NIL}, State) ->
   State;
-put_lexical_rename(BindingExpr, State) ->
+put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
   #{lexical_renames := Renames} = State,
-  #{name := Name} = BindingExpr,
 
-  Code = hash_scope(BindingExpr),
+  Code = hash_scope(LocalExpr),
   NameBin = clj_core:name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
 
   NewRenames = clj_scope:put(Code, clj_core:gensym(ShadowName), Renames),
 
-  State#{lexical_renames => NewRenames}.
+  State#{lexical_renames => NewRenames};
+put_lexical_rename(_, State) ->
+  State.
 
 -spec hash_scope(map()) -> binary().
-hash_scope(BindingExpr) ->
-  Depth = shadow_depth(BindingExpr),
-  #{name := Name} = BindingExpr,
+hash_scope(LocalExpr) ->
+  Depth = shadow_depth(LocalExpr),
+  #{name := Name} = LocalExpr,
   NameBin = clj_core:name(Name),
   term_to_binary({NameBin, Depth}).
 
 -spec shadow_depth(map()) -> non_neg_integer().
-shadow_depth(BindingExpr = #{shadow := _}) ->
-  do_shadow_depth(BindingExpr, 0);
+shadow_depth(LocalExpr = #{shadow := _}) ->
+  do_shadow_depth(LocalExpr, 0);
 shadow_depth(_) ->
   0.
 
@@ -1530,4 +1589,4 @@ new_c_var(Ann) ->
       end,
   erlang:put(local_var_counter, N + 1),
   Name = list_to_atom("clj " ++ integer_to_list(N)),
-  cerl:ann_c_var([generated | Ann], Name).
+  cerl:ann_c_var([compiler_generated | Ann], Name).

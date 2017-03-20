@@ -246,15 +246,15 @@ fn(_Config) ->
    } = Fn1Method1,
 
   XSymbol = clj_core:symbol(<<"x">>),
-  #{ op   := binding
-   , name := XSymbolCheck
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck}
    } = Fn1Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck),
 
   ct:comment("named fn with one param and one method"),
   #{op      := fn,
     methods := [Fn2Method1],
-    local   := #{op := local, name := HelloSymbol}
+    local   := #{ op := local, name := HelloSymbol}
    } = analyze_one(<<"(fn* hello [x] x)">>),
 
   true = clj_core:equiv(HelloSymbol, clj_core:symbol(<<"hello">>)),
@@ -263,8 +263,8 @@ fn(_Config) ->
    , params := [Fn2Param1]
    } = Fn2Method1,
 
-  #{ op   := binding
-   , name := XSymbolCheck2
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck2}
    } = Fn2Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck2),
 
@@ -285,19 +285,19 @@ fn(_Config) ->
   %% locactions are different
   true = clj_core:equiv(Fn3Param1b, Fn3Param1b),
 
-  #{ op   := binding
-   , name := XSymbolCheck3
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck3}
    } = Fn3Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck3),
 
-  #{ op   := binding
-   , name := XSymbolCheck3b
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck3b}
    } = Fn3Param1b,
   true = clj_core:equiv(XSymbol, XSymbolCheck3b),
 
   YSymbol = clj_core:symbol(<<"y">>),
-  #{ op   := binding
-   , name := YSymbolCheck
+  #{ op      := binding
+   , pattern := #{name := YSymbolCheck}
    } = Fn3Param2,
   true = clj_core:equiv(YSymbol, YSymbolCheck),
 
@@ -314,23 +314,27 @@ fn(_Config) ->
    , params := [Fn4Param1b, Fn4Param2]
    } = Fn4Method2,
 
-  true = clj_core:equiv( maps:remove(env, Fn4Param1)
-                       , maps:remove(env, Fn4Param1b)
+  true = clj_core:equiv( maps:without([env, pattern], Fn4Param1)
+                       , maps:without([env, pattern], Fn4Param1b)
                        ),
 
-  #{ op   := binding
-   , name := XSymbolCheck4
+  true = clj_core:equiv( maps:remove(env, maps:get(pattern, Fn4Param1))
+                       , maps:remove(env, maps:get(pattern, Fn4Param1b))
+                       ),
+
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck4}
    } = Fn4Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck4),
 
-  #{ op   := binding
-   , name := XSymbolCheck4b
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck4b}
    } = Fn4Param1b,
   true = clj_core:equiv(XSymbol, XSymbolCheck4b),
 
   ZSymbol = clj_core:symbol(<<"z">>),
   #{ op          := binding
-   , name        := ZSymbolCheck
+   , pattern     := #{name := ZSymbolCheck}
    , 'variadic?' := true
    } = Fn4Param2,
   true = clj_core:equiv(ZSymbol, ZSymbolCheck),
@@ -345,14 +349,14 @@ fn(_Config) ->
    , guard  := #{op := constant, form := true}
    } = Fn5Method1,
 
-  #{ op   := binding
-   , name := XSymbolCheck5
+  #{ op      := binding
+   , pattern := #{name := XSymbolCheck5}
    } = Fn5Param1,
   true = clj_core:equiv(XSymbol, XSymbolCheck5),
 
   ZSymbol = clj_core:symbol(<<"z">>),
   #{ op          := binding
-   , name        := ZSymbolCheck2
+   , pattern     := #{name := ZSymbolCheck2}
    , 'variadic?' := true
    } = Fn5Param2,
   true = clj_core:equiv(ZSymbol, ZSymbolCheck2),
@@ -836,7 +840,9 @@ throw(_Config) ->
    } = analyze_one(<<"(try 1 (catch :error err err))">>),
 
   #{ op    := 'catch'
-   , local := #{op := binding, name := ErrName1_1}
+   , local := #{ op      := binding
+               , pattern := #{name := ErrName1_1}
+               }
    , body  := #{op := do}
    } = Catch1_1,
 
@@ -852,14 +858,18 @@ throw(_Config) ->
                   ),
 
   #{ op    := 'catch'
-   , local := #{op := binding, name := ErrName2_1}
+   , local := #{ op      := binding
+               , pattern := #{name := ErrName2_1}
+               }
    , class := error
    , body  := #{op := do}
    , guard := #{op := constant, form := true}
    } = Catch2_1,
 
   #{ op    := 'catch'
-   , local := #{op := binding, name := ErrName2_2}
+   , local := #{ op      := binding
+               , pattern := #{name := ErrName2_2}
+               }
    , class := throw
    , body  := #{op := do}
    , guard := #{op := constant, form := true}
@@ -875,7 +885,9 @@ throw(_Config) ->
    } = analyze_one(<<"(try 1 (catch :error e e) (finally 2))">>),
 
   #{ op    := 'catch'
-   , local := #{op := binding, name := ErrName3_1}
+   , local := #{ op      := binding
+               , pattern := #{name := ErrName3_1}
+               }
    , class := error
    , body  := #{op := do}
    } = Catch3_1,
@@ -894,7 +906,9 @@ throw(_Config) ->
    } = analyze_one(<<"(try 1 (catch :exit e e))">>),
 
   #{ op    := 'catch'
-   , local := #{op := binding, name := ErrName4_1}
+   , local := #{ op      := binding
+               , pattern := #{name := ErrName4_1}
+               }
    , class := exit
    , body  := #{op := do}
    } = Catch4_1,
@@ -908,7 +922,9 @@ throw(_Config) ->
    } = analyze_one(<<"(try 1 (catch _ e e))">>),
 
   #{ op    := 'catch'
-   , local := #{op := binding, name := ErrName5_1}
+   , local := #{ op      := binding
+               , pattern := #{name := ErrName5_1}
+               }
    , class := UnderscoreSym
    , body  := #{op := do}
    } = Catch5_1,
