@@ -787,16 +787,17 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   {Bindings, State3} = lists:foldl(MatchAstFun, {[], State2}, BindingsExprs),
   {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
 
-  FoldFun = fun
-              ({var, Var, Init, AnnBinding}, BodyAcc) ->
-                cerl:ann_c_let(AnnBinding, [Var], Init, BodyAcc);
-              ({_, Pattern, Init, AnnBinding}, BodyAcc) ->
-                {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
-                Guard       = clj_core_pattern:fold_guards(PatGuards),
-                ClauseAst   = cerl:ann_c_clause(AnnBinding, PatArgs, Guard, BodyAcc),
-                BadmatchAst = fail_clause(badmatch, AnnBinding),
-                cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
-            end,
+  FoldFun =
+    fun
+      ({var, Var, Init, AnnBinding}, BodyAcc) ->
+        cerl:ann_c_let(AnnBinding, [Var], Init, BodyAcc);
+      ({_, Pattern, Init, AnnBinding}, BodyAcc) ->
+        {PatArgs, PatGuards} = clj_core_pattern:pattern_list([Pattern]),
+        Guard       = clj_core_pattern:fold_guards(PatGuards),
+        ClauseAst   = cerl:ann_c_clause(AnnBinding, PatArgs, Guard, BodyAcc),
+        BadmatchAst = fail_clause(badmatch, AnnBinding),
+        cerl:ann_c_case(Ann, Init, [ClauseAst, BadmatchAst])
+    end,
 
   Ast = case Op of
           'let' ->
@@ -1446,7 +1447,7 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
 binary_literal(Ann, Binary) ->
   Size     = cerl:abstract(8),
   Type     = cerl:abstract(integer),
-  Flags     = cerl:abstract([unsigned,big]),
+  Flags     = cerl:abstract([unsigned, big]),
   Segments = [cerl:ann_c_bitstr(Ann, cerl:abstract(B), Size, Type, Flags)
               || B <- binary_to_list(Binary)],
   cerl:ann_c_binary(Ann, Segments).

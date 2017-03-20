@@ -970,7 +970,8 @@ parse_def(List, Env) ->
   Var0 = lookup_var(VarSymbol),
 
   clj_utils:error_when( Var0 =:= ?NIL
-                      , [ <<"Can't refer to qualified var that doesn't exist: ">>
+                      , [ <<"Can't refer to qualified var that "
+                            "doesn't exist: ">>
                         , VarSymbol
                         ]
                       , clj_env:location(Env)
@@ -990,7 +991,9 @@ parse_def(List, Env) ->
   VarMeta      = clj_core:merge([ clj_core:meta(Var0)
                                 , SymbolMeta
                                 , #{ ns   => [QuoteSym, VarNsSym]
-                                   , name => [QuoteSym, clj_core:symbol(NameBin)]
+                                   , name => [ QuoteSym
+                                             , clj_core:symbol(NameBin)
+                                             ]
                                    }
                                 ]),
   Var          = clj_core:with_meta(Var0, VarMeta),
@@ -1275,7 +1278,8 @@ analyze_deftype_method(Form, Env) ->
                       ),
 
   clj_utils:error_when( clj_core:count(Args) < 1
-                      , [ <<"Must supply at least one argument for 'this' in: ">>
+                      , [ <<"Must supply at least one argument "
+                            "for 'this' in: ">>
                         , MethodName
                         ]
                       , clj_env:location(Env)
@@ -2070,7 +2074,8 @@ parse_receive(List, Env) ->
   {Clauses, Afters} = lists:splitwith(IsNotAfter, ClausesAndAfter),
 
   clj_utils:error_when( length(Afters) > 1
-                      , <<"Only one after clause allowed in receive expression">>
+                      , <<"Only one after clause allowed in "
+                          "receive expression">>
                       , clj_env:location(Env)
                       ),
 
