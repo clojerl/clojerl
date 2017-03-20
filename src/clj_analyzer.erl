@@ -884,7 +884,6 @@ add_pattern_local(LocalExpr, Env) ->
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
   IsSymbol = clj_core:'symbol?'(Form),
-  First    = clj_core:'list?'(Form) andalso clj_core:str(clj_core:first(Form)),
   Mapping  = #{in_pattern => true},
   Env1     = clj_env:push(Mapping, Env),
   Env2     =
@@ -938,10 +937,18 @@ parse_pattern(Form, Env) ->
       is_atom(Form);
       is_binary(Form) ->
         analyze_const(Form, Env1);
-      First =:= <<"erl-binary*">> orelse First =:= <<"erl-list*">> ->
-        analyze_form(Form, Env1);
       true ->
-        clj_utils:error([<<"Invalid pattern: ">>, Form], clj_env:location(Env))
+        case
+          clj_core:'list?'(Form)
+          andalso clj_core:str(clj_core:first(Form))
+        of
+          X when X =:= <<"erl-binary*">> orelse X =:= <<"erl-list*">> ->
+            analyze_form(Form, Env1);
+          _ ->
+            clj_utils:error( [<<"Invalid pattern: ">>, Form]
+                           , clj_env:location(Env)
+                           )
+        end
     end,
   clj_env:pop(Env2).
 
