@@ -1,7 +1,5 @@
 *.beam
-ebin/
-deps/
-.erlang.mk*
+_build/
 logs/
 clojerl.d
 *.trace
@@ -11,3 +9,4 @@ callgrind.*
 c_src/*.mk
 *.plt
 *.out*
+rebar.lock
