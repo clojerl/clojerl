@@ -35,7 +35,7 @@ to_list(Str)  -> seq(Str).
 
 str(BitString) when is_bitstring(BitString) ->
   Elements    = do_str(bitstring_to_list(BitString), []),
-  ElementsStr = string:join(Elements, ","),
+  ElementsStr = string:join(Elements, " "),
   ElementsBin = iolist_to_binary(ElementsStr),
 
   <<"#bin[", ElementsBin/binary, "]">>.
