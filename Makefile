@@ -25,9 +25,6 @@ repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start 
 repl: clojure.core clojure.main
 	@rlwrap erl -pa ${CODE_PATH} ${SHELL_OPTS}
 
-shell-no-sync: SHELL_OPTS = -pa  -sname clojerl -setcookie clojerl -s clojerl +pc unicode
-shell-no-sync: shell;
-
 # ------------------------------------------------------------------------------
 # Clojure files compilation
 # ------------------------------------------------------------------------------
