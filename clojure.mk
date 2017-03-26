@@ -14,9 +14,9 @@ $(call clj_to_beam,$(1)): $(1)
 	@bin/compile $(1)
 endef
 
-.PHONY: clojure.core clojure.main clojure bootstrap-clj
+.PHONY: clojure.core clojure.main clojure bootstrap
 
-bootstrap-clj: all
+bootstrap: all
 	bin/compile ${CLJ_SRC}/clojure/core.clj
 
 clojure.core: $(call clj_to_beam,priv/clojure/core.clj)
@@ -26,6 +26,6 @@ clojure: all $(call clj_to_beam,${CLJ_FILES})
 
 $(foreach clj,${CLJ_FILES},$(eval $(call compile_clojure_template,${clj})))
 
-benchmark: bootstrap-clj
+benchmark: bootstrap
 	@bin/compile ${CLJ_SRC}/benchmark/benchmark_runner.clj | \
 	tee ${CLJ_SRC}/benchmark/result.txt
