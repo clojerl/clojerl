@@ -25,11 +25,11 @@
         ]).
 
 -export([count/1]).
+-export([hash/1]).
+-export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
--export([hash/1]).
--export(['_'/1]).
 -export([str/1]).
 
 -spec substring(binary(), integer(), integer()) -> binary().
