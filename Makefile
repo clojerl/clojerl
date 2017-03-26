@@ -10,7 +10,7 @@ all:
 	@rebar3 compile
 
 test:
-	@rebar3 do ct, cover
+	@rebar3 do ct, cover, cover_result
 
 shell:
 	@rebar3 as dev shell --sname clojerl-shell --setcookie clojerl
