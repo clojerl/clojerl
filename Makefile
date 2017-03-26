@@ -1,40 +1,54 @@
-PROJECT = clojerl
+.PHONY: test shell clojure.core clojure.main clojure bootstrap
 
-SHELL_DEPS = sync eep eper eflame
-TEST_DEPS = xref_runner meck
-COVER_SPEC = test/clojerl.spec
+all:
+	@rebar3 compile
 
-dep_sync        = git https://github.com/jfacorro/sync.git     jfacorro.clj_support
-dep_eep         = git https://github.com/virtan/eep            v1.1
-dep_eper        = git https://github.com/massemanet/eper       0.97.3
-dep_eflame      = git https://github.com/jfacorro/eflame       jfacorro.limit.tracing.time
-dep_xref_runner = git https://github.com/inaka/xref_runner.git 0.2.5
-dep_meck        = git https://github.com/eproxus/meck          0.8.4
+test:
+	@rebar3 do ct, cover, cover_result
 
-include erlang.mk
-include clojure.mk
+shell:
+	@rebar3 as dev shell --sname clojerl-shell --setcookie clojerl
 
-CT_OPTS = -cover ${COVER_SPEC} -erl_args -s ${PROJECT}
+CLJ_SRC ?= priv
+CLJ_TARGET ?= ebin
+CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
 
-COMPILE_FIRST = erlang/erlang.io.I* lang/protocols/*
-DIALYZER_OPTS += -I include
-SHELL_OPTS += -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} -s sync +pc unicode
+CODE_PATH=_build/default/lib/*/ebin ${CLJ_TARGET} ${CLJ_SRC}
+TEST_CODE_PATH=_build/default/lib/*/ebin ${CLJ_TARGET} ${CLJ_SRC}
 
-# Generate a list of all modules for the cover.spec
-generate-spec:
-	@bin/generate-spec test/clojerl.spec.in test/clojerl.spec
+tests-shell: SHELL_OPTS = -sname clojerl-test-shell -setcookie clojerl -s clojerl +pc unicode
+tests-shell:
+	@erl -pa ${TEST_CODE_PATH} ${SHELL_OPTS}
 
-coverage-results:
-	@erl -noshell -pa ebin -eval 'cover_report:report(), halt(0).' -env COVER_SPEC '${COVER_SPEC}'
-
-tests-shell: SHELL_OPTS = -name ${PROJECT}-test-shell@`hostname` -setcookie clojerl -s ${PROJECT} +pc unicode
-tests-shell: test-build
-	@erl -pa ebin -pa test -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}
-
-repl: SHELL_OPTS = -pa priv -name ${PROJECT}-repl@`hostname` -setcookie clojerl -s ${PROJECT}
+repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: clojure.core clojure.main
-	@rlwrap erl -pa ebin -pa deps/*/ebin -pa priv ${SHELL_OPTS}
+	@rlwrap erl -pa ${CODE_PATH} ${SHELL_OPTS}
 
-shell-no-sync: SHELL_OPTS = -pa priv -name ${PROJECT}@`hostname` -setcookie clojerl -s ${PROJECT} +pc unicode
-shell-no-sync: shell;
+# ------------------------------------------------------------------------------
+# Clojure files compilation
+# ------------------------------------------------------------------------------
+
+define clj_to_beam
+$(subst .clj,.beam,$(subst _,-,$(subst ${CLJ_SRC}.,${CLJ_TARGET}/,$(subst /,.,$(1)))))
+endef
+
+define compile_clojure_template
+$(call clj_to_beam,$(1)): $(1)
+	@echo "$(1)"
+	@bin/compile $(1)
+endef
+
+bootstrap: all
+	bin/compile ${CLJ_SRC}/clojure/core.clj
+
+clojure.core: $(call clj_to_beam,${CLJ_SRC}/clojure/core.clj)
+clojure.main: $(call clj_to_beam,${CLJ_SRC}/clojure/main.clj)
+
+clojure: all $(call clj_to_beam,${CLJ_FILES})
+
+$(foreach clj,${CLJ_FILES},$(eval $(call compile_clojure_template,${clj})))
+
+benchmark: bootstrap
+	@bin/compile ${CLJ_SRC}/benchmark/benchmark_runner.clj | \
+	tee ${CLJ_SRC}/benchmark/result.txt

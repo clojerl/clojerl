@@ -1,6 +1,6 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -smp enable -pa ebin -pa priv
+%%! -smp enable -pa _build/default/lib/clojerl/ebin -pa priv -pa ebin +pc unicode
 
 -spec main([string()]) -> ok.
 main(Paths) ->
@@ -11,4 +11,8 @@ main(Paths) ->
 -spec compile_file(string()) -> term().
 compile_file(Path) ->
   PathBin = list_to_binary(Path),
-  clj_compiler:compile_file(PathBin, #{verbose => true, time => true}).
+  Opts    = #{ verbose    => true
+             , time       => true
+             , output_dir => "ebin"
+             },
+  clj_compiler:compile_file(PathBin, Opts).
