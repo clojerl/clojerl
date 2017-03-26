@@ -33,6 +33,7 @@
         , unsupported_reader/1
         , erl_literals/1
         , erl_binary/1
+        , erl_alias/1
         , tagged/1
         ]).
 
@@ -1097,6 +1098,19 @@ erl_binary(ReadFun) ->
   ct:comment("Read a single integer"),
   SingleIntBinary = clj_core:list([ErlBinarySym, 64]),
   true = clj_core:equiv(ReadFun(<<"#bin[64]">>), SingleIntBinary),
+
+  {comments, ""}.
+
+erl_alias(Config) when is_list(Config) ->
+  erl_alias(fun read/1),
+  erl_alias(fun read_io/1);
+erl_alias(ReadFun) ->
+  ErlAliasSym = clj_core:symbol(<<"erl-alias*">>),
+  XSym        = clj_core:symbol(<<"x">>),
+  AliasList   = clj_core:list([ErlAliasSym, XSym, 1]),
+
+  ct:comment("Read the tagged literal alias"),
+  true = clj_core:equiv(ReadFun(<<"#as(x 1)">>), AliasList),
 
   {comments, ""}.
 

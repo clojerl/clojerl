@@ -93,6 +93,7 @@ special_forms() ->
    , <<"receive*">>     => fun parse_receive/2
    , <<"erl-binary*">>  => fun parse_erlang_binary/2
    , <<"erl-list*">>    => fun parse_erlang_list/2
+   , <<"erl-alias*">>   => fun parse_erlang_alias/2
    , <<"erl-on-load*">> => fun parse_on_load/2
 
    , <<"import*">>      => fun parse_import/2
@@ -942,7 +943,9 @@ parse_pattern(Form, Env) ->
           clj_core:'list?'(Form)
           andalso clj_core:str(clj_core:first(Form))
         of
-          X when X =:= <<"erl-binary*">> orelse X =:= <<"erl-list*">> ->
+          X when X =:= <<"erl-binary*">> orelse
+                 X =:= <<"erl-list*">> orelse
+                 X =:= <<"erl-alias*">> ->
             analyze_form(Form, Env1);
           _ ->
             clj_utils:error( [<<"Invalid pattern: ">>, Form]
@@ -2332,6 +2335,50 @@ parse_erlang_list(List, Env0) ->
               },
 
   clj_env:push_expr(ListExpr, Env2).
+
+%%------------------------------------------------------------------------------
+%% Erlang match
+%%------------------------------------------------------------------------------
+
+-spec parse_erlang_alias(any(), clj_env:env()) ->
+  clj_env:env().
+parse_erlang_alias(List, Env0) ->
+  [ _ %% erl-alias*
+  | Args
+  ] = clj_core:to_list(List),
+
+  clj_utils:error_when( not clj_env:get(in_pattern, false, Env0)
+                      , [<<"Alias not in pattern.">>]
+                      , clj_env:location(Env0)
+                      ),
+
+  clj_utils:error_when( length(Args) =/= 2
+                      , [ <<"Expected only 2 arguments for erl-match*, got:">>
+                        , length(Args)
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  [Variable, Pattern]  = Args,
+
+  clj_utils:error_when( not is_valid_bind_symbol(Variable)
+                      , [ <<"First argument should be a valid binding symbol:">>
+                        , Variable
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  {VariableExpr, Env1} = clj_env:pop_expr(parse_pattern(Variable, Env0)),
+  {PatternExpr,  Env2} = clj_env:pop_expr(parse_pattern(Pattern, Env1)),
+
+  MatchExpr   = #{ op       => erl_alias
+                 , env      => Env0
+                 , form     => List
+                 , variable => VariableExpr
+                 , pattern  => PatternExpr
+                 },
+
+  clj_env:push_expr(MatchExpr, Env2).
 
 %%------------------------------------------------------------------------------
 %% On load

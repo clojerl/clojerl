@@ -1166,6 +1166,7 @@ read_tagged(State) ->
   case 'clojerl.Symbol':str(Symbol) of
     <<"erl">> -> erlang_literal(Form, State2);
     <<"bin">> -> erlang_binary(Form, State2);
+    <<"as">>  -> erlang_alias(Form, State2);
     _ when SupressRead =:= true ->
       push_form(tagged_literal(Symbol, Form), State2);
     _ ->
@@ -1211,6 +1212,12 @@ erlang_binary(Form, State) ->
 
   ErlBinarySym = clj_core:symbol(<<"erl-binary*">>),
   List         = clj_core:list([ErlBinarySym | clj_core:to_list(Form)]),
+  push_form(List, State).
+
+-spec erlang_alias(any(), state()) -> state().
+erlang_alias(Form, State) ->
+  ErlAliasSym = clj_core:symbol(<<"erl-alias*">>),
+  List        = clj_core:list([ErlAliasSym | clj_core:to_list(Form)]),
   push_form(List, State).
 
 -spec read_record('clojerl.Symbol':type(), any(), state()) -> state().

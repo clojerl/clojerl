@@ -688,6 +688,19 @@ ast(#{op := erl_list} = Expr, State) ->
 
   Ast = cerl:ann_make_list(ann_from(Env), Items, Tail),
   push_ast(Ast, State2);
+ast(#{op := erl_alias} = Expr, State0) ->
+  #{ env      := Env
+   , variable := VariableExpr
+   , pattern  := PatternExpr
+   } = Expr,
+
+  Ann = ann_from(Env),
+
+  {VariableAst, State1} = pop_ast(ast(VariableExpr, State0)),
+  {PatternAst, State2}  = pop_ast(ast(PatternExpr, State1)),
+
+  Ast = cerl:ann_c_alias(Ann, VariableAst, PatternAst),
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% if
 %%------------------------------------------------------------------------------
