@@ -84,3 +84,14 @@
              (erlang/+.e sum x)
              (recur xs (erlang/+.e sum x))))
        42 x])
+
+;; alias
+
+(let* [(erl-alias* x 1) 1
+       1 x])
+
+(let* [#as(x 1) 1
+       1        x])
+
+(let* [#as(x #erl(a b)) #erl(1 2)
+       3                (erlang/+.e a b)])
