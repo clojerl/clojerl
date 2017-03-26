@@ -38,6 +38,8 @@
         , dot/1
         , 'receive'/1
         , erlang_binary/1
+        , erlang_list/1
+        , erlang_alias/1
         , on_load/1
         , macroexpand/1
         ]).
@@ -1333,6 +1335,53 @@ erlang_binary(_Config) ->
        end,
 
   ok = try analyze_one(<<"(erl-binary* {})">>), error
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+-spec erlang_list(config()) -> result().
+erlang_list(_Config) ->
+  ct:comment("Empty erl-list*"),
+  #{ op    := erl_list
+   , items := []
+   , tail  := undefined
+   } = analyze_one(<<"(erl-list*)">>),
+
+  ct:comment("Single literal element"),
+  #{ op    := erl_list
+   , items := [#{op := constant, form := 42}]
+   , tail  := undefined
+   } = analyze_one(<<"(erl-list* 42)">>),
+
+  ct:comment("Single literal element and tail"),
+  #{ op    := erl_list
+   , items := [#{op := constant, form := 42}]
+   , tail  := #{op := erl_list, items := [], tail := undefined}
+   } = analyze_one(<<"(erl-list* 42 & (erl-list*))">>),
+
+  ok = try
+         analyze_one(<<"(erl-list* :hello & (erl-list*) (erl-list*))">>),
+         error
+       catch _:_ -> ok
+       end,
+
+  {comments, ""}.
+
+-spec erlang_alias(config()) -> result().
+erlang_alias(_Config) ->
+  ct:comment("Simple erl-alias*"),
+  #{ op       := 'let'
+   , bindings := [#{op := binding, pattern := Pattern}]
+   } = analyze_one(<<"(let* [(erl-alias* x 1) 1])">>),
+
+  #{op := erl_alias} = Pattern,
+
+  ok = try analyze_one(<<"(let* [(erl-alias* :a 1) 1])">>), error
+       catch _:_ -> ok
+       end,
+
+  ok = try analyze_one(<<"(let* [(erl-alias* x) 1])">>), error
        catch _:_ -> ok
        end,
 

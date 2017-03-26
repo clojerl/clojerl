@@ -10,3 +10,4 @@ c_src/*.mk
 *.plt
 *.out*
 rebar.lock
+*.dump
