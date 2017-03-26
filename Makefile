@@ -9,12 +9,16 @@ test:
 shell:
 	@rebar3 as dev shell --sname clojerl-shell --setcookie clojerl
 
-CODE_PATH=_build/default/lib/*/ebin ebin priv
-TEST_CODE_PATH=_build/default/lib/*/ebin ebin priv
+CLJ_SRC ?= priv
+CLJ_TARGET ?= ebin
+CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
+
+CODE_PATH=_build/default/lib/*/ebin ${CLJ_TARGET} ${CLJ_SRC}
+TEST_CODE_PATH=_build/default/lib/*/ebin ${CLJ_TARGET} ${CLJ_SRC}
 
 tests-shell: SHELL_OPTS = -sname clojerl-test-shell -setcookie clojerl -s clojerl +pc unicode
 tests-shell:
-	@erl -pa ${TEST_CODE_PATH} -pa test/compiler -pa deps/*/ebin ${SHELL_OPTS}
+	@erl -pa ${TEST_CODE_PATH} ${SHELL_OPTS}
 
 repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
@@ -24,13 +28,12 @@ repl: clojure.core clojure.main
 shell-no-sync: SHELL_OPTS = -pa  -sname clojerl -setcookie clojerl -s clojerl +pc unicode
 shell-no-sync: shell;
 
+# ------------------------------------------------------------------------------
 # Clojure files compilation
-
-CLJ_SRC ?= priv
-CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
+# ------------------------------------------------------------------------------
 
 define clj_to_beam
-$(subst .clj,.beam,$(subst _,-,$(subst ${CLJ_SRC}.,ebin/,$(subst /,.,$(1)))))
+$(subst .clj,.beam,$(subst _,-,$(subst ${CLJ_SRC}.,${CLJ_TARGET}/,$(subst /,.,$(1)))))
 endef
 
 define compile_clojure_template
@@ -42,8 +45,8 @@ endef
 bootstrap: all
 	bin/compile ${CLJ_SRC}/clojure/core.clj
 
-clojure.core: $(call clj_to_beam,priv/clojure/core.clj)
-clojure.main: $(call clj_to_beam,priv/clojure/main.clj)
+clojure.core: $(call clj_to_beam,${CLJ_SRC}/clojure/core.clj)
+clojure.main: $(call clj_to_beam,${CLJ_SRC}/clojure/main.clj)
 
 clojure: all $(call clj_to_beam,${CLJ_FILES})
 
