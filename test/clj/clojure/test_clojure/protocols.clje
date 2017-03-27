@@ -21,9 +21,9 @@
 
 (defn delete-module [module]
   (doto module
-    code/purge.e
-    code/delete.e
-    (-> code/which.e file/delete.e)))
+    code/purge
+    code/delete
+    (-> code/which file/delete)))
 
 (defn find-protocol-impls
   [protocol]
@@ -31,7 +31,7 @@
         prefix (type->str protocol)
         f (fn [[module path]]
             (str/starts-with? (type->str module) prefix))]
-    (->> (code/all_loaded.e)
+    (->> (code/all_loaded)
          (filter f)
          (map first))))
 
@@ -58,7 +58,7 @@
 (defn method-names
   "return sorted list of method names on a module"
   [m]
-  (->> (erlang/get_module_info.e m :functions)
+  (->> (erlang/get_module_info m :functions)
        (map (comp str first))
        (map #(subs % 1))
        (filter (comp not #{"$_clj_on_load" "module_info" "module_info"}))
@@ -257,22 +257,22 @@
           r3 (RecordToTestStatics3. 1 2 3)
           rn (RecordToTestStatics3. 1 nil nil)]
       (testing "that a record created with the ctor equals one by the static factory method"
-        (is (= r1    (RecordToTestStatics1/create.e {:a 1})))
-        (is (= r2    (RecordToTestStatics2/create.e {:a 1 :b 2})))
-        (is (= r3    (RecordToTestStatics3/create.e {:a 1 :b 2 :c 3})))
-        (is (= rn    (RecordToTestStatics3/create.e {:a 1}))))
+        (is (= r1    (RecordToTestStatics1/create {:a 1})))
+        (is (= r2    (RecordToTestStatics2/create {:a 1 :b 2})))
+        (is (= r3    (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
+        (is (= rn    (RecordToTestStatics3/create {:a 1}))))
       (testing "that a literal record equals one by the static factory method"
-        (is (= #clojure.test-clojure.protocols.RecordToTestStatics1{:a 1} (RecordToTestStatics1/create.e {:a 1})))
-        (is (= #clojure.test-clojure.protocols.RecordToTestStatics2{:a 1 :b 2} (RecordToTestStatics2/create.e {:a 1 :b 2})))
-        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b 2 :c 3} (RecordToTestStatics3/create.e {:a 1 :b 2 :c 3})))
-        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1} (RecordToTestStatics3/create.e {:a 1})))
-        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b nil :c nil} (RecordToTestStatics3/create.e {:a 1}))))))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics1{:a 1} (RecordToTestStatics1/create {:a 1})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics2{:a 1 :b 2} (RecordToTestStatics2/create {:a 1 :b 2})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b 2 :c 3} (RecordToTestStatics3/create {:a 1 :b 2 :c 3})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1} (RecordToTestStatics3/create {:a 1})))
+        (is (= #clojure.test-clojure.protocols.RecordToTestStatics3{:a 1 :b nil :c nil} (RecordToTestStatics3/create {:a 1}))))))
   (testing "that records and types have a sane generated basis method"
-    (let [rb  (clojure.test-clojure.protocols.RecordToTestBasis/get_basis.e)
-          rbh (clojure.test-clojure.protocols.RecordToTestBasisHinted/get_basis.e)
-          rhg (clojure.test-clojure.protocols.RecordToTestHugeBasis/get_basis.e)
-          tb  (clojure.test-clojure.protocols.TypeToTestBasis/get_basis.e)
-          tbh (clojure.test-clojure.protocols.TypeToTestBasisHinted/get_basis.e)]
+    (let [rb  (clojure.test-clojure.protocols.RecordToTestBasis/get_basis)
+          rbh (clojure.test-clojure.protocols.RecordToTestBasisHinted/get_basis)
+          rhg (clojure.test-clojure.protocols.RecordToTestHugeBasis/get_basis)
+          tb  (clojure.test-clojure.protocols.TypeToTestBasis/get_basis)
+          tbh (clojure.test-clojure.protocols.TypeToTestBasisHinted/get_basis)]
       (is (= '[a b c] rb))
       (is (= '[a b c] rb))
       (is (= '[a b c d e f g h i j k l m n o p q r s t u v w x y z] rhg))
@@ -331,7 +331,7 @@
                (map->RecordToTestA (map->RecordToTestB {:a 1 :b 2 :c 3}))))
         (is (= (map->RecordToTestA {:a 1 :d 4})
                (map->RecordToTestA (map->RecordToTestDegenerateFactories {:a 1 :d 4}))))
-        (is (= r-n (map->RecordToTestFactories (maps/new.e))))
+        (is (= r-n (map->RecordToTestFactories (maps/new))))
         (is (= r-a (map->RecordToTestA (into {} r-b))))
         (is (= r-a (map->RecordToTestA r-b)))
         (is (not= r-a (map->RecordToTestB r-a)))
@@ -511,19 +511,19 @@
   (testing "that primitive hinting requiring no coercion works as expected"
     (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint{:a 42}))
     (is (= (RecordToTestLongHint. 42) #clojure.test-clojure.protocols.RecordToTestLongHint[42]))
-    (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create.e {:a 42})))
+    (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a 42})))
     (is (= (RecordToTestLongHint. 42) (map->RecordToTestLongHint {:a 42})))
     (is (= (RecordToTestLongHint. 42) (->RecordToTestLongHint 42)))
     (is (= (.-a (TypeToTestLongHint. 42)) (.-a (->TypeToTestLongHint (long 42))))))
   (testing "that primitive hinting requiring coercion works as expected"
-    (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create.e {:a (byte 42)})))
+    (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create {:a (byte 42)})))
     (is (= (RecordToTestByteHint. 42) (map->RecordToTestByteHint {:a (byte 42)})))
     (is (= (RecordToTestByteHint. 42) (->RecordToTestByteHint (byte 42))))
     (is (= (.-a (TypeToTestByteHint. 42)) (.-a (->TypeToTestByteHint (byte 42))))))
   (testing "that primitive hinting for non-numerics works as expected"
     (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint{:a true}))
     (is (= (RecordToTestBoolHint. true) #clojure.test-clojure.protocols.RecordToTestBoolHint[true]))
-    (is (= (RecordToTestBoolHint. true) (clojure.test-clojure.protocols.RecordToTestBoolHint/create.e {:a true})))
+    (is (= (RecordToTestBoolHint. true) (clojure.test-clojure.protocols.RecordToTestBoolHint/create {:a true})))
     (is (= (RecordToTestBoolHint. true) (map->RecordToTestBoolHint {:a true})))
     (is (= (RecordToTestBoolHint. true) (->RecordToTestBoolHint true))))
   (testing "covariant hints -- deferred"))

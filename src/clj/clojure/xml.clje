@@ -29,9 +29,9 @@
 
 (defn fq-name [prefix local-name]
   (keyword (str (if-not (empty? prefix)
-                  (str (erlang/list_to_binary.e prefix) ":")
+                  (str (erlang/list_to_binary prefix) ":")
                   "")
-                (erlang/list_to_binary.e local-name))))
+                (erlang/list_to_binary local-name))))
 
 (defn* event-handler
   ([#erl[:startElement uri local-name q-name atts] loc state]
@@ -40,7 +40,7 @@
                    ret
                    (recur (assoc ret
                                  (fq-name (second x) (nth x 2))
-                                 (erlang/list_to_binary.e (nth x 3)))
+                                 (erlang/list_to_binary (nth x 3)))
                           xs)))
          tag (fq-name (first q-name) (second q-name))
          e {:tag     tag
@@ -60,7 +60,7 @@
    (when-not (= *state* :chars)
      (set! *sb* (new erlang.io.StringWriter)))
    (let [^erlang.io.StringWriter sb *sb*]
-     (.write sb (erlang/list_to_binary.e ch))
+     (.write sb (erlang/list_to_binary ch))
      (set! *state* :chars))
    nil)
   ([_ loc state]))
@@ -68,11 +68,11 @@
 (defn startparse-sax [s event-handler]
   (let [options #erl(#erl[:event_fun event-handler])]
     (if (instance? erlang.io.File s)
-      (xmerl_sax_parser/file.e (-> ^erlang.io.File s
-                                   .path
-                                   erlang/binary_to_list.1)
-                               options)
-      (xmerl_sax_parser/stream.e s options))))
+      (xmerl_sax_parser/file (-> ^erlang.io.File s
+                                 .path
+                                 erlang/binary_to_list.1)
+                             options)
+      (xmerl_sax_parser/stream s options))))
 
 (defn parse
   "Parses and loads the source s, which can be a File or a String
@@ -87,7 +87,7 @@
               *current* {:tag nil :attrs nil :content nil}
               *state* :between
               *sb* nil]
-      (startparse s clojure.xml/event-handler.3)
+      (startparse s #erl clojure.xml/event-handler.3)
       ((:content *current*) 0))))
 
 (defn emit-element [e]

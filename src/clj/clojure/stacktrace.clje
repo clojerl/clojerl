@@ -26,29 +26,29 @@
 (defn get-stacktrace
   ([] (get-stacktrace false))
   ([from-process]
-   (let [st (erlang/get_stacktrace.e)]
+   (let [st (erlang/get_stacktrace)]
      (if-not (or (empty? st) from-process)
        st
-       (-> (erlang/self.e)
-           (erlang/process_info.e :current_stacktrace)
+       (-> (erlang/self)
+           (erlang/process_info :current_stacktrace)
            second)))))
 
 (defn info [x k default]
   (let [info (nth x 3)]
-    (proplists/get_value.e k info default)))
+    (proplists/get_value k info default)))
 
 (defn filename [x]
-  (erlang/list_to_binary.e (info x :file
-                                 (erlang/binary_to_list.e "NO_SOURCE_FILE"))))
+  (erlang/list_to_binary (info x :file
+                                 (erlang/binary_to_list "NO_SOURCE_FILE"))))
 
 (defn line-num [x]
   (info x :line "?"))
 
 (defn module [x]
-  (erlang/atom_to_binary.e (first x) :utf8))
+  (erlang/atom_to_binary (first x) :utf8))
 
 (defn function [x]
-  (erlang/atom_to_binary.e (second x) :utf8))
+  (erlang/atom_to_binary (second x) :utf8))
 
 (defn print-trace-element
   "Prints a Clojure-oriented view of one element in a stack trace."

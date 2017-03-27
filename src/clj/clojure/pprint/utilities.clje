@@ -111,7 +111,7 @@ beginning of aseq"
   [c]
   (cond
     (number? c) c
-    (and (string? c) (== (.length ^clojerl.String c) 1)) (first (unicode/characters_to_list.e c :utf8))
+    (and (string? c) (== (.length ^clojerl.String c) 1)) (first (unicode/characters_to_list c :utf8))
     :else (throw "Argument to char-code must be a single-char string or a number")))
 
 (defn- print-char [c]

@@ -20,7 +20,7 @@
 (defmacro use-method
   "Installs a function as a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val func]
-  `(clojerl.MultiFn/add_method.e (var ~multifn) ~dispatch-val (var ~func)))
+  `(clojerl.MultiFn/add_method (var ~multifn) ~dispatch-val (var ~func)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementations of specific dispatch table entries
@@ -127,7 +127,7 @@
 
 (defn- pprint-ideref [o]
   (let [prefix (str "#<" (map-ref-type (str (type o)))
-                    "@" (erlang/phash2.e o) ": ")]
+                    "@" (erlang/phash2 o) ": ")]
     (pprint-logical-block  :prefix prefix :suffix ">"
                            (pprint-indent :block (-> (count prefix) (- 2) -))
                            (pprint-newline :linear)

@@ -8,6 +8,6 @@
        z (case* y
                 x 2
                 #erl [:default :value])]
-  (erlang/display.e x)
-  (erlang/display.e y)
-  (erlang/display.e z))
+  (erlang/display x)
+  (erlang/display y)
+  (erlang/display z))

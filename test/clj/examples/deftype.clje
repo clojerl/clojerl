@@ -10,7 +10,7 @@
 
 (let [x (new SomeType 1 2)]
   (prn x)
-  (prn (clojerl.IHash/hash.e x)))
+  (prn (.hash x)))
 
 (defrecord SomeRecord [x y]
   clojerl.IHash
@@ -18,7 +18,7 @@
 
 (let [x (new SomeRecord 1 2)]
   (prn x)
-  (prn (clojerl.IHash/hash.e x))
+  (prn (.hash x))
   (prn (:x x))
   (prn (assoc x :x 42 :z *out*))
   (prn (merge x {:y 1984 :z :keyword}))
@@ -49,7 +49,7 @@ other/ExampleProtocol
 
 (prn #examples.deftype.SomeRecord{:x 1 :y 2})
 (prn #examples.deftype.SomeRecord[1 2])
-(prn (SomeRecord/create.e {:x 1 :y 2}))
+(prn (SomeRecord/create {:x 1 :y 2}))
 
 (deftype Foo []
   clojerl.IStringable

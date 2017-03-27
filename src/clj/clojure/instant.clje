@@ -33,14 +33,14 @@
 ;;; parser implementation
 
 (defn- parse-int [^clojerl.String s]
-  (erlang/binary_to_integer.e s))
+  (erlang/binary_to_integer s))
 
 (defn- zero-fill-right [^clojerl.String s width]
   (cond (= width (count s)) s
         (< width (count s)) (subs s 0 width)
-        :else (loop [b (new erlang.io.StringWriter s)]
+        :else (loop [^erlang.io.IWriter b (new erlang.io.StringWriter s)]
                 (if (< (count b) width)
-                  (recur (erlang.io.IWriter/write.e b \0))
+                  (recur (.write b \0))
                   (str b)))))
 
 (def timestamp-regex #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?")
@@ -190,8 +190,8 @@ milliseconds since the epoch, UTC."
                        (* offset-sign offset-minutes 60))
         datetime #erl [#erl [years months days]
                        #erl [hours minutes seconds]]
-        greg-seconds (calendar/datetime_to_gregorian_seconds.e datetime)]
-    (calendar/gregorian_seconds_to_datetime.e (- greg-seconds offset-secs))))
+        greg-seconds (calendar/datetime_to_gregorian_seconds datetime)]
+    (calendar/gregorian_seconds_to_datetime (- greg-seconds offset-secs))))
 
 (defn read-instant-date
   "To read an instant as a java.util.Date, bind *data-readers* to a map with

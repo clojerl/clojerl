@@ -22,7 +22,7 @@
 (clojure.core/assert (clojure.core/= (clojure.core/str one) "1"))
 
 (def fixed-arity
-  (fn* [x y] (clj_rt/str.e [x y])))
+  (fn* [x y] (clj_rt/str [x y])))
 
 ;; Call a fn with single fixed arity
 
@@ -30,9 +30,9 @@
 
 (def multiple-fixed-arities
   (fn*
-   ([x] (clj_rt/str.e [:multiple-fixed-arities 1 x]))
-   ([x y] (clj_rt/str.e [:multiple-fixed-arities 2 x y]))
-   ([x y z] (clj_rt/str.e [:multiple-fixed-arities 3 x y z]))))
+   ([x] (clj_rt/str [:multiple-fixed-arities 1 x]))
+   ([x y] (clj_rt/str [:multiple-fixed-arities 2 x y]))
+   ([x y z] (clj_rt/str [:multiple-fixed-arities 3 x y z]))))
 
 ;; Call a fn with multiple fixed arities
 
@@ -41,10 +41,10 @@
 (clojure.core/prn (multiple-fixed-arities 1 2 3))
 
 (def variadic-arity
-  (fn* [& xs] (clj_rt/str.e [:variadic-arity xs])))
+  (fn* [& xs] (clj_rt/str [:variadic-arity xs])))
 
 (def variadic-arity-2
-  (fn* [x & xs] (clj_rt/str.e [:variadic-arity-2 x xs])))
+  (fn* [x & xs] (clj_rt/str [:variadic-arity-2 x xs])))
 
 ;; Call a fn with a single variadic argument
 
@@ -58,10 +58,10 @@
 
 (def multiple-variadic
   (fn*
-   ([x] (clj_rt/str.e [:multiple-variadic-1 x]))
-   ([x y] (clj_rt/str.e [:multiple-variadic-2 x y]))
-   ([x y z] (clj_rt/str.e [:multiple-variadic-3 x y z]))
-   ([x y z & w] (clj_rt/str.e [:multiple-variadic-n x y z w]))))
+   ([x] (clj_rt/str [:multiple-variadic-1 x]))
+   ([x y] (clj_rt/str [:multiple-variadic-2 x y]))
+   ([x y z] (clj_rt/str [:multiple-variadic-3 x y z]))
+   ([x y z & w] (clj_rt/str [:multiple-variadic-n x y z w]))))
 
 ;; Call a  variadic fn that also has fixed arities
 
@@ -132,10 +132,10 @@
 (clojure.core/prn
  ((fn* count-10
         ([x]
-         (if (erlang/>.e x 0)
+         (if (erlang/> x 0)
            (do
              (clojure.core/prn [:anon-recur x])
-             (count-10 (erlang/-.e x 1)))
+             (count-10 (erlang/- x 1)))
            (clojure.core/prn [:anon-recur :done]))))
   10
   ))
@@ -145,10 +145,10 @@
 (clojure.core/prn
  ((fn* count-10-variadic
         ([x & xs]
-         (if (erlang/>.e x 0)
+         (if (erlang/> x 0)
            (do
              (clojure.core/prn [:variadic-anon-recur x xs])
-             (count-10-variadic (erlang/-.e x 1) x xs))
+             (count-10-variadic (erlang/- x 1) x xs))
            (clojure.core/prn [:variadic-anon-recur :done]))))
   10
   ))
@@ -208,20 +208,20 @@
 
 (def recursive
   (fn* [x]
-       (if (erlang/>.e x 0)
+       (if (erlang/> x 0)
          (do
            (clojure.core/prn [:recursive-fn x])
-           (recursive (erlang/-.e x 1)))
+           (recursive (erlang/- x 1)))
          (clojure.core/prn [:recursive-fn :done]))))
 
 (recursive 15)
 
 (def variadic-recursive
   (fn* y [x & xs]
-       (if (erlang/>.e x 0)
+       (if (erlang/> x 0)
          (do
            (clojure.core/prn [:variadic-recursive-fn x xs])
-           (variadic-recursive (erlang/-.e x 1) x xs))
+           (variadic-recursive (erlang/- x 1) x xs))
          (clojure.core/prn [:variadic-recursive-fn :done xs]))))
 
 (variadic-recursive 15)
@@ -231,10 +231,10 @@
 (def same-name-fn
   (fn* same-name-fn
        ([x & xs]
-        (if (erlang/>.e x 0)
+        (if (erlang/> x 0)
           (do
             (clojure.core/prn [:same-name-fn x xs])
-            (same-name-fn (erlang/-.e x 1) x xs))
+            (same-name-fn (erlang/- x 1) x xs))
           (clojure.core/prn [:same-name-fn :done xs])))))
 
 (same-name-fn 3)
@@ -242,7 +242,7 @@
 ;; Define a HOF that returns a function
 
 (def dec-fn
-  (fn* [] (fn* [x] (erlang/-.e x 1))))
+  (fn* [] (fn* [x] (erlang/- x 1))))
 
 (clojure.core/prn ((dec-fn) 10))
 
@@ -251,8 +251,8 @@
 
 (clojure.core/defn recur-fn []
   (clojure.core/let [f (fn* [x]
-            (if (erlang/<.e 0 x)
-              (recur (erlang/-.e x 1))
+            (if (erlang/< 0 x)
+              (recur (erlang/- x 1))
               x))]
     (f 5)))
 

@@ -196,26 +196,26 @@
   ;; verifies the stream is still usable after compiling.
   (spit "dummy.clj" "(ns dummy)")
   (try
-    (let [compile-path (os/getenv.e #erl"clojerl.compile.path")
+    (let [compile-path (os/getenv #erl"clojerl.compile.path")
           tmp "tmp"
           new-out (erlang.io.StringWriter.)]
       (binding [clojure.core/*out* new-out]
         (try
-          (filelib/ensure_dir.e tmp)
-          (os/putenv.e #erl"clojerl.compile.path" #erl"tmp")
-          (clj_compiler/compile_file.e "dummy.clj")
+          (filelib/ensure_dir tmp)
+          (os/putenv #erl"clojerl.compile.path" #erl"tmp")
+          (clj_compiler/compile_file "dummy.clj")
           (println "this should still work without throwing an exception" )
           (finally
             (if compile-path
-              (os/putenv.e #erl"clojerl.compile.path" compile-path)
-              (os/unsetenv.e #erl"clojerl.compile.path"))
-            (doseq [f (file/list_dir.e tmp)]
-              (file/delete.e f))
-            (file/delete.e tmp)))))
+              (os/putenv #erl"clojerl.compile.path" compile-path)
+              (os/unsetenv #erl"clojerl.compile.path"))
+            (doseq [f (file/list_dir tmp)]
+              (file/delete f))
+            (file/delete tmp)))))
     (finally
-      (doseq [f (file/list_dir.e ".")
+      (doseq [f (file/list_dir ".")
               :when (re-find #"dummy.clj" (str f))]
-        (file/delete.e f)))))
+        (file/delete f)))))
 
 (deftest CLJ-1184-do-in-non-list-test
   (testing "do in a vector throws an exception"
@@ -272,8 +272,8 @@
 #_(defn ^{:tag 'long} hinted-primfn [^long x] x)
 #_(defn unhinted-primfn [^long x] x)
 #_(deftest CLJ-1533-primitive-functions-lose-tag
-  (should-not-reflect #(erlang/abs.e (clojure.test-clojure.compilation/hinted-primfn 1)))
-  (should-not-reflect #(erlang/abs.e ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
+  (should-not-reflect #(erlang/abs (clojure.test-clojure.compilation/hinted-primfn 1)))
+  (should-not-reflect #(erlang/abs ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
 
 
 (defrecord Y [a])
@@ -334,7 +334,7 @@
 
 (defn compiler-fails-at? [row col source]
   (try
-    (clj_compiler/compile.e source)
+    (clj_compiler/compile source)
     nil
     (catch :error e
       (let [e  (str e)
@@ -384,9 +384,9 @@
 (deftest incorrect-primitive-type-hint-throws
   ;; invalid primitive type hint
   (is (thrown-with-msg? :error #"function_clause"
-        (load-string "(defn returns-float ^clojerl.Float [] 1.0) (clojerl.Integer/str.e ^clojerl.Integer (returns-float))")))
+        (load-string "(defn returns-float ^clojerl.Float [] 1.0) (.str ^clojerl.Integer (returns-float))")))
   ;; correct casting instead
-  (is (= "1" (load-string "(defn returns-float ^clojerl.Float [] 1.0) (clojerl.Integer/str.e (int (returns-float)))"))))
+  (is (= "1" (load-string "(defn returns-float ^clojerl.Float [] 1.0) (.str (int (returns-float)))"))))
 
 ;; See CLJ-1825
 (def zf (fn rf [x] (lazy-seq (cons x (rf x)))))

@@ -206,7 +206,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm
   (cond
    (integer? x) true
     ;;(decimal? x) ;;no decimal support
-   (float? x)   (= x (clj_utils/floor.e x))
+   (float? x)   (= x (clj_utils/floor x))
     ;;(ratio? x) ;;no ratio support
    :else        false))
 
@@ -557,7 +557,7 @@ Note this should only be used for the last one in the sequence"
         ^String e (if (and (pos? (count e)) (= (nth e 0) \+)) (subs e 1) e)]
     (if (empty? m2)
       ["0" 0]
-      [m2 (- (erlang/binary_to_integer.e e) delta)])))
+      [m2 (- (erlang/binary_to_integer e) delta)])))
 
 (defn- ^String inc-s
   "Assumption: The input string consists of one or more decimal digits,
@@ -710,7 +710,7 @@ string, or one character longer."
             add-sign (or (:at params) (neg? arg))
             prepend-zero (<= k 0)
             ^Integer scaled-exp (- exp (dec k))
-            scaled-exp-str (str (erlang/abs.e scaled-exp))
+            scaled-exp-str (str (erlang/abs scaled-exp))
             scaled-exp-str (str expchar (if (neg? scaled-exp) \- \+)
                                 (if e (apply str
                                              (repeat
@@ -797,7 +797,7 @@ string, or one character longer."
 ;; TODO: support rationals. Back off to ~D/~A is the appropriate cases
 (defn- dollar-float [params navigator offsets]
   (let [[^Float arg navigator] (next-arg navigator)
-        [mantissa exp] (float-parts (erlang/abs.e arg))
+        [mantissa exp] (float-parts (erlang/abs arg))
         d (:d params) ; digits after the decimal
         n (:n params) ; minimum digits before the decimal
         w (:w params) ; minimum field width
@@ -1063,7 +1063,7 @@ string, or one character longer."
      Integer
      (let [c x]
        (.write ^erlang.io.IWriter writer
-               (.to_lower ^String (erlang/list_to_binary.e #erl[c])))))))
+               (.to_lower ^String (erlang/list_to_binary #erl[c])))))))
 
 (defn- downcase-writer
   "Returns a proxy that wraps writer, converting all characters to lower case"
@@ -1085,7 +1085,7 @@ string, or one character longer."
      Integer
      (let [c x]
        (.write ^erlang.io.IWriter writer
-               (.to_upper ^String (erlang/list_to_binary.e #erl[c])))))))
+               (.to_upper ^String (erlang/list_to_binary #erl[c])))))))
 
 (defn- upcase-writer
   "Returns a proxy that wraps writer, converting all characters to upper case"
@@ -1164,7 +1164,7 @@ string, or one character longer."
 
       Integer
       (let [^String c (char x)]
-        (if (and (not @capped) (clojerl.String/is_printable.e c))
+        (if (and (not @capped) (.is_printable c))
           (do
             (reset! capped true)
             (.write ^erlang.io.IWriter writer (.to_upper c)))
@@ -1633,7 +1633,7 @@ not a pretty writer (which keeps track of columns), this function always outputs
      (and (= (.length p) 1) (contains? #{\v \V} (nth p 0))) :parameter-from-args
      (and (= (.length p) 1) (= \# (nth p 0))) :remaining-arg-count
      (and (= (.length p) 2) (= \' (nth p 0))) (nth p 1)
-     true (erlang/binary_to_integer.e p))
+     true (erlang/binary_to_integer p))
    offset])
 
 (def ^{:private true}

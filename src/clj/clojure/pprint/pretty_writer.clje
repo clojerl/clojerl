@@ -97,7 +97,7 @@
 ;;; Functions to write tokens in the output buffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def system-newline (erlang/list_to_binary.e (io_lib/nl.e)))
+(def system-newline (erlang/list_to_binary (io_lib/nl)))
 
 (def ^:private pp-newline #(do system-newline))
 

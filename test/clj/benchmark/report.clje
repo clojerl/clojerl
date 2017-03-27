@@ -5,7 +5,7 @@
 (defn process-line
   [acc line]
   (let [[_ expr runs time] (re-find #"(.*), (\d+) runs, (\d+) ms" line)
-        time (when time (erlang/binary_to_integer.e time))
+        time (when time (erlang/binary_to_integer time))
         item {:expr expr :runs runs :time time}]
     (if expr
       (assoc acc expr item)

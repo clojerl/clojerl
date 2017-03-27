@@ -2,7 +2,7 @@
 
 (try (prn 1))
 
-(try (erlang/+.e 1 :a)
+(try (erlang/+ 1 :a)
      (catch :error error
        (prn [:error error])))
 
@@ -25,7 +25,7 @@
        (prn :finally)))
 
 (try
-  (erlang/error.e :error)
+  (erlang/error :error)
   (catch _ e
     (prn e)))
 
@@ -35,6 +35,6 @@
     (prn e)))
 
 (try
-  (erlang/exit.e :exit)
+  (erlang/exit :exit)
   (catch _ e
     (prn e)))
