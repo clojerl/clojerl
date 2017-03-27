@@ -120,7 +120,7 @@ eval(_Config) ->
 
   ct:comment("(erlang/self) should be this process"),
   Self      = erlang:self(),
-  {Self, _} = clj_compiler:eval(clj_reader:read(<<"(erlang/self.e)">>)),
+  {Self, _} = clj_compiler:eval(clj_reader:read(<<"(erlang/self)">>)),
 
   {comments, ""}.
 

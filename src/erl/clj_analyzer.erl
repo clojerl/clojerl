@@ -138,6 +138,7 @@ special_forms() ->
    , <<"var">>          => fun parse_var/2
 
    , <<"receive*">>     => fun parse_receive/2
+   , <<"erl-fun*">>     => fun parse_erlang_fun/2
    , <<"erl-binary*">>  => fun parse_erlang_binary/2
    , <<"erl-list*">>    => fun parse_erlang_list/2
    , <<"erl-alias*">>   => fun parse_erlang_alias/2
@@ -2172,54 +2173,29 @@ resolve(Symbol, CheckPrivate, Env) ->
 
 -spec erl_fun('clojerl.Symbol':type(), clj_env:env()) -> erl_fun().
 erl_fun(Symbol, Env0) ->
-  NsSym          = clj_rt:symbol('clojerl.Symbol':namespace(Symbol)),
-  {NsName, Env}  = case resolve(NsSym, Env0) of
-                     {{type, Type}, EnvTmp} ->
-                       TypeModule = 'erlang.Type':module(Type),
-                       {atom_to_binary(TypeModule, utf8), EnvTmp};
-                     {_, EnvTmp} ->
-                       {'clojerl.Symbol':name(NsSym), EnvTmp}
-                  end,
-  NsAtom        = binary_to_atom(NsName, utf8),
-  {Name, Arity} = erl_fun_arity('clojerl.Symbol':name(Symbol)),
-  NameAtom      = binary_to_atom(Name, utf8),
+  {Ns0, Name, Arity} = clj_utils:parse_erl_fun(Symbol),
+  NsSym              = clj_rt:symbol(Ns0),
+  {NsAtom, Env}      = case resolve(NsSym, Env0) of
+                         {{type, Type}, EnvTmp} ->
+                           {'erlang.Type':module(Type), EnvTmp};
+                         {_, EnvTmp} ->
+                           { binary_to_atom('clojerl.Symbol':name(NsSym), utf8)
+                           , EnvTmp
+                           }
+                       end,
+
+  NameAtom     = binary_to_atom(Name, utf8),
 
   NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
   clj_utils:warn_when( not NoWarnErlFun
-                       andalso not is_integer(Arity)
-                       andalso Arity =/= <<"e">>
                      , [ <<"'">>, Symbol, <<"'">>
                        , <<" resolved to an Erlang function.">>
-                       , <<" Add the suffix '.e' to the symbol's name">>
-                       , <<" to remove this warning.">>
+                       , <<" Use '#erl' to remove this warning.">>
                        ]
-                     , clj_env:location(Env)
+                     , clj_env:location(Env0)
                      ),
 
-  Arity1 = case Arity of
-             _ when is_integer(Arity) -> Arity;
-             _ -> ?NIL
-           end,
-
-  {erl_fun, NsAtom, NameAtom, Arity1}.
-
--spec erl_fun_arity(binary()) -> {binary(), ?NIL | integer()}.
-erl_fun_arity(Name) ->
-  case binary:split(Name, <<".">>, [global]) of
-    [_] -> {Name, ?NIL};
-    Parts ->
-      Last = lists:last(Parts),
-      case {re:run(Last, <<"\\d+">>), Last} of
-        {nomatch, <<"e">>} when length(Parts) > 1 ->
-          {iolist_to_binary(lists:droplast(Parts)), <<"e">>};
-        {nomatch, _} ->
-          {Name, ?NIL};
-        _ ->
-          NameParts = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
-          Arity = binary_to_integer(Last),
-          {iolist_to_binary(NameParts), Arity}
-      end
-  end.
+  {erl_fun, NsAtom, NameAtom, Arity}.
 
 -spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
 is_maybe_type(Symbol) ->
@@ -2455,6 +2431,60 @@ parse_after(List, Env) ->
                },
 
   clj_env:push_expr(AfterExpr, Env2).
+
+%%------------------------------------------------------------------------------
+%% Erlang fun
+%%------------------------------------------------------------------------------
+
+-spec parse_erlang_fun(any(), clj_env:env()) ->
+  clj_env:env().
+parse_erlang_fun(List, Env0) ->
+  [ _ %% erl-fun*
+  | Args
+  ] = clj_rt:to_list(List),
+
+  clj_utils:error_when( 1 > length(Args) orelse length(Args) > 3
+                      , [ <<"Expected 1, 2 or 3 arguments for erl-fun*, got: ">>
+                        , length(Args)
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  {Module, Function, Arity} = case Args of
+                                [F] ->
+                                  {?NIL, F, ?NIL};
+                                [F, A] when is_integer(A) ->
+                                  {?NIL, F, A};
+                                [M, F] ->
+                                  {M, F, ?NIL};
+                                [M, F, A] ->
+                                  {M, F, A}
+                              end,
+
+  clj_utils:error_when( Module =/= ?NIL andalso not is_atom(Module)
+                      , [ <<"Module must be a keyword, got: ">>
+                        , clj_rt:type(Module)
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  clj_utils:error_when( not is_atom(Function)
+                      , [ <<"Function must be a keyword, got: ">>
+                        , clj_rt:type(Function)
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  clj_utils:error_when( Arity =/= ?NIL andalso not is_integer(Arity)
+                      , [ <<"Arity must be an integer or nil, got: ">>
+                        , clj_rt:type(Arity)
+                        ]
+                      , clj_env:location(Env0)
+                      ),
+
+  ErlFunExpr = erl_fun_expr(List, Module, Function, Arity, Env0),
+
+  clj_env:push_expr(ErlFunExpr, Env0).
 
 %%------------------------------------------------------------------------------
 %% Erlang binary

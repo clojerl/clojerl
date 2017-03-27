@@ -18,6 +18,7 @@
         , char_type/2
         , parse_number/1
         , parse_symbol/1
+        , parse_erl_fun/1
         , desugar_meta/1
 
         , compare/2
@@ -121,6 +122,29 @@ verify_symbol_name({_, Name} = Result) ->
   case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoDoubleSlash]) of
     true -> Result;
     false -> ?NIL
+  end.
+
+-spec parse_erl_fun('clojerl.Symbol':type()) ->
+  {binary(), binary(), integer() | ?NIL}.
+parse_erl_fun(Symbol) ->
+  NsName        = 'clojerl.Symbol':namespace(Symbol),
+  {Name, Arity} = erl_fun_arity('clojerl.Symbol':name(Symbol)),
+  {NsName, Name, Arity}.
+
+-spec erl_fun_arity(binary()) -> {binary(), ?NIL | integer()}.
+erl_fun_arity(Name) ->
+  case binary:split(Name, <<".">>, [global]) of
+    [_] -> {Name, ?NIL};
+    Parts ->
+      Last = lists:last(Parts),
+      case re:run(Last, <<"\\d+">>, [{capture, none}]) of
+        nomatch ->
+          {Name, ?NIL};
+        _ ->
+          NameParts = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
+          Arity = binary_to_integer(Last),
+          {iolist_to_binary(NameParts), Arity}
+      end
   end.
 
 -spec char_type(non_neg_integer()) -> char_type().
