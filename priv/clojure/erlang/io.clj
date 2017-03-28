@@ -54,8 +54,8 @@
                   (throw (str "Not a file: " u))))))
 
 (defprotocol ^{:added "1.2"} IOFactory
-  "Factory functions that create ready-to-use, buffered versions of
-   the various Java I/O stream types, on top of anything that can
+  "Factory functions that create ready-to-use, versions of
+   the various I/O types, on top of anything that can
    be unequivocally converted to the requested kind of stream.
 
    Common options include

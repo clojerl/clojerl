@@ -16,11 +16,10 @@ with :as to specify a prefix, e.g.
 
 Design notes for clojure.string:
 
-1. Strings are objects (as opposed to sequences). As such, the
+1. Strings are Erlang binaries (as opposed to sequences). As such, the
    string being manipulated is the first argument to a function;
-   passing nil will result in a NullPointerException unless
-   documented otherwise. If you want sequence-y behavior instead,
-   use a sequence.
+   passing nil will result in an error unless documented otherwise.
+   If you want sequence-y behavior instead, use a sequence.
 
 2. Functions are generally not lazy, and call straight to host
    methods where those are available and efficient.
@@ -28,15 +27,7 @@ Design notes for clojure.string:
 3. Functions take advantage of String implementation details to
    write high-performing loop/recurs instead of using higher-order
    functions. (This is not idiomatic in general-purpose application
-   code.)
-
-4. When a function is documented to accept a string argument, it
-   will take any implementation of the correct *interface* on the
-   host platform. In Java, this is CharSequence, which is more
-   general than String. In ordinary usage you will almost always
-   pass concrete strings. If you are doing something unusual,
-   e.g. passing a mutable implementation of CharSequence, then
-   thread-safety is your responsibility."
+   code.)"
       :author "Stuart Sierra, Stuart Halloway, David Liebke"}
   clojure.string
   #_(:refer-clojure :exclude (replace reverse)))

@@ -452,8 +452,8 @@
        result#)))
 
 (defn assert-any
-  "Returns generic assertion code for any test, including macros, Java
-  method calls, or isolated symbols."
+  "Returns generic assertion code for any test, including macros,
+  or isolated symbols."
   {:added "1.1"}
   [msg form]
   `(let [value# ~form]

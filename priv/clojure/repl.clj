@@ -14,7 +14,7 @@
   clojure.repl)
 
 (def ^:private special-doc-map
-  '{. {:url "java_interop#dot"
+  '{. {:url "erlang_interop#dot"
        :forms [(.instanceMember instance args*)
                (.instanceMember Classname args*)
                (Classname/staticMethod args*)
@@ -41,7 +41,7 @@
                   :doc "Synchronization primitive that should be avoided
   in user code. Use the 'locking' macro."}
     new {:forms [(Classname. args*) (new Classname args*)]
-         :url "java_interop#new"
+         :url "erlang_interop#new"
          :doc "The args, if any, are evaluated from left to right, and
   passed to the constructor of the class named by Classname. The
   constructed object is returned."}
@@ -55,8 +55,7 @@
                  (set! (. instance-expr instanceFieldName-symbol) expr)
                  (set! (. Classname-symbol staticFieldName-symbol) expr)]
           :url "vars#set"
-          :doc "Used to set thread-local-bound vars, Java object instance
-fields, and Java class static fields."}
+          :doc "Used to set thread-local-bound vars."}
     throw {:forms [(throw expr)]
            :doc "The expr is evaluated and thrown, therefore it should
   yield an instance of some derivee of Throwable."}
@@ -64,7 +63,7 @@ fields, and Java class static fields."}
          :doc "catch-clause => (catch classname name expr*)
   finally-clause => (finally expr*)
 
-  Catches and handles Java exceptions."}
+  Catches and handles exceptions."}
     var {:forms [(var symbol)]
          :doc "The symbol must resolve to a var, and the Var object
 itself (not its value) is returned. The reader macro #'x expands to (var x)."}})

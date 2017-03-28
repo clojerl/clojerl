@@ -11,24 +11,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; definterface ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn namespace-munge
-  "Convert a Clojure namespace name to a legal Java package name."
+  "Convert a Clojure namespace name to a legal Erlang module name."
   {:added "1.2"}
   [ns]
   (-> ns ns-name str))
 
 (defn munge [s] s)
-
-;for now, built on gen-interface
-(defmacro definterface
-  "Creates a new Java interface with the given name and method sigs.
-  The method return types and parameter types may be specified with type hints,
-  defaulting to Object if omitted.
-  (definterface MyInterface
-    (^int method1 [x])
-    (^Bar method2 [^Baz b ^Quux q]))"
-  {:added "1.2"} ;; Present since 1.2, but made public in 1.5.
-  [name & sigs]
-  (throw "unsupported definterface"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; reify/deftype ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -243,7 +231,7 @@
   Methods should be supplied for all methods of the desired
   protocol(s) and interface(s). You can also define overrides for
   methods of Object. Note that a parameter must be supplied to
-  correspond to the target object ('this' in Java parlance). Thus
+  correspond to the target object (i.e. 'this'). Thus
   methods for interfaces will take one more argument than do the
   interface declarations. Note also that recur calls to the method
   head should *not* pass the target object, it will be supplied
@@ -257,8 +245,7 @@
   IPersistentMap, and all of their superinterfaces.
 
   In addition, defrecord will define type-and-value-based =,
-  and will defined Java .hashCode and .equals consistent with the
-  contract for java.util.Map.
+  and will define clojerl.IHash/hash.
 
   When AOT compiling, generates compiled bytecode for a class with the
   given name (a symbol), prepends the current ns as the package, and
@@ -354,7 +341,7 @@
   Methods should be supplied for all methods of the desired
   protocol(s) and interface(s). You can also define overrides for
   methods of Object. Note that a parameter must be supplied to
-  correspond to the target object ('this' in Java parlance). Thus
+  correspond to the target object (i.e. 'this'). Thus
   methods for interfaces will take one more argument than do the
   interface declarations. Note also that recur calls to the method
   head should *not* pass the target object, it will be supplied
@@ -484,8 +471,8 @@
   polymorphic functions and a protocol object. All are
   namespace-qualified by the ns enclosing the definition The resulting
   functions dispatch on the type of their first argument, which is
-  required and corresponds to the implicit target object ('this' in
-  Java parlance). defprotocol is dynamic, has no special compile-time
+  required and corresponds to the implicit target object (i.e.
+  'this'). defprotocol is dynamic, has no special compile-time
   effect, and defines no new types or classes. Implementations of
   the protocol methods can be provided using extend.
 

@@ -110,10 +110,10 @@
   ^{:arglists '([coll])
     :doc "Returns a seq on the collection. If the collection is
     empty, returns nil.  (seq nil) returns nil. seq also works on
-    Strings, native Java arrays (of reference types) and any objects
-    that implement Iterable. Note that seqs cache values, thus seq
-    should not be used on any Iterable whose iterator repeatedly
-    returns the same mutable object."
+    Strings, Erlang tuples and any type that implements Iterable.
+    Note that seqs cache values, thus seq should not be used on
+    any Iterable whose iterator repeatedly returns the same mutable
+    object."
     :tag clojerl.ISeq
     :added "1.0"}
   seq (fn seq [coll] (clj_core/seq.e coll)))
@@ -323,8 +323,7 @@
    (clj_core/vector.e (cons a (cons b (cons c (cons d args)))))))
 
 (defn vec
-  "Creates a new vector containing the contents of coll. Java arrays
-  will be aliased and should not be modified."
+  "Creates a new vector containing the contents of coll."
   {:added "1.0"}
   ([coll]
    (if (vector? coll)
@@ -693,8 +692,7 @@
 
 ;equiv-based
 (defn =
-  "Equality. Returns true if x equals y, false if not. Same as
-  Java x.equals(y) except it also works for nil, and compares
+  "Equality. Returns true if x equals y, false if not. Compares
   numbers and collections in a type-independent manner.  Clojure's immutable data
   structures define equals() (and thus =) as a value, not an identity,
   comparison."
@@ -720,8 +718,7 @@
 (defn compare
   "Comparator. Returns a negative number, zero, or a positive number
   when x is logically 'less than', 'equal to', or 'greater than'
-  y. Same as Java x.compareTo(y) except it also works for nil, and
-  compares numbers and collections in a type-independent manner. x
+  y. Compares numbers and collections in a type-independent manner. x
   must implement Comparable"
   {:added "1.0"}
   [x y]
@@ -759,7 +756,7 @@
 
 (defn count
   "Returns the number of items in the collection. (count nil) returns
-  0.  Also works on strings, arrays, and Java Collections and Maps"
+  0. Also works on strings, arrays, and Erlang lists, tuples and maps"
   {:added "1.0"}
   [coll] (clj_core/count.e coll))
 
@@ -771,8 +768,8 @@
 (defn nth
   "Returns the value at the index. get returns nil if index out of
   bounds, nth throws an exception unless not-found is supplied.  nth
-  also works for strings, Java arrays, regex Matchers and Lists, and,
-  in O(n) time, for sequences."
+  also works for strings, Erlang tuples, and lists, and, in O(n) time,
+  for sequences."
   {:added "1.0"}
   ([coll index] (clj_core/nth.e coll index))
   ([coll index not-found] (clj_core/nth.e coll index not-found)))
@@ -1141,7 +1138,7 @@
 (defn contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like
-  vectors and Java arrays, this tests if the numeric key is within the
+  vectors and Erlang tuples, this tests if the numeric key is within the
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   {:added "1.0"}
@@ -2666,10 +2663,8 @@
 
 (defn sort
   "Returns a sorted sequence of the items in coll. If no comparator is
-  supplied, uses compare.  comparator must implement
-  java.util.Comparator.  Guaranteed to be stable: equal elements will
-  not be reordered.  If coll is a Java array, it will be modified.  To
-  avoid this, sort a copy of the array."
+  supplied, uses compare. Guaranteed to be stable: equal elements will
+  not be reordered."
   {:added "1.0"}
   ([coll]
    (sort compare coll))
@@ -2683,8 +2678,7 @@
   order is determined by comparing (keyfn item).  If no comparator is
   supplied, uses compare.  comparator must implement
   java.util.Comparator.  Guaranteed to be stable: equal elements will
-  not be reordered.  If coll is a Java array, it will be modified.  To
-  avoid this, sort a copy of the array."
+  not be reordered."
   {:added "1.0"}
   ([keyfn coll]
    (sort-by keyfn compare coll))
@@ -3269,9 +3263,8 @@
 (defmacro memfn
   "Expands into code that creates a fn that expects to be passed an
   object and any args and calls the named instance method on the
-  object passing the args. Use when you want to treat a Java method as
-  a first-class fn. name may be type-hinted with the method receiver's
-  type in order to avoid reflective calls."
+  object passing the args. name may be type-hinted with the method
+  receiver's type in order to avoid reflective calls."
   {:added "1.0"}
   [name & args]
   (let [t (with-meta (gensym "target")
@@ -4435,10 +4428,9 @@
   (throw "unsupported classes and interfaces"))
 
 (defn isa?
-  "Returns true if (= child parent), or child is directly or indirectly derived from
-  parent, either via a Java type inheritance relationship or a
-  relationship established via derive. h must be a hierarchy obtained
-  from make-hierarchy, if not supplied defaults to the global
+  "Returns true if (= child parent), or child is directly or indirectly derived
+  from parent, via a relationship established via derive. h must be a hierarchy
+  obtained from make-hierarchy, if not supplied defaults to the global
   hierarchy"
   {:added "1.0"}
   ([child parent] (isa? global-hierarchy child parent))
@@ -4453,10 +4445,9 @@
                 (recur (isa? h (child i) (parent i)) (inc i))))))))
 
 (defn parents
-  "Returns the immediate parents of tag, either via a Java type
-  inheritance relationship or a relationship established via derive. h
-  must be a hierarchy obtained from make-hierarchy, if not supplied
-  defaults to the global hierarchy"
+  "Returns the immediate parents of tag, via a relationship established
+  via derive. h must be a hierarchy obtained from make-hierarchy, if not
+  supplied defaults to the global hierarchy"
   {:added "1.0"}
   ([tag] (parents global-hierarchy tag))
   ([h tag] (not-empty
@@ -4466,10 +4457,9 @@
                 tp)))))
 
 (defn ancestors
-  "Returns the immediate and indirect parents of tag, either via a Java type
-  inheritance relationship or a relationship established via derive. h
-  must be a hierarchy obtained from make-hierarchy, if not supplied
-  defaults to the global hierarchy"
+  "Returns the immediate and indirect parents of tag, via a relationship
+  established via derive. h must be a hierarchy obtained from make-hierarchy,
+  if not supplied defaults to the global hierarchy"
   {:added "1.0"}
   ([tag] (ancestors global-hierarchy tag))
   ([h tag] (not-empty
@@ -4485,8 +4475,7 @@
   "Returns the immediate and indirect children of tag, through a
   relationship established via derive. h must be a hierarchy obtained
   from make-hierarchy, if not supplied defaults to the global
-  hierarchy. Note: does not work on Java type inheritance
-  relationships."
+  hierarchy."
   {:added "1.0"}
   ([tag] (descendants global-hierarchy tag))
   ([h tag] (if (class? tag)
@@ -4911,9 +4900,9 @@
 
   A 'lib' is a named set of resources in classpath whose contents define a
   library of Clojure code. Lib names are symbols and each lib is associated
-  with a Clojure namespace and a Java package that share its name. A lib's
-  name also locates its root directory within classpath using Java's
-  package name to classpath-relative path mapping. All resources in a lib
+  with a Clojure namespace and a Erlang module that share its name. A lib's
+  name also locates its root directory within classpath using Erlang's
+  module name to code-path-relative path mapping. All resources in a lib
   should be contained in the directory structure under its root directory.
   All definitions a lib makes should be in its associated namespace.
 
@@ -5280,7 +5269,7 @@
 
 (add-doc-and-meta *warn-on-infer*
   "When set to true, the compiler will emit warnings when reflection is
-  needed to resolve Java method calls or field accesses.
+  needed to resolve Erlang function calls.
 
   Defaults to false."
   {:added "1.0"})
