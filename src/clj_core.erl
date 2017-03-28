@@ -506,7 +506,12 @@ apply(Fn, Args) ->
 
 -spec next_id() -> integer().
 next_id() ->
-  erlang:unique_integer([positive]).
+  N = case erlang:get(gensym_count) of
+        undefined -> 0;
+        X -> X
+      end,
+  erlang:put(gensym_count, N + 1),
+  N.
 
 -spec gensym() -> 'clojer.Symbol':type().
 gensym() ->
@@ -514,5 +519,5 @@ gensym() ->
 
 -spec gensym(binary()) -> 'clojer.Symbol':type().
 gensym(Prefix) ->
-  PartsBin = lists:map(fun str/1, [Prefix, next_id()]),
+  PartsBin = [Prefix, integer_to_list(next_id())],
   symbol(iolist_to_binary(PartsBin)).
