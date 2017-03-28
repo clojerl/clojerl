@@ -9,6 +9,12 @@ test:
 shell:
 	@rebar3 as dev shell --sname clojerl-shell --setcookie clojerl
 
+clean:
+	@rebar3 clean
+
+clean-all: clean
+	@rm -rf _build/ rebar.lock ebin/
+
 CLJ_SRC ?= priv
 CLJ_TARGET ?= ebin
 CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))

@@ -199,7 +199,7 @@ analyze_seq(List, Env0) ->
              AnaInvoke = fun analyze_invoke/2,
              Fun = case clj_core:'symbol?'(Op) of
                      true ->
-                       maps:get(clj_core:name(Op), special_forms(), AnaInvoke);
+                       maps:get(clj_core:str(Op), special_forms(), AnaInvoke);
                      false ->
                        AnaInvoke
                    end,
