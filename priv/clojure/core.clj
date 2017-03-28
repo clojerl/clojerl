@@ -2992,7 +2992,7 @@
   [& import-symbols-or-lists]
   (let [specs (map #(if (and (seq? %) (= 'quote (first %))) (second %) %)
                    import-symbols-or-lists)]
-    `(do ~@(map #(list 'clojure.core/import* %)
+    `(do ~@(map #(list 'import* %)
                 (reduce1 (fn [v spec]
                            (if (symbol? spec)
                              (conj v (name spec))
