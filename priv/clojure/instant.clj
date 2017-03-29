@@ -150,7 +150,6 @@ with invalid arguments."
     (new-instance years months days hours minutes seconds nanoseconds
                   offset-sign offset-hours offset-minutes)))
 
-
 ;;; ------------------------------------------------------------------------
 ;;; print integration
 #_ ((def ^:private ^ThreadLocal thread-local-utc-date-format
@@ -230,7 +229,7 @@ with invalid arguments."
 ;;; reader integration
 
 (defn- construct-date
-  "Construct a java.util.Date, which expresses the original instant as
+  "Construct a datetime, which expresses the original instant as
 milliseconds since the epoch, UTC."
   [years months days hours minutes seconds nanoseconds
    offset-sign offset-hours offset-minutes]

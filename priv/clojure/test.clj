@@ -198,7 +198,7 @@
    All the test reporting functions write to the var *test-out*.  By
    default, this is the same as *out*, but you can rebind it to any
    PrintWriter.  For example, it could be a file opened with
-   clojure.java.io/writer.
+   erlang.io/writer.
 
 
    EXTENDING TEST-IS (ADVANCED)
@@ -452,8 +452,8 @@
        result#)))
 
 (defn assert-any
-  "Returns generic assertion code for any test, including macros, Java
-  method calls, or isolated symbols."
+  "Returns generic assertion code for any test, including macros,
+  or isolated symbols."
   {:added "1.1"}
   [msg form]
   `(let [value# ~form]

@@ -397,13 +397,6 @@
     (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
 
 (deftest test-ctor-literals
-  ;; (testing "that constructor calls to print-dup'able classes are supported as literals"
-  ;;   (is (= "Hi" #java.lang.String["Hi"]))
-  ;;   (is (= 42 #java.lang.Long[42]))
-  ;;   (is (= 42 #java.lang.Long["42"]))
-  ;;   (is (= [:a 42] #clojure.lang.MapEntry[:a 42])))
-  ;; (testing "that constructor literals are embeddable"
-  ;;   (is (= 42 #java.lang.Long[#java.lang.String["42"]])))
   (testing "that constructor literals work for deftypes too"
     (is (= (.-a (TypeToTestFactory. 42)) (.-a #clojure.test-clojure.protocols.TypeToTestFactory[42])))
     (is (compare-huge-types
@@ -463,8 +456,8 @@
     (is (= 42 (.-a (eval #clojure.test-clojure.protocols.TypeToTestLiterals[42])))))
 
   (testing "that ctor literals only work with constants or statics"
-    (is (thrown? :error (read-string "#java.util.Locale[(str 'en)]")))
-    (is (thrown? :error (read-string "(let [s \"en\"] #java.util.Locale[(str 'en)])")))
+    (is (thrown? :error (read-string "#clojerl.String[(str 'en)]")))
+    (is (thrown? :error (read-string "(let [s \"en\"] #clojerl.String[(str 'en)])")))
     (is (thrown? :error (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals{(keyword \"a\") 42}"))))
 
   (testing "that ctors can have whitespace after class name but before {"
@@ -480,7 +473,7 @@
           :error
           #"Unexpected number of constructor arguments.*"
           (read-string "#clojerl.String[\"\" \"\" \"\" \"\"]")))
-    (is (thrown? :error (read-string "#java.util.Nachos(\"en\")")))))
+    (is (thrown? :error (read-string "#erlang.util.Nachos(\"en\")")))))
 
 (defrecord RecordToTestPrinting [a b])
 (deftest defrecord-printing

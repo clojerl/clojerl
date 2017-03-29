@@ -13,9 +13,7 @@
     (:require clojure.string)
     (:import
      (erlang.io IReader IWriter File
-                StringReader Closeable)
-     #_(java.net URI URL MalformedURLException Socket URLDecoder URLEncoder)))
-
+                StringReader Closeable)))
 
 (defprotocol ^{:added "1.2"} Coercions
   "Coerce between various 'resource-namish' things."
@@ -54,8 +52,8 @@
                   (throw (str "Not a file: " u))))))
 
 (defprotocol ^{:added "1.2"} IOFactory
-  "Factory functions that create ready-to-use, buffered versions of
-   the various Java I/O stream types, on top of anything that can
+  "Factory functions that create ready-to-use, versions of
+   the various I/O types, on top of anything that can
    be unequivocally converted to the requested kind of stream.
 
    Common options include
@@ -69,8 +67,8 @@
   (^{:added "1.2"} make-writer [x opts] "Creates a BufferedWriter. See also IOFactory docs."))
 
 (defn ^erlang.io.IReader reader
-  "Attempts to coerce its argument into an open java.io.Reader.
-   Default implementations always return a java.io.BufferedReader.
+  "Attempts to coerce its argument into an open erlang.io.IReader.
+   Default implementations always return a erlang.io.BufferedReader.
 
    Default implementations are provided for Reader, BufferedReader,
    InputStream, File, URI, URL, Socket, byte arrays, character arrays,
@@ -87,17 +85,16 @@
   (make-reader x (when opts (apply hash-map opts))))
 
 (defn ^erlang.io.IWriter writer
-  "Attempts to coerce its argument into an open java.io.Writer.
-   Default implementations always return a java.io.BufferedWriter.
+  "Attempts to coerce its argument into an open erlang.io.IWriter.
+   Default implementations always return a erlang.io.IWriter.
 
-   Default implementations are provided for Writer, BufferedWriter,
-   OutputStream, File, URI, URL, Socket, and String.
+   Default implementations are provided for File, String and nil.
 
    If the argument is a String, it tries to resolve it first as a URI, then
    as a local file name.  URIs with a 'file' protocol are converted to
    local file names.
 
-   Should be used inside with-open to ensure the Writer is properly
+   Should be used inside with-open to ensure the IWriter is properly
    closed."
   {:added "1.2"}
   [x & opts]
