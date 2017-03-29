@@ -41,7 +41,6 @@
                                %)
                             (keys impls))
                        set
-                       (disj 'Object 'java.lang.Object)
                        vec)
         methods (map (fn [[name params & body]]
                        (cons name (maybe-destructured params body)))

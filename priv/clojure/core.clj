@@ -2647,7 +2647,7 @@
 
 (defn line-seq
   "Returns the lines of text from rdr as a lazy sequence of strings.
-  rdr must implement java.io.BufferedReader."
+  rdr must implement erlang.io.IReader."
   {:added "1.0"}
   [rdr]
   (let [line (erlang.io.IReader/read_line.e rdr)]
@@ -2655,7 +2655,7 @@
       (cons line (lazy-seq (line-seq rdr))))))
 
 (defn comparator
-  "Returns an implementation of java.util.Comparator based upon pred."
+  "Returns an comparator function based upon pred."
   {:added "1.0"}
   [pred]
   (fn [x y]
@@ -3167,7 +3167,7 @@
 
 (defn read
   "Reads the next object from stream, which must be an instance of
-  java.io.PushbackReader or some derivee.  stream defaults to the
+  erlang.io.PushbackReader or some derivee.  stream defaults to the
   current value of *in*.
 
   Opts is a persistent map with valid keys:
@@ -3248,7 +3248,7 @@
   value of x supplied at the front of the given arguments.  The forms
   are evaluated in order.  Returns x.
 
-  (doto (new java.util.HashMap) (.put \"a\" 1) (.put \"b\" 2))"
+  (doto (new erlang.util.Regex) str (.quote))"
   {:added "1.0"}
   [x & forms]
     (let [gx (gensym)]
@@ -4557,30 +4557,6 @@
          true))
      false)))
 
-(defn resultset-seq
-  "Creates and returns a lazy sequence of structmaps corresponding to
-  the rows in the java.sql.ResultSet rs"
-  {:added "1.0"}
-  [^java.sql.ResultSet rs]
-  (throw "unsupported sql result set"))
-
-(defn iterator-seq
-  "Returns a seq on a java.util.Iterator. Note that most collections
-  providing iterators implement Iterable and thus support seq directly.
-  Seqs cache values, thus iterator-seq should not be used on any
-  iterator that repeatedly returns the same mutable object."
-  {:added "1.0"}
-  [iter]
-  (throw "unimplemented iterator")
-  #_(clojure.lang.RT/chunkIteratorSeq iter))
-
-(defn enumeration-seq
-  "Returns a seq on a java.util.Enumeration"
-  {:added "1.0"}
-  [e]
-  (throw "unimplemented iterator")
-  #_(clojure.lang.EnumerationSeq/create e))
-
 (defn format
   "Formats a string using io_lib/format, see io/format for format
   string syntax"
@@ -4642,8 +4618,8 @@
     (:refer-clojure :exclude [ancestors printf])
     (:require (clojure.contrib sql combinatorics))
     (:use (my.lib this that))
-    (:import (java.util Date Timer Random)
-             (java.sql Connection Statement)))"
+    (:import (erlang.util Regex UUID)
+             (erlang.io PushbackReader File)))"
   {:arglists '([name docstring? attr-map? references*])
    :added "1.0"}
   [name & references]
@@ -5307,19 +5283,19 @@
   {:added "1.0"})
 
 (add-doc-and-meta *in*
-  "A java.io.Reader object representing standard input for read operations.
+  "A erlang.io.IReader object representing standard input for read operations.
 
   Defaults to System/in, wrapped in a LineNumberingPushbackReader"
   {:added "1.0"})
 
 (add-doc-and-meta *out*
-  "A java.io.Writer object representing standard output for print operations.
+  "A erlang.io.IWriter object representing standard output for print operations.
 
   Defaults to System/out, wrapped in an OutputStreamWriter"
   {:added "1.0"})
 
 (add-doc-and-meta *err*
-  "A java.io.Writer object representing standard error for print operations.
+  "A erlang.io.IWriter object representing standard error for print operations.
 
   Defaults to System/err, wrapped in a PrintWriter"
   {:added "1.0"})
@@ -5361,19 +5337,15 @@
   the eval reader (#=) and record/type literal syntax are disabled in read/load.
   Example (will fail): (binding [*read-eval* false] (read-string \"#=(* 2 21)\"))
 
-  The default binding can be controlled by the system property
-  'clojure.read.eval' System properties can be set on the command line
-  like this:
+  The default binding can be controlled by the application configuration
+  parameter 'read_eval'. For more information about application parameters
+  please refer to Erlang's documentation.
 
-  java -Dclojure.read.eval=false ...
-
-  The system property can also be set to 'unknown' via
-  -Dclojure.read.eval=unknown, in which case the default binding
-  is :unknown and all reads will fail in contexts where *read-eval*
-  has not been explicitly bound to either true or false. This setting
-  can be a useful diagnostic tool to ensure that all of your reads
-  occur in considered contexts. You can also accomplish this in a
-  particular scope by binding *read-eval* to :unknown
+  The parameter can also be set to ':unknown' and all reads will fail
+  in contexts where *read-eval* has not been explicitly bound to either true
+  or false. This setting can be a useful diagnostic tool to ensure that all
+  of your reads occur in considered contexts. You can also accomplish this in
+  a particular scope by binding *read-eval* to :unknown
   "
   {:added "1.0"})
 
@@ -5931,11 +5903,8 @@
 (defn shuffle
   "Return a random permutation of coll"
   {:added "1.2"}
-  [^java.util.Collection coll]
-  (throw "unimplemented shuffle")
-  #_(let [al (java.util.ArrayList. coll)]
-      (java.util.Collections/shuffle al)
-      (clojure.lang.RT/vector (.toArray al))))
+  [coll]
+  (throw "unimplemented shuffle"))
 
 (defn map-indexed
   "Returns a lazy sequence consisting of the result of applying f to 0

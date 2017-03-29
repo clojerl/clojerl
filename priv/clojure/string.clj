@@ -85,8 +85,7 @@ Design notes for clojure.string:
    substituted with the string that matched the corresponding
    parenthesized group in the pattern.  If you wish your replacement
    string r to be used literally, use (re-quote-replacement r) as the
-   replacement argument.  See also documentation for
-   java.util.regex.Matcher's appendReplacement method.
+   replacement argument.
 
    Example:
    (clojure.string/replace \"Almost Pig Latin\" #\"\\b(\\w)(\\w+)\\b\" \"$2$1ay\")
@@ -146,8 +145,7 @@ Design notes for clojure.string:
    substituted with the string that matched the corresponding
    parenthesized group in the pattern.  If you wish your replacement
    string r to be used literally, use (re-quote-replacement r) as the
-   replacement argument.  See also documentation for
-   java.util.regex.Matcher's appendReplacement method.
+   replacement argument.
 
    Example:
    (clojure.string/replace-first \"swap first two words\"

@@ -172,7 +172,8 @@ ns__val() ->
   var_value(<<"#'clojure.core/*assert*">>, true).
 
 '*read-eval*__val'() ->
-  var_value(<<"#'clojure.core/*read-eval*">>, true).
+  ReadEval = application:get_env(clojerl, read_eval, true),
+  var_value(<<"#'clojure.core/*read-eval*">>, ReadEval).
 
 '*command-line-args*__val'() ->
   var_value(<<"#'clojure.core/*command-line-args*">>, true).

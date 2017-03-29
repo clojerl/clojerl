@@ -155,7 +155,7 @@
 (def ^{:doc "A sequence of lib specs that are applied to `require`
 by default when a new command-line REPL is started."} repl-requires
   '[[clojure.repl :refer (source apropos dir pst doc find-doc)]
-    #_[clojure.java.javadoc :refer (javadoc)]
+    #_[clojure.erlang.doc :refer (erlang-doc)]
     #_[clojure.pprint :refer (pp pprint)]])
 
 (defmacro with-read-known
@@ -350,28 +350,8 @@ by default when a new command-line REPL is started."} repl-requires
      "-?"     help-opt} opt)
    script-opt))
 
-(defn- legacy-repl
-  "Called by the clojure.lang.Repl.main stub to run a repl with args
-  specified the old way"
-  [args]
-  (println "WARNING: clojure.lang.Repl is deprecated.
-Instead, use clojure.main like this:
-java -cp clojure.jar clojure.main -i init.clj -r args...")
-  (let [[inits [sep & args]] (split-with (complement #{"--"}) args)]
-    (repl-opt (concat ["-r"] args) (map vector (repeat "-i") inits))))
-
-(defn- legacy-script
-  "Called by the clojure.lang.Script.main stub to run a script with args
-  specified the old way"
-  [args]
-  (println "WARNING: clojure.lang.Script is deprecated.
-Instead, use clojure.main like this:
-java -cp clojure.jar clojure.main -i init.clj script.clj args...")
-  (let [[inits [sep & args]] (split-with (complement #{"--"}) args)]
-    (null-opt args (map vector (repeat "-i") inits))))
-
 (defn main
-  "Usage: java -cp clojure.jar clojure.main [init-opt*] [main-opt] [arg*]
+  "Usage: erl -pa ebin -s clojure.main main [init-opt*] [main-opt] [arg*]
 
   With no options or args, runs an interactive Read-Eval-Print Loop
 
