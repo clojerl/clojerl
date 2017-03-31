@@ -1,6 +1,6 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -smp enable -pa _build/default/lib/clojerl/ebin -pa priv -pa ebin +pc unicode
+%%! -smp enable -pa _build/default/lib/clojerl/ebin -pa src/clj +pc unicode
 
 -spec main([string()]) -> ok.
 main(Paths) ->
