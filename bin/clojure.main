@@ -1,6 +1,6 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -smp enable -pa _build/default/lib/clojerl/ebin -pa src/clj -pa ebin -s clojerl start -noshell +pc unicode
+%%! -smp enable -pa _build/default/lib/clojerl/ebin -pa src/clj -pa test/clj -pa ebin -s clojerl start -noshell +pc unicode
 
 main(Args) ->
   ArgsBin = [list_to_binary(Arg) || Arg <- Args],
