@@ -1,18 +1,18 @@
 -module('clojerl.Seqable').
 
+-include("clojerl.hrl").
+
 -clojure(true).
 -protocol(true).
 
 -export([seq/1, to_list/1]).
 
--type type() :: list().
+-callback seq(Seqable :: any()) -> any().
 
--callback seq(Seqable :: any()) -> type().
-
--spec seq(any()) -> type().
+-spec seq(any()) -> any().
 seq(Seqable) ->
   clj_protocol:resolve(?MODULE, seq, Seqable).
 
--spec to_list(any()) -> list().
+-spec to_list(any()) -> [any()].
 to_list(Seqable) ->
   clj_protocol:resolve(?MODULE, to_list, Seqable).

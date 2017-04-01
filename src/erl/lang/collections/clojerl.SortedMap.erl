@@ -43,9 +43,9 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: orddict:orddict()}.
+-type type() :: #?TYPE{data :: {map(), rbdict:rbdict()}}.
 
--spec ?CONSTRUCTOR(list()) -> type().
+-spec ?CONSTRUCTOR([any()]) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
   Keys   = lists:foldl(fun fold_key_values/2, #{}, KeyValuePairs),

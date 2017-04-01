@@ -75,7 +75,7 @@ parse_number(Number) ->
   end.
 
 -spec parse_symbol(binary()) ->
-  {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()}.
+  {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()} | ?NIL.
 parse_symbol(<<>>) ->
   ?NIL;
 parse_symbol(<<"::"/utf8, _/binary>>) ->
@@ -109,9 +109,9 @@ verify_symbol_name({_, Name} = Result) ->
   end.
 
 -spec char_type(non_neg_integer()) -> char_type().
-char_type(X) -> char_type(X, <<>>).
+char_type(X) -> char_type(X, ?NIL).
 
--spec char_type(non_neg_integer(), binary()) -> char_type().
+-spec char_type(non_neg_integer(), integer() | ?NIL) -> char_type().
 char_type(X, _)
   when X == $\n; X == $\t; X == $\r; X == $ ; X == $,->
   whitespace;
@@ -179,7 +179,10 @@ throw(List, Location) ->
 throw_when(Throw, Reason) ->
   throw_when(Throw, Reason, ?NIL).
 
--spec throw_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
+-spec throw_when(boolean(), any(), clj_reader:location() | ?NIL) ->
+  ok | no_return().
+throw_when(false, _, _) ->
+  ok;
 throw_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   throw_when(true, Reason, Location);
@@ -187,9 +190,7 @@ throw_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
   erlang:throw(<<LocationBin/binary, Reason/binary>>);
 throw_when(true, Reason, Location) ->
-  erlang:throw({Location, Reason});
-throw_when(false, _, _) ->
-  ok.
+  erlang:throw({Location, Reason}).
 
 -spec error(any()) -> no_return().
 error(List) ->
@@ -205,6 +206,8 @@ error_when(Throw, Reason) ->
 
 -spec error_when(boolean(), any(), clj_reader:location() | ?NIL) ->
   ok | no_return().
+error_when(false, _, _) ->
+  ok;
 error_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   error_when(true, Reason, Location);
@@ -212,15 +215,15 @@ error_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
   erlang:error(<<LocationBin/binary, Reason/binary>>);
 error_when(true, Reason, Location) ->
-  erlang:error({Location, Reason});
-error_when(false, _, _) ->
-  ok.
+  erlang:error({Location, Reason}).
 
--spec warn_when(boolean(), any()) -> ok | no_return().
+-spec warn_when(boolean(), any()) -> ok.
 warn_when(Warn, Reason) ->
   warn_when(Warn, Reason, ?NIL).
 
--spec warn_when(boolean(), any(), clj_reader:location()) -> ok | no_return().
+-spec warn_when(boolean(), any(), clj_reader:location() | ?NIL) -> ok.
+warn_when(false, _, _) ->
+  ok;
 warn_when(true, List, Location) when is_list(List) ->
   Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
   warn_when(true, Reason, Location);
@@ -228,13 +231,13 @@ warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
   'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
                            , <<LocationBin/binary, Reason/binary, "\n">>
-                           );
+                           ),
+  ok;
 warn_when(true, Reason, Location) ->
   'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , "~p~n"
+                           , <<"~p~n">>
                            , [{Location, Reason}]
-                           );
-warn_when(false, _, _) ->
+                           ),
   ok.
 
 -spec group_by(fun((any()) -> any()), list()) -> map().
@@ -313,9 +316,8 @@ parse_int(IntBin) ->
       ?NIL
   end.
 
--spec int_properties([string()]) -> {zero | ?NIL | {integer(), string()},
-                                     boolean(),
-                                     boolean()}.
+-spec int_properties([string()]) ->
+  {zero | ?NIL | {integer(), string()}, integer(), -1 | 1}.
 int_properties(Groups) ->
   Props = lists:map(fun(X) -> X =/= "" end, Groups),
   Result =
@@ -350,9 +352,7 @@ parse_float(FloatBin) ->
 
   list_to_float(FloatStr).
 
--type ratio() :: #{type => ratio,
-                   denom => integer(),
-                   enum => integer()}.
+-type ratio() :: {ratio, integer(), integer()}.
 
 -spec parse_ratio(binary()) -> ratio().
 parse_ratio(RatioBin) ->

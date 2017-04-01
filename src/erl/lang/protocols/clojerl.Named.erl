@@ -1,19 +1,19 @@
 -module('clojerl.Named').
 
+-include("clojerl.hrl").
+
 -clojure(true).
 -protocol(true).
 
 -export([name/1, namespace/1]).
 
--type type() :: any().
-
 -callback name(any()) -> binary().
 -callback namespace(any()) -> binary().
 
--spec name(type()) -> binary().
+-spec name(any()) -> binary() | ?NIL.
 name(X) ->
   clj_protocol:resolve(?MODULE, name, X).
 
--spec namespace(type()) -> binary().
+-spec namespace(any()) -> binary() | ?NIL.
 namespace(X) ->
   clj_protocol:resolve(?MODULE, namespace, X).

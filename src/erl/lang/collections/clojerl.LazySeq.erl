@@ -137,6 +137,7 @@ seq(#?TYPE{name = ?M, data = Fn}) ->
 to_list(#?TYPE{name = ?M} = LazySeq) ->
   do_to_list(LazySeq, []).
 
+-spec do_to_list(?NIL | any(), [any()]) -> [any()].
 do_to_list(?NIL, Acc) ->
   lists:reverse(Acc);
 do_to_list(Seq0, Acc) ->

@@ -7,7 +7,7 @@
         , is_special/1
         ]).
 
--spec analyze(clj_env:env(), any()) -> clj_env:env().
+-spec analyze(any(), clj_env:env()) -> clj_env:env().
 analyze(Form, Env0) ->
   {Expr, Env} =  clj_env:pop_expr(analyze_form(Form, Env0)),
   clj_env:push_expr(Expr#{top_level => true}, Env).
@@ -17,7 +17,7 @@ is_special(S) ->
   clj_core:'symbol?'(S) andalso
     maps:is_key(clj_core:str(S), special_forms()).
 
--spec macroexpand_1(clj_env:env(), any()) -> any().
+-spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
   Op        = clj_core:first(Form),
   IsSymbol  = clj_core:'symbol?'(Op),
@@ -467,15 +467,15 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
   clj_env:push_expr(FnMethodExpr, Env8).
 
 -spec analyze_method_params(['clojerl.Symbol':type()], clj_env:env()) ->
-  [any()].
+  clj_env:env().
 analyze_method_params(ParamsNames, Env) ->
   analyze_method_params(false, -1, ParamsNames, Env).
 
 -spec analyze_method_params( boolean()
-                           , non_neg_integer()
+                           , -1 | non_neg_integer()
                            , ['clojerl.Symbol':type()]
                            , clj_env:env()
-                           ) -> {[any()], clj_env:env()}.
+                           ) -> clj_env:env().
 analyze_method_params(IsVariadic, Arity, Params, Env0) ->
   ParamExprFun =
     fun(Pattern, {Id, EnvAcc0}) ->
@@ -617,7 +617,8 @@ parse_loop(Form, Env) ->
 
   clj_env:push_expr(LoopExpr, clj_env:pop(Env2)).
 
--spec analyze_let('clojerl.List':type(), clj_env:env()) -> clj_env:env().
+-spec analyze_let('clojerl.List':type(), clj_env:env()) ->
+  {map(), clj_env:env()}.
 analyze_let(Form, Env0) ->
   validate_bindings(Form, Env0),
   Op     = clj_core:first(Form),
@@ -1132,8 +1133,8 @@ lookup_var(VarSymbol, true = _CreateNew) ->
     false ->
       lookup_var(VarSymbol, false)
   end;
-lookup_var(VarSymbol, false) ->
-  NsStr = clj_core:namespace(VarSymbol),
+lookup_var(VarSymbol, false = _CreateNew) ->
+  NsStr   = clj_core:namespace(VarSymbol),
   NameStr = clj_core:name(VarSymbol),
 
   case {NsStr, NameStr} of
@@ -1728,7 +1729,7 @@ analyze_invoke(Form, Env) ->
 %% Analyze symbol
 %%------------------------------------------------------------------------------
 
--spec analyze_symbol(clj_env:env(), 'clojerl.Symbol':type()) -> clj_env:env().
+-spec analyze_symbol('clojerl.Symbol':type(), clj_env:env()) -> clj_env:env().
 analyze_symbol(Symbol, Env) ->
   InPattern = clj_env:get(in_pattern, false, Env),
   case InPattern orelse resolve(Symbol, Env) of
@@ -1769,7 +1770,7 @@ analyze_symbol(Symbol, Env) ->
                   , atom()
                   , arity()
                   , clj_env:env()
-                  ) -> clj_env:env().
+                  ) -> map().
 erl_fun_expr(Symbol, Module, Function, Arity, Env) ->
   #{ op       => erl_fun
    , env      => Env
@@ -1806,14 +1807,22 @@ type_expr(Type, Symbol, Env) ->
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
 
 -spec resolve('clojerl.Symbol':env(), clj_env:env()) ->
-  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | ?NIL
+  { {var, 'clojerl.Var':type()}
+    | erl_fun()
+    | {local, map()}
+    | ?NIL
+    | {type, any()}
   , clj_env:env()
   }.
 resolve(Symbol, Env) ->
   resolve(Symbol, true, Env).
 
 -spec resolve('clojerl.Symbol':env(), boolean(), clj_env:env()) ->
-  { {var, 'clojerl.Var':type()} | erl_fun() | {local, map()} | ?NIL
+  { {var , 'clojerl.Var':type()}
+    | erl_fun()
+    | {local, map()}
+    | ?NIL
+    | {type, any()}
   , clj_env:env()
   }.
 resolve(Symbol, CheckPrivate, Env) ->
@@ -1940,7 +1949,7 @@ wrapping_meta(#{form := Form, tag := Tag} = Expr, Env) ->
                       , expr => Expr
                       },
       clj_env:push_expr(WithMetaExpr, Env1);
-    _ ->
+    Meta ->
       clj_env:push_expr(Expr, Env)
   end.
 
@@ -2189,7 +2198,7 @@ parse_segment(Segment0, Env0) ->
 
   clj_env:push_expr(SegmentExpr, Env5).
 
--spec segment_to_list(any()) -> list() | invalid.
+-spec segment_to_list(any()) -> [any()] | invalid.
 segment_to_list(Binary) when is_binary(Binary) ->
   [Binary, type,  binary];
 segment_to_list(Integer) when is_number(Integer) ->

@@ -135,7 +135,7 @@ nth_from(Coll, N, NotFound) ->
     false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
   end.
 
--spec 'empty?'(any()) -> integer().
+-spec 'empty?'(any()) -> boolean().
 'empty?'(Seq) ->
   'clojerl.Seqable':seq(Seq) == ?NIL.
 
@@ -154,7 +154,7 @@ seq_or_else(Seqable) ->
     _    -> Seqable
   end.
 
--spec to_list(any()) -> list().
+-spec to_list(any()) -> [any()].
 to_list(?NIL) -> [];
 to_list(List) when is_list(List) -> List;
 to_list(Seqable) ->
@@ -186,7 +186,7 @@ disj(Coll, Item) ->
 %%      a vanilla Erlang Head and Tail. When dealing with LazySeqs
 %%      it is a clojerl.Cons cell, so that the realization of values
 %%      can be postponed until they are used.
--spec cons(any(), any()) -> list().
+-spec cons(any(), any()) -> 'clojerl.Cons':type() | 'clojerl.List':type().
 cons(Item, ?NIL) ->
   list([Item]);
 cons(Item, Seq) ->
@@ -239,11 +239,11 @@ peek(Stack)     -> 'clojerl.IStack':peek(Stack).
 pop(?NIL) -> ?NIL;
 pop(Stack)     -> 'clojerl.IStack':pop(Stack).
 
--spec name(any()) -> any().
+-spec name(any()) -> binary() | ?NIL.
 name(X) when is_binary(X) -> X;
 name(X) -> 'clojerl.Named':name(X).
 
--spec namespace(any()) -> any().
+-spec namespace(any()) -> binary() | ?NIL.
 namespace(X) ->
   'clojerl.Named':namespace(X).
 
@@ -349,7 +349,7 @@ deref(X) ->
 meta(X) ->
   'clojerl.IMeta':meta(X).
 
--spec with_meta(any(), any()) -> any().
+-spec with_meta(T, 'clojerl.Map':type()) -> T.
 with_meta(X, Meta) ->
   'clojerl.IMeta':with_meta(X, Meta).
 
@@ -432,18 +432,18 @@ boolean(?NIL) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
 
--spec byte(any()) -> boolean().
+-spec byte(number()) -> integer().
 byte(X) when is_number(X), 0 =< X, X =< 256 ->
   erlang:trunc(X).
 
--spec char(any()) -> boolean().
+-spec char(number()) -> binary().
 char(X) when is_number(X) ->
   case unicode:characters_to_binary([X], utf8) of
     Char when is_binary(Char) -> Char;
     Error -> error(Error)
   end.
 
--spec short(any()) -> boolean().
+-spec short(number()) -> integer().
 short(X) when is_number(X), 0 =< X, X < 32768 ->
   erlang:trunc(X).
 

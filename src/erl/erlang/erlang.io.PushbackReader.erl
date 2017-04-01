@@ -159,7 +159,7 @@ maybe_encode_result(_, X) ->
 update_at_line_start(Result, State) ->
   State#{at_line_start := 'clojerl.String':ends_with(Result, <<"\n">>)}.
 
--spec get_chars(integer(), state()) -> {binary() | eof, binary()}.
+-spec get_chars(integer(), state()) -> {binary() | eof, state()}.
 get_chars(N, #{reader := Reader, buffer := <<>>} = State) ->
   {'erlang.io.IReader':read(Reader, N), State};
 get_chars(1, #{buffer := <<Ch/utf8, Str/binary>>} = State) ->
@@ -202,7 +202,7 @@ do_get_line(#{reader := Reader} = State, Result) ->
   end.
 
 -spec get_until(module(), atom(), list(), term()) ->
-  {term(), binary()}.
+  {term(), state()}.
 get_until(Module, Function, XArgs, State) ->
   case apply(Module, Function, [State, ?NIL | XArgs]) of
     {done, Result, NewStr} -> {Result, NewStr};
@@ -224,7 +224,7 @@ skip( {cont, Length, #{buffer := <<_/utf8, RestStr/binary>>} = State}
     ) ->
   {more, {cont, Length - 1, State#{buffer := RestStr}}}.
 
--spec unread_buffer(state(), binary()) -> ok.
+-spec unread_buffer(state(), binary()) -> {ok | {error, term()}, state()}.
 unread_buffer(State = #{buffer := Buffer}, Str) ->
   try
     {ok, State#{buffer := <<Str/binary, Buffer/binary>>}}

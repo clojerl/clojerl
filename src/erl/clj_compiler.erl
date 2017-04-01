@@ -28,6 +28,8 @@
                     , erl_flags   => [atom()]
                     , clj_flags   => [clj_flag()]
                     , verbose     => boolean()
+                    , reader_opts => map()
+                    , time        => boolean()
                     }.
 
 %%------------------------------------------------------------------------------
@@ -46,6 +48,7 @@ default_options() ->
                     ]
    , clj_flags   => []
    , verbose     => false
+   , time        => false
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().
@@ -58,9 +61,9 @@ compile_files(Files, Opts) when is_list(Files) ->
 
 -spec compile_files([file:filename_all()], options(), clj_env:env()) ->
   clj_env:env().
-compile_files(Files, Opts, Env) when is_list(Files) ->
-  Fun = fun(File, #{env := EnvAcc}) -> compile_file(File, Opts, EnvAcc) end,
-  lists:foldl(Fun, #{env => Env}, Files).
+compile_files(Files, Opts, Env0) when is_list(Files) ->
+  Fun = fun(File, EnvAcc) -> compile_file(File, Opts, EnvAcc) end,
+  lists:foldl(Fun, Env0, Files).
 
 -spec compile_file(file:filename_all()) -> clj_env:env().
 compile_file(File) when is_binary(File) ->
@@ -110,10 +113,10 @@ compile(Src, Opts) when is_binary(Src) ->
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->
-  #{eval := Value} = compile_file(Path),
-  Value.
+  Env = compile_file(Path),
+  clj_env:get(eval, Env).
 
--spec timed_compile(binary(), options(), clj_env:env()) -> clj_env:env().
+-spec timed_compile(binary(), options(), clj_env:env()) -> ok.
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
   clj_utils:time("Total", fun compile/3, [Src, Opts, Env]).
 
@@ -175,7 +178,8 @@ no_warn_dynamic_var_name(Env) ->
 
 -spec copy_proc_dict([{any(), any()}]) -> ok.
 copy_proc_dict(List) ->
-  [erlang:put(K, V) || {K, V} <- List].
+  [erlang:put(K, V) || {K, V} <- List],
+  ok.
 
 -spec run_monitored(fun()) -> any().
 run_monitored(Fun) ->
@@ -189,14 +193,13 @@ run_monitored(Fun) ->
       throw(Info)
   end.
 
--spec do_compile(binary(), options(), clj_env:env()) -> ok.
+-spec do_compile(binary(), options(), clj_env:env()) -> no_return().
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
-  Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts},
+  Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts, eval => ?NIL},
   Env1     = clj_env:push(Mapping, Env0),
-  State    = #{env => Env1},
 
   EmitEval = case Opts0 of
                #{time := true} ->
@@ -206,7 +209,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                                    , [ fun emit_eval_form/2
                                      , Src
                                      , RdrOpts
-                                     , State
+                                     , Env1
                                      ]
                                    )
                  end;
@@ -215,7 +218,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                      clj_reader:read_fold( fun emit_eval_form/2
                                          , Src
                                          , RdrOpts
-                                         , State
+                                         , Env1
                                          )
                  end
              end,
@@ -237,7 +240,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
 
   exit(Result).
 
--spec do_eval(any(), options(), clj_env:env()) -> ok.
+-spec do_eval(any(), options(), clj_env:env()) -> no_return().
 do_eval(Form, Opts0, Env0) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
@@ -279,17 +282,14 @@ check_flag(Flag, Env) ->
 ensure_output_dir(#{output_dir := OutputDir}) ->
   ok   = filelib:ensure_dir(filename:join([OutputDir, "dummy"])),
   true = code:add_path(OutputDir),
-  ok;
-ensure_output_dir(_) ->
   ok.
 
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
-emit_eval_form(Form, #{env := Env}) ->
+emit_eval_form(Form, Env) ->
   Env1          = clj_analyzer:analyze(Form, Env),
   {Exprs, Env2} = clj_emitter:emit(Env1),
   Value         = eval_expressions(Exprs),
-
-  #{env => Env2, eval => Value}.
+  clj_env:update(eval, Value, Env2).
 
 -spec compile_forms_fun(options()) -> function().
 compile_forms_fun(Opts) ->

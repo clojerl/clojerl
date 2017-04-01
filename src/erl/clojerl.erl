@@ -48,10 +48,11 @@ ensure_modules() ->
   [ensure_loaded(File) || File <- filelib:wildcard([Path, Filter])],
   ok.
 
--spec ensure_loaded(binary()) -> ok.
+-spec ensure_loaded(string()) -> ok.
 ensure_loaded(File) ->
-  Module = list_to_atom(filename:rootname(filename:basename(File))),
-  code:ensure_loaded(Module).
+  Module           = list_to_atom(filename:rootname(filename:basename(File))),
+  {module, Module} = code:ensure_loaded(Module),
+  ok.
 
 -spec stick() -> ok.
 stick() ->

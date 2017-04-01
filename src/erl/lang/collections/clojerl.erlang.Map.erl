@@ -106,7 +106,7 @@ equiv(X, Y) when is_map(X) ->
   end.
 
 remove_meta(#?TYPE{} = K, V, Acc) ->
-  K1 = K#?TYPE{info = ?NIL},
+  K1 = K#?TYPE{info = #{}},
   Acc#{K1 => V};
 remove_meta(K, V, Acc) ->
   Acc#{K => V}.

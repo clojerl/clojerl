@@ -13,7 +13,7 @@
         , impl_module/2
         ]).
 
--spec resolve(atom(), atom(), list()) -> any().
+-spec resolve(atom(), atom(), any()) -> any().
 resolve(Protocol, Function, Head) ->
   Type = clj_core:type(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 1),
@@ -58,7 +58,7 @@ resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) ->
   F(Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6).
 
 -spec resolve_impl_cache(atom(), atom(), atom(), integer()) ->
-  {module(), atom()}.
+  function().
 resolve_impl_cache(Protocol, Function, Type, Arity) ->
   Key = {resolve_impl, Protocol, Function, Type, Arity},
   case erlang:get(Key) of
@@ -100,7 +100,7 @@ resolve_impl(Protocol, Function, Type, Arity) ->
       end
   end.
 
--spec impl_module(atom(), atom()) -> atom().
+-spec impl_module(atom() | binary(), atom() | binary()) -> atom().
 impl_module(Protocol, Type)
   when is_atom(Protocol),
        is_atom(Type) ->

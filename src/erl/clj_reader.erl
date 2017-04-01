@@ -10,7 +10,7 @@
 
 -type location() :: #{ line   => non_neg_integer()
                      , column => non_neg_integer()
-                     , file   => binary()
+                     , file   => binary() | ?NIL
                      }.
 
 -type opts() :: #{ ?OPT_READ_COND => allow | preserve
@@ -20,7 +20,7 @@
                  , ?OPT_FEATURES  => 'clojerl.Set':type()
                    %% Set of features available when processing a reader
                    %% conditional.
-                 , ?OPT_EOF       => any()
+                 , ?OPT_EOF       => ?EOFTHROW | ok
                    %% When 'eofthrow' then throw, otherwise return value.
                  , file           => file:filename_all()
                    %% Source file being read.
@@ -45,7 +45,9 @@
                     %% Current line and column location.
                   , bindings      => clj_scope:scope()
                     %% Current bindings.
-                  , return_on     => char()
+                  , return_on     => char() | ?NIL
+                    %% Used when reading a string
+                  , current       => binary() | ?NIL
                   }.
 
 -type read_fold_fun() :: fun((any(), any()) -> any()).
@@ -55,7 +57,7 @@
 read_fold(Fun, Src, Opts0, Env) ->
   %% Since we want to consume all of the source, we don't want to
   %% throw when eof is reached.
-  Opts  = Opts0#{eof => ok},
+  Opts  = Opts0#{?OPT_EOF => ok},
   State = new_state(Src, Env, Opts),
   read_fold_loop(Fun, State).
 
@@ -131,8 +133,6 @@ read(Src, Opts) ->
 %%------------------------------------------------------------------------------
 
 -spec platform_features(opts() | ?NIL) -> opts().
-platform_features(?NIL) ->
-  #{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)};
 platform_features(#{?OPT_FEATURES := Features} = Opts) ->
   NewFeatures = lists:foldl( fun(Feature, Acc) ->
                                  clj_core:conj(Acc, Feature)
@@ -145,7 +145,7 @@ platform_features(Opts) ->
   Opts#{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)}.
 
 %% @private
--spec new_state(binary(), any(), opts()) -> state().
+-spec new_state(binary(), clj_env:env(), opts()) -> state().
 new_state(Src, Env, Opts) ->
   #{ src           => Src
    , opts          => platform_features(Opts)
@@ -155,6 +155,7 @@ new_state(Src, Env, Opts) ->
    , loc           => {1, 1}
    , bindings      => clj_scope:new()
    , return_on     => ?NIL
+   , current       => ?NIL
    }.
 
 %% @doc Makes sure a single form is read unless we reach
@@ -222,12 +223,20 @@ read_number(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_string(state()) -> state().
+%% Start consuming string
+read_string(#{ src := <<"\"", _/binary>>
+             , loc := Loc
+             , current := ?NIL
+             } = State
+           ) ->
+  State1 = add_scope(consume_char(State)),
+  read_string(location_started(State1#{current => <<>>}, Loc));
 %% Found closing double quotes
 read_string(#{ src     := <<"\"", _/binary>>
              , current := String
              } = State0
            ) ->
-  State = consume_char(maps:remove(current, State0)),
+  State = consume_char(State0#{current => ?NIL}),
   push_form(String, remove_scope(State));
 %% Process escaped character
 read_string(#{ src     := <<"\\", _/binary>>
@@ -243,10 +252,6 @@ read_string(#{ src     := <<Char/utf8, _/binary>>
              , current := String} = State0) ->
   State = State0#{current => <<String/binary, Char/utf8>>},
   read_string(consume_char(State));
-%% Start consuming string
-read_string(#{src := <<"\"", _/binary>>, loc := Loc} = State) ->
-  State1 = add_scope(consume_char(State)),
-  read_string(location_started(State1#{current => <<>>}, Loc));
 %% Didn't find closing double quotes
 read_string(#{src := <<>>} = State) ->
   case check_reader(State) of
@@ -445,24 +450,24 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_syntax_quote(state()) -> state().
-read_syntax_quote(#{src := <<"`"/utf8, _/binary>>, env := Env} = State) ->
+read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
   {Form, NewState} = read_pop_one(consume_char(State)),
 
   try
     %% TODO: using process dictionary here might be a code smell
     erlang:put(gensym_env, #{}),
-    {QuotedForm, Env1}      = syntax_quote(Form, Env),
-    {NewFormWithMeta, Env2} = add_meta(Form, Env1, QuotedForm),
+    QuotedForm      = syntax_quote(Form),
+    NewFormWithMeta = add_meta(Form, QuotedForm),
 
-    push_form(NewFormWithMeta, NewState#{env => Env2})
+    push_form(NewFormWithMeta, NewState)
   catch error:Reason ->
       clj_utils:error(Reason, location(NewState))
   after
     erlang:erase(gensym_env)
   end.
 
--spec syntax_quote(any(), clj_env:env()) -> {any(), clj_env:env()}.
-syntax_quote(Form, Env) ->
+-spec syntax_quote(any()) -> any().
+syntax_quote(Form) ->
   IsSpecial    = clj_analyzer:is_special(Form),
   IsSymbol     = clj_core:'symbol?'(Form),
   IsUnquote    = is_unquote(Form),
@@ -472,11 +477,11 @@ syntax_quote(Form, Env) ->
 
   QuoteSymbol = clj_core:symbol(<<"quote">>),
   if
-    IsSpecial    -> {clj_core:list([QuoteSymbol, Form]), Env};
+    IsSpecial    -> clj_core:list([QuoteSymbol, Form]);
     IsSymbol     ->
       Symbol = syntax_quote_symbol(Form),
-      {clj_core:list([QuoteSymbol, Symbol]), Env};
-    IsUnquote    -> {clj_core:second(Form), Env};
+      clj_core:list([QuoteSymbol, Symbol]);
+    IsUnquote    -> clj_core:second(Form);
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
       IsMap = clj_core:'map?'(Form),
@@ -486,21 +491,21 @@ syntax_quote(Form, Env) ->
       if
         IsMap ->
           HashMapSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-map">>),
-          syntax_quote_coll(flatten_map(Form), HashMapSymbol, Env);
+          syntax_quote_coll(flatten_map(Form), HashMapSymbol);
         IsVector ->
           VectorSymbol = clj_core:symbol(<<"clojure.core">>, <<"vector">>),
-          syntax_quote_coll(Form, VectorSymbol, Env);
+          syntax_quote_coll(Form, VectorSymbol);
         IsSet ->
           HashSetSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-set">>),
-          syntax_quote_coll(Form, HashSetSymbol, Env);
+          syntax_quote_coll(Form, HashSetSymbol);
         IsList ->
           ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-          syntax_quote_coll(Form, ListSymbol, Env);
+          syntax_quote_coll(Form, ListSymbol);
         true ->
-          syntax_quote_coll(Form, ?NIL, Env)
+          syntax_quote_coll(Form, ?NIL)
       end;
-    IsLiteral -> {Form, Env};
-    true      -> {clj_core:list([QuoteSymbol, Form]), Env}
+    IsLiteral -> Form;
+    true      -> clj_core:list([QuoteSymbol, Form])
   end.
 
 -spec flatten_map(any()) -> any().
@@ -571,55 +576,53 @@ resolve_symbol(Symbol) ->
       clj_core:symbol(Namespace, Name)
   end.
 
--spec syntax_quote_coll(any(), 'clojerl.Symbol':type(), clj_env:env()) ->
-  {any(), clj_env:env()}.
-syntax_quote_coll(List, ?NIL, Env) ->
-  syntax_quote_coll(List, Env);
-syntax_quote_coll(List, FunSymbol, Env) ->
-  {ExpandedList, Env1} = syntax_quote_coll(List, Env),
-  ApplySymbol = clj_core:symbol(<<"clojure.core">>, <<"apply">>),
-  {clj_core:list([ApplySymbol, FunSymbol, ExpandedList]), Env1}.
+-spec syntax_quote_coll(any(), 'clojerl.Symbol':type()) -> any().
+syntax_quote_coll(List, ?NIL) ->
+  syntax_quote_coll(List);
+syntax_quote_coll(List, FunSymbol) ->
+  ExpandedList = syntax_quote_coll(List),
+  ApplySymbol  = clj_core:symbol(<<"clojure.core">>, <<"apply">>),
+  clj_core:list([ApplySymbol, FunSymbol, ExpandedList]).
 
--spec syntax_quote_coll(any(), clj_env:env()) -> {any(), clj_env:env()}.
-syntax_quote_coll(List, Env) ->
+-spec syntax_quote_coll(any()) -> any().
+syntax_quote_coll(List) ->
   case clj_core:'empty?'(List) of
     true ->
       ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-      {clj_core:list([ListSymbol]), Env};
+      clj_core:list([ListSymbol]);
     false ->
-      {ReversedExpandedItems, Env1} = expand_list(List, Env, []),
+      ReversedExpandedItems = expand_list(List, []),
       ExpandedItems = lists:reverse(ReversedExpandedItems),
       ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
-      {clj_core:list([ConcatSymbol | ExpandedItems]), Env1}
+      clj_core:list([ConcatSymbol | ExpandedItems])
   end.
 
--spec expand_list(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
-expand_list(?NIL, Env, Result) ->
-  {Result, Env};
-expand_list(List, Env, Result) ->
-  Item = clj_core:first(List),
+-spec expand_list(any(), any()) -> any().
+expand_list(?NIL, Result) ->
+  Result;
+expand_list(List, Result) ->
+  Item       = clj_core:first(List),
   ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-  {NewItem, Env2} =
-    case {is_unquote(Item), is_unquote_splicing(Item)} of
-      {true, _} ->
-        {clj_core:list([ListSymbol, clj_core:second(Item)]), Env};
-      {_, true} ->
-        {clj_core:second(Item), Env};
-      _ ->
-        {QuotedForm, Env1} = syntax_quote(Item, Env),
-        {clj_core:list([ListSymbol, QuotedForm]), Env1}
-      end,
-  expand_list(clj_core:next(List), Env2, [NewItem | Result]).
+  NewItem    = case {is_unquote(Item), is_unquote_splicing(Item)} of
+                 {true, _} ->
+                   clj_core:list([ListSymbol, clj_core:second(Item)]);
+                 {_, true} ->
+                   clj_core:second(Item);
+                 _ ->
+                   QuotedForm = syntax_quote(Item),
+                   clj_core:list([ListSymbol, QuotedForm])
+               end,
+  expand_list(clj_core:next(List), [NewItem | Result]).
 
--spec add_meta(any(), clj_env:env(), any()) -> {any(), clj_env:env()}.
-add_meta(Form, Env, Result) ->
+-spec add_meta(any(), any()) -> any().
+add_meta(Form, Result) ->
   case clj_core:'meta?'(Form) of
     true ->
       WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
-      {Meta, Env1} = syntax_quote(clj_core:meta(Form), Env),
-      {clj_core:list([WithMetaSym, Result, Meta]), Env1};
+      Meta = syntax_quote(clj_core:meta(Form)),
+      clj_core:list([WithMetaSym, Result, Meta]);
     _ ->
-      {Result, Env}
+      Result
   end.
 
 is_unquote(Form) ->
@@ -827,18 +830,19 @@ read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
       end
   end.
 
--spec arg_type(state()) -> atom().
+-spec arg_type(state()) ->
+  {register_arg_1 | register_arg_multi | register_arg_n, state()}.
 arg_type(State = #{src := <<>>}) ->
   case check_reader(State) of
     eof -> {register_arg_1, State};
     {ok, NewState} -> arg_type(NewState)
   end;
 arg_type(State = #{src := <<Char/utf8, _/binary>>}) ->
-  IsWhitespace = clj_utils:char_type(Char) == whitespace,
+  IsWhitespace = clj_utils:char_type(Char) =:= whitespace,
   IsMacroTerminating = is_macro_terminating(Char),
   Type = if
            IsWhitespace orelse IsMacroTerminating -> register_arg_1;
-           Char == $& -> register_arg_multi;
+           Char =:= $& -> register_arg_multi;
            true -> register_arg_n
          end,
   {Type, State}.
@@ -976,16 +980,21 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
 %%------------------------------------------------------------------------------
 
 -spec read_regex(state()) -> state().
-read_regex(#{src := <<"\\"/utf8, Ch/utf8, _/binary>>} = State) ->
-  Current = maps:get(current, State, <<>>),
+read_regex(#{src := <<"\""/utf8, _/binary>>, current := ?NIL} = State) ->
+  read_regex(State#{current => <<>>});
+read_regex(#{src := <<Ch/utf8, _/binary>>, current := ?NIL} = State) ->
+  NewState = State#{current => <<Ch/utf8>>},
+  read_regex(consume_char(NewState));
+read_regex(#{ src     := <<"\\"/utf8, Ch/utf8, _/binary>>
+            , current := Current
+            } = State
+          ) ->
   NewState = State#{current => <<Current/binary, "\\", Ch/utf8>>},
   read_regex(consume_chars(2, NewState));
-read_regex(#{src := <<"\""/utf8, _/binary>>} = State) ->
-  Current = maps:get(current, State, <<>>),
+read_regex(#{src := <<"\""/utf8, _/binary>>, current := Current} = State) ->
   Regex = 'erlang.util.Regex':?CONSTRUCTOR(Current),
-  push_form(Regex, consume_char(maps:remove(current, State)));
-read_regex(#{src := <<Ch/utf8, _/binary>>} = State) ->
-  Current = maps:get(current, State, <<>>),
+  push_form(Regex, consume_char(State#{current => ?NIL}));
+read_regex(#{src := <<Ch/utf8, _/binary>>, current := Current} = State) ->
   NewState = State#{current => <<Current/binary, Ch/utf8>>},
   read_regex(consume_char(NewState));
 read_regex(#{src := <<>>} = State) ->
@@ -1403,7 +1412,11 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
           , Types
           , Length
           ) ->
-  Type = clj_utils:char_type(X, Rest),
+  Next = case Rest of
+           <<N/utf8, _>> -> N;
+           _             -> -1
+         end,
+  Type = clj_utils:char_type(X, Next),
   case lists:member(Type, Types) of
     true ->
       State1 = consume_char(State),
@@ -1470,7 +1483,7 @@ is_macro_terminating(Char) ->
 
 -spec is_whitespace(char()) -> boolean().
 is_whitespace(Char) ->
-  clj_utils:char_type(Char, <<>>) =:= whitespace.
+  clj_utils:char_type(Char) =:= whitespace.
 
 -spec skip_line(state()) -> state().
 skip_line(State) ->
@@ -1498,7 +1511,7 @@ push_form(Form, #{forms := Forms} = State) ->
 push_pending_form(Form, #{pending_forms := Forms} = State) ->
   State#{pending_forms => [Form | Forms]}.
 
--spec scope_get(atom(), state()) -> state().
+-spec scope_get(atom(), state()) -> any().
 scope_get(Name, #{bindings := Bindings} = _State) ->
   clj_scope:get(Name, Bindings).
 

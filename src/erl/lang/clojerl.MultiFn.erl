@@ -23,7 +23,7 @@
         ]).
 
 -record(multifn, { id     :: {binary(), any()},
-                   name   :: binary(),
+                   name   :: binary() | '$1',
                    value  :: any(),
                    method :: any()
                  }).
@@ -41,7 +41,7 @@
 get_method(Name, Value) ->
   get_method(Name, Value, default, ?NIL).
 
--spec get_method(binary(), any(), any(), map()) -> any().
+-spec get_method(binary(), any(), any(), map() | ?NIL) -> any().
 get_method(Name, Value, Default, _Hierarchy) ->
   case get(?MODULE, {Name, 'clojerl.IHash':hash(Value)}) of
     ?NIL ->
@@ -117,7 +117,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec init_heir() -> ok.
+-spec init_heir() -> {pid() | port(), reference()}.
 init_heir() ->
   case erlang:whereis(?METHODS_HEIR) of
     undefined ->
@@ -158,12 +158,12 @@ new_method(Name, Value, Hash, Method) ->
                     },
   save(?METHODS, MultiFn).
 
--spec save(ets:tid(), term()) -> term().
+-spec save(module() | ets:tid(), term()) -> term().
 save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
 
--spec get(ets:tid(), term()) -> term().
+-spec get(module() | ets:tid(), term()) -> term().
 get(Table, Id) ->
   case ets:lookup(Table, Id) of
     [] -> ?NIL;

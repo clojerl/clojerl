@@ -47,10 +47,10 @@ handle_call({put, Key, Value}, _From, State) ->
   {reply, ok, State}.
 
 handle_cast(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
 handle_info(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
 terminate(_Msg, State) ->
   {ok, State}.

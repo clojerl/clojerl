@@ -31,7 +31,7 @@ initial_state() ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec ast(map(), state()) -> {[ast()], state()}.
+-spec ast(map(), state()) -> state().
 ast(#{op := constant, form := Form, env := Env}, State) when is_binary(Form) ->
   Ast = binary_literal(ann_from(Env), Form),
   push_ast(Ast, State);
