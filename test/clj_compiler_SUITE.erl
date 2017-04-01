@@ -44,13 +44,13 @@ compile_file(_Config) ->
   Opts = #{verbose => true, time => true},
 
   ct:comment("Compile a file and check a var's value by deref'ing it"),
-  SimplePath = clj_test_utils:relative_path(<<"priv/examples/simple.clj">>),
+  SimplePath = clj_test_utils:relative_path(<<"test/clj/examples/simple.clj">>),
   _Env = clj_compiler:compile_file(SimplePath, Opts),
   check_var_value(<<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath =
-    clj_test_utils:relative_path(<<"priv/examples/abcdef_42.clj">>),
+    clj_test_utils:relative_path(<<"test/clj/examples/abcdef_42.clj">>),
   ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
        catch _:_ -> ok end,
 
@@ -59,26 +59,28 @@ compile_file(_Config) ->
 -spec compile_files(config()) -> result().
 compile_files(_Config) ->
   Opts     = #{verbose => true, time => true},
-  PrivPath = clj_test_utils:relative_path(<<"priv">>),
-  true     = code:add_path(binary_to_list(PrivPath)),
+  SrcPath  = clj_test_utils:relative_path(<<"src/clj">>),
+  TestPath = clj_test_utils:relative_path(<<"test/clj">>),
+  true     = code:add_path(binary_to_list(SrcPath)),
+  true     = code:add_path(binary_to_list(TestPath)),
 
-  ct:comment("Compile all priv/clojure/*.clj files succesfully"),
-  Wildcard1 = clj_test_utils:relative_path(<<"priv/clojure/core.clj">>),
+  ct:comment("Compile all src/clj/clojure/*.clj files succesfully"),
+  Wildcard1 = clj_test_utils:relative_path(<<"src/clj/clojure/core.clj">>),
   Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
   FilesBin1 = lists:map(fun erlang:list_to_binary/1, Files1),
   _ = clj_compiler:compile_files(FilesBin1, Opts),
 
   ct:comment("Compile two files and use vars from one and the other"),
-  SimplePath  = clj_test_utils:relative_path(<<"priv/examples/simple.clj">>),
-  Simple2Path = clj_test_utils:relative_path(<<"priv/examples/simple_2.clj">>),
+  SimplePath  = clj_test_utils:relative_path(<<"test/clj/examples/simple.clj">>),
+  Simple2Path = clj_test_utils:relative_path(<<"test/clj/examples/simple_2.clj">>),
   _ = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
-  ct:comment("Compile all priv/examples/*.clj files succesfully"),
-  Wildcard2 = clj_test_utils:relative_path(<<"priv/examples/*.clj">>),
+  ct:comment("Compile all src/clj/examples/*.clj files succesfully"),
+  Wildcard2 = clj_test_utils:relative_path(<<"test/clj/examples/*.clj">>),
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
-  ErrorPath = clj_test_utils:relative_path(<<"priv/examples/error.clj">>),
+  ErrorPath = clj_test_utils:relative_path(<<"test/clj/examples/error.clj">>),
   FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],
   _Env2 = clj_compiler:compile_files(FilesBin2, Opts),
 

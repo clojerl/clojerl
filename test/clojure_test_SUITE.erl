@@ -20,18 +20,19 @@ init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
 
 -spec run(config()) -> result().
 run(_Config) ->
-  PrivPath = clj_test_utils:relative_path(<<"priv/">>),
-  true     = code:add_path(binary_to_list(PrivPath)),
+  SrcPath  = clj_test_utils:relative_path(<<"src/clj/">>),
+  RootPath = clj_test_utils:relative_path(<<"test/clj/">>),
+  true     = code:add_path(binary_to_list(SrcPath)),
+  true     = code:add_path(binary_to_list(RootPath)),
 
-
-  compile(<<"priv/clojure/core.clj">>),
-  compile(<<"priv/clojure/main.clj">>),
+  compile(<<"src/clj/clojure/core.clj">>),
+  compile(<<"src/clj/clojure/main.clj">>),
   'clojure.core':'in-ns'(clj_core:gensym(<<"temp-ns">>)),
   'clojure.core':'use'([clj_core:symbol(<<"clojure.core">>)]),
-  compile(<<"priv/examples/run_tests.clj">>),
+  compile(<<"test/clj/examples/run_tests.clj">>),
 
-  TestsPath = clj_test_utils:relative_path(<<"priv/clojure/test_clojure/">>),
-  Result    = 'examples.run-tests':'-main'([TestsPath, PrivPath]),
+  TestsPath = clj_test_utils:relative_path(<<"test/clj/clojure/test_clojure/">>),
+  Result    = 'examples.run-tests':'-main'([TestsPath, RootPath]),
 
   0 = clj_core:get(Result, fail),
   %% There are two tests that fail because of atoms not being implemented

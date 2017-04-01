@@ -15,7 +15,7 @@ clean:
 clean-all: clean
 	@rm -rf _build/ rebar.lock ebin/
 
-CLJ_SRC ?= priv
+CLJ_SRC ?= src/clj
 CLJ_TARGET ?= ebin
 CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
 

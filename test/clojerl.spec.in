@@ -1,7 +1,0 @@
-%% Specific modules to include in cover.
-{
-  incl_mods,
-  [{{MODULES}}]
-}.
-%% Export coverage data for jenkins.
-{export, "../logs/cover.data"}.
