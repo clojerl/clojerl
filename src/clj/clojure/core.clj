@@ -8,6 +8,9 @@
 
 (ns clojure.core)
 
+;; Unstick clojerl directory when bootstrapping.
+(clojerl/unstick.e)
+
 (def
   ^{:arglists '([& items])
     :doc "Creates a new list containing the items."
