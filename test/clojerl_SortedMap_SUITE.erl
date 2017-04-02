@@ -68,13 +68,13 @@ seq(_Config) ->
   Map = sorted_map([1, 2, 3, 4]),
 
   KVs = lists:map(fun clj_core:seq/1, clj_core:seq(Map)),
-  [[1, 2], [3, 4]] = lists:sort(KVs),
+  true = clj_core:equiv([[1, 2], [3, 4]], KVs),
 
   Map2 = sorted_map([]),
   ?NIL = clj_core:seq(Map2),
 
   MapList = clj_core:to_list(Map),
-  true = clj_core:equiv(MapList, [[1, 2], [3, 4]]),
+  true    = clj_core:equiv([[1, 2], [3, 4]], MapList),
 
   {comments, ""}.
 

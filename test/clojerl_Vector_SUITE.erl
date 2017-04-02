@@ -37,7 +37,7 @@ init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
 -spec new(config()) -> result().
 new(_Config) ->
   Vector = clj_core:vector([1, 2, 3]),
-  [1, 2, 3] = clj_core:seq(Vector),
+  true   = clj_core:equiv([1, 2, 3], clj_core:seq(Vector)),
 
   Vector2 = clj_core:vector([]),
   ?NIL = clj_core:seq(Vector2),
