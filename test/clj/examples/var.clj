@@ -4,7 +4,7 @@
 
 (def prn
   (fn* [x]
-    (io/format.e "~s~n" (clj_core/seq.e [(clj_core/str.e x)]))))
+       (io/format.e "~s~n" #erl((clj_core/str.e x)))))
 
 (prn (var x))
 

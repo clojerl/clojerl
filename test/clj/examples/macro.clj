@@ -11,6 +11,6 @@
 
 (defn hello [name]
   (io/format.e "Going to say hi...")
-  (io/format.e "Hello ~s!~n" (seq [name])))
+  (io/format.e "Hello ~s!~n" #erl(name)))
 
 (hello "Moto")

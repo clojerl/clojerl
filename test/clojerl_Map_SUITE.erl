@@ -65,14 +65,14 @@ str(_Config) ->
 seq(_Config) ->
   Map = clj_core:hash_map([1, 2, 3, 4]),
 
-  KVs = lists:map(fun clj_core:seq/1, clj_core:seq(Map)),
-  [[1, 2], [3, 4]] = lists:sort(KVs),
+  KVs  = lists:map(fun clj_core:seq/1, clj_core:seq(Map)),
+  true = clj_core:equiv([[1, 2], [3, 4]], lists:sort(KVs)),
 
   Map2 = clj_core:hash_map([]),
   ?NIL = clj_core:seq(Map2),
 
   MapList = clj_core:to_list(Map),
-  true = clj_core:equiv(MapList, [[3, 4], [1, 2]]),
+  true = clj_core:equiv([[1, 2], [3, 4]], lists:sort(MapList)),
 
   {comments, ""}.
 
