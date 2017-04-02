@@ -3,11 +3,12 @@
 
 -export([start_link/0, init/1]).
 
--spec start_link() -> ok.
+-spec start_link() -> ignore | {error, term()} | {ok, pid()}.
 start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
--spec init(term()) -> term().
+-spec init(term()) ->
+  {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
 init(_Args) ->
   SupFlags = #{strategy => one_for_one},
   Specs    = [ #{ id    => clj_namespace

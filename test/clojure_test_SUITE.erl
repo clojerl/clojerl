@@ -31,7 +31,7 @@ run(_Config) ->
   'clojure.core':'use'([clj_core:symbol(<<"clojure.core">>)]),
   compile(<<"test/clj/examples/run_tests.clj">>),
 
-  TestsPath = clj_test_utils:relative_path(<<"test/clj/clojure/test_clojure/">>),
+  TestsPath = <<RootPath/binary, "/clojure/test_clojure/">>,
   Result    = 'examples.run-tests':'-main'([TestsPath, RootPath]),
 
   0 = clj_core:get(Result, fail),

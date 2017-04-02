@@ -228,7 +228,7 @@ add_mappings(Mappings, Module) ->
   lists:foreach(AddFun, Mappings),
   Module.
 
--spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module()) ->
+-spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module() | module()) ->
   clj_module().
 add_attributes(Attrs, ModuleName) when is_atom(ModuleName)  ->
   add_attributes(Attrs, get(?MODULE, ModuleName));
@@ -239,7 +239,7 @@ add_attributes(Attrs, Module) ->
   ok = lists:foreach(AddAttr, Attrs),
   Module.
 
--spec add_exports([{atom(), non_neg_integer()}], clj_module()) ->
+-spec add_exports([{atom(), non_neg_integer()}], clj_module() | module()) ->
   clj_module().
 add_exports(Exports, ModuleName) when is_atom(ModuleName)  ->
   add_exports(Exports, get(?MODULE, ModuleName));
@@ -383,7 +383,7 @@ cleanup() ->
 %% if the module's binary is not found, which is interpreted as if the
 %% module is new.
 %% @end
--spec load(binary(), module()) -> ok | {error, term()}.
+-spec load(binary(), module()) -> clj_module().
 load(Source, Name) when is_binary(Source) ->
   SourceStr = binary_to_list(Source),
   Module = case code:ensure_loaded(Name) of
@@ -521,26 +521,21 @@ on_load_function(OnLoadTable) ->
          end,
   cerl:c_fun([], Body).
 
--spec get(atom(), module()) -> any().
-get(Table, Id) ->
-  get(Table, Id, false).
-
--spec get(atom(), module(), boolean()) -> any().
-get(?NIL, Id, _) -> %% If there is no table then nothing will be found.
+-spec get(atom() | ets:tid(), any()) -> any().
+get(?NIL, Id) -> %% If there is no table then nothing will be found.
   throw({no_table, Id});
-get(Table, Id, Throw) ->
+get(Table, Id) ->
   case ets:lookup(Table, Id) of
-    [] when Throw -> throw({not_found, Id});
     []      -> ?NIL;
     [Value] -> Value
   end.
 
--spec save(atom(), term()) -> term().
+-spec save(atom() | ets:tid(), term()) -> term().
 save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
 
--spec new(string(), atom() | cerl:c_module()) -> ok | {error, term()}.
+-spec new(string(), atom() | cerl:c_module()) -> clj_module().
 new(Source, Name) when is_atom(Name), is_list(Source) ->
   FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
   new(cerl:c_module(cerl:c_atom(Name), [], [FileAttr], []));
@@ -548,7 +543,7 @@ new(Source, #c_module{attrs = Attrs} = CoreModule) when is_list(Source) ->
   FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
   new(CoreModule#c_module{attrs = [FileAttr | Attrs]}).
 
--spec new(cerl:cerl()) -> ok | {error, term()}.
+-spec new(cerl:cerl()) -> clj_module().
 new(CoreModule) ->
   Name     = cerl:concrete(cerl:module_name(CoreModule)),
   Exports  = [ {cerl:fname_id(E), cerl:fname_arity(E)}

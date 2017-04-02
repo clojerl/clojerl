@@ -36,7 +36,7 @@ replace(#?TYPE{name = ?M, data = {_, Regex}}, Str, Replacement, Opts) ->
 quote(Regex) when is_binary(Regex) ->
   do_quote(Regex, <<>>).
 
--spec split(type(), binary(), [term()]) -> binary().
+-spec split(type(), binary(), [term()]) -> [binary()].
 split(Regex, Str, Opts) when is_binary(Regex) ->
   split(?CONSTRUCTOR(Regex), Str, Opts);
 split(#?TYPE{name = ?M, data = {_, Regex}}, Str, Opts) ->

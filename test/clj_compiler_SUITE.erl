@@ -71,8 +71,8 @@ compile_files(_Config) ->
   _ = clj_compiler:compile_files(FilesBin1, Opts),
 
   ct:comment("Compile two files and use vars from one and the other"),
-  SimplePath  = clj_test_utils:relative_path(<<"test/clj/examples/simple.clj">>),
-  Simple2Path = clj_test_utils:relative_path(<<"test/clj/examples/simple_2.clj">>),
+  SimplePath  = <<TestPath/binary, "/examples/simple.clj">>,
+  Simple2Path = <<TestPath/binary, "/examples/simple_2.clj">>,
   _ = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),

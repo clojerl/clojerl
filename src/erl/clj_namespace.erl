@@ -60,7 +60,7 @@ current(#namespace{} = Ns) ->
   clj_core:'set!'(NsVar, Ns),
   Ns.
 
--spec all() -> namespace().
+-spec all() -> [namespace()].
 all() -> ets:tab2list(?MODULE).
 
 %% @doc Tries to get the mappings from the module associated to the
@@ -272,7 +272,7 @@ handle_call( {unmap, Ns = #namespace{mappings = Mappings}, Symbol}
            , _From
            , State
            ) ->
-  ok = delete(Mappings, clj_core:name(Symbol)),
+  true = delete(Mappings, clj_core:name(Symbol)),
   {reply, Ns, State};
 handle_call( {add_alias, Ns = #namespace{aliases = Aliases}, Symbol, AliasedNs}
            , _From
@@ -284,17 +284,17 @@ handle_call( {remove_alias, Ns = #namespace{aliases = Aliases}, Symbol}
            , _From
            , State
            ) ->
-  delete(Aliases, clj_core:name(Symbol)),
+  true = delete(Aliases, clj_core:name(Symbol)),
   {reply, Ns, State};
 handle_call({remove, Name}, _From, State) ->
-  Result = ok =:= ets:delete(?MODULE, clj_core:name(Name)),
+  Result = true =:= ets:delete(?MODULE, clj_core:name(Name)),
   {reply, Result, State}.
 
 handle_cast(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
 handle_info(_Msg, State) ->
-  {ok, State}.
+  {noreply, State}.
 
 terminate(_Msg, State) ->
   {ok, State}.
@@ -320,23 +320,23 @@ new(NameSym) ->
                  },
   save(?MODULE, Ns).
 
--spec get(ets:tid(), term()) -> term().
+-spec get(atom() | ets:tid(), term()) -> term().
 get(Table, Id) ->
   case ets:lookup(Table, Id) of
     [] -> ?NIL;
     [Value] -> Value
   end.
 
--spec save(ets:tid(), term()) -> term().
+-spec save(ets:tid() | atom(), term()) -> term().
 save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
 
--spec delete(ets:tid(), term()) -> ok | {error, term()}.
+-spec delete(ets:tid(), term()) -> true.
 delete(Table, Key) ->
   ets:delete(Table, Key).
 
--spec load('clojerl.Symbol':type()) -> namespace().
+-spec load('clojerl.Symbol':type()) -> namespace() | ?NIL.
 load(Name) ->
   NameStr = clj_core:name(Name),
   Module  = binary_to_atom(NameStr, utf8),

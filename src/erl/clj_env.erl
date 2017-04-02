@@ -32,8 +32,9 @@
 
 -type env() :: #{ context    => context()
                 , location   => ?NIL | clj_reader:location()
-                , exprs      => []
+                , exprs      => [map()]
                 , locals     => clj_scope:scope()
+                , mapping    => clj_scope:scope()
                 }.
 
 -export_type([env/0]).
@@ -71,7 +72,7 @@ maybe_update_location(Location, Env) ->
 push_expr(Expr, Env = #{exprs := Exprs}) ->
   Env#{exprs => [Expr | Exprs]}.
 
--spec pop_expr(env()) -> env().
+-spec pop_expr(env()) -> {map(), env()}.
 pop_expr(Env = #{exprs := [H | Exprs]}) ->
   {H, Env#{exprs => Exprs}}.
 
@@ -122,11 +123,11 @@ push(Mapping, Env = #{mapping := Parent}) ->
   Child = clj_scope:new(Parent),
   Env#{mapping := clj_scope:put(Mapping, Child)}.
 
--spec update(any(), function, env()) -> env().
+-spec update(any(), any(), env()) -> env().
 update(Name, Value, Env = #{mapping := Mapping}) ->
   Env#{mapping := clj_scope:update(Name, Value, Mapping)}.
 
--spec put(any(), function, env()) -> env().
+-spec put(any(), any(), env()) -> env().
 put(Name, Value, Env = #{mapping := Mapping}) ->
   Env#{mapping := clj_scope:put(Name, Value, Mapping)}.
 

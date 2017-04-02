@@ -23,7 +23,7 @@
 -export([str/1]).
 
 -type path() :: binary().
--type type() :: #?TYPE{data :: pid()}.
+-type type() :: #?TYPE{data :: pid() | file:fd()}.
 
 -spec open(path()) -> type().
 open(Path) when is_binary(Path) ->
@@ -32,15 +32,15 @@ open(Path) when is_binary(Path) ->
 -spec open(path(), [atom()]) -> type().
 open(Path, Modes) when is_binary(Path) ->
   case file:open(Path, Modes) of
-    {ok, Pid}       -> #?TYPE{data = Pid, info = Path};
+    {ok, Pid}       -> #?TYPE{data = Pid, info = #{path => Path}};
     {error, Reason} -> error(Reason)
   end.
 
 -spec path(type()) -> binary().
-path(#?TYPE{name = ?M, info = Path}) ->
+path(#?TYPE{name = ?M, info = #{path := Path}}) ->
   Path.
 
--spec make_temp(binary(), binary()) -> binary().
+-spec make_temp(binary(), binary()) -> type().
 make_temp(Prefix, Suffix) ->
   TmpDir = tmp_dir(),
   ID     = erlang:integer_to_binary(erlang:phash2(erlang:make_ref())),
@@ -63,7 +63,7 @@ tmp_dir() ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-close(#?TYPE{name = ?M, data = Pid, info = Path}) ->
+close(#?TYPE{name = ?M, data = Pid, info = #{path := Path}}) ->
   case file:close(Pid) of
     {error, _Reason} ->
       error(<<"Couldn't close ", Path/binary>>);
@@ -102,5 +102,5 @@ write(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
   ok = io:fwrite(Pid, Format, clj_core:to_list(Values)),
   SW.
 
-str(#?TYPE{name = ?M, info = Path}) ->
+str(#?TYPE{name = ?M, info = #{path := Path}}) ->
   <<"#<erlang.io.File ", Path/binary, ">">>.

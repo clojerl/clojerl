@@ -20,7 +20,7 @@
 -spec new() -> scope().
 new() -> new(?NIL).
 
--spec new(scope()) -> scope().
+-spec new(scope() | ?NIL) -> scope().
 new(Parent) ->
  #{ parent   => Parent
   , mappings => #{}
@@ -49,7 +49,7 @@ put(Map, Scope) ->
            end,
   lists:foldl(PutFun, Scope, maps:keys(Map)).
 
--spec update(any(), any(), scope()) -> scope().
+-spec update(any(), any(), scope()) -> scope() | not_found.
 update(Key, Value, Scope) ->
   do_update(Key, Value, Scope).
 

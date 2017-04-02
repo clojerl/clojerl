@@ -98,7 +98,7 @@ function(#?TYPE{name = ?M, data = {_, Name}}) ->
 val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
   binary_to_atom(<<Name/binary, "__val">>, utf8).
 
--spec push_bindings(map()) -> ok.
+-spec push_bindings('clojerl.IMap':type()) -> ok.
 push_bindings(BindingsMap) ->
   Bindings      = get_bindings(),
   NewBindings   = clj_scope:new(Bindings),
@@ -132,7 +132,7 @@ get_bindings() ->
 -spec get_bindings_map() -> map().
 get_bindings_map() ->
   case get_bindings() of
-    ?NIL -> #{};
+    ?NIL      -> #{};
     Bindings  ->
       UnwrapFun = fun(_, {ok, X}) -> X end,
       clj_scope:to_map(UnwrapFun, Bindings)

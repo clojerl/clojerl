@@ -2,15 +2,13 @@
 
 -export([write/2, write/3]).
 
--type type() :: any().
+-callback write(A :: any(), K :: binary()) -> any().
+-callback write(A :: any(), K :: binary(), L :: list()) -> any().
 
--callback write(A :: type(), K :: binary()) -> type().
--callback write(A :: type(), K :: binary(), L :: list()) -> type().
-
--spec write(type(), binary()) -> type().
+-spec write(any(), binary()) -> any().
 write(Writer, Str) ->
   clj_protocol:resolve(?MODULE, write, Writer, Str).
 
--spec write(type(), binary(), any()) -> type().
+-spec write(any(), binary(), any()) -> any().
 write(Writer, Format, Values) ->
   clj_protocol:resolve(?MODULE, write, Writer, Format, Values).

@@ -36,7 +36,7 @@
 substring(Str, Start, End) when is_binary(Str), Start =< End, Start >= 0 ->
   do_substring(Str, Start, End, 0, <<>>).
 
--spec do_substring(binary(), integer(), integer(), integer(), integer()) ->
+-spec do_substring(binary(), integer(), integer(), integer(), binary()) ->
   binary().
 do_substring(_Str, _Start, End, End, Acc) ->
   Acc;
@@ -56,7 +56,7 @@ starts_with(Str, Prefix) ->
     _ -> false
   end.
 
--spec ends_with(binary(), binary()) -> ok.
+-spec ends_with(binary(), binary()) -> boolean().
 ends_with(Str, Ends) when size(Ends) > size(Str)->
   false;
 ends_with(Str, Ends) ->
@@ -68,11 +68,11 @@ ends_with(Str, Ends) ->
 contains(Subject, Pattern) ->
   [] =/= binary:matches(Subject, Pattern).
 
--spec append([binary()], binary()) -> binary().
+-spec append(binary(), binary()) -> binary().
 append(X, Y) when is_binary(X), is_binary(Y) ->
   <<X/binary, Y/binary>>.
 
--spec index_of(binary(), binary()) -> boolean().
+-spec index_of(binary(), binary()) -> integer().
 index_of(<<>>, _Value) ->
   -1;
 index_of(Str, Value) ->
@@ -89,11 +89,11 @@ do_index_of(Str, Value, Length, Index) ->
       do_index_of(Rest, Value, Length, Index + 1)
   end.
 
--spec last_index_of(binary(), binary()) -> boolean().
+-spec last_index_of(binary(), binary()) -> integer().
 last_index_of(Str, Value) ->
   last_index_of(Str, Value, 0).
 
--spec last_index_of(binary(), binary(), integer()) -> boolean().
+-spec last_index_of(binary(), binary(), integer()) -> integer().
 last_index_of(<<>>, _Value, _FromIndex) ->
   -1;
 last_index_of(Str, Value, FromIndex) ->

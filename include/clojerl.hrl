@@ -1,3 +1,7 @@
+%% nil
+-define(NIL, undefined).
+-define(NIL_TYPE, 'clojerl.Nil').
+
 %% Use a value that would be invalid for a keyword literal
 -define(TYPE, '7ype').
 -define(M, ?MODULE).
@@ -10,10 +14,6 @@
                }).
 
 -define(IS_TYPE(X), (is_tuple(X) andalso element(1, X) == ?TYPE)).
-
-%% nil
--define(NIL, undefined).
--define(NIL_TYPE, 'clojerl.Nil').
 
 %% default type for protocol
 -define(DEFAULT_TYPE, 'clojerl.Default').

@@ -16,6 +16,7 @@ clean-all: clean
 	@rm -rf _build/ rebar.lock ebin/
 
 CLJ_SRC ?= src/clj
+CLJ_TEST ?= test/clj
 CLJ_TARGET ?= ebin
 CLJ_FILES=$(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
 
@@ -56,5 +57,5 @@ clojure: all $(call clj_to_beam,${CLJ_FILES})
 $(foreach clj,${CLJ_FILES},$(eval $(call compile_clojure_template,${clj})))
 
 benchmark: bootstrap
-	@bin/compile ${CLJ_SRC}/benchmark/benchmark_runner.clj | \
-	tee ${CLJ_SRC}/benchmark/result.txt
+	@bin/compile ${CLJ_TEST}/benchmark/benchmark_runner.clj | \
+	tee ${CLJ_TEST}/benchmark/result.txt

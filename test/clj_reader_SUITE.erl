@@ -98,6 +98,8 @@ string(Config) when is_list(Config) ->
   string(fun read/1),
   string(fun read_io/1);
 string(ReadFun) ->
+  <<"">> = ReadFun(<<"\"\"">>),
+
   <<"hello">> = ReadFun(<<"\"hello\"">>),
 
   <<"hello \t world!">> = ReadFun(<<"\"hello \\t world!\"">>),
@@ -846,8 +848,11 @@ regex(Config) when is_list(Config) ->
   regex(fun read_io/1, fun read_all_io/1).
 
 regex(ReadFun, ReadAllFun) ->
-  Regex = 'erlang.util.Regex':?CONSTRUCTOR(<<".?el\\.lo">>),
-  Regex = ReadFun(<<"#\".?el\\.lo\"">>),
+  Regex1 = 'erlang.util.Regex':?CONSTRUCTOR(<<".?el\\.lo">>),
+  Regex1 = ReadFun(<<"#\".?el\\.lo\"">>),
+
+  Regex2 = 'erlang.util.Regex':?CONSTRUCTOR(<<"">>),
+  Regex2 = ReadFun(<<"#\"\"">>),
 
   ct:comment("EOF: unterminated regex"),
   ok = try ReadAllFun(<<"#\"a*">>)
