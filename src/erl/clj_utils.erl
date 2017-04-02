@@ -2,6 +2,15 @@
 
 -include("clojerl.hrl").
 
+-dialyzer([ {nowarn_function, throw/2}
+          , {nowarn_function, throw_when/2}
+          , {nowarn_function, throw_when/3}
+          , {nowarn_function, error/1}
+          , {nowarn_function, error/2}
+          , {nowarn_function, error_when/2}
+          , {nowarn_function, error_when/3}
+          ]).
+
 -compile({no_auto_import, [throw/1, error/1]}).
 
 -export([ char_type/1
@@ -175,12 +184,13 @@ throw(Reason) ->
 throw(List, Location) ->
   throw_when(true, List, Location).
 
--spec throw_when(boolean(), any()) -> ok | no_return().
+-spec throw_when(true,  any()) -> no_return();
+                (false, any()) -> ok.
 throw_when(Throw, Reason) ->
   throw_when(Throw, Reason, ?NIL).
 
--spec throw_when(boolean(), any(), clj_reader:location() | ?NIL) ->
-  ok | no_return().
+-spec throw_when(true,  any(), clj_reader:location() | ?NIL) -> no_return();
+                (false, any(), clj_reader:location() | ?NIL) -> ok.
 throw_when(false, _, _) ->
   ok;
 throw_when(true, List, Location) when is_list(List) ->
@@ -200,12 +210,13 @@ error(List) ->
 error(List, Location) ->
   error_when(true, List, Location).
 
--spec error_when(boolean(), any()) -> ok | no_return().
+-spec error_when(true,  any()) -> no_return();
+                (false, any()) -> ok.
 error_when(Throw, Reason) ->
   error_when(Throw, Reason, ?NIL).
 
--spec error_when(boolean(), any(), clj_reader:location() | ?NIL) ->
-  ok | no_return().
+-spec error_when(true,  any(), clj_reader:location() | ?NIL) -> no_return();
+                (false, any(), clj_reader:location() | ?NIL) -> ok.
 error_when(false, _, _) ->
   ok;
 error_when(true, List, Location) when is_list(List) ->

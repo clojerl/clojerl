@@ -2,6 +2,8 @@
 
 -include("clojerl.hrl").
 
+-dialyzer(no_return).
+
 -export([ compile_files/1
         , compile_files/2
         , compile_file/1
