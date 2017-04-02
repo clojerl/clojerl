@@ -189,7 +189,7 @@ pop(#?TYPE{name = ?M, data = Array} = Vector) ->
 seq(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
     0 -> ?NIL;
-    _ -> array:to_list(Array)
+    _ -> 'clojerl.List':?CONSTRUCTOR(array:to_list(Array))
   end.
 
 to_list(#?TYPE{name = ?M, data = Array}) ->
