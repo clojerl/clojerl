@@ -1,20 +1,14 @@
+APP         := clojerl
 REBAR3      := rebar3
-ROOT_SRC    := src
-CLJ_SRC     := ${ROOT_SRC}/clj
-CLJ_TEST    := ${ROOT_SRC}/../test/clj
-CLJ_TARGET  := _build/default/lib/clojerl/ebin
-CLJ_EXCLUDE := ${CLJ_SRC}/clojure/core_deftype.clj ${CLJ_SRC}/clojure/core_print.clj
-CLJ_FILES   := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
+ROOT_DIR    := ${CURDIR}
 
-CODE_PATH   := ${CLJ_TARGET} ${CLJ_SRC}
-COMPILE     := bin/compile -o ${CLJ_TARGET} -pa ${CLJ_SRC} -pa ${CLJ_TEST}
+EBIN        := ${ROOT_DIR}/ebin
 
-.PHONY: default erl test shell clean
+.PHONY: all erlang clojure bootstrap clojure.core test shell clean
 
-default: compile
+all: compile
 
-compile:
-	@${REBAR3} compile
+compile: erlang clojure
 
 test:
 	@${REBAR3} as test do ct, cover, cover_result
@@ -24,63 +18,95 @@ shell:
 
 clean:
 	@${REBAR3} clean
-	@rm -rf _build/ rebar.lock ebin/
+	@rm -rf **/*.beam ${EBIN} rebar.lock
 
 repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: clojure.core clojure.main
-	@rlwrap erl -pa ${CODE_PATH} ${SHELL_OPTS}
+	@rlwrap erl -pa `rebar3 path --ebin` ${CODE_PATH} ${SHELL_OPTS}
 
 # ------------------------------------------------------------------------------
-# Clojure files compilation
+# Erlang compilation
 # ------------------------------------------------------------------------------
 
-# Maps clj paths to beam paths
-# path/to/ns/file.clj -> path/to/ebin/ns.file.beam
-define clj_to_beam
-$(addprefix ${CLJ_TARGET}/,$(subst .clj,.beam,$(subst _,-,$(subst /,.,$(1:${CLJ_SRC}/%=%)))))
+APP_SRC    := ${CURDIR}/src
+ERL_SRC    := ${CURDIR}/src/erl
+C_SRC      := ${CURDIR}/c_src
+PRIV       := ${CURDIR}/priv
+INCLUDE    := ${CURDIR}/include
+ERL_FILES  := $(shell find ${ERL_SRC} -name "*.erl")
+BEAM_FILES := $(addprefix ${EBIN}/,$(notdir ${ERL_FILES:.erl=.beam}))
+ERL_OPTS   := +debug_info
+ERLC       := erlc -o ${EBIN} -I ${INCLUDE} ${ERL_OPTS}
+
+# Creates target for the beam file
+define ERLC_TEMPLATE
+${EBIN}/$(notdir ${1:.erl=.beam}): ${1}
+	@echo $(1:${ERL_SRC}/%=%)
+	@mkdir -p $(EBIN)
+	@${ERLC} ${1}
+endef
+
+$(foreach erl,${ERL_FILES},$(eval $(call ERLC_TEMPLATE,${erl})))
+
+erlang: ${BEAM_FILES} ${EBIN}/${APP}.app ${PRIV}/${APP}.so
+
+${PRIV}/${APP}.so:
+	@make -f ${C_SRC}/Makefile -C ${C_SRC}
+
+${EBIN}/${APP}.app: ${APP_SRC}/${APP}.app.src
+	@echo ${APP}.app.src
+	@cp ${APP_SRC}/${APP}.app.src ${EBIN}/${APP}.app
+
+# ------------------------------------------------------------------------------
+# Clojure compilation
+# ------------------------------------------------------------------------------
+
+CLJ_SRC     := ${ROOT_DIR}/src/clj
+CLJ_TEST    := ${ROOT_DIR}/test/clj
+CLJ_EXCLUDE := $(addprefix ${CLJ_SRC}/clojure/,core.clj core_deftype.clj core_print.clj)
+CLJ_FILES   := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
+
+CODE_PATH   := ${EBIN} ${CLJ_SRC}
+COMPILE     := bin/compile -o ${EBIN} -pa ${EBIN} -pa ${CLJ_SRC} -pa ${CLJ_TEST}
+
+# Maps clj to target beam or ns
+# path/to/ns/file.clj -> ns.file[.ext]
+define clj_to
+$(subst .clj,${2},$(subst _,-,$(subst /,.,${1:${CLJ_SRC}/%=%})))
 endef
 
 # Creates target for the beam file
-define compile_clojure_template
-$(call clj_to_beam,${1}): ${1}
-	@echo Compiling $(1:${CURDIR}/%=%)
+define COMPILE_CLJ_TEMPLATE
+${EBIN}/$(call clj_to,${1},.beam): ${1}
+	@echo Compiling $(1:${CLJ_SRC}/%=%)
 	@${COMPILE} ${1}
 endef
 
-# Maps clj paths to ns names
-# path/to/ns/file.clj -> ns.file
-define clj_to_ns
-$(subst .clj,,$(subst /,.,$(1:${CLJ_SRC}/%=%)))
-endef
-
 # Creates target with the ns name
-define compile_clojure_template_ns
-$(call clj_to_ns,${1}): $(call clj_to_beam,${1})
+define COMPILE_NS_TEMPLATE
+$(call clj_to,${1},): ${EBIN}/$(call clj_to,${1},.beam)
 endef
 
 # Targets for beam files
-$(foreach clj,${CLJ_FILES},$(eval $(call compile_clojure_template,${clj})))
+$(foreach clj,${CLJ_FILES},$(eval $(call COMPILE_CLJ_TEMPLATE,${clj})))
 
 # Phony targets with namespaces
-CLJ_NAMESPACES = $(foreach clj,${CLJ_FILES},$(call clj_to_ns,${clj}))
+CLJ_NAMESPACES = $(foreach clj,${CLJ_FILES},$(call clj_to,${clj},))
 .PHONY: ${CLJ_NAMESPACES}
-$(foreach clj,${CLJ_FILES},$(eval $(call compile_clojure_template_ns,${clj})))
+$(foreach clj,${CLJ_FILES},$(eval $(call COMPILE_NS_TEMPLATE,${clj})))
 
-# Add specific target for clojure.core that doesn't have the cloure.core.beam
-clojure.core:
-	@echo Compiling src/clj/clojure/core.clj
-	@${COMPILE} src/clj/clojure/core.clj
+${CLJ_NAMESPACES}: clojure.core
 
-$(filter-out clojure.core,${CLJ_NAMESPACES}): clojure.core
+clojure.core: ${CLJ_SRC}/clojure/core.clj
+	@echo Compiling clojure/core.clj
+	@${COMPILE} $<
 
-.PHONY: bootstrap clojure
+# When bootstrapping we need to force recompilation of clojure.core
+# based on the .clj source file.
+bootstrap: erlang clojure
 
-CLJ_FILES_FILTER = $(filter-out %/clojure/core.clj,${CLJ_FILES})
-
-bootstrap: erl clojure.core
-
-clojure: bootstrap $(call clj_to_beam,${CLJ_FILES_FILTER})
+clojure: erlang $(call clj_to,${CLJ_FILES},)
 
 benchmark: bootstrap
 	@${COMPILE} ${CLJ_TEST}/benchmark/benchmark_runner.clj | \

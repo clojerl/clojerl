@@ -11,3 +11,4 @@ c_src/*.mk
 *.out*
 rebar.lock
 *.dump
+ebin/
