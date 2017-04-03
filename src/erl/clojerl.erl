@@ -7,6 +7,7 @@
 -export([start/2, stop/1]).
 
 -define(APP, clojerl).
+-define(STICKY_MODULES, ['clojure.core']).
 
 -spec start() -> ok.
 start() ->
@@ -56,10 +57,10 @@ ensure_loaded(File) ->
 
 -spec stick() -> ok.
 stick() ->
-  Path = filename:dirname(code:which(?APP)),
-  ok   = code:stick_dir(Path).
+  [code:stick_mod(M) || M <- ?STICKY_MODULES],
+  ok.
 
 -spec unstick() -> ok.
 unstick() ->
-  Path = filename:dirname(code:which(?APP)),
-  ok   = code:unstick_dir(Path).
+  [code:unstick_mod(M) || M <- ?STICKY_MODULES],
+  ok.

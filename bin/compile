@@ -1,18 +1,53 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -smp enable -pa _build/default/lib/clojerl/ebin -pa src/clj -pa ebin +pc unicode
+%%! -smp enable +pc unicode
+
+-type options() :: #{ output_dir => string()
+                    , verbose    => boolean()
+                    , time       => boolean()
+                    , code_paths => [string()]
+                    , files      => [string()]
+                    }.
 
 -spec main([string()]) -> ok.
-main(Paths) ->
+main(Args) ->
+  Opts = parse_args(Args),
+  ok   = process_options(Opts),
   clojerl:start(),
-  lists:foreach(fun(X) -> compile_file(X) end, Paths),
+  Files = maps:get(files, Opts),
+  lists:foreach(fun(X) -> compile_file(X, Opts) end, Files),
   ok.
 
--spec compile_file(string()) -> term().
-compile_file(Path) ->
+-spec compile_file(string(), options()) -> term().
+compile_file(Path, Opts) ->
   PathBin = list_to_binary(Path),
-  Opts    = #{ verbose    => true
-             , time       => true
-             , output_dir => "ebin"
-             },
   clj_compiler:compile_file(PathBin, Opts).
+
+-spec default_options() -> options().
+default_options() ->
+  #{ output_dir => "ebin"
+   , code_paths => []
+   , files      => []
+   }.
+
+-spec parse_args([string()]) -> options().
+parse_args(Args) ->
+  parse_args(Args, default_options()).
+
+-spec parse_args([string()], options()) -> options().
+parse_args([], Opts) ->
+  Opts;
+parse_args(["-o", OutDir | Rest], Opts) ->
+  parse_args(Rest, Opts#{output_dir => OutDir});
+parse_args(["-pa", CodePath | Rest], Opts = #{code_paths := CodePaths}) ->
+  parse_args(Rest, Opts#{code_paths => [CodePath | CodePaths]});
+parse_args([File | Rest], Opts = #{files := Files}) ->
+  parse_args(Rest, Opts#{files => [File | Files]}).
+
+
+-spec process_options(options()) -> ok.
+process_options(Opts) ->
+  #{ output_dir := OutDir
+   , code_paths := CodePaths
+   } = Opts,
+  ok = code:add_paths([OutDir | CodePaths]).
