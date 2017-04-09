@@ -24,7 +24,7 @@ clean:
 
 repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
-repl: clojure.core clojure.main
+repl: compile
 	${V} rlwrap erl -pa `rebar3 path --ebin` ${CODE_PATH} ${SHELL_OPTS}
 
 # ------------------------------------------------------------------------------

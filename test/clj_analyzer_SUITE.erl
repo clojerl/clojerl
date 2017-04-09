@@ -10,7 +10,6 @@
         ]).
 
 -export([ constants/1
-        , ns/1
         , def/1
         , quote/1
         , fn/1
@@ -104,22 +103,6 @@ constants(_Config) ->
 
   {comments, ""}.
 
--spec ns(config()) -> result().
-ns(_Config) ->
-  ct:comment("Not a symbol"),
-  ok = try analyze_one(<<"(ns 1)">>)
-       catch _:_ -> ok
-       end,
-
-  ct:comment("Change namespace and analyze keyword"),
-  HelloKeyword = clj_core:keyword(<<"clojure.core">>, <<"hello">>),
-
-  [ #{op := invoke}
-  , #{op := constant, form := HelloKeyword}
-  ] = analyze_all(<<"(ns bla) ::hello">>),
-
-  {comments, ""}.
-
 -spec def(config()) -> result().
 def(_Config) ->
   ct:comment("Few arguments"),
@@ -174,7 +157,7 @@ def(_Config) ->
 
   [ #{op := invoke, args := [_]}
   , #{op := def}
-  ] = analyze_all(<<"(ns bla) (def x 1)">>),
+  ] = analyze_all(<<"(in-ns 'bla) (def x 1)">>),
 
   ct:comment("Function vars should have fn information in their metadata"),
   #{ op  := def

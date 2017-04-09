@@ -1123,27 +1123,12 @@ tagged(Config) when is_list(Config) ->
   tagged(fun read/1),
   tagged(fun read_io/1);
 tagged(ReadFun) ->
-  DefaultDataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
-                                                    , <<"default-data-readers">>
-                                                    ),
-
-  IdFun              = fun(X) -> X end,
-  DefaultDataReaders = clj_core:hash_map(
-                         [ clj_core:symbol(<<"inst">>), IdFun
-                         , clj_core:symbol(<<"uuid">>), IdFun
-                         ]
-                        ),
-
-  meck:new('clojure.core', [passthrough]),
-  meck:expect( 'clojure.core'
-             , 'clojerl.Var':val_function(DefaultDataReadersVar)
-             , fun() -> DefaultDataReaders end
-             ),
-
+  Date2016 = {{2016, 1, 1}, {0, 0, 0}},
+  UUIDBin  = <<"de305d54-75b4-431b-adb2-eb6b9e546014">>,
+  UUID     = 'erlang.util.UUID':?CONSTRUCTOR(UUIDBin),
   ct:comment("Use default readers"),
-  <<"2016">> = ReadFun(<<"#inst \"2016\"">>),
-  <<"de305d54-75b4-431b-adb2-eb6b9e546014">> =
-    ReadFun(<<"#uuid \"de305d54-75b4-431b-adb2-eb6b9e546014\"">>),
+  Date2016 = ReadFun(<<"#inst \"2016\"">>),
+  UUID     = ReadFun(<<"#uuid \"", UUIDBin/binary, "\"">>),
 
   ct:comment("Use *default-data-reader-fn*"),
   DefaultReaderFunVar =
@@ -1176,8 +1161,6 @@ tagged(ReadFun) ->
   ct:comment("Provide a missing reader"),
   ok = try ReadFun(<<"#bla 1">>), error
        catch _:<<"?:1:2: No reader function for tag bla">> -> ok end,
-
-  meck:unload('clojure.core'),
 
   {comments, ""}.
 
