@@ -11,7 +11,10 @@ all: compile
 compile: erlang clojure
 
 test:
-	@${REBAR3} as test do ct, cover, cover_result
+	${V} ${REBAR3} as test do ct, cover, cover_result
+
+dialyzer: clean
+	${V} ${REBAR3} as dialyzer dialyzer
 
 shell:
 	${V} ${REBAR3} as dev shell --sname clojerl-shell --setcookie clojerl
