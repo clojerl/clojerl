@@ -1,20 +1,25 @@
-APP       := clojerl
 REBAR3    := rebar3
 ROOT_DIR  := ${CURDIR}
 EBIN      ?= ${ROOT_DIR}/ebin
 V         := @
 
-.PHONY: all erlang clojure test shell clean
+ERL_SRC   := ${CURDIR}/src/erl
+INCLUDE   := ${CURDIR}/include
+ERL_OPTS  := +debug_info
+ERLC      := erlc -o ${EBIN} -I ${INCLUDE} -pa ${EBIN} ${ERL_OPTS}
+
+.PHONY: all clojure test shell clean
 
 all: compile
 
-compile: erlang clojure
+compile:
+	${V} ${REBAR3} compile
 
 test:
 	${V} ${REBAR3} as test do ct, cover, cover_result
 
 dialyzer: clean
-	${V} ${REBAR3} as dialyzer dialyzer
+	${V} NO_CLOJURE=1 ${REBAR3} dialyzer
 
 shell:
 	${V} ${REBAR3} as dev shell --sname clojerl-shell --setcookie clojerl
@@ -29,40 +34,6 @@ repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: compile
 	${V} rlwrap erl -pa `rebar3 path --ebin` ${CODE_PATH} ${SHELL_OPTS}
-
-# ------------------------------------------------------------------------------
-# Erlang compilation
-# ------------------------------------------------------------------------------
-
-APP_SRC       := ${CURDIR}/src
-ERL_SRC       := ${CURDIR}/src/erl
-C_SRC         := ${CURDIR}/c_src
-PRIV          := ${CURDIR}/priv
-INCLUDE       := ${CURDIR}/include
-ERL_FILES     := $(shell find ${ERL_SRC} -name "*.erl")
-COMPILE_FIRST := $(shell grep -rl "\-callback" ${ERL_SRC})
-BEAM_FILES    := $(addprefix ${EBIN}/, $(notdir ${COMPILE_FIRST:.erl=.beam}) $(notdir ${ERL_FILES:.erl=.beam}))
-ERL_OPTS      := +debug_info
-ERLC          := erlc -o ${EBIN} -I ${INCLUDE} -pa ${EBIN} ${ERL_OPTS}
-
-# Creates target for the beam file
-define ERLC_TEMPLATE
-${EBIN}/$(notdir ${1:.erl=.beam}): ${1}
-	${V} mkdir -p ${EBIN}
-	${V} ${ERLC} ${1}
-	@echo Compiled $(1:${ERL_SRC}/%=%)
-endef
-
-$(foreach erl,${ERL_FILES},$(eval $(call ERLC_TEMPLATE,${erl})))
-
-erlang: ${BEAM_FILES} ${EBIN}/${APP}.app ${PRIV}/${APP}.so
-
-${PRIV}/${APP}.so:
-	${V} make -f ${C_SRC}/Makefile -C ${C_SRC}
-
-${EBIN}/${APP}.app: ${APP_SRC}/${APP}.app.src
-	@echo ${APP}.app.src
-	${V} cp ${APP_SRC}/${APP}.app.src ${EBIN}/${APP}.app
 
 # ------------------------------------------------------------------------------
 # Clojure compilation
