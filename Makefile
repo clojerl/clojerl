@@ -15,7 +15,7 @@ all: compile
 compile:
 	${V} ${REBAR3} compile
 
-test:
+test: clean
 	${V} ${REBAR3} as test do ct, cover, cover_result
 
 dialyzer: clean

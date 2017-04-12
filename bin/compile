@@ -2,20 +2,27 @@
 %% -*- erlang -*-
 %%! -smp enable +pc unicode
 
--type options() :: #{ output_dir => string()
-                    , verbose    => boolean()
-                    , time       => boolean()
-                    , code_paths => [string()]
-                    , files      => [string()]
+-type options() :: #{ compile_path => string()
+                    , verbose      => boolean()
+                    , time         => boolean()
+                    , code_paths   => [string()]
+                    , files        => [string()]
                     }.
 
 -spec main([string()]) -> ok.
 main(Args) ->
-  Opts = parse_args(Args),
-  ok   = process_options(Opts),
-  clojerl:start(),
+  Opts  = parse_args(Args),
+  ok    = process_options(Opts),
+  ok    = clojerl:start(),
   Files = maps:get(files, Opts),
-  lists:foreach(fun(X) -> compile_file(X, Opts) end, Files),
+
+  CompilePath = maps:get(compile_path, Opts),
+  Bindings    = #{ <<"#'clojure.core/*compile-path*">>  => CompilePath
+                 , <<"#'clojure.core/*compile-files*">> => true
+                 },
+  ok = 'clojerl.Var':push_bindings(Bindings),
+  ok = lists:foreach(fun(X) -> compile_file(X, Opts) end, Files),
+  ok = 'clojerl.Var':pop_bindings(),
   ok.
 
 -spec compile_file(string(), options()) -> term().
@@ -25,9 +32,11 @@ compile_file(Path, Opts) ->
 
 -spec default_options() -> options().
 default_options() ->
-  #{ output_dir => "ebin"
-   , code_paths => []
-   , files      => []
+  #{ compile_path => "ebin"
+   , code_paths   => []
+   , files        => []
+   , time         => false
+   , verbose      => false
    }.
 
 -spec parse_args([string()]) -> options().
@@ -37,17 +46,16 @@ parse_args(Args) ->
 -spec parse_args([string()], options()) -> options().
 parse_args([], Opts) ->
   Opts;
-parse_args(["-o", OutDir | Rest], Opts) ->
-  parse_args(Rest, Opts#{output_dir => OutDir});
+parse_args(["-o", CompilePath | Rest], Opts) ->
+  parse_args(Rest, Opts#{compile_path => CompilePath});
 parse_args(["-pa", CodePath | Rest], Opts = #{code_paths := CodePaths}) ->
   parse_args(Rest, Opts#{code_paths => [CodePath | CodePaths]});
 parse_args([File | Rest], Opts = #{files := Files}) ->
   parse_args(Rest, Opts#{files => [File | Files]}).
 
-
 -spec process_options(options()) -> ok.
 process_options(Opts) ->
-  #{ output_dir := OutDir
-   , code_paths := CodePaths
+  #{ compile_path := CompilePath
+   , code_paths   := CodePaths
    } = Opts,
-  ok = code:add_paths([OutDir | CodePaths]).
+  ok = code:add_paths([CompilePath | CodePaths]).

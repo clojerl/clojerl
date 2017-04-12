@@ -280,12 +280,6 @@ check_flag(Flag, Env) ->
       false
   end.
 
--spec ensure_output_dir(options()) -> ok.
-ensure_output_dir(#{output_dir := OutputDir}) ->
-  ok   = filelib:ensure_dir(filename:join([OutputDir, "dummy"])),
-  true = code:add_path(OutputDir),
-  ok.
-
 -spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
 emit_eval_form(Form, Env) ->
   Env1          = clj_analyzer:analyze(Form, Env),
@@ -315,7 +309,7 @@ compile_forms(Module, Opts) ->
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam, _Warnings} ->
       Name     = cerl:atom_val(cerl:module_name(Module)),
-      BeamPath = maybe_output_beam(Name, add_core_code(Beam, Module), Opts),
+      BeamPath = maybe_output_beam(Name, add_core_code(Beam, Module)),
       {module, Name} = code:load_binary(Name, BeamPath, Beam),
       Name;
     {error, Errors, Warnings} ->
@@ -410,12 +404,25 @@ maybe_output_erl(Module, #{output_erl := Filename}) ->
 maybe_output_erl(_, _) ->
   ok.
 
--spec maybe_output_beam(atom(), binary(), options()) -> string().
-maybe_output_beam(Name, BeamBinary, #{output_dir := OutputDir} = Opts) ->
-  ok           = ensure_output_dir(Opts),
+-spec maybe_output_beam(atom(), binary()) -> string().
+maybe_output_beam(Name, BeamBinary) ->
+  CompileFiles = 'clojure.core':'*compile-files*__val'(),
+  do_maybe_output_beam(Name, BeamBinary, CompileFiles).
+
+-spec do_maybe_output_beam(atom(), binary(), boolean()) -> string().
+do_maybe_output_beam(Name, BeamBinary, true) ->
+  CompilePath  = 'clojure.core':'*compile-path*__val'(),
+  ok           = ensure_path(CompilePath),
   NameBin      = atom_to_binary(Name, utf8),
   BeamFilename = <<NameBin/binary, ".beam">>,
-  BeamPath     = filename:join([OutputDir, BeamFilename]),
+  BeamPath     = filename:join([CompilePath, BeamFilename]),
   ok           = file:write_file(BeamPath, BeamBinary),
   binary_to_list(BeamPath);
-maybe_output_beam(_, _, _) -> "".
+do_maybe_output_beam(_, _, false) ->
+  "".
+
+-spec ensure_path(string()) -> ok.
+ensure_path(Path) ->
+  ok   = filelib:ensure_dir(filename:join([Path, "dummy"])),
+  true = code:add_path(Path),
+  ok.

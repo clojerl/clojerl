@@ -5,6 +5,8 @@
 
 -export([ all/0
         , init_per_suite/1
+        , init_per_testcase/2
+        , end_per_testcase/2
         ]).
 
 -export([ compile/1
@@ -18,6 +20,19 @@ all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
+
+-spec init_per_testcase(_, config()) -> config().
+init_per_testcase(_, Config) ->
+  Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
+              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              },
+  ok       = 'clojerl.Var':push_bindings(Bindings),
+  Config.
+
+-spec end_per_testcase(_, config()) -> config().
+end_per_testcase(_, Config) ->
+  'clojerl.Var':pop_bindings(),
+  Config.
 
 %%------------------------------------------------------------------------------
 %% Test Cases

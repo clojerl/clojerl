@@ -51,7 +51,10 @@ init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
 
 -spec init_per_testcase(_, config()) -> config().
 init_per_testcase(_, Config) ->
-  'clojerl.Var':push_bindings(#{}),
+  Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
+              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              },
+  ok       = 'clojerl.Var':push_bindings(Bindings),
   Config.
 
 -spec end_per_testcase(_, config()) -> config().
