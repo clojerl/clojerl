@@ -23,58 +23,68 @@
                             }
            , <<"*ns*">>  => { ?TYPE, 'clojerl.Var'
                             , {<<"clojure.core">>, <<"*ns*">>}
-                            , #{}
+                            , #{meta => #{dynamic => true}}
                             }
+
+           , <<"*compile-path*">>  =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*compile-path*">>}
+               , #{meta => #{dynamic => true}}
+               }
            , <<"*compile-files*">>  =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*compile-files*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
 
            , <<"*assert*">> =>
-               {?TYPE, 'clojerl.Var', {<<"clojure.core">>, <<"*assert*">>}, #{}}
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*assert*">>}
+               , #{meta => #{dynamic => true}}
+               }
            , <<"*read-eval*">> =>
-               {?TYPE, 'clojerl.Var'
-               , {<<"clojure.core">>, <<"*read-eval*">>}, #{}
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"*read-eval*">>}
+               , #{meta => #{dynamic => true}}
                }
            , <<"*command-line-args*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*command-line-args*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
 
            , <<"*out*">> => { ?TYPE, 'clojerl.Var'
                             , {<<"clojure.core">>, <<"*out*">>}
-                            , #{}
+                            , #{meta => #{dynamic => true}}
                             }
            , <<"*in*">>  => { ?TYPE, 'clojerl.Var'
                             , {<<"clojure.core">>, <<"*in*">>}
-                            , #{}
+                            , #{meta => #{dynamic => true}}
                             }
-           , <<"*err*">>  => { ?TYPE, 'clojerl.Var'
-                             , {<<"clojure.core">>, <<"*err*">>}
-                             , #{}
-                             }
+           , <<"*err*">> => { ?TYPE, 'clojerl.Var'
+                            , {<<"clojure.core">>, <<"*err*">>}
+                            , #{meta => #{dynamic => true}}
+                            }
 
            , <<"*print-dup*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*print-dup*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
            , <<"*flush-on-newline*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*flush-on-newline*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
            , <<"*print-readably*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*print-readably*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
            , <<"*data-readers*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*data-readers*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
            , <<"default-data-readers">> =>
                { ?TYPE, 'clojerl.Var'
@@ -84,12 +94,12 @@
            , <<"*default-data-reader-fn*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*default-data-reader-fn*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
            , <<"*warn-on-infer*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*warn-on-infer*">>}
-               , #{}
+               , #{meta => #{dynamic => true}}
                }
            }).
 
@@ -98,6 +108,7 @@
         , 'in-ns'/1
         , 'in-ns__val'/0
         , '*ns*__val'/0
+        , '*compile-path*__val'/0
         , '*compile-files*__val'/0
 
         , '*assert*__val'/0
@@ -164,6 +175,9 @@ ns__val() ->
       clj_namespace:find_or_create(ClojureCoreSym);
     {ok, X}   -> X
   end.
+
+'*compile-path*__val'() ->
+  var_value(<<"#'clojure.core/*compile-path*">>, ?NIL).
 
 '*compile-files*__val'() ->
   var_value(<<"#'clojure.core/*compile-files*">>, false).
