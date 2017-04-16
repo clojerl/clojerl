@@ -5,6 +5,7 @@
 
 -export([ all/0
         , init_per_suite/1
+        , end_per_suite/1
         , init_per_testcase/2
         , end_per_testcase/2
         ]).
@@ -21,6 +22,9 @@ all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
+
+-spec end_per_suite(config()) -> config().
+end_per_suite(Config) -> Config.
 
 -spec init_per_testcase(atom(), config()) -> config().
 init_per_testcase(_, Config) ->
