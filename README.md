@@ -4,13 +4,44 @@
 
 Clojure implemented on the Erlang VM.
 
-## Getting Started
+## Building
 
 Building `clojerl` requires *Erlang/OTP 18+* and *rebar3*.
 
     git clone https://github.com/jfacorro/clojerl
     cd clojerl
     make repl
+
+## Getting Started
+
+Running `make repl` will start the REPL and show its prompt:
+
+    Clojure 0.0.0-974.592ad8a
+    clje.user=>
+
+From the REPL it's possible to start evaluating Clojure expressions:
+
+    clje.user=> (map inc (range 10))
+    (1 2 3 4 5 6 7 8 9 10)
+    clje.user=> (doc map)
+    -------------------------
+    clojure.core/map
+    ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls])
+      Returns a lazy sequence consisting of the result of applying f to
+      the set of first items of each coll, followed by applying f to the
+      set of second items in each coll, until any one of the colls is
+      exhausted.  Any remaining items in other colls are ignored. Function
+      f should accept number-of-colls arguments. Returns a transducer when
+      no collection is provided.
+    nil
+    clje.user=> (doc inc)
+    -------------------------
+    clojure.core/inc
+    ([x])
+      Returns a number one greater than num. Does not auto-promote
+      longs, will throw on overflow. See also: inc'
+    nil
+    clje.user=>
 
 ## Rationale
 
