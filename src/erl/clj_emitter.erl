@@ -628,7 +628,7 @@ ast(#{op := erl_map} = Expr, State) ->
    } = Expr,
 
   MapPairFun = case maps:get(pattern, Expr, false) of
-                 true  -> fun cerl:c_map_pair_exact/2;
+                 true  -> fun c_map_pair_exact/2;
                  false -> fun cerl:c_map_pair/2
                end,
 
@@ -1567,6 +1567,14 @@ var_val_function(ValAst, VarAst, Ann) ->
   ValueClauseAst = cerl:ann_c_clause(Ann, [TupleAst], XVar),
 
   cerl:ann_c_case(Ann, TestAst, [NilClauseAst, ValueClauseAst]).
+
+%% ----- Map -------
+
+%% cerl:c_map_pair_exact/2 doesn't exist in 18.3
+-spec c_map_pair_exact(cerl:cerl(), cerl:cerl()) -> cerl:c_map_pair().
+c_map_pair_exact(K, V) ->
+  Exact = cerl:c_atom(exact),
+  cerl:ann_c_map_pair([], Exact, K, V).
 
 %% ----- Annotations -------
 
