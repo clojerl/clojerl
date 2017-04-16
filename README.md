@@ -4,10 +4,13 @@
 
 Clojure implemented on the Erlang VM.
 
-## Building
+## Getting Started
+
+Building `clojerl` requires *Erlang/OTP 18+* and *rebar3*.
 
     git clone https://github.com/jfacorro/clojerl
-    make
+    cd clojerl
+    make repl
 
 ## Rationale
 
@@ -16,9 +19,9 @@ systems. It provides immutable, persistent data structures
 out of the box and its concurrency semantics are unequalled by any
 other language.
 
-Clojure is a Lisp and as such comes with all the goodies Lisps provide,
-Apart from these Clojure also introduces powerful abstractions such as
-protocols, multimethods and seqs, to name a few.
+Clojure is a Lisp and as such comes with all the goodies Lisps
+provide. Apart from these Clojure also introduces powerful
+abstractions such as protocols, multimethods and seqs, to name a few.
 
 Clojure was built to simplify the development of concurrent programs
 and some of its concurrency abstractions could be adapted to Erlang.
