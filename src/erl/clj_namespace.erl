@@ -52,12 +52,12 @@
 -spec current() -> namespace().
 current() ->
   NsVar = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"*ns*">>),
-  clj_core:deref(NsVar).
+  clj_rt:deref(NsVar).
 
 -spec current(namespace()) -> namespace().
 current(#namespace{} = Ns) ->
   NsVar = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"*ns*">>),
-  clj_core:'set!'(NsVar, Ns),
+  clj_rt:'set!'(NsVar, Ns),
   Ns.
 
 -spec all() -> [namespace()].
@@ -68,7 +68,7 @@ all() -> ets:tab2list(?MODULE).
 %%      have a 'mappings' attribute, then nil is returned.
 -spec find('clojerl.Symbol':type()) -> namespace() | ?NIL.
 find(Name) ->
-  case get(?MODULE, clj_core:str(Name)) of
+  case get(?MODULE, clj_rt:str(Name)) of
     ?NIL -> gen_server:call(?MODULE, {load, Name});
     Ns -> Ns
   end.
@@ -82,7 +82,7 @@ find_var(Symbol) ->
   'clojerl.Var':type() | ?NIL.
 find_var(Symbol, Ns) ->
   Var = find_mapping(Symbol, Ns),
-  case clj_core:'var?'(Var) of
+  case clj_rt:'var?'(Var) of
     true  -> Var;
     false -> ?NIL
   end.
@@ -93,17 +93,17 @@ find_mapping(Symbol, DefaultNs) ->
   case resolve_ns(Symbol, DefaultNs) of
     ?NIL -> ?NIL;
     Ns ->
-      NameSym = clj_core:symbol(clj_core:name(Symbol)),
+      NameSym = clj_rt:symbol(clj_rt:name(Symbol)),
       mapping(NameSym, Ns)
   end.
 
 -spec resolve_ns('clojerl.Symbol':type(), namespace()) ->
   namespace() | ?NIL.
 resolve_ns(Symbol, DefaultNs) ->
-  case clj_core:namespace(Symbol) of
+  case clj_rt:namespace(Symbol) of
     ?NIL  -> DefaultNs;
     NsStr ->
-      NsSym = clj_core:symbol(NsStr),
+      NsSym = clj_rt:symbol(NsStr),
       case find(NsSym) of
         ?NIL -> alias(NsSym, DefaultNs);
         Ns   -> Ns
@@ -127,17 +127,17 @@ name(#namespace{name = Name}) -> Name.
 
 -spec intern('clojerl.Symbol':type(), namespace()) -> namespace().
 intern(Symbol, Namespace = #namespace{name = NsName}) ->
-  clj_utils:error_when( clj_core:namespace(Symbol) =/= ?NIL
+  clj_utils:error_when( clj_rt:namespace(Symbol) =/= ?NIL
                       , <<"Can't intern namespace-qualified symbol">>
                       ),
 
-  SymName = clj_core:name(Symbol),
-  Var     = 'clojerl.Var':?CONSTRUCTOR(clj_core:name(NsName), SymName),
+  SymName = clj_rt:name(Symbol),
+  Var     = 'clojerl.Var':?CONSTRUCTOR(clj_rt:name(NsName), SymName),
   gen_server:call(?MODULE, {intern, Namespace, Symbol, Var}).
 
 -spec update_var('clojerl.Var':type()) -> namespace().
 update_var(Var) ->
-  VarNsSym = clj_core:symbol(clj_core:namespace(Var)),
+  VarNsSym = clj_rt:symbol(clj_rt:namespace(Var)),
   update_var(Var, find(VarNsSym)).
 
 -spec update_var('clojerl.Var':type(), namespace()) -> namespace().
@@ -155,11 +155,11 @@ get_aliases(#namespace{aliases = Aliases}) ->
 -spec refer('clojerl.Symbol':type(), 'clojerl.Var':type(), namespace()) ->
   namespace().
 refer(Sym, Var, Ns) ->
-  clj_utils:error_when( not clj_core:'symbol?'(Sym)
+  clj_utils:error_when( not clj_rt:'symbol?'(Sym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
-  clj_utils:error_when( clj_core:namespace(Sym) =/= ?NIL
+  clj_utils:error_when( clj_rt:namespace(Sym) =/= ?NIL
                       , <<"Can't refer namespace-qualified symbol">>
                       ),
 
@@ -178,13 +178,13 @@ import_type(TypeName, CheckLoaded) ->
                       ),
 
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
-  Sym     = clj_core:symbol(SymName),
-  TypeSym = clj_core:symbol(TypeName),
+  Sym     = clj_rt:symbol(SymName),
+  TypeSym = clj_rt:symbol(TypeName),
   Ns      = current(),
   Exists  = mapping(Sym, Ns),
 
   clj_utils:error_when( Exists =/= ?NIL
-                        andalso not clj_core:equiv(Exists, TypeSym)
+                        andalso not clj_rt:equiv(Exists, TypeSym)
                       , [ Sym
                         , <<" already refers to: ">>
                         , Exists
@@ -197,7 +197,7 @@ import_type(TypeName, CheckLoaded) ->
 
 -spec unmap('clojerl.Symbol':type(), namespace()) -> namespace().
 unmap(Sym, Ns) ->
-  clj_utils:error_when( not clj_core:'symbol?'(Sym)
+  clj_utils:error_when( not clj_rt:'symbol?'(Sym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
@@ -206,7 +206,7 @@ unmap(Sym, Ns) ->
 -spec add_alias('clojerl.Symbol':type(), namespace(), namespace()) ->
   namespace().
 add_alias(AliasSym, AliasedNs, Ns) ->
-  clj_utils:error_when( not clj_core:'symbol?'(AliasSym)
+  clj_utils:error_when( not clj_rt:'symbol?'(AliasSym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
@@ -215,7 +215,7 @@ add_alias(AliasSym, AliasedNs, Ns) ->
 -spec remove_alias('clojerl.Symbol':type(), namespace()) ->
   namespace().
 remove_alias(AliasSym, Ns) ->
-  clj_utils:error_when( not clj_core:'symbol?'(AliasSym)
+  clj_utils:error_when( not clj_rt:'symbol?'(AliasSym)
                       , <<"Name for refer var is not a symbol">>
                       ),
 
@@ -224,7 +224,7 @@ remove_alias(AliasSym, Ns) ->
 -spec mapping('clojerl.Symbol':type(), namespace()) ->
   'clojerl.Var':type() | ?NIL.
 mapping(Symbol, #namespace{mappings = Mappings}) ->
-  case get(Mappings, clj_core:str(Symbol)) of
+  case get(Mappings, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
     ?NIL -> ?NIL
   end.
@@ -232,7 +232,7 @@ mapping(Symbol, #namespace{mappings = Mappings}) ->
 -spec alias('clojerl.Symbol':type(), namespace()) ->
   'clojerl.Symbol':type() | ?NIL.
 alias(Symbol, #namespace{aliases = Aliases}) ->
-  case get(Aliases, clj_core:str(Symbol)) of
+  case get(Aliases, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
     ?NIL -> ?NIL
   end.
@@ -260,34 +260,34 @@ handle_call( {update_var, Ns = #namespace{mappings = Mappings}, Var}
            , _Form
            , State
            ) ->
-  save(Mappings, {clj_core:name(Var), Var}),
+  save(Mappings, {clj_rt:name(Var), Var}),
   {reply, Ns, State};
 handle_call( {intern, Ns = #namespace{mappings = Mappings}, Symbol, Var}
            , _From
            , State
            ) ->
-  save(Mappings, {clj_core:name(Symbol), Var}),
+  save(Mappings, {clj_rt:name(Symbol), Var}),
   {reply, Ns, State};
 handle_call( {unmap, Ns = #namespace{mappings = Mappings}, Symbol}
            , _From
            , State
            ) ->
-  true = delete(Mappings, clj_core:name(Symbol)),
+  true = delete(Mappings, clj_rt:name(Symbol)),
   {reply, Ns, State};
 handle_call( {add_alias, Ns = #namespace{aliases = Aliases}, Symbol, AliasedNs}
            , _From
            , State
            ) ->
-  save(Aliases, {clj_core:name(Symbol), AliasedNs}),
+  save(Aliases, {clj_rt:name(Symbol), AliasedNs}),
   {reply, Ns, State};
 handle_call( {remove_alias, Ns = #namespace{aliases = Aliases}, Symbol}
            , _From
            , State
            ) ->
-  true = delete(Aliases, clj_core:name(Symbol)),
+  true = delete(Aliases, clj_rt:name(Symbol)),
   {reply, Ns, State};
 handle_call({remove, Name}, _From, State) ->
-  Result = true =:= ets:delete(?MODULE, clj_core:name(Name)),
+  Result = true =:= ets:delete(?MODULE, clj_rt:name(Name)),
   {reply, Result, State}.
 
 handle_cast(_Msg, State) ->
@@ -308,12 +308,12 @@ code_change(_Msg, _From, State) ->
 
 -spec new('clojerl.Symbol':type()) -> namespace().
 new(NameSym) ->
-  clj_utils:error_when( not clj_core:'symbol?'(NameSym)
+  clj_utils:error_when( not clj_rt:'symbol?'(NameSym)
                       , <<"Namespace name must be a symbol">>
                       ),
 
   TableOpts = [set, protected, {keypos, 1}],
-  Ns = #namespace{ id       = clj_core:name(NameSym)
+  Ns = #namespace{ id       = clj_rt:name(NameSym)
                  , name     = NameSym
                  , mappings = ets:new(mappings, TableOpts)
                  , aliases  = ets:new(aliases, TableOpts)
@@ -338,7 +338,7 @@ delete(Table, Key) ->
 
 -spec load('clojerl.Symbol':type()) -> namespace() | ?NIL.
 load(Name) ->
-  NameStr = clj_core:name(Name),
+  NameStr = clj_rt:name(Name),
   Module  = binary_to_atom(NameStr, utf8),
 
   Mappings = case code:ensure_loaded(Module) of

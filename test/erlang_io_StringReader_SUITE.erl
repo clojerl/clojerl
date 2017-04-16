@@ -34,7 +34,7 @@ end_per_suite(Config) -> Config.
 str(_Config) ->
   Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello">>),
 
-  Str   = clj_core:str(Reader),
+  Str   = clj_rt:str(Reader),
   Regex = <<"#<erlang.io.StringReader \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 

@@ -14,13 +14,13 @@ analyze(Form, Env0) ->
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
-  clj_core:'symbol?'(S) andalso
-    maps:is_key(clj_core:str(S), special_forms()).
+  clj_rt:'symbol?'(S) andalso
+    maps:is_key(clj_rt:str(S), special_forms()).
 
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
-  Op        = clj_core:first(Form),
-  IsSymbol  = clj_core:'symbol?'(Op),
+  Op        = clj_rt:first(Form),
+  IsSymbol  = clj_rt:'symbol?'(Op),
   IsSpecial = is_special(Op),
   MacroVar  = case IsSymbol of
                 true -> lookup_var(Op, false);
@@ -33,7 +33,7 @@ macroexpand_1(Form, Env) ->
     andalso ('clojerl.Var':is_macro(MacroVar))
   of
     true ->
-      Args = [Form, Env | clj_core:to_list(clj_core:rest(Form))],
+      Args = [Form, Env | clj_rt:to_list(clj_rt:rest(Form))],
       'clojerl.IFn':apply(MacroVar, Args);
     false ->
       case IsSymbol andalso not IsSpecial of
@@ -48,26 +48,26 @@ macroexpand_1(Form, Env) ->
 
 -spec maybe_macroexpand_symbol(any(), 'clojerl.Symbol':type()) -> any().
 maybe_macroexpand_symbol(Form, OpSym) ->
-  OpBin = clj_core:name(OpSym),
+  OpBin = clj_rt:name(OpSym),
   case 'clojerl.String':char_at(OpBin, 0) of
     <<".">> ->
-      DotSym     = clj_core:symbol(<<".">>),
+      DotSym     = clj_rt:symbol(<<".">>),
       Length     = 'clojerl.String':count(OpBin),
       NameBin    = 'clojerl.String':substring(OpBin, 1, Length),
-      NameSym    = clj_core:symbol(NameBin),
-      [_, Target | Args] = clj_core:to_list(Form),
+      NameSym    = clj_rt:symbol(NameBin),
+      [_, Target | Args] = clj_rt:to_list(Form),
 
-      clj_core:list([DotSym, Target, NameSym | Args]);
+      clj_rt:list([DotSym, Target, NameSym | Args]);
     _ ->
       case 'clojerl.String':ends_with(OpBin, <<".">>) of
         true ->
-          NewSym  = clj_core:symbol(<<"new">>),
+          NewSym  = clj_rt:symbol(<<"new">>),
           Length  = 'clojerl.String':count(OpBin),
           NameBin = 'clojerl.String':substring(OpBin, 0, Length - 1),
-          NameSym = clj_core:symbol(NameBin),
-          [_ | Args]  = clj_core:to_list(Form),
+          NameSym = clj_rt:symbol(NameBin),
+          [_ | Args]  = clj_rt:to_list(Form),
 
-          clj_core:list([NewSym, NameSym | Args]);
+          clj_rt:list([NewSym, NameSym | Args]);
         false ->
           Form
       end
@@ -118,19 +118,19 @@ analyze_forms(Forms, Env) ->
 
 -spec analyze_form(any(), clj_env:env()) -> clj_env:env().
 analyze_form(Form, Env) ->
-  IsSeq    = clj_core:'seq?'(Form),
-  IsSymbol = clj_core:'symbol?'(Form),
-  IsRecord = clj_core:'record?'(Form),
-  IsType   = clj_core:'type?'(Form),
-  IsVector = clj_core:'vector?'(Form),
-  IsMap    = clj_core:'map?'(Form),
+  IsSeq    = clj_rt:'seq?'(Form),
+  IsSymbol = clj_rt:'symbol?'(Form),
+  IsRecord = clj_rt:'record?'(Form),
+  IsType   = clj_rt:'type?'(Form),
+  IsVector = clj_rt:'vector?'(Form),
+  IsMap    = clj_rt:'map?'(Form),
   IsErlMap = is_map(Form),
-  IsSet    = clj_core:'set?'(Form),
-  IsVar    = clj_core:'var?'(Form),
+  IsSet    = clj_rt:'set?'(Form),
+  IsVar    = clj_rt:'var?'(Form),
   IsTuple  = erlang:is_tuple(Form),
   if
     IsSeq ->
-      case clj_core:'empty?'(Form) of
+      case clj_rt:'empty?'(Form) of
         true  -> analyze_const(Form, Env);
         false -> analyze_seq(Form, Env)
       end;
@@ -169,7 +169,7 @@ analyze_const(Constant, Env) ->
 analyze_const(Constant, CheckWrappingMeta, Env) ->
   Expr = #{ op   => constant
           , env  => Env
-          , tag  => clj_core:type(Constant)
+          , tag  => clj_rt:type(Constant)
           , form => Constant
           },
   case CheckWrappingMeta of
@@ -186,7 +186,7 @@ analyze_seq(List, Env0) ->
   OldLocation   = clj_env:location(Env0),
   MaybeLocation = clj_reader:location_meta(List),
   Env           = clj_env:maybe_update_location(MaybeLocation, Env0),
-  Op            = clj_core:first(List),
+  Op            = clj_rt:first(List),
 
   clj_utils:error_when( Op =:= ?NIL
                       , <<"Can't call nil">>
@@ -194,12 +194,12 @@ analyze_seq(List, Env0) ->
                       ),
 
   ExpandedList = macroexpand_1(List, Env),
-  Env1 = case clj_core:equiv(List, ExpandedList) of
+  Env1 = case clj_rt:equiv(List, ExpandedList) of
            true ->
              AnaInvoke = fun analyze_invoke/2,
-             Fun = case clj_core:'symbol?'(Op) of
+             Fun = case clj_rt:'symbol?'(Op) of
                      true ->
-                       maps:get(clj_core:str(Op), special_forms(), AnaInvoke);
+                       maps:get(clj_rt:str(Op), special_forms(), AnaInvoke);
                      false ->
                        AnaInvoke
                    end,
@@ -215,13 +215,13 @@ analyze_seq(List, Env0) ->
 
 -spec parse_quote('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_quote(List, Env) ->
-  Count = clj_core:count(List),
+  Count = clj_rt:count(List),
   clj_utils:error_when( Count =/= 2
                       , [<<"Wrong number of args to quote, had: ">>, Count - 1]
                       , clj_env:location(Env)
                       ),
 
-  Second = clj_core:second(List),
+  Second = clj_rt:second(List),
 
   { #{tag := Tag} = ConstExpr
   , NewEnv
@@ -241,18 +241,18 @@ parse_quote(List, Env) ->
 
 -spec parse_fn('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_fn(List, Env) ->
-  Op = clj_core:first(List),
+  Op = clj_rt:first(List),
 
   {NameSym, Methods} =
-    case clj_core:'symbol?'(clj_core:second(List)) of
-      true  -> {clj_core:second(List), clj_core:rest(clj_core:rest(List))};
-      false -> {clj_core:gensym(<<"anon__">>), clj_core:rest(List)}
+    case clj_rt:'symbol?'(clj_rt:second(List)) of
+      true  -> {clj_rt:second(List), clj_rt:rest(clj_rt:rest(List))};
+      false -> {clj_rt:gensym(<<"anon__">>), clj_rt:rest(List)}
     end,
 
   %% Check if there is more than one method
-  MethodsList = case clj_core:'vector?'(clj_core:first(Methods)) of
+  MethodsList = case clj_rt:'vector?'(clj_rt:first(Methods)) of
                   true  -> [Methods];
-                  false -> clj_core:to_list(Methods)
+                  false -> clj_rt:to_list(Methods)
                 end,
 
   Env0 = clj_env:add_locals_scope(Env),
@@ -271,8 +271,8 @@ parse_fn(List, Env) ->
                   true  ->
                     DefVarNs    = clj_namespace:current(),
                     DefVarNsSym = clj_namespace:name(DefVarNs),
-                    'clojerl.Var':?CONSTRUCTOR( clj_core:name(DefVarNsSym)
-                                              , clj_core:name(DefNameSym)
+                    'clojerl.Var':?CONSTRUCTOR( clj_rt:name(DefVarNsSym)
+                                              , clj_rt:name(DefNameSym)
                                               );
                   false -> ?NIL
                 end,
@@ -286,9 +286,9 @@ parse_fn(List, Env) ->
              clj_env:put_local(NameSym, LocalExpr, Env0)
          end,
 
-  OpMeta      = clj_core:meta(Op),
-  OnceKeyword = clj_core:keyword(<<"once">>),
-  IsOnce      = clj_core:boolean(clj_core:get(OpMeta, OnceKeyword)),
+  OpMeta      = clj_rt:meta(Op),
+  OnceKeyword = clj_rt:keyword(<<"once">>),
+  IsOnce      = clj_rt:boolean(clj_rt:get(OpMeta, OnceKeyword)),
 
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
@@ -357,7 +357,7 @@ parse_fn(List, Env) ->
                    , variadic_arity  => VariadicArity
                    , 'fn?'           => true
                    },
-        DefVar1 = clj_core:with_meta(DefVar, VarMeta),
+        DefVar1 = clj_rt:with_meta(DefVar, VarMeta),
         clj_namespace:update_var(DefVar1),
 
         analyze_fn_methods(MethodsList, LoopId, IsOnce, true, Env2);
@@ -404,15 +404,15 @@ analyze_fn_methods(MethodsList, LoopId, IsOnce, AnalyzeBody, Env) ->
                        ) ->
   clj_env:env().
 analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
-  Params = clj_core:first(List),
-  clj_utils:error_when( not clj_core:'vector?'(Params)
+  Params = clj_rt:first(List),
+  clj_utils:error_when( not clj_rt:'vector?'(Params)
                       , <<"Parameter declaration should be a vector">>
                       , clj_env:location(Env0)
                       ),
 
-  ParamsList = clj_core:to_list(Params),
+  ParamsList = clj_rt:to_list(Params),
 
-  IsNotAmpersandFun = fun(X) -> clj_core:str(X) =/= <<"&">> end,
+  IsNotAmpersandFun = fun(X) -> clj_rt:str(X) =/= <<"&">> end,
   ParamsOnly        = lists:filter(IsNotAmpersandFun, ParamsList),
   IsVariadic        = length(ParamsOnly) =/= length(ParamsList),
 
@@ -426,7 +426,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
   FixedArity  = case IsVariadic of true -> Arity - 1; false -> Arity end,
 
   {_, Guard, Body} = case AnalyzeBody of
-                       true  -> check_guard(clj_core:rest(List));
+                       true  -> check_guard(clj_rt:rest(List));
                        false -> {false, true, List}
                      end,
 
@@ -495,25 +495,25 @@ analyze_method_params(IsVariadic, Arity, Params, Env0) ->
 
 -spec analyze_body('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_body(List, Env) ->
-  DoSym = clj_core:symbol(<<"do">>),
-  DoForm = clj_core:cons(DoSym, List),
+  DoSym = clj_rt:symbol(<<"do">>),
+  DoForm = clj_rt:cons(DoSym, List),
   analyze_form(DoForm, Env).
 
 -spec is_valid_bind_symbol(any()) -> boolean().
 is_valid_bind_symbol(X) ->
-  clj_core:'symbol?'(X)
-    andalso not clj_core:boolean(clj_core:namespace(X))
-    andalso nomatch == re:run(clj_core:name(X), <<"\\.">>).
+  clj_rt:'symbol?'(X)
+    andalso not clj_rt:boolean(clj_rt:namespace(X))
+    andalso nomatch == re:run(clj_rt:name(X), <<"\\.">>).
 
 -spec check_guard(any()) -> {boolean(), any(), any()}.
 check_guard(List) ->
-  Form = clj_core:first(List),
-  case clj_core:'map?'(Form) of
+  Form = clj_rt:first(List),
+  case clj_rt:'map?'(Form) of
     true ->
       Ref = make_ref(),
-      case clj_core:get(Form, 'when', Ref) of
+      case clj_rt:get(Form, 'when', Ref) of
         Ref   -> {false, true, List};
-        Guard -> {true, Guard, clj_core:rest(List)}
+        Guard -> {true, Guard, clj_rt:rest(List)}
       end;
     false ->
       {false, true, List}
@@ -526,7 +526,7 @@ check_guard(List) ->
 -spec parse_do('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_do(Form, Env) ->
   StmtEnv = clj_env:context(statement, Env),
-  Statements = clj_core:to_list(clj_core:rest(Form)),
+  Statements = clj_rt:to_list(clj_rt:rest(Form)),
 
   {StatementsList, Return} =
     case Statements of
@@ -556,7 +556,7 @@ parse_do(Form, Env) ->
 
 -spec parse_if('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_if(Form, Env) ->
-  Count = clj_core:count(Form),
+  Count = clj_rt:count(Form),
   clj_utils:error_when( Count =/= 3 andalso Count =/= 4
                       , [<<"Wrong number of args to if, had: ">>, Count - 1]
                       , clj_env:location(Env)
@@ -565,10 +565,10 @@ parse_if(Form, Env) ->
   {Test, Then, Else} =
     case Count of
       3 ->
-        [_, Test1, Then1] = clj_core:to_list(Form),
+        [_, Test1, Then1] = clj_rt:to_list(Form),
         {Test1, Then1, ?NIL};
       4 ->
-        [_, Test1, Then1, Else1] = clj_core:to_list(Form),
+        [_, Test1, Then1, Else1] = clj_rt:to_list(Form),
         {Test1, Then1, Else1}
     end,
 
@@ -604,7 +604,7 @@ parse_let(Form, Env) ->
 
 -spec parse_loop('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_loop(Form, Env) ->
-  LoopId = clj_core:gensym(<<"loop_">>),
+  LoopId = clj_rt:gensym(<<"loop_">>),
   Env1   = clj_env:push(#{loop_id => {loop, LoopId}}, Env),
 
   {LoopExprExtra, Env2} = analyze_let(Form, Env1),
@@ -621,8 +621,8 @@ parse_loop(Form, Env) ->
   {map(), clj_env:env()}.
 analyze_let(Form, Env0) ->
   validate_bindings(Form, Env0),
-  Op     = clj_core:first(Form),
-  IsLoop = clj_core:equiv(clj_core:symbol(<<"loop*">>), Op),
+  Op     = clj_rt:first(Form),
+  IsLoop = clj_rt:equiv(clj_rt:symbol(<<"loop*">>), Op),
 
   PairUp = fun
              PairUp([], Pairs) ->
@@ -630,8 +630,8 @@ analyze_let(Form, Env0) ->
              PairUp([X, Y | Tail], Pairs) ->
                PairUp(Tail, [{X, Y} | Pairs])
            end,
-  BindingsVec   = clj_core:second(Form),
-  BindingsList  = clj_core:to_list(BindingsVec),
+  BindingsVec   = clj_rt:second(Form),
+  BindingsList  = clj_rt:to_list(BindingsVec),
   BindingPairs  = PairUp(BindingsList, []),
 
   Env1          = clj_env:add_locals_scope(Env0),
@@ -652,7 +652,7 @@ analyze_let(Form, Env0) ->
                 Env3
             end,
 
-  Body = clj_core:rest(clj_core:rest(Form)),
+  Body = clj_rt:rest(clj_rt:rest(Form)),
   {BodyExpr, Env4} = clj_env:pop_expr(analyze_body(Body, BodyEnv)),
 
   LetExprExtra = #{ body     => BodyExpr
@@ -687,21 +687,21 @@ parse_binding({Pattern, Init}, Env0) ->
 
 -spec validate_bindings('clojerl.List':type(), clj_env:env()) -> ok.
 validate_bindings(Form, Env) ->
-  Op = clj_core:first(Form),
-  Bindings = clj_core:second(Form),
-  clj_utils:error_when( not clj_core:'vector?'(Bindings),
+  Op = clj_rt:first(Form),
+  Bindings = clj_rt:second(Form),
+  clj_utils:error_when( not clj_rt:'vector?'(Bindings),
                        [ Op
                        , <<" requires a vector for its bindings, had: ">>
-                       , clj_core:type(Bindings)
+                       , clj_rt:type(Bindings)
                        ]
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:error_when( not clj_core:'even?'(clj_core:count(Bindings))
+  clj_utils:error_when( not clj_rt:'even?'(clj_rt:count(Bindings))
                       , [ Op
                         , <<" requires an even number of forms in binding "
                             "vector, had: ">>
-                        , clj_core:count(Bindings)
+                        , clj_rt:count(Bindings)
                         ]
                       , clj_env:location(Env)
                       ),
@@ -721,17 +721,17 @@ parse_recur(List, Env) ->
                       , <<"Can only recur from tail position">>
                       , clj_env:location(Env)
                       ),
-  clj_utils:error_when( LoopLocals =/= clj_core:count(List) - 1
+  clj_utils:error_when( LoopLocals =/= clj_rt:count(List) - 1
                       , [<<"Mismatched argument count to recur, expected: ">>
                         , LoopLocals
                         , <<" args, had: ">>
-                        , clj_core:count(List) - 1
+                        , clj_rt:count(List) - 1
                         ]
                       , clj_env:location(Env)
                       ),
 
   Env1 = clj_env:context(expr, Env),
-  ArgsList = clj_core:to_list(clj_core:rest(List)),
+  ArgsList = clj_rt:to_list(clj_rt:rest(List)),
   Env2 = analyze_forms(ArgsList, Env1),
   {ArgsExprs, Env3} = clj_env:last_exprs(LoopLocals, Env2),
 
@@ -754,9 +754,9 @@ parse_letfn(Form, Env0) ->
   [ _ %% letfn*
   , FnSpecs
   | Body
-  ] = clj_core:to_list(Form),
+  ] = clj_rt:to_list(Form),
 
-  {FnNames, FnForms} = partition_fun_defs(clj_core:to_list(FnSpecs)),
+  {FnNames, FnForms} = partition_fun_defs(clj_rt:to_list(FnSpecs)),
 
   Env  = clj_env:add_locals_scope(Env0),
 
@@ -807,11 +807,11 @@ partition_fun_defs([Name, Fun | Rest], {NamesAcc, FunsAcc}) ->
 
 -spec parse_case('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_case(List, Env) ->
-  Test             = clj_core:second(List),
+  Test             = clj_rt:second(List),
   {TestExpr, Env1} = clj_env:pop_expr(analyze_form(Test, Env)),
 
-  PatternsBodies     = clj_core:rest(clj_core:rest(List)),
-  PatternsBodiesList = clj_core:to_list(PatternsBodies),
+  PatternsBodies     = clj_rt:rest(clj_rt:rest(List)),
+  PatternsBodiesList = clj_rt:to_list(PatternsBodies),
 
   { ClausesExprs
   , DefaultExpr
@@ -885,7 +885,7 @@ add_pattern_local(LocalExpr, Env) ->
 
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
-  IsSymbol = clj_core:'symbol?'(Form),
+  IsSymbol = clj_rt:'symbol?'(Form),
   Mapping  = #{in_pattern => true},
   Env1     = clj_env:push(Mapping, Env),
   Env2     =
@@ -941,8 +941,8 @@ parse_pattern(Form, Env) ->
         analyze_const(Form, Env1);
       true ->
         case
-          clj_core:'list?'(Form)
-          andalso clj_core:str(clj_core:first(Form))
+          clj_rt:'list?'(Form)
+          andalso clj_rt:str(clj_rt:first(Form))
         of
           X when X =:= <<"erl-binary*">> orelse
                  X =:= <<"erl-list*">> orelse
@@ -963,8 +963,8 @@ parse_pattern(Form, Env) ->
 -spec parse_def('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_def(List, Env) ->
   Docstring    = validate_def_args(List, Env),
-  VarSymbol0   = clj_core:second(List),
-  SymbolMeta0  = clj_core:meta(VarSymbol0),
+  VarSymbol0   = clj_rt:second(List),
+  SymbolMeta0  = clj_rt:meta(VarSymbol0),
   DocstringMap = case Docstring of
                    ?NIL -> #{};
                    Docstring -> #{doc => Docstring}
@@ -972,11 +972,11 @@ parse_def(List, Env) ->
 
   LocationInfo = clj_env:location(Env),
 
-  SymbolMeta   = clj_core:merge([ DocstringMap
+  SymbolMeta   = clj_rt:merge([ DocstringMap
                                 , SymbolMeta0
                                 , LocationInfo
                                 ]),
-  VarSymbol    = clj_core:with_meta(VarSymbol0, SymbolMeta),
+  VarSymbol    = clj_rt:with_meta(VarSymbol0, SymbolMeta),
 
   Var0 = lookup_var(VarSymbol),
 
@@ -988,26 +988,26 @@ parse_def(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  VarNsSym     = clj_core:symbol(clj_core:namespace(Var0)),
+  VarNsSym     = clj_rt:symbol(clj_rt:namespace(Var0)),
   CurrentNs    = clj_namespace:current(),
   CurrentNsSym = clj_namespace:name(CurrentNs),
-  clj_utils:error_when( clj_core:namespace(VarSymbol) =/= ?NIL
-                        andalso not clj_core:equiv(CurrentNsSym, VarNsSym)
+  clj_utils:error_when( clj_rt:namespace(VarSymbol) =/= ?NIL
+                        andalso not clj_rt:equiv(CurrentNsSym, VarNsSym)
                       , <<"Can't create defs outside of current ns">>
                       , clj_env:location(Env)
                       ),
 
-  QuoteSym     = clj_core:symbol(<<"quote">>),
-  NameBin      = clj_core:name(VarSymbol),
-  VarMeta      = clj_core:merge([ clj_core:meta(Var0)
+  QuoteSym     = clj_rt:symbol(<<"quote">>),
+  NameBin      = clj_rt:name(VarSymbol),
+  VarMeta      = clj_rt:merge([ clj_rt:meta(Var0)
                                 , SymbolMeta
                                 , #{ ns   => [QuoteSym, VarNsSym]
                                    , name => [ QuoteSym
-                                             , clj_core:symbol(NameBin)
+                                             , clj_rt:symbol(NameBin)
                                              ]
                                    }
                                 ]),
-  Var          = clj_core:with_meta(Var0, VarMeta),
+  Var          = clj_rt:with_meta(Var0, VarMeta),
   IsDynamic    = 'clojerl.Var':is_dynamic(Var),
 
   NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
@@ -1023,10 +1023,10 @@ parse_def(List, Env) ->
                      ),
 
   clj_namespace:update_var(Var),
-  Count = clj_core:count(List),
+  Count = clj_rt:count(List),
   Init  = case Docstring of
-            ?NIL when Count =:= 3 -> clj_core:third(List);
-            _ when Count =:= 4 -> clj_core:fourth(List);
+            ?NIL when Count =:= 3 -> clj_rt:third(List);
+            _ when Count =:= 4 -> clj_rt:fourth(List);
             _ -> ?UNBOUND
           end,
 
@@ -1052,7 +1052,7 @@ parse_def(List, Env) ->
   clj_env:push_expr(DefExpr, Env2).
 
 process_var_meta(Var, Env) ->
-  Env1           = analyze_form(clj_core:meta(Var), Env),
+  Env1           = analyze_form(clj_rt:meta(Var), Env),
   {Exprs, _Env2} = clj_emitter:emit(Env1),
   VarMeta = clj_compiler:eval_expressions(Exprs, false),
 
@@ -1072,9 +1072,9 @@ var_fn_info(Var, #{op := fn} = Expr) ->
   %% to the var's metadata.
   RemoveKeys = [op, env, methods, form, once, local, tag],
   ExprInfo   = maps:without(RemoveKeys, Expr),
-  VarMeta    = clj_core:meta(Var),
-  VarMeta1   = clj_core:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
-  clj_core:with_meta(Var, VarMeta1);
+  VarMeta    = clj_rt:meta(Var),
+  VarMeta1   = clj_rt:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
+  clj_rt:with_meta(Var, VarMeta1);
 var_fn_info(Var, _) ->
   Var.
 
@@ -1082,16 +1082,16 @@ var_fn_info(Var, _) ->
   ?NIL | binary().
 validate_def_args(List, Env) ->
   Docstring =
-    case {clj_core:count(List), clj_core:third(List)} of
+    case {clj_rt:count(List), clj_rt:third(List)} of
       {4, Str} when is_binary(Str) -> Str;
       _ -> ?NIL
     end,
 
-  case clj_core:count(List) of
+  case clj_rt:count(List) of
     C when C == 2;
            C == 3, Docstring == ?NIL;
            C == 4, Docstring =/= ?NIL  ->
-      case clj_core:type(clj_core:second(List)) of
+      case clj_rt:type(clj_rt:second(List)) of
         'clojerl.Symbol' -> ok;
         _ -> clj_utils:error( <<"First argument to def must be a symbol">>
                             , clj_env:location(Env)
@@ -1116,17 +1116,17 @@ lookup_var(VarSymbol) ->
 -spec lookup_var('clojerl.Symbol':type(), boolean()) ->
   'clojerl.Var':type() | ?NIL.
 lookup_var(VarSymbol, true = _CreateNew) ->
-  NsSym = case clj_core:namespace(VarSymbol) of
+  NsSym = case clj_rt:namespace(VarSymbol) of
             ?NIL  -> ?NIL;
-            NsStr -> clj_core:symbol(NsStr)
+            NsStr -> clj_rt:symbol(NsStr)
           end,
 
-  NameSym   = clj_core:symbol(clj_core:name(VarSymbol)),
+  NameSym   = clj_rt:symbol(clj_rt:name(VarSymbol)),
 
   CurrentNs    = clj_namespace:current(),
   CurrentNsSym = clj_namespace:name(CurrentNs),
 
-  case clj_core:equiv(CurrentNsSym, NsSym) of
+  case clj_rt:equiv(CurrentNsSym, NsSym) of
     Equal when Equal; NsSym == ?NIL ->
       clj_namespace:intern(NameSym, CurrentNs),
       lookup_var(VarSymbol, false);
@@ -1134,21 +1134,21 @@ lookup_var(VarSymbol, true = _CreateNew) ->
       lookup_var(VarSymbol, false)
   end;
 lookup_var(VarSymbol, false = _CreateNew) ->
-  NsStr   = clj_core:namespace(VarSymbol),
-  NameStr = clj_core:name(VarSymbol),
+  NsStr   = clj_rt:namespace(VarSymbol),
+  NameStr = clj_rt:name(VarSymbol),
 
   case {NsStr, NameStr} of
     {?NIL, NameStr} when NameStr == <<"ns">>;
                               NameStr == <<"in-ns">> ->
-      ClojureCoreSym = clj_core:symbol(<<"clojure.core">>, NameStr),
+      ClojureCoreSym = clj_rt:symbol(<<"clojure.core">>, NameStr),
       clj_namespace:find_var(ClojureCoreSym);
     {?NIL, _} ->
       CurrentNs    = clj_namespace:current(),
       CurrentNsSym = clj_namespace:name(CurrentNs),
-      Symbol = clj_core:symbol(clj_core:name(CurrentNsSym), NameStr),
+      Symbol = clj_rt:symbol(clj_rt:name(CurrentNsSym), NameStr),
       clj_namespace:find_var(Symbol);
     {NsStr, NameStr} ->
-      Symbol = clj_core:symbol(NsStr, NameStr),
+      Symbol = clj_rt:symbol(NsStr, NameStr),
       clj_namespace:find_var(Symbol)
   end.
 
@@ -1158,7 +1158,7 @@ lookup_var(VarSymbol, false = _CreateNew) ->
 
 -spec parse_import('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_import(Form, Env) ->
-  ArgCount = clj_core:count(Form) - 1,
+  ArgCount = clj_rt:count(Form) - 1,
   clj_utils:error_when( ArgCount > 1
                       , [ <<"Wrong number of args to import*, had: ">>
                         , ArgCount
@@ -1166,7 +1166,7 @@ parse_import(Form, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  TypeName = clj_core:second(Form),
+  TypeName = clj_rt:second(Form),
   clj_utils:error_when( not is_binary(TypeName)
                       , <<"Argument to import* must be a string">>
                       , clj_env:location(Env)
@@ -1186,7 +1186,7 @@ parse_import(Form, Env) ->
 
 -spec parse_new('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_new(Form, Env) ->
-  [_, Type | Args] = clj_core:to_list(Form),
+  [_, Type | Args] = clj_rt:to_list(Form),
 
   { #{type := TypeSym} = TypeExpr
   , Env1
@@ -1198,7 +1198,7 @@ parse_new(Form, Env) ->
   NewExpr = #{ op   => new
              , env  => Env
              , form => Form
-             , tag  => clj_core:keyword(TypeSym)
+             , tag  => clj_rt:keyword(TypeSym)
              , type => TypeExpr
              , args => ArgsExprs
              },
@@ -1218,11 +1218,11 @@ parse_deftype(Form, Env0) ->
   , _ % :implements
   , Interfaces
   | Methods
-  ] = clj_core:to_list(Form),
+  ] = clj_rt:to_list(Form),
 
   Env0a       = clj_env:push(#{pattern_locals => []}, Env0),
 
-  FieldsList  = clj_core:to_list(Fields),
+  FieldsList  = clj_rt:to_list(Fields),
   Env1        = analyze_method_params(FieldsList, Env0a),
   {FieldsExprs, Env2} = clj_env:last_exprs(length(FieldsList), Env1),
 
@@ -1250,7 +1250,7 @@ parse_deftype(Form, Env0) ->
   Env5 = lists:foldl(fun analyze_deftype_method/2, Env4, Methods),
   {MethodsExprs, Env6} = clj_env:last_exprs(length(Methods), Env5),
 
-  IntfsList   = clj_core:to_list(Interfaces),
+  IntfsList   = clj_rt:to_list(Interfaces),
   {InterfacesExprs, Env7} = clj_env:last_exprs( length(IntfsList)
                                               , analyze_forms(IntfsList, Env6)
                                               ),
@@ -1272,23 +1272,23 @@ parse_deftype(Form, Env0) ->
 -spec analyze_deftype_method('clojerl.List':type(), clj_env:env()) ->
   clj_env:env().
 analyze_deftype_method(Form, Env) ->
-  [MethodName, Args | _Body] = clj_core:to_list(Form),
+  [MethodName, Args | _Body] = clj_rt:to_list(Form),
 
-  clj_utils:error_when( not clj_core:'symbol?'(MethodName)
+  clj_utils:error_when( not clj_rt:'symbol?'(MethodName)
                       , [ <<"Method name must be a symbol, had: ">>
-                        , clj_core:type(MethodName)
+                        , clj_rt:type(MethodName)
                         ]
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:error_when( not clj_core:'vector?'(Args)
+  clj_utils:error_when( not clj_rt:'vector?'(Args)
                       , [ <<"Parameter listing should be a vector, had: ">>
-                        , clj_core:type(Args)
+                        , clj_rt:type(Args)
                         ]
                       , clj_env:location(Env)
                       ),
 
-  clj_utils:error_when( clj_core:count(Args) < 1
+  clj_utils:error_when( clj_rt:count(Args) < 1
                       , [ <<"Must supply at least one argument "
                             "for 'this' in: ">>
                         , MethodName
@@ -1297,7 +1297,7 @@ analyze_deftype_method(Form, Env) ->
                       ),
 
   LoopId = {function, MethodName},
-  {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( clj_core:rest(Form)
+  {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( clj_rt:rest(Form)
                                                          , LoopId
                                                          , true
                                                          , Env
@@ -1322,11 +1322,11 @@ parse_defprotocol(List, Env) ->
   [ _ % defprotocol*
   , FQNameSym
   | MethodsSigs
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
-  clj_utils:error_when( not clj_core:'symbol?'(FQNameSym)
+  clj_utils:error_when( not clj_rt:'symbol?'(FQNameSym)
                       , [ <<"Protocol name should be a symbol, had: ">>
-                        , clj_core:type(FQNameSym)
+                        , clj_rt:type(FQNameSym)
                         ]
                       , clj_env:location(Env)
                       ),
@@ -1348,10 +1348,10 @@ parse_extend_type(List, Env) ->
   [ _ExtendTypeSym % extend-type*
   , Type0
   | ProtosMethods
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
   %% Group each protocol name with its implementation functions.
-  GroupedProtoMethods = split_when(ProtosMethods, fun clj_core:'symbol?'/1),
+  GroupedProtoMethods = split_when(ProtosMethods, fun clj_rt:'symbol?'/1),
 
   %% Analyze each group and map protocols to their implementations.
   {ProtoImplsMap, Env1} = lists:foldl( fun analyze_extend_methods/2
@@ -1360,12 +1360,12 @@ parse_extend_type(List, Env) ->
                                      ),
 
   Type = case Type0 of
-           ?NIL -> clj_core:symbol(atom_to_binary(?NIL_TYPE, utf8));
+           ?NIL -> clj_rt:symbol(atom_to_binary(?NIL_TYPE, utf8));
            _    ->
-             IsSymbol = clj_core:'symbol?'(Type0),
-             case clj_core:str(Type0) of
+             IsSymbol = clj_rt:'symbol?'(Type0),
+             case clj_rt:str(Type0) of
                <<"default">> when IsSymbol ->
-                 clj_core:symbol(atom_to_binary(?DEFAULT_TYPE, utf8));
+                 clj_rt:symbol(atom_to_binary(?DEFAULT_TYPE, utf8));
                _  ->
                  Type0
              end
@@ -1376,7 +1376,7 @@ parse_extend_type(List, Env) ->
 
   clj_utils:error_when( TypeOp =/= type
                       , [ <<"The expression of type ">>
-                        , clj_core:type(Type)
+                        , clj_rt:type(Type)
                         , <<" does not resolve to a type.">>
                         ]
                       , clj_env:location(Env)
@@ -1434,24 +1434,24 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
 
 -spec parse_dot('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_dot(List, Env) ->
-  clj_utils:error_when( clj_core:count(List) < 3
+  clj_utils:error_when( clj_rt:count(List) < 3
                       , <<"Malformed member expression, expecting "
                           "(. target member ...)">>
                       , clj_env:location(Env)
                       ),
 
-  [_Dot, Target | Args] = clj_core:to_list(List),
+  [_Dot, Target | Args] = clj_rt:to_list(List),
 
   {TargetExpr, Env1} = clj_env:pop_expr(analyze_form(Target, Env)),
 
-  FirstArg = clj_core:first(Args),
+  FirstArg = clj_rt:first(Args),
   {NameSym, ArgsList} =
-    case clj_core:'symbol?'(FirstArg) of
+    case clj_rt:'symbol?'(FirstArg) of
       true  ->
-        {FirstArg, clj_core:rest(Args)};
+        {FirstArg, clj_rt:rest(Args)};
       false ->
         clj_utils:error_when( length(Args) > 1
-                              orelse not clj_core:'seq?'(FirstArg)
+                              orelse not clj_rt:'seq?'(FirstArg)
                             , [ <<"Invalid . expression, expected ">>
                               , <<"single list, got: ">>
                               , FirstArg
@@ -1461,8 +1461,8 @@ parse_dot(List, Env) ->
                               ]
                             , clj_env:location(Env)
                             ),
-        { clj_core:first(FirstArg)
-        , clj_core:to_list(clj_core:rest(FirstArg))
+        { clj_rt:first(FirstArg)
+        , clj_rt:to_list(clj_rt:rest(FirstArg))
         }
     end,
 
@@ -1473,8 +1473,8 @@ parse_dot(List, Env) ->
   case TargetExpr of
     #{ op   := type
      , type := TypeSym} ->
-      Module     = clj_core:keyword(TypeSym),
-      Function   = clj_core:keyword(NameSym),
+      Module     = clj_rt:keyword(TypeSym),
+      Function   = clj_rt:keyword(NameSym),
       ErlFunExpr = erl_fun_expr(List, Module, Function, length(ArgsList), Env),
 
       InvokeExpr = #{ op   => invoke
@@ -1487,7 +1487,7 @@ parse_dot(List, Env) ->
       clj_env:push_expr(InvokeExpr, Env2);
     _ ->
       Module          = type_tag(TargetExpr),
-      Function        = clj_core:keyword(NameSym),
+      Function        = clj_rt:keyword(NameSym),
       ResolveTypeExpr = #{ op       => resolve_type
                          , env      => Env
                          , form     => Target
@@ -1498,7 +1498,7 @@ parse_dot(List, Env) ->
                                                   , <<"*warn-on-infer*">>
                                                   ),
 
-      clj_utils:warn_when( clj_core:deref(WarnOnInferVar)
+      clj_utils:warn_when( clj_rt:deref(WarnOnInferVar)
                            andalso Module =:= ?NIL
                          , [<<"Cannot infer target type for">>, List]
                          , clj_env:location(Env)
@@ -1516,10 +1516,10 @@ parse_dot(List, Env) ->
 
 -spec maybe_type_tag('clojerl.Symbol':type()) -> ?NIL | module().
 maybe_type_tag(Symbol) ->
-  Meta = clj_core:meta(Symbol),
-  case clj_core:get(Meta, tag) of
+  Meta = clj_rt:meta(Symbol),
+  case clj_rt:get(Meta, tag) of
     ?NIL -> ?NIL;
-    Tag  -> clj_core:keyword(Tag)
+    Tag  -> clj_rt:keyword(Tag)
   end.
 
 -spec type_tag(map()) -> ?NIL | module().
@@ -1532,7 +1532,7 @@ type_tag(_) -> ?NIL.
 
 -spec parse_throw('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_throw(List, Env) ->
-  Count = clj_core:count(List),
+  Count = clj_rt:count(List),
   clj_utils:error_when( Count =/= 2
                       , [ <<"Wrong number of args to throw, had: ">>
                         , Count - 1
@@ -1540,7 +1540,7 @@ parse_throw(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  Second = clj_core:second(List),
+  Second = clj_rt:second(List),
   ExceptionEnv = clj_env:context(expr, Env),
   {ExceptionExpr, Env1} = clj_env:pop_expr(analyze_form(Second, ExceptionEnv)),
 
@@ -1558,15 +1558,15 @@ parse_throw(List, Env) ->
 
 -spec parse_try('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_try(List, Env) ->
-  CatchSymbol   = clj_core:symbol(<<"catch">>),
-  FinallySymbol = clj_core:symbol(<<"finally">>),
+  CatchSymbol   = clj_rt:symbol(<<"catch">>),
+  FinallySymbol = clj_rt:symbol(<<"finally">>),
   IsCatch       = fun(X) ->
-                      clj_core:'seq?'(X) andalso
-                        clj_core:equiv(clj_core:first(X), CatchSymbol)
+                      clj_rt:'seq?'(X) andalso
+                        clj_rt:equiv(clj_rt:first(X), CatchSymbol)
                   end,
   IsFinally     = fun(X) ->
-                      clj_core:'seq?'(X) andalso
-                        clj_core:equiv(clj_core:first(X), FinallySymbol)
+                      clj_rt:'seq?'(X) andalso
+                        clj_rt:equiv(clj_rt:first(X), FinallySymbol)
                   end,
 
   IsNotCatchFinally = fun(X) -> not IsCatch(X) andalso not IsFinally(X) end,
@@ -1574,7 +1574,7 @@ parse_try(List, Env) ->
   { Body
   , CatchFinallyTail
   } = lists:splitwith( IsNotCatchFinally
-                     , clj_core:to_list(clj_core:rest(List))
+                     , clj_rt:to_list(clj_rt:rest(List))
                      ),
   {Catches, FinallyTail}   = lists:splitwith(IsCatch, CatchFinallyTail),
   {Finallies, Tail}        = lists:splitwith(IsFinally, FinallyTail),
@@ -1601,7 +1601,7 @@ parse_try(List, Env) ->
 
   {FinallyExpr, Env5} = case Finallies of
                           [Finally] ->
-                            RestFinally = clj_core:rest(Finally),
+                            RestFinally = clj_rt:rest(Finally),
                             clj_env:pop_expr(analyze_body(RestFinally, Env4));
                           _ ->
                             {?NIL, Env4}
@@ -1628,7 +1628,7 @@ parse_catch(List, Env) ->
   , ErrType
   , ErrName
   | GuardAndBody
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
   clj_utils:error_when( not is_valid_error_type(ErrType)
                       , [<<"Bad error type: ">>, ErrType]
@@ -1667,7 +1667,7 @@ is_valid_error_type(error) -> true;
 is_valid_error_type(exit)  -> true;
 is_valid_error_type(throw) -> true;
 is_valid_error_type(Form)  ->
-  clj_core:'symbol?'(Form) andalso clj_core:str(Form) =:= <<"_">>.
+  clj_rt:'symbol?'(Form) andalso clj_rt:str(Form) =:= <<"_">>.
 
 %%------------------------------------------------------------------------------
 %% Parse var
@@ -1675,19 +1675,19 @@ is_valid_error_type(Form)  ->
 
 -spec parse_var('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_var(List, Env) ->
-  Count = clj_core:count(List),
+  Count = clj_rt:count(List),
   clj_utils:error_when( Count =/= 2
                       , [<<"Wrong number of args to var, had: ">>, Count]
                       , clj_env:location(Env)
                       ),
 
-  VarSymbol = clj_core:second(List),
+  VarSymbol = clj_rt:second(List),
 
   case resolve(VarSymbol, false, Env) of
     {{var, Var}, Env1} ->
       VarConstExpr = #{ op   => constant
                       , env  => Env
-                      , tag  => clj_core:type(Var)
+                      , tag  => clj_rt:type(Var)
                       , form => Var
                       },
       clj_env:push_expr(VarConstExpr, Env1);
@@ -1706,10 +1706,10 @@ parse_var(List, Env) ->
 
 -spec analyze_invoke('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_invoke(Form, Env) ->
-  FSym = clj_core:first(Form),
+  FSym = clj_rt:first(Form),
   {FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env)),
 
-  Args     = clj_core:to_list(clj_core:rest(Form)),
+  Args     = clj_rt:to_list(clj_rt:rest(Form)),
   ArgCount = length(Args),
   {ArgsExpr, Env2} = clj_env:last_exprs( ArgCount
                                        , analyze_forms(Args, Env1)
@@ -1828,16 +1828,16 @@ resolve(Symbol, Env) ->
 resolve(Symbol, CheckPrivate, Env) ->
   CurrentNs = clj_namespace:current(),
   Local     = clj_env:get_local(Symbol, Env),
-  NsStr     = clj_core:namespace(Symbol),
+  NsStr     = clj_rt:namespace(Symbol),
   MappedVal = clj_namespace:find_mapping(Symbol, CurrentNs),
 
   if
     Local =/= ?NIL ->
       {{local, Local}, Env};
     MappedVal =/= ?NIL ->
-      case clj_core:'var?'(MappedVal) of
+      case clj_rt:'var?'(MappedVal) of
         true ->
-          CurrentNsName = clj_core:name(clj_namespace:name(CurrentNs)),
+          CurrentNsName = clj_rt:name(clj_namespace:name(CurrentNs)),
           clj_utils:error_when( CheckPrivate
                                 andalso NsStr =/= ?NIL
                                 andalso NsStr =/= CurrentNsName
@@ -1862,15 +1862,15 @@ resolve(Symbol, CheckPrivate, Env) ->
 
 -spec erl_fun('clojerl.Symbol':type(), clj_env:env()) -> erl_fun().
 erl_fun(Symbol, Env0) ->
-  NsSym          = clj_core:symbol(clj_core:namespace(Symbol)),
+  NsSym          = clj_rt:symbol(clj_rt:namespace(Symbol)),
   {NsName, Env}  = case resolve(NsSym, Env0) of
                      {{type, TypeSym}, EnvTmp} ->
-                       {clj_core:name(TypeSym), EnvTmp};
+                       {clj_rt:name(TypeSym), EnvTmp};
                      {_, EnvTmp} ->
-                       {clj_core:name(NsSym), EnvTmp}
+                       {clj_rt:name(NsSym), EnvTmp}
                   end,
   NsAtom        = binary_to_atom(NsName, utf8),
-  {Name, Arity} = erl_fun_arity(clj_core:name(Symbol)),
+  {Name, Arity} = erl_fun_arity(clj_rt:name(Symbol)),
   NameAtom      = binary_to_atom(Name, utf8),
 
   NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
@@ -1914,8 +1914,8 @@ erl_fun_arity(Name) ->
 is_maybe_type(?NIL) ->
   false;
 is_maybe_type(Symbol) ->
-  ?NIL = clj_core:namespace(Symbol),
-  Name = clj_core:name(Symbol),
+  ?NIL = clj_rt:namespace(Symbol),
+  Name = clj_rt:name(Symbol),
   Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
   case re:run(Name, Re, [global, {capture, none}]) of
     match ->
@@ -1934,8 +1934,8 @@ is_maybe_type(Symbol) ->
 
 -spec wrapping_meta(map(), clj_env:env()) -> clj_env:env().
 wrapping_meta(#{form := Form, tag := Tag} = Expr, Env) ->
-  Meta = case clj_core:'meta?'(Form) of
-           true  -> clj_reader:remove_location(clj_core:meta(Form));
+  Meta = case clj_rt:'meta?'(Form) of
+           true  -> clj_reader:remove_location(clj_rt:meta(Form));
            false -> ?NIL
          end,
   case Meta of
@@ -1959,9 +1959,9 @@ wrapping_meta(#{form := Form, tag := Tag} = Expr, Env) ->
 
 -spec analyze_vector('clojerl.Vector':type(), clj_env:env()) -> clj_env:env().
 analyze_vector(Vector, Env) ->
-  Count   = clj_core:count(Vector),
+  Count   = clj_rt:count(Vector),
   ExprEnv = clj_env:context(expr, Env),
-  Items   = clj_core:to_list(Vector),
+  Items   = clj_rt:to_list(Vector),
   Env1    = analyze_forms(Items, ExprEnv),
   {ItemsExpr, Env2} = clj_env:last_exprs(Count, Env1),
 
@@ -1980,10 +1980,10 @@ analyze_vector(Vector, Env) ->
 
 -spec analyze_map('clojerl.Map':type(), clj_env:env()) -> clj_env:env().
 analyze_map(Map, Env) ->
-  Keys = clj_core:to_list(clj_core:keys(Map)),
-  Vals = clj_core:to_list(clj_core:vals(Map)),
+  Keys = clj_rt:to_list(clj_rt:keys(Map)),
+  Vals = clj_rt:to_list(clj_rt:vals(Map)),
 
-  Count = clj_core:count(Map),
+  Count = clj_rt:count(Map),
   ExprEnv = clj_env:context(expr, Env),
 
   Env1 = analyze_forms(Keys, ExprEnv),
@@ -2035,10 +2035,10 @@ analyze_erl_map(Map, Env) ->
 -spec analyze_set('clojerl.Set':type(), clj_env:env()) -> clj_env:env().
 analyze_set(Set, Env) ->
   ExprEnv = clj_env:context(expr, Env),
-  Items   = clj_core:to_list(Set),
+  Items   = clj_rt:to_list(Set),
   Env1    = analyze_forms(Items, ExprEnv),
 
-  Count   = clj_core:count(Set),
+  Count   = clj_rt:count(Set),
   {ItemsExpr, Env2} = clj_env:last_exprs(Count, Env1),
 
   SetExpr = #{ op    => set
@@ -2082,12 +2082,12 @@ analyze_tuple(Tuple, Env) ->
 parse_receive(List, Env) ->
   [ _ %% receive*
   | ClausesAndAfter
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
-  AfterSymbol = clj_core:symbol(<<"after">>),
+  AfterSymbol = clj_rt:symbol(<<"after">>),
   IsNotAfter  = fun(X) ->
-                    not (clj_core:'seq?'(X)
-                         andalso clj_core:equiv(clj_core:first(X), AfterSymbol))
+                    not (clj_rt:'seq?'(X)
+                         andalso clj_rt:equiv(clj_rt:first(X), AfterSymbol))
                 end,
 
   {Clauses, Afters} = lists:splitwith(IsNotAfter, ClausesAndAfter),
@@ -2129,7 +2129,7 @@ parse_after(List, Env) ->
   [ _ %% after
   , Timeout
   | Body
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
   {TimeoutExpr, Env1} = clj_env:pop_expr(analyze_form(Timeout, Env)),
   {BodyExpr, Env2}    = clj_env:pop_expr(analyze_body(Body, Env1)),
@@ -2152,7 +2152,7 @@ parse_after(List, Env) ->
 parse_erlang_binary(List, Env0) ->
   [ _ %% erl-binary*
   | Segments
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
   Env1 = lists:foldl(fun parse_segment/2, Env0, Segments),
   {SegmentsExprs, Env2} = clj_env:last_exprs(length(Segments), Env1),
@@ -2204,10 +2204,10 @@ segment_to_list(Binary) when is_binary(Binary) ->
 segment_to_list(Integer) when is_number(Integer) ->
   [Integer, type, integer];
 segment_to_list(X) when ?IS_TYPE(X) ->
-  IsVector = clj_core:'vector?'(X),
-  IsSymbol = clj_core:'symbol?'(X),
+  IsVector = clj_rt:'vector?'(X),
+  IsSymbol = clj_rt:'symbol?'(X),
   if
-    IsVector -> clj_core:to_list(X);
+    IsVector -> clj_rt:to_list(X);
     IsSymbol -> [X, size, 1, type, integer];
     true     -> invalid
   end;
@@ -2269,7 +2269,7 @@ valid_segment_types() ->
   {any(), clj_env:env()}.
 parse_segment_flags(Config, Env) ->
   Flags0 = maps:get(flags, Config, []),
-  Flags1 = clj_core:to_list(Flags0),
+  Flags1 = clj_rt:to_list(Flags0),
   clj_utils:error_when( not lists:all(fun is_valid_segment_flag/1, Flags1)
                       , [<<"Invalid binary segment flag: ">>, Flags1]
                       , clj_env:location(Env)
@@ -2313,10 +2313,10 @@ valid_segment_endianness() ->
 parse_erlang_list(List, Env0) ->
   [ _ %% erl-list*
   | AllItems
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
-  AmpersandSym   = clj_core:symbol(<<"&">>),
-  IsNotAmpersand = fun(X) -> not clj_core:equiv(AmpersandSym, X) end,
+  AmpersandSym   = clj_rt:symbol(<<"&">>),
+  IsNotAmpersand = fun(X) -> not clj_rt:equiv(AmpersandSym, X) end,
   {Items, Tails} = lists:splitwith(IsNotAmpersand, AllItems),
 
   clj_utils:error_when( length(Tails) > 0 andalso length(Tails) =/= 2
@@ -2354,7 +2354,7 @@ parse_erlang_list(List, Env0) ->
 parse_erlang_alias(List, Env0) ->
   [ _ %% erl-alias*
   | Args
-  ] = clj_core:to_list(List),
+  ] = clj_rt:to_list(List),
 
   clj_utils:error_when( not clj_env:get(in_pattern, false, Env0)
                       , [<<"Alias not in pattern.">>]
@@ -2396,7 +2396,7 @@ parse_erlang_alias(List, Env0) ->
 -spec parse_on_load(any(), clj_env:env()) ->
   clj_env:env().
 parse_on_load(List, Env0) ->
-  Body            = clj_core:rest(List),
+  Body            = clj_rt:rest(List),
   {BodyExpr, Env} = clj_env:pop_expr(analyze_body(Body, Env0)),
 
   Expr = #{ op    => on_load

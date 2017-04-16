@@ -99,7 +99,7 @@ write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
   SW.
 
 write(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
-  ok = io:fwrite(Pid, Format, clj_core:to_list(Values)),
+  ok = io:fwrite(Pid, Format, clj_rt:to_list(Values)),
   SW.
 
 str(#?TYPE{name = ?M, info = #{path := Path}}) ->

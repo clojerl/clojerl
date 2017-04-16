@@ -80,7 +80,7 @@ entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
     true ->
       FoundKey = maps:get(Hash, Keys),
       Val = rbdict:fetch(FoundKey, Vals),
-      clj_core:vector([FoundKey, Val]);
+      clj_rt:vector([FoundKey, Val]);
     false -> ?NIL
   end.
 
@@ -103,19 +103,19 @@ equiv( #?TYPE{name = ?M, data = {KeysX, ValsX}}
      , #?TYPE{name = ?M, data = {KeysY, ValsY}}
      ) ->
   maps:size(KeysX) =:= maps:size(KeysY)
-    andalso clj_core:equiv(rbdict:to_list(ValsX), rbdict:to_list(ValsY));
+    andalso clj_rt:equiv(rbdict:to_list(ValsX), rbdict:to_list(ValsY));
 equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
-  case clj_core:'map?'(Y) of
+  case clj_rt:'map?'(Y) of
     true  ->
       KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
-                              , clj_core:to_list(clj_core:keys(Y))
+                              , clj_rt:to_list(clj_rt:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso
-                  clj_core:equiv(rbdict:fetch(Key, Vals), clj_core:get(Y, Key))
+                  clj_rt:equiv(rbdict:fetch(Key, Vals), clj_rt:get(Y, Key))
             end,
-      maps:size(Keys) =:= clj_core:count(Y)
+      maps:size(Keys) =:= clj_rt:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
@@ -135,14 +135,14 @@ apply(_, Args) ->
 cons(#?TYPE{name = ?M} = Map, ?NIL) ->
   Map;
 cons(#?TYPE{name = ?M} = M, X) ->
-  IsVector = clj_core:'vector?'(X),
-  IsMap    = clj_core:'map?'(X),
-  case clj_core:to_list(X) of
+  IsVector = clj_rt:'vector?'(X),
+  IsMap    = clj_rt:'map?'(X),
+  case clj_rt:to_list(X) of
     [K, V] when IsVector ->
       assoc(M, K, V);
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                assoc(Acc, clj_core:first(KV), clj_core:second(KV))
+                assoc(Acc, clj_rt:first(KV), clj_rt:second(KV))
             end,
       lists:foldl(Fun, M, KVs);
     _ ->
@@ -203,7 +203,7 @@ seq(#?TYPE{name = ?M} = Map) ->
 
 to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
   VectorFun = fun({Key, Val}) ->
-                  clj_core:vector([Key, Val])
+                  clj_rt:vector([Key, Val])
               end,
   lists:map(VectorFun, rbdict:to_list(Vals)).
 
@@ -211,8 +211,8 @@ to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
 
 str(#?TYPE{name = ?M, data = {_, Vals}}) ->
   StrFun = fun({Key, Value}) ->
-               KeyStr = clj_core:str(Key),
-               ValStr = clj_core:str(Value),
+               KeyStr = clj_rt:str(Key),
+               ValStr = clj_rt:str(Value),
                'clojerl.String':join([KeyStr, ValStr], <<" ">>)
            end,
   KeyValueStrs = lists:map(StrFun, rbdict:to_list(Vals)),

@@ -64,7 +64,7 @@ split(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Regex = 'erlang.util.Regex':?CONSTRUCTOR(<<"abcd">>),
-  <<"#\"abcd\"">> = clj_core:str(Regex),
+  <<"#\"abcd\"">> = clj_rt:str(Regex),
 
   Result = {match, [<<"abcd">>]},
   Result = 'erlang.util.Regex':run( Regex

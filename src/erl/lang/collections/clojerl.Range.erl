@@ -61,10 +61,10 @@ empty(_) -> [].
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}
      ) ->
-  clj_core:equiv(X, Y);
+  clj_rt:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = X, Y) ->
-  case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(to_list(X), Y);
+  case clj_rt:'sequential?'(Y) of
+    true  -> clj_rt:equiv(to_list(X), Y);
     false -> false
   end.
 
@@ -88,7 +88,7 @@ do_reduce(_F, Acc, Start, End, Step) when
     Step < 1, Start + Step < End ->
   Acc;
 do_reduce(F, Acc, Start, End, Step) ->
-  Val = clj_core:apply(F, [Acc, Start]),
+  Val = clj_rt:apply(F, [Acc, Start]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
     false -> do_reduce(F, Val, Start + Step, End, Step)
@@ -120,6 +120,6 @@ to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) when Step < 0 ->
   lists:seq(Start, End + 1, Step).
 
 str(#?TYPE{name = ?M} = Range) ->
-  ItemsStrs = lists:map(fun clj_core:str/1, to_list(Range)),
+  ItemsStrs = lists:map(fun clj_rt:str/1, to_list(Range)),
   Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.

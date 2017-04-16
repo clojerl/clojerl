@@ -30,14 +30,14 @@ end_per_suite(Config) -> Config.
 init_per_testcase(_, Config) ->
   ok = 'clojerl.MultiFn':add_method(<<"test-method">>, default, default_method),
 
-  HelloSym     = clj_core:symbol(<<"hello">>),
-  HelloSymMeta = clj_core:with_meta(HelloSym, #{private => true}),
+  HelloSym     = clj_rt:symbol(<<"hello">>),
+  HelloSymMeta = clj_rt:with_meta(HelloSym, #{private => true}),
   ok = 'clojerl.MultiFn':add_method( <<"test-method">>
                                    , HelloSymMeta
                                    , symbol_method
                                    ),
 
-  Vector = clj_core:vector([default, HelloSym]),
+  Vector = clj_rt:vector([default, HelloSym]),
   ok = 'clojerl.MultiFn':add_method( <<"test-method">>
                                    , Vector
                                    , vector_method
@@ -59,16 +59,16 @@ get_method(_Config) ->
   default_method = 'clojerl.MultiFn':get_method(<<"test-method">>, default),
 
   ct:comment("Method with symbol value"),
-  HelloSym      = clj_core:symbol(<<"hello">>),
-  HelloSymMeta  = clj_core:with_meta(HelloSym, #{private => true}),
+  HelloSym      = clj_rt:symbol(<<"hello">>),
+  HelloSymMeta  = clj_rt:with_meta(HelloSym, #{private => true}),
   symbol_method = 'clojerl.MultiFn':get_method(<<"test-method">>, HelloSymMeta),
   symbol_method = 'clojerl.MultiFn':get_method(<<"test-method">>, HelloSym),
 
   ct:comment("Method with vector value"),
-  Vector      = clj_core:vector([default, HelloSym]),
-  VectorMeta  = clj_core:with_meta(Vector, #{some => thing}),
-  Vector2     = clj_core:vector([default, HelloSymMeta]),
-  VectorMeta2 = clj_core:with_meta(Vector2, #{some => thing}),
+  Vector      = clj_rt:vector([default, HelloSym]),
+  VectorMeta  = clj_rt:with_meta(Vector, #{some => thing}),
+  Vector2     = clj_rt:vector([default, HelloSymMeta]),
+  VectorMeta2 = clj_rt:with_meta(Vector2, #{some => thing}),
   vector_method = 'clojerl.MultiFn':get_method(<<"test-method">>, Vector),
   vector_method = 'clojerl.MultiFn':get_method(<<"test-method">>, VectorMeta),
 
@@ -94,15 +94,15 @@ get_method(_Config) ->
 get_method_table(_Config) ->
   MethodTable = 'clojerl.MultiFn':get_method_table(<<"test-method">>),
 
-  HelloSym    = clj_core:symbol(<<"hello">>),
-  Vector      = clj_core:vector([default, HelloSym]),
+  HelloSym    = clj_rt:symbol(<<"hello">>),
+  Vector      = clj_rt:vector([default, HelloSym]),
 
   ExpectedTable = #{ default  => default_method
                    , HelloSym => symbol_method
                    , Vector   => vector_method
                    },
 
-  true = clj_core:equiv(ExpectedTable, MethodTable),
+  true = clj_rt:equiv(ExpectedTable, MethodTable),
 
   3 = maps:size(MethodTable),
 

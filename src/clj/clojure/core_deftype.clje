@@ -385,7 +385,7 @@
   "Returns true if atype extends protocol"
   {:added "1.2"}
   [protocol atype]
-  (clj_core/satisfies?.e protocol atype))
+  (clj_rt/satisfies?.e protocol atype))
 
 #_(defn extenders
   "Returns a collection of the types explicitly extending protocol"
@@ -448,7 +448,7 @@
     `(do
        ~(when sigs
           `(#'assert-same-protocol '~iname
-                                   '~(clj_core/to_list.e (map :name (vals sigs)))))
+                                   '~(clj_rt/to_list.e (map :name (vals sigs)))))
        ~@(map (partial emit-protocol-function iname) (vals sigs))
        (~'defprotocol* ~iname ~@meths)
        (import* ~(str iname))

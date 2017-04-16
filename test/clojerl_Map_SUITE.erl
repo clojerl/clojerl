@@ -35,100 +35,100 @@ end_per_suite(Config) -> Config.
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Map = clj_core:hash_map([1, 2, 3, 4]),
-  2 = clj_core:get(Map, 1),
-  4 = clj_core:get(Map, 3),
+  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  2 = clj_rt:get(Map, 1),
+  4 = clj_rt:get(Map, 3),
 
-  [1, 3] = lists:sort(clj_core:keys(Map)),
-  [2, 4] = lists:sort(clj_core:vals(Map)),
+  [1, 3] = lists:sort(clj_rt:keys(Map)),
+  [2, 4] = lists:sort(clj_rt:vals(Map)),
 
-  Map2 = clj_core:hash_map([]),
-  ?NIL = clj_core:seq(Map2),
+  Map2 = clj_rt:hash_map([]),
+  ?NIL = clj_rt:seq(Map2),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  Map = clj_core:hash_map([1, 2, 3, 4]),
-  2 = clj_core:count(Map),
+  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  2 = clj_rt:count(Map),
 
-  Map2 = clj_core:hash_map([]),
-  0 = clj_core:count(Map2),
+  Map2 = clj_rt:hash_map([]),
+  0 = clj_rt:count(Map2),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Map = clj_core:hash_map([1, 2, 3, 4]),
-  <<"{1 2, 3 4}">> = clj_core:str(Map),
+  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  <<"{1 2, 3 4}">> = clj_rt:str(Map),
 
-  Map2 = clj_core:hash_map([]),
-  <<"{}">> = clj_core:str(Map2),
+  Map2 = clj_rt:hash_map([]),
+  <<"{}">> = clj_rt:str(Map2),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Map = clj_core:hash_map([1, 2, 3, 4]),
+  Map = clj_rt:hash_map([1, 2, 3, 4]),
 
-  KVs  = lists:map(fun clj_core:seq/1, clj_core:seq(Map)),
-  true = clj_core:equiv([[1, 2], [3, 4]], lists:sort(KVs)),
+  KVs  = lists:map(fun clj_rt:seq/1, clj_rt:seq(Map)),
+  true = clj_rt:equiv([[1, 2], [3, 4]], lists:sort(KVs)),
 
-  Map2 = clj_core:hash_map([]),
-  ?NIL = clj_core:seq(Map2),
+  Map2 = clj_rt:hash_map([]),
+  ?NIL = clj_rt:seq(Map2),
 
-  MapList = clj_core:to_list(Map),
-  true = clj_core:equiv([[1, 2], [3, 4]], lists:sort(MapList)),
+  MapList = clj_rt:to_list(Map),
+  true = clj_rt:equiv([[1, 2], [3, 4]], lists:sort(MapList)),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that maps with the same elements are equivalent"),
-  Map1 = clj_core:with_meta(clj_core:hash_map([1.0, 2, 3, 4]), #{a => 1}),
-  Map2 = clj_core:with_meta(clj_core:hash_map([3, 4, 1.0, 2]), #{b => 2}),
-  true = clj_core:equiv(Map1, Map2),
+  Map1 = clj_rt:with_meta(clj_rt:hash_map([1.0, 2, 3, 4]), #{a => 1}),
+  Map2 = clj_rt:with_meta(clj_rt:hash_map([3, 4, 1.0, 2]), #{b => 2}),
+  true = clj_rt:equiv(Map1, Map2),
 
   ct:comment("Check that maps with different elements are not equivalent"),
-  Map3 = clj_core:with_meta(clj_core:hash_map([5, 6, 3, 4]), #{c => 3}),
-  false = clj_core:equiv(Map1, Map3),
+  Map3 = clj_rt:with_meta(clj_rt:hash_map([5, 6, 3, 4]), #{c => 3}),
+  false = clj_rt:equiv(Map1, Map3),
 
   ct:comment("A clojerl.Map and an clojerl.erlang.Map"),
-  true = clj_core:equiv(Map1, #{1.0 => 2, 3 => 4}),
-  false = clj_core:equiv(Map1, #{1.0 => 2}),
-  false = clj_core:equiv(Map1, #{1.0 => 2, 3 => 4, 5 => 6}),
+  true = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4}),
+  false = clj_rt:equiv(Map1, #{1.0 => 2}),
+  false = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4, 5 => 6}),
 
   ct:comment("A clojerl.Map and something else"),
-  false = clj_core:equiv(Map1, whatever),
-  false = clj_core:equiv(Map1, 1),
-  false = clj_core:equiv(Map1, [1]),
+  false = clj_rt:equiv(Map1, whatever),
+  false = clj_rt:equiv(Map1, 1),
+  false = clj_rt:equiv(Map1, [1]),
 
   {comments, ""}.
 
 -spec apply(config()) -> result().
 apply(_Config) ->
-  Map = clj_core:hash_map([1, a, 2, b]),
+  Map = clj_rt:hash_map([1, a, 2, b]),
 
   ct:comment("Invoke a map"),
-  a = clj_core:apply(Map, [1]),
-  b = clj_core:apply(Map, [2]),
-  ?NIL = clj_core:apply(Map, [3]),
+  a = clj_rt:apply(Map, [1]),
+  b = clj_rt:apply(Map, [2]),
+  ?NIL = clj_rt:apply(Map, [3]),
 
   ct:comment("Invoke a map with a not-found value"),
-  c = clj_core:apply(Map, [3, c]),
+  c = clj_rt:apply(Map, [3, c]),
 
   ct:comment("Invoke a map with three arguments"),
-  ok = try clj_core:apply(Map, [1, 2, 3]), error
+  ok = try clj_rt:apply(Map, [1, 2, 3]), error
        catch _:_ -> ok end,
 
   {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  Map1 = clj_core:hash_map([1, a, 2, b]),
-  Map1 = clj_core:hash_map([2, b, 1, a]),
-  Map2 = clj_core:hash_map([2, b, 1, a, 3, c]),
-  Map3 = clj_core:hash_map([2.0, b, 1.0, a, 3.0, c]),
+  Map1 = clj_rt:hash_map([1, a, 2, b]),
+  Map1 = clj_rt:hash_map([2, b, 1, a]),
+  Map2 = clj_rt:hash_map([2, b, 1, a, 3, c]),
+  Map3 = clj_rt:hash_map([2.0, b, 1.0, a, 3.0, c]),
 
   Hash1 = 'clojerl.IHash':hash(Map1),
   Hash2 = 'clojerl.IHash':hash(Map2),
@@ -141,33 +141,33 @@ hash(_Config) ->
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  EmptyMap = clj_core:hash_map([]),
+  EmptyMap = clj_rt:hash_map([]),
 
   ct:comment("Conj a key-value pair to an empty map"),
-  OneMap = clj_core:conj(EmptyMap, clj_core:vector([1, 2])),
+  OneMap = clj_rt:conj(EmptyMap, clj_rt:vector([1, 2])),
 
-  1    = clj_core:count(OneMap),
-  true = clj_core:equiv(OneMap, #{1 => 2}),
+  1    = clj_rt:count(OneMap),
+  true = clj_rt:equiv(OneMap, #{1 => 2}),
 
   ct:comment("Conj a key-value pair to a map with one"),
-  TwoMap = clj_core:conj(OneMap, clj_core:vector([3, 4])),
+  TwoMap = clj_rt:conj(OneMap, clj_rt:vector([3, 4])),
 
-  2    = clj_core:count(TwoMap),
-  true = clj_core:equiv(TwoMap, #{1 => 2, 3 => 4}),
+  2    = clj_rt:count(TwoMap),
+  true = clj_rt:equiv(TwoMap, #{1 => 2, 3 => 4}),
 
   ct:comment("Conj another map to a map with one"),
-  ThreeMap = clj_core:conj(TwoMap, #{5 => 6}),
-  3    = clj_core:count(ThreeMap),
-  true = clj_core:equiv(ThreeMap, #{1 => 2, 3 => 4, 5 => 6}),
+  ThreeMap = clj_rt:conj(TwoMap, #{5 => 6}),
+  3    = clj_rt:count(ThreeMap),
+  true = clj_rt:equiv(ThreeMap, #{1 => 2, 3 => 4, 5 => 6}),
 
   ct:comment("Conj a map to nil"),
-  EmptyMap = clj_core:conj(EmptyMap, ?NIL),
-  OneMap   = clj_core:conj(OneMap, ?NIL),
-  TwoMap   = clj_core:conj(TwoMap, ?NIL),
-  ThreeMap = clj_core:conj(ThreeMap, ?NIL),
+  EmptyMap = clj_rt:conj(EmptyMap, ?NIL),
+  OneMap   = clj_rt:conj(OneMap, ?NIL),
+  TwoMap   = clj_rt:conj(TwoMap, ?NIL),
+  ThreeMap = clj_rt:conj(ThreeMap, ?NIL),
 
   ct:comment("Conj something that is not a key-value pair to an empty map"),
-  ok = try clj_core:conj(EmptyMap, clj_core:vector([1])), error
+  ok = try clj_rt:conj(EmptyMap, clj_rt:vector([1])), error
        catch _:_ -> ok end,
 
   {comments, ""}.
@@ -175,47 +175,47 @@ cons(_Config) ->
 -spec associative(config()) -> result().
 
 associative(_Config) ->
-  EmptyMap = clj_core:hash_map([]),
-  false    = clj_core:'contains?'(EmptyMap, 1),
+  EmptyMap = clj_rt:hash_map([]),
+  false    = clj_rt:'contains?'(EmptyMap, 1),
 
-  OneMap = clj_core:assoc(EmptyMap, 1, a),
-  true   = clj_core:'contains?'(OneMap, 1),
-  false  = clj_core:'contains?'(OneMap, 2),
+  OneMap = clj_rt:assoc(EmptyMap, 1, a),
+  true   = clj_rt:'contains?'(OneMap, 1),
+  false  = clj_rt:'contains?'(OneMap, 2),
 
-  TwoMap = clj_core:assoc(OneMap, 2, b),
-  true   = clj_core:'contains?'(TwoMap, 1),
-  true   = clj_core:'contains?'(TwoMap, 2),
+  TwoMap = clj_rt:assoc(OneMap, 2, b),
+  true   = clj_rt:'contains?'(TwoMap, 1),
+  true   = clj_rt:'contains?'(TwoMap, 2),
 
-  Pair   = clj_core:find(TwoMap, 2),
-  true   = clj_core:equiv(Pair, clj_core:vector([2, b])),
+  Pair   = clj_rt:find(TwoMap, 2),
+  true   = clj_rt:equiv(Pair, clj_rt:vector([2, b])),
 
-  ?NIL   = clj_core:find(TwoMap, 3),
+  ?NIL   = clj_rt:find(TwoMap, 3),
 
-  TwoMap = clj_core:dissoc(TwoMap, 3),
-  OneMap = clj_core:dissoc(TwoMap, 2),
+  TwoMap = clj_rt:dissoc(TwoMap, 3),
+  OneMap = clj_rt:dissoc(TwoMap, 2),
 
   ct:comment("Use symbols with different metadata as keys"),
-  HelloSym1 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{a => 1}),
-  HelloSym2 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{b => 2}),
-  HelloMap  = clj_core:assoc(EmptyMap, HelloSym1, a),
-  HelloPair = clj_core:find(HelloMap, HelloSym2),
-  true      = clj_core:equiv(HelloPair, clj_core:vector([HelloSym1, a])),
-  true      = clj_core:'contains?'(HelloMap, HelloSym2),
+  HelloSym1 = clj_rt:with_meta(clj_rt:symbol(<<"hello">>), #{a => 1}),
+  HelloSym2 = clj_rt:with_meta(clj_rt:symbol(<<"hello">>), #{b => 2}),
+  HelloMap  = clj_rt:assoc(EmptyMap, HelloSym1, a),
+  HelloPair = clj_rt:find(HelloMap, HelloSym2),
+  true      = clj_rt:equiv(HelloPair, clj_rt:vector([HelloSym1, a])),
+  true      = clj_rt:'contains?'(HelloMap, HelloSym2),
 
   ct:comment("The new key with different metadata replaces the old one"),
-  HelloMap2 = clj_core:assoc(HelloMap, HelloSym2, a),
-  HelloSym2 = clj_core:first(clj_core:find(HelloMap2, HelloSym2)),
+  HelloMap2 = clj_rt:assoc(HelloMap, HelloSym2, a),
+  HelloSym2 = clj_rt:first(clj_rt:find(HelloMap2, HelloSym2)),
 
   {comments, ""}.
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  NotEmptyMap = clj_core:hash_map([a, b, 2, 3]),
-  EmptyMap    = clj_core:empty(NotEmptyMap),
-  EmptyMap    = clj_core:hash_map([]),
+  NotEmptyMap = clj_rt:hash_map([a, b, 2, 3]),
+  EmptyMap    = clj_rt:empty(NotEmptyMap),
+  EmptyMap    = clj_rt:hash_map([]),
 
-  MapMeta  = clj_core:with_meta(clj_core:hash_map([1, 2, 3, 4]), #{a => 1}),
-  #{a := 1} = clj_core:meta(MapMeta),
+  MapMeta  = clj_rt:with_meta(clj_rt:hash_map([1, 2, 3, 4]), #{a => 1}),
+  #{a := 1} = clj_rt:meta(MapMeta),
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
   Hash2 = 'clojerl.IHash':hash(EmptyMap),

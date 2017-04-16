@@ -97,7 +97,7 @@ constants(_Config) ->
     form := <<"hello">>} = analyze_one(<<"\"hello\"">>),
 
   ct:comment("Keyword"),
-  HelloKeyword = clj_core:keyword(<<"hello">>),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
   #{ op   := constant
    , form := HelloKeyword
    } = analyze_one(<<":hello">>),
@@ -106,7 +106,7 @@ constants(_Config) ->
   #{ op   := constant
    , form := EmptyList
    } = analyze_one(<<"()">>),
-  0 = clj_core:count(EmptyList),
+  0 = clj_rt:count(EmptyList),
 
   {comments, ""}.
 
@@ -156,7 +156,7 @@ def(_Config) ->
   #{ op   := def
    , name := NameSymbol
    } = analyze_one(<<"(def x \"doc string\" 1)">>),
-  <<"doc string">> = clj_core:get(clj_core:meta(NameSymbol), doc),
+  <<"doc string">> = clj_rt:get(clj_rt:meta(NameSymbol), doc),
 
   [_, #{op := def}] = analyze_all(<<"(def x 1) (def y clojure.core/x)">>),
 
@@ -171,7 +171,7 @@ def(_Config) ->
    , var := Var
    } = analyze_one(<<"(def clojure.core/x (fn* [x] x))">>),
 
-  VarMeta = clj_core:meta(Var),
+  VarMeta = clj_rt:meta(Var),
 
   #{ 'variadic?'     := false
    , max_fixed_arity := 1
@@ -182,7 +182,7 @@ def(_Config) ->
   #{ op := def
    , var := VarWithDynamic
    } = analyze_one(<<"(def ^:dynamic *x* 1)">>),
-  #{dynamic := true} = clj_core:meta(VarWithDynamic),
+  #{dynamic := true} = clj_rt:meta(VarWithDynamic),
 
   ct:comment("Vars keep meta from symbol"),
   #{ op  := def
@@ -190,14 +190,14 @@ def(_Config) ->
    } = analyze_one(<<"(def ^{:dynamic true, :macro true} *x* 1)">>),
   #{ dynamic := true
    , macro   := true
-   } = clj_core:meta(VarWithDynamicMacro),
+   } = clj_rt:meta(VarWithDynamicMacro),
 
   ct:comment("Vars keep the arglists"),
   #{ op  := def
    , var := VarWithArgLists
    } = analyze_one(<<"(def ^{:arglists []} *x* 1)">>),
-  #{arglists := EmptyVector} = clj_core:meta(VarWithArgLists),
-  0 = clj_core:count(EmptyVector),
+  #{arglists := EmptyVector} = clj_rt:meta(VarWithArgLists),
+  0 = clj_rt:count(EmptyVector),
 
   ct:comment("Nested defs"),
   #{ op   := def
@@ -237,11 +237,11 @@ fn(_Config) ->
    , params := [Fn1Param1]
    } = Fn1Method1,
 
-  XSymbol = clj_core:symbol(<<"x">>),
+  XSymbol = clj_rt:symbol(<<"x">>),
   #{ op      := binding
    , pattern := #{name := XSymbolCheck}
    } = Fn1Param1,
-  true = clj_core:equiv(XSymbol, XSymbolCheck),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck),
 
   ct:comment("named fn with one param and one method"),
   #{op      := fn,
@@ -249,7 +249,7 @@ fn(_Config) ->
     local   := #{ op := local, name := HelloSymbol}
    } = analyze_one(<<"(fn* hello [x] x)">>),
 
-  true = clj_core:equiv(HelloSymbol, clj_core:symbol(<<"hello">>)),
+  true = clj_rt:equiv(HelloSymbol, clj_rt:symbol(<<"hello">>)),
 
   #{ op     := fn_method
    , params := [Fn2Param1]
@@ -258,7 +258,7 @@ fn(_Config) ->
   #{ op      := binding
    , pattern := #{name := XSymbolCheck2}
    } = Fn2Param1,
-  true = clj_core:equiv(XSymbol, XSymbolCheck2),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck2),
 
   ct:comment("fn with two params and two methods (non-variadic)"),
   #{ op      := fn
@@ -275,23 +275,23 @@ fn(_Config) ->
 
   %% Check that the params are the same, even though the
   %% locactions are different
-  true = clj_core:equiv(Fn3Param1b, Fn3Param1b),
+  true = clj_rt:equiv(Fn3Param1b, Fn3Param1b),
 
   #{ op      := binding
    , pattern := #{name := XSymbolCheck3}
    } = Fn3Param1,
-  true = clj_core:equiv(XSymbol, XSymbolCheck3),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck3),
 
   #{ op      := binding
    , pattern := #{name := XSymbolCheck3b}
    } = Fn3Param1b,
-  true = clj_core:equiv(XSymbol, XSymbolCheck3b),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck3b),
 
-  YSymbol = clj_core:symbol(<<"y">>),
+  YSymbol = clj_rt:symbol(<<"y">>),
   #{ op      := binding
    , pattern := #{name := YSymbolCheck}
    } = Fn3Param2,
-  true = clj_core:equiv(YSymbol, YSymbolCheck),
+  true = clj_rt:equiv(YSymbol, YSymbolCheck),
 
   ct:comment("fn with two params and two methods (variadic)"),
   #{ op      := fn
@@ -306,30 +306,30 @@ fn(_Config) ->
    , params := [Fn4Param1b, Fn4Param2]
    } = Fn4Method2,
 
-  true = clj_core:equiv( maps:without([env, pattern], Fn4Param1)
+  true = clj_rt:equiv( maps:without([env, pattern], Fn4Param1)
                        , maps:without([env, pattern], Fn4Param1b)
                        ),
 
-  true = clj_core:equiv( maps:remove(env, maps:get(pattern, Fn4Param1))
+  true = clj_rt:equiv( maps:remove(env, maps:get(pattern, Fn4Param1))
                        , maps:remove(env, maps:get(pattern, Fn4Param1b))
                        ),
 
   #{ op      := binding
    , pattern := #{name := XSymbolCheck4}
    } = Fn4Param1,
-  true = clj_core:equiv(XSymbol, XSymbolCheck4),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck4),
 
   #{ op      := binding
    , pattern := #{name := XSymbolCheck4b}
    } = Fn4Param1b,
-  true = clj_core:equiv(XSymbol, XSymbolCheck4b),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck4b),
 
-  ZSymbol = clj_core:symbol(<<"z">>),
+  ZSymbol = clj_rt:symbol(<<"z">>),
   #{ op          := binding
    , pattern     := #{name := ZSymbolCheck}
    , 'variadic?' := true
    } = Fn4Param2,
-  true = clj_core:equiv(ZSymbol, ZSymbolCheck),
+  true = clj_rt:equiv(ZSymbol, ZSymbolCheck),
 
   ct:comment("fn with two params and one method (variadic)"),
   #{op      := fn,
@@ -344,14 +344,14 @@ fn(_Config) ->
   #{ op      := binding
    , pattern := #{name := XSymbolCheck5}
    } = Fn5Param1,
-  true = clj_core:equiv(XSymbol, XSymbolCheck5),
+  true = clj_rt:equiv(XSymbol, XSymbolCheck5),
 
-  ZSymbol = clj_core:symbol(<<"z">>),
+  ZSymbol = clj_rt:symbol(<<"z">>),
   #{ op          := binding
    , pattern     := #{name := ZSymbolCheck2}
    , 'variadic?' := true
    } = Fn5Param2,
-  true = clj_core:equiv(ZSymbol, ZSymbolCheck2),
+  true = clj_rt:equiv(ZSymbol, ZSymbolCheck2),
 
   ct:comment("fn with guards"),
   #{ op      := fn
@@ -419,7 +419,7 @@ do(_Config) ->
     ret := KeywordExpr
    } = analyze_one(<<"(do :expr)">>),
 
-  ExprKeyword = clj_core:keyword(<<"expr">>),
+  ExprKeyword = clj_rt:keyword(<<"expr">>),
   #{ op   := constant
    , form := ExprKeyword
    } = KeywordExpr,
@@ -436,7 +436,7 @@ do(_Config) ->
    form := 1
    } = OneExpr,
 
-  RetKeyword = clj_core:keyword(<<"ret">>),
+  RetKeyword = clj_rt:keyword(<<"ret">>),
   #{op := constant,
    form := RetKeyword
    } = RetExpr,
@@ -467,7 +467,7 @@ do(_Config) ->
   #{op := constant,
     form := true} = Test1,
 
-  ThenKeyword = clj_core:keyword(<<"then">>),
+  ThenKeyword = clj_rt:keyword(<<"then">>),
   #{op := constant,
     form := ThenKeyword} = Then1,
 
@@ -487,7 +487,7 @@ do(_Config) ->
   #{op := constant,
     form := ThenKeyword} = Then2,
 
-  ElseKeyword = clj_core:keyword(<<"else">>),
+  ElseKeyword = clj_rt:keyword(<<"else">>),
   #{op := constant,
     form := ElseKeyword} = Else2,
 
@@ -665,9 +665,9 @@ loop(_Config) ->
    } = analyze_one(<<"(loop* [x 1 y :a] y)">>),
   2 = length(Bindings2),
 
-  false = clj_core:equiv(LoopId0, LoopId1),
-  false = clj_core:equiv(LoopId1, LoopId2),
-  false = clj_core:equiv(LoopId0, LoopId2),
+  false = clj_rt:equiv(LoopId0, LoopId1),
+  false = clj_rt:equiv(LoopId1, LoopId2),
+  false = clj_rt:equiv(LoopId0, LoopId2),
 
   ct:comment("loop with zero bindings, body and recur"),
   #{ op       := loop
@@ -711,25 +711,25 @@ invoke(_Config) ->
        end,
 
   ct:comment("Call defined symbol"),
-  HelloSymbol = clj_core:symbol(<<"hello">>),
-  ListHello = clj_core:list([HelloSymbol]),
+  HelloSymbol = clj_rt:symbol(<<"hello">>),
+  ListHello = clj_rt:list([HelloSymbol]),
   [ _
   , #{ op   := invoke
      , form := ListHelloCheck
      , f    := #{op := var, form := HelloSymbolCheck}
      }
   ] = analyze_all(<<"(def hello :hello) (hello)">>),
-  true = clj_core:equiv(ListHello, ListHelloCheck),
-  true = clj_core:equiv(HelloSymbol, HelloSymbolCheck),
+  true = clj_rt:equiv(ListHello, ListHelloCheck),
+  true = clj_rt:equiv(HelloSymbol, HelloSymbolCheck),
 
   ct:comment("Call something different than a symbol, analyzer shouldn't fail"),
-  HelloKeyword = clj_core:keyword(<<"hello">>),
-  OneHello = clj_core:list([1, HelloKeyword]),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
+  OneHello = clj_rt:list([1, HelloKeyword]),
   #{ op   := invoke
    , form := OneHelloCheck
    , f    := #{op := constant, form := 1}
    } = analyze_one(<<"(1 :hello)">>),
-  true = clj_core:equiv(OneHello, OneHelloCheck),
+  true = clj_rt:equiv(OneHello, OneHelloCheck),
 
   {comments, ""}.
 
@@ -743,13 +743,13 @@ symbol(_Config) ->
        end,
 
   ct:comment("Resolved symbol"),
-  HelloSymbol = clj_core:symbol(<<"hello">>),
+  HelloSymbol = clj_rt:symbol(<<"hello">>),
   [ _
   , #{ op   := var
      , form := HelloSymbolCheck
      }
   ] = analyze_all(<<"(def hello 1) hello">>),
-  true = clj_core:equiv(HelloSymbol, HelloSymbolCheck),
+  true = clj_rt:equiv(HelloSymbol, HelloSymbolCheck),
 
   {comments, ""}.
 
@@ -838,7 +838,7 @@ throw(_Config) ->
    , body  := #{op := do}
    } = Catch1_1,
 
-  true = clj_core:equiv(ErrName1_1, clj_core:symbol(<<"err">>)),
+  true = clj_rt:equiv(ErrName1_1, clj_rt:symbol(<<"err">>)),
 
   ct:comment("try with two catches and no finally"),
   #{ op      := 'try'
@@ -867,8 +867,8 @@ throw(_Config) ->
    , guard := #{op := constant, form := true}
    } = Catch2_2,
 
-  true = clj_core:equiv(ErrName2_1, clj_core:symbol(<<"err-1">>)),
-  true = clj_core:equiv(ErrName2_2, clj_core:symbol(<<"err-2">>)),
+  true = clj_rt:equiv(ErrName2_1, clj_rt:symbol(<<"err-1">>)),
+  true = clj_rt:equiv(ErrName2_2, clj_rt:symbol(<<"err-2">>)),
 
   ct:comment("try, catch and finally"),
   #{ op      := 'try'
@@ -884,7 +884,7 @@ throw(_Config) ->
    , body  := #{op := do}
    } = Catch3_1,
 
-  true = clj_core:equiv(ErrName3_1, clj_core:symbol(<<"e">>)),
+  true = clj_rt:equiv(ErrName3_1, clj_rt:symbol(<<"e">>)),
 
   #{ op         := do
    , statements := []
@@ -905,7 +905,7 @@ throw(_Config) ->
    , body  := #{op := do}
    } = Catch4_1,
 
-  true = clj_core:equiv(ErrName4_1, clj_core:symbol(<<"e">>)),
+  true = clj_rt:equiv(ErrName4_1, clj_rt:symbol(<<"e">>)),
 
   ct:comment("try, catch with _"),
   #{ op      := 'try'
@@ -921,8 +921,8 @@ throw(_Config) ->
    , body  := #{op := do}
    } = Catch5_1,
 
-  true = clj_core:equiv(ErrName5_1, clj_core:symbol(<<"e">>)),
-  true = clj_core:equiv(UnderscoreSym, clj_core:symbol(<<"_">>)),
+  true = clj_rt:equiv(ErrName5_1, clj_rt:symbol(<<"e">>)),
+  true = clj_rt:equiv(UnderscoreSym, clj_rt:symbol(<<"_">>)),
 
   ct:comment("try, catch with guards"),
   #{ op      := 'try'
@@ -945,8 +945,8 @@ throw(_Config) ->
 var(_Config) ->
   ct:comment("Use var with symbol for existing var"),
   [_ , #{op := constant, form := VarX}] = analyze_all(<<"(def x 1) (var x)">>),
-  <<"x">> = clj_core:name(VarX),
-  'clojerl.Var' = clj_core:type(VarX),
+  <<"x">> = clj_rt:name(VarX),
+  'clojerl.Var' = clj_rt:type(VarX),
 
   ct:comment("Use var with symbol for non-existing var"),
   ok = try analyze_all(<<"(var zz)">>), error
@@ -1015,16 +1015,16 @@ new(_Config) ->
    , type := #{op := type, type := StringSymbol}
    , args := []
    } = analyze_one(<<"(new clojerl.String)">>),
-  true                 = clj_core:'symbol?'(StringSymbol),
-  <<"clojerl.String">> = clj_core:str(StringSymbol),
+  true                 = clj_rt:'symbol?'(StringSymbol),
+  <<"clojerl.String">> = clj_rt:str(StringSymbol),
 
   ct:comment("Use new with 1 arg"),
   #{ op   := new
    , type := #{op := type, type := StringSymbol}
    , args := [#{op := constant, form := <<"hello">>}]
    } = analyze_one(<<"(new clojerl.String \"hello\")">>),
-  true                 = clj_core:'symbol?'(StringSymbol),
-  <<"clojerl.String">> = clj_core:str(StringSymbol),
+  true                 = clj_rt:'symbol?'(StringSymbol),
+  <<"clojerl.String">> = clj_rt:str(StringSymbol),
 
   {comments, ""}.
 
@@ -1038,10 +1038,10 @@ deftype(_Config) ->
    , protocols := []
    , methods   := []
    } = analyze_one(<<"(deftype* MyType ns.MyType [a b] :implements [])">>),
-  true            = clj_core:'symbol?'(NameSymbol),
-  <<"MyType">>    = clj_core:str(NameSymbol),
-  true            = clj_core:'symbol?'(TypeSymbol),
-  <<"ns.MyType">> = clj_core:str(TypeSymbol),
+  true            = clj_rt:'symbol?'(NameSymbol),
+  <<"MyType">>    = clj_rt:str(NameSymbol),
+  true            = clj_rt:'symbol?'(TypeSymbol),
+  <<"ns.MyType">> = clj_rt:str(TypeSymbol),
 
   ct:comment("deftype* with an interface and a method"),
   #{ op        := deftype
@@ -1064,9 +1064,9 @@ defprotocol(_Config) ->
    , name         := NameSymbol
    , methods_sigs := EmptyMethodsSigs
    } = analyze_one(<<"(defprotocol* some-ns.MyProtocol)">>),
-  true = clj_core:'symbol?'(NameSymbol),
-  <<"some-ns.MyProtocol">> = clj_core:str(NameSymbol),
-  0 = clj_core:count(EmptyMethodsSigs),
+  true = clj_rt:'symbol?'(NameSymbol),
+  <<"some-ns.MyProtocol">> = clj_rt:str(NameSymbol),
+  0 = clj_rt:count(EmptyMethodsSigs),
 
   ct:comment("defprotocol* with signatures"),
   #{ op           := defprotocol
@@ -1074,7 +1074,7 @@ defprotocol(_Config) ->
    , methods_sigs := MethodsSigs
    } = analyze_one(<<"(defprotocol* some-ns.MyProtocol"
                      "  [f1 1] [f2 4] [f2 2])">>),
-  3 = clj_core:count(MethodsSigs),
+  3 = clj_rt:count(MethodsSigs),
 
 
   {comments, ""}.
@@ -1086,8 +1086,8 @@ extend_type(_Config) ->
    , type  := #{op := type, type := TypeSym}
    , impls := #{}
    } = analyze_one(<<"(extend-type* clojerl.String)">>),
-  true = clj_core:'symbol?'(TypeSym),
-  <<"clojerl.String">> = clj_core:str(TypeSym),
+  true = clj_rt:'symbol?'(TypeSym),
+  <<"clojerl.String">> = clj_rt:str(TypeSym),
 
   ct:comment("Extend one protocol"),
   #{ op    := extend_type
@@ -1102,12 +1102,12 @@ extend_type(_Config) ->
   #{ op   := type
    , type := StringableSym
    } = Stringable,
-  true = clj_core:'symbol?'(StringableSym),
-  <<"clojerl.Stringable">> = clj_core:str(StringableSym),
+  true = clj_rt:'symbol?'(StringableSym),
+  <<"clojerl.Stringable">> = clj_rt:str(StringableSym),
 
   [#{op := fn_method, name := StrSym}] = maps:get(Stringable, Impls),
-  true = clj_core:'symbol?'(StrSym),
-  <<"str">> = clj_core:str(StrSym),
+  true = clj_rt:'symbol?'(StrSym),
+  <<"str">> = clj_rt:str(StrSym),
 
   ct:comment("Extend two protocols"),
   #{ op    := extend_type
@@ -1121,13 +1121,13 @@ extend_type(_Config) ->
                      "  (with_meta [this meta] :with-meta))">>
                   ),
 
-  NotStringable = fun(#{type := T}) -> not clj_core:equiv(T, StringableSym) end,
+  NotStringable = fun(#{type := T}) -> not clj_rt:equiv(T, StringableSym) end,
   [IMeta] = lists:filter(NotStringable, maps:keys(Impls2)),
   #{ op   := type
    , type := IMetaSym
    } = IMeta,
-  true = clj_core:'symbol?'(IMetaSym),
-  <<"clojerl.IMeta">> = clj_core:str(IMetaSym),
+  true = clj_rt:'symbol?'(IMetaSym),
+  <<"clojerl.IMeta">> = clj_rt:str(IMetaSym),
 
   [_, _] = maps:get(IMeta, Impls2),
 
@@ -1393,12 +1393,12 @@ macroexpand(_Config) ->
   List1          = clj_reader:read(<<"(.foo bar 1)">>),
   ExpandedCheck1 = clj_reader:read(<<"(. bar foo 1)">>),
   Expanded1      = clj_analyzer:macroexpand_1(List1, clj_env:default()),
-  true           = clj_core:equiv(Expanded1, ExpandedCheck1),
+  true           = clj_rt:equiv(Expanded1, ExpandedCheck1),
 
   List2          = clj_reader:read(<<"(Bar. :one \"two\")">>),
   ExpandedCheck2 = clj_reader:read(<<"(new Bar :one \"two\")">>),
   Expanded2      = clj_analyzer:macroexpand_1(List2, clj_env:default()),
-  true           = clj_core:equiv(Expanded2, ExpandedCheck2),
+  true           = clj_rt:equiv(Expanded2, ExpandedCheck2),
 
   {comments, ""}.
 

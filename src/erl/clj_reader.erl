@@ -81,7 +81,7 @@ read_fold_loop(Fun, State) ->
 
 -spec location_meta(any()) -> location() | ?NIL.
 location_meta(X) ->
-  case clj_core:'meta?'(X) andalso clj_core:meta(X) of
+  case clj_rt:'meta?'(X) andalso clj_rt:meta(X) of
     false -> ?NIL;
     ?NIL  -> ?NIL;
     Meta  ->
@@ -96,7 +96,7 @@ location_meta(X) ->
 
 -spec add_location_field(atom(), any(), map()) -> map().
 add_location_field(Meta, Name, Location) ->
-  case clj_core:get(Meta, Name) of
+  case clj_rt:get(Meta, Name) of
     ?NIL -> Location;
     Value -> maps:put(Name, Value, Location)
   end.
@@ -105,10 +105,10 @@ add_location_field(Meta, Name, Location) ->
 remove_location(?NIL) ->
   ?NIL;
 remove_location(Meta) ->
-  Meta1 = clj_core:dissoc(Meta, file),
-  Meta2 = clj_core:dissoc(Meta1, line),
-  Meta3 = clj_core:dissoc(Meta2, column),
-  case clj_core:'empty?'(Meta3) of
+  Meta1 = clj_rt:dissoc(Meta, file),
+  Meta2 = clj_rt:dissoc(Meta1, line),
+  Meta3 = clj_rt:dissoc(Meta2, column),
+  case clj_rt:'empty?'(Meta3) of
     true  -> ?NIL;
     false -> Meta3
   end.
@@ -135,14 +135,14 @@ read(Src, Opts) ->
 -spec platform_features(opts() | ?NIL) -> opts().
 platform_features(#{?OPT_FEATURES := Features} = Opts) ->
   NewFeatures = lists:foldl( fun(Feature, Acc) ->
-                                 clj_core:conj(Acc, Feature)
+                                 clj_rt:conj(Acc, Feature)
                              end
                            , Features
                            , ?PLATFORM_FEATURES
                            ),
   Opts#{?OPT_FEATURES => NewFeatures};
 platform_features(Opts) ->
-  Opts#{?OPT_FEATURES => clj_core:hash_set(?PLATFORM_FEATURES)}.
+  Opts#{?OPT_FEATURES => clj_rt:hash_set(?PLATFORM_FEATURES)}.
 
 %% @private
 -spec new_state(binary(), clj_env:env(), opts()) -> state().
@@ -364,12 +364,12 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
               {?NIL, <<":", Name/binary>>} ->
                 Ns    = clj_namespace:current(),
                 NsSym = clj_namespace:name(Ns),
-                Namespace = clj_core:name(NsSym),
-                clj_core:keyword(Namespace, Name);
+                Namespace = clj_rt:name(NsSym),
+                clj_rt:keyword(Namespace, Name);
               {?NIL, Name} ->
-                clj_core:keyword(Name);
+                clj_rt:keyword(Name);
               {<<Ch/utf8, _/binary>> = Namespace, Name} when Ch =/= $: ->
-                clj_core:keyword(Namespace, Name);
+                clj_rt:keyword(Namespace, Name);
               _ ->
                 clj_utils:error( <<"Invalid token: :", Token/binary>>
                                , location(State)
@@ -389,9 +389,9 @@ read_symbol(State) ->
              {?NIL, <<"true">>}  -> true;
              {?NIL, <<"false">>} -> false;
              {?NIL, Name} ->
-               clj_core:symbol(Name);
+               clj_rt:symbol(Name);
              {Ns, Name} ->
-               clj_core:symbol(Ns, Name);
+               clj_rt:symbol(Ns, Name);
              ?NIL ->
                clj_utils:error( <<"Invalid token: ", Token/binary>>
                               , location(State)
@@ -413,7 +413,7 @@ read_comment(State) -> skip_line(State).
 
 -spec read_quote(state()) -> state().
 read_quote(#{src := <<"'"/utf8, _/binary>>} = State) ->
-  Quote = clj_core:symbol(<<"quote">>),
+  Quote = clj_rt:symbol(<<"quote">>),
   wrapped_read(Quote, consume_char(State)).
 
 %%------------------------------------------------------------------------------
@@ -422,7 +422,7 @@ read_quote(#{src := <<"'"/utf8, _/binary>>} = State) ->
 
 -spec read_deref(state()) -> state().
 read_deref(#{src := <<"@"/utf8, _/binary>>} = State) ->
-  Deref = clj_core:symbol(<<"clojure.core">>, <<"deref">>),
+  Deref = clj_rt:symbol(<<"clojure.core">>, <<"deref">>),
   wrapped_read(Deref, consume_char(State)).
 
 %%------------------------------------------------------------------------------
@@ -435,13 +435,13 @@ read_meta(#{src := <<"^"/utf8, Src/binary>>} = State) ->
   Meta = clj_utils:desugar_meta(SugaredMeta),
 
   {Form, State2} = read_pop_one(State1),
-  FormMeta = clj_core:merge([clj_core:meta(Form), Meta]),
-  NewMeta  = case clj_core:'seq?'(Form) of
-              true  -> clj_core:merge([FormMeta, file_location_meta(State)]);
+  FormMeta = clj_rt:merge([clj_rt:meta(Form), Meta]),
+  NewMeta  = case clj_rt:'seq?'(Form) of
+              true  -> clj_rt:merge([FormMeta, file_location_meta(State)]);
               false -> FormMeta
             end,
 
-  NewForm = clj_core:with_meta(Form, NewMeta),
+  NewForm = clj_rt:with_meta(Form, NewMeta),
 
   push_form(NewForm, State2).
 
@@ -469,63 +469,63 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
 -spec syntax_quote(any()) -> any().
 syntax_quote(Form) ->
   IsSpecial    = clj_analyzer:is_special(Form),
-  IsSymbol     = clj_core:'symbol?'(Form),
+  IsSymbol     = clj_rt:'symbol?'(Form),
   IsUnquote    = is_unquote(Form),
   IsUnquoteSpl = is_unquote_splicing(Form),
-  IsColl       = clj_core:'coll?'(Form),
+  IsColl       = clj_rt:'coll?'(Form),
   IsLiteral    = is_literal(Form),
 
-  QuoteSymbol = clj_core:symbol(<<"quote">>),
+  QuoteSymbol = clj_rt:symbol(<<"quote">>),
   if
-    IsSpecial    -> clj_core:list([QuoteSymbol, Form]);
+    IsSpecial    -> clj_rt:list([QuoteSymbol, Form]);
     IsSymbol     ->
       Symbol = syntax_quote_symbol(Form),
-      clj_core:list([QuoteSymbol, Symbol]);
-    IsUnquote    -> clj_core:second(Form);
+      clj_rt:list([QuoteSymbol, Symbol]);
+    IsUnquote    -> clj_rt:second(Form);
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     IsColl ->
-      IsMap = clj_core:'map?'(Form),
-      IsVector = clj_core:'vector?'(Form),
-      IsSet = clj_core:'set?'(Form),
-      IsList = clj_core:'list?'(Form),
+      IsMap = clj_rt:'map?'(Form),
+      IsVector = clj_rt:'vector?'(Form),
+      IsSet = clj_rt:'set?'(Form),
+      IsList = clj_rt:'list?'(Form),
       if
         IsMap ->
-          HashMapSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-map">>),
+          HashMapSymbol = clj_rt:symbol(<<"clojure.core">>, <<"hash-map">>),
           syntax_quote_coll(flatten_map(Form), HashMapSymbol);
         IsVector ->
-          VectorSymbol = clj_core:symbol(<<"clojure.core">>, <<"vector">>),
+          VectorSymbol = clj_rt:symbol(<<"clojure.core">>, <<"vector">>),
           syntax_quote_coll(Form, VectorSymbol);
         IsSet ->
-          HashSetSymbol = clj_core:symbol(<<"clojure.core">>, <<"hash-set">>),
+          HashSetSymbol = clj_rt:symbol(<<"clojure.core">>, <<"hash-set">>),
           syntax_quote_coll(Form, HashSetSymbol);
         IsList ->
-          ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
+          ListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"list">>),
           syntax_quote_coll(Form, ListSymbol);
         true ->
           syntax_quote_coll(Form, ?NIL)
       end;
     IsLiteral -> Form;
-    true      -> clj_core:list([QuoteSymbol, Form])
+    true      -> clj_rt:list([QuoteSymbol, Form])
   end.
 
 -spec flatten_map(any()) -> any().
 flatten_map(Map) ->
-  MapSeq = clj_core:seq(Map),
-  flatten_map(MapSeq, clj_core:vector([])).
+  MapSeq = clj_rt:seq(Map),
+  flatten_map(MapSeq, clj_rt:vector([])).
 
 -spec flatten_map(any() | ?NIL, 'clojerl.Vector':type()) -> any().
 flatten_map(?NIL, Vector) ->
-  clj_core:seq(Vector);
+  clj_rt:seq(Vector);
 flatten_map(MapSeq, Vector) ->
-  First = clj_core:first(MapSeq),
-  Vector1 = clj_core:conj(Vector, clj_core:first(First)),
-  Vector2 = clj_core:conj(Vector1, clj_core:second(First)),
-  flatten_map(clj_core:next(MapSeq), Vector2).
+  First = clj_rt:first(MapSeq),
+  Vector1 = clj_rt:conj(Vector, clj_rt:first(First)),
+  Vector2 = clj_rt:conj(Vector1, clj_rt:second(First)),
+  flatten_map(clj_rt:next(MapSeq), Vector2).
 
 -spec syntax_quote_symbol(any()) -> any().
 syntax_quote_symbol(Symbol) ->
-  NamespaceStr = clj_core:namespace(Symbol),
-  NameStr = clj_core:name(Symbol),
+  NamespaceStr = clj_rt:namespace(Symbol),
+  NameStr = clj_rt:name(Symbol),
   IsGenSym = 'clojerl.String':ends_with(NameStr, <<"#">>),
   case {NamespaceStr, IsGenSym} of
     {?NIL, true} ->
@@ -540,14 +540,14 @@ register_gensym(Symbol) ->
                 undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
-  case maps:get(clj_core:name(Symbol), GensymEnv, ?NIL) of
+  case maps:get(clj_rt:name(Symbol), GensymEnv, ?NIL) of
     ?NIL ->
-      NameStr = clj_core:name(Symbol),
+      NameStr = clj_rt:name(Symbol),
       NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
-      Parts = [NameStr2, <<"__">>, clj_core:next_id(), <<"__auto__">>],
-      PartsStr = lists:map(fun clj_core:str/1, Parts),
-      GenSym = clj_core:symbol(erlang:iolist_to_binary(PartsStr)),
-      SymbolName = clj_core:name(Symbol),
+      Parts = [NameStr2, <<"__">>, clj_rt:next_id(), <<"__auto__">>],
+      PartsStr = lists:map(fun clj_rt:str/1, Parts),
+      GenSym = clj_rt:symbol(erlang:iolist_to_binary(PartsStr)),
+      SymbolName = clj_rt:name(Symbol),
       erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
       GenSym;
     GenSym ->
@@ -556,24 +556,24 @@ register_gensym(Symbol) ->
 
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
-  HasDot = binary:match(clj_core:str(Symbol), <<"\.">>) =/= nomatch,
+  HasDot = binary:match(clj_rt:str(Symbol), <<"\.">>) =/= nomatch,
   case HasDot orelse clj_namespace:find_var(Symbol) of
     true -> Symbol;
     ?NIL ->
-      case clj_core:namespace(Symbol) of
+      case clj_rt:namespace(Symbol) of
         ?NIL ->
           CurrentNs = clj_namespace:current(),
           NameSym   = clj_namespace:name(CurrentNs),
-          Namespace = clj_core:name(NameSym),
-          Name      = clj_core:name(Symbol),
-          clj_core:symbol(Namespace, Name);
+          Namespace = clj_rt:name(NameSym),
+          Name      = clj_rt:name(Symbol),
+          clj_rt:symbol(Namespace, Name);
         _ ->
           Symbol
       end;
     Var ->
-      Namespace = clj_core:namespace(Var),
-      Name      = clj_core:name(Var),
-      clj_core:symbol(Namespace, Name)
+      Namespace = clj_rt:namespace(Var),
+      Name      = clj_rt:name(Var),
+      clj_rt:symbol(Namespace, Name)
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type()) -> any().
@@ -581,67 +581,67 @@ syntax_quote_coll(List, ?NIL) ->
   syntax_quote_coll(List);
 syntax_quote_coll(List, FunSymbol) ->
   ExpandedList = syntax_quote_coll(List),
-  ApplySymbol  = clj_core:symbol(<<"clojure.core">>, <<"apply">>),
-  clj_core:list([ApplySymbol, FunSymbol, ExpandedList]).
+  ApplySymbol  = clj_rt:symbol(<<"clojure.core">>, <<"apply">>),
+  clj_rt:list([ApplySymbol, FunSymbol, ExpandedList]).
 
 -spec syntax_quote_coll(any()) -> any().
 syntax_quote_coll(List) ->
-  case clj_core:'empty?'(List) of
+  case clj_rt:'empty?'(List) of
     true ->
-      ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
-      clj_core:list([ListSymbol]);
+      ListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"list">>),
+      clj_rt:list([ListSymbol]);
     false ->
       ReversedExpandedItems = expand_list(List, []),
       ExpandedItems = lists:reverse(ReversedExpandedItems),
-      ConcatSymbol = clj_core:symbol(<<"clojure.core">>, <<"concat">>),
-      clj_core:list([ConcatSymbol | ExpandedItems])
+      ConcatSymbol = clj_rt:symbol(<<"clojure.core">>, <<"concat">>),
+      clj_rt:list([ConcatSymbol | ExpandedItems])
   end.
 
 -spec expand_list(any(), any()) -> any().
 expand_list(?NIL, Result) ->
   Result;
 expand_list(List, Result) ->
-  Item       = clj_core:first(List),
-  ListSymbol = clj_core:symbol(<<"clojure.core">>, <<"list">>),
+  Item       = clj_rt:first(List),
+  ListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"list">>),
   NewItem    = case {is_unquote(Item), is_unquote_splicing(Item)} of
                  {true, _} ->
-                   clj_core:list([ListSymbol, clj_core:second(Item)]);
+                   clj_rt:list([ListSymbol, clj_rt:second(Item)]);
                  {_, true} ->
-                   clj_core:second(Item);
+                   clj_rt:second(Item);
                  _ ->
                    QuotedForm = syntax_quote(Item),
-                   clj_core:list([ListSymbol, QuotedForm])
+                   clj_rt:list([ListSymbol, QuotedForm])
                end,
-  expand_list(clj_core:next(List), [NewItem | Result]).
+  expand_list(clj_rt:next(List), [NewItem | Result]).
 
 -spec add_meta(any(), any()) -> any().
 add_meta(Form, Result) ->
-  case clj_core:'meta?'(Form) of
+  case clj_rt:'meta?'(Form) of
     true ->
-      WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
-      Meta = syntax_quote(clj_core:meta(Form)),
-      clj_core:list([WithMetaSym, Result, Meta]);
+      WithMetaSym = clj_rt:symbol(<<"clojure.core">>, <<"with-meta">>),
+      Meta = syntax_quote(clj_rt:meta(Form)),
+      clj_rt:list([WithMetaSym, Result, Meta]);
     _ ->
       Result
   end.
 
 is_unquote(Form) ->
-  clj_core:'seq?'(Form) andalso
-    clj_core:first(Form) == clj_core:symbol(<<"clojure.core">>, <<"unquote">>).
+  clj_rt:'seq?'(Form) andalso
+    clj_rt:first(Form) == clj_rt:symbol(<<"clojure.core">>, <<"unquote">>).
 
 is_unquote_splicing(Form) ->
-  clj_core:'seq?'(Form) andalso
-    clj_core:first(Form) == clj_core:symbol(<<"clojure.core">>,
+  clj_rt:'seq?'(Form) andalso
+    clj_rt:first(Form) == clj_rt:symbol(<<"clojure.core">>,
                                             <<"unquote-splicing">>).
 
 is_literal(Form) ->
-  clj_core:'keyword?'(Form)
-    orelse clj_core:'number?'(Form)
-    orelse clj_core:'char?'(Form)
-    orelse clj_core:'string?'(Form)
-    orelse clj_core:'nil?'(Form)
-    orelse clj_core:'boolean?'(Form)
-    orelse clj_core:'regex?'(Form).
+  clj_rt:'keyword?'(Form)
+    orelse clj_rt:'number?'(Form)
+    orelse clj_rt:'char?'(Form)
+    orelse clj_rt:'string?'(Form)
+    orelse clj_rt:'nil?'(Form)
+    orelse clj_rt:'boolean?'(Form)
+    orelse clj_rt:'regex?'(Form).
 
 %%------------------------------------------------------------------------------
 %% Unquote
@@ -652,11 +652,11 @@ read_unquote(#{src := <<"\~"/utf8, _/binary>>} = State0) ->
   State = consume_char(State0),
   case peek_src(State) of
     $@ ->
-      UnquoteSplicing = clj_core:symbol(<<"clojure.core">>,
+      UnquoteSplicing = clj_rt:symbol(<<"clojure.core">>,
                                         <<"unquote-splicing">>),
       wrapped_read(UnquoteSplicing, consume_char(State));
     _ ->
-      Unquote = clj_core:symbol(<<"clojure.core">>, <<"unquote">>),
+      Unquote = clj_rt:symbol(<<"clojure.core">>, <<"unquote">>),
       wrapped_read(Unquote, State)
   end.
 
@@ -676,7 +676,7 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
   #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
-  List = clj_core:with_meta(clj_core:list(Items), file_location_meta(State0)),
+  List = clj_rt:with_meta(clj_rt:list(Items), file_location_meta(State0)),
 
   State2#{forms => [List | Forms]}.
 
@@ -696,7 +696,7 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
   #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
-  Vector = clj_core:with_meta( clj_core:vector(Items)
+  Vector = clj_rt:with_meta( clj_rt:vector(Items)
                              , file_location_meta(State0)
                              ),
 
@@ -720,7 +720,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = clj_core:with_meta( clj_core:hash_map(Items)
+      Map = clj_rt:with_meta( clj_rt:hash_map(Items)
                               , file_location_meta(State0)
                               ),
       State2#{forms => [Map | Forms]};
@@ -866,10 +866,10 @@ gen_arg_sym(N) ->
               NBin = integer_to_binary(N),
               <<"p", NBin/binary>>
           end,
-  NextId = clj_core:next_id(),
-  Parts = lists:map(fun clj_core:str/1, [Param, <<"__">>, NextId, <<"#">>]),
+  NextId = clj_rt:next_id(),
+  Parts = lists:map(fun clj_rt:str/1, [Param, <<"__">>, NextId, <<"#">>]),
   Name = erlang:iolist_to_binary(Parts),
-  clj_core:symbol(Name).
+  clj_rt:symbol(Name).
 
 %%------------------------------------------------------------------------------
 %% Reader dispatch
@@ -906,7 +906,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
 
 -spec read_var(state()) -> state().
 read_var(#{src := <<"'", _/binary>>} = State) ->
-  VarSymbol = clj_core:symbol(<<"var">>),
+  VarSymbol = clj_rt:symbol(<<"var">>),
   wrapped_read(VarSymbol, consume_char(State)).
 
 %%------------------------------------------------------------------------------
@@ -937,14 +937,14 @@ read_fn(State) ->
   ArgsSyms2 = case maps:get(-1, ArgEnv, ?NIL) of
                 ?NIL -> ArgsSyms;
                 RestArgSym  ->
-                  AmpSym = clj_core:symbol(<<"&">>),
+                  AmpSym = clj_rt:symbol(<<"&">>),
                   ArgsSyms ++ [AmpSym, RestArgSym]
               end,
-  ArgsVector = clj_core:vector(ArgsSyms2),
+  ArgsVector = clj_rt:vector(ArgsSyms2),
 
-  FnSymbol = clj_core:symbol(<<"fn*">>),
-  FnForm   = clj_core:list([FnSymbol, ArgsVector, Form]),
-  FnFormWithMeta = clj_core:with_meta(FnForm, file_location_meta(State)),
+  FnSymbol = clj_rt:symbol(<<"fn*">>),
+  FnForm   = clj_rt:list([FnSymbol, ArgsVector, Form]),
+  FnFormWithMeta = clj_rt:with_meta(FnForm, file_location_meta(State)),
 
   push_form(FnFormWithMeta, NewState).
 
@@ -970,8 +970,8 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
   #{forms := ReversedItems} = State2,
 
   Items       = lists:reverse(ReversedItems),
-  Set         = clj_core:hash_set(Items),
-  SetWithMeta = clj_core:with_meta(Set, file_location_meta(State0)),
+  Set         = clj_rt:hash_set(Items),
+  SetWithMeta = clj_rt:with_meta(Set, file_location_meta(State0)),
 
   State2#{forms => [SetWithMeta | Forms]}.
 
@@ -1080,14 +1080,14 @@ read_cond_delimited(IsSplicing, State) ->
     {nomatch,  State1} ->
       read_cond_delimited(IsSplicing, State1);
     {match, Form, State1} when IsSplicing ->
-      clj_utils:error_when( not clj_core:'sequential?'(Form)
+      clj_utils:error_when( not clj_rt:'sequential?'(Form)
                           , <<"Spliced form list in "
                               "read-cond-splicing must "
                               "extend clojerl.ISequential">>
                           , location(State1)
                           ),
 
-      ReadDelim  = clj_core:boolean(scope_get(read_delim, State)),
+      ReadDelim  = clj_rt:boolean(scope_get(read_delim, State)),
       clj_utils:error_when( IsSplicing andalso not ReadDelim
                           , <<"Reader conditional splicing "
                               "not allowed at the top level">>
@@ -1095,7 +1095,7 @@ read_cond_delimited(IsSplicing, State) ->
                           ),
 
       State2 = read_until($), fun read_skip_suppress/1, State1),
-      Items = lists:reverse(clj_core:to_list(Form)),
+      Items = lists:reverse(clj_rt:to_list(Form)),
       lists:foldl(fun push_pending_form/2, State2, Items);
     {match, Form, State1} ->
       State2 = read_until($), fun read_skip_suppress/1, State1),
@@ -1105,12 +1105,12 @@ read_cond_delimited(IsSplicing, State) ->
 -spec match_feature(state()) ->
   {match | nomatch, any(), state()} | {finished, state()}.
 match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
-  Features = maps:get(?OPT_FEATURES, Opts, clj_core:hash_set([])),
+  Features = maps:get(?OPT_FEATURES, Opts, clj_rt:hash_set([])),
   try
     %% Change the return_on value so that we only read until the next
     %% ')' char.
     {Feature, State1} = read_pop_one(State#{return_on => $)}),
-    clj_utils:error_when( not clj_core:'keyword?'(Feature)
+    clj_utils:error_when( not clj_rt:'keyword?'(Feature)
                         , <<"Feature should be a keyword">>
                         , location(State)
                         ),
@@ -1123,7 +1123,7 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
     try
       case
         Feature =:= ?DEFAULT_FEATURE orelse
-        clj_core:'contains?'(Features, Feature)
+        clj_rt:'contains?'(Features, Feature)
       of
         true  ->
           {Form, State2} = read_pop_one(State1),
@@ -1165,7 +1165,7 @@ read_skip_suppress(State) ->
 read_tagged(State) ->
   {Symbol, State1} = read_pop_one(State),
 
-  clj_utils:error_when( not clj_core:'symbol?'(Symbol)
+  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
                       , <<"Reader tag must be a symbol">>
                       , location(State)
                       ),
@@ -1179,7 +1179,7 @@ read_tagged(State) ->
     _ when SupressRead =:= true ->
       push_form(tagged_literal(Symbol, Form), State2);
     _ ->
-      case 'clojerl.String':contains(clj_core:name(Symbol), <<".">>) of
+      case 'clojerl.String':contains(clj_rt:name(Symbol), <<".">>) of
         true  -> read_record(Symbol, Form, State2);
         false -> read_tagged(Symbol, Form, location(State), State2)
       end
@@ -1187,20 +1187,20 @@ read_tagged(State) ->
 
 -spec erlang_literal(any(), state()) -> state().
 erlang_literal(Form, State) ->
-  IsList   = clj_core:'list?'(Form),
-  IsMap    = clj_core:'map?'(Form),
-  IsVector = clj_core:'vector?'(Form),
-  IsString = clj_core:'string?'(Form),
+  IsList   = clj_rt:'list?'(Form),
+  IsMap    = clj_rt:'map?'(Form),
+  IsVector = clj_rt:'vector?'(Form),
+  IsString = clj_rt:'string?'(Form),
 
   Value    =
     if
       IsList   ->
-        ErlListSym = clj_core:symbol(<<"erl-list*">>),
-        List       = clj_core:to_list(Form),
-        clj_core:list([ErlListSym | List]);
+        ErlListSym = clj_rt:symbol(<<"erl-list*">>),
+        List       = clj_rt:to_list(Form),
+        clj_rt:list([ErlListSym | List]);
       IsMap    -> 'clojerl.Map':to_erl_map(Form);
       IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
-      IsString -> clj_core:list( [ clj_core:symbol(<<"quote">>)
+      IsString -> clj_rt:list( [ clj_rt:symbol(<<"quote">>)
                                  , unicode:characters_to_list(Form)
                                  ]
                                );
@@ -1214,19 +1214,19 @@ erlang_literal(Form, State) ->
 
 -spec erlang_binary(any(), state()) -> state().
 erlang_binary(Form, State) ->
-  clj_utils:error_when( not clj_core:'vector?'(Form)
+  clj_utils:error_when( not clj_rt:'vector?'(Form)
                       , <<"Binary expressions should be enclosed by a vector">>
                       , location(State)
                       ),
 
-  ErlBinarySym = clj_core:symbol(<<"erl-binary*">>),
-  List         = clj_core:list([ErlBinarySym | clj_core:to_list(Form)]),
+  ErlBinarySym = clj_rt:symbol(<<"erl-binary*">>),
+  List         = clj_rt:list([ErlBinarySym | clj_rt:to_list(Form)]),
   push_form(List, State).
 
 -spec erlang_alias(any(), state()) -> state().
 erlang_alias(Form, State) ->
-  ErlAliasSym = clj_core:symbol(<<"erl-alias*">>),
-  List        = clj_core:list([ErlAliasSym | clj_core:to_list(Form)]),
+  ErlAliasSym = clj_rt:symbol(<<"erl-alias*">>),
+  List        = clj_rt:list([ErlAliasSym | clj_rt:to_list(Form)]),
   push_form(List, State).
 
 -spec read_record('clojerl.Symbol':type(), any(), state()) -> state().
@@ -1235,14 +1235,14 @@ read_record(Symbol, Form, State) ->
                                           , <<"*read-eval*">>
                                           ),
 
-  clj_utils:error_when( not clj_core:boolean(clj_core:deref(ReadEvalVar))
+  clj_utils:error_when( not clj_rt:boolean(clj_rt:deref(ReadEvalVar))
                       , <<"Record construction syntax can only be used "
                           "when *read-eval* == true">>
                       , location(State)
                       ),
 
-  clj_utils:error_when( not clj_core:'vector?'(Form)
-                        andalso not clj_core:'map?'(Form)
+  clj_utils:error_when( not clj_rt:'vector?'(Form)
+                        andalso not clj_rt:'map?'(Form)
                       , [ <<"Unreadable constructor form starting with \"#">>
                         , Symbol
                         , <<"\"">>
@@ -1250,7 +1250,7 @@ read_record(Symbol, Form, State) ->
                       , location(State)
                       ),
 
-  Type = try erlang:binary_to_existing_atom(clj_core:str(Symbol), utf8)
+  Type = try erlang:binary_to_existing_atom(clj_rt:str(Symbol), utf8)
          catch throw:badarg ->
              clj_utils:error( [Symbol, <<" is not loaded or doesn't exist">>]
                             , location(State)
@@ -1258,9 +1258,9 @@ read_record(Symbol, Form, State) ->
          end,
 
   Record =
-    case clj_core:'vector?'(Form) of
+    case clj_rt:'vector?'(Form) of
       true  ->
-        ArgCount = clj_core:count(Form),
+        ArgCount = clj_rt:count(Form),
         Exported = erlang:function_exported(Type, ?CONSTRUCTOR, ArgCount),
 
         clj_utils:error_when( not Exported
@@ -1271,16 +1271,16 @@ read_record(Symbol, Form, State) ->
                             , location(State)
                             ),
 
-        erlang:apply(Type, ?CONSTRUCTOR, clj_core:to_list(Form));
+        erlang:apply(Type, ?CONSTRUCTOR, clj_rt:to_list(Form));
       false ->
-        Keys        = clj_core:to_list(clj_core:keys(Form)),
-        NotKwFun    = fun(X) -> not clj_core:'keyword?'(X) end,
+        Keys        = clj_rt:to_list(clj_rt:keys(Form)),
+        NotKwFun    = fun(X) -> not clj_rt:'keyword?'(X) end,
         NonKeywords = lists:filter(NotKwFun, Keys),
 
         clj_utils:error_when( NonKeywords =/= []
                             , [ <<"Unreadable defrecord form: key must ">>
                               , <<"be of type clojerl.Keyword, got ">>
-                              , clj_core:first(NonKeywords)
+                              , clj_rt:first(NonKeywords)
                               ]
                             , location(State)
                             ),
@@ -1304,13 +1304,13 @@ read_tagged(Symbol, Form, Location, State) ->
                               , <<"*default-data-reader-fn*">>
                               ),
 
-  DataReaders = clj_core:deref(DataReadersVar),
-  Reader0     = clj_core:get(DataReaders, Symbol, ?NIL),
+  DataReaders = clj_rt:deref(DataReadersVar),
+  Reader0     = clj_rt:get(DataReaders, Symbol, ?NIL),
 
-  DefaultDataReaders = clj_core:deref(DefaultDataReadersVar),
+  DefaultDataReaders = clj_rt:deref(DefaultDataReadersVar),
   Reader1 = case
               Reader0 =/= ?NIL
-              orelse clj_core:get(DefaultDataReaders, Symbol, ?NIL)
+              orelse clj_rt:get(DefaultDataReaders, Symbol, ?NIL)
             of
               true -> Reader0;
               DefaultDataReader -> DefaultDataReader
@@ -1318,7 +1318,7 @@ read_tagged(Symbol, Form, Location, State) ->
 
   {IsDefault, Reader2} = case Reader1 =/= ?NIL of
                            true  -> {false, Reader1};
-                           false -> {true, clj_core:deref(DefaultReaderFunVar)}
+                           false -> {true, clj_rt:deref(DefaultReaderFunVar)}
                          end,
 
   clj_utils:error_when( Reader2 =:= ?NIL
@@ -1327,8 +1327,8 @@ read_tagged(Symbol, Form, Location, State) ->
                       ),
 
   ReadForm = case IsDefault of
-               true  -> clj_core:apply(Reader2, [Symbol, Form]);
-               false -> clj_core:apply(Reader2, [Form])
+               true  -> clj_rt:apply(Reader2, [Symbol, Form]);
+               false -> clj_rt:apply(Reader2, [Form])
              end,
   push_form(ReadForm, State).
 
@@ -1494,7 +1494,7 @@ skip_line(State) ->
 -spec wrapped_read('clojerl.Symbol':type(), state()) -> state().
 wrapped_read(Symbol, State) ->
   {Form, NewState} = read_pop_one(State),
-  List = clj_core:list([Symbol, Form]),
+  List = clj_rt:list([Symbol, Form]),
   push_form(List, NewState).
 
 -spec read_pop_one(state()) -> {any(), state()}.

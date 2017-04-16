@@ -1,7 +1,7 @@
 (ns examples.macro)
 
-(def cons (fn* [x s] (clj_core/cons.e x s)))
-(def seq (fn* [s] (clj_core/seq.e s)))
+(def cons (fn* [x s] (clj_rt/cons.e x s)))
+(def seq (fn* [s] (clj_rt/seq.e s)))
 
 (def ^:macro defn
   (fn* [form env name args & body]

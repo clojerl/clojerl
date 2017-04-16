@@ -38,7 +38,7 @@ str(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
-  Str   = clj_core:str(Reader),
+  Str   = clj_rt:str(Reader),
   Regex = <<"#<erlang.io.PushbackReader \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 

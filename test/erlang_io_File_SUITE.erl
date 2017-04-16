@@ -35,7 +35,7 @@ end_per_suite(Config) ->
 str(_Config) ->
   File = 'erlang.io.File':open(<<"tmp">>, [read]),
 
-  Str   = clj_core:str(File),
+  Str   = clj_rt:str(File),
   Regex = <<"#<erlang.io.File tmp>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 

@@ -31,9 +31,9 @@ end_per_suite(Config) -> Config.
 str(_Config) ->
   Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello">>),
 
-  <<"hello">> = clj_core:str(Writer),
+  <<"hello">> = clj_rt:str(Writer),
   Writer = 'erlang.io.IWriter':write(Writer, <<" world!">>),
-  <<"hello world!">> = clj_core:str(Writer),
+  <<"hello world!">> = clj_rt:str(Writer),
 
   ?NIL = 'erlang.io.Closeable':close(Writer),
 
@@ -47,11 +47,11 @@ write(_Config) ->
   Writer = 'erlang.io.IWriter':write(Writer, <<" ">>),
   Writer = 'erlang.io.IWriter':write(Writer, <<"world!">>),
 
-  <<"hello world!">> = clj_core:str(Writer),
+  <<"hello world!">> = clj_rt:str(Writer),
 
   Writer = 'erlang.io.IWriter':write(Writer, <<"~s!">>, [<<" Yeah">>]),
 
-  <<"hello world! Yeah!">> = clj_core:str(Writer),
+  <<"hello world! Yeah!">> = clj_rt:str(Writer),
 
   ?NIL = 'erlang.io.Closeable':close(Writer),
 
@@ -75,7 +75,7 @@ complete_coverage(_Config) ->
   Pid    = Writer#?TYPE.data,
 
   ct:comment("Get the length"),
-  13 = clj_core:count(Writer),
+  13 = clj_rt:count(Writer),
 
   ct:comment("Send an unexpected message"),
   Pid ! {},
@@ -89,11 +89,11 @@ complete_coverage(_Config) ->
 
   ?NIL = 'erlang.io.Closeable':close(Writer),
 
-  ok = try clj_core:str(Writer), error
+  ok = try clj_rt:str(Writer), error
        catch _:_ -> ok
        end,
 
-  ok = try clj_core:count(Writer), error
+  ok = try clj_rt:count(Writer), error
        catch _:_ -> ok
        end,
 

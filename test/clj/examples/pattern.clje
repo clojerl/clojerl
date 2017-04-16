@@ -45,7 +45,7 @@
 
 (def spawn
   (fn* [f & args]
-       (erlang/spawn.e :clj_core :apply (clj_core/to_list.e [f args]))))
+       (erlang/spawn.e :clj_rt :apply (clj_rt/to_list.e [f args]))))
 
 (def f
   (fn* []

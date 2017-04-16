@@ -96,11 +96,11 @@ remove_locals_scope(Env = #{locals := Locals}) ->
 
 -spec get_local('clojerl.Symbol':type(), env()) -> any().
 get_local(Sym, _Env = #{locals := Locals}) ->
-  clj_scope:get(clj_core:str(Sym), Locals).
+  clj_scope:get(clj_rt:str(Sym), Locals).
 
 -spec put_local('clojerl.Symbol':type(), any(), env()) -> env().
 put_local(Sym, Local, Env = #{locals := Locals}) ->
-  Env#{locals => clj_scope:put(clj_core:str(Sym), Local, Locals)}.
+  Env#{locals => clj_scope:put(clj_rt:str(Sym), Local, Locals)}.
 
 -spec put_locals([map()], env()) -> env().
 put_locals(Locals, Env) ->

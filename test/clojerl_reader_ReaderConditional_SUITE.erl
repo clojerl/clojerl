@@ -32,13 +32,13 @@ equiv(_Config) ->
   ct:comment("Compare two different reader conditionals"),
   ReadCond  = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([], false),
   ReadCond1 = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([a, b], true),
-  false = clj_core:equiv(ReadCond, ReadCond1),
+  false = clj_rt:equiv(ReadCond, ReadCond1),
 
   ct:comment("Compare the same reader conditional"),
-  true = clj_core:equiv(ReadCond, ReadCond),
+  true = clj_rt:equiv(ReadCond, ReadCond),
 
   ct:comment("Compare a reader conditional with something else"),
-  false = clj_core:equiv(ReadCond, 42),
+  false = clj_rt:equiv(ReadCond, 42),
 
   {comments, ""}.
 
@@ -60,10 +60,10 @@ get(_Config) ->
   ct:comment("Only :form and :splicing? keys return something"),
 
   ReadCond  = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([a, b], true),
-  [a, b]    = clj_core:get(ReadCond, form),
-  true      = clj_core:get(ReadCond, 'splicing?'),
-  ?NIL      = clj_core:get(ReadCond, bla),
-  not_found = clj_core:get(ReadCond, bla, not_found),
+  [a, b]    = clj_rt:get(ReadCond, form),
+  true      = clj_rt:get(ReadCond, 'splicing?'),
+  ?NIL      = clj_rt:get(ReadCond, bla),
+  not_found = clj_rt:get(ReadCond, bla, not_found),
 
   {comments, ""}.
 
@@ -72,11 +72,11 @@ str(_Config) ->
   ct:comment("Check the str representation of reader cond with no splicing"),
   ReadCond = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([], false),
   Regex = <<"#?\\(\\)">>,
-  {match, _} = re:run(clj_core:str(ReadCond), Regex),
+  {match, _} = re:run(clj_rt:str(ReadCond), Regex),
 
   ct:comment("Check the str representation of reader cond with splicing"),
   ReadCond1 = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([a, b], true),
   SplicingRegex = <<"#?@\\(:a :b\\)">>,
-  {match, _} = re:run(clj_core:str(ReadCond1), SplicingRegex),
+  {match, _} = re:run(clj_rt:str(ReadCond1), SplicingRegex),
 
   {comments, ""}.

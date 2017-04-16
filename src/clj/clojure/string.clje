@@ -174,7 +174,7 @@ Design notes for clojure.string:
   ([coll]
    (apply str coll))
   ([separator coll]
-   (clojerl.String/join.e (clj_core/to_list.e coll) separator)))
+   (clojerl.String/join.e (clj_rt/to_list.e coll) separator)))
 
 (defn ^clojerl.String upper-case
   "Converts string to all upper-case."
@@ -210,7 +210,7 @@ Design notes for clojure.string:
   ([s re limit]
    (vec (erlang.util.Regex/split.e re
                                    (when s (str s))
-                                   (clj_core/to_list.e [:global #erl [:match_limit limit]])))))
+                                   (clj_rt/to_list.e [:global #erl [:match_limit limit]])))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."

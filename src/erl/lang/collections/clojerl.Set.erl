@@ -63,9 +63,9 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}
      ) ->
-  clj_core:equiv(X, Y);
+  clj_rt:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = X, Y) ->
-  clj_core:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
+  clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
@@ -120,6 +120,6 @@ to_list(#?TYPE{name = ?M, data = MapSet}) ->
 %% clojerl.Stringable
 
 str(#?TYPE{name = ?M, data = MapSet}) ->
-  Items = lists:map(fun clj_core:str/1, maps:values(MapSet)),
+  Items = lists:map(fun clj_rt:str/1, maps:values(MapSet)),
   Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.

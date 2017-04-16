@@ -35,73 +35,73 @@ end_per_suite(Config) -> Config.
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
-  1 = clj_core:get(Set, 1),
-  2 = clj_core:get(Set, 2),
-  3 = clj_core:get(Set, 3),
-  4 = clj_core:get(Set, 4),
-  ?NIL        = clj_core:get(Set, 5),
-  'not-found' = clj_core:get(Set, 5, 'not-found'),
+  Set = clj_rt:hash_set([1, 2, 3, 4]),
+  1 = clj_rt:get(Set, 1),
+  2 = clj_rt:get(Set, 2),
+  3 = clj_rt:get(Set, 3),
+  4 = clj_rt:get(Set, 4),
+  ?NIL        = clj_rt:get(Set, 5),
+  'not-found' = clj_rt:get(Set, 5, 'not-found'),
 
-  Set2 = clj_core:hash_set([]),
-  ?NIL = clj_core:get(Set2, whatever),
+  Set2 = clj_rt:hash_set([]),
+  ?NIL = clj_rt:get(Set2, whatever),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
-  4 = clj_core:count(Set),
+  Set = clj_rt:hash_set([1, 2, 3, 4]),
+  4 = clj_rt:count(Set),
 
-  Set2 = clj_core:hash_set([]),
-  0 = clj_core:count(Set2),
+  Set2 = clj_rt:hash_set([]),
+  0 = clj_rt:count(Set2),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
-  <<"#{1 2 4 3}">> = clj_core:str(Set),
+  Set = clj_rt:hash_set([1, 2, 3, 4]),
+  <<"#{1 2 4 3}">> = clj_rt:str(Set),
 
-  Set2 = clj_core:hash_set([]),
-  <<"#{}">> = clj_core:str(Set2),
+  Set2 = clj_rt:hash_set([]),
+  <<"#{}">> = clj_rt:str(Set2),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Set = clj_core:hash_set([1, 2, 3, 4]),
-  [1, 2, 3, 4] = lists:sort(clj_core:seq(Set)),
-  [1, 2, 3, 4] = lists:sort(clj_core:to_list(Set)),
+  Set = clj_rt:hash_set([1, 2, 3, 4]),
+  [1, 2, 3, 4] = lists:sort(clj_rt:seq(Set)),
+  [1, 2, 3, 4] = lists:sort(clj_rt:to_list(Set)),
 
-  Set2 = clj_core:hash_set([]),
-  ?NIL = clj_core:seq(Set2),
+  Set2 = clj_rt:hash_set([]),
+  ?NIL = clj_rt:seq(Set2),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that sets with the same elements are equivalent"),
-  Set1 = clj_core:with_meta(clj_core:hash_set([1, 2, 3, 4]), #{a => 1}),
-  Set2 = clj_core:with_meta(clj_core:hash_set([3, 4, 1, 2]), #{b => 2}),
-  true = clj_core:equiv(Set1, Set2),
+  Set1 = clj_rt:with_meta(clj_rt:hash_set([1, 2, 3, 4]), #{a => 1}),
+  Set2 = clj_rt:with_meta(clj_rt:hash_set([3, 4, 1, 2]), #{b => 2}),
+  true = clj_rt:equiv(Set1, Set2),
 
   ct:comment("Check that sets with the same elements are not equivalent"),
-  Set3 = clj_core:with_meta(clj_core:hash_set([5, 6, 3, 4]), #{c => 3}),
-  false = clj_core:equiv(Set1, Set3),
+  Set3 = clj_rt:with_meta(clj_rt:hash_set([5, 6, 3, 4]), #{c => 3}),
+  false = clj_rt:equiv(Set1, Set3),
 
   ct:comment("A clojerl.Set and something else"),
-  false = clj_core:equiv(Set1, whatever),
-  false = clj_core:equiv(Set1, 1),
-  false = clj_core:equiv(Set1, [1]),
+  false = clj_rt:equiv(Set1, whatever),
+  false = clj_rt:equiv(Set1, 1),
+  false = clj_rt:equiv(Set1, [1]),
 
   {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  List1 = clj_core:hash_set([1, 2, 3]),
-  List2 = clj_core:hash_set([1, 3, 2]),
-  List3 = clj_core:hash_set([1.0, 2, 3]),
+  List1 = clj_rt:hash_set([1, 2, 3]),
+  List2 = clj_rt:hash_set([1, 3, 2]),
+  List3 = clj_rt:hash_set([1.0, 2, 3]),
 
   Hash1 = 'clojerl.IHash':hash(List1),
   Hash2 = 'clojerl.IHash':hash(List2),
@@ -114,48 +114,48 @@ hash(_Config) ->
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  EmptySet = clj_core:hash_set([]),
+  EmptySet = clj_rt:hash_set([]),
 
   ct:comment("Conj an element to an empty set"),
-  OneSet = clj_core:conj(EmptySet, 1),
+  OneSet = clj_rt:conj(EmptySet, 1),
 
-  1    = clj_core:count(OneSet),
-  true = clj_core:equiv(OneSet, clj_core:hash_set([1])),
+  1    = clj_rt:count(OneSet),
+  true = clj_rt:equiv(OneSet, clj_rt:hash_set([1])),
 
   ct:comment("Conj a different element to a set with one element"),
-  TwoSet = clj_core:conj(OneSet, 2),
+  TwoSet = clj_rt:conj(OneSet, 2),
 
-  2    = clj_core:count(TwoSet),
-  true = clj_core:equiv(TwoSet, clj_core:hash_set([1, 2])),
+  2    = clj_rt:count(TwoSet),
+  true = clj_rt:equiv(TwoSet, clj_rt:hash_set([1, 2])),
 
   ct:comment("Conj an existing element in the set"),
-  TwoSet = clj_core:conj(TwoSet, 1),
+  TwoSet = clj_rt:conj(TwoSet, 1),
 
   ct:comment("Conj the same symbol with different meta to an empty set"),
-  OneSymbol         = clj_core:symbol(<<"one">>),
-  OneSymbolWithMeta = clj_core:with_meta(OneSymbol, #{one => 1}),
-  OneSymbolSet      = clj_core:conj(EmptySet, OneSymbol),
-  OneSymbolSet2     = clj_core:conj(OneSymbolSet, OneSymbolWithMeta),
+  OneSymbol         = clj_rt:symbol(<<"one">>),
+  OneSymbolWithMeta = clj_rt:with_meta(OneSymbol, #{one => 1}),
+  OneSymbolSet      = clj_rt:conj(EmptySet, OneSymbol),
+  OneSymbolSet2     = clj_rt:conj(OneSymbolSet, OneSymbolWithMeta),
 
   ct:comment("Sets should be equivalent"),
-  true      = clj_core:equiv(OneSymbolSet, OneSymbolSet2),
+  true      = clj_rt:equiv(OneSymbolSet, OneSymbolSet2),
   ct:comment("The symbol with the metadata is not added to the set"),
-  OneSymbol = clj_core:first(OneSymbolSet2),
+  OneSymbol = clj_rt:first(OneSymbolSet2),
 
   {comments, ""}.
 
 -spec apply(config()) -> result().
 apply(_Config) ->
-  HelloKeyword = clj_core:keyword(<<"hello">>),
-  EmptySet     = clj_core:hash_set([]),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
+  EmptySet     = clj_rt:hash_set([]),
 
-  ?NIL = clj_core:apply(EmptySet, [HelloKeyword]),
+  ?NIL = clj_rt:apply(EmptySet, [HelloKeyword]),
 
-  HelloSet = clj_core:conj(EmptySet, HelloKeyword),
-  HelloKeyword = clj_core:apply(HelloSet, [HelloKeyword]),
+  HelloSet = clj_rt:conj(EmptySet, HelloKeyword),
+  HelloKeyword = clj_rt:apply(HelloSet, [HelloKeyword]),
 
   ok = try
-         clj_core:apply(HelloSet, [HelloKeyword, extra]),
+         clj_rt:apply(HelloSet, [HelloKeyword, extra]),
          error
        catch _:_ ->
            ok
@@ -165,24 +165,24 @@ apply(_Config) ->
 
 -spec disjoin(config()) -> result().
 disjoin(_Config) ->
-  EmptySet = clj_core:hash_set([]),
-  EmptySet = clj_core:disj(EmptySet, whatever),
+  EmptySet = clj_rt:hash_set([]),
+  EmptySet = clj_rt:disj(EmptySet, whatever),
 
-  OneSet = clj_core:conj(EmptySet, 1),
-  true   = clj_core:equiv(clj_core:disj(OneSet, 1), EmptySet),
+  OneSet = clj_rt:conj(EmptySet, 1),
+  true   = clj_rt:equiv(clj_rt:disj(OneSet, 1), EmptySet),
 
-  TwoSet = clj_core:conj(OneSet, 2),
-  true   = clj_core:equiv(clj_core:disj(TwoSet, 2), OneSet),
+  TwoSet = clj_rt:conj(OneSet, 2),
+  true   = clj_rt:equiv(clj_rt:disj(TwoSet, 2), OneSet),
 
   {comments, ""}.
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  NotEmptySet = clj_core:hash_set([a, b, 2, 3]),
-  EmptySet    = clj_core:empty(NotEmptySet),
-  EmptySet    = clj_core:hash_set([]),
+  NotEmptySet = clj_rt:hash_set([a, b, 2, 3]),
+  EmptySet    = clj_rt:empty(NotEmptySet),
+  EmptySet    = clj_rt:hash_set([]),
 
-  SetMeta  = clj_core:with_meta(clj_core:hash_set([1, 2, 3, 4]), #{a => 1}),
-  #{a := 1} = clj_core:meta(SetMeta),
+  SetMeta  = clj_rt:with_meta(clj_rt:hash_set([1, 2, 3, 4]), #{a => 1}),
+  #{a := 1} = clj_rt:meta(SetMeta),
 
   {comments, ""}.

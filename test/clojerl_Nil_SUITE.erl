@@ -33,10 +33,10 @@ cons(_Config) ->
   Nil = ?NIL,
 
   ct:comment("Conj an element to nil"),
-  OneList = clj_core:conj(Nil, 1),
+  OneList = clj_rt:conj(Nil, 1),
 
-  1    = clj_core:count(OneList),
-  true = clj_core:equiv(OneList, [1]),
+  1    = clj_rt:count(OneList),
+  true = clj_rt:equiv(OneList, [1]),
 
   {comments, ""}.
 
@@ -51,18 +51,18 @@ hash(_Config) ->
 seq(_Config) ->
   Nil = ?NIL,
 
-  ?NIL = clj_core:seq(Nil),
+  ?NIL = clj_rt:seq(Nil),
 
-  ?NIL = clj_core:first(Nil),
-  ?NIL = clj_core:next(Nil),
-  [] = clj_core:rest(Nil),
+  ?NIL = clj_rt:first(Nil),
+  ?NIL = clj_rt:next(Nil),
+  [] = clj_rt:rest(Nil),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
   ct:comment("Check the string representation of true and false"),
-  <<"">> = clj_core:str(?NIL),
+  <<"">> = clj_rt:str(?NIL),
 
   {comments, ""}.
 

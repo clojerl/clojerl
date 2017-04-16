@@ -28,46 +28,46 @@ end_per_suite(Config) -> Config.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  ErlSymbol = clj_core:symbol(<<"erl">>),
-  JsSymbol  = clj_core:symbol(<<"js">>),
+  ErlSymbol = clj_rt:symbol(<<"erl">>),
+  JsSymbol  = clj_rt:symbol(<<"js">>),
 
   ct:comment("Compare two different tagged literals"),
   TaggedLit1 = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, []),
   TaggedLit2 = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(JsSymbol, []),
-  false = clj_core:equiv(TaggedLit1, TaggedLit2),
+  false = clj_rt:equiv(TaggedLit1, TaggedLit2),
 
   ct:comment("Compare the same tagged literals"),
-  true = clj_core:equiv(TaggedLit1, TaggedLit1),
+  true = clj_rt:equiv(TaggedLit1, TaggedLit1),
 
   ct:comment("Compare a tagged literal with something else"),
-  false = clj_core:equiv(TaggedLit1, []),
+  false = clj_rt:equiv(TaggedLit1, []),
 
   {comments, ""}.
 
 -spec get(config()) -> result().
 get(_Config) ->
-  ErlSymbol = clj_core:symbol(<<"erl">>),
+  ErlSymbol = clj_rt:symbol(<<"erl">>),
 
   ct:comment("Only :form and :tag keys return something"),
   TaggedLit = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, [a, b]),
-  [a, b]    = clj_core:get(TaggedLit, form),
-  ErlSymbol = clj_core:get(TaggedLit, tag),
-  ?NIL      = clj_core:get(TaggedLit, bla),
-  not_found = clj_core:get(TaggedLit, bla, not_found),
+  [a, b]    = clj_rt:get(TaggedLit, form),
+  ErlSymbol = clj_rt:get(TaggedLit, tag),
+  ?NIL      = clj_rt:get(TaggedLit, bla),
+  not_found = clj_rt:get(TaggedLit, bla, not_found),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  ErlSymbol = clj_core:symbol(<<"erl">>),
+  ErlSymbol = clj_rt:symbol(<<"erl">>),
 
   ct:comment("Check the str representation of tagged literals"),
   TaggedLit1 = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, []),
   Regex1 = <<"#erl \\(\\)">>,
-  {match, _} = re:run(clj_core:str(TaggedLit1), Regex1),
+  {match, _} = re:run(clj_rt:str(TaggedLit1), Regex1),
 
   TaggedLit2 = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, hello),
   Regex2 = <<"#erl :hello">>,
-  {match, _} = re:run(clj_core:str(TaggedLit2), Regex2),
+  {match, _} = re:run(clj_rt:str(TaggedLit2), Regex2),
 
   {comments, ""}.

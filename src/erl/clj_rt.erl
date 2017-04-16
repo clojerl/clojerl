@@ -1,4 +1,4 @@
--module(clj_core).
+-module(clj_rt).
 
 -include("clojerl.hrl").
 

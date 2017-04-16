@@ -103,14 +103,14 @@ push_bindings(BindingsMap) ->
   Bindings      = get_bindings(),
   NewBindings   = clj_scope:new(Bindings),
   AddBindingFun = fun(K, Acc) ->
-                      clj_scope:put( clj_core:str(K)
-                                   , {ok, clj_core:get(BindingsMap, K)}
+                      clj_scope:put( clj_rt:str(K)
+                                   , {ok, clj_rt:get(BindingsMap, K)}
                                    , Acc
                                    )
                   end,
   NewBindings1  = lists:foldl( AddBindingFun
                              , NewBindings
-                             , clj_core:keys(BindingsMap)
+                             , clj_rt:keys(BindingsMap)
                              ),
   erlang:put(dynamic_bindings, NewBindings1),
   ok.
@@ -144,7 +144,7 @@ reset_bindings(Bindings) ->
 
 -spec dynamic_binding('clojerl.Var':type()) -> any().
 dynamic_binding(Var) ->
-  Key = clj_core:str(Var),
+  Key = clj_rt:str(Var),
   clj_scope:get(Key, get_bindings()).
 
 -spec dynamic_binding('clojerl.Var':type(), any()) -> any().
@@ -154,7 +154,7 @@ dynamic_binding(Var, Value) ->
       push_bindings(#{}),
       dynamic_binding(Var, Value);
     Bindings  ->
-      Key = clj_core:str(Var),
+      Key = clj_rt:str(Var),
       NewBindings = case clj_scope:update(Key, {ok, Value}, Bindings) of
                       not_found ->
                         clj_scope:put(Key, {ok, Value}, Bindings);
@@ -220,11 +220,11 @@ with_meta( #?TYPE{name = ?M, info = Info} = Keyword
 apply(#?TYPE{name = ?M} = Var, Args) ->
   Module   = module(Var),
   Function = function(Var),
-  Args1    = case clj_core:seq(Args) of
+  Args1    = case clj_rt:seq(Args) of
                ?NIL -> [];
                Seq       -> Seq
              end,
-  Args2    = process_args(Var, Args1, fun clj_core:seq/1),
+  Args2    = process_args(Var, Args1, fun clj_rt:seq/1),
   %% HACK
   Fun      = clj_module:fake_fun(Module, Function, length(Args2)),
 
@@ -255,4 +255,4 @@ process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
       end
   end;
 process_args(Var, Args, RestFun) ->
-  process_args(Var, clj_core:to_list(Args), RestFun).
+  process_args(Var, clj_rt:to_list(Args), RestFun).

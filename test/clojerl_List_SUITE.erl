@@ -38,49 +38,49 @@ end_per_suite(Config) -> Config.
 
 -spec new(config()) -> result().
 new(_Config) ->
-  List = clj_core:list([1, 2, 3]),
-  [1, 2, 3] = clj_core:seq(List),
+  List = clj_rt:list([1, 2, 3]),
+  [1, 2, 3] = clj_rt:seq(List),
 
-  List2 = clj_core:list([]),
-  List2 = clj_core:list(?NIL),
-  ?NIL = clj_core:seq(List2),
+  List2 = clj_rt:list([]),
+  List2 = clj_rt:list(?NIL),
+  ?NIL = clj_rt:seq(List2),
 
-  List = clj_core:list(clj_core:cons(1, [2, 3])),
+  List = clj_rt:list(clj_rt:cons(1, [2, 3])),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  List = clj_core:list([1, 2, 3]),
-  3 = clj_core:count(List),
+  List = clj_rt:list([1, 2, 3]),
+  3 = clj_rt:count(List),
 
-  List2 = clj_core:list([]),
-  0 = clj_core:count(List2),
+  List2 = clj_rt:list([]),
+  0 = clj_rt:count(List2),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  List = clj_core:list([1, 2, 3]),
-  <<"(1 2 3)">> = clj_core:str(List),
+  List = clj_rt:list([1, 2, 3]),
+  <<"(1 2 3)">> = clj_rt:str(List),
 
-  List2 = clj_core:list([]),
-  <<"()">> = clj_core:str(List2),
+  List2 = clj_rt:list([]),
+  <<"()">> = clj_rt:str(List2),
 
   {comments, ""}.
 
 -spec is_sequential(config()) -> result().
 is_sequential(_Config) ->
-  List = clj_core:list([1, 2, 3]),
-  true = clj_core:'sequential?'(List),
+  List = clj_rt:list([1, 2, 3]),
+  true = clj_rt:'sequential?'(List),
 
   {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  List1 = clj_core:list([1, 2, 3]),
-  List2 = clj_core:list([1, 3, 2]),
-  List3 = clj_core:list([1.0, 2, 3]),
+  List1 = clj_rt:list([1, 2, 3]),
+  List2 = clj_rt:list([1, 3, 2]),
+  List3 = clj_rt:list([1.0, 2, 3]),
 
   Hash1 = 'clojerl.IHash':hash(List1),
   Hash2 = 'clojerl.IHash':hash(List2),
@@ -93,76 +93,76 @@ hash(_Config) ->
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  List = clj_core:list([1, 2, 3]),
-  1 = clj_core:first(List),
-  [2, 3] = clj_core:seq(clj_core:next(List)),
-  [2, 3] = clj_core:seq(clj_core:rest(List)),
+  List = clj_rt:list([1, 2, 3]),
+  1 = clj_rt:first(List),
+  [2, 3] = clj_rt:seq(clj_rt:next(List)),
+  [2, 3] = clj_rt:seq(clj_rt:rest(List)),
 
-  List2 = clj_core:list([1]),
-  1 = clj_core:first(List2),
-  ?NIL = clj_core:next(List2),
-  [] = clj_core:to_list(clj_core:rest(List2)),
+  List2 = clj_rt:list([1]),
+  1 = clj_rt:first(List2),
+  ?NIL = clj_rt:next(List2),
+  [] = clj_rt:to_list(clj_rt:rest(List2)),
 
-  List3 = clj_core:list([]),
-  ?NIL = clj_core:first(List3),
-  ?NIL = clj_core:next(List3),
-  ?NIL = clj_core:rest(List3),
+  List3 = clj_rt:list([]),
+  ?NIL = clj_rt:first(List3),
+  ?NIL = clj_rt:next(List3),
+  ?NIL = clj_rt:rest(List3),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that lists with the same elements are equivalent"),
-  List1 = clj_core:with_meta(clj_core:list([1, 2, 3]), #{a => 1}),
-  List2 = clj_core:with_meta(clj_core:list([1, 2, 3]), #{b => 2}),
+  List1 = clj_rt:with_meta(clj_rt:list([1, 2, 3]), #{a => 1}),
+  List2 = clj_rt:with_meta(clj_rt:list([1, 2, 3]), #{b => 2}),
 
-  true  = clj_core:equiv(List1, List2),
+  true  = clj_rt:equiv(List1, List2),
 
   ct:comment("Check that lists with the same elements are not equivalent"),
-  List3 = clj_core:with_meta(clj_core:list([1, 2, 3, 4]), #{c => 3}),
-  false = clj_core:equiv(List1, List3),
+  List3 = clj_rt:with_meta(clj_rt:list([1, 2, 3, 4]), #{c => 3}),
+  false = clj_rt:equiv(List1, List3),
 
   ct:comment("A clojerl.List and an clojerl.erlang.List"),
-  true = clj_core:equiv(List1, [1, 2, 3]),
-  false = clj_core:equiv(List1, [1, 2, 3, a]),
+  true = clj_rt:equiv(List1, [1, 2, 3]),
+  false = clj_rt:equiv(List1, [1, 2, 3, a]),
 
   ct:comment("A clojerl.List and something else"),
-  false = clj_core:equiv(List1, whatever),
-  false = clj_core:equiv(List1, #{}),
+  false = clj_rt:equiv(List1, whatever),
+  false = clj_rt:equiv(List1, #{}),
 
   {comments, ""}.
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  EmptyList = clj_core:list([]),
+  EmptyList = clj_rt:list([]),
 
   ct:comment("Conj an element to an empty list"),
-  OneList = clj_core:conj(EmptyList, 1),
+  OneList = clj_rt:conj(EmptyList, 1),
 
-  1    = clj_core:count(OneList),
-  true = clj_core:equiv(OneList, [1]),
+  1    = clj_rt:count(OneList),
+  true = clj_rt:equiv(OneList, [1]),
 
   ct:comment("Conj an element to a list with one element"),
-  TwoList = clj_core:conj(OneList, 2),
+  TwoList = clj_rt:conj(OneList, 2),
 
-  2    = clj_core:count(TwoList),
-  true = clj_core:equiv(TwoList, [2, 1]),
+  2    = clj_rt:count(TwoList),
+  true = clj_rt:equiv(TwoList, [2, 1]),
 
   {comments, ""}.
 
 -spec stack(config()) -> result().
 stack(_Config) ->
-  EmptyList = clj_core:list([]),
-  ?NIL = clj_core:peek(EmptyList),
-  EmptyList = clj_core:pop(EmptyList),
+  EmptyList = clj_rt:list([]),
+  ?NIL = clj_rt:peek(EmptyList),
+  EmptyList = clj_rt:pop(EmptyList),
 
-  OneList   = clj_core:list([1]),
-  1         = clj_core:peek(OneList),
-  EmptyList = clj_core:pop(OneList),
+  OneList   = clj_rt:list([1]),
+  1         = clj_rt:peek(OneList),
+  EmptyList = clj_rt:pop(OneList),
 
-  TwoList   = clj_core:list([2, 1]),
-  2         = clj_core:peek(TwoList),
-  OneList = clj_core:pop(TwoList),
+  TwoList   = clj_rt:list([2, 1]),
+  2         = clj_rt:peek(TwoList),
+  OneList = clj_rt:pop(TwoList),
 
   {comments, ""}.
 
@@ -172,12 +172,12 @@ reduce(_Config) ->
               ([]) -> 0;
               ([X, Y]) -> X + Y
             end,
-  EmptyList = clj_core:list([]),
+  EmptyList = clj_rt:list([]),
 
   0  = 'clojerl.IReduce':reduce(EmptyList, PlusFun),
   42 = 'clojerl.IReduce':reduce(EmptyList, PlusFun, 42),
 
-  TenList = clj_core:list(lists:seq(1, 10)),
+  TenList = clj_rt:list(lists:seq(1, 10)),
   55 = 'clojerl.IReduce':reduce(TenList, PlusFun),
   60 = 'clojerl.IReduce':reduce(TenList, PlusFun, 5),
 
@@ -187,7 +187,7 @@ reduce(_Config) ->
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
   Reduced = 'clojerl.IReduce':reduce(TenList, PlusMaxFun),
-  10 = clj_core:deref(Reduced),
+  10 = clj_rt:deref(Reduced),
 
   {comments, ""}.
 
@@ -195,11 +195,11 @@ reduce(_Config) ->
 complete_coverage(_Config) ->
   ?NIL = 'clojerl.List':'_'(?NIL),
 
-  NotEmptyList = clj_core:list([a, b, 2, 3]),
-  EmptyList    = clj_core:empty(NotEmptyList),
-  EmptyList    = clj_core:list([]),
+  NotEmptyList = clj_rt:list([a, b, 2, 3]),
+  EmptyList    = clj_rt:empty(NotEmptyList),
+  EmptyList    = clj_rt:list([]),
 
-  ListMeta  = clj_core:with_meta(clj_core:list([1, 2, 3]), #{a => 1}),
-  #{a := 1} = clj_core:meta(ListMeta),
+  ListMeta  = clj_rt:with_meta(clj_rt:list([1, 2, 3]), #{a => 1}),
+  #{a := 1} = clj_rt:meta(ListMeta),
 
   {comments, ""}.

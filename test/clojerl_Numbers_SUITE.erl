@@ -48,11 +48,11 @@ hash(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   ct:comment("Check the string representation of an integer"),
-  <<"42">> = clj_core:str(42),
+  <<"42">> = clj_rt:str(42),
 
   ct:comment("Check the string representation of a float"),
-  <<"3.14">> = clj_core:str(3.14),
-  <<"3.1416">> = clj_core:str(3.1416),
-  <<"3.14159265">> = clj_core:str(3.14159265),
+  <<"3.14">> = clj_rt:str(3.14),
+  <<"3.1416">> = clj_rt:str(3.1416),
+  <<"3.14159265">> = clj_rt:str(3.14159265),
 
   {comments, ""}.

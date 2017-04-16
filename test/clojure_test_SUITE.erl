@@ -46,16 +46,16 @@ run(_Config) ->
 
   compile(<<"src/clj/clojure/core.clje">>),
   compile(<<"src/clj/clojure/main.clje">>),
-  'clojure.core':'in-ns'(clj_core:gensym(<<"temp-ns">>)),
-  'clojure.core':'use'([clj_core:symbol(<<"clojure.core">>)]),
+  'clojure.core':'in-ns'(clj_rt:gensym(<<"temp-ns">>)),
+  'clojure.core':'use'([clj_rt:symbol(<<"clojure.core">>)]),
   compile(<<"test/clj/examples/run_tests.clje">>),
 
   TestsPath = <<RootPath/binary, "/clojure/test_clojure/">>,
   Result    = 'examples.run-tests':'-main'([TestsPath, RootPath]),
 
-  0 = clj_core:get(Result, fail),
+  0 = clj_rt:get(Result, fail),
   %% There are two tests that fail because of atoms not being implemented
-  2 = clj_core:get(Result, error),
+  2 = clj_rt:get(Result, error),
 
   {comments, ""}.
 

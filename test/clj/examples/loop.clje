@@ -17,7 +17,7 @@
            (clojure.core/prn [:outer-recur x])
            (recur (erlang/+.e x 1)))
          (loop* [x :b x :a]
-                (if (clj_core/equiv.e x :a)
+                (if (clj_rt/equiv.e x :a)
                   (do
                     (clojure.core/prn [:inner-recur x])
                     (recur :b :c))
