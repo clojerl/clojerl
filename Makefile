@@ -1,8 +1,7 @@
 REBAR3    := rebar3
-ROOT_DIR  := ${CURDIR}
-EBIN      ?= ${ROOT_DIR}/ebin
 V         := @
 
+EBIN      ?= ${CURDIR}/ebin
 ERL_SRC   := ${CURDIR}/src/erl
 INCLUDE   := ${CURDIR}/include
 ERL_OPTS  := +debug_info
@@ -39,16 +38,16 @@ repl: compile
 # Clojure compilation
 # ------------------------------------------------------------------------------
 
-CLJ_SRC     := ${ROOT_DIR}/src/clj
-BOOT_SRC    := ${ROOT_DIR}/bootstrap
-CLJ_TEST    := ${ROOT_DIR}/test/clj
+BOOT_SRC    := ${CURDIR}/bootstrap
+CLJ_SRC     := ${CURDIR}/src/clj
+CLJ_TEST    := ${CURDIR}/test/clj
 CLJ_EXCLUDE := $(addprefix ${CLJ_SRC}/clojure/,core.clj core_deftype.clj core_print.clj)
 CLJ_FILES   := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
 
 CODE_PATH   := ${EBIN} ${CLJ_SRC}
 CLOJERLC    := bin/compile -o ${EBIN} -pa ${EBIN} -pa ${CLJ_SRC} -pa ${CLJ_TEST}
 
-# Maps clj to target beam or ns: path/to/ns/file.clj -> ns.file[.ext]
+# Maps clj to target beam or ns: path/to/ns/some_file.clj -> ns.some-file[.ext]
 define clj_to
 $(subst .clj,${2},$(subst _,-,$(subst /,.,${1:${CLJ_SRC}/%=%})))
 endef
