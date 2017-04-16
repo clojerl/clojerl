@@ -5,6 +5,8 @@
 
 -export([ all/0
         , init_per_suite/1
+        , init_per_testcase/2
+        , end_per_testcase/2
         ]).
 
 -export([ compile/1
@@ -18,6 +20,19 @@ all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
+
+-spec init_per_testcase(_, config()) -> config().
+init_per_testcase(_, Config) ->
+  Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
+              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              },
+  ok       = 'clojerl.Var':push_bindings(Bindings),
+  Config.
+
+-spec end_per_testcase(_, config()) -> config().
+end_per_testcase(_, Config) ->
+  'clojerl.Var':pop_bindings(),
+  Config.
 
 %%------------------------------------------------------------------------------
 %% Test Cases
@@ -64,12 +79,6 @@ compile_files(_Config) ->
   true     = code:add_path(binary_to_list(SrcPath)),
   true     = code:add_path(binary_to_list(TestPath)),
 
-  ct:comment("Compile all src/clj/clojure/*.clj files succesfully"),
-  Wildcard1 = clj_test_utils:relative_path(<<"src/clj/clojure/core.clj">>),
-  Files1    = filelib:wildcard(binary_to_list(Wildcard1)),
-  FilesBin1 = lists:map(fun erlang:list_to_binary/1, Files1),
-  _ = clj_compiler:compile_files(FilesBin1, Opts),
-
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath  = <<TestPath/binary, "/examples/simple.clj">>,
   Simple2Path = <<TestPath/binary, "/examples/simple_2.clj">>,
@@ -88,15 +97,17 @@ compile_files(_Config) ->
 
 -spec eval(config()) -> result().
 eval(_Config) ->
+  'clojure.core':'in-ns'(clj_core:symbol(<<"test.clj_compiler">>)),
+
   ct:comment("Eval form"),
   {1, _} = clj_compiler:eval(1),
 
   ct:comment("Define a var"),
   DefList = clj_reader:read(<<"(def hello :world)">>),
   {Var, _} = clj_compiler:eval(DefList),
-  Var = find_var(<<"clojure.core">>, <<"hello">>),
+  Var = find_var(<<"test.clj_compiler">>, <<"hello">>),
 
-  check_var_value(<<"clojure.core">>, <<"hello">>, world),
+  check_var_value(<<"test.clj_compiler">>, <<"hello">>, world),
 
   ct:comment("Current namespace is changed"),
   {_, _}  = clj_compiler:eval(clj_reader:read(<<"(ns a)">>)),

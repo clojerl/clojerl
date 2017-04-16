@@ -419,8 +419,14 @@ build_fake_fun(Function, Arity, Module) ->
                             , [Fun | Defs]
                             ),
 
-  CompileOpts = #{erl_flags => [from_core, binary]},
-  clj_compiler:compile_forms(FakeModule, CompileOpts),
+  try
+    Bindings    = #{<<"#'clojure.core/*compile-files*">> => false},
+    ok          = 'clojerl.Var':push_bindings(Bindings),
+    CompileOpts = #{erl_flags => [from_core, binary]},
+    clj_compiler:compile_forms(FakeModule, CompileOpts)
+  after
+    ok = 'clojerl.Var':pop_bindings()
+  end,
 
   save(Module#module.fake_modules, {FakeModuleName}),
 

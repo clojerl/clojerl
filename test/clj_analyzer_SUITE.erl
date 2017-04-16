@@ -10,7 +10,6 @@
         ]).
 
 -export([ constants/1
-        , ns/1
         , def/1
         , quote/1
         , fn/1
@@ -52,7 +51,10 @@ init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
 
 -spec init_per_testcase(_, config()) -> config().
 init_per_testcase(_, Config) ->
-  'clojerl.Var':push_bindings(#{}),
+  Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
+              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              },
+  ok       = 'clojerl.Var':push_bindings(Bindings),
   Config.
 
 -spec end_per_testcase(_, config()) -> config().
@@ -101,22 +103,6 @@ constants(_Config) ->
    , form := EmptyList
    } = analyze_one(<<"()">>),
   0 = clj_core:count(EmptyList),
-
-  {comments, ""}.
-
--spec ns(config()) -> result().
-ns(_Config) ->
-  ct:comment("Not a symbol"),
-  ok = try analyze_one(<<"(ns 1)">>)
-       catch _:_ -> ok
-       end,
-
-  ct:comment("Change namespace and analyze keyword"),
-  HelloKeyword = clj_core:keyword(<<"clojure.core">>, <<"hello">>),
-
-  [ #{op := invoke}
-  , #{op := constant, form := HelloKeyword}
-  ] = analyze_all(<<"(ns bla) ::hello">>),
 
   {comments, ""}.
 
@@ -174,7 +160,7 @@ def(_Config) ->
 
   [ #{op := invoke, args := [_]}
   , #{op := def}
-  ] = analyze_all(<<"(ns bla) (def x 1)">>),
+  ] = analyze_all(<<"(in-ns 'bla) (def x 1)">>),
 
   ct:comment("Function vars should have fn information in their metadata"),
   #{ op  := def
