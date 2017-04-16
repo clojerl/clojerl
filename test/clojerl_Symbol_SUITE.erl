@@ -32,28 +32,28 @@ end_per_suite(Config) -> Config.
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that symbols with the same names"),
-  Symbol1 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{a => 1}),
-  Symbol2 = clj_core:with_meta(clj_core:symbol(<<"hello">>), #{b => 2}),
+  Symbol1 = clj_rt:with_meta(clj_rt:symbol(<<"hello">>), #{a => 1}),
+  Symbol2 = clj_rt:with_meta(clj_rt:symbol(<<"hello">>), #{b => 2}),
 
-  true  = clj_core:equiv(Symbol1, Symbol2),
+  true  = clj_rt:equiv(Symbol1, Symbol2),
 
   ct:comment("Check that symbols with the differente names are not equivalent"),
-  Symbol3 = clj_core:with_meta(clj_core:symbol(<<"hello-world">>), #{c => 3}),
-  false = clj_core:equiv(Symbol1, Symbol3),
+  Symbol3 = clj_rt:with_meta(clj_rt:symbol(<<"hello-world">>), #{c => 3}),
+  false = clj_rt:equiv(Symbol1, Symbol3),
 
   ct:comment("A clojerl.Symbol and something else"),
-  false = clj_core:equiv(Symbol1, whatever),
-  false = clj_core:equiv(Symbol1, #{}),
+  false = clj_rt:equiv(Symbol1, whatever),
+  false = clj_rt:equiv(Symbol1, #{}),
 
   {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  HelloSymbol = clj_core:symbol(<<"hello">>),
+  HelloSymbol = clj_rt:symbol(<<"hello">>),
   Hash1 = 'clojerl.IHash':hash(HelloSymbol),
   Hash1 = 'clojerl.IHash':hash(HelloSymbol),
 
-  WorldSymbol = clj_core:symbol(<<"world">>),
+  WorldSymbol = clj_rt:symbol(<<"world">>),
   Hash2 = 'clojerl.IHash':hash(WorldSymbol),
 
   true = Hash1 =/= Hash2,
@@ -62,14 +62,14 @@ hash(_Config) ->
 
 -spec apply(config()) -> result().
 apply(_Config) ->
-  HelloSymbol = clj_core:symbol(<<"hello">>),
-  world = clj_core:apply(HelloSymbol, [#{HelloSymbol => world}]),
+  HelloSymbol = clj_rt:symbol(<<"hello">>),
+  world = clj_rt:apply(HelloSymbol, [#{HelloSymbol => world}]),
 
-  ?NIL      = clj_core:apply(HelloSymbol, [#{bla => ble}]),
-  not_found = clj_core:apply(HelloSymbol, [#{bla => ble}, not_found]),
+  ?NIL      = clj_rt:apply(HelloSymbol, [#{bla => ble}]),
+  not_found = clj_rt:apply(HelloSymbol, [#{bla => ble}, not_found]),
 
   ok = try
-         clj_core:apply(HelloSymbol, [#{bla => ble}, not_found, extra]),
+         clj_rt:apply(HelloSymbol, [#{bla => ble}, not_found, extra]),
          error
        catch _:_ ->
            ok
@@ -79,29 +79,29 @@ apply(_Config) ->
 
 -spec meta(config()) -> result().
 meta(_Config) ->
-  Symbol3   = clj_core:with_meta(clj_core:symbol(<<"hello-world">>), #{c => 3}),
-  #{c := 3} = clj_core:meta(Symbol3),
+  Symbol3   = clj_rt:with_meta(clj_rt:symbol(<<"hello-world">>), #{c => 3}),
+  #{c := 3} = clj_rt:meta(Symbol3),
 
   {comments, ""}.
 
 -spec name(config()) -> result().
 name(_Config) ->
-  HelloSymbol = clj_core:symbol(<<"hello">>),
-  ?NIL        = clj_core:namespace(HelloSymbol),
-  <<"hello">> = clj_core:name(HelloSymbol),
+  HelloSymbol = clj_rt:symbol(<<"hello">>),
+  ?NIL        = clj_rt:namespace(HelloSymbol),
+  <<"hello">> = clj_rt:name(HelloSymbol),
 
-  HelloWorldSymbol = clj_core:symbol(<<"hello">>, <<"world">>),
-  <<"hello">> = clj_core:namespace(HelloWorldSymbol),
-  <<"world">> = clj_core:name(HelloWorldSymbol),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello">>, <<"world">>),
+  <<"hello">> = clj_rt:namespace(HelloWorldSymbol),
+  <<"world">> = clj_rt:name(HelloWorldSymbol),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  HelloSymbol = clj_core:symbol(<<"hello">>),
-  <<"hello">> = clj_core:str(HelloSymbol),
+  HelloSymbol = clj_rt:symbol(<<"hello">>),
+  <<"hello">> = clj_rt:str(HelloSymbol),
 
-  HelloWorldSymbol = clj_core:symbol(<<"hello">>, <<"world">>),
-  <<"hello/world">> = clj_core:str(HelloWorldSymbol),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello">>, <<"world">>),
+  <<"hello/world">> = clj_rt:str(HelloWorldSymbol),
 
   {comments, ""}.

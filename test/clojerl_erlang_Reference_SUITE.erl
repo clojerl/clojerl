@@ -41,6 +41,6 @@ hash(_Config) ->
 str(_Config) ->
   ct:comment("Check the str representation of a reference"),
   Regex = <<"#<Ref \\d+\\.\\d+\\.\\d+\\.\\d+>">>,
-  match = re:run(clj_core:str(make_ref()), Regex, [{capture, none}]),
+  match = re:run(clj_rt:str(make_ref()), Regex, [{capture, none}]),
 
   {comments, ""}.

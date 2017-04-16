@@ -47,7 +47,7 @@
 %%------------------------------------------------------------------------------
 
 count(#?TYPE{name = ?M, data = {_, More}}) ->
-  1 + clj_core:count(More).
+  1 + clj_rt:count(More).
 
 cons(#?TYPE{name = ?M} = Cons, X) -> ?CONSTRUCTOR(X, Cons).
 
@@ -56,10 +56,10 @@ empty(_) -> [].
 equiv( #?TYPE{name = ?M, data = {XFirst, XMore}}
                       , #?TYPE{name = ?M, data = {YFirst, YMore}}
                       ) ->
-  clj_core:equiv(XFirst, YFirst) andalso clj_core:equiv(XMore, YMore);
+  clj_rt:equiv(XFirst, YFirst) andalso clj_rt:equiv(XMore, YMore);
 equiv(#?TYPE{name = ?M} = Cons, Y) ->
-  case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(to_list(Cons), clj_core:seq(Y));
+  case clj_rt:'sequential?'(Y) of
+    true  -> clj_rt:equiv(to_list(Cons), clj_rt:seq(Y));
     false -> false
   end.
 
@@ -73,13 +73,13 @@ with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 reduce(#?TYPE{name = ?M, data = {First, Rest}}, F) ->
-  do_reduce(F, First, clj_core:to_list(Rest)).
+  do_reduce(F, First, clj_rt:to_list(Rest)).
 
 reduce(#?TYPE{name = ?M, data = {First, Rest}}, F, Init) ->
-  do_reduce(F, Init, clj_core:conj(clj_core:to_list(Rest), First)).
+  do_reduce(F, Init, clj_rt:conj(clj_rt:to_list(Rest), First)).
 
 do_reduce(F, Acc, [First | Items]) ->
-  Val = clj_core:apply(F, [Acc, First]),
+  Val = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
     false -> do_reduce(F, Val, Items)
@@ -90,7 +90,7 @@ do_reduce(_F, Acc, []) ->
 first(#?TYPE{name = ?M, data = {First, _}}) -> First.
 
 next(#?TYPE{name = ?M, data = {_, ?NIL}}) -> ?NIL;
-next(#?TYPE{name = ?M, data = {_, More}}) -> clj_core:seq(More).
+next(#?TYPE{name = ?M, data = {_, More}}) -> clj_rt:seq(More).
 
 more(#?TYPE{name = ?M, data = {_, ?NIL}}) -> [];
 more(#?TYPE{name = ?M, data = {_, More}}) -> More.
@@ -100,7 +100,7 @@ more(#?TYPE{name = ?M, data = {_, More}}) -> More.
 seq(#?TYPE{name = ?M} = Cons) -> Cons.
 
 to_list(#?TYPE{name = ?M, data = {First, More}}) ->
-  [First | clj_core:to_list(More)].
+  [First | clj_rt:to_list(More)].
 
 str(#?TYPE{name = ?M} = Cons) ->
-  clj_core:str(to_list(Cons)).
+  clj_rt:str(to_list(Cons)).

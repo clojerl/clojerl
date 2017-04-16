@@ -61,10 +61,10 @@ empty(_) -> [].
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}
      ) ->
-  clj_core:equiv(X, Y);
+  clj_rt:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
-  case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv('clojerl.Seqable':to_list(LazySeq), Y);
+  case clj_rt:'sequential?'(Y) of
+    true  -> clj_rt:equiv('clojerl.Seqable':to_list(LazySeq), Y);
     false -> false
   end.
 
@@ -79,7 +79,7 @@ with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
 
 reduce(#?TYPE{name = ?M} = LazySeq, F) ->
   case seq(LazySeq) of
-    ?NIL -> clj_core:apply(F, []);
+    ?NIL -> clj_rt:apply(F, []);
     Seq  ->
       Init = 'clojerl.ISeq':first(Seq),
       Next = 'clojerl.ISeq':next(Seq),
@@ -93,7 +93,7 @@ do_reduce(F, Acc, #?TYPE{name = ?M} = LazySeq) ->
   do_reduce(F, Acc, seq(LazySeq));
 do_reduce(F, Acc, Seq) when Seq =/= ?NIL ->
   First = 'clojerl.ISeq':first(Seq),
-  Val   = clj_core:apply(F, [Acc, First]),
+  Val   = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
     false -> do_reduce(F, Val, 'clojerl.ISeq':next(Seq))

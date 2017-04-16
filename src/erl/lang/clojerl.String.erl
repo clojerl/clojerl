@@ -109,10 +109,10 @@ last_index_of(Str, Value, FromIndex) ->
 join([], _) ->
   <<>>;
 join([S], _) ->
-  clj_core:str(S);
+  clj_rt:str(S);
 join([H | T], Sep) ->
-  B = << <<Sep/binary, (clj_core:str(X))/binary>> || X <- T >>,
-  HStr = clj_core:str(H),
+  B = << <<Sep/binary, (clj_rt:str(X))/binary>> || X <- T >>,
+  HStr = clj_rt:str(H),
   <<HStr/binary, B/binary>>.
 
 -spec char_at(binary(), non_neg_integer()) -> binary().

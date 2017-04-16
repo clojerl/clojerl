@@ -138,13 +138,13 @@ eval(Form, Opts) ->
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Opts, Env) ->
-  DoSymbol = clj_core:symbol(<<"do">>),
+  DoSymbol = clj_rt:symbol(<<"do">>),
   case
-    clj_core:'seq?'(Form)
-    andalso clj_core:equiv(clj_core:first(Form), DoSymbol)
+    clj_rt:'seq?'(Form)
+    andalso clj_rt:equiv(clj_rt:first(Form), DoSymbol)
   of
     true ->
-      Forms = clj_core:to_list(clj_core:rest(Form)),
+      Forms = clj_rt:to_list(clj_rt:rest(Form)),
       FoldFun = fun(F, {_, EnvAcc}) ->
                     eval1(F, Opts, EnvAcc)
                 end,
@@ -335,7 +335,7 @@ eval_expressions(Expressions) ->
 eval_expressions(Expressions, ReplaceCalls) ->
   CurrentNs     = clj_namespace:current(),
   CurrentNsSym  = clj_namespace:name(CurrentNs),
-  CurrentNsAtom = binary_to_existing_atom(clj_core:str(CurrentNsSym), utf8),
+  CurrentNsAtom = binary_to_existing_atom(clj_rt:str(CurrentNsSym), utf8),
   ReplacedExprs = case ReplaceCalls of
                     true  -> [ clj_module:replace_calls(Expr, CurrentNsAtom)
                                || Expr <- Expressions

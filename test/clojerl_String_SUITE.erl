@@ -44,16 +44,16 @@ append(_Config) ->
 
 -spec count(config()) -> result().
 count(_Config) ->
-  3 = clj_core:count(<<"abc">>),
+  3 = clj_rt:count(<<"abc">>),
 
-  0 = clj_core:count(<<>>),
+  0 = clj_rt:count(<<>>),
 
   InvalidBinary = <<69, 82, 67, 80, 79, 0, 0, 0, 0, 0, 0, 0, 81, 0, 0, 0, 255,
                     255, 255, 255, 255, 255, 255, 255, 97, 0, 100, 0, 0, 0, 0,
                     0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 125, 0, 11, 29, 97,
                     29, 98, 29, 99, 29, 100, 114, 0, 11, 0>>,
-  ok = try clj_core:count(InvalidBinary), error
+  ok = try clj_rt:count(InvalidBinary), error
        catch _:_ -> ok
        end,
 
@@ -115,19 +115,19 @@ to_upper(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  <<"hello">> = clj_core:str(<<"hello">>),
-  <<>> = clj_core:str(<<>>),
+  <<"hello">> = clj_rt:str(<<"hello">>),
+  <<>> = clj_rt:str(<<>>),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  5 = clj_core:count(clj_core:seq(<<"hello">>)),
-  [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_core:seq(<<"hello">>),
+  5 = clj_rt:count(clj_rt:seq(<<"hello">>)),
+  [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_rt:seq(<<"hello">>),
 
-  ?NIL = clj_core:seq(<<>>),
+  ?NIL = clj_rt:seq(<<>>),
 
-  [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_core:to_list(<<"hello">>),
+  [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_rt:to_list(<<"hello">>),
 
   {comments, ""}.
 

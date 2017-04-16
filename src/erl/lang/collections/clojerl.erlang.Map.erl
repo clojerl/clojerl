@@ -47,7 +47,7 @@ entry_at(Map, Key) ->
   case maps:is_key(Key, Map) of
     true ->
       Val = maps:get(Key, Map),
-      clj_core:vector([Key, Val]);
+      clj_rt:vector([Key, Val]);
     false -> ?NIL
   end.
 
@@ -57,14 +57,14 @@ assoc(Map, Key, Value) ->
 count(Map) -> maps:size(Map).
 
 cons(Map, X) ->
-  IsVector = clj_core:'vector?'(X),
-  IsMap    = clj_core:'map?'(X),
-  case clj_core:to_list(X) of
+  IsVector = clj_rt:'vector?'(X),
+  IsMap    = clj_rt:'map?'(X),
+  case clj_rt:to_list(X) of
     [K, V] when IsVector ->
       Map#{K => V};
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                assoc(Acc, clj_core:first(KV), clj_core:second(KV))
+                assoc(Acc, clj_rt:first(KV), clj_rt:second(KV))
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->
@@ -86,21 +86,21 @@ equiv(X, Y) when is_map(X), is_map(Y) ->
 
       FunEquiv = fun(K) ->
                      maps:is_key(K, Y1)
-                       andalso clj_core:equiv( maps:get(K, X1)
+                       andalso clj_rt:equiv( maps:get(K, X1)
                                              , maps:get(K, Y1))
                  end,
 
       lists:all(FunEquiv, maps:keys(X1))
   end;
 equiv(X, Y) when is_map(X) ->
-  case clj_core:'map?'(Y) of
+  case clj_rt:'map?'(Y) of
     true  ->
-      Keys = clj_core:keys(Y),
+      Keys = clj_rt:keys(Y),
       Fun = fun(Key) ->
                 maps:is_key(Key, X) andalso
-                  clj_core:equiv(maps:get(Key, X), clj_core:get(Y, Key))
+                  clj_rt:equiv(maps:get(Key, X), clj_rt:get(Y, Key))
             end,
-      maps:size(X) == clj_core:count(Y)
+      maps:size(X) == clj_rt:count(Y)
         andalso lists:all(Fun, Keys);
     false -> false
   end.
@@ -141,8 +141,8 @@ without(Map, Key) ->
 
 str(Map) when is_map(Map) ->
   StrFun = fun(Key) ->
-               KeyStr = clj_core:str(Key),
-               ValStr = clj_core:str(maps:get(Key, Map)),
+               KeyStr = clj_rt:str(Key),
+               ValStr = clj_rt:str(maps:get(Key, Map)),
 
                'clojerl.String':join([KeyStr, ValStr], <<" ">>)
            end,
@@ -152,7 +152,7 @@ str(Map) when is_map(Map) ->
 
 seq(Map) when is_map(Map) ->
   FoldFun = fun(K, V, List) ->
-                [clj_core:vector([K, V]) | List]
+                [clj_rt:vector([K, V]) | List]
             end,
   case maps:fold(FoldFun, [], Map) of
     [] -> ?NIL;
@@ -161,6 +161,6 @@ seq(Map) when is_map(Map) ->
 
 to_list(Map) ->
   FoldFun = fun(K, V, List) ->
-                [clj_core:vector([K, V]) | List]
+                [clj_rt:vector([K, V]) | List]
             end,
   maps:fold(FoldFun, [], Map).

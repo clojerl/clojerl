@@ -44,7 +44,7 @@ count(Items) -> length(Items).
 hash(List) -> clj_murmur3:ordered(List).
 
 reduce([], F) ->
-  clj_core:apply(F, []);
+  clj_rt:apply(F, []);
 reduce([First | Rest], F) ->
   do_reduce(F, First, Rest).
 
@@ -52,7 +52,7 @@ reduce(List, F, Init) ->
   do_reduce(F, Init, List).
 
 do_reduce(F, Acc, [First | Items]) ->
-  Val = clj_core:apply(F, [Acc, First]),
+  Val = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
     false -> do_reduce(F, Val, Items)
@@ -63,7 +63,7 @@ do_reduce(_F, Acc, []) ->
 str([]) ->
   <<"()">>;
 str(Items) when is_list(Items) ->
-  ItemsStrs = lists:map(fun clj_core:str/1, Items),
+  ItemsStrs = lists:map(fun clj_rt:str/1, Items),
   Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.
 
@@ -103,15 +103,15 @@ equiv(X, Y) when is_list(X), is_list(Y) ->
     false -> false
   end;
 equiv(X, Y) ->
-  case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(Y, X);
+  case clj_rt:'sequential?'(Y) of
+    true  -> clj_rt:equiv(Y, X);
     false -> false
   end.
 
 do_equiv([], []) ->
   true;
 do_equiv([X | TailX], [Y | TailY]) ->
-  case clj_core:equiv(X, Y) of
+  case clj_rt:equiv(X, Y) of
     true  -> do_equiv(TailX, TailY);
     false -> false
   end.

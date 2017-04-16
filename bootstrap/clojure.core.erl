@@ -131,14 +131,14 @@
         ]).
 
 ns(Form, _Env, Name, _References) ->
-  clj_utils:error_when( not clj_core:'symbol?'(Name)
+  clj_utils:error_when( not clj_rt:'symbol?'(Name)
                       , <<"First argument to ns must be a symbol">>
                       , clj_reader:location_meta(Form)
                       ),
 
-  InNsSym = clj_core:symbol(<<"clojure.core">>, <<"in-ns">>),
-  QuoteSym = clj_core:symbol(<<"quote">>),
-  clj_core:list([InNsSym, clj_core:list([QuoteSym, Name])]).
+  InNsSym = clj_rt:symbol(<<"clojure.core">>, <<"in-ns">>),
+  QuoteSym = clj_rt:symbol(<<"quote">>),
+  clj_rt:list([InNsSym, clj_rt:list([QuoteSym, Name])]).
 
 ns__val() ->
   Var  = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"ns">>),
@@ -147,12 +147,12 @@ ns__val() ->
           , max_fixed_arity => ?NIL
           , variadic_arity  => 3
           },
-  clj_core:with_meta(Var, Meta).
+  clj_rt:with_meta(Var, Meta).
 
 'in-ns'(MaybeQuotedName) ->
   Name  = 'maybe-unquote'(MaybeQuotedName),
 
-  clj_utils:error_when( not clj_core:'symbol?'(Name)
+  clj_utils:error_when( not clj_rt:'symbol?'(Name)
                       , <<"First argument to in-ns must be a symbol">>
                       , clj_reader:location_meta(Name)
                       ),
@@ -166,12 +166,12 @@ ns__val() ->
           , max_fixed_arity => 1
           , variadic_arity  => ?NIL
           },
-  clj_core:with_meta(Var, Meta).
+  clj_rt:with_meta(Var, Meta).
 
 '*ns*__val'() ->
   case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*ns*">>) of
     ?NIL ->
-      ClojureCoreSym = clj_core:symbol(<<"clojure.core">>),
+      ClojureCoreSym = clj_rt:symbol(<<"clojure.core">>),
       clj_namespace:find_or_create(ClojureCoreSym);
     {ok, X}   -> X
   end.
@@ -223,12 +223,12 @@ ns__val() ->
 
 %% @private
 'maybe-unquote'(MaybeQuotedForm) ->
-  case clj_core:'seq?'(MaybeQuotedForm) of
+  case clj_rt:'seq?'(MaybeQuotedForm) of
     false -> MaybeQuotedForm;
     true  ->
-      Quote = clj_core:first(MaybeQuotedForm),
-      case clj_core:equiv(Quote, clj_core:symbol(<<"quote">>)) of
-        true  -> clj_core:second(MaybeQuotedForm);
+      Quote = clj_rt:first(MaybeQuotedForm),
+      case clj_rt:equiv(Quote, clj_rt:symbol(<<"quote">>)) of
+        true  -> clj_rt:second(MaybeQuotedForm);
         false -> MaybeQuotedForm
       end
   end.

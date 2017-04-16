@@ -21,7 +21,7 @@ apply(Fun, Args) when is_function(Fun), is_list(Args) ->
 
   erlang:apply(Fun, Args1);
 apply(Fun, Args) when is_function(Fun) ->
-  apply(Fun, clj_core:to_list(Args)).
+  apply(Fun, clj_rt:to_list(Args)).
 
 hash(Fun) when is_function(Fun) ->
   erlang:phash2(Fun).

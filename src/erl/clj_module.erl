@@ -222,7 +222,7 @@ add_mappings(Mappings, Module) ->
              ({K, V}) ->
                save(Module#module.mappings, {K, V});
              (V) ->
-               K = clj_core:name(V),
+               K = clj_rt:name(V),
                save(Module#module.mappings, {K, V})
            end,
   lists:foreach(AddFun, Mappings),

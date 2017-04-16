@@ -43,14 +43,14 @@ hash(_Config) ->
 
 -spec apply(config()) -> result().
 apply(_Config) ->
-  HelloKeyword = clj_core:keyword(<<"hello">>),
-  world = clj_core:apply(HelloKeyword, [#{HelloKeyword => world}]),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
+  world = clj_rt:apply(HelloKeyword, [#{HelloKeyword => world}]),
 
-  ?NIL = clj_core:apply(HelloKeyword, [#{bla => ble}]),
-  not_found = clj_core:apply(HelloKeyword, [#{bla => ble}, not_found]),
+  ?NIL = clj_rt:apply(HelloKeyword, [#{bla => ble}]),
+  not_found = clj_rt:apply(HelloKeyword, [#{bla => ble}, not_found]),
 
   ok = try
-         clj_core:apply(HelloKeyword, [#{bla => ble}, not_found, extra]),
+         clj_rt:apply(HelloKeyword, [#{bla => ble}, not_found, extra]),
          error
        catch _:_ ->
            ok
@@ -60,23 +60,23 @@ apply(_Config) ->
 
 -spec name(config()) -> result().
 name(_Config) ->
-  HelloKeyword = clj_core:keyword(<<"hello">>),
-  ?NIL   = clj_core:namespace(HelloKeyword),
-  <<"hello">> = clj_core:name(HelloKeyword),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
+  ?NIL   = clj_rt:namespace(HelloKeyword),
+  <<"hello">> = clj_rt:name(HelloKeyword),
 
-  HelloWorldKeyword = clj_core:keyword(<<"hello">>, <<"world">>),
-  <<"hello">> = clj_core:namespace(HelloWorldKeyword),
-  <<"world">> = clj_core:name(HelloWorldKeyword),
+  HelloWorldKeyword = clj_rt:keyword(<<"hello">>, <<"world">>),
+  <<"hello">> = clj_rt:namespace(HelloWorldKeyword),
+  <<"world">> = clj_rt:name(HelloWorldKeyword),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  HelloKeyword = clj_core:keyword(<<"hello">>),
-  <<":hello">> = clj_core:str(HelloKeyword),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
+  <<":hello">> = clj_rt:str(HelloKeyword),
 
-  HelloWorldKeyword = clj_core:keyword(<<"hello">>, <<"world">>),
-  <<":hello/world">> = clj_core:str(HelloWorldKeyword),
+  HelloWorldKeyword = clj_rt:keyword(<<"hello">>, <<"world">>),
+  <<":hello/world">> = clj_rt:str(HelloWorldKeyword),
 
   {comments, ""}.
 
@@ -177,9 +177,9 @@ complete_coverage(_Config) ->
 
   ct:comment("Use all new clauses"),
   hello = 'clojerl.Keyword':?CONSTRUCTOR(hello),
-  hello = 'clojerl.Keyword':?CONSTRUCTOR(clj_core:symbol(<<"hello">>)),
+  hello = 'clojerl.Keyword':?CONSTRUCTOR(clj_rt:symbol(<<"hello">>)),
   hello = 'clojerl.Keyword':?CONSTRUCTOR( ?NIL
-                                        , clj_core:symbol(<<"hello">>)
+                                        , clj_rt:symbol(<<"hello">>)
                                         ),
 
   {comments, ""}.

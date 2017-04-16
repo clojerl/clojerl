@@ -97,12 +97,12 @@ equiv( #?TYPE{name = ?M, data = X}
     true ->
       X1 = array:to_list(X),
       Y1 = array:to_list(Y),
-      clj_core:equiv(X1, Y1);
+      clj_rt:equiv(X1, Y1);
     false -> false
   end;
 equiv(#?TYPE{name = ?M, data = X}, Y) ->
-  case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(array:to_list(X), Y);
+  case clj_rt:'sequential?'(Y) of
+    true  -> clj_rt:equiv(array:to_list(X), Y);
     false -> false
   end.
 
@@ -138,7 +138,7 @@ with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
 
 reduce(#?TYPE{name = ?M, data = Array}, F) ->
   case array:size(Array) of
-    0    -> clj_core:apply(F, []);
+    0    -> clj_rt:apply(F, []);
     Size ->
       Init = array:get(0, Array),
       do_reduce(F, Init, 1, Size, Array)
@@ -146,12 +146,12 @@ reduce(#?TYPE{name = ?M, data = Array}, F) ->
 
 reduce(#?TYPE{name = ?M, data = Array}, F, Init) ->
   Fold = fun(_, Item, Acc) ->
-             clj_core:apply(F, [Acc, Item])
+             clj_rt:apply(F, [Acc, Item])
          end,
   array:foldl(Fold, Init, Array).
 
 do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
-  Val = clj_core:apply(F, [Acc, array:get(Index, Array)]),
+  Val = clj_rt:apply(F, [Acc, array:get(Index, Array)]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
     false -> do_reduce(F, Val, Index + 1, Size, Array)
@@ -196,6 +196,6 @@ to_list(#?TYPE{name = ?M, data = Array}) ->
   array:to_list(Array).
 
 str(#?TYPE{name = ?M, data = Array}) ->
-  Items = lists:map(fun clj_core:str/1, array:to_list(Array)),
+  Items = lists:map(fun clj_rt:str/1, array:to_list(Array)),
   Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"[", Strs/binary, "]">>.

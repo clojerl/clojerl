@@ -25,7 +25,7 @@
 equiv( #?TYPE{name = ?M, data = {X1, Y}}
      , #?TYPE{name = ?M, data = {X2, Y}}
      ) ->
-  clj_core:equiv(X1, X2);
+  clj_rt:equiv(X1, X2);
 equiv(_, _) ->
   false.
 
@@ -53,5 +53,5 @@ str(#?TYPE{name = ?M, data = {List, IsSplicing}}) ->
              true  -> <<"@">>;
              false -> <<>>
            end,
-  ListBin = clj_core:str(List),
+  ListBin = clj_rt:str(List),
   <<"#?", Splice/binary, ListBin/binary>>.

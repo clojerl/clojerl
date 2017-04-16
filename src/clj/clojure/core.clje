@@ -22,7 +22,7 @@
     :doc "Returns a new seq where x is the first element and seq is
     the rest."
     :added "1.0"}
-  cons (fn* [x s] (clj_core/cons.e x s)))
+  cons (fn* [x s] (clj_rt/cons.e x s)))
 
 (def
   ^{:macro true
@@ -39,14 +39,14 @@
     :added "1.0"}
   fn (fn* fn [&form _&env & decl]
          (let [x (cons 'fn* (new clojerl.List decl))]
-           (clj_core/with_meta.e x (clj_core/meta.e &form)))))
+           (clj_rt/with_meta.e x (clj_rt/meta.e &form)))))
 
 (def
   ^{:arglists '([coll])
     :doc "Returns the first item in the collection. Calls seq on its
     argument. If coll is nil, returns nil."
     :added "1.0"}
-  first (fn first [coll] (clj_core/first.e coll)))
+  first (fn first [coll] (clj_rt/first.e coll)))
 
 (def
   ^{:arglists '([coll])
@@ -54,7 +54,7 @@
     :doc "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil."
     :added "1.0"}
-  next (fn next [x] (clj_core/next.e x)))
+  next (fn next [x] (clj_rt/next.e x)))
 
 (def
   ^{:arglists '([coll])
@@ -62,7 +62,7 @@
     :doc "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
     :added "1.0"}
-  rest (fn rest [x] (clj_core/rest.e x)))
+  rest (fn rest [x] (clj_rt/rest.e x)))
 
 (def
   ^{:arglists '([coll x] [coll x & xs])
@@ -73,7 +73,7 @@
   conj (fn conj
          ([] [])
          ([coll] coll)
-         ([coll x] (clj_core/conj.e coll x))
+         ([coll x] (clj_rt/conj.e coll x))
          ([coll x & xs]
           (if xs
             (recur (conj coll x) (first xs) (next xs))
@@ -119,20 +119,20 @@
     object."
     :tag clojerl.ISeq
     :added "1.0"}
-  seq (fn seq [coll] (clj_core/seq.e coll)))
+  seq (fn seq [coll] (clj_rt/seq.e coll)))
 
 (def
   ^{:arglists '([protocol x])
     :doc "Returns true if x satisfies the protocol"
     :added "1.2"}
   satisfies? (fn satisfies? [protocol x]
-               (clj_core/satisfies?.e protocol (clj_core/type.e x))))
+               (clj_rt/satisfies?.e protocol (clj_rt/type.e x))))
 
 (def
   ^{:arglists '([atype x])
     :doc "Returns true if x's type is atype"
     :added "1.0"}
-  instance? (fn instance? [atype x] (erlang/==.e atype (clj_core/type.e x))))
+  instance? (fn instance? [atype x] (erlang/==.e atype (clj_rt/type.e x))))
 
 (def
   ^{:arglists '([x])
@@ -199,7 +199,7 @@
     :added "1.0"}
   assoc
   (fn assoc
-    ([map key val] (clj_core/assoc.e map key val))
+    ([map key val] (clj_rt/assoc.e map key val))
     ([map key val & kvs]
      (let [ret (assoc map key val)]
        (if kvs
@@ -215,7 +215,7 @@
     :added "1.0"}
   meta (fn meta [x]
          (if (meta? x)
-           (clj_core/meta.e x))))
+           (clj_rt/meta.e x))))
 
 (def
   ^{:arglists '([^clojure.lang.IObj obj m])
@@ -223,7 +223,7 @@
     map m as its metadata."
     :added "1.0"}
   with-meta (fn with-meta [x m]
-              (clj_core/with_meta.e x m)))
+              (clj_rt/with_meta.e x m)))
 
 (def ^{:private true :dynamic true}
   assert-valid-fdecl (fn [fdecl]))
@@ -237,8 +237,8 @@
           (fn [fdecl]
             (let [arglist (first fdecl)
                   ;elide implicit macro args
-                  arglist (if (clj_core/equiv.e '&form (first arglist))
-                            (clj_core/subvec.e arglist 2 (clj_core/count.e arglist))
+                  arglist (if (clj_rt/equiv.e '&form (first arglist))
+                            (clj_rt/subvec.e arglist 2 (clj_rt/count.e arglist))
                             arglist)
                   body (next fdecl)]
               (if (map? (first body))
@@ -323,7 +323,7 @@
   ([a b c] [a b c])
   ([a b c d] [a b c d])
   ([a b c d & args]
-   (clj_core/vector.e (cons a (cons b (cons c (cons d args)))))))
+   (clj_rt/vector.e (cons a (cons b (cons c (cons d args)))))))
 
 (defn vec
   "Creates a new vector containing the contents of coll."
@@ -332,8 +332,8 @@
    (if (vector? coll)
      (if (satisfies? clojerl.IMeta coll)
        (with-meta coll nil)
-       (clj_core/vector.e coll))
-     (clj_core/vector.e coll))))
+       (clj_rt/vector.e coll))
+     (clj_rt/vector.e coll))))
 
 (defn hash-map
   "keyval => key val
@@ -483,14 +483,14 @@
    :added "1.0"}
   (^clojerl.String [] "")
   (^clojerl.String [^Object x]
-                    (if (nil? x) "" (clj_core/str.e x)))
+                    (if (nil? x) "" (clj_rt/str.e x)))
   (^clojerl.String [x & ys]
                     ((fn [acc more]
                        (if more
                          (recur (clojerl.String/append.e acc (str (first more)))
                                 (next more))
                          acc))
-                     (clj_core/str.e x) ys)))
+                     (clj_rt/str.e x) ys)))
 
 (defn keyword?
   "Return true if x is a Keyword"
@@ -501,8 +501,8 @@
   "Returns a Symbol with the given namespace and name."
   {:tag clojerl.Symbol
    :added "1.0"}
-  ([name] (if (symbol? name) name (clj_core/symbol.e name)))
-  ([ns name] (clj_core/symbol.e ns name)))
+  ([name] (if (symbol? name) name (clj_rt/symbol.e name)))
+  ([ns name] (clj_rt/symbol.e ns name)))
 
 (defn gensym
   "Returns a new symbol with a unique name. If a prefix string is
@@ -510,7 +510,7 @@
   prefix is not supplied, the prefix is 'G__'."
   {:added "1.0"}
   ([] (gensym "G__"))
-  ([prefix-string] (clj_core/gensym.e prefix-string)))
+  ([prefix-string] (clj_rt/gensym.e prefix-string)))
 
 (defmacro cond
   "Takes a set of test/expr pairs. It evaluates each test one at a
@@ -532,8 +532,8 @@
   {:tag clojerl.Keyword
    :added "1.0"}
   ([name] (cond (keyword? name) name
-                (symbol? name) (new clojerl.Keyword (clj_core/namespace.e name)
-                                                      (clj_core/name.e name))
+                (symbol? name) (new clojerl.Keyword (clj_rt/namespace.e name)
+                                                      (clj_rt/name.e name))
                 (string? name) (new clojerl.Keyword name)))
   ([ns name] (new clojerl.Keyword ns name)))
 
@@ -545,8 +545,8 @@
   {:tag clojerl.Keyword
    :added "1.3"}
   ([name] (cond (keyword? name) name
-                (symbol? name) (clojerl.Keyword/find.e (clj_core/namespace.e name)
-                                                       (clj_core/name.e name))
+                (symbol? name) (clojerl.Keyword/find.e (clj_rt/namespace.e name)
+                                                       (clj_rt/name.e name))
                 (string? name) (clojerl.Keyword/find.e name)))
   ([ns name] (clojerl.Keyword/find.e ns name)))
 
@@ -701,12 +701,12 @@
   comparison."
   {:added "1.0"}
   ([x] true)
-  ([x y] (clj_core/equiv.e x y))
+  ([x y] (clj_rt/equiv.e x y))
   ([x y & more]
-   (if (clj_core/equiv.e x y)
+   (if (clj_rt/equiv.e x y)
      (if (next more)
        (recur y (first more) (next more))
-       (clj_core/equiv.e y (first more)))
+       (clj_rt/equiv.e y (first more)))
      false)))
 
 (defn not=
@@ -761,7 +761,7 @@
   "Returns the number of items in the collection. (count nil) returns
   0. Also works on strings, arrays, and Erlang lists, tuples and maps"
   {:added "1.0"}
-  [coll] (clj_core/count.e coll))
+  [coll] (clj_rt/count.e coll))
 
 (defn int
   "Coerce to int"
@@ -774,8 +774,8 @@
   also works for strings, Erlang tuples, and lists, and, in O(n) time,
   for sequences."
   {:added "1.0"}
-  ([coll index] (clj_core/nth.e coll index))
-  ([coll index not-found] (clj_core/nth.e coll index not-found)))
+  ([coll index] (clj_rt/nth.e coll index))
+  ([coll index not-found] (clj_rt/nth.e coll index not-found)))
 
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
@@ -1120,7 +1120,7 @@
   "For a list or queue, same as first, for a vector, same as, but much
   more efficient than, last. If the collection is empty, returns nil."
   {:added "1.0"}
-  [coll] (clj_core/peek.e coll))
+  [coll] (clj_rt/peek.e coll))
 
 (defn pop
   "For a list or queue, returns a new list/queue without the first
@@ -1128,7 +1128,7 @@
   the collection is empty, throws an exception.  Note - not the same
   as next/butlast."
   {:added "1.0"}
-  [coll] (clj_core/pop.e coll))
+  [coll] (clj_rt/pop.e coll))
 
 ;;map stuff
 
@@ -1145,15 +1145,15 @@
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   {:added "1.0"}
-  [coll key] (clj_core/contains?.e coll key))
+  [coll key] (clj_rt/contains?.e coll key))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
   {:added "1.0"}
   ([map key]
-   (clj_core/get.e map key))
+   (clj_rt/get.e map key))
   ([map key not-found]
-   (clj_core/get.e map key not-found)))
+   (clj_rt/get.e map key not-found)))
 
 (defn dissoc
   "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
@@ -1161,7 +1161,7 @@
   {:added "1.0"}
   ([map] map)
   ([map key]
-   (clj_core/dissoc.e map key))
+   (clj_rt/dissoc.e map key))
   ([map key & ks]
    (let [ret (dissoc map key)]
      (if ks
@@ -1175,7 +1175,7 @@
   ([set] set)
   ([^clojure.lang.IPersistentSet set key]
    (when set
-     (clj_core/disj.e set key)))
+     (clj_rt/disj.e set key)))
   ([set key & ks]
    (when set
      (let [ret (disj set key)]
@@ -1186,7 +1186,7 @@
 (defn find
   "Returns the map entry for key, or nil if key not present."
   {:added "1.0"}
-  [map key] (clj_core/find.e map key))
+  [map key] (clj_rt/find.e map key))
 
 (defn select-keys
   "Returns a map containing only those entries in map whose key is in keys"
@@ -1194,7 +1194,7 @@
   [map keyseq]
     (loop [ret {} keys (seq keyseq)]
       (if keys
-        (let [entry (clj_core/find.e map (first keys))]
+        (let [entry (clj_rt/find.e map (first keys))]
           (recur
            (if entry
              (conj ret entry)
@@ -1205,12 +1205,12 @@
 (defn keys
   "Returns a sequence of the map's keys, in the same order as (seq map)."
   {:added "1.0"}
-  [map] (clj_core/keys.e map))
+  [map] (clj_rt/keys.e map))
 
 (defn vals
   "Returns a sequence of the map's values, in the same order as (seq map)."
   {:added "1.0"}
-  [map] (clj_core/vals.e map))
+  [map] (clj_rt/vals.e map))
 
 (defn key
   "Returns the key of the map entry."
@@ -1229,21 +1229,21 @@
   can be a vector or sorted-map), in reverse order. If rev is empty returns nil"
   {:added "1.0"}
   [rev]
-    (clj_core/rseq.e rev))
+    (clj_rt/rseq.e rev))
 
 (defn name
   "Returns the name String of a string, symbol or keyword."
   {:tag clojerl.String
    :added "1.0"}
   [x]
-  (if (string? x) x (clj_core/name.e x)))
+  (if (string? x) x (clj_rt/name.e x)))
 
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   {:tag clojerl.String
    :added "1.0"}
   [^clojure.lang.Named x]
-  (clj_core/namespace.e x))
+  (clj_rt/namespace.e x))
 
 (defmacro ..
   "form => fieldName-symbol or (instanceMethodName-symbol args*)
@@ -1433,7 +1433,7 @@
 (defmacro set!
   [x val]
   (assert-args (symbol? x) "a symbol as its first argument")
-  `(clj_core/set!.e (var ~x) ~val))
+  `(clj_rt/set!.e (var ~x) ~val))
 
 (defmacro if-let
   "bindings => binding-form test
@@ -1918,8 +1918,8 @@
   {:added "1.0"}
   ([ref]
    (if (satisfies? clojerl.IDeref ref)
-     (clj_core/deref.e ref)
-     (throw (str "unimplemented deref for type " (clj_core/type.e ref)))
+     (clj_rt/deref.e ref)
+     (throw (str "unimplemented deref for type " (clj_rt/type.e ref)))
      #_(deref-future ref)))
   ([ref timeout-ms timeout-val]
    (throw "unimplemented timeout for deref")
@@ -2673,7 +2673,7 @@
    (sort compare coll))
   ([comp coll]
    (if (seq coll)
-     (lists/sort.e (clj_core/to_list.e coll))
+     (lists/sort.e (clj_rt/to_list.e coll))
      ())))
 
 (defn sort-by
@@ -2811,7 +2811,7 @@
                         `(loop [~seq- (seq ~v), ~chunk- nil,
                                 ~count- 0, ~i- 0]
                            (if (< ~i- ~count-)
-                             (let [~k (clj_core/nth.e ~chunk- ~i-)]
+                             (let [~k (clj_rt/nth.e ~chunk- ~i-)]
                                ~subform-chunk
                                ~@(when needrec [recform-chunk]))
                              (when-let [~seq- (seq ~seq-)]
@@ -3001,9 +3001,9 @@
   "Returns a tuple with components set to the values in aseq."
   {:added "1.0"}
   ([aseq]
-   (-> (seq aseq) clj_core/to_list.1 erlang/list_to_tuple.1))
+   (-> (seq aseq) clj_rt/to_list.1 erlang/list_to_tuple.1))
   ([type aseq]
-   (-> (seq aseq) clj_core/to_list.1 erlang/list_to_tuple.1)))
+   (-> (seq aseq) clj_rt/to_list.1 erlang/list_to_tuple.1)))
 
 (defn tuple
   "Returns a tuple with items."
@@ -3015,7 +3015,7 @@
   "Returns the Class of x"
   {:added "1.0"}
   ^clojerl.Keyword [^Object x]
-  (if (nil? x) x (clj_core/type.e x)))
+  (if (nil? x) x (clj_rt/type.e x)))
 
 (defn type
   "Returns the :type metadata of x, or its Class if none"
@@ -3054,24 +3054,24 @@
   "Coerce to short"
   {:added "1.0"}
   [^Number x]
-  (clj_core/short.e x))
+  (clj_rt/short.e x))
 
 (defn byte
   "Coerce to byte"
   {:added "1.0"}
   [^Number x]
-  (clj_core/byte.e x))
+  (clj_rt/byte.e x))
 
 (defn char
   "Coerce to char"
   {:added "1.1"}
   [x]
-  (clj_core/char.e x))
+  (clj_rt/char.e x))
 
 (defn boolean
   "Coerce to boolean"
   {:added "1.0"}
-  [x] (clj_core/boolean.e x))
+  [x] (clj_rt/boolean.e x))
 
 (defn number?
   "Returns true if x is a Number"
@@ -3224,7 +3224,7 @@
   ([v start]
    (subvec v start (count v)))
   ([v start end]
-   (clj_core/subvec.e v start end)))
+   (clj_rt/subvec.e v start end)))
 
 (defmacro with-open
   "bindings => [name init ...]
@@ -3332,7 +3332,7 @@
   [coll]
   (if (set? coll)
     (with-meta coll nil)
-    (clj_core/hash_set.e (clj_core/to_list.e coll))))
+    (clj_rt/hash_set.e (clj_rt/to_list.e coll))))
 
 (defn ^{:private true}
   filter-key [keyfn pred amap]
@@ -3633,7 +3633,7 @@
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
                                       (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (new clojerl.Map (clj_core/to_list.e ~gmapseq))
+                                                           (new clojerl.Map (clj_rt/to_list.e ~gmapseq))
                                                            ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
@@ -3888,7 +3888,7 @@
                                            ~gb (chunk-buffer size#)]
                                        (if (loop [~gi (int 0)]
                                              (if (< ~gi size#)
-                                               (let [~bind (clj_core/nth.e c# ~gi)]
+                                               (let [~bind (clj_rt/nth.e c# ~gi)]
                                                  ~(do-cmod mod-pairs))
                                                true))
                                          (chunk-cons
@@ -4075,14 +4075,14 @@
   ([s start end] (clojerl.String/substring.e s start end)))
 
 (defn regex? [x]
-  (clj_core/regex?.e x))
+  (clj_rt/regex?.e x))
 
 (defn re-run
   "Runs the matching of the pattern over the string using the provided
   options."
   {:added "1.0"}
   [re s & opts]
-  (let [opts (clj_core/to_list.e opts)
+  (let [opts (clj_rt/to_list.e opts)
         res  (erlang.util.Regex/run.e re s opts)]
     (when (and (tuple? res) (= (first res) :match))
       (vec (second res)))))
@@ -4330,7 +4330,7 @@
   {:added "1.0"}
   [coll]
   (when (satisfies? clojerl.IColl coll)
-    (clj_core/empty.e coll)))
+    (clj_rt/empty.e coll)))
 
 (defn seque
   "Creates a queued seq on another (presumably lazy) seq s. The queued
@@ -4565,7 +4565,7 @@
   string syntax"
   {:added "1.0"}
   ^clojerl.String [fmt & args]
-  (->> (clj_core/to_list.e args)
+  (->> (clj_rt/to_list.e args)
        (io_lib/format.e fmt)
        erlang/list_to_binary.e))
 
@@ -4767,7 +4767,7 @@
             "namespace '~s' not found after loading '~s'"
             lib (root-resource lib))
   (when require
-    (clj_core/set!.e #'*loaded-libs* (conj *loaded-libs* lib))))
+    (clj_rt/set!.e #'*loaded-libs* (conj *loaded-libs* lib))))
 
 (defn- load-all
   "Loads a lib given its name and forces a load of any libs it directly or
@@ -4775,7 +4775,7 @@
   exists after loading. If require, records the load so any duplicate loads
   can be skipped."
   [lib need-ns require]
-  (clj_core/set!.e #'*loaded-libs*
+  (clj_rt/set!.e #'*loaded-libs*
                    (reduce1 conj
                             *loaded-libs*
                             ;; TODO: should be a sorted-set
@@ -4965,7 +4965,7 @@
       (check-cyclic-dependency path)
       (when-not (= path (first *pending-paths*))
         (binding [*pending-paths* (conj *pending-paths* path)]
-          (clj_core/load.e (subs path 1)))))))
+          (clj_rt/load.e (subs path 1)))))))
 
 (defn compile
   "Compiles the namespace named by the symbol lib into a set of

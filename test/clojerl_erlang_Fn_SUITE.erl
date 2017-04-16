@@ -42,33 +42,33 @@ hash(_Config) ->
 apply(_Config) ->
   ct:comment("Apply a 0 arity fun with 0 arguments"),
   Fun0 = fun() -> ok end,
-  ok = clj_core:apply(Fun0, []),
+  ok = clj_rt:apply(Fun0, []),
 
   ct:comment("Apply a 2 arity fun with 2 arguments"),
   Fun2 = fun(X, Y) -> {X, Y} end,
-  {a, b} = clj_core:apply(Fun2, [a, b]),
+  {a, b} = clj_rt:apply(Fun2, [a, b]),
 
   ct:comment("Apply a 2 arity fun with 0 arguments"),
-  ok = try clj_core:apply(Fun2, []), error
+  ok = try clj_rt:apply(Fun2, []), error
        catch _:_ -> ok end,
 
   ct:comment("Apply a fun built from a function"),
   FunFunction = fun clojerl_erlang_Fn_SUITE:all/0,
-  [_ | _] = clj_core:apply(FunFunction, []),
+  [_ | _] = clj_rt:apply(FunFunction, []),
 
   ct:comment("Apply a non Clojure fun generated through erl_eval"),
-  ok = clj_core:apply(fun() -> ok end, []),
+  ok = clj_rt:apply(fun() -> ok end, []),
 
   ct:comment("Invoke a non Clojure named fun generated through erl_eval"),
-  ok = clj_core:apply(fun _Ok() -> ok end, []),
+  ok = clj_rt:apply(fun _Ok() -> ok end, []),
 
   ct:comment("Invoke a Clojure fun"),
   {CljFun, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
-  ok = clj_core:apply(CljFun, []),
+  ok = clj_rt:apply(CljFun, []),
 
   ct:comment("Invoke a Clojure fun with a seq as the argument list"),
   {CljFun2, _} = clj_compiler:eval(clj_reader:read(<<"(fn* [] :ok)">>)),
-  ok = clj_core:apply(CljFun2, clj_core:list([])),
+  ok = clj_rt:apply(CljFun2, clj_rt:list([])),
 
   {comments, ""}.
 
@@ -78,6 +78,6 @@ str(_Config) ->
 
   ct:comment("Check the str representation of a fun"),
   Fun0 = fun () -> ok end,
-  {match, _} = re:run(clj_core:str(Fun0), Regex),
+  {match, _} = re:run(clj_rt:str(Fun0), Regex),
 
   {comments, ""}.

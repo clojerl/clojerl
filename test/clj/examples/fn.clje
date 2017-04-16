@@ -22,7 +22,7 @@
 (clojure.core/assert (clojure.core/= (clojure.core/str one) "1"))
 
 (def fixed-arity
-  (fn* [x y] (clj_core/str.e [x y])))
+  (fn* [x y] (clj_rt/str.e [x y])))
 
 ;; Call a fn with single fixed arity
 
@@ -30,9 +30,9 @@
 
 (def multiple-fixed-arities
   (fn*
-   ([x] (clj_core/str.e [:multiple-fixed-arities 1 x]))
-   ([x y] (clj_core/str.e [:multiple-fixed-arities 2 x y]))
-   ([x y z] (clj_core/str.e [:multiple-fixed-arities 3 x y z]))))
+   ([x] (clj_rt/str.e [:multiple-fixed-arities 1 x]))
+   ([x y] (clj_rt/str.e [:multiple-fixed-arities 2 x y]))
+   ([x y z] (clj_rt/str.e [:multiple-fixed-arities 3 x y z]))))
 
 ;; Call a fn with multiple fixed arities
 
@@ -41,10 +41,10 @@
 (clojure.core/prn (multiple-fixed-arities 1 2 3))
 
 (def variadic-arity
-  (fn* [& xs] (clj_core/str.e [:variadic-arity xs])))
+  (fn* [& xs] (clj_rt/str.e [:variadic-arity xs])))
 
 (def variadic-arity-2
-  (fn* [x & xs] (clj_core/str.e [:variadic-arity-2 x xs])))
+  (fn* [x & xs] (clj_rt/str.e [:variadic-arity-2 x xs])))
 
 ;; Call a fn with a single variadic argument
 
@@ -58,10 +58,10 @@
 
 (def multiple-variadic
   (fn*
-   ([x] (clj_core/str.e [:multiple-variadic-1 x]))
-   ([x y] (clj_core/str.e [:multiple-variadic-2 x y]))
-   ([x y z] (clj_core/str.e [:multiple-variadic-3 x y z]))
-   ([x y z & w] (clj_core/str.e [:multiple-variadic-n x y z w]))))
+   ([x] (clj_rt/str.e [:multiple-variadic-1 x]))
+   ([x y] (clj_rt/str.e [:multiple-variadic-2 x y]))
+   ([x y z] (clj_rt/str.e [:multiple-variadic-3 x y z]))
+   ([x y z & w] (clj_rt/str.e [:multiple-variadic-n x y z w]))))
 
 ;; Call a  variadic fn that also has fixed arities
 

@@ -33,33 +33,33 @@ end_per_suite(Config) -> Config.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  3 = clj_core:count({1, 2, 3}),
-  0 = clj_core:count({}),
+  3 = clj_rt:count({1, 2, 3}),
+  0 = clj_rt:count({}),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  Symbol = clj_core:symbol(<<"hello">>),
+  Symbol = clj_rt:symbol(<<"hello">>),
   ct:comment("Check that tuples with the same elements are equivalent"),
-  Tuple1 = {clj_core:with_meta(Symbol, #{a => 1}), 1, a},
-  Tuple2 = {clj_core:with_meta(Symbol, #{b => 2}), 1, a},
-  true = clj_core:equiv(Tuple1, Tuple2),
+  Tuple1 = {clj_rt:with_meta(Symbol, #{a => 1}), 1, a},
+  Tuple2 = {clj_rt:with_meta(Symbol, #{b => 2}), 1, a},
+  true = clj_rt:equiv(Tuple1, Tuple2),
 
   ct:comment("Check that maps with different elements are not equivalent"),
-  false = clj_core:equiv(Tuple1, {a, b, c}),
-  false = clj_core:equiv(Tuple1, {1, 2, 3, 4}),
+  false = clj_rt:equiv(Tuple1, {a, b, c}),
+  false = clj_rt:equiv(Tuple1, {1, 2, 3, 4}),
 
   ct:comment("A Tuple and a List"),
-  true = clj_core:equiv(Tuple1, [Symbol, 1, a]),
-  false = clj_core:equiv(Tuple1, [1, 2, 3, 4]),
-  false = clj_core:equiv(Tuple1, [2, 3]),
+  true = clj_rt:equiv(Tuple1, [Symbol, 1, a]),
+  false = clj_rt:equiv(Tuple1, [1, 2, 3, 4]),
+  false = clj_rt:equiv(Tuple1, [2, 3]),
 
   ct:comment("A Tuple and something else"),
-  false = clj_core:equiv(Tuple1, whatever),
-  false = clj_core:equiv(Tuple1, 1),
-  false = clj_core:equiv(Tuple1, [1]),
-  false = clj_core:equiv(Tuple1, #{}),
+  false = clj_rt:equiv(Tuple1, whatever),
+  false = clj_rt:equiv(Tuple1, 1),
+  false = clj_rt:equiv(Tuple1, [1]),
+  false = clj_rt:equiv(Tuple1, #{}),
 
   {comments, ""}.
 
@@ -76,8 +76,8 @@ hash(_Config) ->
 
 -spec is_sequential(config()) -> result().
 is_sequential(_Config) ->
-  true = clj_core:'sequential?'({1, 2, 3}),
-  true = clj_core:'sequential?'({}),
+  true = clj_rt:'sequential?'({1, 2, 3}),
+  true = clj_rt:'sequential?'({}),
 
   {comments, ""}.
 
@@ -85,33 +85,33 @@ is_sequential(_Config) ->
 nth(_Config) ->
   Tuple = {1, b, 3},
 
-  1 = clj_core:nth(Tuple, 0),
-  b = clj_core:nth(Tuple, 1),
-  3 = clj_core:nth(Tuple, 2),
+  1 = clj_rt:nth(Tuple, 0),
+  b = clj_rt:nth(Tuple, 1),
+  3 = clj_rt:nth(Tuple, 2),
 
-  3 = clj_core:nth(Tuple, 2, not_found),
-  not_found = clj_core:nth(Tuple, 42, not_found),
+  3 = clj_rt:nth(Tuple, 2, not_found),
+  not_found = clj_rt:nth(Tuple, 42, not_found),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  [1, 2, 3] = clj_core:seq({1, 2, 3}),
+  [1, 2, 3] = clj_rt:seq({1, 2, 3}),
 
-  [1] = clj_core:seq({1}),
+  [1] = clj_rt:seq({1}),
 
-  ?NIL = clj_core:seq({}),
-  [1, 2, 3] = clj_core:to_list({1, 2, 3}),
+  ?NIL = clj_rt:seq({}),
+  [1, 2, 3] = clj_rt:to_list({1, 2, 3}),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
   Tuple = {1, 2, 3, 4},
-  <<"#erl[1, 2, 3, 4]">> = clj_core:str(Tuple),
+  <<"#erl[1, 2, 3, 4]">> = clj_rt:str(Tuple),
 
   EmptyTuple = {},
-  <<"#erl[]">> = clj_core:str(EmptyTuple),
+  <<"#erl[]">> = clj_rt:str(EmptyTuple),
 
   {comments, ""}.
 

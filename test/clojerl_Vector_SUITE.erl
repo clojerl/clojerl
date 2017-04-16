@@ -42,46 +42,46 @@ end_per_suite(Config) -> Config.
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Vector = clj_core:vector([1, 2, 3]),
-  true   = clj_core:equiv([1, 2, 3], clj_core:seq(Vector)),
+  Vector = clj_rt:vector([1, 2, 3]),
+  true   = clj_rt:equiv([1, 2, 3], clj_rt:seq(Vector)),
 
-  Vector2 = clj_core:vector([]),
-  ?NIL = clj_core:seq(Vector2),
+  Vector2 = clj_rt:vector([]),
+  ?NIL = clj_rt:seq(Vector2),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  Vector = clj_core:vector([1, 2, 3]),
-  3 = clj_core:count(Vector),
+  Vector = clj_rt:vector([1, 2, 3]),
+  3 = clj_rt:count(Vector),
 
-  Vector2 = clj_core:vector([]),
-  0 = clj_core:count(Vector2),
+  Vector2 = clj_rt:vector([]),
+  0 = clj_rt:count(Vector2),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Vector = clj_core:vector([1, 2, 3]),
-  <<"[1 2 3]">> = clj_core:str(Vector),
+  Vector = clj_rt:vector([1, 2, 3]),
+  <<"[1 2 3]">> = clj_rt:str(Vector),
 
-  Vector2 = clj_core:vector([]),
-  <<"[]">> = clj_core:str(Vector2),
+  Vector2 = clj_rt:vector([]),
+  <<"[]">> = clj_rt:str(Vector2),
 
   {comments, ""}.
 
 -spec is_sequential(config()) -> result().
 is_sequential(_Config) ->
-  Vector = clj_core:vector([1, 2, 3]),
-  true = clj_core:'sequential?'(Vector),
+  Vector = clj_rt:vector([1, 2, 3]),
+  true = clj_rt:'sequential?'(Vector),
 
   {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  Vector1 = clj_core:vector([1, 2, 3]),
-  Vector2 = clj_core:vector([1, 3, 2]),
-  Vector3 = clj_core:vector([1.0, 2, 3]),
+  Vector1 = clj_rt:vector([1, 2, 3]),
+  Vector2 = clj_rt:vector([1, 3, 2]),
+  Vector3 = clj_rt:vector([1.0, 2, 3]),
 
   Hash1 = 'clojerl.IHash':hash(Vector1),
   Hash2 = 'clojerl.IHash':hash(Vector2),
@@ -95,120 +95,120 @@ hash(_Config) ->
 -spec apply(config()) -> result().
 apply(_Config) ->
   ct:comment("Invoke a vector "),
-  Vector = clj_core:vector([1, b, 3]),
-  1 = clj_core:apply(Vector, [0]),
-  b = clj_core:apply(Vector, [1]),
-  3 = clj_core:apply(Vector, [2]),
+  Vector = clj_rt:vector([1, b, 3]),
+  1 = clj_rt:apply(Vector, [0]),
+  b = clj_rt:apply(Vector, [1]),
+  3 = clj_rt:apply(Vector, [2]),
 
   ct:comment("Invoke a vector with two arguments"),
-  ok = try clj_core:apply(Vector, [1, 2]), error
+  ok = try clj_rt:apply(Vector, [1, 2]), error
        catch _:_ -> ok end,
 
   {comments, ""}.
 
 -spec nth(config()) -> result().
 nth(_Config) ->
-  Vector = clj_core:vector([1, b, 3]),
+  Vector = clj_rt:vector([1, b, 3]),
 
-  1 = clj_core:nth(Vector, 0),
-  b = clj_core:nth(Vector, 1),
-  3 = clj_core:nth(Vector, 2),
+  1 = clj_rt:nth(Vector, 0),
+  b = clj_rt:nth(Vector, 1),
+  3 = clj_rt:nth(Vector, 2),
 
-  3 = clj_core:nth(Vector, 2, not_found),
-  not_found = clj_core:nth(Vector, 42, not_found),
+  3 = clj_rt:nth(Vector, 2, not_found),
+  not_found = clj_rt:nth(Vector, 42, not_found),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Vector = clj_core:vector([1, 2, 3]),
-  1 = clj_core:first(Vector),
-  [2, 3] = clj_core:seq(clj_core:next(Vector)),
-  [2, 3] = clj_core:seq(clj_core:rest(Vector)),
+  Vector = clj_rt:vector([1, 2, 3]),
+  1 = clj_rt:first(Vector),
+  [2, 3] = clj_rt:seq(clj_rt:next(Vector)),
+  [2, 3] = clj_rt:seq(clj_rt:rest(Vector)),
 
-  [1, 2, 3] = clj_core:to_list(Vector),
+  [1, 2, 3] = clj_rt:to_list(Vector),
 
-  Vector2 = clj_core:vector([1]),
-  1 = clj_core:first(Vector2),
-  ?NIL = clj_core:next(Vector2),
-  [] = clj_core:to_list(clj_core:rest(Vector2)),
+  Vector2 = clj_rt:vector([1]),
+  1 = clj_rt:first(Vector2),
+  ?NIL = clj_rt:next(Vector2),
+  [] = clj_rt:to_list(clj_rt:rest(Vector2)),
 
-  [1] = clj_core:to_list(Vector2),
+  [1] = clj_rt:to_list(Vector2),
 
-  Vector3 = clj_core:vector([]),
-  ?NIL = clj_core:first(Vector3),
-  ?NIL = clj_core:next(Vector3),
-  [] = clj_core:rest(Vector3),
+  Vector3 = clj_rt:vector([]),
+  ?NIL = clj_rt:first(Vector3),
+  ?NIL = clj_rt:next(Vector3),
+  [] = clj_rt:rest(Vector3),
 
-  [] = clj_core:to_list(Vector3),
+  [] = clj_rt:to_list(Vector3),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that vectors with the same elements are equivalent"),
-  Vector1 = clj_core:with_meta(clj_core:vector([1, 2, 3]), #{a => 1}),
-  Vector2 = clj_core:with_meta(clj_core:vector([1, 2, 3]), #{b => 2}),
+  Vector1 = clj_rt:with_meta(clj_rt:vector([1, 2, 3]), #{a => 1}),
+  Vector2 = clj_rt:with_meta(clj_rt:vector([1, 2, 3]), #{b => 2}),
 
-  true  = clj_core:equiv(Vector1, Vector2),
+  true  = clj_rt:equiv(Vector1, Vector2),
 
   ct:comment("Check that vectors with the same elements are not equivalent"),
-  Vector3 = clj_core:with_meta(clj_core:vector([1, 2, 3, 4]), #{c => 3}),
-  false = clj_core:equiv(Vector1, Vector3),
+  Vector3 = clj_rt:with_meta(clj_rt:vector([1, 2, 3, 4]), #{c => 3}),
+  false = clj_rt:equiv(Vector1, Vector3),
 
   ct:comment("A clojerl.Vector and an clojerl.erlang.List"),
-  true = clj_core:equiv(Vector1, [1, 2, 3]),
-  false = clj_core:equiv(Vector1, [1, 2, 3, a]),
+  true = clj_rt:equiv(Vector1, [1, 2, 3]),
+  false = clj_rt:equiv(Vector1, [1, 2, 3, a]),
 
   ct:comment("A clojerl.Vector and something else"),
-  false = clj_core:equiv(Vector1, whatever),
-  false = clj_core:equiv(Vector1, #{}),
+  false = clj_rt:equiv(Vector1, whatever),
+  false = clj_rt:equiv(Vector1, #{}),
 
   {comments, ""}.
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  EmptyVector = clj_core:vector([]),
+  EmptyVector = clj_rt:vector([]),
 
   ct:comment("Conj an element to an empty vector"),
-  OneVector = clj_core:conj(EmptyVector, 1),
+  OneVector = clj_rt:conj(EmptyVector, 1),
 
-  1    = clj_core:count(OneVector),
-  true = clj_core:equiv(OneVector, [1]),
+  1    = clj_rt:count(OneVector),
+  true = clj_rt:equiv(OneVector, [1]),
 
   ct:comment("Conj an element to a vector with one element"),
-  TwoVector = clj_core:conj(OneVector, 2),
+  TwoVector = clj_rt:conj(OneVector, 2),
 
-  2    = clj_core:count(TwoVector),
-  true = clj_core:equiv(TwoVector, [1, 2]),
+  2    = clj_rt:count(TwoVector),
+  true = clj_rt:equiv(TwoVector, [1, 2]),
 
   {comments, ""}.
 
 -spec subvec(config()) -> result().
 subvec(_Config) ->
-  OneToTen = clj_core:vector(lists:seq(1, 10)),
+  OneToTen = clj_rt:vector(lists:seq(1, 10)),
 
   ct:comment("Get subvec from 1 to 4, 0-based indexes"),
   TwoToFive = 'clojerl.Vector':subvec(OneToTen, 1, 4),
-  [2, 3, 4] = clj_core:to_list(TwoToFive),
+  [2, 3, 4] = clj_rt:to_list(TwoToFive),
 
   {comments, ""}.
 
 -spec stack(config()) -> result().
 stack(_Config) ->
-  EmptyVector = clj_core:vector([]),
-  ?NIL = clj_core:peek(EmptyVector),
-  ok = try EmptyVector = clj_core:pop(EmptyVector), error
+  EmptyVector = clj_rt:vector([]),
+  ?NIL = clj_rt:peek(EmptyVector),
+  ok = try EmptyVector = clj_rt:pop(EmptyVector), error
        catch _:_ -> ok
        end,
 
-  OneVector = clj_core:vector([1]),
-  1         = clj_core:peek(OneVector),
-  true      = clj_core:equiv(clj_core:pop(OneVector), EmptyVector),
+  OneVector = clj_rt:vector([1]),
+  1         = clj_rt:peek(OneVector),
+  true      = clj_rt:equiv(clj_rt:pop(OneVector), EmptyVector),
 
-  TwoVector   = clj_core:vector([1, 2]),
-  2         = clj_core:peek(TwoVector),
-  true      = clj_core:equiv(clj_core:pop(TwoVector), OneVector),
+  TwoVector   = clj_rt:vector([1, 2]),
+  2         = clj_rt:peek(TwoVector),
+  true      = clj_rt:equiv(clj_rt:pop(TwoVector), OneVector),
 
   {comments, ""}.
 
@@ -218,12 +218,12 @@ reduce(_Config) ->
               ([]) -> 0;
               ([X, Y]) -> X + Y
             end,
-  EmptyVector = clj_core:vector([]),
+  EmptyVector = clj_rt:vector([]),
 
   0  = 'clojerl.IReduce':reduce(EmptyVector, PlusFun),
   42 = 'clojerl.IReduce':reduce(EmptyVector, PlusFun, 42),
 
-  TenVector = clj_core:vector(lists:seq(1, 10)),
+  TenVector = clj_rt:vector(lists:seq(1, 10)),
   55 = 'clojerl.IReduce':reduce(TenVector, PlusFun),
   60 = 'clojerl.IReduce':reduce(TenVector, PlusFun, 5),
 
@@ -233,41 +233,41 @@ reduce(_Config) ->
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
   Reduced = 'clojerl.IReduce':reduce(TenVector, PlusMaxFun),
-  10 = clj_core:deref(Reduced),
+  10 = clj_rt:deref(Reduced),
 
   {comments, ""}.
 
 -spec associative(config()) -> result().
 associative(_Config) ->
-  EmptyVector = clj_core:vector([]),
+  EmptyVector = clj_rt:vector([]),
 
-  OneVector  = clj_core:assoc(EmptyVector, 0, a),
-  TwoVector  = clj_core:assoc(OneVector, 1, b),
-  OneVector2 = clj_core:assoc(TwoVector, 0, c),
+  OneVector  = clj_rt:assoc(EmptyVector, 0, a),
+  TwoVector  = clj_rt:assoc(OneVector, 1, b),
+  OneVector2 = clj_rt:assoc(TwoVector, 0, c),
 
-  [a]    = clj_core:to_list(OneVector),
-  [a, b] = clj_core:to_list(TwoVector),
-  [c, b] = clj_core:to_list(OneVector2),
+  [a]    = clj_rt:to_list(OneVector),
+  [a, b] = clj_rt:to_list(TwoVector),
+  [c, b] = clj_rt:to_list(OneVector2),
 
-  ok = try clj_core:assoc(EmptyVector, 2, a), error
+  ok = try clj_rt:assoc(EmptyVector, 2, a), error
        catch error:_ -> ok
        end,
 
-  ok = try clj_core:assoc(OneVector, 2, a), error
+  ok = try clj_rt:assoc(OneVector, 2, a), error
        catch error:_ -> ok
        end,
 
-  a = clj_core:find(TwoVector, 0),
-  b = clj_core:find(TwoVector, 1),
+  a = clj_rt:find(TwoVector, 0),
+  b = clj_rt:find(TwoVector, 1),
 
-  ?NIL = clj_core:find(TwoVector, 3),
+  ?NIL = clj_rt:find(TwoVector, 3),
 
-  true = clj_core:'contains?'(OneVector, 0),
-  true = clj_core:'contains?'(TwoVector, 1),
+  true = clj_rt:'contains?'(OneVector, 0),
+  true = clj_rt:'contains?'(TwoVector, 1),
 
-  false = clj_core:'contains?'(EmptyVector, 1),
-  false = clj_core:'contains?'(OneVector, 1),
-  false = clj_core:'contains?'(TwoVector, 2),
+  false = clj_rt:'contains?'(EmptyVector, 1),
+  false = clj_rt:'contains?'(OneVector, 1),
+  false = clj_rt:'contains?'(TwoVector, 2),
 
   {comments, ""}.
 
@@ -275,18 +275,18 @@ associative(_Config) ->
 complete_coverage(_Config) ->
   ?NIL = 'clojerl.Vector':'_'(?NIL),
 
-  NotEmptyVector = clj_core:vector([a, b, 2, 3]),
-  EmptyVector    = clj_core:empty(NotEmptyVector),
-  EmptyVector    = clj_core:vector([]),
+  NotEmptyVector = clj_rt:vector([a, b, 2, 3]),
+  EmptyVector    = clj_rt:empty(NotEmptyVector),
+  EmptyVector    = clj_rt:vector([]),
 
-  VectorMeta  = clj_core:with_meta(clj_core:vector([1, 2, 3]), #{a => 1}),
-  #{a := 1} = clj_core:meta(VectorMeta),
+  VectorMeta  = clj_rt:with_meta(clj_rt:vector([1, 2, 3]), #{a => 1}),
+  #{a := 1} = clj_rt:meta(VectorMeta),
 
-  a = clj_core:get(NotEmptyVector, 0),
-  b = clj_core:get(NotEmptyVector, 1),
-  2 = clj_core:get(NotEmptyVector, 2),
-  3 = clj_core:get(NotEmptyVector, 3),
-  ?NIL = clj_core:get(NotEmptyVector, 4),
-  bla = clj_core:get(NotEmptyVector, 43, bla),
+  a = clj_rt:get(NotEmptyVector, 0),
+  b = clj_rt:get(NotEmptyVector, 1),
+  2 = clj_rt:get(NotEmptyVector, 2),
+  3 = clj_rt:get(NotEmptyVector, 3),
+  ?NIL = clj_rt:get(NotEmptyVector, 4),
+  bla = clj_rt:get(NotEmptyVector, 43, bla),
 
   {comments, ""}.

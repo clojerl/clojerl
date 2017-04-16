@@ -87,7 +87,7 @@ entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
     true ->
       KeyFound = maps:get(Hash, Keys),
       Val      = maps:get(Hash, Vals),
-      clj_core:vector([KeyFound, Val]);
+      clj_rt:vector([KeyFound, Val]);
     false -> ?NIL
   end.
 
@@ -105,19 +105,19 @@ count(#?TYPE{name = ?M, data = {Keys, _}}) ->
 equiv( #?TYPE{name = ?M, data = {KeysX, ValsX}}
      , #?TYPE{name = ?M, data = {KeysY, ValsY}}
      ) ->
-  clj_core:equiv(KeysX, KeysY) andalso clj_core:equiv(ValsX, ValsY);
+  clj_rt:equiv(KeysX, KeysY) andalso clj_rt:equiv(ValsX, ValsY);
 equiv(#?TYPE{name = ?M, data = {Keys, Vals}}, Y) ->
-  case clj_core:'map?'(Y) of
+  case clj_rt:'map?'(Y) of
     true  ->
       KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
-                              , clj_core:to_list(clj_core:keys(Y))
+                              , clj_rt:to_list(clj_rt:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso
-                  clj_core:equiv(maps:get(Hash, Vals), clj_core:get(Y, Key))
+                  clj_rt:equiv(maps:get(Hash, Vals), clj_rt:get(Y, Key))
             end,
-      maps:size(Keys) =:= clj_core:count(Y)
+      maps:size(Keys) =:= clj_rt:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
@@ -138,14 +138,14 @@ apply(_, Args) ->
 cons(#?TYPE{name = ?M} = Map, ?NIL) ->
   Map;
 cons(#?TYPE{name = ?M} = Map, X) ->
-  IsVector = clj_core:'vector?'(X),
-  IsMap    = clj_core:'map?'(X),
-  case clj_core:to_list(X) of
+  IsVector = clj_rt:'vector?'(X),
+  IsMap    = clj_rt:'map?'(X),
+  case clj_rt:to_list(X) of
     [K, V] when IsVector ->
       assoc(Map, K, V);
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                assoc(Acc, clj_core:first(KV), clj_core:second(KV))
+                assoc(Acc, clj_rt:first(KV), clj_rt:second(KV))
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->
@@ -199,7 +199,7 @@ seq(#?TYPE{name = ?M} = Map) ->
 
 to_list(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
   FoldFun = fun(Hash, K, List) ->
-                [clj_core:vector([K, maps:get(Hash, Vals)]) | List]
+                [clj_rt:vector([K, maps:get(Hash, Vals)]) | List]
             end,
   maps:fold(FoldFun, [], Keys).
 
@@ -207,8 +207,8 @@ to_list(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
 
 str(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
   StrFun = fun(Hash) ->
-               KeyStr = clj_core:str(maps:get(Hash, Keys)),
-               ValStr = clj_core:str(maps:get(Hash, Vals)),
+               KeyStr = clj_rt:str(maps:get(Hash, Keys)),
+               ValStr = clj_rt:str(maps:get(Hash, Vals)),
                'clojerl.String':join([KeyStr, ValStr], <<" ">>)
            end,
   KeyValueStrs = lists:map(StrFun, maps:keys(Keys)),

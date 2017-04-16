@@ -38,20 +38,20 @@ end_per_suite(Config) -> Config.
 -spec new(config()) -> result().
 new(_Config) ->
   LazySeq3 = range(1, 3),
-  [1, 2, 3] = clj_core:to_list(LazySeq3),
+  [1, 2, 3] = clj_rt:to_list(LazySeq3),
 
   LazySeq0 = range(1, 0),
-  ?NIL = clj_core:seq(LazySeq0),
+  ?NIL = clj_rt:seq(LazySeq0),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
   LazySeq42 = range(1, 42),
-  42 = clj_core:count(LazySeq42),
+  42 = clj_rt:count(LazySeq42),
 
   LazySeq0 = range(1, 0),
-  0 = clj_core:count(LazySeq0),
+  0 = clj_rt:count(LazySeq0),
 
   {comments, ""}.
 
@@ -59,18 +59,18 @@ count(_Config) ->
 str(_Config) ->
   Regex = <<"#<clojerl.LazySeq@\\d+>">>,
   LazySeq3 = range(1, 3),
-  {match, _} = re:run(clj_core:str(LazySeq3), Regex),
+  {match, _} = re:run(clj_rt:str(LazySeq3), Regex),
 
   LazySeq0 = range(1, 0),
-  {match, _} = re:run(clj_core:str(LazySeq0), Regex),
-  <<"()">> = clj_core:str(clj_core:rest(LazySeq0)),
+  {match, _} = re:run(clj_rt:str(LazySeq0), Regex),
+  <<"()">> = clj_rt:str(clj_rt:rest(LazySeq0)),
 
   {comments, ""}.
 
 -spec is_sequential(config()) -> result().
 is_sequential(_Config) ->
   LazySeq = range(1, 3),
-  true = clj_core:'sequential?'(LazySeq),
+  true = clj_rt:'sequential?'(LazySeq),
 
   {comments, ""}.
 
@@ -92,48 +92,48 @@ hash(_Config) ->
 -spec seq(config()) -> result().
 seq(_Config) ->
   LazySeq = range(1, 3),
-  1 = clj_core:first(LazySeq),
-  2 = clj_core:first(clj_core:next(LazySeq)),
-  3 = clj_core:first(clj_core:next(clj_core:next(LazySeq))),
+  1 = clj_rt:first(LazySeq),
+  2 = clj_rt:first(clj_rt:next(LazySeq)),
+  3 = clj_rt:first(clj_rt:next(clj_rt:next(LazySeq))),
 
   LazySeq1 = range(1, 1),
-  1 = clj_core:first(LazySeq1),
-  ?NIL = clj_core:next(LazySeq1),
-  [] = clj_core:to_list(clj_core:rest(LazySeq1)),
-  ?NIL = clj_core:seq(clj_core:rest(LazySeq1)),
+  1 = clj_rt:first(LazySeq1),
+  ?NIL = clj_rt:next(LazySeq1),
+  [] = clj_rt:to_list(clj_rt:rest(LazySeq1)),
+  ?NIL = clj_rt:seq(clj_rt:rest(LazySeq1)),
 
   LazySeq0  = range(1, 0),
-  ?NIL = clj_core:first(LazySeq0),
-  ?NIL = clj_core:next(LazySeq0),
-  true = ?NIL =/= clj_core:rest(LazySeq0),
-  ?NIL = clj_core:seq(clj_core:rest(LazySeq0)),
+  ?NIL = clj_rt:first(LazySeq0),
+  ?NIL = clj_rt:next(LazySeq0),
+  true = ?NIL =/= clj_rt:rest(LazySeq0),
+  ?NIL = clj_rt:seq(clj_rt:rest(LazySeq0)),
 
   LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> range(1, 3) end),
-  1 = clj_core:first(LazySeqBis),
-  2 = clj_core:first(clj_core:rest(LazySeqBis)),
-  3 = clj_core:first(clj_core:next(clj_core:next(LazySeqBis))),
-  [1, 2, 3] = clj_core:to_list(clj_core:seq(LazySeqBis)),
+  1 = clj_rt:first(LazySeqBis),
+  2 = clj_rt:first(clj_rt:rest(LazySeqBis)),
+  3 = clj_rt:first(clj_rt:next(clj_rt:next(LazySeqBis))),
+  [1, 2, 3] = clj_rt:to_list(clj_rt:seq(LazySeqBis)),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that lazy seqs with the same elements are equivalent"),
-  LazySeq1 = clj_core:with_meta(range(1, 3), #{a => 1}),
-  LazySeq2 = clj_core:with_meta(range(1, 3), #{b => 2}),
-  true = clj_core:equiv(LazySeq1, LazySeq2),
+  LazySeq1 = clj_rt:with_meta(range(1, 3), #{a => 1}),
+  LazySeq2 = clj_rt:with_meta(range(1, 3), #{b => 2}),
+  true = clj_rt:equiv(LazySeq1, LazySeq2),
 
   ct:comment("Check that a lazy seq and a list with the "
              "same elements are equivalent"),
-  true = clj_core:equiv(LazySeq1, [1, 2, 3]),
+  true = clj_rt:equiv(LazySeq1, [1, 2, 3]),
 
   ct:comment("Check that lists with the same elements are not equivalent"),
-  LazySeq3 = clj_core:with_meta(range(1, 4), #{c => 3}),
-  false = clj_core:equiv(LazySeq1, LazySeq3),
+  LazySeq3 = clj_rt:with_meta(range(1, 4), #{c => 3}),
+  false = clj_rt:equiv(LazySeq1, LazySeq3),
 
   ct:comment("A clojerl.List and something else"),
-  false = clj_core:equiv(LazySeq1, whatever),
-  false = clj_core:equiv(LazySeq1, #{}),
+  false = clj_rt:equiv(LazySeq1, whatever),
+  false = clj_rt:equiv(LazySeq1, #{}),
 
   {comments, ""}.
 
@@ -142,16 +142,16 @@ cons(_Config) ->
   LazySeq = range(2, 2),
 
   ct:comment("Conj an element to a one element lazy seq"),
-  TwoList = clj_core:conj(LazySeq, 1),
+  TwoList = clj_rt:conj(LazySeq, 1),
 
-  2    = clj_core:count(TwoList),
-  true = clj_core:equiv(clj_core:to_list(TwoList), [1, 2]),
+  2    = clj_rt:count(TwoList),
+  true = clj_rt:equiv(clj_rt:to_list(TwoList), [1, 2]),
 
   ct:comment("Conj an element to a list with one element"),
-  ThreeList = clj_core:conj(TwoList, 0),
+  ThreeList = clj_rt:conj(TwoList, 0),
 
-  3    = clj_core:count(ThreeList),
-  true = clj_core:equiv(clj_core:to_list(ThreeList), [0, 1, 2]),
+  3    = clj_rt:count(ThreeList),
+  true = clj_rt:equiv(clj_rt:to_list(ThreeList), [0, 1, 2]),
 
   {comments, ""}.
 
@@ -176,7 +176,7 @@ reduce(_Config) ->
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
   Reduced = 'clojerl.IReduce':reduce(TenLazySeq, PlusMaxFun),
-  10 = clj_core:deref(Reduced),
+  10 = clj_rt:deref(Reduced),
 
   {comments, ""}.
 
@@ -185,11 +185,11 @@ complete_coverage(_Config) ->
   ?NIL = 'clojerl.LazySeq':'_'(?NIL),
 
   LazySeq   = range(2, 2),
-  EmptyList = clj_core:empty(LazySeq),
+  EmptyList = clj_rt:empty(LazySeq),
   EmptyList = [],
 
-  LazySeqMeta = clj_core:with_meta(LazySeq, #{a => 1}),
-  #{a := 1}   = clj_core:meta(LazySeqMeta),
+  LazySeqMeta = clj_rt:with_meta(LazySeq, #{a => 1}),
+  #{a := 1}   = clj_rt:meta(LazySeqMeta),
 
   {comments, ""}.
 

@@ -35,7 +35,7 @@ hash(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   ct:comment("Check the string representation of true and false"),
-  <<"true">> = clj_core:str(true),
-  <<"false">> = clj_core:str(false),
+  <<"true">> = clj_rt:str(true),
+  <<"false">> = clj_rt:str(false),
 
   {comments, ""}.

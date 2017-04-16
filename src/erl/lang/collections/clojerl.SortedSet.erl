@@ -64,7 +64,7 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv(#?TYPE{name = ?M} = X, #?TYPE{name = ?M} = Y) ->
   hash(X) =:= hash(Y);
 equiv(#?TYPE{name = ?M} = X, Y) ->
-  clj_core:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
+  clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
@@ -126,6 +126,6 @@ to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
 %% clojerl.Stringable
 
 str(#?TYPE{name = ?M, data = {_, Vals}}) ->
-  Items = [clj_core:str(K) || {K, _} <- rbdict:to_list(Vals)],
+  Items = [clj_rt:str(K) || {K, _} <- rbdict:to_list(Vals)],
   Strs  = 'clojerl.String':join(Items, <<" ">>),
   <<"#{", Strs/binary, "}">>.

@@ -154,22 +154,22 @@ keyword(Config) when is_list(Config) ->
   keyword(fun read/1),
   keyword(fun read_io/1);
 keyword(ReadFun) ->
-  SomeNsSymbol = clj_core:symbol(<<"some-ns">>),
+  SomeNsSymbol = clj_rt:symbol(<<"some-ns">>),
   clj_namespace:find_or_create(SomeNsSymbol),
 
-  Keyword1 = clj_core:keyword(<<"hello-world">>),
+  Keyword1 = clj_rt:keyword(<<"hello-world">>),
   Keyword1 = ReadFun(<<":hello-world">>),
 
-  Keyword2 = clj_core:keyword(<<"some-ns">>, <<"hello-world">>),
+  Keyword2 = clj_rt:keyword(<<"some-ns">>, <<"hello-world">>),
   Keyword2 = ReadFun(<<"::hello-world">>),
 
-  Keyword3 = clj_core:keyword(<<"another-ns">>, <<"hello-world">>),
+  Keyword3 = clj_rt:keyword(<<"another-ns">>, <<"hello-world">>),
   Keyword3 = ReadFun(<<":another-ns/hello-world">>),
 
-  Keyword4 = clj_core:keyword(<<"/">>),
+  Keyword4 = clj_rt:keyword(<<"/">>),
   Keyword4 = ReadFun(<<":/">>),
 
-  Keyword5 = clj_core:keyword(<<"some-ns">>, <<"/">>),
+  Keyword5 = clj_rt:keyword(<<"some-ns">>, <<"/">>),
   Keyword5 = ReadFun(<<":some-ns//">>),
 
   ct:comment("Error: triple colon :::"),
@@ -203,19 +203,19 @@ symbol(Config) when is_list(Config) ->
   symbol(fun read/1),
   symbol(fun read_io/1);
 symbol(ReadFun) ->
-  Symbol1 = clj_core:symbol(<<"hello-world">>),
-  true    = clj_core:equiv(ReadFun(<<"hello-world">>), Symbol1),
+  Symbol1 = clj_rt:symbol(<<"hello-world">>),
+  true    = clj_rt:equiv(ReadFun(<<"hello-world">>), Symbol1),
 
-  Symbol2 = clj_core:symbol(<<"some-ns">>, <<"hello-world">>),
-  true    = clj_core:equiv(ReadFun(<<"some-ns/hello-world">>), Symbol2),
+  Symbol2 = clj_rt:symbol(<<"some-ns">>, <<"hello-world">>),
+  true    = clj_rt:equiv(ReadFun(<<"some-ns/hello-world">>), Symbol2),
 
-  Symbol3 = clj_core:symbol(<<"another-ns">>, <<"hello-world">>),
-  true    = clj_core:equiv( ReadFun(<<"another-ns/hello-world">>)
+  Symbol3 = clj_rt:symbol(<<"another-ns">>, <<"hello-world">>),
+  true    = clj_rt:equiv( ReadFun(<<"another-ns/hello-world">>)
                           , Symbol3
                           ),
 
-  Symbol4 = clj_core:symbol(<<"some-ns">>, <<"/">>),
-  true    = clj_core:equiv(ReadFun(<<"some-ns//">>), Symbol4),
+  Symbol4 = clj_rt:symbol(<<"some-ns">>, <<"/">>),
+  true    = clj_rt:equiv(ReadFun(<<"some-ns//">>), Symbol4),
 
   ct:comment("nil, true & false"),
   ?NIL = ReadFun(<<"nil">>),
@@ -243,7 +243,7 @@ comment(Config) when is_list(Config) ->
   comment(fun read_all/1),
   comment(fun read_all_io/1);
 comment(ReadAllFun) ->
-  BlaKeyword = clj_core:keyword(<<"bla">>),
+  BlaKeyword = clj_rt:keyword(<<"bla">>),
 
   ct:comment("Single semi-colon"),
   [1, BlaKeyword] = ReadAllFun(<<"1 ; comment\n :bla ">>),
@@ -263,19 +263,19 @@ quote(Config) when is_list(Config) ->
   quote(fun read/1),
   quote(fun read_io/1);
 quote(ReadFun) ->
-  QuoteSymbol = clj_core:symbol(<<"quote">>),
-  ListSymbol = clj_core:symbol(<<"list">>),
+  QuoteSymbol = clj_rt:symbol(<<"quote">>),
+  ListSymbol = clj_rt:symbol(<<"list">>),
 
   ct:comment("Quote number"),
-  ListQuote1 = clj_core:list([QuoteSymbol, 1]),
+  ListQuote1 = clj_rt:list([QuoteSymbol, 1]),
   ListQuote1 = ReadFun(<<"'1">>),
 
   ct:comment("Quote symbol"),
-  ListQuote2 = clj_core:list([QuoteSymbol, ListSymbol]),
-  true       = clj_core:equiv(ReadFun(<<"'list">>), ListQuote2),
+  ListQuote2 = clj_rt:list([QuoteSymbol, ListSymbol]),
+  true       = clj_rt:equiv(ReadFun(<<"'list">>), ListQuote2),
 
   ct:comment("Quote space symbol"),
-  true       = clj_core:equiv(ReadFun(<<"' list">>), ListQuote2),
+  true       = clj_rt:equiv(ReadFun(<<"' list">>), ListQuote2),
 
   ct:comment("Error: only provide ' "),
   ok = try ReadFun(<<"'">>)
@@ -289,20 +289,20 @@ deref(Config) when is_list(Config) ->
   deref(fun read_io/1, fun read_all_io/1).
 
 deref(ReadFun, ReadAllFun) ->
-  DerefSymbol = clj_core:symbol(<<"clojure.core">>, <<"deref">>),
-  ListSymbol = clj_core:symbol(<<"list">>),
+  DerefSymbol = clj_rt:symbol(<<"clojure.core">>, <<"deref">>),
+  ListSymbol = clj_rt:symbol(<<"list">>),
 
   ct:comment("Deref number :P"),
-  ListDeref1 = clj_core:list([DerefSymbol, 1]),
+  ListDeref1 = clj_rt:list([DerefSymbol, 1]),
   ListDeref1= ReadFun(<<"@1">>),
 
   ct:comment("Deref symbol :P"),
-  ListDeref2 = clj_core:list([DerefSymbol, ListSymbol]),
-  true       = clj_core:equiv(ReadFun(<<"@list">>), ListDeref2),
+  ListDeref2 = clj_rt:list([DerefSymbol, ListSymbol]),
+  true       = clj_rt:equiv(ReadFun(<<"@list">>), ListDeref2),
 
   ct:comment("Deref symbol :P and read other stuff"),
   [ListDeref3, 42.0] = ReadAllFun(<<"@list 42.0">>),
-  true = clj_core:equiv(ListDeref3, ListDeref2),
+  true = clj_rt:equiv(ListDeref3, ListDeref2),
 
   ct:comment("Error: only provide @ "),
   ok = try ReadFun(<<"@">>)
@@ -326,9 +326,9 @@ meta(ReadFun) ->
   %% Compare metadata after removing the location information.
   CheckMetaEquiv =
     fun(Value, ExpectedMeta) ->
-        Meta = clj_core:meta(Value),
+        Meta = clj_rt:meta(Value),
         MetaNoLocation = clj_reader:remove_location(Meta),
-        clj_core:equiv(MetaNoLocation, ExpectedMeta)
+        clj_rt:equiv(MetaNoLocation, ExpectedMeta)
     end,
 
   ct:comment("Keyword meta to symbol"),
@@ -392,23 +392,23 @@ syntax_quote(Config) when is_list(Config) ->
   syntax_quote(fun read/1),
   syntax_quote(fun read_io/1);
 syntax_quote(ReadFun) ->
-  WithMetaSym = clj_core:symbol(<<"clojure.core">>, <<"with-meta">>),
-  QuoteSym = clj_core:symbol(<<"quote">>),
-  QuoteFun = fun(X) -> clj_core:list([QuoteSym, X]) end,
+  WithMetaSym = clj_rt:symbol(<<"clojure.core">>, <<"with-meta">>),
+  QuoteSym = clj_rt:symbol(<<"quote">>),
+  QuoteFun = fun(X) -> clj_rt:list([QuoteSym, X]) end,
 
   ct:comment("Read special form"),
-  DoSym = clj_core:symbol(<<"do">>),
+  DoSym = clj_rt:symbol(<<"do">>),
   QuoteDoList = QuoteFun(DoSym),
   DoSyntaxQuote = ReadFun(<<"`do">>),
-  true = clj_core:equiv(clj_core:first(DoSyntaxQuote), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(DoSyntaxQuote), QuoteDoList),
+  true = clj_rt:equiv(clj_rt:first(DoSyntaxQuote), WithMetaSym),
+  true = clj_rt:equiv(clj_rt:second(DoSyntaxQuote), QuoteDoList),
 
-  DefSym = clj_core:symbol(<<"def">>),
+  DefSym = clj_rt:symbol(<<"def">>),
 
-  QuoteDefList = clj_core:list([QuoteSym, DefSym]),
+  QuoteDefList = clj_rt:list([QuoteSym, DefSym]),
   DefSyntaxQuote = ReadFun(<<"`def">>),
-  true = clj_core:equiv(clj_core:first(DefSyntaxQuote), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(DefSyntaxQuote), QuoteDefList),
+  true = clj_rt:equiv(clj_rt:first(DefSyntaxQuote), WithMetaSym),
+  true = clj_rt:equiv(clj_rt:second(DefSyntaxQuote), QuoteDefList),
 
   ct:comment("Read literals"),
   1 = ReadFun(<<"`1">>),
@@ -416,49 +416,49 @@ syntax_quote(ReadFun) ->
   <<"something!">> = ReadFun(<<"`\"something!\"">>),
 
   ct:comment("Keywords can't have metadata"),
-  HelloKeyword = clj_core:keyword(<<"hello">>),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
   HelloKeyword = ReadFun(<<"`:hello">>),
 
   ct:comment("Read values that can have metadata"),
 
   ct:comment("Read unqualified symbol"),
-  UserHelloSym = clj_core:symbol(<<"clojure.core">>, <<"hello">>),
+  UserHelloSym = clj_rt:symbol(<<"clojure.core">>, <<"hello">>),
   HelloSyntaxQuote = ReadFun(<<"`hello">>),
-  true = clj_core:equiv(clj_core:first(HelloSyntaxQuote), WithMetaSym),
-  true = clj_core:equiv( clj_core:second(HelloSyntaxQuote)
+  true = clj_rt:equiv(clj_rt:first(HelloSyntaxQuote), WithMetaSym),
+  true = clj_rt:equiv( clj_rt:second(HelloSyntaxQuote)
                        , QuoteFun(UserHelloSym)
                        ),
 
   ct:comment("Read qualified symbol"),
-  SomeNsHelloSym = clj_core:symbol(<<"some-ns">>, <<"hello">>),
+  SomeNsHelloSym = clj_rt:symbol(<<"some-ns">>, <<"hello">>),
   SomeNsHelloSyntaxQuote = ReadFun(<<"`some-ns/hello">>),
-  true = clj_core:equiv(clj_core:first(SomeNsHelloSyntaxQuote), WithMetaSym),
-  true = clj_core:equiv( clj_core:second(SomeNsHelloSyntaxQuote)
+  true = clj_rt:equiv(clj_rt:first(SomeNsHelloSyntaxQuote), WithMetaSym),
+  true = clj_rt:equiv( clj_rt:second(SomeNsHelloSyntaxQuote)
                        , QuoteFun(SomeNsHelloSym)
                        ),
 
   ct:comment("Read auto-gen symbol"),
   ListGenSym = ReadFun(<<"`hello#">>),
-  QuotedGenSym = clj_core:second(ListGenSym),
-  GenSymName = clj_core:name(clj_core:second(QuotedGenSym)),
+  QuotedGenSym = clj_rt:second(ListGenSym),
+  GenSymName = clj_rt:name(clj_rt:second(QuotedGenSym)),
   {match, _} = re:run(GenSymName, "hello__\\d+__auto__"),
 
   ct:comment("Read auto-gen symbol, "
              "check generated symbols have the same name"),
   ListGenSym2 = ReadFun(<<"`(hello# hello# world#)">>),
-  ListApply  = clj_core:second(ListGenSym2),
-  ListConcat = clj_core:third(ListApply),
-  ListSecond = clj_core:second(ListConcat),
-  ListThird  = clj_core:third(ListConcat),
-  true = clj_core:equiv( clj_core:second(ListSecond)
-                       , clj_core:second(ListThird)
+  ListApply  = clj_rt:second(ListGenSym2),
+  ListConcat = clj_rt:third(ListApply),
+  ListSecond = clj_rt:second(ListConcat),
+  ListThird  = clj_rt:third(ListConcat),
+  true = clj_rt:equiv( clj_rt:second(ListSecond)
+                       , clj_rt:second(ListThird)
                        ),
 
   ct:comment("Read unquote"),
-  HelloSym = clj_core:symbol(<<"hello">>),
+  HelloSym = clj_rt:symbol(<<"hello">>),
   ListWithMetaHelloSym = ReadFun(<<"`~hello">>),
-  true = clj_core:equiv(clj_core:first(ListWithMetaHelloSym), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(ListWithMetaHelloSym), HelloSym),
+  true = clj_rt:equiv(clj_rt:first(ListWithMetaHelloSym), WithMetaSym),
+  true = clj_rt:equiv(clj_rt:second(ListWithMetaHelloSym), HelloSym),
 
   ct:comment("Use unquote splice not in list"),
   ok = try ReadFun(<<"`~@(hello)">>)
@@ -469,13 +469,13 @@ syntax_quote(ReadFun) ->
   ListHelloCheck = ReadFun(<<"(clojure.core/concat"
                              "  (clojure.core/list 'clojure.core/hello)"
                              "  (clojure.core/list :world))">>),
-  true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaListHello))
+  true = clj_rt:equiv( clj_rt:third(clj_rt:second(WithMetaListHello))
                        , ListHelloCheck
                        ),
 
   WithMetaEmptyList = ReadFun(<<"`()">>),
   EmptyListCheck = ReadFun(<<"(clojure.core/list)">>),
-  true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaEmptyList))
+  true = clj_rt:equiv( clj_rt:third(clj_rt:second(WithMetaEmptyList))
                        , EmptyListCheck
                        ),
 
@@ -486,8 +486,8 @@ syntax_quote(ReadFun) ->
                                "  (clojure.core/concat"
                                "    (clojure.core/list 'clojure.core/hello)"
                                "    (clojure.core/list :world)))">>),
-  true = clj_core:equiv(clj_core:first(MapWithMeta), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(MapWithMeta), MapWithMetaCheck),
+  true = clj_rt:equiv(clj_rt:first(MapWithMeta), WithMetaSym),
+  true = clj_rt:equiv(clj_rt:second(MapWithMeta), MapWithMetaCheck),
 
   ct:comment("Read vector"),
   VectorWithMeta = ReadFun(<<"`[hello :world]">>),
@@ -496,8 +496,8 @@ syntax_quote(ReadFun) ->
                                   "  (clojure.core/concat"
                                   "    (clojure.core/list 'clojure.core/hello)"
                                   "    (clojure.core/list :world)))">>),
-  true = clj_core:equiv(clj_core:first(VectorWithMeta), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(VectorWithMeta), VectorWithMetaCheck),
+  true = clj_rt:equiv(clj_rt:first(VectorWithMeta), WithMetaSym),
+  true = clj_rt:equiv(clj_rt:second(VectorWithMeta), VectorWithMetaCheck),
 
   ct:comment("Read set"),
   SetWithMeta = ReadFun(<<"`#{hello :world}">>),
@@ -507,15 +507,15 @@ syntax_quote(ReadFun) ->
               "  (clojure.core/concat"
               "    (clojure.core/list :world)"
               "    (clojure.core/list 'clojure.core/hello)))">>),
-  true = clj_core:equiv(clj_core:first(SetWithMeta), WithMetaSym),
-  true = clj_core:equiv(clj_core:second(SetWithMeta), SetWithMetaCheck),
+  true = clj_rt:equiv(clj_rt:first(SetWithMeta), WithMetaSym),
+  true = clj_rt:equiv(clj_rt:second(SetWithMeta), SetWithMetaCheck),
 
   ct:comment("Read unquote-splice inside list"),
   WithMetaHelloWorldSup = ReadFun(<<"`(~@(hello world) :sup?)">>),
   HelloWorldSupCheck = ReadFun(<<"(clojure.core/concat"
                                  "  (hello world)"
                                  "  (clojure.core/list :sup?))">>),
-  true = clj_core:equiv( clj_core:third(clj_core:second(WithMetaHelloWorldSup))
+  true = clj_rt:equiv( clj_rt:third(clj_rt:second(WithMetaHelloWorldSup))
                        , HelloWorldSupCheck
                        ),
 
@@ -524,14 +524,14 @@ syntax_quote(ReadFun) ->
   ListHelloWorldCheck = ReadFun(<<"(clojure.core/concat"
                                   "  (clojure.core/list hello)"
                                   "  (clojure.core/list :world))">>),
-  true = clj_core:equiv( clj_core:third(clj_core:second(ListWithMetaHelloWorld))
+  true = clj_rt:equiv( clj_rt:third(clj_rt:second(ListWithMetaHelloWorld))
                        , ListHelloWorldCheck
                        ),
 
   ct:comment("Syntax quote a symbol with dots"),
   HelloWorldWithDot = ReadFun(<<"`hello.world">>),
   HelloWorldWithDotCheck = ReadFun(<<"(quote hello.world)">>),
-  true = clj_core:equiv( clj_core:second(HelloWorldWithDot)
+  true = clj_rt:equiv( clj_rt:second(HelloWorldWithDot)
                        , HelloWorldWithDotCheck
                        ),
 
@@ -541,19 +541,19 @@ unquote(Config) when is_list(Config) ->
   unquote(fun read/1),
   unquote(fun read_io/1);
 unquote(ReadFun) ->
-  UnquoteSymbol = clj_core:symbol(<<"clojure.core">>, <<"unquote">>),
-  UnquoteSplicingSymbol = clj_core:symbol(<<"clojure.core">>,
+  UnquoteSymbol = clj_rt:symbol(<<"clojure.core">>, <<"unquote">>),
+  UnquoteSplicingSymbol = clj_rt:symbol(<<"clojure.core">>,
                                                <<"unquote-splicing">>),
-  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
   ct:comment("Unquote"),
-  ListUnquote = clj_core:list([UnquoteSymbol, HelloWorldSymbol]),
-  true = clj_core:equiv(ReadFun(<<"~hello-world">>), ListUnquote),
+  ListUnquote = clj_rt:list([UnquoteSymbol, HelloWorldSymbol]),
+  true = clj_rt:equiv(ReadFun(<<"~hello-world">>), ListUnquote),
 
   ct:comment("Unquote splicing"),
-  ListUnquoteSplicing = clj_core:list([UnquoteSplicingSymbol,
+  ListUnquoteSplicing = clj_rt:list([UnquoteSplicingSymbol,
                                        HelloWorldSymbol]),
-  true = clj_core:equiv(ReadFun(<<"~@hello-world">>), ListUnquoteSplicing),
+  true = clj_rt:equiv(ReadFun(<<"~@hello-world">>), ListUnquoteSplicing),
 
   ct:comment("Unquote nothing"),
   ok = try ReadFun(<<"~">>)
@@ -566,21 +566,21 @@ list(Config) when is_list(Config) ->
   list(fun read/1),
   list(fun read_io/1);
 list(ReadFun) ->
-  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
-  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
+  HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
   ct:comment("Empty List"),
-  EmptyList = clj_core:list([]),
-  true = clj_core:equiv(ReadFun(<<"()">>), EmptyList),
+  EmptyList = clj_rt:list([]),
+  true = clj_rt:equiv(ReadFun(<<"()">>), EmptyList),
 
   ct:comment("List"),
-  List = clj_core:list([HelloWorldKeyword, HelloWorldSymbol]),
-  true = clj_core:equiv( ReadFun(<<"(:hello-world hello-world)">>)
+  List = clj_rt:list([HelloWorldKeyword, HelloWorldSymbol]),
+  true = clj_rt:equiv( ReadFun(<<"(:hello-world hello-world)">>)
                        , List
                        ),
 
   ct:comment("List & space"),
-  true = clj_core:equiv( ReadFun(<<"(:hello-world hello-world )">>)
+  true = clj_rt:equiv( ReadFun(<<"(:hello-world hello-world )">>)
                        , List
                        ),
 
@@ -595,12 +595,12 @@ vector(Config) when is_list(Config) ->
   vector(fun read/1),
   vector(fun read_io/1);
 vector(ReadFun) ->
-  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
-  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
+  HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
   ct:comment("Vector"),
   Vector = 'clojerl.Vector':?CONSTRUCTOR([HelloWorldKeyword, HelloWorldSymbol]),
-  true = clj_core:equiv( ReadFun(<<"[:hello-world hello-world]">>)
+  true = clj_rt:equiv( ReadFun(<<"[:hello-world hello-world]">>)
                        , Vector
                        ),
 
@@ -615,8 +615,8 @@ map(Config) when is_list(Config) ->
   map(fun read/1),
   map(fun read_io/1);
 map(ReadFun) ->
-  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
-  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
+  HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
   ct:comment("Map"),
   Map = 'clojerl.Map':?CONSTRUCTOR([ HelloWorldKeyword
@@ -627,7 +627,7 @@ map(ReadFun) ->
                                   ),
   MapResult = ReadFun(<<"{:hello-world hello-world,"
                         " hello-world :hello-world}">>),
-  true = clj_core:equiv(Map, MapResult),
+  true = clj_rt:equiv(Map, MapResult),
 
   ct:comment("Map without closing braces"),
   ok = try ReadFun(<<"{1 42.0">>)
@@ -645,13 +645,13 @@ set(Config) when is_list(Config) ->
   set(fun read/1),
   set(fun read_io/1);
 set(ReadFun) ->
-  HelloWorldKeyword = clj_core:keyword(<<"hello-world">>),
-  HelloWorldSymbol = clj_core:symbol(<<"hello-world">>),
+  HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
+  HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
   ct:comment("Set"),
   Set = 'clojerl.Set':?CONSTRUCTOR([HelloWorldKeyword, HelloWorldSymbol]),
   SetResult = ReadFun(<<"#{:hello-world hello-world}">>),
-  true = clj_core:equiv(Set, SetResult),
+  true = clj_rt:equiv(Set, SetResult),
 
   ct:comment("Set without closing braces"),
   ok = try ReadFun(<<"#{1 42.0">>)
@@ -728,44 +728,44 @@ fn(Config) when is_list(Config) ->
   fn(fun read/1),
   fn(fun read_io/1);
 fn(ReadFun) ->
-  FnSymbol = clj_core:symbol(<<"fn*">>),
-  EmptyVector = clj_core:vector([]),
-  EmptyList = clj_core:list([]),
+  FnSymbol = clj_rt:symbol(<<"fn*">>),
+  EmptyVector = clj_rt:vector([]),
+  EmptyList = clj_rt:list([]),
 
   ct:comment("Read empty anonymous fn"),
   EmptyFn = ReadFun(<<"#()">>),
-  FnSymbol = clj_core:first(EmptyFn),
-  EmptyVector = clj_core:second(EmptyFn),
-  true = clj_core:equiv(clj_core:third(EmptyFn), EmptyList),
+  FnSymbol = clj_rt:first(EmptyFn),
+  EmptyVector = clj_rt:second(EmptyFn),
+  true = clj_rt:equiv(clj_rt:third(EmptyFn), EmptyList),
 
   ct:comment("Read anonymous fn with %"),
   OneArgFn = ReadFun(<<"#(%)">>),
-  FnSymbol = clj_core:first(OneArgFn),
-  ArgVector1 = clj_core:second(OneArgFn),
-  1 = clj_core:count(ArgVector1),
-  BodyList1 = clj_core:third(OneArgFn),
-  1 = clj_core:count(BodyList1),
-  true = clj_core:first(ArgVector1) == clj_core:first(ArgVector1),
+  FnSymbol = clj_rt:first(OneArgFn),
+  ArgVector1 = clj_rt:second(OneArgFn),
+  1 = clj_rt:count(ArgVector1),
+  BodyList1 = clj_rt:third(OneArgFn),
+  1 = clj_rt:count(BodyList1),
+  true = clj_rt:first(ArgVector1) == clj_rt:first(ArgVector1),
 
   ct:comment("Read anonymous fn with %4 and %42"),
   FortyTwoArgFn = ReadFun(<<"#(do %42 %4)">>),
-  FnSymbol = clj_core:first(FortyTwoArgFn),
-  ArgVector42 = clj_core:second(FortyTwoArgFn),
-  42 = clj_core:count(ArgVector42),
-  BodyList42 = clj_core:third(FortyTwoArgFn),
-  3 = clj_core:count(BodyList42),
-  Arg42Sym = clj_core:second(BodyList42),
-  {match, _} = re:run(clj_core:name(Arg42Sym), "p42__\\d+#"),
+  FnSymbol = clj_rt:first(FortyTwoArgFn),
+  ArgVector42 = clj_rt:second(FortyTwoArgFn),
+  42 = clj_rt:count(ArgVector42),
+  BodyList42 = clj_rt:third(FortyTwoArgFn),
+  3 = clj_rt:count(BodyList42),
+  Arg42Sym = clj_rt:second(BodyList42),
+  {match, _} = re:run(clj_rt:name(Arg42Sym), "p42__\\d+#"),
 
   ct:comment("Read anonymous fn with %3 and %&"),
   RestArgFn = ReadFun(<<"#(do %& %3)">>),
-  FnSymbol = clj_core:first(RestArgFn),
-  ArgVectorRest = clj_core:second(RestArgFn),
-  5 = clj_core:count(ArgVectorRest), %% 1-3, & and rest
-  BodyListRest = clj_core:third(RestArgFn),
-  3 = clj_core:count(BodyListRest),
-  ArgRestSym = clj_core:second(BodyListRest),
-  {match, _} = re:run(clj_core:name(ArgRestSym), "rest__\\d+#"),
+  FnSymbol = clj_rt:first(RestArgFn),
+  ArgVectorRest = clj_rt:second(RestArgFn),
+  5 = clj_rt:count(ArgVectorRest), %% 1-3, & and rest
+  BodyListRest = clj_rt:third(RestArgFn),
+  3 = clj_rt:count(BodyListRest),
+  ArgRestSym = clj_rt:second(BodyListRest),
+  {match, _} = re:run(clj_rt:name(ArgRestSym), "rest__\\d+#"),
 
   ct:comment("Nested #()"),
   ok = try ReadFun(<<"#(do #(%))">>)
@@ -779,37 +779,37 @@ arg(Config) when is_list(Config) ->
 
 arg(ReadFun, ReadAllFun) ->
   ct:comment("Read % as a symbol"),
-  ArgSymbol = clj_core:symbol(<<"%">>),
-  true = clj_core:equiv(ReadFun(<<"%">>), ArgSymbol),
+  ArgSymbol = clj_rt:symbol(<<"%">>),
+  true = clj_rt:equiv(ReadFun(<<"%">>), ArgSymbol),
 
   ct:comment("Read %1 as a symbol"),
-  ArgOneSymbol = clj_core:symbol(<<"%1">>),
-  true = clj_core:equiv(ReadFun(<<"%1">>), ArgOneSymbol),
+  ArgOneSymbol = clj_rt:symbol(<<"%1">>),
+  true = clj_rt:equiv(ReadFun(<<"%1">>), ArgOneSymbol),
 
   erlang:put(arg_env, #{}),
 
   ct:comment("Read % as an argument"),
   ArgGenSymbol = ReadFun(<<"%">>),
-  ArgGenName = clj_core:name(ArgGenSymbol),
+  ArgGenName = clj_rt:name(ArgGenSymbol),
   {match, _} = re:run(ArgGenName, "p1__\\d+#"),
 
   ArgGenSymbol2 = ReadFun(<<"% ">>),
-  ArgGenName2 = clj_core:name(ArgGenSymbol2),
+  ArgGenName2 = clj_rt:name(ArgGenSymbol2),
   {match, _} = re:run(ArgGenName2, "p1__\\d+#"),
 
   ct:comment("Read %1 as an argument"),
   ArgOneGenSymbol = ReadFun(<<"%1">>),
-  ArgOneGenName = clj_core:name(ArgOneGenSymbol),
+  ArgOneGenName = clj_rt:name(ArgOneGenSymbol),
   {match, _} = re:run(ArgOneGenName, "p1__\\d+#"),
 
   ct:comment("Read %42 as an argument"),
   ArgFortyTwoGenSymbol = ReadFun(<<"%42">>),
-  ArgFortyTwoGenName = clj_core:name(ArgFortyTwoGenSymbol),
+  ArgFortyTwoGenName = clj_rt:name(ArgFortyTwoGenSymbol),
   {match, _} = re:run(ArgFortyTwoGenName, "p42__\\d+#"),
 
   ct:comment("Read %& as an argument"),
   [ArgRestGenSymbol] = ReadAllFun(<<"%&">>),
-  ArgRestGenName = clj_core:name(ArgRestGenSymbol),
+  ArgRestGenName = clj_rt:name(ArgRestGenSymbol),
   {match, _} = re:run(ArgRestGenName, "rest__\\d+#"),
 
   ct:comment("Invalid char after %"),
@@ -832,7 +832,7 @@ eval(ReadFun) ->
   1 = ReadFun(<<"#=(do 1)">>),
 
   ct:comment("Read eval (str 1)"),
-  <<"1">> = ReadFun(<<"#=(clj_core/str.e 1)">>),
+  <<"1">> = ReadFun(<<"#=(clj_rt/str.e 1)">>),
 
   {comments, ""}.
 
@@ -840,12 +840,12 @@ var(Config) when is_list(Config) ->
   var(fun read/1),
   var(fun read_io/1);
 var(ReadFun) ->
-  VarSymbol = clj_core:symbol(<<"var">>),
-  ListSymbol = clj_core:symbol(<<"list">>),
+  VarSymbol = clj_rt:symbol(<<"var">>),
+  ListSymbol = clj_rt:symbol(<<"list">>),
 
   ct:comment(""),
-  List = clj_core:list([VarSymbol, ListSymbol]),
-  true = clj_core:equiv(ReadFun(<<"#'list">>), List),
+  List = clj_rt:list([VarSymbol, ListSymbol]),
+  true = clj_rt:equiv(ReadFun(<<"#'list">>), List),
 
   {comments, ""}.
 
@@ -889,10 +889,10 @@ discard(ReadFun, ReadAllFun) ->
 
   1 = ReadFun(<<"1 #_ :hello">>),
 
-  StrSym = clj_core:symbol(<<"str">>),
-  ByeKeyword = clj_core:keyword(<<"bye">>),
-  List = clj_core:list([StrSym, ByeKeyword]),
-  true = clj_core:equiv(ReadFun(<<"(str  #_ :hello :bye)">>), List),
+  StrSym = clj_rt:symbol(<<"str">>),
+  ByeKeyword = clj_rt:keyword(<<"bye">>),
+  List = clj_rt:list([StrSym, ByeKeyword]),
+  true = clj_rt:equiv(ReadFun(<<"(str  #_ :hello :bye)">>), List),
 
   {comments, ""}.
 
@@ -906,7 +906,7 @@ discard(ReadFun, ReadAllFun) ->
                           features => ReadFun(<<"#{:clj}">>)},
   AllowClrFeatureOpts = #{'read-cond' => allow,
                           features => ReadFun(<<"#{:clr}">>)},
-  HelloKeyword = clj_core:keyword(<<"hello">>),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
 
   ct:comment("Allow with no features"),
   HelloKeyword = ReadFun2(<<"#?(:one 2) :hello">>, AllowOpts),
@@ -956,16 +956,16 @@ discard(ReadFun, ReadAllFun) ->
                                          ),
   [ReaderCondCheck, HelloKeyword] =
     read_all(<<"#?(1 2) :hello">>, PreserveOpts),
-  true = clj_core:equiv(ReaderCond, ReaderCondCheck),
+  true = clj_rt:equiv(ReaderCond, ReaderCondCheck),
 
   ReaderCondSplice =
     'clojerl.reader.ReaderConditional':?CONSTRUCTOR(
                                           ReadFun(<<"(1 2)">>), true
                                          ),
-  ReaderCondSpliceVector = clj_core:vector([ReaderCondSplice, HelloKeyword]),
+  ReaderCondSpliceVector = clj_rt:vector([ReaderCondSplice, HelloKeyword]),
   ReaderCondSpliceVectorCheck = ReadFun2(<<"[#?@(1 2) :hello]">>, PreserveOpts),
-  true = clj_core:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
-  false = clj_core:equiv(ReaderCond, ReaderCondSpliceVector),
+  true = clj_rt:equiv(ReaderCondSpliceVector, ReaderCondSpliceVectorCheck),
+  false = clj_rt:equiv(ReaderCond, ReaderCondSpliceVector),
 
   ct:comment("EOF while reading cond"),
   ok = try ReadFun2(<<"#?">>, AllowOpts)
@@ -1035,28 +1035,28 @@ erl_literals(ReadFun) ->
   {42} = ReadFun(<<"#erl [42]">>),
 
   ct:comment("Read a tuple with many elements"),
-  HelloKeyword = clj_core:keyword(<<"hello">>),
-  WorldSymbol = clj_core:symbol(<<"world">>),
+  HelloKeyword = clj_rt:keyword(<<"hello">>),
+  WorldSymbol = clj_rt:symbol(<<"world">>),
   { 42
   , HelloKeywordCheck
   , 2.5
   , WorldSymbolCheck
   } = ReadFun(<<"#erl [42, :hello, 2.5, world]">>),
-  true = clj_core:equiv(HelloKeyword, HelloKeywordCheck),
-  true = clj_core:equiv(WorldSymbol, WorldSymbolCheck),
+  true = clj_rt:equiv(HelloKeyword, HelloKeywordCheck),
+  true = clj_rt:equiv(WorldSymbol, WorldSymbolCheck),
 
   ct:comment("Read a tuple whose first element is an keyword"),
   T = ReadFun(<<"#erl [:random, :hello, 2.5, 'world]">>),
-  'clojerl.erlang.Tuple' = clj_core:type(T),
+  'clojerl.erlang.Tuple' = clj_rt:type(T),
 
   %% List
   ct:comment("Read an empty list"),
-  ErlListSym         = clj_core:symbol(<<"erl-list*">>),
-  [ErlListSymCheck] = clj_core:to_list(ReadFun(<<"#erl()">>)),
-  true = clj_core:equiv(ErlListSym, ErlListSymCheck),
+  ErlListSym         = clj_rt:symbol(<<"erl-list*">>),
+  [ErlListSymCheck] = clj_rt:to_list(ReadFun(<<"#erl()">>)),
+  true = clj_rt:equiv(ErlListSym, ErlListSymCheck),
 
   ct:comment("Read a list with a single element"),
-  [ErlListSymCheck, 42] = clj_core:to_list(ReadFun(<<"#erl (42)">>)),
+  [ErlListSymCheck, 42] = clj_rt:to_list(ReadFun(<<"#erl (42)">>)),
 
   ct:comment("Read a tuple with many elements"),
   [ ErlListSymCheck
@@ -1064,9 +1064,9 @@ erl_literals(ReadFun) ->
   , HelloKeywordCheckList
   , 2.5
   , WorldSymbolCheckList
-  ] = clj_core:to_list(ReadFun(<<"#erl (42, :hello, 2.5, world)">>)),
-  true = clj_core:equiv(HelloKeyword, HelloKeywordCheckList),
-  true = clj_core:equiv(WorldSymbol, WorldSymbolCheckList),
+  ] = clj_rt:to_list(ReadFun(<<"#erl (42, :hello, 2.5, world)">>)),
+  true = clj_rt:equiv(HelloKeyword, HelloKeywordCheckList),
+  true = clj_rt:equiv(WorldSymbol, WorldSymbolCheckList),
 
   %% Map
   ct:comment("Read an empty map"),
@@ -1079,15 +1079,15 @@ erl_literals(ReadFun) ->
   #{ 42  := HelloKeywordCheckMap
    , 2.5 := WorldSymbolCheckMap
    } = ReadFun(<<"#erl {42, :hello, 2.5, world}">>),
-  true = clj_core:equiv(HelloKeyword, HelloKeywordCheckMap),
-  true = clj_core:equiv(WorldSymbol, WorldSymbolCheckMap),
+  true = clj_rt:equiv(HelloKeyword, HelloKeywordCheckMap),
+  true = clj_rt:equiv(WorldSymbol, WorldSymbolCheckMap),
 
   %% String
   ct:comment("Read a string"),
-  "" = clj_core:second(ReadFun(<<"#erl \"\"">>)),
+  "" = clj_rt:second(ReadFun(<<"#erl \"\"">>)),
 
   ct:comment("Read a non-empty string"),
-  "Hello there!" = clj_core:second(ReadFun(<<"#erl \"Hello there!\"">>)),
+  "Hello there!" = clj_rt:second(ReadFun(<<"#erl \"Hello there!\"">>)),
 
   ct:comment("Try to read an integer"),
   ok = try ReadFun(<<"#erl 1">>), error
@@ -1100,15 +1100,15 @@ erl_binary(Config) when is_list(Config) ->
   erl_binary(fun read/1),
   erl_binary(fun read_io/1);
 erl_binary(ReadFun) ->
-  ErlBinarySym = clj_core:symbol(<<"erl-binary*">>),
-  EmptyBinary  = clj_core:list([ErlBinarySym]),
+  ErlBinarySym = clj_rt:symbol(<<"erl-binary*">>),
+  EmptyBinary  = clj_rt:list([ErlBinarySym]),
 
   ct:comment("Read an empty binary"),
-  true = clj_core:equiv(ReadFun(<<"#bin[]">>), EmptyBinary),
+  true = clj_rt:equiv(ReadFun(<<"#bin[]">>), EmptyBinary),
 
   ct:comment("Read a single integer"),
-  SingleIntBinary = clj_core:list([ErlBinarySym, 64]),
-  true = clj_core:equiv(ReadFun(<<"#bin[64]">>), SingleIntBinary),
+  SingleIntBinary = clj_rt:list([ErlBinarySym, 64]),
+  true = clj_rt:equiv(ReadFun(<<"#bin[64]">>), SingleIntBinary),
 
   {comments, ""}.
 
@@ -1116,12 +1116,12 @@ erl_alias(Config) when is_list(Config) ->
   erl_alias(fun read/1),
   erl_alias(fun read_io/1);
 erl_alias(ReadFun) ->
-  ErlAliasSym = clj_core:symbol(<<"erl-alias*">>),
-  XSym        = clj_core:symbol(<<"x">>),
-  AliasList   = clj_core:list([ErlAliasSym, XSym, 1]),
+  ErlAliasSym = clj_rt:symbol(<<"erl-alias*">>),
+  XSym        = clj_rt:symbol(<<"x">>),
+  AliasList   = clj_rt:list([ErlAliasSym, XSym, 1]),
 
   ct:comment("Read the tagged literal alias"),
-  true = clj_core:equiv(ReadFun(<<"#as(x 1)">>), AliasList),
+  true = clj_rt:equiv(ReadFun(<<"#as(x 1)">>), AliasList),
 
   {comments, ""}.
 
@@ -1151,7 +1151,7 @@ tagged(ReadFun) ->
   DataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                                              , <<"*data-readers*">>
                                              ),
-  DataReaders    = clj_core:hash_map([ clj_core:symbol(<<"bla">>)
+  DataReaders    = clj_rt:hash_map([ clj_rt:symbol(<<"bla">>)
                                      , fun(_) -> bla end
                                      ]
                                     ),

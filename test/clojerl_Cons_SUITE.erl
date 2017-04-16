@@ -38,31 +38,31 @@ end_per_suite(Config) -> Config.
 -spec new(config()) -> result().
 new(_Config) ->
   Cons = range(1, 3),
-  [1, 2, 3] = clj_core:to_list(Cons),
+  [1, 2, 3] = clj_rt:to_list(Cons),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
   Cons = range(1, 42),
-  42 = clj_core:count(Cons),
+  42 = clj_rt:count(Cons),
 
   Cons1 = range(1, 7),
-  7 = clj_core:count(Cons1),
+  7 = clj_rt:count(Cons1),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
   Cons = range(1, 3),
-  <<"(1 2 3)">> = clj_core:str(Cons),
+  <<"(1 2 3)">> = clj_rt:str(Cons),
 
   {comments, ""}.
 
 -spec is_sequential(config()) -> result().
 is_sequential(_Config) ->
   Cons = range(1, 3),
-  true = clj_core:'sequential?'(Cons),
+  true = clj_rt:'sequential?'(Cons),
 
   {comments, ""}.
 
@@ -84,39 +84,39 @@ hash(_Config) ->
 -spec seq(config()) -> result().
 seq(_Config) ->
   Cons = range(1, 3),
-  1 = clj_core:first(Cons),
-  2 = clj_core:first(clj_core:rest(Cons)),
-  2 = clj_core:first(clj_core:next(Cons)),
-  3 = clj_core:first(clj_core:rest(clj_core:rest(Cons))),
-  3 = clj_core:first(clj_core:next(clj_core:next(Cons))),
+  1 = clj_rt:first(Cons),
+  2 = clj_rt:first(clj_rt:rest(Cons)),
+  2 = clj_rt:first(clj_rt:next(Cons)),
+  3 = clj_rt:first(clj_rt:rest(clj_rt:rest(Cons))),
+  3 = clj_rt:first(clj_rt:next(clj_rt:next(Cons))),
 
   Cons1     = range(1, 1),
-  1         = clj_core:first(Cons1),
-  ?NIL = clj_core:next(Cons1),
-  []        = clj_core:rest(Cons1),
+  1         = clj_rt:first(Cons1),
+  ?NIL = clj_rt:next(Cons1),
+  []        = clj_rt:rest(Cons1),
 
-  [1, 2, 3] = clj_core:to_list(Cons),
+  [1, 2, 3] = clj_rt:to_list(Cons),
 
   {comments, ""}.
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
   ct:comment("Check that lazy seqs with the same elements are equivalent"),
-  Cons1 = clj_core:with_meta(range(1, 3), #{a => 1}),
-  Cons2 = clj_core:with_meta(range(1, 3), #{b => 2}),
-  true = clj_core:equiv(Cons1, Cons2),
+  Cons1 = clj_rt:with_meta(range(1, 3), #{a => 1}),
+  Cons2 = clj_rt:with_meta(range(1, 3), #{b => 2}),
+  true = clj_rt:equiv(Cons1, Cons2),
 
   ct:comment("Check that a lazy seq and a list with the "
              "same elements are equivalent"),
-  true = clj_core:equiv(Cons1, [1, 2, 3]),
+  true = clj_rt:equiv(Cons1, [1, 2, 3]),
 
   ct:comment("Check that lists with the same elements are not equivalent"),
-  Cons3 = clj_core:with_meta(range(1, 4), #{c => 3}),
-  false = clj_core:equiv(Cons1, Cons3),
+  Cons3 = clj_rt:with_meta(range(1, 4), #{c => 3}),
+  false = clj_rt:equiv(Cons1, Cons3),
 
   ct:comment("A clojerl.List and something else"),
-  false = clj_core:equiv(Cons1, whatever),
-  false = clj_core:equiv(Cons1, #{}),
+  false = clj_rt:equiv(Cons1, whatever),
+  false = clj_rt:equiv(Cons1, #{}),
 
   {comments, ""}.
 
@@ -125,16 +125,16 @@ cons(_Config) ->
   Cons = range(2, 2),
 
   ct:comment("Conj an element to a one element lazy seq"),
-  TwoList = clj_core:conj(Cons, 1),
+  TwoList = clj_rt:conj(Cons, 1),
 
-  2    = clj_core:count(TwoList),
-  true = clj_core:equiv(clj_core:to_list(TwoList), [1, 2]),
+  2    = clj_rt:count(TwoList),
+  true = clj_rt:equiv(clj_rt:to_list(TwoList), [1, 2]),
 
   ct:comment("Conj an element to a list with one element"),
-  ThreeList = clj_core:conj(TwoList, 0),
+  ThreeList = clj_rt:conj(TwoList, 0),
 
-  3    = clj_core:count(ThreeList),
-  true = clj_core:equiv(clj_core:to_list(ThreeList), [0, 1, 2]),
+  3    = clj_rt:count(ThreeList),
+  true = clj_rt:equiv(clj_rt:to_list(ThreeList), [0, 1, 2]),
 
   {comments, ""}.
 
@@ -155,7 +155,7 @@ reduce(_Config) ->
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
   Reduced = 'clojerl.IReduce':reduce(TenCons, PlusMaxFun),
-  10 = clj_core:deref(Reduced),
+  10 = clj_rt:deref(Reduced),
 
   {comments, ""}.
 
@@ -164,10 +164,10 @@ complete_coverage(_Config) ->
   ?NIL = 'clojerl.Cons':'_'(?NIL),
 
   Cons = range(2, 2),
-  []   = clj_core:empty(Cons),
+  []   = clj_rt:empty(Cons),
 
-  Cons1     = clj_core:with_meta(Cons, #{a => 1}),
-  #{a := 1} = clj_core:meta(Cons1),
+  Cons1     = clj_rt:with_meta(Cons, #{a => 1}),
+  #{a := 1} = clj_rt:meta(Cons1),
 
   {comments, ""}.
 

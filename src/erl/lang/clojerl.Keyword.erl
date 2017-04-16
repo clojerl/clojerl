@@ -39,7 +39,7 @@
 ?CONSTRUCTOR(Name) when is_atom(Name) ->
   Name;
 ?CONSTRUCTOR(Symbol) ->
-  binary_to_atom(clj_core:str(Symbol), utf8).
+  binary_to_atom(clj_rt:str(Symbol), utf8).
 
 -spec ?CONSTRUCTOR(binary(), binary()) -> type().
 ?CONSTRUCTOR(Namespace, Name)
@@ -73,11 +73,11 @@ find(Namespace, Name) ->
 %% clojerl.IFn
 
 apply(Keyword, Args) ->
-  case clj_core:to_list(Args) of
+  case clj_rt:to_list(Args) of
     [Map] ->
-      clj_core:get(Map, Keyword);
+      clj_rt:get(Map, Keyword);
     [Map, NotFound] ->
-      clj_core:get(Map, Keyword, NotFound);
+      clj_rt:get(Map, Keyword, NotFound);
     _ ->
       CountBin = integer_to_binary(length(Args)),
       throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>)
@@ -151,12 +151,12 @@ write(Name, Str) when is_atom(Name), is_binary(Str) ->
 
 write(IO, Format, Values)
   when IO =:= standard_io; IO =:= standard_error ->
-  ok = io:fwrite(IO, Format, clj_core:to_list(Values)),
+  ok = io:fwrite(IO, Format, clj_rt:to_list(Values)),
   IO;
 write(Name, Str, Values) when is_atom(Name) ->
   case erlang:whereis(Name) of
     undefined ->
       error(<<"Invalid process name">>);
     _ ->
-      io:fwrite(Name, Str, clj_core:to_list(Values))
+      io:fwrite(Name, Str, clj_rt:to_list(Values))
   end.

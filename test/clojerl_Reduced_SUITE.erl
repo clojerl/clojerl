@@ -32,7 +32,7 @@ deref(_Config) ->
   ct:comment("Deref reduced"),
   Value   = [some, value],
   Reduced = 'clojerl.Reduced':?CONSTRUCTOR(Value),
-  Value   = clj_core:deref(Reduced),
+  Value   = clj_rt:deref(Reduced),
 
   {comments, ""}.
 
@@ -57,7 +57,7 @@ str(_Config) ->
   Value1   = [some, value],
   Reduced1 = 'clojerl.Reduced':?CONSTRUCTOR(Value1),
   Regex1 = <<"#<clojerl.Reduced \\(:some :value\\)">>,
-  {match, _} = re:run(clj_core:str(Reduced1), Regex1),
+  {match, _} = re:run(clj_rt:str(Reduced1), Regex1),
 
   {comments, ""}.
 

@@ -101,7 +101,7 @@ compile_files(_Config) ->
 
 -spec eval(config()) -> result().
 eval(_Config) ->
-  'clojure.core':'in-ns'(clj_core:symbol(<<"test.clj_compiler">>)),
+  'clojure.core':'in-ns'(clj_rt:symbol(<<"test.clj_compiler">>)),
 
   ct:comment("Eval form"),
   {1, _} = clj_compiler:eval(1),
@@ -115,7 +115,7 @@ eval(_Config) ->
 
   ct:comment("Current namespace is changed"),
   {_, _}  = clj_compiler:eval(clj_reader:read(<<"(ns a)">>)),
-  <<"a">> = clj_core:str(clj_namespace:name(clj_namespace:current())),
+  <<"a">> = clj_rt:str(clj_namespace:name(clj_namespace:current())),
 
   ct:comment("(erlang/self) should be this process"),
   Self      = erlang:self(),
@@ -130,11 +130,11 @@ eval(_Config) ->
 -spec check_var_value(binary(), binary(), any()) -> any().
 check_var_value(Namespace, Name, Value) ->
   Var   = find_var(Namespace, Name),
-  Value = clj_core:deref(Var).
+  Value = clj_rt:deref(Var).
 
 -spec find_var(binary(), binary()) -> 'clojerl.Var':type().
 find_var(Namespace, Name) ->
-  Symbol = clj_core:symbol(Namespace, Name),
+  Symbol = clj_rt:symbol(Namespace, Name),
   case clj_namespace:find_var(Symbol) of
     ?NIL -> error;
     V -> V

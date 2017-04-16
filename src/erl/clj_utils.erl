@@ -155,15 +155,15 @@ char_type(_, _) -> symbol.
                    'clojerl.Symbol':type() |
                    string()) -> map().
 desugar_meta(Meta) ->
-  case clj_core:type(Meta) of
+  case clj_rt:type(Meta) of
     'clojerl.Keyword' ->
-      clj_core:hash_map([Meta, true]);
+      clj_rt:hash_map([Meta, true]);
     'clojerl.Map' ->
       Meta;
     Type when Type == 'clojerl.Symbol'
               orelse Type == 'clojerl.String' ->
-      Tag = clj_core:keyword(<<"tag">>),
-      clj_core:hash_map([Tag, Meta]);
+      Tag = clj_rt:keyword(<<"tag">>),
+      clj_rt:hash_map([Tag, Meta]);
     _ ->
       throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
@@ -194,7 +194,7 @@ throw_when(Throw, Reason) ->
 throw_when(false, _, _) ->
   ok;
 throw_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
   throw_when(true, Reason, Location);
 throw_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -220,7 +220,7 @@ error_when(Throw, Reason) ->
 error_when(false, _, _) ->
   ok;
 error_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
   error_when(true, Reason, Location);
 error_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -236,7 +236,7 @@ warn_when(Warn, Reason) ->
 warn_when(false, _, _) ->
   ok;
 warn_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_core:str/1, List)),
+  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
   warn_when(true, Reason, Location);
 warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),

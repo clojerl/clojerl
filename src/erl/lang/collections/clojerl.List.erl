@@ -49,7 +49,7 @@
 ?CONSTRUCTOR(?NIL) ->
   #?TYPE{data = []};
 ?CONSTRUCTOR(Items) ->
-  #?TYPE{data = clj_core:to_list(Items)}.
+  #?TYPE{data = clj_rt:to_list(Items)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -67,10 +67,10 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}
      ) ->
-  clj_core:equiv(X, Y);
+  clj_rt:equiv(X, Y);
 equiv(#?TYPE{name = ?M, data = X}, Y) ->
-  case clj_core:'sequential?'(Y) of
-    true  -> clj_core:equiv(X, Y);
+  case clj_rt:'sequential?'(Y) of
+    true  -> clj_rt:equiv(X, Y);
     false -> false
   end.
 
@@ -84,7 +84,7 @@ with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
   List#?TYPE{info = Info#{meta => Metadata}}.
 
 reduce(#?TYPE{name = ?M, data = []}, F) ->
-  clj_core:apply(F, []);
+  clj_rt:apply(F, []);
 reduce(#?TYPE{name = ?M, data = [First | Rest]}, F) ->
   do_reduce(F, First, Rest).
 
@@ -92,7 +92,7 @@ reduce(#?TYPE{name = ?M, data = List}, F, Init) ->
   do_reduce(F, Init, List).
 
 do_reduce(F, Acc, [First | Items]) ->
-  Val = clj_core:apply(F, [Acc, First]),
+  Val = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
     false -> do_reduce(F, Val, Items)
@@ -115,7 +115,7 @@ more(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
 '_'(_) -> ?NIL.
 
 peek(#?TYPE{name = ?M, data = List}) ->
-  clj_core:peek(List).
+  clj_rt:peek(List).
 
 pop(#?TYPE{name = ?M, data = []} = List) ->
   List;
@@ -130,6 +130,6 @@ to_list(#?TYPE{name = ?M, data = List}) -> List.
 str(#?TYPE{name = ?M, data = []}) ->
   <<"()">>;
 str(#?TYPE{name = ?M, data = Items}) ->
-  ItemsStrs = lists:map(fun clj_core:str/1, Items),
+  ItemsStrs = lists:map(fun clj_rt:str/1, Items),
   Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
   <<"(", Strs/binary, ")">>.

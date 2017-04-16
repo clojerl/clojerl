@@ -32,5 +32,5 @@ deref(#?TYPE{name = ?M, data = Value}) -> Value.
 hash(#?TYPE{name = ?M} = X) -> erlang:phash2(X).
 
 str(#?TYPE{name = ?M, data = Value}) ->
-  ValueStr = clj_core:str(Value),
+  ValueStr = clj_rt:str(Value),
   <<"#<clojerl.Reduced ", ValueStr/binary, ">">>.

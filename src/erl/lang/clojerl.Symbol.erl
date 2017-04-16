@@ -41,9 +41,9 @@
 %% clojerl.IFn
 
 apply(#?TYPE{name = ?M} = Symbol, [Map]) ->
-  clj_core:get(Map, Symbol);
+  clj_rt:get(Map, Symbol);
 apply(#?TYPE{name = ?M} = Symbol, [Map, NotFound]) ->
-  clj_core:get(Map, Symbol, NotFound);
+  clj_rt:get(Map, Symbol, NotFound);
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for symbol, got: ", CountBin/binary>>).

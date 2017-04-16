@@ -40,7 +40,7 @@ str(_Config) ->
   UUIDStr = <<"01234567-ABCD-ABCD-ABCD-0123456789AB">>,
 
   UUID    = 'erlang.util.UUID':?CONSTRUCTOR(UUIDStr),
-  UUIDStr = clj_core:str(UUID),
+  UUIDStr = clj_rt:str(UUID),
 
   ct:comment("Invalid UUIDs"),
   ok = try
