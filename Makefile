@@ -29,6 +29,8 @@ clean:
 	${V} rm -rf ${EBIN}
 	${V} rm -rf priv/*.so c_src/*.o
 
+travis-ci: test dialyzer
+
 repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: compile
