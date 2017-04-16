@@ -3,7 +3,10 @@
 -include("clojerl.hrl").
 -include("clj_test_utils.hrl").
 
--export([all/0, init_per_suite/1]).
+-export([ all/0
+        , init_per_suite/1
+        , end_per_suite/1
+        ]).
 
 -export([ deref/1
         , hash/1
@@ -16,6 +19,9 @@ all() -> clj_test_utils:all(?MODULE).
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
+
+-spec end_per_suite(config()) -> config().
+end_per_suite(Config) -> Config.
 
 %%------------------------------------------------------------------------------
 %% Test Cases
