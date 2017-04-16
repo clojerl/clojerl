@@ -68,7 +68,7 @@ load(ScriptBase, FailIfNotFound) ->
   case load_ns(NsBin) of
     ok -> ok;
     _ ->
-      case resolve_file(ScriptBase, [<<".clj">>, <<".cljc">>]) of
+      case resolve_file(ScriptBase, [<<".clje">>, <<".cljc">>]) of
         ?NIL ->
           clj_utils:error_when( FailIfNotFound
                               , [ <<"Could not locate ">>, NsBin

@@ -44,11 +44,11 @@ run(_Config) ->
   true     = code:add_path(binary_to_list(SrcPath)),
   true     = code:add_path(binary_to_list(RootPath)),
 
-  compile(<<"src/clj/clojure/core.clj">>),
-  compile(<<"src/clj/clojure/main.clj">>),
+  compile(<<"src/clj/clojure/core.clje">>),
+  compile(<<"src/clj/clojure/main.clje">>),
   'clojure.core':'in-ns'(clj_core:gensym(<<"temp-ns">>)),
   'clojure.core':'use'([clj_core:symbol(<<"clojure.core">>)]),
-  compile(<<"test/clj/examples/run_tests.clj">>),
+  compile(<<"test/clj/examples/run_tests.clje">>),
 
   TestsPath = <<RootPath/binary, "/clojure/test_clojure/">>,
   Result    = 'examples.run-tests':'-main'([TestsPath, RootPath]),

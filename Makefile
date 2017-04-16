@@ -41,28 +41,29 @@ repl: compile
 BOOT_SRC    := ${CURDIR}/bootstrap
 CLJ_SRC     := ${CURDIR}/src/clj
 CLJ_TEST    := ${CURDIR}/test/clj
-CLJ_EXCLUDE := $(addprefix ${CLJ_SRC}/clojure/,core.clj core_deftype.clj core_print.clj)
-CLJ_FILES   := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*.clj))
+EXT         := .clje
+CLJ_EXCLUDE := $(addprefix ${CLJ_SRC}/clojure/,core${EXT} core_deftype${EXT} core_print${EXT})
+CLJ_FILES   := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*${EXT}))
 
 CODE_PATH   := ${EBIN} ${CLJ_SRC}
 CLOJERLC    := bin/compile -o ${EBIN} -pa ${EBIN} -pa ${CLJ_SRC} -pa ${CLJ_TEST}
 
-# Maps clj to target beam or ns: path/to/ns/some_file.clj -> ns.some-file[.ext]
+# Maps clj to target beam or ns: path/to/ns/some_file${EXT} -> ns.some-file[.ext]
 define clj_to
-$(subst .clj,${2},$(subst _,-,$(subst /,.,${1:${CLJ_SRC}/%=%})))
+$(subst ${EXT},${2},$(subst _,-,$(subst /,.,${1:${CLJ_SRC}/%=%})))
 endef
 
 clojure: clojure.core $(call clj_to,${CLJ_FILES},)
 
 benchmark: all
-	${V} ${CLOJERLC} ${CLJ_TEST}/benchmark/benchmark_runner.clj | \
+	${V} ${CLOJERLC} ${CLJ_TEST}/benchmark/benchmark_runner${EXT} | \
 	tee ${CLJ_TEST}/benchmark/result.txt
 
 # This target is special since it is built from two sources erl and clj
-${EBIN}/clojure.core.beam: ${BOOT_SRC}/clojure.core.erl ${CLJ_SRC}/clojure/core.clj
+${EBIN}/clojure.core.beam: ${BOOT_SRC}/clojure.core.erl ${CLJ_SRC}/clojure/core${EXT}
 	${V} mkdir -p ${EBIN}
 	${V} ${ERLC} ${BOOT_SRC}/clojure.core.erl
-	${V} ${CLOJERLC} ${CLJ_SRC}/clojure/core.clj
+	${V} ${CLOJERLC} ${CLJ_SRC}/clojure/core${EXT}
 	@ echo Compiled clojure.core
 
 clojure.core: ${EBIN}/clojure.core.beam
