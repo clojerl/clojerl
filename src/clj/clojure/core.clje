@@ -4864,7 +4864,7 @@
     (let [pending (map #(if (= % path) (str "[ " % " ]") %)
                        (cons path *pending-paths*))
           chain (apply str (interpose "->" pending))]
-      (throw-if true "Cyclic load dependency: %s" chain))))
+      (throw-if true "Cyclic load dependency: ~s" chain))))
 
 ;; Public
 
