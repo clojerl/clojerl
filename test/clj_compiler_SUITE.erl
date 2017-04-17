@@ -91,7 +91,7 @@ compile_files(_Config) ->
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
   ct:comment("Compile all src/clj/examples/*.clj files succesfully"),
-  Wildcard2 = clj_test_utils:relative_path(<<"test/clj/examples/*.clje">>),
+  Wildcard2 = clj_test_utils:relative_path(<<"test/clj/examples/**/*.clje">>),
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
   ErrorPath = clj_test_utils:relative_path(<<"test/clj/examples/error.clje">>),
   FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],

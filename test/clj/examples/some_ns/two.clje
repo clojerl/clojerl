@@ -1,0 +1,5 @@
+(ns examples.some-ns.two)
+
+(require 'examples.some-ns.one)
+
+(def x examples.some-ns.one/x)

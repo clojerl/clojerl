@@ -64,14 +64,15 @@ load(ScriptBase) ->
 
 -spec load(binary(), boolean()) -> ?NIL.
 load(ScriptBase, FailIfNotFound) ->
-  NsBin = binary:replace(ScriptBase, <<"/">>, <<".">>, [global]),
-  case load_ns(NsBin) of
+  NsBin0 = binary:replace(ScriptBase, <<"/">>, <<".">>, [global]),
+  NsBin1 = binary:replace(NsBin0, <<"_">>, <<"-">>, [global]),
+  case load_ns(NsBin1) of
     ok -> ok;
     _ ->
       case resolve_file(ScriptBase, [<<".clje">>, <<".cljc">>]) of
         ?NIL ->
           clj_utils:error_when( FailIfNotFound
-                              , [ <<"Could not locate ">>, NsBin
+                              , [ <<"Could not locate ">>, NsBin1
                                 , <<".beam or ">>, ScriptBase
                                 , <<" on code path.">>
                                 ]
