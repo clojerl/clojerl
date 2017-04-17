@@ -10,7 +10,7 @@ Building `clojerl` requires *Erlang/OTP 18+* and *rebar3*.
 
     git clone https://github.com/jfacorro/clojerl
     cd clojerl
-    make repl
+    make
 
 ## Getting Started
 
