@@ -26,8 +26,7 @@
 -type clj_flag() :: 'no-warn-symbol-as-erl-fun'
                   | 'no-warn-dynamic-var-name'.
 
--type options() :: #{ output_dir  => string()
-                    , erl_flags   => [atom()]
+-type options() :: #{ erl_flags   => [atom()]
                     , clj_flags   => [clj_flag()]
                     , verbose     => boolean()
                     , reader_opts => map()
@@ -40,8 +39,7 @@
 
 -spec default_options() -> options().
 default_options() ->
-  #{ output_dir  => "ebin"
-   , erl_flags   => [ verbose
+  #{ erl_flags   => [ verbose
                     %% , debug_info
                     %% Don't use these except for improving generated code
                     , nowarn_unused_vars

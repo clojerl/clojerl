@@ -5699,23 +5699,23 @@
   (let [properties (second (application/get_all_key.e :clojerl))
         vsn        (proplists/get_value.e :vsn properties)
         version-string (erlang/list_to_binary.e vsn)
-        [_ major minor incremental qualifier snapshot]
+        [_ major minor incremental build ref]
         (re-matches
-         #"(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9_]+))?(?:-(SNAPSHOT))?"
+         #"(\d+)\.(\d+)\.(\d+)(?:\+build\.([a-zA-Z0-9_]+))?(?:\.ref([a-zA-Z0-9_]+))?"
          version-string)
         clojure-version {:major       (erlang/binary_to_integer.e major)
                          :minor       (erlang/binary_to_integer.e minor)
                          :incremental (erlang/binary_to_integer.e incremental)
-                         :qualifier   (if (= qualifier "SNAPSHOT") nil qualifier)}]
-    (if (clojerl.String/contains.e version-string "SNAPSHOT")
+                         :build       build
+                         :ref         ref}]
+    (if ref
       (assoc clojure-version :interim true)
       clojure-version)))
 
 (add-doc-and-meta *clojure-version*
   "The version info for Clojure core, as a map containing :major :minor
-  :incremental and :qualifier keys. Feature releases may increment
-  :minor and/or :major, bugfix releases will increment :incremental.
-  Possible values of :qualifier include \"GA\", \"SNAPSHOT\", \"RC-x\" \"BETA-x\""
+  :incremental, :build and :ref keys. Feature releases may increment
+  :minor and/or :major, bugfix releases will increment :incremental."
   {:added "1.0"})
 
 (defn
@@ -5728,10 +5728,10 @@
        (:minor *clojure-version*)
        (when-let [i (:incremental *clojure-version*)]
          (str "." i))
-       (when-let [q (:qualifier *clojure-version*)]
-         (when (pos? (count q)) (str "-" q)))
-       (when (:interim *clojure-version*)
-         "-SNAPSHOT")))
+       (when-let [b (:build *clojure-version*)]
+         (str "-" b))
+       (when-let [r (:ref *clojure-version*)]
+         (str "." r))))
 
 (defn promise
   "Returns a promise object that can be read with deref/@, and set,
