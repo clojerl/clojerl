@@ -43,6 +43,8 @@ From the REPL it's possible to start evaluating Clojure expressions:
     nil
     clje.user=>
 
+For a very basic example of a project please check the [example-web-app](https://github.com/clojerl/example-web-app/) repository.
+
 ## Rationale
 
 Erlang is a great language for building safe, reliable and scalable
