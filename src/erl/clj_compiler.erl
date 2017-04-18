@@ -78,14 +78,13 @@ compile_file(File, Opts) when is_binary(File) ->
 compile_file(File, Opts0, Env) when is_binary(File) ->
   case file:read_file(File) of
     {ok, Src} ->
-      Opts        = maps:merge(default_options(), Opts0),
-      Filename    = filename:basename(File),
-      FilenameStr = binary_to_list(Filename),
-      ErlFlags    = maps:get(erl_flags, Opts, []),
-      ReaderOpts  = reader_opts(File),
-      Opts1       = Opts#{ erl_flags   => [{source, FilenameStr} | ErlFlags]
-                         , reader_opts => ReaderOpts#{file => Filename}
-                         },
+      Opts       = maps:merge(default_options(), Opts0),
+      FileStr    = binary_to_list(File),
+      ErlFlags   = maps:get(erl_flags, Opts, []),
+      ReaderOpts = reader_opts(File),
+      Opts1      = Opts#{ erl_flags   => [{source, FileStr} | ErlFlags]
+                        , reader_opts => ReaderOpts#{file => File}
+                        },
       when_verbose(Opts1, <<"Compiling ", File/binary, "\n">>),
       CompileFun = case Opts1 of
                      #{time := true} -> fun timed_compile/3;
