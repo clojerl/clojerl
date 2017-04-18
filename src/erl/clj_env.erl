@@ -6,8 +6,6 @@
         , context/1
         , context/2
         , location/1
-        , location/2
-        , maybe_update_location/2
 
         , push_expr/2
         , pop_expr/1
@@ -31,7 +29,6 @@
 -type context() :: expr | return | statement.
 
 -type env() :: #{ context    => context()
-                , location   => ?NIL | clj_reader:location()
                 , exprs      => [map()]
                 , locals     => clj_scope:scope()
                 , mapping    => clj_scope:scope()
@@ -42,7 +39,6 @@
 -spec default() -> env().
 default() ->
   #{ context    => expr
-   , location   => ?NIL
    , exprs      => []
    , locals     => clj_scope:new()
    , mapping    => clj_scope:new()
@@ -55,18 +51,7 @@ context(#{context := Ctx}) -> Ctx.
 context(Ctx, Env) -> Env#{context => Ctx}.
 
 -spec location(env()) -> ?NIL | clj_reader:location().
-location(#{location := Location}) ->
-  Location.
-
--spec location(?NIL | clj_reader:location(), env()) -> env().
-location(Location, Env) ->
-  Env#{location => Location}.
-
--spec maybe_update_location(?NIL | map(), env()) -> env().
-maybe_update_location(?NIL, Env) ->
-  Env;
-maybe_update_location(Location, Env) ->
-  Env#{location => Location}.
+location(Env) -> get(location, Env).
 
 -spec push_expr(map(), env()) -> env().
 push_expr(Expr, Env = #{exprs := Exprs}) ->

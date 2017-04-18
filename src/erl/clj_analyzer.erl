@@ -183,18 +183,20 @@ analyze_const(Constant, CheckWrappingMeta, Env) ->
 
 -spec analyze_seq('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_seq(List, Env0) ->
-  OldLocation   = clj_env:location(Env0),
-  MaybeLocation = clj_reader:location_meta(List),
-  Env           = clj_env:maybe_update_location(MaybeLocation, Env0),
-  Op            = clj_rt:first(List),
+  Mapping = case clj_reader:location_meta(List) of
+              ?NIL     -> #{};
+              Location -> #{location => Location}
+            end,
+  Env1    = clj_env:push(Mapping, Env0),
+  Op      = clj_rt:first(List),
 
   clj_utils:error_when( Op =:= ?NIL
                       , <<"Can't call nil">>
-                      , clj_env:location(Env)
+                      , clj_env:location(Env1)
                       ),
 
-  ExpandedList = macroexpand_1(List, Env),
-  Env1 = case clj_rt:equiv(List, ExpandedList) of
+  ExpandedList = macroexpand_1(List, Env1),
+  Env2 = case clj_rt:equiv(List, ExpandedList) of
            true ->
              AnaInvoke = fun analyze_invoke/2,
              Fun = case clj_rt:'symbol?'(Op) of
@@ -203,11 +205,11 @@ analyze_seq(List, Env0) ->
                      false ->
                        AnaInvoke
                    end,
-             Fun(List, Env);
+             Fun(List, Env1);
            false ->
-             analyze_form(ExpandedList, Env)
+             analyze_form(ExpandedList, Env1)
          end,
-  clj_env:location(OldLocation, Env1).
+  clj_env:pop(Env2).
 
 %%------------------------------------------------------------------------------
 %% Parse quote
