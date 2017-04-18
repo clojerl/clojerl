@@ -197,8 +197,13 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
-  Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts, eval => ?NIL},
+  File     = maps:get(file, RdrOpts),
+  Mapping  = #{ clj_flags     => CljFlags
+              , compiler_opts => Opts
+              , eval          => ?NIL
+              },
   Env1     = clj_env:push(Mapping, Env0),
+  Env2     = clj_env:maybe_update_location(#{file => File}, Env1),
 
   EmitEval = case Opts0 of
                #{time := true} ->
@@ -208,7 +213,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                                    , [ fun emit_eval_form/2
                                      , Src
                                      , RdrOpts
-                                     , Env1
+                                     , Env2
                                      ]
                                    )
                  end;
@@ -217,7 +222,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                      clj_reader:read_fold( fun emit_eval_form/2
                                          , Src
                                          , RdrOpts
-                                         , Env1
+                                         , Env2
                                          )
                  end
              end,
