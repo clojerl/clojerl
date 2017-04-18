@@ -47,7 +47,7 @@
   {:added "1.3"}
   [el]
   (let [file (filename el)
-        clojure-fn? (and file (or (clojerl.String/ends_with.e file ".clj")
+        clojure-fn? (and file (or (clojerl.String/ends_with.e file ".clje")
                                   (clojerl.String/ends_with.e file ".cljc")
                                   (= file "NO_SOURCE_FILE")))]
     (str (if clojure-fn? (demunge (module el)) (module el))
