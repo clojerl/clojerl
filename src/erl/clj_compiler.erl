@@ -197,7 +197,12 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
-  Mapping  = #{clj_flags => CljFlags, compiler_opts => Opts, eval => ?NIL},
+  File     = maps:get(file, RdrOpts, ?NIL),
+  Mapping  = #{ clj_flags     => CljFlags
+              , compiler_opts => Opts
+              , eval          => ?NIL
+              , location      => #{file => File}
+              },
   Env1     = clj_env:push(Mapping, Env0),
 
   EmitEval = case Opts0 of
