@@ -417,8 +417,7 @@ location_to_binary(#{line := Line, column := Col} = Location)
 location_to_binary(#{file := Filename})
   when is_binary(Filename) ->
   <<Filename/binary, ":?:?: ">>;
-location_to_binary(X) ->
-  erlang:display(X),
+location_to_binary(_) ->
   <<"?:?:?: ">>.
 
 -spec floor(number()) -> number().

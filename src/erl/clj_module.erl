@@ -9,8 +9,8 @@
 
 -export([ with_context/1
 
-        , all_forms/0
-        , get_forms/1
+        , all_modules/0
+        , get_module/1
         , ensure_loaded/2
         , is_loaded/1
         , remove/1
@@ -87,17 +87,16 @@ with_context(Fun) ->
     cleanup()
   end.
 
-%% @doc Returns a list where each element is a list with the abstract
-%%      forms of all stored modules.
+%% @doc Returns a list where each element is Core Erlang module.
 %% @end
--spec all_forms() -> [cerl:c_module()].
-all_forms() ->
+-spec all_modules() -> [cerl:c_module()].
+all_modules() ->
   All = gen_server:call(?MODULE, all),
-  lists:map(fun to_forms/1, All).
+  lists:map(fun to_module/1, All).
 
--spec get_forms(atom()) -> cerl:c_module().
-get_forms(ModuleName) when is_atom(ModuleName) ->
-  to_forms(get(?MODULE, ModuleName)).
+-spec get_module(atom()) -> cerl:c_module().
+get_module(ModuleName) when is_atom(ModuleName) ->
+  to_module(get(?MODULE, ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(binary(), module()) -> ok.
@@ -423,7 +422,7 @@ build_fake_fun(Function, Arity, Module) ->
     Bindings    = #{<<"#'clojure.core/*compile-files*">> => false},
     ok          = 'clojerl.Var':push_bindings(Bindings),
     CompileOpts = #{erl_flags => [from_core, binary]},
-    clj_compiler:compile_forms(FakeModule, CompileOpts)
+    clj_compiler:compile_module(FakeModule, CompileOpts)
   after
     ok = 'clojerl.Var':pop_bindings()
   end,
@@ -450,8 +449,8 @@ delete_fake_modules(Module) ->
   ok.
 
 %% @private
--spec to_forms(clj_module()) -> cerl:c_module().
-to_forms(#module{} = Module) ->
+-spec to_module(clj_module()) -> cerl:c_module().
+to_module(#module{} = Module) ->
   #module{ name     = Name
          , source   = Source
          , mappings = MappingsTable

@@ -290,7 +290,7 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_functions(Functions, Module),
 
   Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  Module = clj_compiler:compile_module(clj_module:get_module(Module), Opts),
   ok     = clj_module:remove(Module),
 
   Ast = cerl:ann_abstract(ann_from(Env), Name),
@@ -349,7 +349,7 @@ ast(#{op := defprotocol} = Expr, State) ->
   clj_module:add_attributes([ProtocolAttr | Attributes], Module),
 
   Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  Module = clj_compiler:compile_module(clj_module:get_module(Module), Opts),
   ok     = clj_module:remove(Module),
 
   Ast = cerl:ann_abstract(Ann, NameSym),
@@ -385,7 +385,9 @@ ast(#{op := extend_type} = Expr, State) ->
         clj_module:add_functions(FunctionsAsts, Module),
 
         Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-        Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+        Module = clj_compiler:compile_module( clj_module:get_module(Module)
+                                            , Opts
+                                            ),
         ok     = clj_module:remove(Module),
 
         StateAcc2
