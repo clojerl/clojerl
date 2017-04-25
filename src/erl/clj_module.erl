@@ -333,8 +333,9 @@ handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
               {Pid, Mods} -> Mods
             end,
 
-  true = ets:delete(TabId, Pid),
-  ok   = lists:foreach(fun(M) -> ets:delete(?MODULE, M#module.name) end, Modules),
+  true      = ets:delete(TabId, Pid),
+  DeleteFun = fun(M) -> ets:delete(?MODULE, M#module.name) end,
+  ok        = lists:foreach(DeleteFun, Modules),
 
   {reply, Modules, State};
 handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
@@ -473,7 +474,9 @@ to_module(#module{} = Module) ->
                  ],
 
   ClojureAttr  = {cerl:c_atom(clojure), cerl:abstract(true)},
-  OnLoadAttr   = {cerl:c_atom(on_load), cerl:abstract([{?ON_LOAD_FUNCTION, 0}])},
+  OnLoadAttr   = { cerl:c_atom(on_load)
+                 , cerl:abstract([{?ON_LOAD_FUNCTION, 0}])
+                 },
 
   Attrs        = [X || {X} <- ets:tab2list(AttrsTable)],
   UniqueAttrs  = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),

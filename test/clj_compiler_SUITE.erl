@@ -61,15 +61,15 @@ compile(_Config) ->
 -spec compile_file(config()) -> result().
 compile_file(_Config) ->
   Opts = #{verbose => true, time => true},
-
+  Dir  = <<"test/clj/examples">>,
   ct:comment("Compile a file and check a var's value by deref'ing it"),
-  SimplePath = clj_test_utils:relative_path(<<"test/clj/examples/simple.clje">>),
+  SimplePath = clj_test_utils:relative_path(<<Dir/binary, "/simple.clje">>),
   _Env = clj_compiler:compile_file(SimplePath, Opts),
   check_var_value(<<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath =
-    clj_test_utils:relative_path(<<"test/clj/examples/abcdef_42.clje">>),
+    clj_test_utils:relative_path(<<Dir/binary, "/abcdef_42.clje">>),
   ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
        catch _:_ -> ok end,
 
