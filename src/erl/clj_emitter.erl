@@ -290,7 +290,7 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_functions(Functions, Module),
 
   Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  Module = clj_compiler:compile_module(clj_module:get_module(Module), Opts),
   ok     = clj_module:remove(Module),
 
   Ast = cerl:ann_abstract(ann_from(Env), Name),
@@ -349,7 +349,7 @@ ast(#{op := defprotocol} = Expr, State) ->
   clj_module:add_attributes([ProtocolAttr | Attributes], Module),
 
   Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-  Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+  Module = clj_compiler:compile_module(clj_module:get_module(Module), Opts),
   ok     = clj_module:remove(Module),
 
   Ast = cerl:ann_abstract(Ann, NameSym),
@@ -385,7 +385,9 @@ ast(#{op := extend_type} = Expr, State) ->
         clj_module:add_functions(FunctionsAsts, Module),
 
         Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-        Module = clj_compiler:compile_forms(clj_module:get_forms(Module), Opts),
+        Module = clj_compiler:compile_module( clj_module:get_module(Module)
+                                            , Opts
+                                            ),
         ok     = clj_module:remove(Module),
 
         StateAcc2
@@ -1209,12 +1211,12 @@ field_fun_name(FieldName) when is_atom(FieldName) ->
 %% @doc Builds a tuple abstract form tagged with atom ?TYPE which is used
 %%      to build Clojerl data types.
 -spec type_tuple( atom()
-                , [cerl:cerl()]
-                , [cerl:cerl()]
-                , [cerl:cerl()]
+                , [ast()]
+                , [ast()]
+                , [ast()]
                 , create | match
                 ) ->
-  cerl:cerl().
+  ast().
 type_tuple(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts, TupleType) ->
   {MapFieldType, InfoAst} = case TupleType of
                               create -> {assoc, cerl:c_atom(?NIL)};
@@ -1253,7 +1255,7 @@ type_tuple_ast(Typename, DataAst, InfoAst) ->
 
 %% ----- Case and receive Clauses -------
 
--spec fail_clause(atom(), [any()]) -> cerl:cerl().
+-spec fail_clause(atom(), [any()]) -> ast().
 fail_clause(Reason, Ann) ->
   VarAst      = new_c_var(Ann),
   BadmatchAst = cerl:c_tuple([cerl:c_atom(Reason), VarAst]),
@@ -1261,7 +1263,7 @@ fail_clause(Reason, Ann) ->
   cerl:ann_c_clause([compiler_generated | Ann], [VarAst], FailAst).
 
 -spec clause({clj_analyzer:expr(), clj_analyzer:expr()}, state()) ->
-  cerl:cerl().
+  ast().
 clause({PatternExpr, BodyExpr}, StateAcc) ->
   #{ env   := EnvPattern
    , guard := GuardExpr
@@ -1278,8 +1280,8 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
 
 %% ----- Functions -------
 
--spec function_form(atom(), [term()], [cerl:cerl()], cerl:cerl()) ->
-  cerl:cerl().
+-spec function_form(atom(), [term()], [ast()], ast()) ->
+  {ast(), ast()}.
 function_form(Name, Ann, Args, Body) when is_atom(Name) ->
   EvalName = cerl:c_fname(Name, length(Args)),
   EvalFun  = cerl:ann_c_fun(Ann, Args, Body),
@@ -1393,7 +1395,7 @@ add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
   lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
 
 -spec body_from_clauses([term()], [cerl:c_clause()]) ->
-  {[cerl:c_var()], cerl:cerl()}.
+  {[cerl:c_var()], ast()}.
 body_from_clauses(Ann, [ClauseAst]) ->
   case cerl:clause_guard(ClauseAst) =:= cerl:c_atom(true) of
     true  ->
@@ -1407,7 +1409,7 @@ body_from_clauses(Ann, ClauseAsts) ->
   case_from_clauses(Ann, ClauseAsts).
 
 -spec case_from_clauses([term()], [cerl:c_clause()]) ->
-  {[cerl:c_var()], cerl:cerl()}.
+  {[cerl:c_var()], ast()}.
 case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
   Patterns = cerl:clause_pats(ClauseAst),
   Vars = [new_c_var(Ann) || _ <- lists:seq(0, length(Patterns) - 1)],
@@ -1417,7 +1419,7 @@ case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
 %% ----- letrec -------
 
 -spec letrec_defs([ast()], [ast()], state()) ->
-  {[{cerl:cerl(), cerl:cerl()}], state()}.
+  {[{ast(), ast()}], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
   {VarsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State0, VarsExprs)
                               , length(VarsExprs)
@@ -1571,7 +1573,7 @@ var_val_function(ValAst, VarAst, Ann) ->
 %% ----- Map -------
 
 %% cerl:c_map_pair_exact/2 doesn't exist in 18.3
--spec c_map_pair_exact(cerl:cerl(), cerl:cerl()) -> cerl:c_map_pair().
+-spec c_map_pair_exact(ast(), ast()) -> cerl:c_map_pair().
 c_map_pair_exact(K, V) ->
   Exact = cerl:c_atom(exact),
   cerl:ann_c_map_pair([], Exact, K, V).

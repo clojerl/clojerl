@@ -16,7 +16,7 @@
         , eval/3
         , eval_expressions/1
         , eval_expressions/2
-        , compile_forms/2
+        , compile_module/2
         ]).
 
 -export([ no_warn_dynamic_var_name/1
@@ -156,7 +156,7 @@ eval1(Form, Opts, Env) ->
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
   {Exprs, Modules, Env1} = run_monitored(DoEval),
 
-  lists:foreach(compile_forms_fun(Opts), Modules),
+  lists:foreach(compile_module_fun(Opts), Modules),
   Value = eval_expressions(Exprs),
 
   {Value, Env1}.
@@ -232,7 +232,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
         try
           State1 = EmitEval(),
           %% Compile all modules
-          lists:foreach(compile_forms_fun(Opts), clj_module:all_forms()),
+          lists:foreach(compile_module_fun(Opts), clj_module:all_modules()),
           {shutdown, State1}
         catch
           Kind:Error ->
@@ -259,7 +259,7 @@ do_eval(Form, Opts0, Env0) ->
 
           { shutdown
           , { Exprs
-            , clj_module:all_forms()
+            , clj_module:all_modules()
             , clj_env:pop(Env2)
             }
           }
@@ -289,19 +289,19 @@ emit_eval_form(Form, Env) ->
   Value         = eval_expressions(Exprs),
   clj_env:update(eval, Value, Env2).
 
--spec compile_forms_fun(options()) -> function().
-compile_forms_fun(Opts) ->
+-spec compile_module_fun(options()) -> function().
+compile_module_fun(Opts) ->
   case Opts of
     #{time := true} ->
       fun(Forms) ->
-          clj_utils:time("Compile Forms", fun compile_forms/2, [Forms, Opts])
+          clj_utils:time("Compile Forms", fun compile_module/2, [Forms, Opts])
       end;
     _ ->
-      fun(Forms) -> compile_forms(Forms, Opts) end
+      fun(Forms) -> compile_module(Forms, Opts) end
   end.
 
--spec compile_forms(cerl:c_module(), options()) -> atom().
-compile_forms(Module, Opts) ->
+-spec compile_module(cerl:c_module(), options()) -> atom().
+compile_module(Module, Opts) ->
   ok       = maybe_output_erl(Module, Opts),
   ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
              | maps:get(erl_flags, Opts, [])
