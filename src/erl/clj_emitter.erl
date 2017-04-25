@@ -465,33 +465,7 @@ ast(#{op := invoke} = Expr, State) ->
   case FExpr of
     %% Var
     #{op := var, var := Var, form := Symbol} ->
-      VarMeta = clj_rt:meta(Var),
-      Module  = 'clojerl.Var':module(Var),
-
-      Ast =
-        case clj_rt:get(VarMeta, 'fn?', false) of
-          true ->
-            Function    = 'clojerl.Var':function(Var),
-            Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-            CurrentNs   = clj_namespace:current(),
-            NsName      = clj_rt:name(clj_namespace:name(CurrentNs)),
-            VarNsName   = clj_rt:namespace(Var),
-            ForceRemote = maps:get(force_remote_invoke, State),
-            %% When the var's symbol is not namespace qualified and the var's
-            %% namespace is the current namespace, emit a local function
-            %% call, otherwise emit a remote call.
-            case clj_rt:namespace(Symbol) of
-              ?NIL when NsName =:= VarNsName, not ForceRemote ->
-                call_fa(Function, Args1, Ann);
-              _ ->
-                call_mfa(Module, Function, Args1, Ann)
-            end;
-          false ->
-            ValFunction = 'clojerl.Var':val_function(Var),
-            FunAst      = call_mfa(Module, ValFunction, [], Ann),
-            ArgsAst     = list_ast(Args),
-            call_mfa('clojerl.IFn', apply, [FunAst, ArgsAst], Ann)
-        end,
+      Ast = var_invoke(Var, Symbol, Args, Ann, State),
 
       push_ast(Ast, State1);
     %% Erlang Function
@@ -1569,6 +1543,39 @@ var_val_function(ValAst, VarAst, Ann) ->
   ValueClauseAst = cerl:ann_c_clause(Ann, [TupleAst], XVar),
 
   cerl:ann_c_case(Ann, TestAst, [NilClauseAst, ValueClauseAst]).
+
+-spec var_invoke( 'clojerl.Var':type()
+                , 'clojerl.Symbol':type()
+                , [ast()]
+                , [term()]
+                , state()) -> ast().
+var_invoke(Var, Symbol, Args, Ann, State) ->
+  VarMeta = clj_rt:meta(Var),
+  Module  = 'clojerl.Var':module(Var),
+
+  case clj_rt:get(VarMeta, 'fn?', false) of
+    true ->
+      Function    = 'clojerl.Var':function(Var),
+      Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+      CurrentNs   = clj_namespace:current(),
+      NsName      = clj_rt:name(clj_namespace:name(CurrentNs)),
+      VarNsName   = clj_rt:namespace(Var),
+      ForceRemote = maps:get(force_remote_invoke, State),
+      %% When the var's symbol is not namespace qualified and the var's
+      %% namespace is the current namespace, emit a local function
+      %% call, otherwise emit a remote call.
+      case clj_rt:namespace(Symbol) of
+        ?NIL when NsName =:= VarNsName, not ForceRemote ->
+          call_fa(Function, Args1, Ann);
+        _ ->
+          call_mfa(Module, Function, Args1, Ann)
+      end;
+    false ->
+      ValFunction = 'clojerl.Var':val_function(Var),
+      FunAst      = call_mfa(Module, ValFunction, [], Ann),
+      ArgsAst     = list_ast(Args),
+      call_mfa('clojerl.IFn', apply, [FunAst, ArgsAst], Ann)
+  end.
 
 %% ----- Map -------
 
