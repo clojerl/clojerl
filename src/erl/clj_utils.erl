@@ -40,12 +40,16 @@
         , time/2
         , time/3
 
+        , store_beam/2
+        , add_core_code/2
         , code_from_binary/1
 
         , floor/1
         , ceil/1
         , signum/1
         ]).
+
+-define(CORE_CHUNK, "Core").
 
 -define(INT_PATTERN,
         "^([-+]?)"
@@ -284,24 +288,40 @@ time(Label, Fun, Args) ->
   io:format("~s: ~p ms~n", [Label, T / 1000]),
   V.
 
+-spec store_beam(module(), binary()) -> ok.
+store_beam(Name, Binary) ->
+  clj_cache:put({beam, Name}, Binary).
+
+-spec add_core_code(binary(), cerl:cerl()) -> binary().
+add_core_code(BeamBinary, CoreModule) ->
+  CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
+  CoreAbstractChunk   = {?CORE_CHUNK, CoreAbstract},
+  {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
+  {ok, NewBeamBinary} = beam_lib:build_module(OldChunks ++ [CoreAbstractChunk]),
+  NewBeamBinary.
+
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
 code_from_binary(Name) when is_atom(Name) ->
   case code:get_object_code(Name) of
     {Name, Binary, _} ->
       core_from_binary(Binary);
     _ ->
-      error([ <<"Could not load object code for namespace: ">>
-            , atom_to_binary(Name, utf8)
-            ])
+      case clj_cache:get({beam, Name}) of
+        {ok, Binary} -> core_from_binary(Binary);
+        _ ->
+          error([ <<"Could not load object code for namespace: ">>
+                , atom_to_binary(Name, utf8)
+                ])
+      end
   end.
 
 -spec core_from_binary(binary()) ->
   cerl:cerl() | {error, missing_abstract_code}.
 core_from_binary(Binary) ->
-  ChunkNames = ["Core", abstract_code],
+  ChunkNames = [?CORE_CHUNK, abstract_code],
   ChunkOpts  = [allow_missing_chunks],
   {ok, {_, Chunks}} = beam_lib:chunks(Binary, ChunkNames, ChunkOpts),
-  case proplists:get_value("Core", Chunks) of
+  case proplists:get_value(?CORE_CHUNK, Chunks) of
     missing_chunk ->
       case proplists:get_value(abstract_code, Chunks) of
         %% This case is only for bootstrapping clojure.core since it
@@ -426,7 +446,7 @@ location_to_binary(#{file := Filename})
   when is_binary(Filename) ->
   <<Filename/binary, ":?:?: ">>;
 location_to_binary(_) ->
-  <<"?:?:?: ">>.
+  <<?NO_SOURCE, ":?:?: ">>.
 
 -spec floor(number()) -> number().
 floor(X) when X < 0 ->

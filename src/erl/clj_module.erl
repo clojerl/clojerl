@@ -314,6 +314,7 @@ start_link() ->
 
 init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
+  %% The loaded_modules table keeps track of the modules loaded by process ID.
   TabId = ets:new(loaded_modules, [set, protected, {keypos, 1}]),
   {ok, #{loaded_modules => TabId}}.
 
@@ -384,13 +385,13 @@ cleanup() ->
 %% module is new.
 %% @end
 -spec load(binary(), module()) -> clj_module().
-load(Source, Name) when is_binary(Source) ->
-  SourceStr = binary_to_list(Source),
+load(Path, Name) when is_binary(Path) ->
+  PathStr = binary_to_list(Path),
   Module = case code:ensure_loaded(Name) of
              {module, Name} ->
-               new(SourceStr, clj_utils:code_from_binary(Name));
+               new(PathStr, clj_utils:code_from_binary(Name));
              {error, _} ->
-               new(SourceStr, Name)
+               new(PathStr, Name)
            end,
   ok = gen_server:call(?MODULE, {load, Module}),
   Module.
@@ -422,7 +423,7 @@ build_fake_fun(Function, Arity, Module) ->
   try
     Bindings    = #{<<"#'clojure.core/*compile-files*">> => false},
     ok          = 'clojerl.Var':push_bindings(Bindings),
-    CompileOpts = #{erl_flags => [from_core, binary]},
+    CompileOpts = #{erl_flags => [from_core, binary], fake => true},
     clj_compiler:compile_module(FakeModule, CompileOpts)
   after
     ok = 'clojerl.Var':pop_bindings()
@@ -544,11 +545,11 @@ save(Table, Value) ->
   Value.
 
 -spec new(string(), atom() | cerl:c_module()) -> clj_module().
-new(Source, Name) when is_atom(Name), is_list(Source) ->
-  FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
+new(Path, Name) when is_atom(Name), is_list(Path) ->
+  FileAttr = {cerl:c_atom(file), cerl:abstract(Path)},
   new(cerl:c_module(cerl:c_atom(Name), [], [FileAttr], []));
-new(Source, #c_module{attrs = Attrs} = CoreModule) when is_list(Source) ->
-  FileAttr = {cerl:c_atom(file), cerl:abstract(Source)},
+new(Path, #c_module{attrs = Attrs} = CoreModule) when is_list(Path) ->
+  FileAttr = {cerl:c_atom(file), cerl:abstract(Path)},
   new(CoreModule#c_module{attrs = [FileAttr | Attrs]}).
 
 -spec new(cerl:cerl()) -> clj_module().
@@ -566,12 +567,12 @@ new(CoreModule) ->
                [V] -> V;
                V -> V
              end,
-  Source = maps:get(file, Extracted, ""),
+  Path     = maps:get(file, Extracted, ""),
 
   %% Tables need to be public so that other compiler processes can modify them.
   TableOpts = [set, public, {keypos, 1}],
   Module = #module{ name         = Name
-                  , source       = Source
+                  , source       = Path
                   , mappings     = ets:new(var, TableOpts)
                   , funs         = ets:new(funs, TableOpts)
                   , fake_funs    = ets:new(fake_funs, TableOpts)
