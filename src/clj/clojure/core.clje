@@ -5258,7 +5258,7 @@
   files. This directory must be in the classpath for 'compile' to
   work.
 
-  Defaults to \"classes\""
+  Defaults to \"ebin\""
   {:added "1.0"})
 
 (add-doc-and-meta *compile-files*

@@ -1200,9 +1200,9 @@ erlang_literal(Form, State) ->
         clj_rt:list([ErlListSym | List]);
       IsMap    -> 'clojerl.Map':to_erl_map(Form);
       IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
-      IsString -> clj_rt:list( [ clj_rt:symbol(<<"quote">>)
-                                 , unicode:characters_to_list(Form)
-                                 ]
+      IsString -> clj_rt:list( [ clj_rt:symbol(<<"erl-list*">>)
+                               | unicode:characters_to_list(Form)
+                               ]
                                );
       true     -> clj_utils:error(<<"Can only have list, map, tuple "
                                     "or Erlang string literals">>

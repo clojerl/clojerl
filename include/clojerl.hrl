@@ -29,3 +29,5 @@
 -define(OPT_IO_READER, 'io-reader').
 
 -define(EOFTHROW, eofthrow).
+
+-define(NO_SOURCE, "NO_SOURCE_FILE").

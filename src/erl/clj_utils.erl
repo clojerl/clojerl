@@ -40,12 +40,16 @@
         , time/2
         , time/3
 
+        , store_binary/2
+        , add_core_to_binary/2
         , code_from_binary/1
 
         , floor/1
         , ceil/1
         , signum/1
         ]).
+
+-define(CORE_CHUNK, "Core").
 
 -define(INT_PATTERN,
         "^([-+]?)"
@@ -194,7 +198,7 @@ throw_when(Throw, Reason) ->
 throw_when(false, _, _) ->
   ok;
 throw_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
+  Reason = error_msg_to_binary(List),
   throw_when(true, Reason, Location);
 throw_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -220,7 +224,7 @@ error_when(Throw, Reason) ->
 error_when(false, _, _) ->
   ok;
 error_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
+  Reason = error_msg_to_binary(List),
   error_when(true, Reason, Location);
 error_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -236,7 +240,7 @@ warn_when(Warn, Reason) ->
 warn_when(false, _, _) ->
   ok;
 warn_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
+  Reason = error_msg_to_binary(List),
   warn_when(true, Reason, Location);
 warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -250,6 +254,14 @@ warn_when(true, Reason, Location) ->
                            , [{Location, Reason}]
                            ),
   ok.
+
+-spec error_msg_to_binary(any()) -> binary().
+error_msg_to_binary(Message) when is_binary(Message) ->
+  Message;
+error_msg_to_binary(Message) when is_list(Message) ->
+  erlang:iolist_to_binary(lists:map(fun error_msg_to_binary/1, Message));
+error_msg_to_binary(Message) ->
+  clj_rt:str(Message).
 
 -spec group_by(fun((any()) -> any()), list()) -> map().
 group_by(GroupBy, List) ->
@@ -276,24 +288,40 @@ time(Label, Fun, Args) ->
   io:format("~s: ~p ms~n", [Label, T / 1000]),
   V.
 
+-spec store_binary(module(), binary()) -> ok.
+store_binary(Name, Binary) ->
+  clj_cache:put({beam, Name}, Binary).
+
+-spec add_core_to_binary(binary(), cerl:cerl()) -> binary().
+add_core_to_binary(BeamBinary, CoreModule) ->
+  CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
+  CoreAbstractChunk   = {?CORE_CHUNK, CoreAbstract},
+  {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
+  {ok, NewBeamBinary} = beam_lib:build_module(OldChunks ++ [CoreAbstractChunk]),
+  NewBeamBinary.
+
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
 code_from_binary(Name) when is_atom(Name) ->
   case code:get_object_code(Name) of
     {Name, Binary, _} ->
       core_from_binary(Binary);
     _ ->
-      error([ <<"Could not load object code for namespace: ">>
-            , atom_to_binary(Name, utf8)
-            ])
+      case clj_cache:get({beam, Name}) of
+        {ok, Binary} -> core_from_binary(Binary);
+        _ ->
+          error([ <<"Could not load object code for namespace: ">>
+                , atom_to_binary(Name, utf8)
+                ])
+      end
   end.
 
 -spec core_from_binary(binary()) ->
   cerl:cerl() | {error, missing_abstract_code}.
 core_from_binary(Binary) ->
-  ChunkNames = ["Core", abstract_code],
+  ChunkNames = [?CORE_CHUNK, abstract_code],
   ChunkOpts  = [allow_missing_chunks],
   {ok, {_, Chunks}} = beam_lib:chunks(Binary, ChunkNames, ChunkOpts),
-  case proplists:get_value("Core", Chunks) of
+  case proplists:get_value(?CORE_CHUNK, Chunks) of
     missing_chunk ->
       case proplists:get_value(abstract_code, Chunks) of
         %% This case is only for bootstrapping clojure.core since it
@@ -407,7 +435,7 @@ location_to_binary(#{line := Line, column := Col, file := Filename})
   LineBin     = integer_to_binary(Line),
   ColBin      = integer_to_binary(Col),
   FilenameBin = case Filename of
-                  ?NIL -> <<"?">>;
+                  ?NIL -> <<?NO_SOURCE>>;
                   _ -> Filename
                 end,
   <<FilenameBin/binary, ":", LineBin/binary, ":", ColBin/binary, ": ">>;
@@ -418,7 +446,7 @@ location_to_binary(#{file := Filename})
   when is_binary(Filename) ->
   <<Filename/binary, ":?:?: ">>;
 location_to_binary(_) ->
-  <<"?:?:?: ">>.
+  <<?NO_SOURCE, ":?:?: ">>.
 
 -spec floor(number()) -> number().
 floor(X) when X < 0 ->

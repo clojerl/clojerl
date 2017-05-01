@@ -26,11 +26,14 @@
 -type clj_flag() :: 'no-warn-symbol-as-erl-fun'
                   | 'no-warn-dynamic-var-name'.
 
--type options() :: #{ erl_flags   => [atom()]
-                    , clj_flags   => [clj_flag()]
-                    , verbose     => boolean()
-                    , reader_opts => map()
-                    , time        => boolean()
+-type options() :: #{ erl_flags   => [atom()]     %% erlang compilation flags
+                    , clj_flags   => [clj_flag()] %% clojerl compilation flags
+                    , verbose     => boolean()    %% Output verbose messages
+                    , reader_opts => map()        %% Options for the reader
+                    , time        => boolean()    %% Measure and show
+                                                  %% compilation times
+                    , output_core => binary() | false %% Output .core code
+                    , fake        => boolean()    %% Fake modules being compiled
                     }.
 
 %%------------------------------------------------------------------------------
@@ -48,7 +51,10 @@ default_options() ->
                     ]
    , clj_flags   => []
    , verbose     => false
+   , reader_opts => #{}
    , time        => false
+   , output_core => false
+   , fake        => false
    }.
 
 -spec compile_files([file:filename_all()]) -> clj_env:env().
@@ -290,19 +296,16 @@ emit_eval_form(Form, Env) ->
   clj_env:update(eval, Value, Env2).
 
 -spec compile_module_fun(options()) -> function().
+compile_module_fun(#{time := true} = Opts) ->
+  fun(Forms) ->
+      clj_utils:time("Compile Forms", fun compile_module/2, [Forms, Opts])
+  end;
 compile_module_fun(Opts) ->
-  case Opts of
-    #{time := true} ->
-      fun(Forms) ->
-          clj_utils:time("Compile Forms", fun compile_module/2, [Forms, Opts])
-      end;
-    _ ->
-      fun(Forms) -> compile_module(Forms, Opts) end
-  end.
+  fun(Forms) -> compile_module(Forms, Opts) end.
 
 -spec compile_module(cerl:c_module(), options()) -> atom().
 compile_module(Module, Opts) ->
-  ok       = maybe_output_erl(Module, Opts),
+  ok       = maybe_output_core(Module, Opts),
   ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
              | maps:get(erl_flags, Opts, [])
              ],
@@ -311,21 +314,13 @@ compile_module(Module, Opts) ->
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam, _Warnings} ->
       Name     = cerl:atom_val(cerl:module_name(Module)),
-      BeamPath = maybe_output_beam(Name, add_core_code(Beam, Module)),
+      BeamCore = clj_utils:add_core_to_binary(Beam, Module),
+      BeamPath = maybe_output_beam(Name, BeamCore, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam),
       Name;
     {error, Errors, Warnings} ->
       error({Errors, Warnings})
   end.
-
-
--spec add_core_code(binary(), cerl:cerl()) -> binary().
-add_core_code(BeamBinary, CoreModule) ->
-  CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
-  CoreAbstractChunk   = {"Core", CoreAbstract},
-  {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
-  {ok, NewBeamBinary} = beam_lib:build_module(OldChunks ++ [CoreAbstractChunk]),
-  NewBeamBinary.
 
 -define(CERL_EVAL_MODULE, "cerl_eval").
 
@@ -398,30 +393,36 @@ when_verbose(#{verbose := true}, Message) ->
 when_verbose(_, _) ->
   ok.
 
--spec maybe_output_erl(cerl:c_module(), options()) ->
+-spec maybe_output_core(cerl:c_module(), options()) ->
   ok | {error, term()}.
-maybe_output_erl(Module, #{output_erl := Filename}) ->
+maybe_output_core(Module, #{output_core := Path}) when is_binary(Path) ->
   Source = core_pp:format(Module),
-  file:write_file(Filename, Source);
-maybe_output_erl(_, _) ->
+  file:write_file(Path, Source);
+maybe_output_core(_, _) ->
   ok.
 
--spec maybe_output_beam(atom(), binary()) -> string().
-maybe_output_beam(Name, BeamBinary) ->
+-spec maybe_output_beam(atom(), binary(), options()) -> string().
+maybe_output_beam(_Name, _BeamBinary, #{fake := true}) ->
+  ?NO_SOURCE;
+maybe_output_beam(Name, BeamBinary, _Opts) ->
   CompileFiles = 'clojure.core':'*compile-files*__val'(),
-  do_maybe_output_beam(Name, BeamBinary, CompileFiles).
+  case CompileFiles of
+    true  ->
+      output_beam(Name, BeamBinary);
+    false ->
+      clj_utils:store_binary(Name, BeamBinary),
+      ?NO_SOURCE
+  end.
 
--spec do_maybe_output_beam(atom(), binary(), boolean()) -> string().
-do_maybe_output_beam(Name, BeamBinary, true) ->
+-spec output_beam(atom(), binary()) -> string().
+output_beam(Name, BeamBinary) ->
   CompilePath  = 'clojure.core':'*compile-path*__val'(),
   ok           = ensure_path(CompilePath),
   NameBin      = atom_to_binary(Name, utf8),
   BeamFilename = <<NameBin/binary, ".beam">>,
   BeamPath     = filename:join([CompilePath, BeamFilename]),
   ok           = file:write_file(BeamPath, BeamBinary),
-  binary_to_list(BeamPath);
-do_maybe_output_beam(_, _, false) ->
-  "".
+  binary_to_list(BeamPath).
 
 -spec ensure_path(string()) -> ok.
 ensure_path(Path) ->

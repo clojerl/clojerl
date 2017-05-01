@@ -72,7 +72,7 @@
              *warn-on-infer* *warn-on-infer*
              *data-readers* *data-readers*
              *default-data-reader-fn* *default-data-reader-fn*
-             ;;*compile-path* (System/getProperty "clojure.compile.path" "classes")
+             *compile-path* (os/getenv.e #erl"CLOJERL_COMPILE_PATH" #erl"ebin")
              *command-line-args* *command-line-args*
              *assert* *assert*
              *in* (new erlang.io.PushbackReader *in*)
