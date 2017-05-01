@@ -40,8 +40,8 @@
         , time/2
         , time/3
 
-        , store_beam/2
-        , add_core_code/2
+        , store_binary/2
+        , add_core_to_binary/2
         , code_from_binary/1
 
         , floor/1
@@ -288,12 +288,12 @@ time(Label, Fun, Args) ->
   io:format("~s: ~p ms~n", [Label, T / 1000]),
   V.
 
--spec store_beam(module(), binary()) -> ok.
-store_beam(Name, Binary) ->
+-spec store_binary(module(), binary()) -> ok.
+store_binary(Name, Binary) ->
   clj_cache:put({beam, Name}, Binary).
 
--spec add_core_code(binary(), cerl:cerl()) -> binary().
-add_core_code(BeamBinary, CoreModule) ->
+-spec add_core_to_binary(binary(), cerl:cerl()) -> binary().
+add_core_to_binary(BeamBinary, CoreModule) ->
   CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
   CoreAbstractChunk   = {?CORE_CHUNK, CoreAbstract},
   {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),

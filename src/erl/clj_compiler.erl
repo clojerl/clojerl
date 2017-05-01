@@ -314,7 +314,7 @@ compile_module(Module, Opts) ->
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam, _Warnings} ->
       Name     = cerl:atom_val(cerl:module_name(Module)),
-      BeamCore = clj_utils:add_core_code(Beam, Module),
+      BeamCore = clj_utils:add_core_to_binary(Beam, Module),
       BeamPath = maybe_output_beam(Name, BeamCore, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam),
       Name;
@@ -410,7 +410,7 @@ maybe_output_beam(Name, BeamBinary, _Opts) ->
     true  ->
       output_beam(Name, BeamBinary);
     false ->
-      clj_utils:store_beam(Name, BeamBinary),
+      clj_utils:store_binary(Name, BeamBinary),
       ?NO_SOURCE
   end.
 
