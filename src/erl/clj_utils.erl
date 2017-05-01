@@ -435,7 +435,7 @@ location_to_binary(#{line := Line, column := Col, file := Filename})
   LineBin     = integer_to_binary(Line),
   ColBin      = integer_to_binary(Col),
   FilenameBin = case Filename of
-                  ?NIL -> <<"?">>;
+                  ?NIL -> <<?NO_SOURCE>>;
                   _ -> Filename
                 end,
   <<FilenameBin/binary, ":", LineBin/binary, ":", ColBin/binary, ": ">>;

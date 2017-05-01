@@ -769,7 +769,7 @@ fn(ReadFun) ->
 
   ct:comment("Nested #()"),
   ok = try ReadFun(<<"#(do #(%))">>)
-       catch _:<<"?:1:7: Nested #()s are not allowed">> -> ok end,
+       catch _:<<?NO_SOURCE, ":1:7: Nested #()s are not allowed">> -> ok end,
 
   {comments, ""}.
 
@@ -814,7 +814,8 @@ arg(ReadFun, ReadAllFun) ->
 
   ct:comment("Invalid char after %"),
   ok = try ReadFun(<<"%a">>)
-       catch _:<<"?:1:2: Arg literal must be %, %& or %integer">> -> ok
+       catch _:<<?NO_SOURCE, ":1:2: Arg literal must be %, %& or %integer">> ->
+         ok
        end,
 
   erlang:erase(arg_env),
@@ -873,7 +874,7 @@ unreadable_form(Config) when is_list(Config) ->
 unreadable_form(ReadFun) ->
   ct:comment("Read unreadable"),
   ok = try ReadFun(<<"#<1>">>)
-       catch _:<<"?:1:1: Unreadable form">> -> ok
+       catch _:<<?NO_SOURCE, ":1:1: Unreadable form">> -> ok
        end,
 
   {comments, ""}.
@@ -969,45 +970,48 @@ discard(ReadFun, ReadAllFun) ->
 
   ct:comment("EOF while reading cond"),
   ok = try ReadFun2(<<"#?">>, AllowOpts)
-       catch _:<<"?:1:3: EOF while reading cond">> -> ok
+       catch _:<<?NO_SOURCE, ":1:3: EOF while reading cond">> -> ok
        end,
 
   ct:comment("Reader conditional not allowed"),
   ok = try ReadFun(<<"#?(:clj :whatever :clr :whateverrrr)">>)
-       catch _:<<"?:1:3: Conditional read not allowed">> -> ok
+       catch _:<<?NO_SOURCE, ":1:3: Conditional read not allowed">> -> ok
        end,
 
   ct:comment("No list"),
   ok = try ReadFun2(<<"#?:clj">>, AllowOpts)
-       catch _:<<"?:1:3: read-cond body must be a list">> -> ok
+       catch _:<<?NO_SOURCE, ":1:3: read-cond body must be a list">> -> ok
        end,
 
   ct:comment("EOF: no feature matched"),
   ok = try ReadFun2(<<"#?(:clj :whatever :clr :whateverrrr)">>, AllowOpts)
-       catch _:<<"?:1:37: EOF">> -> ok
+       catch _:<<?NO_SOURCE, ":1:37: EOF">> -> ok
        end,
 
   ct:comment("Uneven number of forms"),
   ok = try ReadFun2(<<"#?(:one :two :three)">>, AllowOpts)
-       catch _:<<"?:1:21: read-cond requires an even number of forms">> -> ok
+       catch
+         _:<<?NO_SOURCE, ":1:21: read-cond requires an "
+             "even number of forms">> ->
+           ok
        end,
 
   ct:comment("Splice at the top level"),
   ok = try ReadFun2(<<"#?@(:clje [:two])">>, AllowOpts)
-       catch _:<<"?:1:5: Reader conditional splicing not allowed "
+       catch _:<<?NO_SOURCE, ":1:5: Reader conditional splicing not allowed "
                  "at the top level">> -> ok
        end,
 
   ct:comment("Splice in list but not sequential"),
   ok = try ReadFun2(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
                            AllowClrFeatureOpts)
-       catch _:<<"?:1:13: Spliced form list in read-cond-splicing must "
-                  "extend clojerl.ISequential">> -> ok
+       catch _:<<?NO_SOURCE, ":1:13: Spliced form list in read-cond-splicing "
+                  "must extend clojerl.ISequential">> -> ok
        end,
 
   ct:comment("Feature is not a keyword"),
   ok = try ReadFun2(<<"#?(1 2) :hello">>, AllowOpts)
-       catch _:<<"?:1:4: Feature should be a keyword">> -> ok
+       catch _:<<?NO_SOURCE, ":1:4: Feature should be a keyword">> -> ok
        end,
 
   {comments, ""}.
@@ -1162,11 +1166,11 @@ tagged(ReadFun) ->
 
   ct:comment("Don't provide a symbol"),
   ok = try ReadFun(<<"#1">>), error
-       catch _:<<"?:1:2: Reader tag must be a symbol">> -> ok end,
+       catch _:<<?NO_SOURCE, ":1:2: Reader tag must be a symbol">> -> ok end,
 
   ct:comment("Provide a missing reader"),
   ok = try ReadFun(<<"#bla 1">>), error
-       catch _:<<"?:1:2: No reader function for tag bla">> -> ok end,
+       catch _:<<?NO_SOURCE, ":1:2: No reader function for tag bla">> -> ok end,
 
   {comments, ""}.
 
