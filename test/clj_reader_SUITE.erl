@@ -1088,10 +1088,12 @@ erl_literals(ReadFun) ->
 
   %% String
   ct:comment("Read a string"),
-  "" = clj_rt:second(ReadFun(<<"#erl \"\"">>)),
+  [ErlListSymCheck] = clj_rt:to_list(ReadFun(<<"#erl\"\"">>)),
 
   ct:comment("Read a non-empty string"),
-  "Hello there!" = clj_rt:second(ReadFun(<<"#erl \"Hello there!\"">>)),
+  [ ErlListSymCheck
+  | "Hello there!"
+  ] = clj_rt:to_list(ReadFun(<<"#erl \"Hello there!\"">>)),
 
   ct:comment("Try to read an integer"),
   ok = try ReadFun(<<"#erl 1">>), error
