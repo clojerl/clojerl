@@ -194,7 +194,7 @@ throw_when(Throw, Reason) ->
 throw_when(false, _, _) ->
   ok;
 throw_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
+  Reason = error_msg_to_binary(List),
   throw_when(true, Reason, Location);
 throw_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -220,7 +220,7 @@ error_when(Throw, Reason) ->
 error_when(false, _, _) ->
   ok;
 error_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
+  Reason = error_msg_to_binary(List),
   error_when(true, Reason, Location);
 error_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -236,7 +236,7 @@ warn_when(Warn, Reason) ->
 warn_when(false, _, _) ->
   ok;
 warn_when(true, List, Location) when is_list(List) ->
-  Reason = erlang:iolist_to_binary(lists:map(fun clj_rt:str/1, List)),
+  Reason = error_msg_to_binary(List),
   warn_when(true, Reason, Location);
 warn_when(true, Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
@@ -250,6 +250,14 @@ warn_when(true, Reason, Location) ->
                            , [{Location, Reason}]
                            ),
   ok.
+
+-spec error_msg_to_binary(any()) -> binary().
+error_msg_to_binary(Message) when is_binary(Message) ->
+  Message;
+error_msg_to_binary(Message) when is_list(Message) ->
+  erlang:iolist_to_binary(lists:map(fun error_msg_to_binary/1, Message));
+error_msg_to_binary(Message) ->
+  clj_rt:str(Message).
 
 -spec group_by(fun((any()) -> any()), list()) -> map().
 group_by(GroupBy, List) ->
