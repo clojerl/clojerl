@@ -30,4 +30,14 @@
 
 -define(EOFTHROW, eofthrow).
 
+%% Show this as a file when none is available
 -define(NO_SOURCE, "NO_SOURCE_FILE").
+
+%% Uncomment this define to enable debug messages.
+%% -define(CLJ_DEBUG, true).
+
+-ifdef(CLJ_DEBUG).
+-define(DEBUG(Term), erlang:display(Term)).
+-else.
+-define(DEBUG(Term), ok).
+-endif.

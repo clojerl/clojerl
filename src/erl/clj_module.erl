@@ -475,21 +475,15 @@ to_module(#module{} = Module) ->
                  ],
 
   ClojureAttr  = {cerl:c_atom(clojure), cerl:abstract(true)},
-  OnLoadAttr   = { cerl:c_atom(on_load)
-                 , cerl:abstract([{?ON_LOAD_FUNCTION, 0}])
-                 },
 
   Attrs        = [X || {X} <- ets:tab2list(AttrsTable)],
-  UniqueAttrs  = lists:usort([ClojureAttr, OnLoadAttr | Attrs]),
+  UniqueAttrs  = lists:usort([ClojureAttr | Attrs]),
 
   AllAttrs     = [FileAttr, MappingsAttr | UniqueAttrs],
 
-  OnLoadName   = cerl:c_fname(?ON_LOAD_FUNCTION, 0),
-  OnLoadFun    = on_load_function(OnLoadTable),
-  Funs         = [X || {_, X} <- ets:tab2list(FunsTable)],
-  Defs         = [{OnLoadName, OnLoadFun} | Funs],
+  Defs         = [X || {_, X} <- ets:tab2list(FunsTable)],
 
-  cerl:c_module(cerl:c_atom(Name), Exports, AllAttrs, Defs).
+  maybe_on_load(OnLoadTable, cerl:c_atom(Name), Exports, AllAttrs, Defs).
 
 add_module_info_functions(Module) ->
   {_, Funs} = module_info_funs(Module#module.name),
@@ -520,15 +514,42 @@ module_info_funs(Name) ->
     , {InfoName1, InfoFun1}
     ]}.
 
+%% @doc Only add an on_load function if there are any expressions to be added.
+-spec maybe_on_load( ets:tid()
+                   , cerl:c_atom()
+                   , [cerl:c_var()]
+                   , [{cerl:c_atom(), cerl:cerl()}]
+                   , [cerl:c_fun()]
+                   ) ->
+  cerl:c_module().
+maybe_on_load(OnLoadTable, Name, Exports0, Attrs0, Defs0) ->
+  case ets:info(OnLoadTable, size) of
+    0 ->
+      ?DEBUG({no_on_load, cerl:atom_val(Name)}),
+      cerl:c_module(Name, Exports0, Attrs0, Defs0);
+    _ ->
+      Attr   = { cerl:c_atom(on_load)
+               , cerl:abstract([{?ON_LOAD_FUNCTION, 0}])
+               },
+
+      FName  = cerl:c_fname(?ON_LOAD_FUNCTION, 0),
+      Fun    = on_load_function(OnLoadTable),
+      Def    = {FName, Fun},
+
+      Exports1 = [FName | Exports0],
+      Attrs1   = lists:usort([Attr | Attrs0]),
+      Defs1    = [Def  | Defs0],
+
+      cerl:c_module(Name, Exports1, Attrs1, Defs1)
+  end.
+
 %% @private
+-spec on_load_function(ets:tid()) -> empty | cerl:cerl().
 on_load_function(OnLoadTable) ->
-  Body = case [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)] of
-           []       -> cerl:c_atom(ok);
-           [Head | Tail]  ->
-             SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
-             lists:foldl(SeqFun, Head, Tail)
-         end,
-  cerl:c_fun([], Body).
+  [Head | Tail] = [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)],
+  SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
+  Body   = lists:foldl(SeqFun, Head, Tail),
+  cerl:c_fun([], cerl:c_seq(Body, cerl:c_atom(ok))).
 
 -spec get(atom() | ets:tid(), any()) -> any().
 get(?NIL, Id) -> %% If there is no table then nothing will be found.
