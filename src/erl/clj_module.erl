@@ -274,7 +274,10 @@ remove_all_functions(Module) ->
 -spec add_on_load(cerl:cerl(), module() | clj_module()) ->
   clj_module().
 add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
-  add_on_load(Expr, get(?MODULE, ModuleName));
+  case get(?MODULE, ModuleName) of
+    undefined -> error({not_found, ModuleName});
+    Module    -> add_on_load(Expr, Module)
+  end;
 add_on_load(Expr, Module) ->
   save(Module#module.on_load, {Expr, Expr}),
   Module.
