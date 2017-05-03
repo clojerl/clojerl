@@ -984,13 +984,16 @@ ast(#{op := 'receive'} = Expr, State0) ->
 %% on_load
 %%------------------------------------------------------------------------------
 ast(#{op := on_load} = Expr, State) ->
-  #{body := BodyExpr} = Expr,
+  #{ body := BodyExpr
+   , env  := Env
+   } = Expr,
 
   {Ast, State1} = pop_ast(ast(BodyExpr, State)),
 
   CurrentNs  = clj_namespace:current(),
   NameSym    = clj_namespace:name(CurrentNs),
   ModuleName = binary_to_atom(clj_rt:name(NameSym), utf8),
+  ok         = clj_module:ensure_loaded(file_from(Env), ModuleName),
   clj_module:add_on_load(Ast, ModuleName),
 
   push_ast(Ast, State1);
