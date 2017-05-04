@@ -50,6 +50,12 @@ parse_args(["-o", CompilePath | Rest], Opts) ->
   parse_args(Rest, Opts#{compile_path => CompilePath});
 parse_args(["-pa", CodePath | Rest], Opts = #{code_paths := CodePaths}) ->
   parse_args(Rest, Opts#{code_paths => [CodePath | CodePaths]});
+parse_args([TimeOpt | Rest], Opts)
+  when TimeOpt =:= "-t"; TimeOpt =:= "--time" ->
+  parse_args(Rest, Opts#{time => true});
+parse_args([VerboseOpt | Rest], Opts)
+  when VerboseOpt =:= "-v"; VerboseOpt =:= "--verbose" ->
+  parse_args(Rest, Opts#{verbose => true});
 parse_args([File | Rest], Opts = #{files := Files}) ->
   parse_args(Rest, Opts#{files => [File | Files]}).
 
