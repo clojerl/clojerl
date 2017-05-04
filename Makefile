@@ -58,7 +58,7 @@ endef
 clojure: clojure.core $(call clj_to,${CLJ_FILES},)
 
 benchmark: all
-	${V} ${CLOJERLC} -pa `rebar3 path --ebin` ${CLJ_TEST}/benchmark/benchmark_runner${EXT} | \
+	${V} ${CLOJERLC} --time -pa `rebar3 path --ebin` ${CLJ_TEST}/benchmark/benchmark_runner${EXT} | \
 	tee ${CLJ_TEST}/benchmark/result.txt
 
 # This target is special since it is built from two sources erl and clj
