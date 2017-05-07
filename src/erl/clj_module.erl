@@ -415,7 +415,7 @@ build_fake_fun(Function, Arity, Module) ->
   {Names, Defs} = module_info_funs(FakeModuleName),
   ModuleName = cerl:c_atom(FakeModuleName),
   Exports    = [FName | Names],
-  Clojure    = {cerl:c_atom(clojure), cerl:c_atom(true)},
+  Clojure    = {cerl:c_atom(clojure), cerl:abstract([true])},
 
   FakeModule = cerl:c_module( ModuleName
                             , Exports
@@ -477,7 +477,7 @@ to_module(#module{} = Module) ->
                   || {{FName, Arity}} <- ets:tab2list(ExportsTable)
                  ],
 
-  ClojureAttr  = {cerl:c_atom(clojure), cerl:abstract(true)},
+  ClojureAttr  = {cerl:c_atom(clojure), cerl:abstract([true])},
 
   Attrs        = [X || {X} <- ets:tab2list(AttrsTable)],
   UniqueAttrs  = lists:usort([ClojureAttr | Attrs]),
@@ -612,7 +612,7 @@ new(CoreModule) ->
 
   %% Remove the on_load function and all its contents.
   %% IMPORTANT: This means that whenever a namespace is recompiled all
-  %% `on-load*' expressions need to be included in the compilation as
+  %% `erl-on-load*' expressions need to be included in the compilation as
   %% well or they won't be present in the resulting binary.
   OnLoadId = {?ON_LOAD_FUNCTION, 0},
   true     = ets:delete(Module#module.funs, OnLoadId),
