@@ -1,5 +1,7 @@
 -module(clj_murmur3).
 
+-compile(no_native).
+
 -export([ ordered/1
         , unordered/1
         ]).
