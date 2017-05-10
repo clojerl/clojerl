@@ -344,7 +344,7 @@ ast(#{op := defprotocol} = Expr, State) ->
                         }
                     end,
 
-  ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:c_atom(true)},
+  ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:abstract([true])},
   Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
   clj_module:add_attributes([ProtocolAttr | Attributes], Module),
 

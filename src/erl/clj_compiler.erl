@@ -370,7 +370,7 @@ eval_module(Expressions) ->
   {InfoExports, InfoFuns} = clj_module:module_info_funs(ModuleName),
 
   Exports = [FunName | InfoExports],
-  Attrs   = [{cerl:c_atom(clojure), cerl:abstract(true)}],
+  Attrs   = [{cerl:c_atom(clojure), cerl:abstract([true])}],
   Defs    = [{FunName, Fun} | InfoFuns],
   Name    = cerl:c_atom(ModuleName),
   {ModuleName, cerl:c_module(Name, Exports, Attrs, Defs)}.
