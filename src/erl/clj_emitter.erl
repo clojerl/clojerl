@@ -1486,25 +1486,38 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 -spec get_lexical_rename(map(), state()) -> binary().
 get_lexical_rename(LocalExpr, State) ->
   #{lexical_renames := Renames} = State,
+  IsUnderscore = maps:get(underscore, LocalExpr, false),
+  HasShadow    = shadow_depth(LocalExpr) > 0,
 
-  RenameSym = case shadow_depth(LocalExpr) of
-                0 ->
-                  maps:get(name, LocalExpr);
-                _ ->
-                  Code = hash_scope(LocalExpr),
-                  clj_scope:get(Code, Renames)
-              end,
+  RenameSym    = if
+                   IsUnderscore ->
+                     Code = underscore_hash(LocalExpr),
+                     clj_scope:get(Code, Renames);
+                   HasShadow ->
+                     Code = hash_scope(LocalExpr),
+                     clj_scope:get(Code, Renames);
+                   true ->
+                     maps:get(name, LocalExpr)
+                 end,
 
   clj_rt:str(RenameSym).
 
 -spec put_lexical_rename(map(), state()) -> state().
+put_lexical_rename(#{pattern := #{underscore := true} = LocalExpr}, State) ->
+  #{lexical_renames := Renames} = State,
+
+  Code       = underscore_hash(LocalExpr),
+  ShadowName = <<"__underscore__">>,
+  NewRenames = clj_scope:put(Code, clj_rt:gensym(ShadowName), Renames),
+
+  State#{lexical_renames => NewRenames};
 put_lexical_rename(#{shadow := ?NIL}, State) ->
   State;
 put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
   #{lexical_renames := Renames} = State,
 
-  Code = hash_scope(LocalExpr),
-  NameBin = clj_rt:name(Name),
+  Code       = hash_scope(LocalExpr),
+  NameBin    = clj_rt:name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
 
   NewRenames = clj_scope:put(Code, clj_rt:gensym(ShadowName), Renames),
@@ -1512,6 +1525,10 @@ put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
   State#{lexical_renames => NewRenames};
 put_lexical_rename(_, State) ->
   State.
+
+-spec underscore_hash(map()) -> integer().
+underscore_hash(#{underscore := true} = LocalExpr) ->
+  erlang:phash2(LocalExpr#{env := ?NIL}).
 
 -spec hash_scope(map()) -> binary().
 hash_scope(LocalExpr) ->
