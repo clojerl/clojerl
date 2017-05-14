@@ -7,6 +7,9 @@
 (def g (fn* ([#erl{:x x} x] x)
             ([_ _] :whatever)))
 
+;; Make sure that the argument renaming happens correctly for _.
+(def h (fn* [_] _))
+
 (let* [:foo (g #erl{:x :foo} :foo)
        :whatever (g #erl{:x :foo} :bar)
        :whatever (g :foo :bar)

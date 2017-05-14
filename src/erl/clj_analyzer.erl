@@ -1740,11 +1740,13 @@ analyze_symbol(Symbol, Env) ->
                           , [<<"Not a valid binding symbol, had: ">>, Symbol]
                           , clj_env:location(Env)
                           ),
-      Ast = #{ op     => local
-             , env    => Env
-             , name   => Symbol
-             , tag    => maybe_type_tag(Symbol)
-             , shadow => clj_env:get_local(Symbol, Env)
+      Ast = #{ op         => local
+             , env        => Env
+             , name       => Symbol
+             , tag        => maybe_type_tag(Symbol)
+             , shadow     => clj_env:get_local(Symbol, Env)
+             , underscore => clj_rt:name(Symbol) =:= <<"_">>
+             , id         => erlang:unique_integer()
              },
       Env1 = add_pattern_local(Ast, Env),
       clj_env:push_expr(Ast, Env1);

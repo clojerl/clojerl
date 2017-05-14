@@ -310,12 +310,15 @@ fn(_Config) ->
    } = Fn4Method2,
 
   true = clj_rt:equiv( maps:without([env, pattern], Fn4Param1)
-                       , maps:without([env, pattern], Fn4Param1b)
-                       ),
+                     , maps:without([env, pattern], Fn4Param1b)
+                     ),
 
-  true = clj_rt:equiv( maps:remove(env, maps:get(pattern, Fn4Param1))
-                       , maps:remove(env, maps:get(pattern, Fn4Param1b))
-                       ),
+  Fn4Pattern1  = maps:get(pattern, Fn4Param1),
+  Fn4Pattern1b = maps:get(pattern, Fn4Param1b),
+
+  true = clj_rt:equiv( maps:without([env, id], Fn4Pattern1)
+                     , maps:without([env, id], Fn4Pattern1b)
+                     ),
 
   #{ op      := binding
    , pattern := #{name := XSymbolCheck4}
