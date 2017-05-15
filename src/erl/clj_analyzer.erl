@@ -1219,9 +1219,11 @@ parse_deftype(Form, Env0) ->
   , Fields
   , _ % :implements
   , Interfaces
-  | Methods
+  | OptsAndMethods
   ] = clj_rt:to_list(Form),
 
+  IsNotSeq    = fun(X) -> not clj_rt:'seq?'(X) end,
+  {Opts, Methods} = lists:splitwith(IsNotSeq, OptsAndMethods),
   Env0a       = clj_env:push(#{pattern_locals => []}, Env0),
 
   FieldsList  = clj_rt:to_list(Fields),
@@ -1264,6 +1266,7 @@ parse_deftype(Form, Env0) ->
                  , type      => TypeSym
                  , fields    => FieldsExprs
                  , protocols => InterfacesExprs
+                 , opts      => Opts
                  , methods   => MethodsExprs
                  },
 
