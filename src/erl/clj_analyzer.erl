@@ -1920,7 +1920,7 @@ is_maybe_type(?NIL) ->
 is_maybe_type(Symbol) ->
   ?NIL = clj_rt:namespace(Symbol),
   Name = clj_rt:name(Symbol),
-  Re   = <<"([a-z]\\w*\\.)+[A-Z]\\w*">>,
+  Re   = <<"([a-z]\\w*\\.)+[A-Za-z]\\w*">>,
   case re:run(Name, Re, [global, {capture, none}]) of
     match ->
       Module = binary_to_atom(Name, utf8),
