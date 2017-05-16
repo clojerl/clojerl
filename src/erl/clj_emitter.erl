@@ -211,12 +211,18 @@ ast(#{op := deftype} = Expr, State0) ->
                ],
 
   %% Functions
+  ForceRemote = maps:get(force_remote_invoke, State0),
+
   {AllFieldsAsts, State} = pop_ast( lists:foldl(fun ast/2, State0, FieldsExprs)
                                    , length(FieldsExprs)
                                    ),
-  {MethodsAsts, State1}  = pop_ast( lists:foldl(fun ast/2, State, MethodsExprs)
-                                  , length(MethodsExprs)
-                                  ),
+  { MethodsAsts
+  , State1
+  }  = pop_ast( lists:foldl( fun ast/2
+                           , State#{force_remote_invoke => true}
+                           , MethodsExprs)
+              , length(MethodsExprs)
+              ),
 
   %% Expand the first argument to pattern match on all fields so that they are
   %% available in the functions scope.
@@ -295,7 +301,7 @@ ast(#{op := deftype} = Expr, State0) ->
 
   Ast = cerl:ann_abstract(ann_from(Env), Name),
 
-  push_ast(Ast, State1);
+  push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
 %%------------------------------------------------------------------------------
 %% methods
 %%------------------------------------------------------------------------------
