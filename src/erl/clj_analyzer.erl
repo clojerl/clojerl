@@ -1523,13 +1523,13 @@ parse_dot(List, Env) ->
 maybe_type_tag(Symbol) ->
   Meta = clj_rt:meta(Symbol),
   case clj_rt:get(Meta, tag) of
-    ?NIL -> ?NIL;
+    ?NIL -> ?NO_TAG;
     Tag  -> clj_rt:keyword(Tag)
   end.
 
 -spec type_tag(map()) -> ?NIL | module().
 type_tag(#{tag := Type}) -> Type;
-type_tag(_) -> ?NIL.
+type_tag(_) -> ?NO_TAG.
 
 %%------------------------------------------------------------------------------
 %% Parse throw
@@ -1712,7 +1712,7 @@ parse_var(List, Env) ->
 -spec analyze_invoke('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_invoke(Form, Env) ->
   FSym = clj_rt:first(Form),
-  {FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env)),
+  {#{op := Op} = FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env)),
 
   Args     = clj_rt:to_list(clj_rt:rest(Form)),
   ArgCount = length(Args),
@@ -1720,10 +1720,15 @@ analyze_invoke(Form, Env) ->
                                        , analyze_forms(Args, Env1)
                                        ),
 
+  Tag = case Op =:= fn orelse Op =:= var of
+          true  -> maps:get(tag, FExpr, ?NIL);
+          false -> ?NO_TAG
+        end,
+
   InvokeExpr = #{ op   => invoke
                 , env  => Env
                 , form => Form
-                , tag  => maps:get(tag, FExpr, ?NIL)
+                , tag  => Tag
                 , f    => FExpr#{arity => ArgCount}
                 , args => ArgsExpr
                 },

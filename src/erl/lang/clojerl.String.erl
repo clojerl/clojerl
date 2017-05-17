@@ -1,5 +1,7 @@
 -module('clojerl.String').
 
+-compile({no_auto_import,[length/1]}).
+
 -include("clojerl.hrl").
 
 -behavior('clojerl.Counted').
@@ -8,7 +10,8 @@
 -behavior('clojerl.Seqable').
 -behavior('clojerl.Stringable').
 
--export([ substring/3
+-export([ substring/2
+        , substring/3
         , starts_with/2
         , ends_with/2
         , contains/2
@@ -22,6 +25,7 @@
         , to_lower/1
         , is_whitespace/1
         , is_printable/1
+        , length/1
         ]).
 
 -export([count/1]).
@@ -31,6 +35,10 @@
         , to_list/1
         ]).
 -export([str/1]).
+
+-spec substring(binary(), integer()) -> binary().
+substring(Str, Start) when is_binary(Str), Start >= 0 ->
+  do_substring(Str, Start, count(Str), 0, <<>>).
 
 -spec substring(binary(), integer(), integer()) -> binary().
 substring(Str, Start, End) when is_binary(Str), Start =< End, Start >= 0 ->
@@ -140,15 +148,19 @@ is_whitespace(Str) ->
 is_printable(Str) ->
   io_lib:printable_list(unicode:characters_to_list(Str)).
 
+-spec length(binary()) -> non_neg_integer().
+length(Str) ->
+  case unicode:characters_to_list(Str) of
+    {error, _, _} -> error(<<"Invalid unicode binary string">>);
+    List -> erlang:length(List)
+  end.
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
 count(Str) ->
-  case unicode:characters_to_list(Str) of
-    {error, _, _} -> error(<<"Invalid unicode binary string">>);
-    List -> erlang:length(List)
-  end.
+  length(Str).
 
 hash(Str) ->
   erlang:phash2(Str).

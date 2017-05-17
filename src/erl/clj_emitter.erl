@@ -492,7 +492,7 @@ ast(#{op := invoke} = Expr, State) ->
       ArgCount   = length(Args),
       TargetAst  = erlang:hd(Args),
       case Module of
-        ?NIL ->
+        ?NO_TAG ->
           FVarAst    = new_c_var(Ann),
           ModuleAst  = call_mfa(clj_rt, type, [TargetAst], Ann),
           ResolveAst = call_mfa( erlang
