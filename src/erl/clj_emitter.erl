@@ -1635,7 +1635,7 @@ sym_to_kw(Symbol) ->
 
 -spec default_compiler_options() -> clj_compiler:opts().
 default_compiler_options() ->
-  #{erl_flags => [binary, debug_info], output_dir => "ebin"}.
+  #{erl_flags => [binary, debug_info], output_dir => <<"ebin">>}.
 
 -spec new_c_var(cerl:ann()) -> cerl:c_var().
 new_c_var(Ann) ->

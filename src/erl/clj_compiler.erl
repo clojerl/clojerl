@@ -424,8 +424,8 @@ output_beam(Name, BeamBinary) ->
   ok           = file:write_file(BeamPath, BeamBinary),
   binary_to_list(BeamPath).
 
--spec ensure_path(string()) -> ok.
-ensure_path(Path) ->
+-spec ensure_path(binary()) -> ok.
+ensure_path(Path) when is_binary(Path) ->
   ok   = filelib:ensure_dir(filename:join([Path, "dummy"])),
-  true = code:add_path(Path),
+  true = code:add_path(binary_to_list(Path)),
   ok.

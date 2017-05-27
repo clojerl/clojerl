@@ -56,7 +56,7 @@ end_per_suite(Config) -> Config.
 -spec init_per_testcase(_, config()) -> config().
 init_per_testcase(_, Config) ->
   Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
-              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              , <<"#'clojure.core/*compile-path*">> => <<"ebin">>
               },
   ok       = 'clojerl.Var':push_bindings(Bindings),
   Config.
