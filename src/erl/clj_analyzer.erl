@@ -257,13 +257,12 @@ parse_fn(List, Env) ->
                   false -> clj_rt:to_list(Methods)
                 end,
 
-  Env0 = clj_env:add_locals_scope(Env),
-
+  {TagExpr, Env0} = maybe_type_tag(NameSym, clj_env:add_locals_scope(Env)),
   %% Add the name of the fn as a local binding
   LocalExpr     = #{ op   => local
                    , env  => Env
                    , name => NameSym
-                   , tag  => maybe_type_tag(NameSym)
+                   , tag  => TagExpr
                    },
 
   %% If there is a def var we add it to the local scope
@@ -367,10 +366,12 @@ parse_fn(List, Env) ->
         {MethodsExprs, Env2}
     end,
 
+  {TagExpr, Env5} = maybe_type_tag(NameSym, Env4),
+
   FnExpr = #{ op              => fn
             , env             => Env
             , form            => List
-            , tag             => maybe_type_tag(NameSym)
+            , tag             => TagExpr
             , 'variadic?'     => IsVariadic
             , max_fixed_arity => MaxFixedArity
             , variadic_arity  => VariadicArity
@@ -379,9 +380,9 @@ parse_fn(List, Env) ->
             , local           => LocalExpr
             },
 
-  Env5 = clj_env:remove_locals_scope(Env4),
-  Env6 = clj_env:pop(Env5),
-  clj_env:push_expr(FnExpr, Env6).
+  Env6 = clj_env:remove_locals_scope(Env5),
+  Env7 = clj_env:pop(Env6),
+  clj_env:push_expr(FnExpr, Env7).
 
 -spec analyze_fn_methods( ['clojerl.List':type()]
                         , 'clojerl.Symbol':type()
@@ -452,6 +453,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
     end,
 
   %% TODO: check for a single symbol after '&
+  {TagExpr, Env7} = maybe_type_tag(Params, Env6),
 
   FnMethodExpr = #{ op          => fn_method
                   , env         => Env0
@@ -462,11 +464,12 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
                   , guard       => GuardExpr
                   , fixed_arity => FixedArity
                   , body        => BodyExpr
+                  , tag         => TagExpr
                   },
 
-  Env7  = clj_env:remove_locals_scope(Env6),
-  Env8  = clj_env:pop(Env7),
-  clj_env:push_expr(FnMethodExpr, Env8).
+  Env8  = clj_env:remove_locals_scope(Env7),
+  Env9  = clj_env:pop(Env8),
+  clj_env:push_expr(FnMethodExpr, Env9).
 
 -spec analyze_method_params(['clojerl.Symbol':type()], clj_env:env()) ->
   clj_env:env().
@@ -759,25 +762,24 @@ parse_letfn(Form, Env0) ->
   ] = clj_rt:to_list(Form),
 
   {FnNames, FnForms} = partition_fun_defs(clj_rt:to_list(FnSpecs)),
-
-  Env  = clj_env:add_locals_scope(Env0),
-
-  BindingFun = fun(FnName) ->
-                   #{ op     => local
-                    , env    => Env
-                    , name   => FnName
-                    , tag    => maybe_type_tag(FnName)
-                    , shadow => clj_env:get_local(FnName, Env)
-                    , form   => FnName
-                    }
+  Env = clj_env:add_locals_scope(Env0),
+  BindingFun = fun(FnName, {FnNamesExprsAcc, EnvAcc0}) ->
+                   {TagExpr, EnvAcc1} = maybe_type_tag(FnName, EnvAcc0),
+                   FnNameExpr = #{ op     => local
+                                 , env    => Env
+                                 , name   => FnName
+                                 , tag    => TagExpr
+                                 , shadow => clj_env:get_local(FnName, Env)
+                                 , form   => FnName
+                                 },
+                   { [FnNameExpr|FnNamesExprsAcc]
+                   , clj_env:put_locals([FnNameExpr], EnvAcc1)
+                   }
                end,
-  FnNamesExprs = lists:map(BindingFun, FnNames),
-
-  Env1 = clj_env:put_locals(FnNamesExprs, Env),
-
-  {FnsExprs, Env2} = clj_env:last_exprs( length(FnNames)
-                                       , analyze_forms(FnForms, Env1)
-                                       ),
+  {FnNamesExprs, Env1} = lists:foldr(BindingFun, {[], Env}, FnNames),
+  {FnsExprs, Env2}     = clj_env:last_exprs( length(FnNames)
+                                           , analyze_forms(FnForms, Env1)
+                                           ),
 
   {BodyExpr, Env3} = clj_env:pop_expr(analyze_body(Body, Env2)),
 
@@ -1040,18 +1042,20 @@ parse_def(List, Env) ->
   Var2     = 'clojerl.Var':with_meta(Var1, VarMeta1),
   clj_namespace:update_var(Var2),
 
+  {TagExpr, Env2} = maybe_type_tag(VarSymbol, Env1),
+
   DefExpr = #{ op      => def
              , env     => Env
              , form    => List
              , name    => VarSymbol
-             , tag     => maybe_type_tag(VarSymbol)
+             , tag     => TagExpr
              , var     => Var2
              , init    => InitExpr
              , dynamic => IsDynamic
              },
 
-  Env2 = clj_env:pop(Env1),
-  clj_env:push_expr(DefExpr, Env2).
+  Env3 = clj_env:pop(Env2),
+  clj_env:push_expr(DefExpr, Env3).
 
 process_var_meta(Var, Env) ->
   Env1           = analyze_form(clj_rt:meta(Var), Env),
@@ -1519,17 +1523,24 @@ parse_dot(List, Env) ->
       clj_env:push_expr(InvokeExpr, Env2)
   end.
 
--spec maybe_type_tag('clojerl.Symbol':type()) -> ?NIL | module().
-maybe_type_tag(Symbol) ->
+-spec maybe_type_tag('clojerl.Symbol':type(), clj_env:env()) ->
+  {any(), clj_env:env()}.
+maybe_type_tag(Symbol, Env) ->
   Meta = clj_rt:meta(Symbol),
   case clj_rt:get(Meta, tag) of
-    ?NIL -> ?NO_TAG;
-    Tag  -> clj_rt:keyword(Tag)
+    ?NIL -> {?NO_TAG, Env};
+    Tag  ->
+      Mapping = #{in_pattern => false},
+      Env1    = clj_env:push(Mapping, Env),
+      Env2    = analyze_form(Tag, Env1),
+      clj_env:pop_expr(clj_env:pop(Env2))
   end.
 
--spec type_tag(map()) -> ?NIL | module().
-type_tag(#{tag := Type}) -> Type;
-type_tag(_) -> ?NO_TAG.
+-spec type_tag(map()) -> ?NO_TAG | module().
+type_tag(#{tag := #{op := type, type := TypeSym}}) ->
+  clj_rt:keyword(TypeSym);
+type_tag(_) ->
+  ?NO_TAG.
 
 %%------------------------------------------------------------------------------
 %% Parse throw
@@ -1748,16 +1759,18 @@ analyze_symbol(Symbol, Env) ->
                           , [<<"Not a valid binding symbol, had: ">>, Symbol]
                           , clj_env:location(Env)
                           ),
+      {TagExpr, Env1} = maybe_type_tag(Symbol, Env),
+
       Ast = #{ op         => local
              , env        => Env
              , name       => Symbol
-             , tag        => maybe_type_tag(Symbol)
+             , tag        => TagExpr
              , shadow     => clj_env:get_local(Symbol, Env)
              , underscore => clj_rt:name(Symbol) =:= <<"_">>
              , id         => erlang:unique_integer()
              },
-      Env1 = add_pattern_local(Ast, Env),
-      clj_env:push_expr(Ast, Env1);
+      Env2 = add_pattern_local(Ast, Env1),
+      clj_env:push_expr(Ast, Env2);
     {?NIL, _} ->
       clj_utils:error([ <<"Unable to resolve symbol '">>, Symbol
                       , <<"' in this context">>
@@ -1770,8 +1783,8 @@ analyze_symbol(Symbol, Env) ->
       FunExpr = erl_fun_expr(Symbol, Module, Function, Arity, Env1),
       clj_env:push_expr(FunExpr, Env1);
     {{var, Var}, Env1} ->
-      VarExpr = var_expr(Var, Symbol, Env1),
-      clj_env:push_expr(VarExpr, Env1);
+      {VarExpr, Env2} = var_expr(Var, Symbol, Env1),
+      clj_env:push_expr(VarExpr, Env2);
     {{type, Type}, Env1} ->
       TypeExpr = type_expr(Type, Symbol, Env1),
       clj_env:push_expr(TypeExpr, Env1)
@@ -1794,14 +1807,16 @@ erl_fun_expr(Symbol, Module, Function, Arity, Env) ->
 
 -spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
   map().
-var_expr(Var, Symbol, Env) ->
- #{ op   => var
-  , env  => Env
-  , form => Symbol
-  , name => Symbol
-  , tag  => maybe_type_tag(Var)
-  , var  => Var
-  }.
+var_expr(Var, Symbol, Env0) ->
+  {TagExpr, Env1} = maybe_type_tag(Var, Env0),
+  VarExpr         = #{ op   => var
+                     , env  => Env0
+                     , form => Symbol
+                     , name => Symbol
+                     , tag  => TagExpr
+                     , var  => Var
+                     },
+  {VarExpr, Env1}.
 
 -spec type_expr('clojerl.Symbol':type()
                , 'clojerl.Symbol':type()
