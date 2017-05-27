@@ -245,10 +245,10 @@
 (defrecord RecordToTestStatics2 [a b])
 (defrecord RecordToTestStatics3 [a b c])
 (defrecord RecordToTestBasis [a b c])
-(defrecord RecordToTestBasisHinted [^clojerl.String a ^Long b c])
+(defrecord RecordToTestBasisHinted [^clojerl.String a ^clojerl.Integer b c])
 (defrecord RecordToTestHugeBasis [a b c d e f g h i j k l m n o p q r s t u v w x y z])
 (defrecord TypeToTestBasis [a b c])
-(defrecord TypeToTestBasisHinted [^clojerl.String a ^Long b c])
+(defrecord TypeToTestBasisHinted [^clojerl.String a ^clojerl.Integer b c])
 
 (deftest test-statics
   (testing "that a record has its generated static methods"
@@ -278,11 +278,11 @@
       (is (= '[a b c d e f g h i j k l m n o p q r s t u v w x y z] rhg))
       (testing "that record basis hinting looks as we expect"
         (is (= (:tag (meta (rbh 0))) 'clojerl.String))
-        (is (= (:tag (meta (rbh 1))) 'Long))
+        (is (= (:tag (meta (rbh 1))) 'clojerl.Integer))
         (is (nil? (:tag (meta (rbh 2))))))
       (testing "that type basis hinting looks as we expect"
         (is (= (:tag (meta (tbh 0))) 'clojerl.String))
-        (is (= (:tag (meta (tbh 1))) 'Long))
+        (is (= (:tag (meta (tbh 1))) 'clojerl.Integer))
         (is (nil? (:tag (meta (tbh 2)))))))))
 
 (defrecord RecordToTestFactories [a b c])

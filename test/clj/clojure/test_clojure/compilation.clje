@@ -123,7 +123,7 @@
               (loop [x (long x) y (long y)]
                 (if (== y 0)
                   x
-                  (recur y ^Long(rem x y)))))]
+                  (recur y ^clojerl.Integer (rem x y)))))]
       (is (= 4 (gcd 8 100))))))
 
 ;; ensure proper use of hints / type decls
@@ -146,12 +146,12 @@
     (is (= 'clojerl.Integer (-> arglists second meta :tag)))))
 
 (deftest CLJ-1232-return-type-not-imported
-  (is (thrown-with-msg? :error #"Unable to resolve classname: Closeable"
+  (is (thrown-with-msg? :error #"Unable to resolve symbol 'Closeable'"
                         (eval '(defn a ^Closeable []))))
-  (is (thrown-with-msg? :error #"Unable to resolve classname: Closeable"
+  (is (thrown-with-msg? :error #"Unable to resolve symbol 'Closeable'"
                         (eval '(defn a (^Closeable []))))))
 
-(defn ^clojerl.String hinting-conflict ^Integer [])
+(defn ^clojerl.String hinting-conflict ^clojerl.Integer [])
 
 (deftest calls-use-arg-vector-hint
   (should-not-reflect #(.floatValue (clojure.test-clojure.compilation/hinting-conflict)))
@@ -170,15 +170,15 @@
 
 (defprotocol HintedProtocol
   (hintedp ^clojerl.String [a]
-           ^Integer [a b]))
+           ^clojerl.Integer [a b]))
 
 (deftest hinted-protocol-arg-vector
   (should-not-reflect #(.substring (clojure.test-clojure.compilation/hintedp "") 0))
   (should-not-reflect #(.floatValue (clojure.test-clojure.compilation/hintedp :a :b))))
 
 (defn primfn
-  (^long [])
-  (^double [a]))
+  (^clojerl.Integer [])
+  (^clojerl.Float [a]))
 
 (deftest primitive-return-decl
   (should-not-reflect #(loop [k 5] (recur (clojure.test-clojure.compilation/primfn))))
@@ -267,7 +267,7 @@
 (defn unhinted-primfn [^long x] x)
 (deftest CLJ-1533-primitive-functions-lose-tag
   (should-not-reflect #(Math/abs (clojure.test-clojure.compilation/hinted-primfn 1)))
-  (should-not-reflect #(Math/abs ^long (clojure.test-clojure.compilation/unhinted-primfn 1))))
+  (should-not-reflect #(Math/abs ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
 
 
 (defrecord Y [a])
