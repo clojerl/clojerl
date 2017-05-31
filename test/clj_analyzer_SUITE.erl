@@ -438,7 +438,9 @@ do(_Config) ->
     ret := RetExpr
    } = analyze_one(<<"(do :expr 1 :ret)">>),
 
-  true = maps:remove(env, KeywordExpr) =:= maps:remove(env, KeywordExpr1),
+  true = ( maps:without([env, tag], KeywordExpr) =:=
+           maps:without([env, tag], KeywordExpr1)
+         ),
 
   #{op := constant,
    form := 1

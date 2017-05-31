@@ -169,7 +169,7 @@ analyze_const(Constant, Env) ->
 analyze_const(Constant, CheckWrappingMeta, Env) ->
   Expr = #{ op   => constant
           , env  => Env
-          , tag  => clj_rt:type(Constant)
+          , tag  => type_expr(Constant, Env)
           , form => Constant
           },
   case CheckWrappingMeta of
@@ -908,7 +908,7 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => erl_map
                , env     => Env
                , form    => Form
-               , tag     => 'clojerl.erlang.Map'
+               , tag     => type_expr(Form, Env)
                , keys    => KeysExprs
                , vals    => ValsExprs
                , pattern => true
@@ -923,7 +923,7 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => tuple
                , env     => Env
                , form    => Form
-               , tag     => 'clojerl.erlang.Tuple'
+               , tag     => type_expr(Form, Env)
                , items   => ValsExprs
                },
         clj_env:push_expr(Ast, InnerEnv1);
@@ -934,7 +934,7 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => erl_list
                , env     => Env
                , form    => Form
-               , tag     => 'clojerl.erlang.List'
+               , tag     => type_expr(Form, Env)
                , items   => ValsExprs
                },
         clj_env:push_expr(Ast, InnerEnv1);
@@ -1192,19 +1192,16 @@ parse_import(Form, Env) ->
 
 -spec parse_new('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_new(Form, Env) ->
-  [_, Type | Args] = clj_rt:to_list(Form),
+  [_, Type | Args]  = clj_rt:to_list(Form),
 
-  { #{type := TypeSym} = TypeExpr
-  , Env1
-  } = clj_env:pop_expr(analyze_form(Type, Env)),
-
+  {TypeExpr, Env1}  = clj_env:pop_expr(analyze_form(Type, Env)),
   {ArgsExprs, Env2} =
     clj_env:last_exprs(length(Args), analyze_forms(Args, Env1)),
 
   NewExpr = #{ op   => new
              , env  => Env
              , form => Form
-             , tag  => clj_rt:keyword(TypeSym)
+             , tag  => TypeExpr
              , type => TypeExpr
              , args => ArgsExprs
              },
@@ -1703,7 +1700,7 @@ parse_var(List, Env) ->
     {{var, Var}, Env1} ->
       VarConstExpr = #{ op   => constant
                       , env  => Env
-                      , tag  => clj_rt:type(Var)
+                      , tag  => type_expr(Var, Env)
                       , form => Var
                       },
       clj_env:push_expr(VarConstExpr, Env1);
@@ -1818,7 +1815,7 @@ var_expr(Var, Symbol, Env0) ->
                      },
   {VarExpr, Env1}.
 
--spec type_expr('clojerl.Symbol':type()
+-spec type_expr( 'clojerl.Symbol':type()
                , 'clojerl.Symbol':type()
                , clj_env:env()
                ) ->
@@ -1828,7 +1825,14 @@ type_expr(Type, Symbol, Env) ->
   , env  => Env
   , form => Symbol
   , type => Type
-  , tag  => 'clojerl.Keyword'
+  }.
+
+-spec type_expr( any(), clj_env:env()) -> map().
+type_expr(Value, Env) ->
+  Type = clj_rt:type(Value),
+ #{ op   => type
+  , env  => Env
+  , type => clj_rt:symbol(atom_to_binary(Type, utf8))
   }.
 
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
@@ -1995,7 +1999,7 @@ analyze_vector(Vector, Env) ->
   VectorExpr = #{ op    => vector
                 , env   => Env2
                 , form  => Vector
-                , tag   => 'clojerl.Vector'
+                , tag   => type_expr(Vector, Env)
                 , items => ItemsExpr
                 },
 
@@ -2021,7 +2025,7 @@ analyze_map(Map, Env) ->
   MapExpr = #{ op   => map
              , env  => Env4
              , form => Map
-             , tag  => 'clojerl.Map'
+             , tag  => type_expr(Map, Env)
              , keys => KeysExpr
              , vals => ValsExpr
              },
@@ -2032,7 +2036,7 @@ analyze_map(Map, Env) ->
 %% Analyze Erlang map
 %%------------------------------------------------------------------------------
 
--spec analyze_erl_map('clojerl.Map':type(), clj_env:env()) -> clj_env:env().
+-spec analyze_erl_map(map(), clj_env:env()) -> clj_env:env().
 analyze_erl_map(Map, Env) ->
   Keys  = maps:keys(Map),
   Vals  = maps:values(Map),
@@ -2048,7 +2052,7 @@ analyze_erl_map(Map, Env) ->
   MapExpr = #{ op   => erl_map
              , env  => Env4
              , form => Map
-             , tag  => 'clojerl.erlang.Map'
+             , tag  => type_expr(Map, Env)
              , keys => KeysExpr
              , vals => ValsExpr
              },
@@ -2071,7 +2075,7 @@ analyze_set(Set, Env) ->
   SetExpr = #{ op    => set
              , env   => Env2
              , form  => Set
-             , tag   => 'clojerl.Set'
+             , tag   => type_expr(Set, Env)
              , items => ItemsExpr
              },
 
@@ -2094,7 +2098,7 @@ analyze_tuple(Tuple, Env) ->
   TupleExpr = #{ op    => tuple
                , env   => Env2
                , form  => Tuple
-               , tag   => 'clojerl.erlang.Tuple'
+               , tag   => type_expr(Tuple, Env)
                , items => ItemsExpr
                },
 
