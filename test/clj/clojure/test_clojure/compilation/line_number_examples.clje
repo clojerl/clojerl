@@ -11,19 +11,19 @@
   "I throw an exception in an instance field form."
   []
   (.field
-   ^Thing (identity nil)))
+   ^Thing (identity nil)) nil)
 
 (defn instance-field-reflected
   "I throw an exception in an instance field form."
   []
   (.field
-   (identity nil)))
+   (identity nil)) nil)
 
 (defn instance-field-unboxed
   "I throw an exception in an instance field form."
   ^long []
   (.primitive
-   ^Thing (identity nil)))
+   ^Thing (identity nil)) nil)
 
 #_(defn instance-field-assign
   "I throw an exception in an instance field assignment form."
@@ -53,20 +53,20 @@
   []
   (.without
    ^Map (identity nil)
-   :key))
+   :key) nil)
 
 (defn instance-method-reflected
   "I throw an exception in an instance method form."
   []
   (.without
    (identity nil)
-   :key))
+   :key) nil)
 
 (defn instance-method-unboxed
   "I throw an exception in an instance method form."
   ^long []
   (.count
-   ^Map (identity nil)))
+   ^Map (identity nil)) nil)
 
 #_(defn static-method
   "I throw an exception in a static method form."
@@ -90,7 +90,7 @@
   "I throw an exception in an invoke form."
   []
   ((identity nil)
-   (identity nil)))
+   (identity nil)) nil)
 
 (defn threading
   "I throw an exception in a threading form."
@@ -100,17 +100,17 @@
       (identity)
       ((identity nil))
       (identity)
-      (identity)))
+      (identity)) nil)
 
 (defn keyword-invoke
   "I throw an exception in a keyword invoke."
   []
   (letfn [(get-map []
-            (let [t (transient {})]
-              (persistent! t)
-              t))]
+            (let [t {}]
+              (assoc t :foo :bar)
+              :bar))]
     (:foo
-     (get-map))))
+     (get-map))) nil)
 
 (defn invoke-cast
   "I throw an exception casting to IFn in an invoke form."
@@ -118,4 +118,4 @@
   ;; This code formatting is intentional.
   (
    (identity 1)
-   (identity nil)))
+   (identity nil)) nil)

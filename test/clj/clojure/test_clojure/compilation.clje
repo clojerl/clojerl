@@ -281,36 +281,35 @@
 (binding [*compile-path* "ebin/test-classes"]
   (compile 'clojure.test-clojure.compilation.examples))
 
+(defn fails-on-line-number? [expected function]
+  (try
+    (function)
+    nil
+    (catch _ e
+      (let [st     (stack/get-stacktrace)
+            frames (filter #(re-find #"line_number_examples.clj" (stack/filename %))
+                           st)
+            actual (when (not (empty? frames))
+                     (stack/line-num (first frames)))]
+        (= expected actual)))))
 
 (deftest test-compiler-line-numbers
-  (let [fails-on-line-number? (fn [expected function]
-                                 (try
-                                   (function)
-                                   nil
-                                   (catch :error t
-                                     (let [st (stack/get-stacktrace)
-                                           frames (filter #(= "line_number_examples.clj" (stack/filename %))
-                                                          st)
-                                           _ (if (zero? (count frames))
-                                               (stack/print-stack-trace st))
-                                           actual (stack/line-num (first frames))]
-                                       (= expected actual)))))]
-    (is (fails-on-line-number?  13 line/instance-field))
-    (is (fails-on-line-number?  19 line/instance-field-reflected))
-    (is (fails-on-line-number?  25 line/instance-field-unboxed))
-    ;; (is (fails-on-line-number?  32 line/instance-field-assign))
-    ;; (is (fails-on-line-number?  40 line/instance-field-assign-reflected))
-    ;; (is (fails-on-line-number?  47 line/static-field-assign))
-    (is (fails-on-line-number?  54 line/instance-method))
-    (is (fails-on-line-number?  61 line/instance-method-reflected))
-    (is (fails-on-line-number?  68 line/instance-method-unboxed))
-    ;; (is (fails-on-line-number?  74 line/static-method))
-    ;; (is (fails-on-line-number?  80 line/static-method-reflected))
-    ;; (is (fails-on-line-number?  86 line/static-method-unboxed))
-    (is (fails-on-line-number?  92 line/invoke))
-    (is (fails-on-line-number? 101 line/threading))
-    (is (fails-on-line-number? 112 line/keyword-invoke))
-    (is (fails-on-line-number? 119 line/invoke-cast))))
+  (is (fails-on-line-number?  13 line/instance-field))
+  (is (fails-on-line-number?  19 line/instance-field-reflected))
+  (is (fails-on-line-number?  25 line/instance-field-unboxed))
+  ;; (is (fails-on-line-number?  32 line/instance-field-assign))
+  ;; (is (fails-on-line-number?  40 line/instance-field-assign-reflected))
+  ;; (is (fails-on-line-number?  47 line/static-field-assign))
+  (is (fails-on-line-number?  54 line/instance-method))
+  (is (fails-on-line-number?  61 line/instance-method-reflected))
+  (is (fails-on-line-number?  68 line/instance-method-unboxed))
+  ;; (is (fails-on-line-number?  74 line/static-method))
+  ;; (is (fails-on-line-number?  80 line/static-method-reflected))
+  ;; (is (fails-on-line-number?  86 line/static-method-unboxed))
+  (is (fails-on-line-number?  92 line/invoke))
+  (is (fails-on-line-number? 101 line/threading))
+  (is (fails-on-line-number? 112 line/keyword-invoke))
+  (is (fails-on-line-number? 119 line/invoke-cast)))
 
 (deftest CLJ-979
   (is (= clojure.test-clojure.compilation.examples.X
