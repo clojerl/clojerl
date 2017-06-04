@@ -44,6 +44,7 @@
         (:macro m) true
         (:name m) 'when )))
 
+;; NA: there are no static constants in Erlang
 #_(deftest test-embedded-constants
   (testing "Embedded constants"
     (is (eval `(= Boolean/TYPE ~Boolean/TYPE)))
@@ -111,6 +112,7 @@
                            (recur (dec x))))
                        3)))))))
 
+;; NA
 ;; disabled until build box can call java from mvn
 #_(deftest test-numeric-dispatch
   (is (= "(int, int)" (TestDispatch/someMethod (int 1) (int 1))))
@@ -176,16 +178,17 @@
   (should-not-reflect #(.substring (clojure.test-clojure.compilation/hintedp "") 0))
   (should-not-reflect #(.floatValue (clojure.test-clojure.compilation/hintedp :a :b))))
 
-(defn primfn
+
+;; NA: there are no 'primitive' types in Erlang
+#_(defn primfn
   (^clojerl.Integer [])
   (^clojerl.Float [a]))
-
-(deftest primitive-return-decl
+#_(deftest primitive-return-decl
   (should-not-reflect #(loop [k 5] (recur (clojure.test-clojure.compilation/primfn))))
   (should-not-reflect #(loop [k 5.0] (recur (clojure.test-clojure.compilation/primfn 0))))
 
   (should-print-err-message #"(?s).*k is not matching primitive.*"
-    #(loop [k (clojure.test-clojure.compilation/primfn)] (recur :foo))))
+                            #(loop [k (clojure.test-clojure.compilation/primfn)] (recur :foo))))
 
 #_(deftest CLJ-1154-use-out-after-compile
   ;; This test creates a dummy file to compile, sets up a dummy
@@ -256,7 +259,8 @@
   [^{:tag clojure.test-clojure.compilation/gen-name} n]
   (assert (= n %)))
 
-(deftest test-fnexpr-type-hint
+;; NA
+#_(deftest test-fnexpr-type-hint
   (testing "CLJ-1378: FnExpr should be allowed to override its reported class with a type hint."
     (is (thrown? :error
                  (load-string "(.submit (java.util.concurrent.Executors/newCachedThreadPool) #())")))
@@ -266,8 +270,8 @@
 (defn ^{:tag 'long} hinted-primfn [^long x] x)
 (defn unhinted-primfn [^long x] x)
 (deftest CLJ-1533-primitive-functions-lose-tag
-  (should-not-reflect #(Math/abs (clojure.test-clojure.compilation/hinted-primfn 1)))
-  (should-not-reflect #(Math/abs ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
+  (should-not-reflect #(erlang/abs.e (clojure.test-clojure.compilation/hinted-primfn 1)))
+  (should-not-reflect #(erlang/abs.e ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
 
 
 (defrecord Y [a])
@@ -316,39 +320,40 @@
          (class (clojure.test-clojure.compilation.examples.T.))
          (class (clojure.test-clojure.compilation.examples/->T)))))
 
-(deftest clj-1208
+#_(deftest clj-1208
   ;; clojure.test-clojure.compilation.load-ns has not been loaded
   ;; so this would fail if the deftype didn't load it in its static
   ;; initializer as the implementation of f requires a var from
   ;; that namespace
   (is (= 1 (.f (clojure.test-clojure.compilation.load-ns.x.)))))
 
+
+(defn compiler-fails-at? [row col source]
+  (try
+    (clj_compiler/compile.e source)
+    nil
+    (catch :error e
+      (let [e  (str e)
+            re (re-pattern (str ":" row ":" col))]
+        (re-find re e)))))
+
 (deftest clj-1568
-  (let [compiler-fails-at?
-          (fn [row col source]
-            (try
-              (Compiler/load (erlang.io.StringReader. source) (name (gensym "clj-1568.example-")) "clj-1568.example")
-              nil
-              (catch :error e
-                (let [st (stack/get-stacktrace)
-                      e  (first st)]
-                  (= row (stack/line-num e))))))]
-    (testing "with error in the initial form"
-      (are [row col source] (compiler-fails-at? row col source)
-           ;; note that the spacing of the following string is important
-           1  4 "   (.foo nil)"
-           2 18 "
-                 (/ 1 0)"))
-    (testing "with error in an non-initial form"
-      (are [row col source] (compiler-fails-at? row col source)
-           ;; note that the spacing of the following string is important
-           3 18 "(:foo {})
+  (testing "with error in the initial form"
+    (are [row col source] (compiler-fails-at? row col source)
+      ;; note that the spacing of the following string is important
+      1  4 "   (whatever 1)"
+      2 18 "
+                 (nil)"))
+  (testing "with error in an non-initial form"
+    (are [row col source] (compiler-fails-at? row col source)
+      ;; note that the spacing of the following string is important
+      3 18 "(:foo {})
 
-                 (.foo nil)"
-           4 20 "(ns clj-1568.example)
+                 (nil)"
+      4 20 "(ns clj-1568.example)
 
 
-                   (/ 1 0)"))))
+                   (whatever 1)")))
 
 (deftype CLJ1399 [munged-field-name])
 
@@ -374,10 +379,10 @@
 ;; See CLJ-1846
 (deftest incorrect-primitive-type-hint-throws
   ;; invalid primitive type hint
-  (is (thrown-with-msg? :error #"Cannot coerce long to int"
-        (load-string "(defn returns-long ^long [] 1) (Integer/bitCount ^int (returns-long))")))
+  (is (thrown-with-msg? :error #"function_clause"
+        (load-string "(defn returns-float ^clojerl.Float [] 1.0) (clojerl.Integer/str.e ^clojerl.Integer (returns-float))")))
   ;; correct casting instead
-  (is (= 1 (load-string "(defn returns-long ^long [] 1) (Integer/bitCount (int (returns-long)))"))))
+  (is (= "1" (load-string "(defn returns-float ^clojerl.Float [] 1.0) (clojerl.Integer/str.e (int (returns-float)))"))))
 
 ;; See CLJ-1825
 #_(def zf (fn rf [x] (lazy-seq (cons x (rf x)))))
