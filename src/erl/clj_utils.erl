@@ -326,9 +326,20 @@ core_from_binary(Binary) ->
       case proplists:get_value(abstract_code, Chunks) of
         %% This case is only for bootstrapping clojure.core since it
         %% is written in Erlang it has erlang abstract syntax forms.
-        {raw_abstract_v1, Code} ->
-          {Mod, Exp, Forms, Opts} = sys_pre_expand:module(Code, []),
-          {ok, CoreModule, _} = v3_core:module({Mod, Exp, Forms}, Opts),
+        {raw_abstract_v1, Code0} ->
+          %% Since OTP 20 there is no sys_pre_expand module.
+          {Code1, Opts1} = case code:ensure_loaded(sys_pre_expand) of
+                           {module, _} ->
+                             { Mod
+                             , Exp
+                             , Forms
+                             , Opts0
+                             } = sys_pre_expand:module(Code0, []),
+                             {{Mod, Exp, Forms}, Opts0};
+                           {error, _} ->
+                             {Code0, []}
+                         end,
+          {ok, CoreModule, _} = v3_core:module(Code1, Opts1),
           CoreModule;
         missing_chunk ->
           {error, missing_abstract_code}
