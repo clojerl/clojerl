@@ -11,6 +11,7 @@
         , compile/1
         , compile/2
         , load_file/1
+        , load_string/1
         , eval/1
         , eval/2
         , eval/3
@@ -115,6 +116,11 @@ compile(Src) when is_binary(Src) ->
 -spec compile(binary(), options()) -> clj_env:env().
 compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
+
+-spec load_string(binary()) -> any().
+load_string(Path) ->
+  Env = compile(Path),
+  clj_env:get(eval, Env).
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->

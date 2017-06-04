@@ -3319,7 +3319,7 @@
   string"
   {:added "1.0"}
   [s]
-  (clj_compiler/compile.e str))
+  (clj_compiler/load_string.e s))
 
 (defn set?
   "Returns true if x implements IPersistentSet"
