@@ -9,7 +9,7 @@
 ; Author: Frantisek Sodomka
 
 (ns clojure.test-clojure.compilation
-  ;; (:import clojerl.String)
+  (:import clojerl.String)
   (:require #_[clojure.test.generative :refer (defspec)]
             #_[clojure.data.generators :as gen]
             [clojure.stacktrace :as stack]

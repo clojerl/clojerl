@@ -140,13 +140,14 @@ ast(#{op := def} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := import} = Expr, State) ->
   #{ typename := Typename
+   , ns       := Ns
    , env      := Env
    } = Expr,
 
   Parts   = binary:split(Typename, <<".">>, [global]),
   SymName = lists:last(Parts),
-  NsName  = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
-  Module  = binary_to_atom(NsName, utf8),
+  NsName  = clj_namespace:name(Ns),
+  Module  = clj_rt:keyword(NsName),
 
   clj_module:ensure_loaded(file_from(Env), Module),
   %% Add the mapping from type name symbol to fully qualified symbol

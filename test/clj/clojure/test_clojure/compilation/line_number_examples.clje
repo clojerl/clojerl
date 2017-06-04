@@ -3,7 +3,7 @@
 
   Original source at:
     https://github.com/pjstadig/clojure-line-numbers/blob/master/src/clojure_line_numbers/core.clj"
-  (:import (clojerl Map)))
+  (:import clojerl.Map))
 
 (defrecord Thing [field ^long primitive])
 
