@@ -60,7 +60,7 @@
   (testing "resolve nonexistent class create should return nil (assembla #262)"
     (is (nil? (resolve 'NonExistentClass.)))))
 
-#_(deftest test-no-recur-across-try
+(deftest test-no-recur-across-try
   (testing "don't recur to function from inside try"
     (is (thrown? :error
                  (eval '(fn [x] (try (recur 1)))))))
@@ -72,7 +72,7 @@
     (is (thrown? :error
                  (eval '(loop [x 5]
                           (try
-                            (catch Exception e
+                            (catch :error e
                               (recur 1))))))))
   (testing "don't recur to loop from inside of finally inside of try"
     (is (thrown? :error
@@ -92,8 +92,8 @@
                            (if (zero? x) x (recur (dec x)))))))))
   (testing "allow loop/recur fully inside catch"
     (is (= 3 (eval '(try
-                      (throw (Exception.))
-                      (catch Exception e
+                      (throw "something")
+                      (catch :throw e
                         (loop [x 0]
                           (if (< x 3) (recur (inc x)) x))))))))
   (testing "allow loop/recur fully inside finally"

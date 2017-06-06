@@ -9,8 +9,8 @@
 
 -spec analyze(any(), clj_env:env()) -> clj_env:env().
 analyze(Form, Env0) ->
-  {Expr, Env} =  clj_env:pop_expr(analyze_form(Form, Env0)),
-  clj_env:push_expr(Expr#{top_level => true}, Env).
+  {Expr, Env1} =  clj_env:pop_expr(analyze_form(Form, Env0)),
+  clj_env:push_expr(Expr#{top_level => true}, Env1).
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -438,10 +438,13 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
       true ->
         LocalExprs = clj_env:get(pattern_locals, [], Env4),
         BodyEnv0   = clj_env:put_locals(lists:reverse(LocalExprs), Env4),
-        BodyEnv1   = clj_env:context(return, BodyEnv0),
-        BodyEnv2   = clj_env:put(loop_id, LoopId, BodyEnv1),
-        BodyEnv3   = clj_env:put(loop_locals, length(ParamsExprs), BodyEnv2),
-        clj_env:pop_expr(analyze_body(Body, BodyEnv3));
+        Mapping    = #{ context     => return
+                      , loop_id     => LoopId
+                      , loop_locals => length(ParamsExprs)
+                      },
+        BodyEnv1   = clj_env:push(Mapping, BodyEnv0),
+        BodyEnv2   = analyze_body(Body, BodyEnv1),
+        clj_env:pop_expr(clj_env:pop(BodyEnv2));
       false ->
         {?NIL, Env4}
     end,
@@ -529,8 +532,7 @@ check_guard(List) ->
 %%------------------------------------------------------------------------------
 
 -spec parse_do('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_do(Form, Env) ->
-  StmtEnv = clj_env:context(statement, Env),
+parse_do(Form, Env0) ->
   Statements = clj_rt:to_list(clj_rt:rest(Form)),
 
   {StatementsList, Return} =
@@ -539,32 +541,32 @@ parse_do(Form, Env) ->
       _  -> {lists:droplast(Statements), lists:last(Statements)}
     end,
 
-  Env1 = analyze_forms(StatementsList, StmtEnv),
-  {StatementsExprs, Env2} =
-    clj_env:last_exprs(length(StatementsList), Env1),
+  Env1 = clj_env:push(#{context => statement}, Env0),
+  Env2 = analyze_forms(StatementsList, Env1),
+  {StatementsExprs, Env3} = clj_env:last_exprs(length(StatementsList), Env2),
 
-  ReturnEnv = clj_env:context(return, Env2),
-  {ReturnExpr, Env3} = clj_env:pop_expr(analyze_form(Return, ReturnEnv)),
+  Env4 = clj_env:pop(Env3),
+  {ReturnExpr, Env5} = clj_env:pop_expr(analyze_form(Return, Env4)),
 
   DoExpr = #{ op         => do
-            , env        => Env
+            , env        => Env0
             , form       => Statements
             , statements => StatementsExprs
             , ret        => ReturnExpr
             },
 
-  clj_env:push_expr(DoExpr, Env3).
+  clj_env:push_expr(DoExpr, Env5).
 
 %%------------------------------------------------------------------------------
 %% Parse if
 %%------------------------------------------------------------------------------
 
 -spec parse_if('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_if(Form, Env) ->
+parse_if(Form, Env0) ->
   Count = clj_rt:count(Form),
   clj_utils:error_when( Count =/= 3 andalso Count =/= 4
                       , [<<"Wrong number of args to if, had: ">>, Count - 1]
-                      , clj_env:location(Env)
+                      , clj_env:location(Env0)
                       ),
 
   {Test, Then, Else} =
@@ -577,20 +579,21 @@ parse_if(Form, Env) ->
         {Test1, Then1, Else1}
     end,
 
-  TestEnv = clj_env:context(expr, Env),
-  {TestExpr, Env1} = clj_env:pop_expr(analyze_form(Test, TestEnv)),
-  Env2 = analyze_forms([Then, Else], Env1),
-  {[ThenExpr, ElseExpr], Env3} = clj_env:last_exprs(2, Env2),
+  Env1 = clj_env:push(#{context => expr}, Env0),
+  {TestExpr, Env2} = clj_env:pop_expr(analyze_form(Test, Env1)),
+
+  Env3 = analyze_forms([Then, Else], clj_env:pop(Env2)),
+  {[ThenExpr, ElseExpr], Env4} = clj_env:last_exprs(2, Env3),
 
   IfExpr = #{ op   => 'if'
             , form => Form
-            , env  => Env
+            , env  => Env0
             , test => TestExpr
             , then => ThenExpr
             , else => ElseExpr
             },
 
-  clj_env:push_expr(IfExpr, Env3).
+  clj_env:push_expr(IfExpr, Env4).
 
 %%------------------------------------------------------------------------------
 %% Parse let & parse loop
@@ -649,15 +652,17 @@ analyze_let(Form, Env0) ->
   BindingCount = length(BindingPairs),
   {BindingsExprs, Env3} = clj_env:last_exprs(BindingCount, Env2),
 
-  BodyEnv = case IsLoop of
+  Mapping = case IsLoop of
               true ->
-                EnvTemp = clj_env:context(return, Env3),
-                clj_env:put(loop_locals, BindingCount, EnvTemp);
+                #{ context     => return
+                 , loop_locals => BindingCount
+                 };
               false ->
-                Env3
+                #{}
             end,
 
-  Body = clj_rt:rest(clj_rt:rest(Form)),
+  BodyEnv = clj_env:push(Mapping, Env3),
+  Body    = clj_rt:rest(clj_rt:rest(Form)),
   {BodyExpr, Env4} = clj_env:pop_expr(analyze_body(Body, BodyEnv)),
 
   LetExprExtra = #{ body     => BodyExpr
@@ -665,7 +670,7 @@ analyze_let(Form, Env0) ->
                   },
 
   Env5 = clj_env:remove_locals_scope(Env4),
-  Env6 = clj_env:pop(Env5),
+  Env6 = clj_env:pop(clj_env:pop(Env5)),
   {LetExprExtra, Env6}.
 
 -spec parse_binding({any(), any()}, clj_env:env()) -> clj_env:env().
@@ -722,7 +727,6 @@ parse_recur(List, Env) ->
   LoopLocals         = clj_env:get(loop_locals, Env),
 
   clj_utils:error_when( clj_env:context(Env) =/= return
-                        andalso clj_env:context(Env) =/= expr
                       , <<"Can only recur from tail position">>
                       , clj_env:location(Env)
                       ),
@@ -735,9 +739,9 @@ parse_recur(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  Env1 = clj_env:context(expr, Env),
+  Env1     = clj_env:push(#{context => expr}, Env),
   ArgsList = clj_rt:to_list(clj_rt:rest(List)),
-  Env2 = analyze_forms(ArgsList, Env1),
+  Env2     = analyze_forms(ArgsList, Env1),
   {ArgsExprs, Env3} = clj_env:last_exprs(LoopLocals, Env2),
 
   RecurExpr = #{ op         => recur
@@ -748,7 +752,7 @@ parse_recur(List, Env) ->
                , loop_type  => LoopType
                },
 
-  clj_env:push_expr(RecurExpr, Env3).
+  clj_env:push_expr(RecurExpr, clj_env:pop(Env3)).
 
 %%------------------------------------------------------------------------------
 %% Parse letfn
@@ -977,9 +981,9 @@ parse_def(List, Env) ->
   LocationInfo = clj_env:location(Env),
 
   SymbolMeta   = clj_rt:merge([ DocstringMap
-                                , SymbolMeta0
-                                , LocationInfo
-                                ]),
+                              , SymbolMeta0
+                              , LocationInfo
+                              ]),
   VarSymbol    = clj_rt:with_meta(VarSymbol0, SymbolMeta),
 
   Var0 = lookup_var(VarSymbol),
@@ -1034,7 +1038,7 @@ parse_def(List, Env) ->
             _ -> ?UNBOUND
           end,
 
-  ExprEnv  = clj_env:push(#{def_name => VarSymbol}, clj_env:context(expr, Env)),
+  ExprEnv  = clj_env:push(#{def_name => VarSymbol, context => expr}, Env),
   {InitExpr, Env1} = clj_env:pop_expr(analyze_form(Init, ExprEnv)),
 
   Var1     = var_fn_info(Var, InitExpr),
@@ -1440,14 +1444,14 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
 %%------------------------------------------------------------------------------
 
 -spec parse_dot('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_dot(List, Env) ->
-  clj_utils:error_when( clj_rt:count(List) < 3
+parse_dot(Form, Env) ->
+  clj_utils:error_when( clj_rt:count(Form) < 3
                       , <<"Malformed member expression, expecting "
                           "(. target member ...)">>
                       , clj_env:location(Env)
                       ),
 
-  [_Dot, Target | Args] = clj_rt:to_list(List),
+  [_Dot, Target | Args] = clj_rt:to_list(Form),
 
   {TargetExpr, Env1} = clj_env:pop_expr(analyze_form(Target, Env)),
 
@@ -1482,11 +1486,11 @@ parse_dot(List, Env) ->
      , type := TypeSym} ->
       Module     = clj_rt:keyword(TypeSym),
       Function   = clj_rt:keyword(NameSym),
-      ErlFunExpr = erl_fun_expr(List, Module, Function, length(ArgsList), Env),
+      ErlFunExpr = erl_fun_expr(Form, Module, Function, length(ArgsList), Env),
 
       InvokeExpr = #{ op   => invoke
                     , env  => Env
-                    , form => List
+                    , form => Form
                     , f    => ErlFunExpr
                     , args => ArgsExprs
                     },
@@ -1506,14 +1510,14 @@ parse_dot(List, Env) ->
                                                   ),
 
       clj_utils:warn_when( clj_rt:deref(WarnOnInferVar)
-                           andalso Module =:= ?NIL
-                         , [<<"Cannot infer target type for">>, List]
+                           andalso Module =:= ?NO_TAG
+                         , [<<"Cannot infer target type for ">>, Form]
                          , clj_env:location(Env)
                          ),
 
       InvokeExpr = #{ op   => invoke
                     , env  => Env
-                    , form => List
+                    , form => Form
                     , f    => ResolveTypeExpr
                     , args => [TargetExpr | ArgsExprs]
                     },
@@ -1545,26 +1549,26 @@ type_tag(_) ->
 %%------------------------------------------------------------------------------
 
 -spec parse_throw('clojerl.List':type(), clj_env:env()) -> clj_env:env().
-parse_throw(List, Env) ->
+parse_throw(List, Env0) ->
   Count = clj_rt:count(List),
   clj_utils:error_when( Count =/= 2
                       , [ <<"Wrong number of args to throw, had: ">>
                         , Count - 1
                         ]
-                      , clj_env:location(Env)
+                      , clj_env:location(Env0)
                       ),
 
-  Second = clj_rt:second(List),
-  ExceptionEnv = clj_env:context(expr, Env),
-  {ExceptionExpr, Env1} = clj_env:pop_expr(analyze_form(Second, ExceptionEnv)),
+  Second   = clj_rt:second(List),
+  Env1     = clj_env:push(#{context => expr}, Env0),
+  {ExceptionExpr, Env2} = clj_env:pop_expr(analyze_form(Second, Env1)),
 
   ThrowExpr = #{ op        => throw
-               , env       => Env
+               , env       => Env0
                , form      => List
                , exception => ExceptionExpr
                },
 
-  clj_env:push_expr(ThrowExpr, Env1).
+  clj_env:push_expr(ThrowExpr, clj_env:pop(Env2)).
 
 %%------------------------------------------------------------------------------
 %% Parse try
@@ -1604,21 +1608,23 @@ parse_try(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  Env1             = clj_env:put(in_try, true, Env),
+  Mapping          = #{in_try => true, context => expr},
+  Env1             = clj_env:push(Mapping, Env),
   {BodyExpr, Env2} = clj_env:pop_expr(analyze_body(Body, Env1)),
 
-  Env3                 = clj_env:context(expr, Env2),
+  Env3             = clj_env:put(context, expr, Env2),
   {CatchesExprs, Env4} =
     clj_env:last_exprs( length(Catches)
                       , lists:foldl(fun parse_catch/2, Env3, Catches)
                       ),
 
-  {FinallyExpr, Env5} = case Finallies of
+  Env5             = clj_env:put(context, statement, Env4),
+  {FinallyExpr, Env6} = case Finallies of
                           [Finally] ->
                             RestFinally = clj_rt:rest(Finally),
-                            clj_env:pop_expr(analyze_body(RestFinally, Env4));
+                            clj_env:pop_expr(analyze_body(RestFinally, Env5));
                           _ ->
-                            {?NIL, Env4}
+                            {?NIL, Env5}
                         end,
 
   TryExpr = #{ op      => 'try'
@@ -1629,8 +1635,7 @@ parse_try(List, Env) ->
              , finally => FinallyExpr
              },
 
-  Env6 = clj_env:put(in_try, false, Env5),
-  clj_env:push_expr(TryExpr, Env6).
+  clj_env:push_expr(TryExpr, clj_env:pop(Env6)).
 
 %%------------------------------------------------------------------------------
 %% Parse catch
@@ -1990,97 +1995,97 @@ wrapping_meta(#{form := Form, tag := Tag} = Expr, Env) ->
 %%------------------------------------------------------------------------------
 
 -spec analyze_vector('clojerl.Vector':type(), clj_env:env()) -> clj_env:env().
-analyze_vector(Vector, Env) ->
+analyze_vector(Vector, Env0) ->
   Count   = clj_rt:count(Vector),
-  ExprEnv = clj_env:context(expr, Env),
+  Env1    = clj_env:push(#{context => expr}, Env0),
   Items   = clj_rt:to_list(Vector),
-  Env1    = analyze_forms(Items, ExprEnv),
-  {ItemsExpr, Env2} = clj_env:last_exprs(Count, Env1),
+  Env2    = analyze_forms(Items, Env1),
+  {ItemsExpr, Env3} = clj_env:last_exprs(Count, Env2),
 
   VectorExpr = #{ op    => vector
-                , env   => Env2
+                , env   => Env0
                 , form  => Vector
-                , tag   => type_expr(Vector, Env)
+                , tag   => type_expr(Vector, Env0)
                 , items => ItemsExpr
                 },
 
-  wrapping_meta(VectorExpr, Env2).
+  wrapping_meta(VectorExpr, clj_env:pop(Env3)).
 
 %%------------------------------------------------------------------------------
 %% Analyze map
 %%------------------------------------------------------------------------------
 
 -spec analyze_map('clojerl.Map':type(), clj_env:env()) -> clj_env:env().
-analyze_map(Map, Env) ->
-  Keys = clj_rt:to_list(clj_rt:keys(Map)),
-  Vals = clj_rt:to_list(clj_rt:vals(Map)),
+analyze_map(Map, Env0) ->
+  Keys  = clj_rt:to_list(clj_rt:keys(Map)),
+  Vals  = clj_rt:to_list(clj_rt:vals(Map)),
 
   Count = clj_rt:count(Map),
-  ExprEnv = clj_env:context(expr, Env),
+  Env1  = clj_env:push(#{context => expr}, Env0),
 
-  Env1 = analyze_forms(Keys, ExprEnv),
-  {KeysExpr, Env2} = clj_env:last_exprs(Count, Env1),
-  Env3 = analyze_forms(Vals, Env2),
-  {ValsExpr, Env4} = clj_env:last_exprs(Count, Env3),
+  Env2  = analyze_forms(Keys, Env1),
+  {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
+  Env4  = analyze_forms(Vals, Env3),
+  {ValsExpr, Env5} = clj_env:last_exprs(Count, Env4),
 
   MapExpr = #{ op   => map
-             , env  => Env4
+             , env  => Env0
              , form => Map
-             , tag  => type_expr(Map, Env)
+             , tag  => type_expr(Map, Env0)
              , keys => KeysExpr
              , vals => ValsExpr
              },
 
-  wrapping_meta(MapExpr, Env4).
+  wrapping_meta(MapExpr, clj_env:pop(Env5)).
 
 %%------------------------------------------------------------------------------
 %% Analyze Erlang map
 %%------------------------------------------------------------------------------
 
 -spec analyze_erl_map(map(), clj_env:env()) -> clj_env:env().
-analyze_erl_map(Map, Env) ->
+analyze_erl_map(Map, Env0) ->
   Keys  = maps:keys(Map),
   Vals  = maps:values(Map),
 
   Count = maps:size(Map),
-  ExprEnv = clj_env:context(expr, Env),
+  Env1  = clj_env:push(#{context => expr}, Env0),
 
-  Env1 = analyze_forms(Keys, ExprEnv),
-  {KeysExpr, Env2} = clj_env:last_exprs(Count, Env1),
-  Env3 = analyze_forms(Vals, Env2),
-  {ValsExpr, Env4} = clj_env:last_exprs(Count, Env3),
+  Env2 = analyze_forms(Keys, Env1),
+  {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
+  Env4 = analyze_forms(Vals, Env3),
+  {ValsExpr, Env5} = clj_env:last_exprs(Count, Env4),
 
   MapExpr = #{ op   => erl_map
-             , env  => Env4
+             , env  => Env0
              , form => Map
-             , tag  => type_expr(Map, Env)
+             , tag  => type_expr(Map, Env0)
              , keys => KeysExpr
              , vals => ValsExpr
              },
 
-  wrapping_meta(MapExpr, Env4).
+  wrapping_meta(MapExpr, clj_env:pop(Env5)).
 
 %%------------------------------------------------------------------------------
 %% Analyze set
 %%------------------------------------------------------------------------------
 
 -spec analyze_set('clojerl.Set':type(), clj_env:env()) -> clj_env:env().
-analyze_set(Set, Env) ->
-  ExprEnv = clj_env:context(expr, Env),
+analyze_set(Set, Env0) ->
+  Env1    = clj_env:push(#{context => expr}, Env0),
   Items   = clj_rt:to_list(Set),
-  Env1    = analyze_forms(Items, ExprEnv),
+  Env2    = analyze_forms(Items, Env1),
 
   Count   = clj_rt:count(Set),
-  {ItemsExpr, Env2} = clj_env:last_exprs(Count, Env1),
+  {ItemsExpr, Env3} = clj_env:last_exprs(Count, Env2),
 
   SetExpr = #{ op    => set
-             , env   => Env2
+             , env   => Env0
              , form  => Set
-             , tag   => type_expr(Set, Env)
+             , tag   => type_expr(Set, Env0)
              , items => ItemsExpr
              },
 
-  wrapping_meta(SetExpr, Env2).
+  wrapping_meta(SetExpr, clj_env:pop(Env3)).
 
 %%------------------------------------------------------------------------------
 %% Analyze tuple
@@ -2088,22 +2093,22 @@ analyze_set(Set, Env) ->
 
 -spec analyze_tuple('clojerl.erlang.Tuple':type(), clj_env:env()) ->
   clj_env:env().
-analyze_tuple(Tuple, Env) ->
-  ExprEnv = clj_env:context(expr, Env),
+analyze_tuple(Tuple, Env0) ->
+  Env1    = clj_env:push(#{context => expr}, Env0),
   Items   = erlang:tuple_to_list(Tuple),
-  Env1    = analyze_forms(Items, ExprEnv),
+  Env2    = analyze_forms(Items, Env1),
 
   Count   = erlang:tuple_size(Tuple),
-  {ItemsExpr, Env2} = clj_env:last_exprs(Count, Env1),
+  {ItemsExpr, Env3} = clj_env:last_exprs(Count, Env2),
 
   TupleExpr = #{ op    => tuple
-               , env   => Env2
+               , env   => Env0
                , form  => Tuple
-               , tag   => type_expr(Tuple, Env)
+               , tag   => type_expr(Tuple, Env0)
                , items => ItemsExpr
                },
 
-  clj_env:push_expr(TupleExpr, Env2).
+  clj_env:push_expr(TupleExpr, clj_env:pop(Env3)).
 
 %%------------------------------------------------------------------------------
 %% receive

@@ -4,7 +4,6 @@
 
 -export([ default/0
         , context/1
-        , context/2
         , location/1
 
         , push_expr/2
@@ -38,17 +37,13 @@
 
 -spec default() -> env().
 default() ->
-  #{ context    => expr
-   , exprs      => []
+  #{ exprs      => []
    , locals     => clj_scope:new()
    , mapping    => clj_scope:new()
    }.
 
 -spec context(env()) -> context().
-context(#{context := Ctx}) -> Ctx.
-
--spec context(context(), env()) -> env().
-context(Ctx, Env) -> Env#{context => Ctx}.
+context(Env) -> get(context, expr, Env).
 
 -spec location(env()) -> ?NIL | clj_reader:location().
 location(Env) -> get(location, Env).
