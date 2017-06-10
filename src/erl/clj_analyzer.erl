@@ -1725,19 +1725,23 @@ parse_var(List, Env) ->
 
 -spec analyze_invoke('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_invoke(Form, Env) ->
-  FSym = clj_rt:first(Form),
-  {#{op := Op} = FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env)),
+  FSym          = clj_rt:first(Form),
+  {FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env)),
 
-  Args     = clj_rt:to_list(clj_rt:rest(Form)),
-  ArgCount = length(Args),
+  Args          = clj_rt:to_list(clj_rt:rest(Form)),
+  ArgCount      = length(Args),
   {ArgsExpr, Env2} = clj_env:last_exprs( ArgCount
                                        , analyze_forms(Args, Env1)
                                        ),
 
-  Tag = case Op =:= fn orelse Op =:= var of
-          true  -> maps:get(tag, FExpr, ?NIL);
-          false -> ?NO_TAG
-        end,
+  {Tag, Env3} = case FExpr of
+                  #{op := fn, tag := Tag0} ->
+                    {Tag0, Env2};
+                  #{op := var, var := Var, tag := Tag0} ->
+                    signature_tag(ArgCount, Tag0, Var, Env2);
+                  _   ->
+                    {?NO_TAG, Env2}
+                end,
 
   InvokeExpr = #{ op   => invoke
                 , env  => Env
@@ -1747,7 +1751,25 @@ analyze_invoke(Form, Env) ->
                 , args => ArgsExpr
                 },
 
-  clj_env:push_expr(InvokeExpr, Env2).
+  clj_env:push_expr(InvokeExpr, Env3).
+
+-spec signature_tag( integer()
+                   , map() | ?NO_TAG
+                   , 'clojerl.Var':type()
+                   , clj_env:env()
+                   ) ->
+  {map() | ?NO_TAG, clj_env:env()}.
+signature_tag(ArgCount, Default, Var, Env) ->
+  ArgLists = clj_rt:to_list(clj_rt:get(clj_rt:meta(Var), arglists)),
+  IsNotAmpersandFun = fun(X) -> clj_rt:str(X) =/= <<"&">> end,
+  Fun = fun(ArgList) ->
+            ArgsOnly = lists:filter(IsNotAmpersandFun, clj_rt:to_list(ArgList)),
+            clj_rt:count(ArgsOnly) =:= ArgCount
+        end,
+  case lists:filter(Fun, ArgLists) of
+    []        -> {Default, Env};
+    [ArgList] -> maybe_type_tag(ArgList, Env)
+  end.
 
 %%------------------------------------------------------------------------------
 %% Analyze symbol
@@ -1809,7 +1831,7 @@ erl_fun_expr(Symbol, Module, Function, Arity, Env) ->
    }.
 
 -spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
-  map().
+  {map(), clj_env:env()}.
 var_expr(Var, Symbol, Env0) ->
   {TagExpr, Env1} = maybe_type_tag(Var, Env0),
   VarExpr         = #{ op   => var
