@@ -153,17 +153,17 @@
   (is (thrown-with-msg? :error #"Unable to resolve symbol 'Closeable'"
                         (eval '(defn a (^Closeable []))))))
 
-(defn ^clojerl.String hinting-conflict ^clojerl.Integer [])
+(defn ^clojerl.String hinting-conflict ^erlang.util.Regex [])
 
 (deftest calls-use-arg-vector-hint
-  (should-not-reflect #(.floatValue (clojure.test-clojure.compilation/hinting-conflict)))
-  (should-print-err-message #"(?s)Reflection warning.*"
+  (should-not-reflect #(.quote (clojure.test-clojure.compilation/hinting-conflict)))
+  (should-print-err-message #"(?s)Cannot infer target type.*"
     #(.substring (clojure.test-clojure.compilation/hinting-conflict) 0)))
 
 (deftest deref-uses-var-tag
   (should-not-reflect #(.substring clojure.test-clojure.compilation/hinting-conflict 0))
-  (should-print-err-message #"(?s)Reflection warning.*"
-    #(.floatValue clojure.test-clojure.compilation/hinting-conflict)))
+  (should-print-err-message #"(?s)Cannot infer target type.*"
+    #(.quote clojure.test-clojure.compilation/hinting-conflict)))
 
 (defn ^clojerl.String legacy-hinting [])
 

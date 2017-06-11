@@ -1101,12 +1101,10 @@ validate_def_args(List, Env) ->
     C when C == 2;
            C == 3, Docstring == ?NIL;
            C == 4, Docstring =/= ?NIL  ->
-      case clj_rt:type(clj_rt:second(List)) of
-        'clojerl.Symbol' -> ok;
-        _ -> clj_utils:error( <<"First argument to def must be a symbol">>
-                            , clj_env:location(Env)
-                            )
-      end,
+      clj_utils:error_when( not clj_rt:'symbol?'(clj_rt:second(List))
+                          , <<"First argument to def must be a symbol">>
+                          , clj_env:location(Env)
+                          ),
       Docstring;
     1 ->
       clj_utils:error( <<"Too few arguments to def">>
