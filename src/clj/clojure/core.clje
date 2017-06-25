@@ -132,7 +132,7 @@
   ^{:arglists '([atype x])
     :doc "Returns true if x's type is atype"
     :added "1.0"}
-  instance? (fn instance? [atype x] (erlang/==.e atype (clj_rt/type.e x))))
+  instance? (fn instance? [atype x] (erlang/=:=.e atype (clj_rt/type.e x))))
 
 (def
   ^{:arglists '([x])
