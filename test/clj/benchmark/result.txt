@@ -1,118 +1,118 @@
-[x 1], (identity x), 1000000 runs, 23.691 msecs
+[x 1], (identity x), 1000000 runs, 24.977 msecs
 ;; symbol construction
-[], (symbol (quote foo)), 1000000 runs, 48.636 msecs
+[], (symbol (quote foo)), 1000000 runs, 73.881 msecs
 
 ;;; instance?
-[coll []], (instance? :clojerl.Vector coll), 1000000 runs, 41.776 msecs
+[coll []], (instance? clojerl.Vector coll), 1000000 runs, 74.807 msecs
 ;;; satisfies?
-[coll (list 1 2 3)], (satisfies? :clojerl.ISeq coll), 1000000 runs, 128.688959 msecs
-[coll [1 2 3]], (satisfies? :clojerl.ISeq coll), 1000000 runs, 101.107866 msecs
+[coll (list 1 2 3)], (satisfies? clojerl.ISeq coll), 1000000 runs, 143.443 msecs
+[coll [1 2 3]], (satisfies? clojerl.ISeq coll), 1000000 runs, 156.363 msecs
 
 ;;; tuple & string ops
-[coll "foobar"], (seq coll), 1000000 runs, 436.573423 msecs
-[coll "foobar"], (first coll), 1000000 runs, 735.984028 msecs
-[coll "foobar"], (nth coll 2), 1000000 runs, 667.194118 msecs
-[coll (tuple 1 2 3)], (seq coll), 1000000 runs, 176.997766 msecs
-[coll (tuple 1 2 3)], (first coll), 1000000 runs, 508.582328 msecs
-[coll (tuple 1 2 3)], (nth coll 2), 1000000 runs, 253.341666 msecs
+[coll "foobar"], (seq coll), 1000000 runs, 427.460736 msecs
+[coll "foobar"], (first coll), 1000000 runs, 780.408485 msecs
+[coll "foobar"], (nth coll 2), 1000000 runs, 665.107561 msecs
+[coll (tuple 1 2 3)], (seq coll), 1000000 runs, 173.269885 msecs
+[coll (tuple 1 2 3)], (first coll), 1000000 runs, 447.017705 msecs
+[coll (tuple 1 2 3)], (nth coll 2), 1000000 runs, 257.91783 msecs
 
 ;;; list ops
-[coll (list 1 2 3)], (first coll), 1000000 runs, 241.891681 msecs
-[coll (list 1 2 3)], (rest coll), 1000000 runs, 257.18966 msecs
-[], (list), 1000000 runs, 36.631951 msecs
-[], (list 1 2 3), 1000000 runs, 37.32795 msecs
+[coll (list 1 2 3)], (first coll), 1000000 runs, 248.617836 msecs
+[coll (list 1 2 3)], (rest coll), 1000000 runs, 246.154838 msecs
+[], (list), 1000000 runs, 40.126973 msecs
+[], (list 1 2 3), 1000000 runs, 37.770975 msecs
 
 ;;; vector ops
-[], [], 1000000 runs, 75.4069 msecs
-[[a b c] (take 3 (repeatedly (fn* [] (rand-int 10))))], (count [a b c]), 1000000 runs, 381.314496 msecs
-[[a b c] (take 3 (repeatedly (fn* [] (rand-int 10))))], (count (vec [a b c])), 1000000 runs, 670.323115 msecs
-[[a b c] (take 3 (repeatedly (fn* [] (rand-int 10))))], (count (vector a b c)), 1000000 runs, 382.075496 msecs
-[coll [1 2 3]], (nth coll 0), 1000000 runs, 244.116678 msecs
-[coll [1 2 3]], (coll 0), 1000000 runs, 169.540776 msecs
-[coll [1 2 3]], (conj coll 4), 1000000 runs, 246.270674 msecs
-[coll [1 2 3]], (seq coll), 1000000 runs, 229.836697 msecs
-[coll (seq [1 2 3])], (first coll), 1000000 runs, 254.180665 msecs
-[coll (seq [1 2 3])], (rest coll), 1000000 runs, 251.241668 msecs
-[coll (seq [1 2 3])], (next coll), 1000000 runs, 273.131639 msecs
+[], [], 1000000 runs, 75.036951 msecs
+[[a b c] (take 3 (repeatedly (fn* [] (rand-int 10))))], (count [a b c]), 1000000 runs, 363.64176 msecs
+[[a b c] (take 3 (repeatedly (fn* [] (rand-int 10))))], (count (vec [a b c])), 1000000 runs, 769.091493 msecs
+[[a b c] (take 3 (repeatedly (fn* [] (rand-int 10))))], (count (vector a b c)), 1000000 runs, 389.198743 msecs
+[coll [1 2 3]], (nth coll 0), 1000000 runs, 270.787821 msecs
+[coll [1 2 3]], (coll 0), 1000000 runs, 187.085877 msecs
+[coll [1 2 3]], (conj coll 4), 1000000 runs, 238.730843 msecs
+[coll [1 2 3]], (seq coll), 1000000 runs, 238.103843 msecs
+[coll (seq [1 2 3])], (first coll), 1000000 runs, 245.814837 msecs
+[coll (seq [1 2 3])], (rest coll), 1000000 runs, 245.032838 msecs
+[coll (seq [1 2 3])], (next coll), 1000000 runs, 236.237844 msecs
 
 ;;; large vector ops
-[], (reduce conj [] (range 40000)), 10 runs, 525.107307 msecs
-[coll (reduce conj [] (range (+ 32768 32)))], (conj coll :foo), 100000 runs, 56.533926 msecs
-[coll (reduce conj [] (range 40000))], (assoc coll 123 :foo), 100000 runs, 46.949938 msecs
-[coll (reduce conj [] (range (+ 32768 33)))], (pop coll), 100000 runs, 20.814973 msecs
+[], (reduce conj [] (range 40000)), 10 runs, 549.084638 msecs
+[coll (reduce conj [] (range (+ 32768 32)))], (conj coll :foo), 100000 runs, 58.277962 msecs
+[coll (reduce conj [] (range 40000))], (assoc coll 123 :foo), 100000 runs, 52.184966 msecs
+[coll (reduce conj [] (range (+ 32768 33)))], (pop coll), 100000 runs, 21.725986 msecs
 
 ;;; vector equality
-[a (into [] (range 1000000)) b (into [] (range 1000000))], (= a b), 1 runs, 244.308678 msecs
+[a (into [] (range 1000000)) b (into [] (range 1000000))], (= a b), 1 runs, 260.862828 msecs
 
 ;;; keyword compare
 
 ;;; reduce lazy-seqs, vectors, ranges
-[coll (take 100000 (iterate inc 0))], (reduce + 0 coll), 1 runs, 358.728526 msecs
-[coll (range 1000000)], (reduce + 0 coll), 1 runs, 844.422885 msecs
-[coll (into [] (range 1000000))], (reduce + 0 coll), 1 runs, 924.055779 msecs
+[coll (take 100000 (iterate inc 0))], (reduce + 0 coll), 1 runs, 371.121755 msecs
+[coll (range 1000000)], (reduce + 0 coll), 1 runs, 845.528442 msecs
+[coll (into [] (range 1000000))], (reduce + 0 coll), 1 runs, 915.572396 msecs
 
 ;; apply
-[coll (into [] (range 1000000))], (apply + coll), 1 runs, 985.393698 msecs
-[], (list 1 2 3 4 5), 1000000 runs, 33.434956 msecs
-[xs (list 1 2 3 4 5)], (apply list xs), 1000000 runs, 1203.63241 msecs
-[xs [1 2 3 4 5]], (apply list xs), 1000000 runs, 1372.542187 msecs
-[f (fn [a b & more])], (apply f (range 32)), 1000000 runs, 1005.888671 msecs
-[f (fn [a b c d e f g h i j & more])], (apply f (range 32)), 1000000 runs, 1005.518671 msecs
+[coll (into [] (range 1000000))], (apply + coll), 1 runs, 1046.672309 msecs
+[], (list 1 2 3 4 5), 1000000 runs, 38.938974 msecs
+[xs (list 1 2 3 4 5)], (apply list xs), 1000000 runs, 1319.539129 msecs
+[xs [1 2 3 4 5]], (apply list xs), 1000000 runs, 1425.702059 msecs
+[f (fn [a b & more])], (apply f (range 32)), 1000000 runs, 1012.931332 msecs
+[f (fn [a b c d e f g h i j & more])], (apply f (range 32)), 1000000 runs, 1045.45631 msecs
 
 ;; update-in
-[coll {:foo 1} ks [:foo]], (update-in coll ks inc), 1000000 runs, 2811.488286 msecs
+[coll {:foo 1} ks [:foo]], (update-in coll ks inc), 1000000 runs, 2921.830072 msecs
 
 ;;; map / record ops
-[coll {:foo 1, :bar 2}], (get coll :foo), 1000000 runs, 401.47047 msecs
-[coll {(quote foo) 1, (quote bar) 2}], (get coll (quote foo)), 1000000 runs, 439.69942 msecs
-[coll {:foo 1, :bar 2}], (:foo coll), 1000000 runs, 558.891262 msecs
-[coll {(quote foo) 1, (quote bar) 2}], ((quote foo) coll), 1000000 runs, 552.89427 msecs
-[coll {:foo 1, :bar 2}], (kw coll), 1000000 runs, 559.424261 msecs
-[coll {(quote foo) 1, (quote bar) 2}], (sym coll), 1000000 runs, 554.106268 msecs
-[coll {:foo 1, :bar 2}], (loop [i 0 m coll] (if (< i 100000) (recur (inc i) (assoc m :foo 2)) m)), 1 runs, 35.487953 msecs
-[coll (new Foo 1 2)], (:bar coll), 1000000 runs, 646.255146 msecs
-[coll (new Foo 1 2)], (assoc coll :bar 2), 1000000 runs, 1060.0166 msecs
-[coll (new Foo 1 2)], (assoc coll :baz 3), 1000000 runs, 1864.082537 msecs
-[coll (new Foo 1 2)], (loop [i 0 m coll] (if (< i 1000000) (recur (inc i) (assoc m :bar 2)) m)), 1 runs, 1026.357644 msecs
+[coll {:foo 1, :bar 2}], (get coll :foo), 1000000 runs, 431.632715 msecs
+[coll {(quote foo) 1, (quote bar) 2}], (get coll (quote foo)), 1000000 runs, 481.140682 msecs
+[coll {:foo 1, :bar 2}], (:foo coll), 1000000 runs, 568.668625 msecs
+[coll {(quote foo) 1, (quote bar) 2}], ((quote foo) coll), 1000000 runs, 586.832612 msecs
+[coll {:foo 1, :bar 2}], (kw coll), 1000000 runs, 582.330616 msecs
+[coll {(quote foo) 1, (quote bar) 2}], (sym coll), 1000000 runs, 578.448618 msecs
+[coll {:foo 1, :bar 2}], (loop [i 0 m coll] (if (< i 100000) (recur (inc i) (assoc m :foo 2)) m)), 1 runs, 46.16497 msecs
+[coll (new Foo 1 2)], (:bar coll), 1000000 runs, 629.085585 msecs
+[coll (new Foo 1 2)], (assoc coll :bar 2), 1000000 runs, 1070.607293 msecs
+[coll (new Foo 1 2)], (assoc coll :baz 3), 1000000 runs, 1885.693756 msecs
+[coll (new Foo 1 2)], (loop [i 0 m coll] (if (< i 1000000) (recur (inc i) (assoc m :bar 2)) m)), 1 runs, 1057.643302 msecs
 
 ;;; zipmap
-[m {:c 3, :b 2, :a 1}], (zipmap (keys m) (map inc (vals m))), 100000 runs, 1125.529513 msecs
+[m {:c 3, :b 2, :a 1}], (zipmap (keys m) (map inc (vals m))), 100000 runs, 1123.439258 msecs
 
 ;;; seq ops
-[coll (range 500000)], (reduce + coll), 1 runs, 433.094428 msecs
+[coll (range 500000)], (reduce + coll), 1 runs, 436.243712 msecs
 
 ;;; reader
-[s "{:foo [1 2 3]}"], (read-string s), 1000 runs, 74.836902 msecs
-[s big-str-data], (read-string s), 1000 runs, 4569.358964 msecs
+[s "{:foo [1 2 3]}"], (read-string s), 1000 runs, 78.397948 msecs
+[s big-str-data], (read-string s), 1000 runs, 4759.955858 msecs
 
 ;;; range
-[r (range 1000000)], (last r), 1 runs, 465.095386 msecs
+[r (range 1000000)], (last r), 1 runs, 492.149676 msecs
 
 ;;; lazy-seq
 ;;; first run
-[r r], (last r), 1 runs, 2337.099913 msecs
+[r r], (last r), 1 runs, 2343.083454 msecs
 ;;; second run
-[r r], (last r), 1 runs, 2354.52289 msecs
+[r r], (last r), 1 runs, 2367.891438 msecs
 
 ;;; comprehensions
-[xs (range 512)], (last (for [x xs y xs] (+ x y))), 1 runs, 1413.146133 msecs
-[xs (vec (range 512))], (last (for [x xs y xs] (+ x y))), 4 runs, 5489.019712 msecs
+[xs (range 512)], (last (for [x xs y xs] (+ x y))), 1 runs, 1434.749053 msecs
+[xs (vec (range 512))], (last (for [x xs y xs] (+ x y))), 4 runs, 5470.13139 msecs
 
 ;; reducers
 ;; transducers
 ;; reduce range 1000000 many ops
-[xs (range 1000000)], (reduce + 0 (map inc (map inc (map inc xs)))), 1 runs, 6516.029393 msecs
+[xs (range 1000000)], (reduce + 0 (map inc (map inc (map inc xs)))), 1 runs, 6582.962655 msecs
 ;; transduce range 1000000 many ops 
 
 
 ;; multimethods
-[], (simple-multi :foo), 1000000 runs, 3599.088246 msecs
+[], (simple-multi :foo), 1000000 runs, 3752.206524 msecs
 
 
 ;; higher-order variadic function calls
-[f tuple], (f 1 2 3 4 5 6 7 8 9 0), 100000 runs, 121.813839 msecs
-[f vector], (f 1 2 3 4 5 6 7 8 9 0), 100000 runs, 266.009648 msecs
-[], (= 1 1 1 1 1 1 1 1 1 0), 100000 runs, 555.378266 msecs
-Read, Analyze & Emit: 61946.082 ms
-Compile Forms: 128.279 ms
-Total: 62082.977 ms
+[f tuple], (f 1 2 3 4 5 6 7 8 9 0), 100000 runs, 133.366911 msecs
+[f vector], (f 1 2 3 4 5 6 7 8 9 0), 100000 runs, 272.99482 msecs
+[], (= 1 1 1 1 1 1 1 1 1 0), 100000 runs, 558.514632 msecs
+Read, Analyze & Emit: 63328.652 ms
+Compile Forms: 127.903 ms
+Total: 63464.352 ms

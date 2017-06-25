@@ -11,10 +11,10 @@
   (println)
 
   (println ";;; instance?")
-  (simple-benchmark [coll []] (instance? :clojerl.Vector coll) 1000000)
+  (simple-benchmark [coll []] (instance? clojerl.Vector coll) 1000000)
   (println ";;; satisfies?")
-  (simple-benchmark [coll (list 1 2 3)] (satisfies? :clojerl.ISeq coll) 1000000)
-  (simple-benchmark [coll [1 2 3]] (satisfies? :clojerl.ISeq coll) 1000000)
+  (simple-benchmark [coll (list 1 2 3)] (satisfies? clojerl.ISeq coll) 1000000)
+  (simple-benchmark [coll [1 2 3]] (satisfies? clojerl.ISeq coll) 1000000)
   (println)
 
   (println ";;; tuple & string ops")

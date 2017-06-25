@@ -167,7 +167,8 @@ ast(#{op := type} = Expr, State) ->
    } = Expr,
 
   TypeModule = sym_to_kw(TypeSym),
-  Ast        = cerl:ann_c_atom(ann_from(Env), TypeModule),
+  Type       = 'erlang.Type':?CONSTRUCTOR(TypeModule),
+  Ast        = cerl:ann_abstract(ann_from(Env), Type),
 
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
@@ -184,7 +185,8 @@ ast(#{op := new} = Expr, State) ->
                               ),
 
   {TypeAst, State2}  = pop_ast(ast(TypeExpr, State1)),
-  TypeModule         = cerl:concrete(TypeAst),
+  Type               = cerl:concrete(TypeAst),
+  TypeModule         = 'erlang.Type':module(Type),
 
   Ast = call_mfa(TypeModule, ?CONSTRUCTOR, ArgsAsts, ann_from(Env)),
   push_ast(Ast, State2);
@@ -495,7 +497,7 @@ ast(#{op := invoke} = Expr, State) ->
       case Module of
         ?NO_TAG ->
           FVarAst    = new_c_var(Ann),
-          ModuleAst  = call_mfa(clj_rt, type, [TargetAst], Ann),
+          ModuleAst  = call_mfa(clj_rt, type_module, [TargetAst], Ann),
           ResolveAst = call_mfa( erlang
                                , make_fun
                                , [ ModuleAst

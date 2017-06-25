@@ -98,7 +98,7 @@ Design notes for clojure.string:
     (cond
       (string? match) (replace match s (str replacement) opts)
       (regex? match) (if (or (string? replacement)
-                             (instance? :erlang.io.StringWriter replacement))
+                             (instance? erlang.io.StringWriter replacement))
                        (replace match s (str replacement) opts)
                        (replace-by s match replacement))
       :else (throw (str "Invalid match arg: " match)))))
@@ -158,11 +158,11 @@ Design notes for clojure.string:
         opts #erl ()]
     (cond
       (or (string? match)
-          (instance? :erlang.io.StringWriter match))
+          (instance? erlang.io.StringWriter match))
       (replace-first-str s (str match) (str replacement))
       (regex? match)
       (if (or (string? replacement)
-              (instance? :erlang.io.StringWriter replacement))
+              (instance? erlang.io.StringWriter replacement))
         (replace match s (str replacement) opts)
         (replace-first-by s match replacement))
       :else (throw (str "Invalid match arg: " match)))))

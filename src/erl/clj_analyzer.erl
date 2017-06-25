@@ -1855,7 +1855,7 @@ type_expr(Type, Symbol, Env) ->
 
 -spec type_expr( any(), clj_env:env()) -> map().
 type_expr(Value, Env) ->
-  Type = clj_rt:type(Value),
+  Type = clj_rt:type_module(Value),
  #{ op   => type
   , env  => Env
   , type => clj_rt:symbol(atom_to_binary(Type, utf8))
