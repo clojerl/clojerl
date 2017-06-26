@@ -4090,7 +4090,7 @@
 (defn re-pattern
   "Returns a compiled Erlang regular expression unless s is already a
   compiled pattern."
-  {:tag :erlang.util.Regex
+  {:tag erlang.util.Regex
    :added "1.0"}
   [s]
   (if (regex? s)
