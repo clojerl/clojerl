@@ -157,12 +157,12 @@
 
 (deftest calls-use-arg-vector-hint
   (should-not-reflect #(.quote (clojure.test-clojure.compilation/hinting-conflict)))
-  (should-print-err-message #"(?s)Cannot infer target type.*"
+  (should-print-err-message #"(?s).*Cannot infer target type.*"
     #(.substring (clojure.test-clojure.compilation/hinting-conflict) 0)))
 
 (deftest deref-uses-var-tag
   (should-not-reflect #(.substring clojure.test-clojure.compilation/hinting-conflict 0))
-  (should-print-err-message #"(?s)Cannot infer target type.*"
+  (should-print-err-message #"(?s).*Cannot infer target type.*"
     #(.quote clojure.test-clojure.compilation/hinting-conflict)))
 
 (defn ^clojerl.String legacy-hinting [])
@@ -267,9 +267,10 @@
     (is (try (load-string "(.submit (java.util.concurrent.Executors/newCachedThreadPool) ^Runnable #())")
              (catch :error e nil)))))
 
-(defn ^{:tag 'long} hinted-primfn [^long x] x)
-(defn unhinted-primfn [^long x] x)
-(deftest CLJ-1533-primitive-functions-lose-tag
+;; NA: there are no 'primitive' types in Erlang
+#_(defn ^{:tag 'long} hinted-primfn [^long x] x)
+#_(defn unhinted-primfn [^long x] x)
+#_(deftest CLJ-1533-primitive-functions-lose-tag
   (should-not-reflect #(erlang/abs.e (clojure.test-clojure.compilation/hinted-primfn 1)))
   (should-not-reflect #(erlang/abs.e ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
 

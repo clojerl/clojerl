@@ -1497,28 +1497,48 @@ parse_dot(Form, Env) ->
     _ ->
       Module          = type_tag(TargetExpr),
       Function        = clj_rt:keyword(NameSym),
-      ResolveTypeExpr = #{ op       => resolve_type
-                         , env      => Env
-                         , form     => Target
-                         , module   => Module
-                         , function => Function
-                         },
+
       WarnOnInferVar  = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                                                   , <<"*warn-on-infer*">>
                                                   ),
+      WarnOnInfer     = clj_rt:deref(WarnOnInferVar),
 
-      clj_utils:warn_when( clj_rt:deref(WarnOnInferVar)
-                           andalso Module =:= ?NO_TAG
-                         , [<<"Cannot infer target type for ">>, Form]
+      clj_utils:warn_when( WarnOnInfer andalso Module =:= ?NO_TAG
+                         , [<<"Cannot infer target type in ">>, Form]
                          , clj_env:location(Env)
                          ),
 
-      InvokeExpr = #{ op   => invoke
-                    , env  => Env
-                    , form => Form
-                    , f    => ResolveTypeExpr
-                    , args => [TargetExpr | ArgsExprs]
-                    },
+      Count           = length(ArgsExprs) + 1,
+      IsExported      = erlang:function_exported(Module, Function, Count),
+      clj_utils:warn_when( WarnOnInfer
+                           andalso not IsExported
+                           andalso Module =/= ?NO_TAG
+                         , [ <<"Cannot infer target type in ">>, Form
+                           , <<" there is not function ">>, NameSym
+                           , <<" for type ">>
+                           , 'erlang.Type':?CONSTRUCTOR(Module)
+                           ]
+                         , clj_env:location(Env)
+                         ),
+
+      Module1         = case IsExported of
+                          true  -> Module;
+                          false -> ?NO_TAG
+                        end,
+
+      ResolveTypeExpr = #{ op       => resolve_type
+                         , env      => Env
+                         , form     => Target
+                         , module   => Module1
+                         , function => Function
+                         },
+
+      InvokeExpr      = #{ op   => invoke
+                         , env  => Env
+                         , form => Form
+                         , f    => ResolveTypeExpr
+                         , args => [TargetExpr | ArgsExprs]
+                         },
 
       clj_env:push_expr(InvokeExpr, Env2)
   end.
@@ -1529,12 +1549,38 @@ maybe_type_tag(Symbol, Env) ->
   Meta = clj_rt:meta(Symbol),
   case clj_rt:get(Meta, tag) of
     ?NIL -> {?NO_TAG, Env};
-    Tag  ->
-      Mapping = #{in_pattern => false},
-      Env1    = clj_env:push(Mapping, Env),
-      Env2    = analyze_form(Tag, Env1),
-      clj_env:pop_expr(clj_env:pop(Env2))
+    Tag  -> maybe_resolve_type_tag(Tag, Env)
   end.
+
+-spec maybe_resolve_type_tag(any(), clj_env:env()) ->
+  {any(), clj_env:env()}.
+maybe_resolve_type_tag(Tag, Env) ->
+  Symbol = case clj_rt:type_module(Tag) of
+             'clojerl.Symbol' ->
+               Tag;
+             'erlang.Type' ->
+               Module = 'erlang.Type':module(Tag),
+               clj_rt:symbol(atom_to_binary(Module, utf8));
+             'clojerl.String' ->
+               clj_rt:symbol(Tag);
+             _ ->
+               clj_utils:error( [ <<"Invalid tag, expected Type, ">>
+                                , <<"Symbol or String got: ">>
+                                , clj_rt:type(Tag)
+                                ]
+                              , clj_env:location(Env)
+                              )
+           end,
+
+  resolve_type_tag(Symbol, Env).
+
+-spec resolve_type_tag('clojerl.Symbol':type(), clj_env:env()) ->
+  {any(), clj_env:env()}.
+resolve_type_tag(Symbol, Env) ->
+  Mapping = #{in_pattern => false},
+  Env1    = clj_env:push(Mapping, Env),
+  Env2    = analyze_form(Symbol, Env1),
+  clj_env:pop_expr(clj_env:pop(Env2)).
 
 -spec type_tag(map()) -> ?NO_TAG | module().
 type_tag(#{tag := #{op := type, type := TypeSym}}) ->
