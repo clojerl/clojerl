@@ -385,8 +385,8 @@
   (is (= "1" (load-string "(defn returns-float ^clojerl.Float [] 1.0) (clojerl.Integer/str.e (int (returns-float)))"))))
 
 ;; See CLJ-1825
-#_(def zf (fn rf [x] (lazy-seq (cons x (rf x)))))
-#_(deftest test-anon-recursive-fn
+(def zf (fn rf [x] (lazy-seq (cons x (rf x)))))
+(deftest test-anon-recursive-fn
   (is (= [0 0] (take 2 ((fn rf [x] (lazy-seq (cons x (rf x)))) 0))))
   (is (= [0 0] (take 2 (zf 0)))))
 

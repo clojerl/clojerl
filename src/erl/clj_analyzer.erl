@@ -278,11 +278,13 @@ parse_fn(List, Env) ->
                   false -> ?NIL
                 end,
 
-  %% If it is a def we only register the var, otherwise register the local.
+  %% If it is a def we register the var, otherwise register the local.
   Env1 = case IsDef of
            true  ->
              clj_namespace:update_var(DefVar),
-             Env0;
+             %% Register a local mapping the symbol fn to the var
+             {VarExpr, Env0Tmp} = var_expr(DefVar, DefNameSym, Env0),
+             clj_env:put_local(NameSym, VarExpr, Env0Tmp);
            false ->
              clj_env:put_local(NameSym, LocalExpr, Env0)
          end,
