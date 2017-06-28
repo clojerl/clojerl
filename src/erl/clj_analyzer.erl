@@ -1516,7 +1516,7 @@ parse_dot(Form, Env) ->
                            andalso not IsExported
                            andalso Module =/= ?NO_TAG
                          , [ <<"Cannot infer target type in ">>, Form
-                           , <<" there is not function ">>, NameSym
+                           , <<" there is no function ">>, NameSym
                            , <<" for type ">>
                            , 'erlang.Type':?CONSTRUCTOR(Module)
                            ]

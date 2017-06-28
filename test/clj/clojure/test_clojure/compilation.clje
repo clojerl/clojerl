@@ -320,6 +320,9 @@
          (class (clojure.test-clojure.compilation.examples.T.))
          (class (clojure.test-clojure.compilation.examples/->T)))))
 
+;; N/A: this test will succeed in Erlang since function call in f
+;;      will for the :clojure.test-clojure.compilation.load-ns module
+;;      to load.
 #_(deftest clj-1208
   ;; clojure.test-clojure.compilation.load-ns has not been loaded
   ;; so this would fail if the deftype didn't load it in its static
