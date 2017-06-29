@@ -11,7 +11,7 @@
 -export([hash/1]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: module(), info :: ?NIL}.
+-type type() :: #?TYPE{data :: module()}.
 
 -spec ?CONSTRUCTOR(atom()) -> type().
 ?CONSTRUCTOR(Name) when is_atom(Name) ->
