@@ -104,7 +104,7 @@
   (new erlang.io.StringWriter s))
 
 (deftest char-sequence-handling
-  (are [result f args] (let [[^CharSequence s & more] args]
+  (are [result f args] (let [[^clojerl.String s & more] args]
                          (= result (apply f (string-writer s) more)))
        "paz" s/reverse ["zap"]
        "foo:bar" s/replace ["foo-bar" \- \:]

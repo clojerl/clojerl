@@ -1,3 +1,5 @@
+.SILENT:
+
 REBAR3    := rebar3
 V         := @
 

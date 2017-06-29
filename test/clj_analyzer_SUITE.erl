@@ -56,7 +56,7 @@ end_per_suite(Config) -> Config.
 -spec init_per_testcase(_, config()) -> config().
 init_per_testcase(_, Config) ->
   Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
-              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              , <<"#'clojure.core/*compile-path*">> => <<"ebin">>
               },
   ok       = 'clojerl.Var':push_bindings(Bindings),
   Config.
@@ -438,7 +438,9 @@ do(_Config) ->
     ret := RetExpr
    } = analyze_one(<<"(do :expr 1 :ret)">>),
 
-  true = maps:remove(env, KeywordExpr) =:= maps:remove(env, KeywordExpr1),
+  true = ( maps:without([env, tag], KeywordExpr) =:=
+           maps:without([env, tag], KeywordExpr1)
+         ),
 
   #{op := constant,
    form := 1
@@ -603,7 +605,7 @@ do(_Config) ->
   ok = try analyze_one(<<"(let*)">>)
        catch _:Reason2 ->
            <<?NO_SOURCE, ":1:1: let* requires a vector for its bindings, "
-             "had: :clojerl.Nil">> = Reason2,
+             "had: clojerl.Nil">> = Reason2,
            ok
        end,
 
@@ -956,7 +958,7 @@ var(_Config) ->
   ct:comment("Use var with symbol for existing var"),
   [_ , #{op := constant, form := VarX}] = analyze_all(<<"(def x 1) (var x)">>),
   <<"x">> = clj_rt:name(VarX),
-  'clojerl.Var' = clj_rt:type(VarX),
+  'clojerl.Var' = clj_rt:type_module(VarX),
 
   ct:comment("Use var with symbol for non-existing var"),
   ok = try analyze_all(<<"(var zz)">>), error

@@ -211,7 +211,7 @@ by default when a new command-line REPL is started."} repl-requires
   [& options]
   (let [{:keys [init need-prompt prompt flush read eval print caught]
          :or {init        #()
-              need-prompt #(if (instance? :erlang.io.PushbackReader *in*)
+              need-prompt #(if (instance? erlang.io.PushbackReader *in*)
                              (erlang.io.PushbackReader/at_line_start.e *in*)
                              true)
               prompt      repl-prompt

@@ -159,13 +159,13 @@ char_type(_, _) -> symbol.
                    'clojerl.Symbol':type() |
                    string()) -> map().
 desugar_meta(Meta) ->
-  case clj_rt:type(Meta) of
+  case clj_rt:type_module(Meta) of
     'clojerl.Keyword' ->
       clj_rt:hash_map([Meta, true]);
     'clojerl.Map' ->
       Meta;
-    Type when Type == 'clojerl.Symbol'
-              orelse Type == 'clojerl.String' ->
+    Type when Type == 'clojerl.Symbol' orelse
+              Type == 'clojerl.String' ->
       Tag = clj_rt:keyword(<<"tag">>),
       clj_rt:hash_map([Tag, Meta]);
     _ ->

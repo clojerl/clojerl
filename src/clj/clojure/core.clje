@@ -132,7 +132,7 @@
   ^{:arglists '([atype x])
     :doc "Returns true if x's type is atype"
     :added "1.0"}
-  instance? (fn instance? [atype x] (erlang/==.e atype (clj_rt/type.e x))))
+  instance? (fn instance? [atype x] (erlang/=:=.e atype (clj_rt/type.e x))))
 
 (def
   ^{:arglists '([x])
@@ -482,8 +482,8 @@
   {:tag clojerl.String
    :added "1.0"}
   (^clojerl.String [] "")
-  (^clojerl.String [^Object x]
-                    (if (nil? x) "" (clj_rt/str.e x)))
+  (^clojerl.String [x]
+   (if (nil? x) "" (clj_rt/str.e x)))
   (^clojerl.String [x & ys]
                     ((fn [acc more]
                        (if more
@@ -1173,7 +1173,7 @@
   does not contain key(s)."
   {:added "1.0"}
   ([set] set)
-  ([^clojure.lang.IPersistentSet set key]
+  ([^clojerl.Set set key]
    (when set
      (clj_rt/disj.e set key)))
   ([set key & ks]
@@ -1242,7 +1242,7 @@
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   {:tag clojerl.String
    :added "1.0"}
-  [^clojure.lang.Named x]
+  [^clojerl.Named x]
   (clj_rt/namespace.e x))
 
 (defmacro ..
@@ -1385,39 +1385,39 @@
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
   {:added "1.2"}
-  [^Var multifn]
+  [^clojerl.Var multifn]
   (clojerl.MultiFn/remove_all.e (name multifn)))
 
 (defn remove-method
   "Removes the method of multimethod associated with dispatch-value."
   {:added "1.0"}
-  [^clojure.lang.MultiFn multifn dispatch-val]
+  [^clojerl.MultiFn multifn dispatch-val]
   (clojerl.MultiFn/remove_method.e multifn dispatch-val))
 
 (defn prefer-method
   "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y
    when there is a conflict"
   {:added "1.0"}
-  [^clojure.lang.MultiFn multifn dispatch-val-x dispatch-val-y]
+  [^clojerl.MultiFn multifn dispatch-val-x dispatch-val-y]
   (throw "unimplemented hierarchy"))
 
 (defn methods
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
   {:added "1.0"}
-  [^clojure.lang.MultiFn multifn]
+  [^clojerl.MultiFn multifn]
   (clojerl.MultiFn/get_method_table.e multifn))
 
 (defn get-method
   "Given a multimethod and a dispatch value, returns the dispatch fn
   that would apply to that value, or nil if none apply and no default"
   {:added "1.0"}
-  [^clojure.lang.MultiFn multifn dispatch-val]
+  [^clojerl.MultiFn multifn dispatch-val]
   (clojerl.MultiFn/get_method.e multifn dispatch-val))
 
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   {:added "1.0"}
-  [^clojure.lang.MultiFn multifn]
+  [^clojerl.MultiFn multifn]
   (throw "unimplemented hierarchy"))
 
 ;;;;;;;;; var stuff
@@ -1630,7 +1630,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Refs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ^{:private true}
-  setup-reference [^clojure.lang.ARef r options]
+  setup-reference [r options]
   (throw "unimplemented ref")
   #_(let [opts (apply hash-map options)]
     (when (:meta opts)
@@ -1695,7 +1695,7 @@
 
   (apply action-fn state-of-agent args)"
   {:added "1.5"}
-  [executor ^clojure.lang.Agent a f & args]
+  [executor a f & args]
   (throw "unimplemented agent")
   #_(.dispatch a (binding [*agent* a] (binding-conveyor-fn f)) args executor))
 
@@ -1706,7 +1706,7 @@
 
   (apply action-fn state-of-agent args)"
   {:added "1.0"}
-  [^clojure.lang.Agent a f & args]
+  [a f & args]
   (throw "unimplemented agent")
   #_(apply send-via clojure.lang.Agent/pooledExecutor a f args))
 
@@ -1717,7 +1717,7 @@
 
   (apply action-fn state-of-agent args)"
   {:added "1.0"}
-  [^clojure.lang.Agent a f & args]
+  [a f & args]
   (throw "unimplemented agent")
   #_(apply send-via clojure.lang.Agent/soloExecutor a f args))
 
@@ -1748,14 +1748,14 @@
   the watch with remove-watch, but are otherwise considered opaque by
   the watch mechanism."
   {:added "1.0"}
-  [^clojure.lang.IRef reference key fn]
+  [reference key fn]
   (throw "unimplemented agent/atom/var/ref")
   #_(.addWatch reference key fn))
 
 (defn remove-watch
   "Removes a watch (set by add-watch) from a reference"
   {:added "1.0"}
-  [^clojure.lang.IRef reference key]
+  [reference key]
   (throw "unimplemented agent/atom/var/ref")
   #_(.removeWatch reference key))
 
@@ -1764,7 +1764,7 @@
   agent if the agent is failed.  Returns nil if the agent is not
   failed."
   {:added "1.2"}
-  [^clojure.lang.Agent a]
+  [a]
   (throw "unimplemented agent")
   #_(.getError a))
 
@@ -1780,7 +1780,7 @@
   the agent is not failed."
   {:added "1.2"
    }
-  [^clojure.lang.Agent a, new-state & options]
+  [a, new-state & options]
   (throw "unimplemented agent")
   #_(let [opts (apply hash-map options)]
     (.restart a new-state (if (:clear-actions opts) true false))))
@@ -1791,7 +1791,7 @@
   validator fn, handler-fn will be called with two arguments: the
   agent and the exception."
   {:added "1.2"}
-  [^clojure.lang.Agent a, handler-fn]
+  [a, handler-fn]
   (throw "unimplemented agent")
   #_(.setErrorHandler a handler-fn))
 
@@ -1799,7 +1799,7 @@
   "Returns the error-handler of agent a, or nil if there is none.
   See set-error-handler!"
   {:added "1.2"}
-  [^clojure.lang.Agent a]
+  [a]
   (throw "unimplemented agent")
   #_(.getErrorHandler a))
 
@@ -1816,14 +1816,14 @@
   queued actions will be held until a 'restart-agent'.  Deref will
   still work, returning the state of the agent before the error."
   {:added "1.2"}
-  [^clojure.lang.Agent a, mode-keyword]
+  [a, mode-keyword]
   (throw "unimplemented agent")
   #_(.setErrorMode a mode-keyword))
 
 (defn error-mode
   "Returns the error-mode of agent a.  See set-error-mode!"
   {:added "1.2"}
-  [^clojure.lang.Agent a]
+  [a]
   (throw "unimplemented agent")
   #_(.getErrorMode a))
 
@@ -1843,7 +1843,7 @@
   agent, allowing subsequent actions to occur."
   {:added "1.0"
    :deprecated "1.2"}
-  [^clojure.lang.Agent a]
+  [a]
   (throw "unimplemented agent")
   #_(restart-agent a (.deref a)))
 
@@ -1895,10 +1895,10 @@
     r)))
 
 (defn ^:private deref-future
-  ([^java.util.concurrent.Future fut]
+  ([fut]
    (throw "unimplemented ref")
    #_(.get fut))
-  ([^java.util.concurrent.Future fut timeout-ms timeout-val]
+  ([fut timeout-ms timeout-val]
    (throw "unimplemented ref")
    #_(try (.get fut timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
         (catch java.util.concurrent.TimeoutException e
@@ -1952,16 +1952,16 @@
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
   {:added "1.0"}
-  ([^clojure.lang.IAtom atom f]
+  ([atom f]
    (throw "unimplemented atom")
    #_(.swap atom f))
-  ([^clojure.lang.IAtom atom f x]
+  ([atom f x]
    (throw "unimplemented atom")
    #_(.swap atom f x))
-  ([^clojure.lang.IAtom atom f x y]
+  ([atom f x y]
    (throw "unimplemented atom")
    #_(.swap atom f x y))
-  ([^clojure.lang.IAtom atom f x y & args]
+  ([atom f x y & args]
    (throw "unimplemented atom")
    #_(.swap atom f x y args)))
 
@@ -1970,7 +1970,7 @@
   current value of the atom is identical to oldval. Returns true if
   set happened, else false"
   {:added "1.0"}
-  [^clojure.lang.IAtom atom oldval newval]
+  [atom oldval newval]
   (throw "unimplemented atom")
   #_(.compareAndSet atom oldval newval))
 
@@ -1978,7 +1978,7 @@
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
   {:added "1.0"}
-  [^clojure.lang.IAtom atom newval]
+  [atom newval]
   (throw "unimplemented atom")
   #_(.reset atom newval))
 
@@ -1990,14 +1990,14 @@
   value if var) is not acceptable to the new validator, an exception
   will be thrown and the validator will not be changed."
   {:added "1.0"}
-  [^clojure.lang.IRef iref validator-fn]
+  [iref validator-fn]
   (throw "unimplemented var/ref/agent/atom")
   #_(. iref (setValidator validator-fn)))
 
 (defn get-validator
   "Gets the validator-fn for a var/ref/agent/atom."
   {:added "1.0"}
-  [^clojure.lang.IRef iref]
+  [iref]
   (throw "unimplemented var/ref/agent/atom")
   #_(. iref (getValidator)))
 
@@ -2008,14 +2008,14 @@
 
   f must be free of side-effects"
   {:added "1.0"}
-  [^clojure.lang.IReference iref f & args]
+  [iref f & args]
   (throw "unimplemented var/ref/agent/atom")
   #_(.alterMeta iref f args))
 
 (defn reset-meta!
   "Atomically resets the metadata for a namespace/var/ref/agent/atom"
   {:added "1.0"}
-  [^clojure.lang.IReference iref metadata-map]
+  [iref metadata-map]
   (throw "unimplemented var/ref/agent/atom")
   #_(.resetMeta iref metadata-map))
 
@@ -2036,7 +2036,7 @@
   ref-set."
   {:added "1.0"}
 
-  [^clojure.lang.Ref ref fun & args]
+  [ref fun & args]
   (throw "unimplemented ref")
   #_(. ref (commute fun args)))
 
@@ -2048,7 +2048,7 @@
 
   and returns the in-transaction-value of ref."
   {:added "1.0"}
-  [^clojure.lang.Ref ref fun & args]
+  [ref fun & args]
   (throw "unimplemented ref")
   #_(. ref (alter fun args)))
 
@@ -2056,34 +2056,34 @@
   "Must be called in a transaction. Sets the value of ref.
   Returns val."
   {:added "1.0"}
-  [^clojure.lang.Ref ref val]
+  [ref val]
   (throw "unimplemented ref")
   #_(. ref (set val)))
 
 (defn ref-history-count
   "Returns the history count of a ref"
   {:added "1.1"}
-  [^clojure.lang.Ref ref]
+  [ref]
   (throw "unimplemented")
   #_(.getHistoryCount ref))
 
 (defn ref-min-history
   "Gets the min-history of a ref, or sets it and returns the ref"
   {:added "1.1"}
-  ([^clojure.lang.Ref ref]
+  ([ref]
    (throw "unimplemented ref")
    #_(.getMinHistory ref))
-  ([^clojure.lang.Ref ref n]
+  ([ref n]
    (throw "unimplemented ref")
    #_(.setMinHistory ref n)))
 
 (defn ref-max-history
   "Gets the max-history of a ref, or sets it and returns the ref"
   {:added "1.1"}
-  ([^clojure.lang.Ref ref]
+  ([ref]
    (throw "unimplemented ref")
    #_(.getMaxHistory ref))
-  ([^clojure.lang.Ref ref n]
+  ([ref n]
    (throw "unimplemented ref")
    #_(.setMaxHistory ref n)))
 
@@ -2092,7 +2092,7 @@
   by other transactions.  Returns the in-transaction-value of
   ref. Allows for more concurrency than (ref-set ref @ref)"
   {:added "1.0"}
-  [^clojure.lang.Ref ref]
+  [ref]
   (throw "unimplemented ref")
   #_(. ref (touch))
   #_(. ref (deref)))
@@ -2796,7 +2796,7 @@
                                                ~recform)]))
                      (let [seq- (gensym "seq_")
                            chunk- (with-meta (gensym "chunk_")
-                                             {:tag 'clojure.lang.IChunk})
+                                             {} #_{:tag 'clojure.lang.IChunk})
                            count- (gensym "count_")
                            i- (gensym "i_")
                            recform `(recur (next ~seq-) nil 0 0)
@@ -2842,7 +2842,7 @@
         (send agent count-down))
       (. latch (await)))))
 
-(defn await1 [^clojure.lang.Agent a]
+(defn await1 [a]
   (throw "unimplemented agent")
   #_(when (pos? (.getQueueCount a))
     (await a))
@@ -2897,7 +2897,7 @@
 (defn transient
   "Returns a new, transient version of the collection, in constant time."
   {:added "1.1"}
-  [^clojure.lang.IEditableCollection coll]
+  [coll]
   (throw "unimplemented transient")
   #_(.asTransient coll))
 
@@ -2906,7 +2906,7 @@
   constant time. The transient collection cannot be used after this
   call, any such use will throw an exception."
   {:added "1.1"}
-  [^clojure.lang.ITransientCollection coll]
+  [coll]
   (throw "unimplemented transient")
   #_(.persistent coll))
 
@@ -2916,7 +2916,7 @@
   {:added "1.1"}
   ([] (transient []))
   ([coll] coll)
-  ([^clojure.lang.ITransientCollection coll x]
+  ([coll x]
    (throw "unimplemented transient")
    #_(.conj coll x)))
 
@@ -2925,10 +2925,10 @@
   val(s). When applied to a transient vector, sets the val at index.
   Note - index must be <= (count vector). Returns coll."
   {:added "1.1"}
-  ([^clojure.lang.ITransientAssociative coll key val]
+  ([coll key val]
    (throw "unimplemented transient")
    #_(.assoc coll key val))
-  ([^clojure.lang.ITransientAssociative coll key val & kvs]
+  ([coll key val & kvs]
    (throw "unimplemented transient")
    #_(let [ret (.assoc coll key val)]
        (if kvs
@@ -2938,10 +2938,10 @@
 (defn dissoc!
   "Returns a transient map that doesn't contain a mapping for key(s)."
   {:added "1.1"}
-  ([^clojure.lang.ITransientMap map key]
+  ([map key]
    (throw "unimplemented transient")
    #_(.without map key))
-  ([^clojure.lang.ITransientMap map key & ks]
+  ([map key & ks]
    (throw "unimplemented transient")
    #_(let [ret (.without map key)]
        (if ks
@@ -2952,7 +2952,7 @@
   "Removes the last item from a transient vector. If
   the collection is empty, throws an exception. Returns coll"
   {:added "1.1"}
-  [^clojure.lang.ITransientVector coll]
+  [coll]
   (throw "unimplemented transient")
   #_(.pop coll))
 
@@ -2961,10 +2961,10 @@
   does not contain key(s)."
   {:added "1.1"}
   ([set] set)
-  ([^clojure.lang.ITransientSet set key]
+  ([set key]
    (throw "unimplemented transient")
    #_(. set (disjoin key)))
-  ([^clojure.lang.ITransientSet set key & ks]
+  ([set key & ks]
    (throw "unimplemented transient")
    #_(let [ret (. set (disjoin key))]
      (if ks
@@ -3014,7 +3014,7 @@
 (defn class
   "Returns the Class of x"
   {:added "1.0"}
-  ^clojerl.Keyword [^Object x]
+  ^clojerl.Keyword [x]
   (if (nil? x) x (clj_rt/type.e x)))
 
 (defn type
@@ -3047,19 +3047,19 @@
 (defn double
   "Coerce to double"
   {:added "1.0"}
-  [^Number x]
+  [x]
   (erlang/float.e x))
 
 (defn short
   "Coerce to short"
   {:added "1.0"}
-  [^Number x]
+  [x]
   (clj_rt/short.e x))
 
 (defn byte
   "Coerce to byte"
   {:added "1.0"}
-  [^Number x]
+  [x]
   (clj_rt/byte.e x))
 
 (defn char
@@ -3122,27 +3122,26 @@
    (pr-on x *out*))
   ([x & more]
    (pr x)
-   (io/put_chars.e *out* " ")
+   (erlang.io.IWriter/write.e *out* " ")
    (if-let [nmore (next more)]
      (recur (first more) nmore)
      (apply pr more))))
 
 (def ^:private ^clojerl.String system-newline
-  (let [os-family (first (os/type.e))]
-    (if (= os-family :win32) "\r\n" "\n")))
+  (erlang/list_to_binary.e (io_lib/nl.e)))
 
 (defn newline
   "Writes a platform-specific newline to *out*"
   {:added "1.0"}
   []
-  (io/nl.e *out*) nil)
+  (erlang.io.IWriter/write.e *out* system-newline) nil)
 
 (defn flush
   "Flushes the output stream that is the current value of
   *out*"
   {:added "1.0"}
   []
-  (io/put_chars.e *out* "") nil)
+  (erlang.io.IWriter/write.e *out* "") nil)
 
 (defn prn
   "Same as pr followed by (newline). Observes *flush-on-newline*"
@@ -3319,7 +3318,7 @@
   string"
   {:added "1.0"}
   [s]
-  (clj_compiler/compile.e str))
+  (clj_compiler/load_string.e s))
 
 (defn set?
   "Returns true if x implements IPersistentSet"
@@ -4090,7 +4089,7 @@
 (defn re-pattern
   "Returns a compiled Erlang regular expression unless s is already a
   compiled pattern."
-  {:tag :erlang.util.Regex
+  {:tag erlang.util.Regex
    :added "1.0"}
   [s]
   (if (regex? s)
@@ -4207,7 +4206,7 @@
 #_ (
     (defn mk-bound-fn
       {:private true}
-      [^clojure.lang.Sorted sc test key]
+      [sc test key]
       (fn [e]
         (test (.. sc comparator (compare (. sc entryKey e) key)) 0)))
 
@@ -4216,13 +4215,13 @@
   >=. Returns a seq of those entries with keys ek for
   which (test (.. sc comparator (compare ek key)) 0) is true"
       {:added "1.0"}
-      ([^clojure.lang.Sorted sc test key]
+      ([sc test key]
        (let [include (mk-bound-fn sc test key)]
          (if (#{> >=} test)
            (when-let [[e :as s] (. sc seqFrom key true)]
              (if (include e) s (next s)))
            (take-while include (. sc seq true)))))
-      ([^clojure.lang.Sorted sc start-test start-key end-test end-key]
+      ([sc start-test start-key end-test end-key]
        (when-let [[e :as s] (. sc seqFrom start-key true)]
          (take-while (mk-bound-fn sc end-test end-key)
                      (if ((mk-bound-fn sc start-test start-key) e) s (next s))))))
@@ -4232,13 +4231,13 @@
   >=. Returns a reverse seq of those entries with keys ek for
   which (test (.. sc comparator (compare ek key)) 0) is true"
       {:added "1.0"}
-      ([^clojure.lang.Sorted sc test key]
+      ([sc test key]
        (let [include (mk-bound-fn sc test key)]
          (if (#{< <=} test)
            (when-let [[e :as s] (. sc seqFrom key false)]
              (if (include e) s (next s)))
            (take-while include (. sc seq false)))))
-      ([^clojure.lang.Sorted sc start-test start-key end-test end-key]
+      ([sc start-test start-key end-test end-key]
        (when-let [[e :as s] (. sc seqFrom end-key false)]
          (take-while (mk-bound-fn sc start-test start-key)
                      (if ((mk-bound-fn sc end-test end-key) e) s (next s)))))))
@@ -4388,7 +4387,7 @@
   "Atomically alters the root binding of var v by applying f to its
   current value plus any args"
   {:added "1.0"}
-  [^clojure.lang.Var v f & args]
+  [v f & args]
   (throw "unsupported alter-var-root"))
 
 (defn bound?
@@ -4421,13 +4420,13 @@
 (defn bases
   "Returns the immediate superclass and direct interfaces of c, if any"
   {:added "1.0"}
-  [^Class c]
+  [c]
   (throw "unsupported classes and interfaces"))
 
 (defn supers
   "Returns the immediate and indirect superclasses and interfaces of c, if any"
   {:added "1.0"}
-  [^Class class]
+  [class]
   (throw "unsupported classes and interfaces"))
 
 (defn isa?
@@ -5362,7 +5361,7 @@
 (defn future-done?
   "Returns true if future f is done"
   {:added "1.1"}
-  [^java.util.concurrent.Future f]
+  [f]
   (throw "unimplemented future")
   #_(.isDone f))
 
@@ -5645,14 +5644,14 @@
 (defn future-cancel
   "Cancels the future, if possible."
   {:added "1.1"}
-  [^java.util.concurrent.Future f]
+  [f]
   (throw "unimplemented future")
   #_(.cancel f true))
 
 (defn future-cancelled?
   "Returns true if future f is cancelled"
   {:added "1.1"}
-  [^java.util.concurrent.Future f]
+  [f]
   (throw "unimplemented future")
   #_(.isCancelled f))
 
@@ -6082,7 +6081,7 @@
   (throw "unimplemented with-redefs-fn")
   #_(let [root-bind (fn [m]
                     (doseq [[a-var a-val] m]
-                      (.bindRoot ^clojure.lang.Var a-var a-val)))
+                      (.bindRoot a-var a-val)))
         old-vals (zipmap (keys binding-map)
                          (map #(.getRawRoot ^clojure.lang.Var %) (keys binding-map)))]
     (try
@@ -6109,7 +6108,7 @@
 (defn realized?
   "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
   {:added "1.3"}
-  [^clojure.lang.IPending x]
+  [x]
   (throw "unimplemented realized?")
   #_(.isRealized x))
 
@@ -6257,7 +6256,7 @@
   [& xforms]
   (new Eduction (apply comp (butlast xforms)) (last xforms)))
 
-(defmethod print-method Eduction [c, ^Writer w]
+(defmethod print-method Eduction [c, ^erlang.io.IWriter w]
   (if *print-readably*
     (do
       (print-sequential "(" pr-on " " ")" c w))

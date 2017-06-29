@@ -250,7 +250,7 @@ str-or-pattern."
        (when-let [e *e]
          (pst (root-cause e) e-or-depth))
        (pst e-or-depth 12)))
-  ([^Throwable e depth]
+  ([e depth]
      (binding [*out* *err*]
        (println (str e
                      (when-let [info (ex-data e)] (str " " (pr-str info)))))

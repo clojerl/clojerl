@@ -23,7 +23,7 @@ end_per_suite(Config) -> Config.
 -spec init_per_testcase(_, config()) -> config().
 init_per_testcase(_, Config) ->
   Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
-              , <<"#'clojure.core/*compile-path*">> => "ebin"
+              , <<"#'clojure.core/*compile-path*">> => <<"ebin">>
               },
   ok       = 'clojerl.Var':push_bindings(Bindings),
   Config.
@@ -54,8 +54,8 @@ run(_Config) ->
   Result    = 'examples.run-tests':'-main'([TestsPath, RootPath]),
 
   0 = clj_rt:get(Result, fail),
-  %% There are two tests that fail because of atoms not being implemented
-  2 = clj_rt:get(Result, error),
+  %% These are tests that fail because of atoms not being implemented
+  3 = clj_rt:get(Result, error),
 
   {comments, ""}.
 

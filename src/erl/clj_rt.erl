@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--export([ type/1
+-export([ type/1, type_module/1
         , load/1, load/2
         , count/1, nth/2, nth/3
         , 'empty?'/1, empty/1
@@ -40,23 +40,27 @@
         , gensym/0, gensym/1
         ]).
 
--spec type(any()) -> atom().
-type(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
-type(X) when is_binary(X)    -> 'clojerl.String';
-type(X) when is_bitstring(X) -> 'clojerl.BitString';
-type(X) when is_integer(X)   -> 'clojerl.Integer';
-type(X) when is_float(X)     -> 'clojerl.Float';
-type(X) when is_boolean(X)   -> 'clojerl.Boolean';
-type(X) when is_list(X)      -> 'clojerl.erlang.List';
-type(X) when is_map(X)       -> 'clojerl.erlang.Map';
-type(X) when is_tuple(X)     -> 'clojerl.erlang.Tuple';
-type(X) when is_function(X)  -> 'clojerl.erlang.Fn';
-type(?NIL)                   -> ?NIL_TYPE;
-type(X) when is_atom(X)      -> 'clojerl.Keyword';
-type(X) when is_port(X)      -> 'clojerl.erlang.Port';
-type(X) when is_pid(X)       -> 'clojerl.erlang.Process';
-type(X) when is_reference(X) -> 'clojerl.erlang.Reference';
-type(Value) -> throw({Value, <<" has an unsupported type">>}).
+-spec type(any()) -> 'erlang.Type':type().
+type(X) ->
+  'erlang.Type':?CONSTRUCTOR(type_module(X)).
+
+-spec type_module(any()) -> module().
+type_module(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
+type_module(X) when is_binary(X)    -> 'clojerl.String';
+type_module(X) when is_bitstring(X) -> 'clojerl.BitString';
+type_module(X) when is_integer(X)   -> 'clojerl.Integer';
+type_module(X) when is_float(X)     -> 'clojerl.Float';
+type_module(X) when is_boolean(X)   -> 'clojerl.Boolean';
+type_module(X) when is_list(X)      -> 'clojerl.erlang.List';
+type_module(X) when is_map(X)       -> 'clojerl.erlang.Map';
+type_module(X) when is_tuple(X)     -> 'clojerl.erlang.Tuple';
+type_module(X) when is_function(X)  -> 'clojerl.erlang.Fn';
+type_module(?NIL)                   -> ?NIL_TYPE;
+type_module(X) when is_atom(X)      -> 'clojerl.Keyword';
+type_module(X) when is_port(X)      -> 'clojerl.erlang.Port';
+type_module(X) when is_pid(X)       -> 'clojerl.erlang.Process';
+type_module(X) when is_reference(X) -> 'clojerl.erlang.Reference';
+type_module(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec load(binary()) -> ?NIL.
 load(ScriptBase) ->
@@ -112,8 +116,8 @@ count(Seq)       -> 'clojerl.Counted':count(Seq).
 nth(?NIL, _) -> ?NIL;
 nth([], _) -> ?NIL;
 nth(Coll, N) ->
-  Type = type(Coll),
-  case 'satisfies?'('clojerl.Indexed', Type) of
+  Type = type_module(Coll),
+  case clj_protocol:'satisfies?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N);
     false -> nth_from(Coll, N, ?NIL)
   end.
@@ -122,16 +126,16 @@ nth(Coll, N) ->
 nth(?NIL, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
-  Type = type(Coll),
-  case 'satisfies?'('clojerl.Indexed', Type) of
+  Type = type_module(Coll),
+  case clj_protocol:'satisfies?'('clojerl.Indexed', Type) of
     true  -> 'clojerl.Indexed':nth(Coll, N, NotFound);
     false -> nth_from(Coll, N, NotFound)
   end.
 
 -spec nth_from(any(), integer(), any()) -> any().
 nth_from(Coll, N, NotFound) ->
-  Type = type(Coll),
-  case 'satisfies?'('clojerl.ISequential', Type) of
+  Type = type_module(Coll),
+  case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
     true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
     false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
   end.
@@ -164,8 +168,8 @@ to_list(Seqable) ->
 -spec equiv(any(), any()) -> boolean().
 equiv(X, Y) ->
   case
-    'satisfies?'('clojerl.IEquiv', type(X))
-    andalso 'satisfies?'('clojerl.IEquiv', type(Y))
+    clj_protocol:'satisfies?'('clojerl.IEquiv', type_module(X))
+    andalso clj_protocol:'satisfies?'('clojerl.IEquiv', type_module(Y))
   of
     true  -> 'clojerl.IEquiv':equiv(X, Y);
     false -> X == Y
@@ -264,79 +268,83 @@ keyword(Name) ->
 keyword(Namespace, Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Namespace, Name).
 
--spec 'satisfies?'(atom(), atom()) -> boolean().
+-spec 'satisfies?'('erlang.Type':type(), 'erlang.Type':type()) -> boolean().
 'satisfies?'(Protocol, Type) ->
-  clj_protocol:'satisfies?'(Protocol, Type).
+  ProtocolModule = 'erlang.Type':module(Protocol),
+  TypeModule     = 'erlang.Type':module(Type),
+  clj_protocol:'satisfies?'(ProtocolModule, TypeModule).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
-  'satisfies?'('clojerl.IColl', type(X)).
+  clj_protocol:'satisfies?'('clojerl.IColl', type_module(X)).
 
 -spec 'sequential?'(any()) -> boolean().
 'sequential?'(X) ->
-  'satisfies?'('clojerl.ISequential', type(X)).
+  clj_protocol:'satisfies?'('clojerl.ISequential', type_module(X)).
 
 -spec 'associative?'(any()) -> boolean().
 'associative?'(X) ->
-  'satisfies?'('clojerl.Associative', type(X)).
+  clj_protocol:'satisfies?'('clojerl.Associative', type_module(X)).
 
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
-  'satisfies?'('clojerl.ISeq', type(X)).
+  clj_protocol:'satisfies?'('clojerl.ISeq', type_module(X)).
 
 -spec 'list?'(any()) -> boolean().
 'list?'(X) ->
-  type(X) == 'clojerl.List'.
+  type_module(X) == 'clojerl.List'.
 
 -spec 'vector?'(any()) -> boolean().
 'vector?'(X) ->
-  type(X) == 'clojerl.Vector'.
+  type_module(X) == 'clojerl.Vector'.
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
-  'satisfies?'('clojerl.IMap', type(X)).
+  clj_protocol:'satisfies?'('clojerl.IMap', type_module(X)).
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
-  'satisfies?'('clojerl.ISet', type(X)).
+  clj_protocol:'satisfies?'('clojerl.ISet', type_module(X)).
 
 -spec 'record?'(any()) -> boolean().
 'record?'(X) ->
-  'satisfies?'('clojerl.IRecord', type(X)).
+  clj_protocol:'satisfies?'('clojerl.IRecord', type_module(X)).
 
 -spec 'type?'(any()) -> boolean().
 'type?'(X) ->
-  'satisfies?'('clojerl.IType', type(X)).
+  clj_protocol:'satisfies?'('clojerl.IType', type_module(X)).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
-  type(X) == 'clojerl.Symbol'.
+  type_module(X) == 'clojerl.Symbol'.
 
 -spec 'keyword?'(any()) -> boolean().
 'keyword?'(X) ->
-  type(X) == 'clojerl.Keyword'.
+  type_module(X) == 'clojerl.Keyword'.
 
 -spec 'number?'(any()) -> boolean().
-'number?'(X) -> type(X) == 'clojerl.Integer' orelse type(X) == 'clojerl.Float'.
+'number?'(X) ->
+  type_module(X) == 'clojerl.Integer'
+    orelse type_module(X) == 'clojerl.Float'.
 
 -spec 'char?'(any()) -> boolean().
-'char?'(X) -> type(X) == 'clojerl.Integer'.
+'char?'(X) -> type_module(X) == 'clojerl.Integer'.
 
 -spec 'string?'(any()) -> boolean().
-'string?'(X) -> type(X) == 'clojerl.String'.
+'string?'(X) -> type_module(X) == 'clojerl.String'.
 
 -spec 'nil?'(any()) -> boolean().
-'nil?'(X) -> type(X) == ?NIL_TYPE.
+'nil?'(X) -> type_module(X) == ?NIL_TYPE.
 
 -spec 'boolean?'(any()) -> boolean().
-'boolean?'(X) -> type(X) == 'clojerl.Boolean'.
+'boolean?'(X) -> type_module(X) == 'clojerl.Boolean'.
 
 -spec 'regex?'(any()) -> boolean().
-'regex?'(X) -> type(X) == 'erlang.util.Regex'.
+'regex?'(X) -> type_module(X) == 'erlang.util.Regex'.
 
 -spec 'var?'(any()) -> boolean().
 'var?'(X) ->
-  type(X) == 'clojerl.Var'.
+  type_module(X) == 'clojerl.Var'.
 
 -spec deref(any()) -> any().
 deref(X) ->
@@ -356,7 +364,7 @@ with_meta(X, Meta) ->
 
 -spec 'meta?'(any()) -> any().
 'meta?'(X) ->
-  'satisfies?'('clojerl.IMeta', type(X)).
+  clj_protocol:'satisfies?'('clojerl.IMeta', type_module(X)).
 
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(?NIL, _) ->
@@ -368,8 +376,7 @@ with_meta(X, Meta) ->
   if
     IsAssociative -> 'clojerl.Associative':contains_key(Coll, Key);
     IsSet -> 'clojerl.ISet':contains(Coll, Key);
-    true  ->
-      clj_utils:error([ "contains? not supported on type: ", name(type(Coll))])
+    true  -> clj_utils:error(["contains? not supported on type: ", type(Coll)])
   end.
 
 -spec get(any(), any()) -> any().

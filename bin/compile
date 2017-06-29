@@ -16,7 +16,7 @@ main(Args) ->
   ok    = clojerl:start(),
   Files = maps:get(files, Opts),
 
-  CompilePath = maps:get(compile_path, Opts),
+  CompilePath = list_to_binary(maps:get(compile_path, Opts)),
   Bindings    = #{ <<"#'clojure.core/*compile-path*">>  => CompilePath
                  , <<"#'clojure.core/*compile-files*">> => true
                  },

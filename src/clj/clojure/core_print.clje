@@ -79,7 +79,7 @@
           (pr-on m w))
       (write w " "))))
 
-(defn print-simple [o, ^Writer w]
+(defn print-simple [o ^erlang.io.IWriter w]
   (print-meta o w)
   (write w (str o)))
 
@@ -118,21 +118,21 @@
 (defmethod print-dup clojerl.Var [o, w]
   (write w (str "#=(var " (namespace o) "/" (name o) ")")))
 
-(defmethod print-method clojerl.List [o, ^Writer w]
+(defmethod print-method clojerl.List [o, ^erlang.io.IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
-(defmethod print-method clojerl.erlang.List [o, ^Writer w]
+(defmethod print-method clojerl.erlang.List [o, ^erlang.io.IWriter w]
   (print-meta o w)
   (if (io_lib/printable_unicode_list.e o)
     (write w (str "#erl\"" (erlang/list_to_binary.e o) "\""))
     (print-sequential "#erl(" pr-on " " ")" o w)))
 
-(defmethod print-method clojerl.Cons [o, ^Writer w]
+(defmethod print-method clojerl.Cons [o, ^erlang.io.IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
-(defmethod print-method clojerl.LazySeq [o, ^Writer w]
+(defmethod print-method clojerl.LazySeq [o, ^erlang.io.IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
@@ -153,7 +153,7 @@
      \formfeed "\\f"
      \backspace "\\b"})
 
-(defmethod print-method clojerl.String [^clojerl.String s, ^Writer w]
+(defmethod print-method clojerl.String [^clojerl.String s, ^erlang.io.IWriter w]
   (if (or *print-dup* *print-readably*)
     (let [printable? (clojerl.String/is_printable.e s)]
       (write w (if printable? \" "#bin["))
@@ -172,31 +172,31 @@
 
 (defmethod print-dup clojerl.String [s w] (print-method s w))
 
-(defmethod print-method clojerl.Vector [v, ^Writer w]
+(defmethod print-method clojerl.Vector [v, ^erlang.io.IWriter w]
   (print-meta v w)
   (print-sequential "[" pr-on " " "]" v w))
 
 (defn- print-map [begin m end print-one w]
   (print-sequential
    begin
-   (fn [e  ^Writer w]
+   (fn [e  ^erlang.io.IWriter w]
      (do (print-one (key e) w) (write w \space) (print-one (val e) w)))
    ", "
    end
    (seq m) w))
 
-(defmethod print-method clojerl.Map [m, ^Writer w]
+(defmethod print-method clojerl.Map [m, ^erlang.io.IWriter w]
   (print-meta m w)
   (print-map "{" m "}" pr-on w))
 
-(defmethod print-method clojerl.erlang.Map [m, ^Writer w]
+(defmethod print-method clojerl.erlang.Map [m, ^erlang.io.IWriter w]
   (print-meta m w)
   (print-map "#erl{" m "}" pr-on w))
 
-(defmethod print-method clojerl.Set [s, ^Writer w]
+(defmethod print-method clojerl.Set [s, ^erlang.io.IWriter w]
   (print-meta s w)
   (print-sequential "#{" pr-on " " "}" (seq s) w))
 
-(defmethod print-method clojerl.erlang.Tuple [s, ^Writer w]
+(defmethod print-method clojerl.erlang.Tuple [s, ^erlang.io.IWriter w]
   (print-meta s w)
   (print-sequential "#erl[" pr-on " " "]" (seq s) w))

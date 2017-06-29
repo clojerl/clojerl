@@ -15,45 +15,45 @@
 
 -spec resolve(atom(), atom(), any()) -> any().
 resolve(Protocol, Function, Head) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 1),
   F(Head).
 
 -spec resolve(atom(), atom(), any(), any()) -> any().
 resolve(Protocol, Function, Head, Arg1) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 2),
   F(Head, Arg1).
 
 -spec resolve(atom(), atom(), any(), any(), any()) -> any().
 resolve(Protocol, Function, Head, Arg1, Arg2) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 3),
   F(Head, Arg1, Arg2).
 
 -spec resolve(atom(), atom(), any(), any(), any(), any()) -> any().
 resolve(Protocol, Function, Head, Arg1, Arg2, Arg3) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 4),
   F(Head, Arg1, Arg2, Arg3).
 
 -spec resolve(atom(), atom(), any(), any(), any(), any(), any()) -> any().
 resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 5),
   F(Head, Arg1, Arg2, Arg3, Arg4).
 
 -spec resolve(atom(), atom(), any(), any(), any(), any(), any(), any()) ->
   any().
 resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 6),
   F(Head, Arg1, Arg2, Arg3, Arg4, Arg5).
 
 -spec resolve( atom(), atom(), any(), any(), any(), any(), any(), any(), any()
              ) -> any().
 resolve(Protocol, Function, Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) ->
-  Type = clj_rt:type(Head),
+  Type = clj_rt:type_module(Head),
   F    = resolve_impl_cache(Protocol, Function, Type, 7),
   F(Head, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6).
 
@@ -87,6 +87,8 @@ resolve_impl_cache(Protocol, Function, Type, Arity) ->
 -spec resolve_impl(atom(), atom(), atom(), integer()) ->
   function() | undefined.
 resolve_impl(Protocol, Function, Type, Arity) ->
+  %% Avoid having to load every module in advance
+  _ = code:ensure_loaded(Type),
   case erlang:function_exported(Type, Function, Arity) of
     true  ->
       erlang:make_fun(Type, Function, Arity);

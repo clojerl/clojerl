@@ -35,7 +35,7 @@ Design notes for clojure.string:
 (defn ^clojerl.String reverse
   "Returns s with its characters reversed."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (-> (when s (str s))
       unicode/characters_to_list.1
       lists/reverse.1
@@ -46,7 +46,7 @@ Design notes for clojure.string:
    replacement for a pattern match in replace or replace-first, do the
    necessary escaping of special characters in the replacement."
   {:added "1.5"}
-  [^CharSequence replacement]
+  [^clojerl.String replacement]
   (erlang.util.Regex/quote.e (when replacement (str replacement))))
 
 (defn- replace-by
@@ -98,7 +98,7 @@ Design notes for clojure.string:
     (cond
       (string? match) (replace match s (str replacement) opts)
       (regex? match) (if (or (string? replacement)
-                             (instance? :erlang.io.StringWriter replacement))
+                             (instance? erlang.io.StringWriter replacement))
                        (replace match s (str replacement) opts)
                        (replace-by s match replacement))
       :else (throw (str "Invalid match arg: " match)))))
@@ -158,11 +158,11 @@ Design notes for clojure.string:
         opts #erl ()]
     (cond
       (or (string? match)
-          (instance? :erlang.io.StringWriter match))
+          (instance? erlang.io.StringWriter match))
       (replace-first-str s (str match) (str replacement))
       (regex? match)
       (if (or (string? replacement)
-              (instance? :erlang.io.StringWriter replacement))
+              (instance? erlang.io.StringWriter replacement))
         (replace match s (str replacement) opts)
         (replace-first-by s match replacement))
       :else (throw (str "Invalid match arg: " match)))))
@@ -179,20 +179,20 @@ Design notes for clojure.string:
 (defn ^clojerl.String upper-case
   "Converts string to all upper-case."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (clojerl.String/to_upper.e (when s (str s))))
 
 (defn ^clojerl.String lower-case
   "Converts string to all lower-case."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (clojerl.String/to_lower.e (when s (str s))))
 
 (defn ^clojerl.String capitalize
   "Converts first character of the string to upper-case, all other
   characters to lower-case."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (let [s (when s (str s))]
     (if (< (count s) 2)
       (upper-case s)
@@ -239,7 +239,7 @@ Design notes for clojure.string:
 (defn ^clojerl.String triml
   "Removes whitespace from the left side of string."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (let [s (when s (str s))
         len (when s (count s))]
     (loop [index 0]
@@ -252,7 +252,7 @@ Design notes for clojure.string:
 (defn ^clojerl.String trimr
   "Removes whitespace from the right side of string."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (let [s (when s (str s))]
     (loop [index (when s (count s))]
       (if (zero? index)
@@ -265,7 +265,7 @@ Design notes for clojure.string:
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
   {:added "1.2"}
-  [^CharSequence s]
+  [^clojerl.String s]
   (let [s (when s (str s))]
     (loop [index (when s (count s))]
       (if (zero? index)
@@ -337,12 +337,12 @@ Design notes for clojure.string:
   "Return last index of value (string or char) in s, optionally
   searching backward from from-index or nil if not found."
   {:added "1.8"}
-  ([^CharSequence s value]
+  ([^clojerl.String s value]
    (let [result (clojerl.String/last_index_of.e (str s) value)]
      (if (= result -1)
        nil
        result)))
-  ([^CharSequence s value ^long from-index]
+  ([^clojerl.String s value ^long from-index]
    (let [result (clojerl.String/last_index_of.e (str s) value from-index)]
      (if (= result -1)
        nil
@@ -351,11 +351,11 @@ Design notes for clojure.string:
 (defn ends-with?
   "True if s ends with substr."
   {:added "1.8"}
-  [^CharSequence s ^clojerl.String substr]
+  [^clojerl.String s ^clojerl.String substr]
   (clojerl.String/ends_with.e (str s) substr))
 
 (defn includes?
   "True if s includes substr."
   {:added "1.8"}
-  [^CharSequence s ^CharSequence substr]
+  [^clojerl.String s ^clojerl.String substr]
   (clojerl.String/contains.e (str s) substr))
