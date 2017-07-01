@@ -1604,7 +1604,7 @@
   "Returns the global var named by the namespace-qualified symbol, or
   nil if no var with that name."
   {:added "1.0"}
-  [sym] (clj_namespace/find_var.e sym))
+  [sym] (clojerl.Namespace/find_var.e sym))
 
 (defn binding-conveyor-fn
   {:private true
@@ -3345,7 +3345,7 @@
 (defn find-ns
   "Returns the namespace named by the symbol or nil if it doesn't exist."
   {:added "1.0"}
-  [sym] (clj_namespace/find.e sym))
+  [sym] (clojerl.Namespace/find.e sym))
 
 (defn create-ns
   "Create a new namespace named by the symbol if one doesn't already
@@ -3353,19 +3353,19 @@
   name."
   {:added "1.0"}
   [sym]
-  (clj_namespace/find_or_create.e sym))
+  (clojerl.Namespace/find_or_create.e sym))
 
 (defn remove-ns
   "Removes the namespace named by the symbol. Use with caution.
   Cannot be used to remove the clojure namespace."
   {:added "1.0"}
   [sym]
-  (clj_namespace/remove.e sym))
+  (clojerl.Namespace/remove.e sym))
 
 (defn all-ns
   "Returns a sequence of all namespaces."
   {:added "1.0"}
-  [] (clj_namespace/all.e))
+  [] (clojerl.Namespace/all.e))
 
 (defn the-ns
   "If passed a namespace, returns it. Else, when passed a symbol,
@@ -3381,19 +3381,19 @@
   "Returns the name of the namespace, a symbol."
   {:added "1.0"}
   [ns]
-  (clj_namespace/name.e (the-ns ns)))
+  (clojerl.Namespace/name.e (the-ns ns)))
 
 (defn ns-map
   "Returns a map of all the mappings for the namespace."
   {:added "1.0"}
   [ns]
-  (clj_namespace/get_mappings.e (the-ns ns)))
+  (clojerl.Namespace/get_mappings.e (the-ns ns)))
 
 (defn ns-unmap
   "Removes the mappings for the symbol from the namespace."
   {:added "1.0"}
   [ns sym]
-  (clj_namespace/unmap.e sym (the-ns ns)))
+  (clojerl.Namespace/unmap.e sym (the-ns ns)))
 
 ;(defn export [syms]
 ;  (doseq [sym syms]
@@ -3463,7 +3463,7 @@
             (throw (if (get (ns-interns ns) name)
                      (str name " is not public")
                      (str name " does not exist"))))
-          (clj_namespace/refer.e (or (rename sym) sym) v *ns*))))))
+          (clojerl.Namespace/refer.e (or (rename sym) sym) v *ns*))))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -3481,19 +3481,19 @@
   to calling this directly."
   {:added "1.0"}
   [alias namespace-sym]
-  (clj_namespace/add_alias.e alias (the-ns namespace-sym) *ns*))
+  (clojerl.Namespace/add_alias.e alias (the-ns namespace-sym) *ns*))
 
 (defn ns-aliases
   "Returns a map of the aliases for the namespace."
   {:added "1.0"}
   [ns]
-  (clj_namespace/get_aliases.e (the-ns ns)))
+  (clojerl.Namespace/get_aliases.e (the-ns ns)))
 
 (defn ns-unalias
   "Removes the alias for the symbol from the namespace."
   {:added "1.0"}
   [ns sym]
-  (clj_namespace/remove_alias.e sym (the-ns ns)))
+  (clojerl.Namespace/remove_alias.e sym (the-ns ns)))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
@@ -3572,7 +3572,7 @@
    (ns-resolve ns nil sym))
   ([ns env sym]
    (when-not (contains? env sym)
-     (clj_namespace/find_var.e sym (the-ns ns)))))
+     (clojerl.Namespace/find_var.e sym (the-ns ns)))))
 
 (defn resolve
   "same as (ns-resolve *ns* symbol) or (ns-resolve *ns* &env symbol)"
@@ -4598,7 +4598,7 @@
   [name]
   (let [name (maybe-unquote name)]
     (if (symbol? name)
-      (clj_namespace/find_or_create.e name)
+      (clojerl.Namespace/find_or_create.e name)
       (throw (str "First argument to in-ns must be a symbol, got: " (type name))))))
 
 (defmacro ns

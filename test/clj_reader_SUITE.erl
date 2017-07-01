@@ -155,7 +155,7 @@ keyword(Config) when is_list(Config) ->
   keyword(fun read_io/1);
 keyword(ReadFun) ->
   SomeNsSymbol = clj_rt:symbol(<<"some-ns">>),
-  clj_namespace:find_or_create(SomeNsSymbol),
+  'clojerl.Namespace':find_or_create(SomeNsSymbol),
 
   Keyword1 = clj_rt:keyword(<<"hello-world">>),
   Keyword1 = ReadFun(<<":hello-world">>),
