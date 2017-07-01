@@ -115,7 +115,7 @@ eval(_Config) ->
 
   ct:comment("Current namespace is changed"),
   {_, _}  = clj_compiler:eval(clj_reader:read(<<"(ns a)">>)),
-  <<"a">> = clj_rt:str(clj_namespace:name(clj_namespace:current())),
+  <<"a">> = clj_rt:str('clojerl.Namespace':name('clojerl.Namespace':current())),
 
   ct:comment("(erlang/self) should be this process"),
   Self      = erlang:self(),
@@ -135,7 +135,7 @@ check_var_value(Namespace, Name, Value) ->
 -spec find_var(binary(), binary()) -> 'clojerl.Var':type().
 find_var(Namespace, Name) ->
   Symbol = clj_rt:symbol(Namespace, Name),
-  case clj_namespace:find_var(Symbol) of
+  case 'clojerl.Namespace':find_var(Symbol) of
     ?NIL -> error;
     V -> V
   end.

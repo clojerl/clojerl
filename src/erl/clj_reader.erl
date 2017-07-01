@@ -362,8 +362,8 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
   Keyword = case clj_utils:parse_symbol(Token) of
               {?NIL, <<":", Name/binary>>} ->
-                Ns    = clj_namespace:current(),
-                NsSym = clj_namespace:name(Ns),
+                Ns    = 'clojerl.Namespace':current(),
+                NsSym = 'clojerl.Namespace':name(Ns),
                 Namespace = clj_rt:name(NsSym),
                 clj_rt:keyword(Namespace, Name);
               {?NIL, Name} ->
@@ -557,13 +557,13 @@ register_gensym(Symbol) ->
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
   HasDot = binary:match(clj_rt:str(Symbol), <<"\.">>) =/= nomatch,
-  case HasDot orelse clj_namespace:find_var(Symbol) of
+  case HasDot orelse 'clojerl.Namespace':find_var(Symbol) of
     true -> Symbol;
     ?NIL ->
       case clj_rt:namespace(Symbol) of
         ?NIL ->
-          CurrentNs = clj_namespace:current(),
-          NameSym   = clj_namespace:name(CurrentNs),
+          CurrentNs = 'clojerl.Namespace':current(),
+          NameSym   = 'clojerl.Namespace':name(CurrentNs),
           Namespace = clj_rt:name(NameSym),
           Name      = clj_rt:name(Symbol),
           clj_rt:symbol(Namespace, Name);

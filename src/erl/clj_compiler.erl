@@ -336,8 +336,8 @@ eval_expressions(Expressions) ->
 
 -spec eval_expressions([cerl:cerl()], boolean()) -> [any()].
 eval_expressions(Expressions, ReplaceCalls) ->
-  CurrentNs     = clj_namespace:current(),
-  CurrentNsSym  = clj_namespace:name(CurrentNs),
+  CurrentNs     = 'clojerl.Namespace':current(),
+  CurrentNsSym  = 'clojerl.Namespace':name(CurrentNs),
   CurrentNsAtom = binary_to_existing_atom(clj_rt:str(CurrentNsSym), utf8),
   ReplacedExprs = case ReplaceCalls of
                     true  -> [ clj_module:replace_calls(Expr, CurrentNsAtom)

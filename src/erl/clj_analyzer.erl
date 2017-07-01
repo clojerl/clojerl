@@ -270,8 +270,8 @@ parse_fn(List, Env) ->
   IsDef       = DefNameSym =/= ?NIL,
   DefVar      = case IsDef of
                   true  ->
-                    DefVarNs    = clj_namespace:current(),
-                    DefVarNsSym = clj_namespace:name(DefVarNs),
+                    DefVarNs    = 'clojerl.Namespace':current(),
+                    DefVarNsSym = 'clojerl.Namespace':name(DefVarNs),
                     'clojerl.Var':?CONSTRUCTOR( clj_rt:name(DefVarNsSym)
                                               , clj_rt:name(DefNameSym)
                                               );
@@ -281,7 +281,7 @@ parse_fn(List, Env) ->
   %% If it is a def we register the var, otherwise register the local.
   Env1 = case IsDef of
            true  ->
-             clj_namespace:update_var(DefVar),
+             'clojerl.Namespace':update_var(DefVar),
              %% Register a local mapping the symbol fn to the var
              {VarExpr, Env0Tmp} = var_expr(DefVar, DefNameSym, Env0),
              clj_env:put_local(NameSym, VarExpr, Env0Tmp);
@@ -361,7 +361,7 @@ parse_fn(List, Env) ->
                    , 'fn?'           => true
                    },
         DefVar1 = clj_rt:with_meta(DefVar, VarMeta),
-        clj_namespace:update_var(DefVar1),
+        'clojerl.Namespace':update_var(DefVar1),
 
         analyze_fn_methods(MethodsList, LoopId, IsOnce, true, Env2);
       false ->
@@ -988,7 +988,7 @@ parse_def(List, Env) ->
                               ]),
   VarSymbol    = clj_rt:with_meta(VarSymbol0, SymbolMeta),
 
-  Var0 = lookup_var(VarSymbol),
+  Var0         = lookup_var(VarSymbol),
 
   clj_utils:error_when( Var0 =:= ?NIL
                       , [ <<"Can't refer to qualified var that "
@@ -999,8 +999,8 @@ parse_def(List, Env) ->
                       ),
 
   VarNsSym     = clj_rt:symbol(clj_rt:namespace(Var0)),
-  CurrentNs    = clj_namespace:current(),
-  CurrentNsSym = clj_namespace:name(CurrentNs),
+  CurrentNs    = 'clojerl.Namespace':current(),
+  CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
   clj_utils:error_when( clj_rt:namespace(VarSymbol) =/= ?NIL
                         andalso not clj_rt:equiv(CurrentNsSym, VarNsSym)
                       , <<"Can't create defs outside of current ns">>
@@ -1032,7 +1032,7 @@ parse_def(List, Env) ->
                      , clj_env:location(Env)
                      ),
 
-  clj_namespace:update_var(Var),
+  'clojerl.Namespace':update_var(Var),
   Count = clj_rt:count(List),
   Init  = case Docstring of
             ?NIL when Count =:= 3 -> clj_rt:third(List);
@@ -1046,7 +1046,7 @@ parse_def(List, Env) ->
   Var1     = var_fn_info(Var, InitExpr),
   VarMeta1 = process_var_meta(Var1, Env),
   Var2     = 'clojerl.Var':with_meta(Var1, VarMeta1),
-  clj_namespace:update_var(Var2),
+  'clojerl.Namespace':update_var(Var2),
 
   {TagExpr, Env2} = maybe_type_tag(VarSymbol, Env1),
 
@@ -1126,19 +1126,18 @@ lookup_var(VarSymbol) ->
 -spec lookup_var('clojerl.Symbol':type(), boolean()) ->
   'clojerl.Var':type() | ?NIL.
 lookup_var(VarSymbol, true = _CreateNew) ->
-  NsSym = case clj_rt:namespace(VarSymbol) of
-            ?NIL  -> ?NIL;
-            NsStr -> clj_rt:symbol(NsStr)
-          end,
+  NsSym        = case clj_rt:namespace(VarSymbol) of
+                   ?NIL  -> ?NIL;
+                   NsStr -> clj_rt:symbol(NsStr)
+                 end,
+  NameSym      = clj_rt:symbol(clj_rt:name(VarSymbol)),
 
-  NameSym   = clj_rt:symbol(clj_rt:name(VarSymbol)),
-
-  CurrentNs    = clj_namespace:current(),
-  CurrentNsSym = clj_namespace:name(CurrentNs),
+  CurrentNs    = 'clojerl.Namespace':current(),
+  CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
 
   case clj_rt:equiv(CurrentNsSym, NsSym) of
-    Equal when Equal; NsSym == ?NIL ->
-      clj_namespace:intern(NameSym, CurrentNs),
+    Equal when Equal orelse NsSym =:= ?NIL ->
+      'clojerl.Namespace':intern(NameSym, CurrentNs),
       lookup_var(VarSymbol, false);
     false ->
       lookup_var(VarSymbol, false)
@@ -1148,18 +1147,18 @@ lookup_var(VarSymbol, false = _CreateNew) ->
   NameStr = clj_rt:name(VarSymbol),
 
   case {NsStr, NameStr} of
-    {?NIL, NameStr} when NameStr == <<"ns">>;
-                              NameStr == <<"in-ns">> ->
+    {?NIL, NameStr} when NameStr =:= <<"ns">> orelse
+                         NameStr =:= <<"in-ns">> ->
       ClojureCoreSym = clj_rt:symbol(<<"clojure.core">>, NameStr),
-      clj_namespace:find_var(ClojureCoreSym);
+      'clojerl.Namespace':find_var(ClojureCoreSym);
     {?NIL, _} ->
-      CurrentNs    = clj_namespace:current(),
-      CurrentNsSym = clj_namespace:name(CurrentNs),
+      CurrentNs    = 'clojerl.Namespace':current(),
+      CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
       Symbol = clj_rt:symbol(clj_rt:name(CurrentNsSym), NameStr),
-      clj_namespace:find_var(Symbol);
+      'clojerl.Namespace':find_var(Symbol);
     {NsStr, NameStr} ->
       Symbol = clj_rt:symbol(NsStr, NameStr),
-      clj_namespace:find_var(Symbol)
+      'clojerl.Namespace':find_var(Symbol)
   end.
 
 %%------------------------------------------------------------------------------
@@ -1185,7 +1184,7 @@ parse_import(Form, Env) ->
   NewExpr = #{ op       => import
              , env      => Env
              , form     => Form
-             , ns       => clj_namespace:current()
+             , ns       => 'clojerl.Namespace':current()
              , typename => TypeName
              },
 
@@ -1931,10 +1930,10 @@ resolve(Symbol, Env) ->
   , clj_env:env()
   }.
 resolve(Symbol, CheckPrivate, Env) ->
-  CurrentNs = clj_namespace:current(),
+  CurrentNs = 'clojerl.Namespace':current(),
   Local     = clj_env:get_local(Symbol, Env),
   NsStr     = clj_rt:namespace(Symbol),
-  MappedVal = clj_namespace:find_mapping(Symbol, CurrentNs),
+  MappedVal = 'clojerl.Namespace':find_mapping(Symbol, CurrentNs),
 
   if
     Local =/= ?NIL ->
@@ -1942,7 +1941,7 @@ resolve(Symbol, CheckPrivate, Env) ->
     MappedVal =/= ?NIL ->
       case clj_rt:'var?'(MappedVal) of
         true ->
-          CurrentNsName = clj_rt:name(clj_namespace:name(CurrentNs)),
+          CurrentNsName = clj_rt:name('clojerl.Namespace':name(CurrentNs)),
           clj_utils:error_when( CheckPrivate
                                 andalso NsStr =/= ?NIL
                                 andalso NsStr =/= CurrentNsName

@@ -157,7 +157,7 @@ ns__val() ->
                       , clj_reader:location_meta(Name)
                       ),
 
-  clj_namespace:find_or_create(Name),
+  'clojerl.Namespace':find_or_create(Name),
   ?NIL.
 
 'in-ns__val'() ->
@@ -172,7 +172,7 @@ ns__val() ->
   case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*ns*">>) of
     ?NIL ->
       ClojureCoreSym = clj_rt:symbol(<<"clojure.core">>),
-      clj_namespace:find_or_create(ClojureCoreSym);
+      'clojerl.Namespace':find_or_create(ClojureCoreSym);
     {ok, X}   -> X
   end.
 

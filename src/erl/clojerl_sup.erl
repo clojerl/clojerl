@@ -11,8 +11,8 @@ start_link() ->
   {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
 init(_Args) ->
   SupFlags = #{strategy => one_for_one},
-  Specs    = [ #{ id    => clj_namespace
-                , start => {clj_namespace, start_link, []}
+  Specs    = [ #{ id    => 'clojerl.Namespace'
+                , start => {'clojerl.Namespace', start_link, []}
                 }
              , #{ id    => clj_module
                 , start => {clj_module, start_link, []}

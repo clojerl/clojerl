@@ -146,7 +146,7 @@ ast(#{op := import} = Expr, State) ->
 
   Parts   = binary:split(Typename, <<".">>, [global]),
   SymName = lists:last(Parts),
-  NsName  = clj_namespace:name(Ns),
+  NsName  = 'clojerl.Namespace':name(Ns),
   Module  = clj_rt:keyword(NsName),
 
   clj_module:ensure_loaded(file_from(Env), Module),
@@ -155,7 +155,7 @@ ast(#{op := import} = Expr, State) ->
 
   TypenameAst = cerl:abstract(Typename),
   Ann         = ann_from(Env),
-  ImportAst   = call_mfa(clj_namespace, import_type, [TypenameAst], Ann),
+  ImportAst   = call_mfa('clojerl.Namespace', import_type, [TypenameAst], Ann),
 
   push_ast(ImportAst, State);
 %%------------------------------------------------------------------------------
@@ -999,8 +999,8 @@ ast(#{op := on_load} = Expr, State) ->
 
   {Ast, State1} = pop_ast(ast(BodyExpr, State)),
 
-  CurrentNs  = clj_namespace:current(),
-  NameSym    = clj_namespace:name(CurrentNs),
+  CurrentNs  = 'clojerl.Namespace':current(),
+  NameSym    = 'clojerl.Namespace':name(CurrentNs),
   ModuleName = binary_to_atom(clj_rt:name(NameSym), utf8),
   ok         = clj_module:ensure_loaded(file_from(Env), ModuleName),
   clj_module:add_on_load(Ast, ModuleName),
@@ -1586,8 +1586,8 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
     true ->
       Function    = 'clojerl.Var':function(Var),
       Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-      CurrentNs   = clj_namespace:current(),
-      NsName      = clj_rt:name(clj_namespace:name(CurrentNs)),
+      CurrentNs   = 'clojerl.Namespace':current(),
+      NsName      = clj_rt:name('clojerl.Namespace':name(CurrentNs)),
       VarNsName   = clj_rt:namespace(Var),
       ForceRemote = maps:get(force_remote_invoke, State),
       %% When the var's symbol is not namespace qualified and the var's

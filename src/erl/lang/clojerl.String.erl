@@ -1,6 +1,6 @@
 -module('clojerl.String').
 
--compile({no_auto_import,[length/1]}).
+-compile({no_auto_import, [length/1]}).
 
 -include("clojerl.hrl").
 
