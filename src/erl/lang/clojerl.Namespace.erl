@@ -211,7 +211,7 @@ import_type(TypeName, CheckLoaded) ->
   Type = binary_to_atom(TypeName, utf8),
   clj_utils:error_when( CheckLoaded
                         andalso {module, Type} =/= code:ensure_loaded(Type)
-                      , [ <<"Type '">>, Type, <<"' could not be loaded. ">>]
+                      , [ <<"Type ">>, TypeName, <<" could not be loaded. ">>]
                       ),
 
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),

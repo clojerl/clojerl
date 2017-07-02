@@ -137,6 +137,24 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
        first
        erlang/list_to_binary.1))
 
+;; NOTE: this was originally a proxy writing to sw
+(deftype PushbackReaderStringWriter [pbr sw]
+  erlang.io.IReader
+  (read [_]
+    (let [i (.read pbr)]
+      (.write sw i)
+      i))
+  (read [_ len]
+    (.read pbr len))
+  (read_line [_]
+    (.read_line pbr))
+  (skip [_ n]
+    (.skip pbr n))
+  (unread [_ ch]
+    (let [len (count sw)]
+      (.delete sw (dec len) len))
+    (.unread pbr ch)))
+
 (defn source-fn
   "Returns a string of the source code for the given symbol, if it can
   find it.  This requires that the symbol resolve to a Var defined in
@@ -149,16 +167,15 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
   (when-let [v (resolve x)]
     (when-let [filepath (:file (meta v))]
       (when-let [filepath (find-file-in-code-path filepath)]
-        (with-open [rdr (erlang.io.File/open.e filepath)]
-          (dotimes [_x (dec (:line (meta v)))]
-            (erlang.io.IReader/read_line.e rdr))
-          (let [text      (new erlang.io.StringWriter "")
-                pbr       rdr ;; TODO: this was originally a proxy writing to rdr
-                read-opts (if (clojerl.String/ends_with.e filepath "cljc")
-                            {:read-cond :allow} {})]
+        (with-open [rdr  (erlang.io.File/open.e filepath)
+                    pbr  (erlang.io.PushbackReader. rdr)
+                    text (erlang.io.StringWriter. "")]
+          (dotimes [_x (dec (:line (meta v)))] (.read_line rdr))
+          (let [read-opts  (if (clojerl.String/ends_with.e filepath "cljc")
+                             {:read-cond :allow} {})]
             (if (= :unknown *read-eval*)
               (throw "Unable to read source while *read-eval* is :unknown.")
-              (read (new erlang.io.PushbackReader rdr) #_read-opts))
+              (read read-opts (PushbackReaderStringWriter. pbr text)))
             (str text)))))))
 
 (defmacro source

@@ -8,8 +8,7 @@
 -behaviour('erlang.io.IWriter').
 
 -export([?CONSTRUCTOR/0, ?CONSTRUCTOR/1]).
--export([ start_link/1
-        , init/1
+-export([ init/1
         , loop/1
         ]).
 
@@ -20,6 +19,8 @@
         , write/3
         ]).
 
+-export([delete/3]).
+
 -type type() :: #?TYPE{data :: pid()}.
 
 -spec ?CONSTRUCTOR() -> type().
@@ -29,6 +30,13 @@
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Str) ->
   #?TYPE{data = start_link(Str)}.
+
+-spec delete(type(), pos_integer(), pos_integer()) -> type().
+delete(SW = #?TYPE{name = ?M, data = Pid}, Start, End) ->
+  case send_command(Pid, {delete, Start, End}) of
+    {error, _} -> error(<<"Couldn't delete range in erlang.io.StringWriter">>);
+    ok         -> SW
+  end.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -88,15 +96,26 @@ init(Str) -> ?MODULE:loop(Str).
 loop(Str) ->
   receive
     {io_request, From, ReplyAs, Request} ->
-      {Reply, NewState} = request(Request, Str),
+      {Reply, NewStr} = request(Request, Str),
       reply(From, ReplyAs, Reply),
-      ?MODULE:loop(NewState);
+      ?MODULE:loop(NewStr);
     {From, Ref, str} ->
       From ! {Ref, Str},
       ?MODULE:loop(Str);
     {From, Ref, count} ->
       From ! {Ref, 'clojerl.String':count(Str)},
       ?MODULE:loop(Str);
+    {From, Ref, {delete, Start, End}} ->
+      NewStr = try
+                 First  = 'clojerl.String':substring(Str, 0, Start),
+                 Second = 'clojerl.String':substring(Str, End),
+                 From ! {Ref, ok},
+                 <<First/binary, Second/binary>>
+               catch _:Reason ->
+                   From ! {Ref, {error, Reason}},
+                   Str
+               end,
+      ?MODULE:loop(NewStr);
     {From, Ref, close} ->
       From ! {Ref, ok};
     _Unknown ->
