@@ -218,7 +218,7 @@
            (clj_rt/meta.e x))))
 
 (def
-  ^{:arglists '([^clojure.lang.IObj obj m])
+  ^{:arglists '([^clojerl.IMeta obj m])
     :doc "Returns an object of the same type and value as obj, with
     map m as its metadata."
     :added "1.0"}
@@ -3570,7 +3570,7 @@
    (vector? name-vals-vec) "a vector for its binding"
    (even? (count name-vals-vec)) "an even number of forms in binding vector")
   `(let [~@(interleave (take-nth 2 name-vals-vec)
-                       (repeat '(.. clojure.lang.Var create setDynamic)))]
+                       (repeat '(.. clojerl.Var create setDynamic)))]
      (clojerl.Var/push_bindings.e (hash-map ~@name-vals-vec))
      (try
        ~@body
@@ -4076,7 +4076,7 @@
     (clj_analyzer/is_special.e s))
 
 (defn var?
-  "Returns true if v is of type clojure.lang.Var"
+  "Returns true if v is of type clojerl.Var"
   {:added "1.0"}
   [v] (instance? clojerl.Var v))
 
