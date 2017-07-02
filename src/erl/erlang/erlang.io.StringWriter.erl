@@ -32,10 +32,10 @@
   #?TYPE{data = start_link(Str)}.
 
 -spec delete(type(), pos_integer(), pos_integer()) -> type().
-delete(#?TYPE{name = ?M, data = Pid}, Start, End) ->
+delete(SW = #?TYPE{name = ?M, data = Pid}, Start, End) ->
   case send_command(Pid, {delete, Start, End}) of
     {error, _} -> error(<<"Couldn't delete range in erlang.io.StringWriter">>);
-    Count      -> Count
+    ok         -> SW
   end.
 
 %%------------------------------------------------------------------------------
@@ -106,10 +106,15 @@ loop(Str) ->
       From ! {Ref, 'clojerl.String':count(Str)},
       ?MODULE:loop(Str);
     {From, Ref, {delete, Start, End}} ->
-      First  = 'clojerl.String':substring(Str, 0, Start),
-      Second = 'clojerl.String':substring(Str, End),
-      NewStr = <<First/binary, Second/binary>>,
-      From ! {Ref, ok},
+      NewStr = try
+                 First  = 'clojerl.String':substring(Str, 0, Start),
+                 Second = 'clojerl.String':substring(Str, End),
+                 From ! {Ref, ok},
+                 <<First/binary, Second/binary>>
+               catch _:Reason ->
+                   From ! {Ref, {error, Reason}},
+                   Str
+               end,
       ?MODULE:loop(NewStr);
     {From, Ref, close} ->
       From ! {Ref, ok};

@@ -10,6 +10,7 @@
 
 -export([ str/1
         , write/1
+        , delete/1
         , close/1
         , complete_coverage/1
         ]).
@@ -54,6 +55,24 @@ write(_Config) ->
   <<"hello world! Yeah!">> = clj_rt:str(Writer),
 
   ?NIL = 'erlang.io.Closeable':close(Writer),
+
+  {comments, ""}.
+
+-spec delete(config()) -> result().
+delete(_Config) ->
+  Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(),
+
+  Writer = 'erlang.io.IWriter':write(Writer, <<"hello world!">>),
+
+  Writer = 'erlang.io.StringWriter':delete(Writer, 5, 6),
+  <<"helloworld!">> = clj_rt:str(Writer),
+
+  Writer = 'erlang.io.StringWriter':delete(Writer, 0, 5),
+  <<"world!">> = clj_rt:str(Writer),
+
+  ok = try 'erlang.io.StringWriter':delete(Writer, -1, 0), error
+       catch _:_ -> ok
+       end,
 
   {comments, ""}.
 
