@@ -1522,22 +1522,21 @@ parse_dot(Form, Env) ->
                          , clj_env:location(Env)
                          ),
 
-      Module1         = case IsExported of
-                          true  -> Module;
-                          false -> ?NO_TAG
+      FunExpr         = case IsExported of
+                          true ->
+                            erl_fun_expr(Form, Module, Function, Count, Env);
+                          false ->
+                            #{ op       => resolve_type
+                             , env      => Env
+                             , form     => Target
+                             , function => Function
+                             }
                         end,
-
-      ResolveTypeExpr = #{ op       => resolve_type
-                         , env      => Env
-                         , form     => Target
-                         , module   => Module1
-                         , function => Function
-                         },
 
       InvokeExpr      = #{ op   => invoke
                          , env  => Env
                          , form => Form
-                         , f    => ResolveTypeExpr
+                         , f    => FunExpr
                          , args => [TargetExpr | ArgsExprs]
                          },
 

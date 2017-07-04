@@ -65,18 +65,20 @@ benchmark: all
 
 # This target is special since it is built from two sources erl and clj
 ${EBIN}/clojure.core.beam: ${BOOT_SRC}/clojure.core.erl ${CLJ_SRC}/clojure/core${EXT}
+	@ echo -n Compiling clojure.core...
 	${V} mkdir -p ${EBIN}
 	${V} ${ERLC} ${BOOT_SRC}/clojure.core.erl
 	${V} ${CLOJERLC} ${CLJ_SRC}/clojure/core${EXT}
-	@ echo Compiled clojure.core
+	@ echo done
 
 clojure.core: ${EBIN}/clojure.core.beam
 
 # Creates target for the beam file
 define COMPILE_CLJ_TEMPLATE
 ${EBIN}/$(call clj_to,${1},.beam): ${1}
+	@ echo -n Compiling $(call clj_to,${1},)...
 	${V} ${CLOJERLC} ${1}
-	@ echo Compiled $(call clj_to,${1},)
+	@ echo done
 endef
 
 # Creates target with the ns name
