@@ -691,6 +691,7 @@ parse_binding({Pattern, Init}, Env0) ->
               , init    => InitExpr
               , form    => Pattern
               , local   => OpAtom
+              , tag     => maps:get(tag, PatternExpr, ?NO_TAG)
               },
 
   LocalExprs = clj_env:get(pattern_locals, [], Env2),
@@ -1479,6 +1480,7 @@ parse_dot(Form, Env) ->
   {ArgsExprs, Env2} = clj_env:last_exprs( length(ArgsList)
                                         , analyze_forms(ArgsList, Env1)
                                         ),
+  {TagExpr, Env3}   = maybe_type_tag(Form, Env2),
 
   case TargetExpr of
     #{ op   := type
@@ -1490,11 +1492,12 @@ parse_dot(Form, Env) ->
       InvokeExpr = #{ op   => invoke
                     , env  => Env
                     , form => Form
+                    , tag  => TagExpr
                     , f    => ErlFunExpr
                     , args => ArgsExprs
                     },
 
-      clj_env:push_expr(InvokeExpr, Env2);
+      clj_env:push_expr(InvokeExpr, Env3);
     _ ->
       Module          = type_tag(TargetExpr),
       Function        = clj_rt:keyword(NameSym),
@@ -1536,20 +1539,31 @@ parse_dot(Form, Env) ->
       InvokeExpr      = #{ op   => invoke
                          , env  => Env
                          , form => Form
+                         , tag  => TagExpr
                          , f    => FunExpr
                          , args => [TargetExpr | ArgsExprs]
                          },
 
-      clj_env:push_expr(InvokeExpr, Env2)
+      clj_env:push_expr(InvokeExpr, Env3)
   end.
 
--spec maybe_type_tag('clojerl.Symbol':type(), clj_env:env()) ->
-  {any(), clj_env:env()}.
-maybe_type_tag(Symbol, Env) ->
-  Meta = clj_rt:meta(Symbol),
-  case clj_rt:get(Meta, tag) of
-    ?NIL -> {?NO_TAG, Env};
-    Tag  -> maybe_resolve_type_tag(Tag, Env)
+-spec add_type_tag(any(), map(), clj_env:env()) ->
+  {map(), clj_env:env()}.
+add_type_tag(Form, Expr, Env0) ->
+  case maybe_type_tag(Form, Env0) of
+    {?NO_TAG, Env1} -> {Expr, Env1};
+    {TagExpr, Env1} -> {Expr#{tag => TagExpr}, Env1}
+  end.
+
+-spec maybe_type_tag(any(), clj_env:env()) ->
+  {?NO_TAG | map(), clj_env:env()}.
+maybe_type_tag(Form, Env) ->
+  Meta = clj_rt:'meta?'(Form) andalso clj_rt:meta(Form),
+  case Meta =/= false andalso clj_rt:get(Meta, tag) of
+    X when X =:= false; X =:= ?NIL ->
+      {?NO_TAG, Env};
+    Tag ->
+      maybe_resolve_type_tag(Tag, Env)
   end.
 
 -spec maybe_resolve_type_tag(any(), clj_env:env()) ->
@@ -1754,7 +1768,7 @@ parse_var(List, Env) ->
                       , form => Var
                       },
       clj_env:push_expr(VarConstExpr, Env1);
-    {?NIL, _} ->
+    {_, _} ->
       clj_utils:error([ <<"Unable to resolve var: ">>
                       , VarSymbol
                       , <<" in this context">>
@@ -1778,24 +1792,26 @@ analyze_invoke(Form, Env) ->
                                        , analyze_forms(Args, Env1)
                                        ),
 
-  {Tag, Env3} = case FExpr of
-                  #{op := fn, tag := Tag0} ->
-                    {Tag0, Env2};
-                  #{op := var, var := Var, tag := Tag0} ->
-                    signature_tag(ArgCount, Tag0, Var, Env2);
-                  _   ->
-                    {?NO_TAG, Env2}
-                end,
+  {TagExpr, Env3} = case FExpr of
+                      #{op := fn, tag := Tag0} ->
+                        {Tag0, Env2};
+                      #{op := var, var := Var, tag := Tag0} ->
+                        signature_tag(ArgCount, Tag0, Var, Env2);
+                      _   ->
+                        {?NO_TAG, Env2}
+                    end,
 
-  InvokeExpr = #{ op   => invoke
-                , env  => Env
-                , form => Form
-                , tag  => Tag
-                , f    => FExpr#{arity => ArgCount}
-                , args => ArgsExpr
-                },
+  InvokeExpr0 = #{ op   => invoke
+                 , env  => Env
+                 , form => Form
+                 , tag  => TagExpr
+                 , f    => FExpr#{arity => ArgCount}
+                 , args => ArgsExpr
+                 },
 
-  clj_env:push_expr(InvokeExpr, Env3).
+  {InvokeExpr1, Env4} = add_type_tag(Form, InvokeExpr0, Env3),
+
+  clj_env:push_expr(InvokeExpr1, Env4).
 
 -spec signature_tag( integer()
                    , map() | ?NO_TAG
@@ -1820,43 +1836,48 @@ signature_tag(ArgCount, Default, Var, Env) ->
 %%------------------------------------------------------------------------------
 
 -spec analyze_symbol('clojerl.Symbol':type(), clj_env:env()) -> clj_env:env().
-analyze_symbol(Symbol, Env) ->
-  InPattern = clj_env:get(in_pattern, false, Env),
-  case InPattern orelse resolve(Symbol, Env) of
-    true ->
-      clj_utils:error_when( not is_valid_bind_symbol(Symbol)
-                          , [<<"Not a valid binding symbol, had: ">>, Symbol]
-                          , clj_env:location(Env)
-                          ),
-      {TagExpr, Env1} = maybe_type_tag(Symbol, Env),
+analyze_symbol(Symbol, Env0) ->
+  InPattern     = clj_env:get(in_pattern, false, Env0),
+  {Expr0, Env1} = do_analyze_symbol(InPattern, Symbol, Env0),
+  {Expr1, Env2} = add_type_tag(Symbol, Expr0, Env1),
+  clj_env:push_expr(Expr1, Env2).
 
-      Ast = #{ op         => local
-             , env        => Env
-             , name       => Symbol
-             , tag        => TagExpr
-             , shadow     => clj_env:get_local(Symbol, Env)
-             , underscore => clj_rt:name(Symbol) =:= <<"_">>
-             , id         => erlang:unique_integer()
-             },
-      Env2 = add_pattern_local(Ast, Env1),
-      clj_env:push_expr(Ast, Env2);
+-spec do_analyze_symbol(boolean(), 'clojerl.Symbol':t(), clj_env:env()) ->
+  {map(), clj_env:env()}.
+do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
+  clj_utils:error_when( not is_valid_bind_symbol(Symbol)
+                      , [<<"Not a valid binding symbol, had: ">>, Symbol]
+                      , clj_env:location(Env0)
+                      ),
+
+  Expr0 = #{ op         => local
+           , env        => Env0
+           , name       => Symbol
+           , shadow     => clj_env:get_local(Symbol, Env0)
+           , underscore => clj_rt:name(Symbol) =:= <<"_">>
+           , id         => erlang:unique_integer()
+           },
+  %% We need to do this here so that the registered local has a type tag.
+  {Expr1, Env1} = add_type_tag(Symbol, Expr0, Env0),
+  {Expr1, add_pattern_local(Expr1, Env1)};
+do_analyze_symbol(false = _InPattern, Symbol, Env0) ->
+  case resolve(Symbol, Env0) of
     {?NIL, _} ->
       clj_utils:error([ <<"Unable to resolve symbol '">>, Symbol
                       , <<"' in this context">>
                       ]
-                     , clj_env:location(Env)
+                     , clj_env:location(Env0)
                      );
     {{local, Local}, Env1} ->
-      clj_env:push_expr(Local#{env => Env}, Env1);
+      {Local#{env => Env0}, Env1};
     {{erl_fun, Module, Function, Arity}, Env1} ->
       FunExpr = erl_fun_expr(Symbol, Module, Function, Arity, Env1),
-      clj_env:push_expr(FunExpr, Env1);
+      {FunExpr, Env1};
     {{var, Var}, Env1} ->
-      {VarExpr, Env2} = var_expr(Var, Symbol, Env1),
-      clj_env:push_expr(VarExpr, Env2);
+      var_expr(Var, Symbol, Env1);
     {{type, Type}, Env1} ->
       TypeExpr = type_expr(Type, Symbol, Env1),
-      clj_env:push_expr(TypeExpr, Env1)
+      {TypeExpr, Env1}
   end.
 
 -spec erl_fun_expr( 'clojerl.Symbol':type()
