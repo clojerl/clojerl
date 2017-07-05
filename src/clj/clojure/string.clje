@@ -30,7 +30,9 @@ Design notes for clojure.string:
    code.)"
       :author "Stuart Sierra, Stuart Halloway, David Liebke"}
   clojure.string
-  #_(:refer-clojure :exclude (replace reverse)))
+  (:refer-clojure :exclude (replace reverse)))
+
+(set! *warn-on-infer* true)
 
 (defn ^clojerl.String reverse
   "Returns s with its characters reversed."
