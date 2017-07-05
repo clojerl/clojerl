@@ -594,6 +594,15 @@ do(_Config) ->
    } = Body3,
   local = ReturnExprOp3,
 
+  ct:comment("type hints are respected"),
+  #{ op := 'let'
+   , bindings := [Binding4]
+   } = analyze_one(<<"(let* [^clojerl.String x 1] x)">>),
+
+  #{ op  := binding
+   , tag := #{op := type}
+   } = Binding4,
+
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
        catch _:<<?NO_SOURCE, ":1:1: Unable to resolve "
@@ -742,6 +751,12 @@ invoke(_Config) ->
    , f    := #{op := constant, form := 1}
    } = analyze_one(<<"(1 :hello)">>),
   true = clj_rt:equiv(OneHello, OneHelloCheck),
+
+  ct:comment("type hints are respected"),
+  #{ op  := invoke
+   , tag := #{op := type, type := StringSym}
+   } = analyze_one(<<"^clojerl.String (:foo {:foo 1})">>),
+  true = clj_rt:equiv(StringSym, clj_rt:symbol(<<"clojerl.String">>)),
 
   {comments, ""}.
 
@@ -1176,6 +1191,22 @@ dot(_Config) ->
   #{ op   := 'let'
    , body := #{ op := do, ret := #{op := invoke}}
    } = analyze_one(<<"(let* [x 1] (. x foo))">>),
+
+  #{ op   := 'let'
+   , body := #{op := do, ret := InvokeExpr1}
+   } = analyze_one(<<"(let* [x \"foo\"] (.substring ^clojerl.String x 1))">>),
+
+  #{ op := invoke
+   , f  := #{op := erl_fun}
+   } = InvokeExpr1,
+
+  #{ op   := 'let'
+   , body := #{op := do, ret := InvokeExpr2}
+   } = analyze_one(<<"(let* [x \"foo\"] (.substring x 1))">>),
+
+  #{ op := invoke
+   , f  := #{op := resolve_type}
+   } = InvokeExpr2,
 
   ct:comment("Require at least 3 forms"),
   ok = try analyze_one(<<"(. a)">>), error

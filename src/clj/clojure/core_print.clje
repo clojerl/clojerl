@@ -10,6 +10,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; printing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(import '(erlang.io IWriter))
+
+(set! *warn-on-infer* true)
+
 (def ^:dynamic *print-meta* nil)
 
 (def ^:dynamic
@@ -37,109 +41,104 @@
 
 (def ^:dynamic *verbose-defrecords* false)
 
-(defn- write
-  "Wrap io/fwrite.e"
-  [w str]
-  (erlang.io.IWriter/write.e w str))
-
-(defn- print-sequential [begin, print-one, sep, end, sequence, w]
+(defn- print-sequential [begin, print-one, sep, end, sequence, ^IWriter w]
   (binding [*print-level* (and (not *print-dup*) *print-level* (dec *print-level*))]
     (if (and *print-level* (neg? *print-level*))
-      (write w "#")
+      (.write w "#")
       (do
-        (write w begin)
+        (.write w begin)
         (when-let [xs (seq sequence)]
           (if (and (not *print-dup*) *print-length*)
             (loop [xs xs
                    print-length *print-length*]
               (let [[x & xs] xs]
                 (if (zero? print-length)
-                  (write w "...")
+                  (.write w "...")
                   (do
                     (print-one x w)
                     (when xs
-                      (write w sep)
+                      (.write w sep)
                       (recur xs (dec print-length)))))))
             (loop [xs xs]
               (let [[x & xs] xs]
                 (print-one x w)
                 (when xs
-                  (write w sep)
+                  (.write w sep)
                   (recur xs))))))
-        (write w end)))))
+        (.write w end)))))
 
-(defn- print-meta [o, w]
+(defn- print-meta [o, ^IWriter w]
   (when-let [m (meta o)]
     (when (and (pos? (count m))
                (or *print-dup*
                    (and *print-meta* *print-readably*)))
-      (write w "^")
+      (.write w "^")
       (if (and (= (count m) 1) (:tag m))
           (pr-on (:tag m) w)
           (pr-on m w))
-      (write w " "))))
+      (.write w " "))))
 
-(defn print-simple [o ^erlang.io.IWriter w]
+(defn print-simple [o ^IWriter w]
   (print-meta o w)
-  (write w (str o)))
+  (.write w (str o)))
 
-(defmethod print-method :default [o, w]
+(defmethod print-method :default [o, ^IWriter w]
   (print-simple o w))
 
-(defmethod print-method nil [o, w]
-  (write w "nil"))
+(defmethod print-method nil [o, ^IWriter w]
+  (.write w "nil"))
 
-(defmethod print-dup nil [o w] (print-method o w))
+(defmethod print-dup nil [o ^IWriter w] (print-method o w))
 
-(defmethod print-method clojerl.Keyword [o, w]
-  (write w (str o)))
+(defmethod print-method clojerl.Keyword [o, ^IWriter w]
+  (.write w (str o)))
 
-(defmethod print-dup clojerl.Keyword [o w] (print-method o w))
+(defmethod print-dup clojerl.Keyword [o ^IWriter w] (print-method o w))
 
-(defmethod print-method clojerl.Integer [o, w]
-  (write w (str o)))
+(defmethod print-method clojerl.Integer [o, ^IWriter w]
+  (.write w (str o)))
 
-(defmethod print-method clojerl.Float [o, w]
-  (write w (str o)))
+(defmethod print-method clojerl.Float [o, ^IWriter w]
+  (.write w (str o)))
 
-(defmethod print-method clojerl.Boolean [o, w]
-  (write w (str o)))
+(defmethod print-method clojerl.Boolean [o, ^IWriter w]
+  (.write w (str o)))
 
-(defmethod print-dup clojerl.Boolean [o w] (print-method o w))
+(defmethod print-dup clojerl.Boolean [o ^IWriter w] (print-method o w))
 
-(defmethod print-method clojerl.Symbol [o, w]
+(defmethod print-method clojerl.Symbol [o, ^IWriter w]
   (print-simple o w))
 
-(defmethod print-dup clojerl.Symbol [o w] (print-method o w))
+(defmethod print-dup clojerl.Symbol [o ^IWriter w] (print-method o w))
 
-(defmethod print-method clojerl.Var [o, w]
+(defmethod print-method clojerl.Var [o, ^IWriter w]
   (print-simple o w))
 
-(defmethod print-dup clojerl.Var [o, w]
-  (write w (str "#=(var " (namespace o) "/" (name o) ")")))
+(defmethod print-dup clojerl.Var [o, ^IWriter w]
+  (.write w (str "#=(var " (namespace o) "/" (name o) ")")))
 
-(defmethod print-method clojerl.List [o, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.List [o, ^IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
-(defmethod print-method clojerl.erlang.List [o, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.erlang.List [o, ^IWriter w]
   (print-meta o w)
   (if (io_lib/printable_unicode_list.e o)
-    (write w (str "#erl\"" (erlang/list_to_binary.e o) "\""))
+    (.write w (str "#erl\"" (erlang/list_to_binary.e o) "\""))
     (print-sequential "#erl(" pr-on " " ")" o w)))
 
-(defmethod print-method clojerl.Cons [o, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.Cons [o, ^IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
-(defmethod print-method clojerl.LazySeq [o, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.LazySeq [o, ^IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
-(defmethod print-dup clojerl.List [o w] (print-method o w))
-(defmethod print-dup clojerl.erlang.List [o w] (print-method o w))
-(defmethod print-dup clojerl.Cons [o w] (print-method o w))
-(defmethod print-dup clojerl.LazySeq [o w] (print-method o w))
+(defmethod print-dup clojerl.List [o ^IWriter w] (print-method o w))
+(defmethod print-dup clojerl.erlang.List [o ^IWriter w] (print-method o w))
+(defmethod print-dup clojerl.Cons [o ^IWriter w] (print-method o w))
+(defmethod print-dup clojerl.LazySeq [o ^IWriter w] (print-method o w))
 
 (def ^{:tag clojerl.String
        :doc "Returns escape string for char or nil if none"
@@ -153,50 +152,50 @@
      \formfeed "\\f"
      \backspace "\\b"})
 
-(defmethod print-method clojerl.String [^clojerl.String s, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.String [^clojerl.String s, ^IWriter w]
   (if (or *print-dup* *print-readably*)
     (let [printable? (clojerl.String/is_printable.e s)]
-      (write w (if printable? \" "#bin["))
+      (.write w (if printable? \" "#bin["))
       (if printable?
         (dotimes [n (.count s)]
           (let [c (clojerl.String/char_at.e s n)
                 e (char-escape-string c)]
-            (if e (write w e) (write w c))))
+            (if e (.write w e) (.write w c))))
         (->> (erlang/binary_to_list.e s)
              (interpose " ")
              (apply str)
-             (write w)))
-      (write w (if printable? \" "]")))
-    (write w s))
+             (.write w)))
+      (.write w (if printable? \" "]")))
+    (.write w s))
   nil)
 
-(defmethod print-dup clojerl.String [s w] (print-method s w))
+(defmethod print-dup clojerl.String [s ^IWriter w] (print-method s w))
 
-(defmethod print-method clojerl.Vector [v, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.Vector [v, ^IWriter w]
   (print-meta v w)
   (print-sequential "[" pr-on " " "]" v w))
 
-(defn- print-map [begin m end print-one w]
+(defn- print-map [begin m end print-one ^IWriter w]
   (print-sequential
    begin
-   (fn [e  ^erlang.io.IWriter w]
-     (do (print-one (key e) w) (write w \space) (print-one (val e) w)))
+   (fn [e  ^IWriter w]
+     (do (print-one (key e) w) (.write w \space) (print-one (val e) w)))
    ", "
    end
    (seq m) w))
 
-(defmethod print-method clojerl.Map [m, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.Map [m, ^IWriter w]
   (print-meta m w)
   (print-map "{" m "}" pr-on w))
 
-(defmethod print-method clojerl.erlang.Map [m, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.erlang.Map [m, ^IWriter w]
   (print-meta m w)
   (print-map "#erl{" m "}" pr-on w))
 
-(defmethod print-method clojerl.Set [s, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.Set [s, ^IWriter w]
   (print-meta s w)
   (print-sequential "#{" pr-on " " "}" (seq s) w))
 
-(defmethod print-method clojerl.erlang.Tuple [s, ^erlang.io.IWriter w]
+(defmethod print-method clojerl.erlang.Tuple [s, ^IWriter w]
   (print-meta s w)
   (print-sequential "#erl[" pr-on " " "]" (seq s) w))

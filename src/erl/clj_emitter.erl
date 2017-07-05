@@ -489,35 +489,28 @@ ast(#{op := invoke} = Expr, State) ->
       push_ast(Ast, State);
     %% Resolve Target Type
     #{ op       := resolve_type
-     , module   := Module
      , function := Function
      } ->
       ArgCount   = length(Args),
       TargetAst  = erlang:hd(Args),
-      case Module of
-        ?NO_TAG ->
-          FVarAst    = new_c_var(Ann),
-          ModuleAst  = call_mfa(clj_rt, type_module, [TargetAst], Ann),
-          ResolveAst = call_mfa( erlang
-                               , make_fun
-                               , [ ModuleAst
-                                 , cerl:ann_c_atom(Ann, Function)
-                                 , cerl:ann_abstract(Ann, ArgCount)
-                                 ]
-                               , Ann
-                               ),
+      FVarAst    = new_c_var(Ann),
+      ModuleAst  = call_mfa(clj_rt, type_module, [TargetAst], Ann),
+      ResolveAst = call_mfa( erlang
+                           , make_fun
+                           , [ ModuleAst
+                             , cerl:ann_c_atom(Ann, Function)
+                             , cerl:ann_abstract(Ann, ArgCount)
+                             ]
+                           , Ann
+                           ),
 
-          Ast = cerl:ann_c_let( Ann
-                              , [FVarAst]
-                              , ResolveAst
-                              , cerl:ann_c_apply(Ann, FVarAst, Args)
-                              ),
+      Ast = cerl:ann_c_let( Ann
+                          , [FVarAst]
+                          , ResolveAst
+                          , cerl:ann_c_apply(Ann, FVarAst, Args)
+                          ),
 
-          push_ast(Ast, State);
-        Module ->
-          Ast = call_mfa(Module, Function, Args, Ann),
-          push_ast(Ast, State)
-      end;
+      push_ast(Ast, State);
     %% Apply Fn
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
