@@ -273,16 +273,10 @@
                 (seq ret)))))
 
 (def
-  ^{:doc "Same as (def name (fn [params* ] exprs*)) or (def
-    name (fn ([params* ] exprs*)+)) with any doc-string or attrs added
-    to the var metadata. prepost-map defines a map with optional keys
-    :pre and :post that contain collections of pre or post conditions."
-    :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
-                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])
-    :added "1.0"
-    :macro true}
-  defn
-  (fn* [&form &env name & fdecl]
+  ^{:doc "Used to generate the code for defn and defn*"
+    :private true}
+  generate-defn
+  (fn* [fn-sym &form &env name fdecl]
        (if (symbol? name)
          nil
          (throw "First argument to defn must be a symbol"))
@@ -310,9 +304,35 @@
              m     (conj {:arglists (list 'quote (sigs fdecl))} m)
              m     (conj (if (meta name) (meta name) {}) m)]
          (list 'def (with-meta name m)
-               (cons 'clojure.core/fn ;; can't use syntax-quote here yet because
+               (cons fn-sym
                      ;; we haven't defined all the necessary functions
                      (new clojerl.List (seq fdecl)))))))
+
+(def
+  ^{:doc "Same as (def name (fn [params* ] exprs*)) or (def
+    name (fn ([params* ] exprs*)+)) with any doc-string or attrs added
+    to the var metadata. prepost-map defines a map with optional keys
+    :pre and :post that contain collections of pre or post conditions."
+    :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
+                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])
+    :added "1.0"
+    :macro true}
+  defn
+  (fn* [&form &env name & fdecl]
+       (generate-defn 'clojure.core/fn &form &env name fdecl)))
+
+(def
+  ^{:doc "Same as (def name (fn* [params* ] exprs*)) or (def
+    name (fn* ([params* ] exprs*)+)) with any doc-string or attrs added
+    to the var metadata. prepost-map defines a map with optional keys
+    :pre and :post that contain collections of pre or post conditions."
+    :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
+                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])
+    :added "1.0"
+    :macro true}
+  defn*
+  (fn* [&form &env name & fdecl]
+       (generate-defn 'fn* &form &env name fdecl)))
 
 (defn vector
   "Creates a new vector containing the args."
