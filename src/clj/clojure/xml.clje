@@ -9,71 +9,66 @@
 (ns ^{:doc "XML reading/writing."
        :author "Rich Hickey"}
   clojure.xml
-  (:import (org.xml.sax ContentHandler Attributes SAXException)
-           (javax.xml.parsers SAXParser SAXParserFactory)))
+  (:import (clojerl String)))
 
 (def ^:dynamic *stack*)
 (def ^:dynamic *current*)
 (def ^:dynamic *state*) ; :element :chars :between
 (def ^:dynamic *sb*)
 
-(defstruct element :tag :attrs :content)
+;; (defrecord element [tag attrs content])
 
-(def tag (accessor element :tag))
-(def attrs (accessor element :attrs))
-(def content (accessor element :content))
+(defn push-content
+  [e c]
+  (assoc e :content (conj (or (:content e) []) c)))
 
-(def content-handler
-  (let [push-content (fn [e c]
-                       (assoc e :content (conj (or (:content e) []) c)))
-        push-chars (fn []
-                     (when (and (= *state* :chars)
-                                (some (complement #(Character/isWhitespace (char %))) (str *sb*)))
-                       (set! *current* (push-content *current* (str *sb*)))))]
-    (new clojure.lang.XMLHandler
-         (proxy [ContentHandler] []
-           (startElement [uri local-name q-name ^Attributes atts]
-             (let [attrs (fn [ret i]
-                           (if (neg? i)
-                             ret
-                             (recur (assoc ret
-                                           (clojure.lang.Keyword/intern (symbol (.getQName atts i)))
-                                           (.getValue atts (int i)))
-                                    (dec i))))
-                   e (struct element
-                             (. clojure.lang.Keyword (intern (symbol q-name)))
-                             (when (pos? (.getLength atts))
-                               (attrs {} (dec (.getLength atts)))))]
-               (push-chars)
-               (set! *stack* (conj *stack* *current*))
-               (set! *current* e)
-               (set! *state* :element))
-             nil)
-           (endElement [uri local-name q-name]
-             (push-chars)
-             (set! *current* (push-content (peek *stack*) *current*))
-             (set! *stack* (pop *stack*))
-             (set! *state* :between)
-             nil)
-           (characters [^chars ch start length]
-             (when-not (= *state* :chars)
-               (set! *sb* (new StringBuilder)))
-             (let [^StringBuilder sb *sb*]
-               (.append sb ch (int start) (int length))
-               (set! *state* :chars))
-             nil)
-           (setDocumentLocator [locator])
-           (startDocument [])
-           (endDocument [])
-           (startPrefixMapping [prefix uri])
-           (endPrefixMapping [prefix])
-           (ignorableWhitespace [ch start length])
-           (processingInstruction [target data])
-           (skippedEntity [name])
-           ))))
+(defn push-chars []
+  (when (and (= *state* :chars)
+             (some (complement #(.is_whitespace %)) (str *sb*)))
+    (set! *current* (push-content *current* (str *sb*)))))
 
-(defn startparse-sax [s ch]
-  (.. SAXParserFactory (newInstance) (newSAXParser) (parse s ch)))
+(defn fq-name [prefix local-name]
+  (keyword (str (if-not (empty? prefix)
+                  (str (erlang/list_to_binary.e prefix) ":")
+                  "")
+                (erlang/list_to_binary.e local-name))))
+
+(defn* event-handler
+  ([#erl[:startElement uri local-name q-name atts] loc state]
+   (let [attrs (fn [ret [x xs]]
+                 (if-not x
+                   ret
+                   (recur (assoc ret
+                                 (fq-name (second x) (nth x 2))
+                                 (erlang/list_to_binary.e (nth x 3)))
+                          xs)))
+         tag (fq-name (first q-name) (second q-name))
+         e {:tag     tag
+            :attrs   (when-not (empty? atts) (attrs {} atts))
+            :content nil}]
+     (push-chars)
+     (set! *stack* (conj *stack* *current*))
+     (set! *current* e)
+     (set! *state* :element)))
+  ([#erl[:endElement uri local-name q-name] loc state]
+   (push-chars)
+   (set! *current* (push-content (peek *stack*) *current*))
+   (set! *stack* (pop *stack*))
+   (set! *state* :between)
+   nil)
+  ([#erl[:characters ch] loc state]
+   (when-not (= *state* :chars)
+     (set! *sb* (new erlang.io.StringWriter)))
+   (let [^erlang.io.StringWriter sb *sb*]
+     (.write sb (erlang/list_to_binary.e ch))
+     (set! *state* :chars))
+   nil)
+  ([_ loc state]))
+
+(defn startparse-sax [s event-handler]
+  (let [options #erl(#erl[ ;; :continuation_fun continuation
+                          :event_fun event-handler])]
+    (xmerl_sax_parser/stream.e s options)))
 
 (defn parse
   "Parses and loads the source s, which can be a File, InputStream or
@@ -86,11 +81,11 @@
   ([s] (parse s startparse-sax))
   ([s startparse]
     (binding [*stack* nil
-              *current* (struct element)
+              *current* {:tag nil :attrs nil :content nil}
               *state* :between
               *sb* nil]
-      (startparse s content-handler)
-      ((:content *current*) 0)))) 
+      (startparse s clojure.xml/event-handler.3)
+      ((:content *current*) 0))))
 
 (defn emit-element [e]
   (if (instance? String e)
