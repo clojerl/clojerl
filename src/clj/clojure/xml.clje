@@ -66,17 +66,20 @@
   ([_ loc state]))
 
 (defn startparse-sax [s event-handler]
-  (let [options #erl(#erl[ ;; :continuation_fun continuation
-                          :event_fun event-handler])]
-    (xmerl_sax_parser/stream.e s options)))
+  (let [options #erl(#erl[:event_fun event-handler])]
+    (if (instance? erlang.io.File s)
+      (xmerl_sax_parser/file.e (-> ^erlang.io.File s
+                                   .path
+                                   erlang/binary_to_list.1)
+                               options)
+      (xmerl_sax_parser/stream.e s options))))
 
 (defn parse
-  "Parses and loads the source s, which can be a File, InputStream or
-  String naming a URI. Returns a tree of the xml/element struct-map,
-  which has the keys :tag, :attrs, and :content. and accessor fns tag,
-  attrs, and content. Other parsers can be supplied by passing
-  startparse, a fn taking a source and a ContentHandler and returning
-  a parser"
+  "Parses and loads the source s, which can be a File or a String
+  containing the XML. Returns a tree of the xml/map, which has the keys :tag,
+  :attrs, and :content. and accessor fns tag, attrs, and content. Other parsers
+  can be supplied by passing startparse, a fn taking a source and an
+  EventHandler (as defined in xmerl_sax_parser) and returning a parser"
   {:added "1.0"}
   ([s] (parse s startparse-sax))
   ([s startparse]
