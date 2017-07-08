@@ -1,0 +1,116 @@
+;   Copyright (c) Rich Hickey. All rights reserved.
+;   The use and distribution terms for this software are covered by the
+;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;   which can be found in the file epl-v10.html at the root of this distribution.
+;   By using this software in any fashion, you are agreeing to be bound by
+;   the terms of this license.
+;   You must not remove this notice, or any other, from this software.
+
+(ns ^{:doc "XML reading/writing."
+       :author "Rich Hickey"}
+  clojure.xml
+  (:import (clojerl String)))
+
+(def ^:dynamic *stack*)
+(def ^:dynamic *current*)
+(def ^:dynamic *state*) ; :element :chars :between
+(def ^:dynamic *sb*)
+
+;; (defrecord element [tag attrs content])
+
+(defn push-content
+  [e c]
+  (assoc e :content (conj (or (:content e) []) c)))
+
+(defn push-chars []
+  (when (and (= *state* :chars)
+             (some (complement #(.is_whitespace %)) (str *sb*)))
+    (set! *current* (push-content *current* (str *sb*)))))
+
+(defn fq-name [prefix local-name]
+  (keyword (str (if-not (empty? prefix)
+                  (str (erlang/list_to_binary.e prefix) ":")
+                  "")
+                (erlang/list_to_binary.e local-name))))
+
+(defn* event-handler
+  ([#erl[:startElement uri local-name q-name atts] loc state]
+   (let [attrs (fn [ret [x xs]]
+                 (if-not x
+                   ret
+                   (recur (assoc ret
+                                 (fq-name (second x) (nth x 2))
+                                 (erlang/list_to_binary.e (nth x 3)))
+                          xs)))
+         tag (fq-name (first q-name) (second q-name))
+         e {:tag     tag
+            :attrs   (when-not (empty? atts) (attrs {} atts))
+            :content nil}]
+     (push-chars)
+     (set! *stack* (conj *stack* *current*))
+     (set! *current* e)
+     (set! *state* :element)))
+  ([#erl[:endElement uri local-name q-name] loc state]
+   (push-chars)
+   (set! *current* (push-content (peek *stack*) *current*))
+   (set! *stack* (pop *stack*))
+   (set! *state* :between)
+   nil)
+  ([#erl[:characters ch] loc state]
+   (when-not (= *state* :chars)
+     (set! *sb* (new erlang.io.StringWriter)))
+   (let [^erlang.io.StringWriter sb *sb*]
+     (.write sb (erlang/list_to_binary.e ch))
+     (set! *state* :chars))
+   nil)
+  ([_ loc state]))
+
+(defn startparse-sax [s event-handler]
+  (let [options #erl(#erl[:event_fun event-handler])]
+    (if (instance? erlang.io.File s)
+      (xmerl_sax_parser/file.e (-> ^erlang.io.File s
+                                   .path
+                                   erlang/binary_to_list.1)
+                               options)
+      (xmerl_sax_parser/stream.e s options))))
+
+(defn parse
+  "Parses and loads the source s, which can be a File or a String
+  containing the XML. Returns a tree of the xml/map, which has the keys :tag,
+  :attrs, and :content. and accessor fns tag, attrs, and content. Other parsers
+  can be supplied by passing startparse, a fn taking a source and an
+  EventHandler (as defined in xmerl_sax_parser) and returning a parser"
+  {:added "1.0"}
+  ([s] (parse s startparse-sax))
+  ([s startparse]
+    (binding [*stack* nil
+              *current* {:tag nil :attrs nil :content nil}
+              *state* :between
+              *sb* nil]
+      (startparse s clojure.xml/event-handler.3)
+      ((:content *current*) 0))))
+
+(defn emit-element [e]
+  (if (instance? String e)
+    (println e)
+    (do
+      (print (str "<" (name (:tag e))))
+      (when (:attrs e)
+	(doseq [attr (:attrs e)]
+	  (print (str " " (name (key attr)) "='" (val attr)"'"))))
+      (if (:content e)
+	(do
+	  (println ">")
+	  (doseq [c (:content e)]
+	    (emit-element c))
+	  (println (str "</" (name (:tag e)) ">")))
+	(println "/>")))))
+
+(defn emit [x]
+  (println "<?xml version='1.0' encoding='UTF-8'?>")
+  (emit-element x))
+
+;(export '(tag attrs content parse element emit emit-element))
+
+;(load-file "/Users/rich/dev/clojure/src/xml.clj")
+;(def x (xml/parse "http://arstechnica.com/journals.rssx"))

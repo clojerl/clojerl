@@ -1185,7 +1185,6 @@ parse_import(Form, Env) ->
   NewExpr = #{ op       => import
              , env      => Env
              , form     => Form
-             , ns       => 'clojerl.Namespace':current()
              , typename => TypeName
              },
 
