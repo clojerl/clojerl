@@ -10,6 +10,7 @@
 -behavior('clojerl.Stringable').
 
 -export([ ?CONSTRUCTOR/1
+        , swap/2
         , swap/3
         , swap/4
         , swap/5
@@ -42,6 +43,10 @@
   UUID = 'erlang.util.UUID':random(),
   Id   = 'erlang.util.UUID':str(UUID),
   #?TYPE{data = {Id, Value}}.
+
+-spec swap(type(), any()) -> any().
+swap(#?TYPE{name = ?M, data = {Id, Initial}}, Fun) ->
+  do_swap(Id, Initial, Fun, []).
 
 -spec swap(type(), any(), any()) -> any().
 swap(#?TYPE{name = ?M, data = {Id, Initial}}, Fun, X) ->
