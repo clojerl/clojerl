@@ -89,8 +89,6 @@ radix specifier is in the form #XXr where XX is the decimal value of *print-base
    :added "1.2"}
  *print-base* 10)
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal variables that keep track of where we are in the
 ;; structure
@@ -133,15 +131,14 @@ radix specifier is in the form #XXr where XX is the decimal value of *print-base
       :right-margin     'clojure.pprint/*print-right-margin*,
       :suppress-namespaces 'clojure.pprint/*print-suppress-namespaces*})
 
-
 (defmacro ^{:private true} binding-map [amap & body]
   (let []
     `(do
-       (. clojerl.Var (pushThreadBindings ~amap))
+       (. clojerl.Var (push_bindings ~amap))
        (try
         ~@body
         (finally
-         (. clojerl.Var (popThreadBindings)))))))
+         (. clojerl.Var (pop_bindings)))))))
 
 (defn- table-ize [t m]
   (apply hash-map (mapcat
@@ -150,7 +147,7 @@ radix specifier is in the form #XXr where XX is the decimal value of *print-base
 
 (defn- pretty-writer?
   "Return true iff x is a PrettyWriter"
-  [x] (and (instance? clojerl.IDeref x) (:pretty-writer @@x)))
+  [x] (and (satisfies? clojerl.IDeref x) (:pretty-writer @@x)))
 
 (defn- make-pretty-writer
   "Wrap base-writer in a PrettyWriter with the specified right-margin and miser-width"
@@ -181,10 +178,9 @@ already know that the pretty printer will have set up their environment appropri
 Normal library clients should use the standard \"write\" interface. "
   {:added "1.2"}
   [object]
-  (let [length-reached (and
-                        *current-length*
-                        *print-length*
-                        (>= *current-length* *print-length*))]
+  (let [length-reached (and *current-length*
+                            *print-length*
+                            (>= *current-length* *print-length*))]
     (if-not *print-pretty*
       (pr object)
       (if length-reached
@@ -235,7 +231,7 @@ The following keyword arguments can be passed with values:
             (binding [*out* base-writer]
               (pr object)))
           (if (nil? optval)
-            (.toString ^erlang.io.StringWriter base-writer)))))))
+            (.str ^erlang.io.StringWriter base-writer)))))))
 
 
 (defn pprint
@@ -266,9 +262,7 @@ For example functions, see simple-dispatch and code-dispatch in
 clojure.pprint.dispatch.clj."
   {:added "1.2"}
   [function]
-  (let [old-meta (meta #'*print-pprint-dispatch*)]
-    (alter-var-root #'*print-pprint-dispatch* (constantly function))
-    (alter-meta! #'*print-pprint-dispatch* (constantly old-meta)))
+  (set! *print-pprint-dispatch* function)
   nil)
 
 (defmacro with-pprint-dispatch
@@ -292,9 +286,7 @@ clojure.pprint.dispatch.clj."
 (defn- check-enumerated-arg [arg choices]
   (if-not (choices arg)
           (throw
-           (IllegalArgumentException.
-            ;; TODO clean up choices string
-            (str "Bad argument: " arg ". It must be one of " choices)))))
+           (str "Bad argument: " arg ". It must be one of " choices))))
 
 (defn- level-exceeded []
   (and *print-level* (>= *current-level* *print-level*)))
@@ -368,7 +360,7 @@ THIS FUNCTION IS NOT YET IMPLEMENTED."
   {:added "1.2"}
   [kind colnum colinc]
   (check-enumerated-arg kind #{:line :section :line-relative :section-relative})
-  (throw (UnsupportedOperationException. "pprint-tab is not yet implemented")))
+  (throw "pprint-tab is not yet implemented"))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

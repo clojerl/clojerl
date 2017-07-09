@@ -4111,8 +4111,7 @@
     (new erlang.util.Regex s)))
 
 (defn re-find
-  "Returns the next regex match, if any, of string to pattern.
-  Uses re-groups to return the groups."
+  "Returns the next regex match, if any, of string to pattern."
   {:added "1.0"}
   [re s]
   (let [matches (re-run re s #erl [:capture :all :binary])]

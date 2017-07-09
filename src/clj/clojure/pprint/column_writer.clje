@@ -26,7 +26,7 @@
   (sym @@this))
 
 (defn- set-field [^IWriter this sym new-val]
-  (alter @this assoc sym new-val))
+  (swap! @this assoc sym new-val))
 
 (defn- get-column [this]
   (get-field this :cur))
@@ -38,46 +38,42 @@
   (get-field this :max))
 
 (defn- set-max-column [this new-max]
-  (dosync (set-field this :max new-max))
+  (set-field this :max new-max)
   nil)
 
 (defn- get-writer [this]
   (get-field this :base))
 
-(defn- c-write-char [^IWriter this ^Integer c]
-  (dosync (if (= c (int \newline))
-	    (do
-              (set-field this :cur 0)
-              (set-field this :line (inc (get-field this :line))))
-	    (set-field this :cur (inc (get-field this :cur)))))
+(defn- c-write-char [^IWriter this ^clojerl.Integer c]
+  (if (= c (int \newline))
+    (do
+      (set-field this :cur 0)
+      (set-field this :line (inc (get-field this :line))))
+    (set-field this :cur (inc (get-field this :cur))))
   (.write ^IWriter (get-field this :base) c))
+
+(deftype ColumnWriter [writer fields]
+  clojerl.IDeref
+  (deref [_] fields)
+  erlang.io.IWriter
+  (write [this x]
+    (condp = (class x)
+      clojerl.String
+      (let [^clojerl.String s x
+            nl (.last_index_of s "\n")]
+        (if (neg? nl)
+          (set-field this :cur (+ (get-field this :cur) (count s)))
+          (do
+            (set-field this :cur (- (count s) nl 1))
+            (set-field this :line (+ (get-field this :line)
+                                     (count (filter #(= % \newline) s))))))
+        (.write ^IWriter (get-field this :base) s))
+
+      clojerl.Integer
+      (c-write-char this x))))
 
 (defn- column-writer
   ([writer] (column-writer writer *default-page-width*))
   ([^IWriter writer max-columns]
-     (let [fields (ref {:max max-columns, :cur 0, :line 0 :base writer})]
-       (proxy [Writer IDeref] []
-         (deref [] fields)
-         (flush []
-           (.flush writer))
-         (write
-          ([^chars cbuf ^Integer off ^Integer len]
-             (let [^IWriter writer (get-field this :base)]
-               (.write writer cbuf off len)))
-          ([x]
-             (condp = (class x)
-               String
-               (let [^String s x
-                     nl (.lastIndexOf s (int \newline))]
-                 (dosync (if (neg? nl)
-                           (set-field this :cur (+ (get-field this :cur) (count s)))
-                           (do
-                             (set-field this :cur (- (count s) nl 1))
-                             (set-field this :line (+ (get-field this :line)
-                                                      (count (filter #(= % \newline) s)))))))
-                 (.write ^IWriter (get-field this :base) s))
-
-               Integer
-               (c-write-char this x)
-               Long
-               (c-write-char this x))))))))
+   (let [fields (atom {:max max-columns, :cur 0, :line 0 :base writer})]
+     (ColumnWriter. writer fields))))

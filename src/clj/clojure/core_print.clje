@@ -41,6 +41,13 @@
 
 (def ^:dynamic *verbose-defrecords* false)
 
+(def ^:dynamic
+ ^{:doc "*print-namespace-maps* controls whether the printer will print
+  namespace map literal syntax. It defaults to false, but the REPL binds
+  to true."
+   :added "1.9"}
+  *print-namespace-maps* false)
+
 (defn- print-sequential [begin, print-one, sep, end, sequence, ^IWriter w]
   (binding [*print-level* (and (not *print-dup*) *print-level* (dec *print-level*))]
     (if (and *print-level* (neg? *print-level*))
@@ -188,6 +195,28 @@
    ", "
    end
    (seq m) w))
+
+(defn- strip-ns
+  [named]
+  (if (symbol? named)
+    (symbol nil (name named))
+    (keyword nil (name named))))
+
+(defn- lift-ns
+  "Returns [lifted-ns lifted-map] or nil if m can't be lifted."
+  [m]
+  (when *print-namespace-maps*
+    (loop [ns nil
+           [[k v :as entry] & entries] (seq m)
+           lm {}]
+      (if entry
+        (when (or (keyword? k) (symbol? k))
+          (if ns
+            (when (= ns (namespace k))
+              (recur ns entries (assoc lm (strip-ns k) v)))
+            (when-let [new-ns (namespace k)]
+              (recur new-ns entries (assoc lm (strip-ns k) v)))))
+        [ns (apply conj (empty m) lm)]))))
 
 (defmethod print-method clojerl.Map [m, ^IWriter w]
   (print-meta m w)

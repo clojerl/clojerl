@@ -42,12 +42,14 @@ repl: compile
 # Clojure compilation
 # ------------------------------------------------------------------------------
 
-BOOT_SRC    := ${CURDIR}/bootstrap
-CLJ_SRC     := ${CURDIR}/src/clj
-CLJ_TEST    := ${CURDIR}/test/clj
-EXT         := .clje
-CLJ_EXCLUDE := $(addprefix ${CLJ_SRC}/clojure/,core${EXT} core_deftype${EXT} core_print${EXT})
-CLJ_FILES   := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*${EXT}))
+BOOT_SRC       := ${CURDIR}/bootstrap
+CLJ_SRC        := ${CURDIR}/src/clj
+CLJ_TEST       := ${CURDIR}/test/clj
+EXT            := .clje
+EXCLUDE_PPRINT := $(wildcard ${CLJ_SRC}/clojure/pprint/*${EXT})
+EXCLUDE_CORE   := $(addprefix ${CLJ_SRC}/clojure/,core${EXT} core_deftype${EXT} core_print${EXT})
+CLJ_EXCLUDE    := ${EXCLUDE_CORE} ${EXCLUDE_PPRINT}
+CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*${EXT}))
 
 CODE_PATH   := ${EBIN} ${CLJ_SRC}
 CLOJERLC    := bin/compile -o ${EBIN} -pa ${EBIN} -pa ${CLJ_SRC} -pa ${CLJ_TEST}

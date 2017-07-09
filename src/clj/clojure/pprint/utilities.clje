@@ -40,7 +40,7 @@
     (let [[result new-context] (apply func [context])]
       (if (not result)
         [acc new-context]
-      (recur new-context (conj acc result))))))
+        (recur new-context (conj acc result))))))
 
 (defn- consume-while [func initial-context]
   (loop [context initial-context
@@ -105,3 +105,11 @@ beginning of aseq"
 ;; Flush the pretty-print buffer without flushing the underlying stream
 (defprotocol PrettyFlush
   (ppflush [_]))
+
+(defn char-code
+  "Convert char to int"
+  [c]
+  (cond
+    (number? c) c
+    (and (string? c) (== (.length ^clojerl.String c) 1)) (first (unicode/characters_to_list.e c :utf8))
+    :else (throw "Argument to char must be a character or number")))

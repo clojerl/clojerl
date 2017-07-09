@@ -20,7 +20,7 @@
                        (apply max (count (str k)) (map #(count (str (get % k))) rows)))
                      ks)
              spacers (map #(apply str (repeat % "-")) widths)
-             fmts (map #(str "%" % "s") widths)
+             fmts (map #(str "~" % "s") widths)
              fmt-row (fn [leader divider trailer row]
                        (str leader
                             (apply str (interpose divider

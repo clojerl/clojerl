@@ -20,7 +20,7 @@
 (defn- use-method
   "Installs a function as a new method of multimethod associated with dispatch-value. "
   [^clojerl.MultiFn multifn dispatch-val func]
-  (. multifn addMethod dispatch-val func))
+  (clojerl.MultiFn/add_method.e multifn dispatch-val func))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementations of specific dispatch table entries
@@ -43,8 +43,10 @@
 ;;; :keyword, \char, or ""). The notable exception is #() which is special-cased.
 
 (def ^{:private true} reader-macros
-     {'quote "'", 'clojure.core/deref "@",
-      'var "#'", 'clojure.core/unquote "~"})
+  {'quote "'"
+   'var "#'"
+   'clojure.core/deref "@"
+   'clojure.core/unquote "~"})
 
 (defn- pprint-reader-macro [alis]
   (let [^String macro-char (reader-macros (first alis))]
@@ -124,18 +126,13 @@
       name))
 
 (defn- pprint-ideref [o]
-  (let [prefix (format "#<%s@%x%s: "
-                       (map-ref-type (.getSimpleName (class o)))
-                       (System/identityHashCode o)
-                       (if (and false #_(instance? clojure.lang.Agent o) ;; TODO: implement agents
-                                (agent-error o))
-                         " FAILED"
-                         ""))]
+  (let [prefix (str "#<" (map-ref-type (str (type o)))
+                    "@" (erlang/phash2.e o) ": ")]
     (pprint-logical-block  :prefix prefix :suffix ">"
                            (pprint-indent :block (-> (count prefix) (- 2) -))
                            (pprint-newline :linear)
                            (write-out (cond
-                                       (and (future? o) (not (future-done? o))) :pending
+                                        (and (future? o) (not (future-done? o))) :pending
                                        ;; (and (instance? clojure.lang.IPending o) (not (.isRealized ^clojure.lang.IPending o))) :not-delivered
                                        :else @o)))))
 
@@ -143,26 +140,25 @@
 
 (defn- pprint-simple-default [obj]
   (cond
-    (.isArray (class obj)) (pprint-array obj)
     (and *print-suppress-namespaces* (symbol? obj)) (print (name obj))
     :else (pr obj)))
-
 
 (defmulti
   simple-dispatch
   "The pretty print dispatch function for simple data structure format."
   {:added "1.2" :arglists '[[object]]}
-  class)
+  type)
 
-(use-method simple-dispatch clojerl.ISeq pprint-list)
-(use-method simple-dispatch clojerl.Vector pprint-vector)
-(use-method simple-dispatch clojerl.Map pprint-map)
-(use-method simple-dispatch clojerl.Set pprint-set)
-;; (use-method simple-dispatch clojure.lang.PersistentQueue pprint-pqueue)
-(use-method simple-dispatch clojerl.Var pprint-simple-default)
-(use-method simple-dispatch clojerl.IDeref pprint-ideref)
-(use-method simple-dispatch nil pr)
-(use-method simple-dispatch :default pprint-simple-default)
+(erl-on-load*
+ (use-method simple-dispatch clojerl.List pprint-list)
+ (use-method simple-dispatch clojerl.Vector pprint-vector)
+ (use-method simple-dispatch clojerl.Map pprint-map)
+ (use-method simple-dispatch clojerl.Set pprint-set)
+ ;; (use-method simple-dispatch clojure.lang.PersistentQueue pprint-pqueue)
+ (use-method simple-dispatch clojerl.Var pprint-simple-default)
+ (use-method simple-dispatch clojerl.IDeref pprint-ideref)
+ (use-method simple-dispatch clojerl.Nil pr)
+ (use-method simple-dispatch :default pprint-simple-default))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Dispatch for the code table
@@ -454,22 +450,24 @@
   code-dispatch
   "The pretty print dispatch function for pretty printing Clojure code."
   {:added "1.2" :arglists '[[object]]}
-  class)
+  type)
 
-(use-method code-dispatch clojerl.ISeq pprint-code-list)
-(use-method code-dispatch clojerl.Symbol pprint-code-symbol)
+(erl-on-load*
+ (use-method code-dispatch clojerl.List pprint-code-list)
+ (use-method code-dispatch clojerl.Symbol pprint-code-symbol)
 
-;; The following are all exact copies of simple-dispatch
-(use-method code-dispatch clojerl.Vector pprint-vector)
-(use-method code-dispatch clojerl.Map pprint-map)
-(use-method code-dispatch clojerl.Set pprint-set)
-;; (use-method code-dispatch clojure.lang.PersistentQueue pprint-pqueue)
-(use-method code-dispatch clojerl.IDeref pprint-ideref)
-(use-method code-dispatch nil pr)
-(use-method code-dispatch :default pprint-simple-default)
+ ;; The following are all exact copies of simple-dispatch
+ (use-method code-dispatch clojerl.Vector pprint-vector)
+ (use-method code-dispatch clojerl.Map pprint-map)
+ (use-method code-dispatch clojerl.Set pprint-set)
+ ;; (use-method code-dispatch clojure.lang.PersistentQueue pprint-pqueue)
+ (use-method code-dispatch clojerl.IDeref pprint-ideref)
+ (use-method code-dispatch clojerl.Nil pr)
+ (use-method code-dispatch :default pprint-simple-default))
 
-(set-pprint-dispatch simple-dispatch)
-
+;; TODO: This should be a root binding, but it's not available.
+(def ^:dynamic *print-pprint-dispatch* simple-dispatch)
+>>>>>>> 1fc3aab... [#237] Specify clojerl.List since hierarchies are not implemented yet
 
 ;;; For testing
 (comment
