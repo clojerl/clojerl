@@ -1962,8 +1962,7 @@
   return false or throw an exception."
   {:added "1.0"}
   ([x]
-   (throw "unimplemented atom")
-   #_(new clojure.lang.Atom x))
+   (new clojerl.Atom x))
   ([x & options] (setup-reference (atom x) options)))
 
 (defn swap!
@@ -1972,35 +1971,29 @@
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
   {:added "1.0"}
-  ([atom f]
-   (throw "unimplemented atom")
-   #_(.swap atom f))
-  ([atom f x]
-   (throw "unimplemented atom")
-   #_(.swap atom f x))
-  ([atom f x y]
-   (throw "unimplemented atom")
-   #_(.swap atom f x y))
-  ([atom f x y & args]
-   (throw "unimplemented atom")
-   #_(.swap atom f x y args)))
+  ([^clojerl.Atom atom f]
+   (.swap atom f))
+  ([^clojerl.Atom atom f x]
+   (.swap atom f x))
+  ([^clojerl.Atom atom f x y]
+   (.swap atom f x y))
+  ([^clojerl.Atom atom f x y & args]
+   (.swap atom f x y args)))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
   current value of the atom is identical to oldval. Returns true if
   set happened, else false"
   {:added "1.0"}
-  [atom oldval newval]
-  (throw "unimplemented atom")
-  #_(.compareAndSet atom oldval newval))
+  [^clojerl.Atom atom oldval newval]
+  (.compare_and_set atom oldval newval))
 
 (defn reset!
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
   {:added "1.0"}
-  [atom newval]
-  (throw "unimplemented atom")
-  #_(.reset atom newval))
+  [^clojerl.Atom atom newval]
+  (.reset atom newval))
 
 (defn set-validator!
   "Sets the validator-fn for a var/ref/agent/atom. validator-fn must be nil or a
