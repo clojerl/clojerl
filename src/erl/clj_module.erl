@@ -96,7 +96,7 @@ all_modules() ->
 
 -spec get_module(atom()) -> cerl:c_module().
 get_module(ModuleName) when is_atom(ModuleName) ->
-  to_module(get(?MODULE, ModuleName)).
+  to_module(clj_utils:ets_get(?MODULE, ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(binary(), module()) -> ok.
@@ -128,17 +128,17 @@ remove(Module) when is_atom(Module)->
 %% @end
 -spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
-  case get(?MODULE, ModuleName) of
+  case clj_utils:ets_get(?MODULE, ModuleName) of
     ?NIL ->
       fun ModuleName:Function/Arity;
     Module ->
       FA     = {Function, Arity},
-      case ets:lookup(Module#module.fake_funs, FA) of
-        [] ->
+      case clj_utils:ets_get(Module#module.fake_funs, FA) of
+        ?NIL ->
           Fun = build_fake_fun(Function, Arity, Module),
-          save(Module#module.fake_funs, {FA, Fun}),
+          clj_utils:ets_save(Module#module.fake_funs, {FA, Fun}),
           Fun;
-        [{_, Fun}] ->
+        {_, Fun} ->
           Fun
       end
   end.
@@ -215,14 +215,14 @@ fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
 -spec add_mappings(['clojerl.Var':type()], module() | clj_module()) ->
   clj_module().
 add_mappings(Mappings, ModuleName) when is_atom(ModuleName)  ->
-  add_mappings(Mappings, get(?MODULE, ModuleName));
+  add_mappings(Mappings, clj_utils:ets_get(?MODULE, ModuleName));
 add_mappings(Mappings, Module) ->
   AddFun = fun
              ({K, V}) ->
-               save(Module#module.mappings, {K, V});
+               clj_utils:ets_save(Module#module.mappings, {K, V});
              (V) ->
                K = clj_rt:name(V),
-               save(Module#module.mappings, {K, V})
+               clj_utils:ets_save(Module#module.mappings, {K, V})
            end,
   lists:foreach(AddFun, Mappings),
   Module.
@@ -230,21 +230,21 @@ add_mappings(Mappings, Module) ->
 -spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module() | module()) ->
   clj_module().
 add_attributes(Attrs, ModuleName) when is_atom(ModuleName)  ->
-  add_attributes(Attrs, get(?MODULE, ModuleName));
+  add_attributes(Attrs, clj_utils:ets_get(?MODULE, ModuleName));
 add_attributes([], Module) ->
   Module;
 add_attributes(Attrs, Module) ->
-  AddAttr = fun(E) -> save(Module#module.attrs, {E}) end,
+  AddAttr = fun(E) -> clj_utils:ets_save(Module#module.attrs, {E}) end,
   ok = lists:foreach(AddAttr, Attrs),
   Module.
 
 -spec add_exports([{atom(), non_neg_integer()}], clj_module() | module()) ->
   clj_module().
 add_exports(Exports, ModuleName) when is_atom(ModuleName)  ->
-  add_exports(Exports, get(?MODULE, ModuleName));
+  add_exports(Exports, clj_utils:ets_get(?MODULE, ModuleName));
 add_exports(Exports, Module) ->
   AddExport = fun(E) ->
-                  save(Module#module.exports, {E})
+                  clj_utils:ets_save(Module#module.exports, {E})
               end,
   ok = lists:foreach(AddExport, Exports),
   Module.
@@ -252,12 +252,12 @@ add_exports(Exports, Module) ->
 -spec add_functions([{cerl:cerl(), cerl:cerl()}], module() | clj_module()) ->
   clj_module().
 add_functions(Funs, ModuleName) when is_atom(ModuleName)  ->
-  add_functions(Funs, get(?MODULE, ModuleName));
+  add_functions(Funs, clj_utils:ets_get(?MODULE, ModuleName));
 add_functions(Funs, Module) ->
   SaveFun = fun(F) ->
                 FunctionId  = function_id(F),
                 ok          = delete_fake_fun(FunctionId, Module),
-                save(Module#module.funs, {FunctionId, F})
+                clj_utils:ets_save(Module#module.funs, {FunctionId, F})
             end,
   lists:foreach(SaveFun, Funs),
   Module.
@@ -265,7 +265,7 @@ add_functions(Funs, Module) ->
 -spec remove_all_functions(module() | clj_module()) ->
   clj_module().
 remove_all_functions(ModuleName) when is_atom(ModuleName)  ->
-  remove_all_functions(get(?MODULE, ModuleName));
+  remove_all_functions(clj_utils:ets_get(?MODULE, ModuleName));
 remove_all_functions(Module) ->
   true = ets:delete_all_objects(Module#module.funs),
   true = ets:delete_all_objects(Module#module.exports),
@@ -274,12 +274,12 @@ remove_all_functions(Module) ->
 -spec add_on_load(cerl:cerl(), module() | clj_module()) ->
   clj_module().
 add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
-  case get(?MODULE, ModuleName) of
+  case clj_utils:ets_get(?MODULE, ModuleName) of
     undefined -> error({not_found, ModuleName});
     Module    -> add_on_load(Expr, Module)
   end;
 add_on_load(Expr, Module) ->
-  save(Module#module.on_load, {Expr, Expr}),
+  clj_utils:ets_save(Module#module.on_load, {Expr, Expr}),
   Module.
 
 -spec is_clojure(module()) -> boolean().
@@ -322,17 +322,17 @@ init([]) ->
   {ok, #{loaded_modules => TabId}}.
 
 handle_call({load, Module}, {Pid, _}, #{loaded_modules := TabId} = State) ->
-  Module = save(?MODULE, Module),
-  case get(TabId, Pid) of
+  Module = clj_utils:ets_save(?MODULE, Module),
+  case clj_utils:ets_get(TabId, Pid) of
     ?NIL ->
-      save(TabId, {Pid, [Module]});
+      clj_utils:ets_save(TabId, {Pid, [Module]});
     {Pid, Modules}  ->
-      save(TabId, {Pid, [Module | Modules]})
+      clj_utils:ets_save(TabId, {Pid, [Module | Modules]})
   end,
 
   {reply, ok, State};
 handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
-  Modules = case get(TabId, Pid) of
+  Modules = case clj_utils:ets_get(TabId, Pid) of
               ?NIL   -> [];
               {Pid, Mods} -> Mods
             end,
@@ -343,7 +343,7 @@ handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
 
   {reply, Modules, State};
 handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
-  Modules = case get(TabId, Pid) of
+  Modules = case clj_utils:ets_get(TabId, Pid) of
               ?NIL   -> [];
               {Pid, Mods} -> Mods
             end,
@@ -352,10 +352,10 @@ handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
 
 handle_cast({remove, Pid, ModuleName}, #{loaded_modules := TabId} = State) ->
   true = ets:delete(?MODULE, ModuleName),
-  case get(TabId, Pid) of
+  case clj_utils:ets_get(TabId, Pid) of
     {Pid, Modules} ->
       NewModules = [M || M <- Modules, M#module.name =/= ModuleName],
-      save(TabId, {Pid, NewModules});
+      clj_utils:ets_save(TabId, {Pid, NewModules});
     ?NIL   -> ok
   end,
   {noreply, State}.
@@ -406,7 +406,7 @@ is_loaded(Name) ->
 %% @private
 -spec build_fake_fun(atom(), integer(), clj_module()) -> function().
 build_fake_fun(Function, Arity, Module) ->
-  {_, FunctionAst} = get(Module#module.funs, {Function, Arity}),
+  {_, FunctionAst} = clj_utils:ets_get(Module#module.funs, {Function, Arity}),
 
   {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),
   Int = erlang:unique_integer([positive]),
@@ -432,7 +432,7 @@ build_fake_fun(Function, Arity, Module) ->
     ok = 'clojerl.Var':pop_bindings()
   end,
 
-  save(Module#module.fake_modules, {FakeModuleName}),
+  clj_utils:ets_save(Module#module.fake_modules, {FakeModuleName}),
 
   erlang:make_fun(FakeModuleName, Function, Arity).
 
@@ -553,20 +553,6 @@ on_load_function(OnLoadTable) ->
   SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
   Body   = lists:foldl(SeqFun, Head, Tail),
   cerl:c_fun([], cerl:c_seq(Body, cerl:c_atom(ok))).
-
--spec get(atom() | ets:tid(), any()) -> any().
-get(?NIL, Id) -> %% If there is no table then nothing will be found.
-  throw({no_table, Id});
-get(Table, Id) ->
-  case ets:lookup(Table, Id) of
-    []      -> ?NIL;
-    [Value] -> Value
-  end.
-
--spec save(atom() | ets:tid(), term()) -> term().
-save(Table, Value) ->
-  true = ets:insert(Table, Value),
-  Value.
 
 -spec new(string(), atom() | cerl:c_module()) -> clj_module().
 new(Path, Name) when is_atom(Name), is_list(Path) ->

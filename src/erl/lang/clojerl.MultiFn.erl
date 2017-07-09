@@ -43,9 +43,9 @@ get_method(Name, Value) ->
 
 -spec get_method(binary(), any(), any(), map() | ?NIL) -> any().
 get_method(Name, Value, Default, _Hierarchy) ->
-  case get(?MODULE, {Name, 'clojerl.IHash':hash(Value)}) of
+  case clj_utils:ets_get(?MODULE, {Name, 'clojerl.IHash':hash(Value)}) of
     ?NIL ->
-      case get(?MODULE, {Name, 'clojerl.IHash':hash(Default)}) of
+      case clj_utils:ets_get(?MODULE, {Name, 'clojerl.IHash':hash(Default)}) of
         ?NIL -> ?NIL;
         Method -> Method#multifn.method
       end;
@@ -156,19 +156,7 @@ new_method(Name, Value, Hash, Method) ->
                     , value  = Value
                     , method = Method
                     },
-  save(?METHODS, MultiFn).
-
--spec save(module() | ets:tid(), term()) -> term().
-save(Table, Value) ->
-  true = ets:insert(Table, Value),
-  Value.
-
--spec get(module() | ets:tid(), term()) -> term().
-get(Table, Id) ->
-  case ets:lookup(Table, Id) of
-    [] -> ?NIL;
-    [Value] -> Value
-  end.
+  clj_utils:ets_save(?METHODS, MultiFn).
 
 -spec by_name(binary()) -> multifn().
 by_name(Name) ->
