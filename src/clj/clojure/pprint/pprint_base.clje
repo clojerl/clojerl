@@ -134,11 +134,11 @@ radix specifier is in the form #XXr where XX is the decimal value of *print-base
 (defmacro ^{:private true} binding-map [amap & body]
   (let []
     `(do
-       (. clojerl.Var (push_bindings ~amap))
+       (clojerl.Var/push_bindings.e ~amap)
        (try
-        ~@body
-        (finally
-         (. clojerl.Var (pop_bindings)))))))
+         ~@body
+         (finally
+           (clojerl.Var/pop_bindings.e))))))
 
 (defn- table-ize [t m]
   (apply hash-map (mapcat

@@ -17,10 +17,10 @@
 
 (in-ns 'clojure.pprint)
 
-(defn- use-method
+(defmacro use-method
   "Installs a function as a new method of multimethod associated with dispatch-value. "
-  [^clojerl.MultiFn multifn dispatch-val func]
-  (clojerl.MultiFn/add_method.e multifn dispatch-val func))
+  [multifn dispatch-val func]
+  `(clojerl.MultiFn/add_method.e (var ~multifn) ~dispatch-val (var ~func)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementations of specific dispatch table entries
@@ -467,7 +467,6 @@
 
 ;; TODO: This should be a root binding, but it's not available.
 (def ^:dynamic *print-pprint-dispatch* simple-dispatch)
->>>>>>> 1fc3aab... [#237] Specify clojerl.List since hierarchies are not implemented yet
 
 ;;; For testing
 (comment

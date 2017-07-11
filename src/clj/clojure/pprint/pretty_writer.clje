@@ -43,7 +43,7 @@
 (defmacro ^{:private true}
   setf [sym new-val]
   "Set the value of the field SYM to NEW-VAL"
-  `(alter @~'this assoc ~sym ~new-val))
+  `(swap! @~'this assoc ~sym ~new-val))
 
 (defmacro ^{:private true}
   write-to-base
@@ -321,7 +321,7 @@
           (do
             (write-white-space this)
             (write-to-base l)))
-        (write-to-base (int \newline))
+        (write-to-base \newline)
         (doseq [^String l (next (butlast lines))]
           (write-to-base l)
           (write-to-base ^String (pp-newline))
@@ -384,7 +384,7 @@
 (defn- pretty-writer [writer max-columns miser-width]
   (let [lb (->logical-block nil nil (atom 0) (atom 0) (atom false) (atom false)
                             nil nil nil nil)
-        fields (ref {:pretty-writer true
+        fields (atom {:pretty-writer true
                      :base (column-writer writer max-columns)
                      :logical-blocks lb
                      :sections nil
