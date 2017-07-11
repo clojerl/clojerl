@@ -11,6 +11,8 @@
 -export([ count/1
         , seq/1
         , str/1
+        , hash/1
+        , complete_coverage/1
         ]).
 
 -spec all() -> [atom()].
@@ -44,5 +46,23 @@ seq(_Config) ->
   BitString = <<1, 2, 3, 1:1>>,
   4 = clj_rt:count(clj_rt:seq(BitString)),
   [1, 2, 3, <<1:1>>] = clj_rt:seq(BitString),
+
+  ?NIL = 'clojerl.BitString':seq(<<>>),
+
+  [1, 2, 3, <<1:1>>] = clj_rt:to_list(<<1, 2, 3, 1:1>>),
+
+  {comments, ""}.
+
+hash(_Config) ->
+  BitString = <<1, 2, 3, 1:1>>,
+
+  Hash = 'clojerl.IHash':hash(BitString),
+  Hash = 'clojerl.IHash':hash(BitString),
+
+  {comments, ""}.
+
+-spec complete_coverage(config()) -> result().
+complete_coverage(_Config) ->
+  ?NIL = 'clojerl.BitString':'_'(<<>>),
 
   {comments, ""}.
