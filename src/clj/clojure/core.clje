@@ -6423,6 +6423,6 @@
        (let [start#   (erlang/monotonic_time.e :nano_seconds)
              ret#     (dotimes [_# ~iterations] ~expr)
              end#     (erlang/monotonic_time.e :nano_seconds)
-             elapsed# (/ (- end# start#) 1000000)]
+             elapsed# (int (/ (- end# start#) 1000000))]
          (~print-fn (str ~bs-str ", " ~expr-str ", "
                       ~iterations " runs, " elapsed# " msecs"))))))
