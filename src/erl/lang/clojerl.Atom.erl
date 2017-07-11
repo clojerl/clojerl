@@ -66,7 +66,10 @@ reset(#?TYPE{name = ?M, data = {Id, Initial}}, Value) ->
 
 -spec compare_and_set(type(), any(), any()) -> any().
 compare_and_set(#?TYPE{name = ?M, data = {Id, _Initial}}, Old, New) ->
-  do_compare_and_set(Id, Old, New).
+  case do_compare_and_set(Id, Old, New) of
+    {ok, New} -> true;
+    not_set   -> false
+  end.
 
 %%------------------------------------------------------------------------------
 %% Internal
@@ -113,7 +116,9 @@ deref(#?TYPE{name = ?M, data = {Id, Initial}} = _Atom) ->
 equiv( #?TYPE{name = ?M, data = {Id1, _}}
      , #?TYPE{name = ?M, data = {Id2, _}}
      ) ->
-  Id1 =:= Id2.
+  Id1 =:= Id2;
+equiv(_, _) ->
+  false.
 
 hash(#?TYPE{name = ?M, data = {ID, _}}) ->
   erlang:phash2(ID).
@@ -145,6 +150,7 @@ handle_call({compare_and_set, AtomId, Old, New}, _From, State) ->
               {ok, New}
           end,
   {reply, Reply, State}.
+
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
