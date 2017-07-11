@@ -1,8 +1,8 @@
 -module('clojerl.Namespace').
--behaviour(gen_server).
 
 -include("clojerl.hrl").
 
+-behaviour(gen_server).
 -behavior('clojerl.IHash').
 -behavior('clojerl.Stringable').
 
@@ -66,7 +66,7 @@
           , aliases  => ets:new(aliases, Opts)
           },
   Ns   = #?TYPE{data = clj_rt:name(Name), info = Info},
-  save(?MODULE, Ns).
+  clj_utils:ets_save(?MODULE, Ns).
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -105,7 +105,7 @@ all() -> ets:tab2list(?MODULE).
 %%      have a 'mappings' attribute, then nil is returned.
 -spec find('clojerl.Symbol':type()) -> type() | ?NIL.
 find(Name) ->
-  case get(?MODULE, clj_rt:str(Name)) of
+  case clj_utils:ets_get(?MODULE, clj_rt:str(Name)) of
     ?NIL -> gen_server:call(?MODULE, {load, Name});
     Ns -> Ns
   end.
@@ -261,7 +261,7 @@ remove_alias(AliasSym, Ns) ->
 -spec mapping('clojerl.Symbol':type(), type()) ->
   'clojerl.Var':type() | ?NIL.
 mapping(Symbol, #?TYPE{name = ?M, info = #{mappings := Mappings}}) ->
-  case get(Mappings, clj_rt:str(Symbol)) of
+  case clj_utils:ets_get(Mappings, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
     ?NIL -> ?NIL
   end.
@@ -269,7 +269,7 @@ mapping(Symbol, #?TYPE{name = ?M, info = #{mappings := Mappings}}) ->
 -spec alias('clojerl.Symbol':type(), type()) ->
   'clojerl.Symbol':type() | ?NIL.
 alias(Symbol, #?TYPE{name = ?M, info = #{aliases := Aliases}}) ->
-  case get(Aliases, clj_rt:str(Symbol)) of
+  case clj_utils:ets_get(Aliases, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
     ?NIL -> ?NIL
   end.
@@ -290,7 +290,7 @@ handle_call({new, Name}, _From, State) ->
 handle_call({load, Name}, _Form, State) ->
   Ns = case load(Name) of
          ?NIL -> ?NIL;
-         X -> save(?MODULE, X)
+         X -> clj_utils:ets_save(?MODULE, X)
        end,
   {reply, Ns, State};
 handle_call( { update_var
@@ -300,7 +300,7 @@ handle_call( { update_var
            , _Form
            , State
            ) ->
-  save(Mappings, {clj_rt:name(Var), Var}),
+  clj_utils:ets_save(Mappings, {clj_rt:name(Var), Var}),
   {reply, Ns, State};
 handle_call( { intern
              , Ns = #?TYPE{name = ?M, info = #{mappings := Mappings}}
@@ -310,7 +310,7 @@ handle_call( { intern
            , _From
            , State
            ) ->
-  save(Mappings, {clj_rt:name(Symbol), Var}),
+  clj_utils:ets_save(Mappings, {clj_rt:name(Symbol), Var}),
   {reply, Ns, State};
 handle_call( { unmap
              , Ns = #?TYPE{name = ?M, info = #{mappings := Mappings}}
@@ -319,7 +319,7 @@ handle_call( { unmap
            , _From
            , State
            ) ->
-  true = delete(Mappings, clj_rt:name(Symbol)),
+  true = ets:delete(Mappings, clj_rt:name(Symbol)),
   {reply, Ns, State};
 handle_call( { add_alias
              , Ns = #?TYPE{name = ?M, info = #{aliases := Aliases}}
@@ -329,7 +329,7 @@ handle_call( { add_alias
            , _From
            , State
            ) ->
-  save(Aliases, {clj_rt:name(Symbol), AliasedNs}),
+  clj_utils:ets_save(Aliases, {clj_rt:name(Symbol), AliasedNs}),
   {reply, Ns, State};
 handle_call( { remove_alias
              , Ns = #?TYPE{name = ?M, info = #{aliases := Aliases}}
@@ -338,7 +338,7 @@ handle_call( { remove_alias
            , _From
            , State
            ) ->
-  true = delete(Aliases, clj_rt:name(Symbol)),
+  true = ets:delete(Aliases, clj_rt:name(Symbol)),
   {reply, Ns, State};
 handle_call({remove, Name}, _From, State) ->
   Result = true =:= ets:delete(?MODULE, clj_rt:name(Name)),
@@ -359,22 +359,6 @@ code_change(_Msg, _From, State) ->
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
-
--spec get(atom() | ets:tid(), term()) -> term().
-get(Table, Id) ->
-  case ets:lookup(Table, Id) of
-    [] -> ?NIL;
-    [Value] -> Value
-  end.
-
--spec save(ets:tid() | atom(), term()) -> term().
-save(Table, Value) ->
-  true = ets:insert(Table, Value),
-  Value.
-
--spec delete(ets:tid(), term()) -> true.
-delete(Table, Key) ->
-  ets:delete(Table, Key).
 
 -spec load('clojerl.Symbol':type()) -> type() | ?NIL.
 load(Name) ->
@@ -398,7 +382,7 @@ load(Name) ->
       #?TYPE{info = #{mappings := MappingsId}} = Ns,
 
       SaveFun = fun(K, V) ->
-                    save(MappingsId, {K, V})
+                    clj_utils:ets_save(MappingsId, {K, V})
                 end,
       maps:map(SaveFun, Mappings),
       Ns

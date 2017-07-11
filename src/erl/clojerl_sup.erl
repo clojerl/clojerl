@@ -23,5 +23,8 @@ init(_Args) ->
              , #{ id    => 'clojerl.MultiFn'
                 , start => {'clojerl.MultiFn', start_link, []}
                 }
+             , #{ id    => 'clojerl.Atom'
+                , start => {'clojerl.Atom', start_link, []}
+                }
              ],
   {ok, {SupFlags, Specs}}.

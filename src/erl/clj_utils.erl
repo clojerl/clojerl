@@ -47,6 +47,9 @@
         , floor/1
         , ceil/1
         , signum/1
+
+        , ets_get/2
+        , ets_save/2
         ]).
 
 -define(CORE_CHUNK, "Core").
@@ -482,3 +485,15 @@ ceil(X) ->
 -spec signum(number()) -> number().
 signum(X) when X < 0 -> -1;
 signum(X) when X >= 0 -> 1.
+
+-spec ets_get(atom() | ets:tid(), term()) -> term().
+ets_get(Table, Id) ->
+  case ets:lookup(Table, Id) of
+    [] -> ?NIL;
+    [Value] -> Value
+  end.
+
+-spec ets_save(ets:tid() | atom(), term()) -> term().
+ets_save(Table, Value) ->
+  true = ets:insert(Table, Value),
+  Value.

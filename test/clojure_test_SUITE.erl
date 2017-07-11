@@ -55,7 +55,7 @@ run(_Config) ->
 
   0 = clj_rt:get(Result, fail),
   %% These are tests that fail because of atoms not being implemented
-  3 = clj_rt:get(Result, error),
+  1 = clj_rt:get(Result, error),
 
   {comments, ""}.
 
