@@ -1383,7 +1383,7 @@
            (defn ~(with-meta mm-name m)
              [& args#]
              (let [val# (apply ~dispatch-fn args#)
-                   f#    (clojerl.MultiFn/get_method.e ~(name mm-name) val# ~default ~hierarchy)]
+                   f#   (clojerl.MultiFn/get_method.e ~mm-name val# ~default ~hierarchy)]
                (when (nil? f#)
                  (throw (str "No multimethod defined for dispatch value " val#
                              " in " '~mm-name
@@ -1393,12 +1393,12 @@
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
-  [multifn dispatch-val & fn-tail]
-  (let [fn-name (symbol (str (name multifn) "_method_" dispatch-val))]
+  [^clojerl.Symbol multifn dispatch-val & fn-tail]
+  (let [fn-name (gensym (str multifn "_method_" dispatch-val))]
     `(do
        (defn- ~fn-name ~@fn-tail)
        (erl-on-load*
-        (clojerl.MultiFn/add_method.e ~(name multifn)
+        (clojerl.MultiFn/add_method.e (var ~multifn)
                                       ~dispatch-val
                                       (var ~fn-name))))))
 
@@ -1406,38 +1406,39 @@
   "Removes all of the methods of multimethod."
   {:added "1.2"}
   [^clojerl.Var multifn]
-  (clojerl.MultiFn/remove_all.e (name multifn)))
+  (clojerl.MultiFn/remove_all.e multifn)
+  multifn)
 
 (defn remove-method
   "Removes the method of multimethod associated with dispatch-value."
   {:added "1.0"}
-  [^clojerl.MultiFn multifn dispatch-val]
+  [^clojerl.Var multifn dispatch-val]
   (clojerl.MultiFn/remove_method.e multifn dispatch-val))
 
 (defn prefer-method
   "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y
    when there is a conflict"
   {:added "1.0"}
-  [^clojerl.MultiFn multifn dispatch-val-x dispatch-val-y]
+  [^clojerl.Var multifn dispatch-val-x dispatch-val-y]
   (throw "unimplemented hierarchy"))
 
 (defn methods
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
   {:added "1.0"}
-  [^clojerl.MultiFn multifn]
+  [^clojerl.Var multifn]
   (clojerl.MultiFn/get_method_table.e multifn))
 
 (defn get-method
   "Given a multimethod and a dispatch value, returns the dispatch fn
   that would apply to that value, or nil if none apply and no default"
   {:added "1.0"}
-  [^clojerl.MultiFn multifn dispatch-val]
+  [^clojerl.Var multifn dispatch-val]
   (clojerl.MultiFn/get_method.e multifn dispatch-val))
 
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   {:added "1.0"}
-  [^clojerl.MultiFn multifn]
+  [^clojerl.Var multifn]
   (throw "unimplemented hierarchy"))
 
 ;;;;;;;;; var stuff
@@ -5080,10 +5081,9 @@
   [x] (satisfies? clojerl.IFn x))
 
 (defn fn?
-  "Returns true if x implements Fn, i.e. is an object created via fn."
+  "Returns true if x is an Erlang function."
   {:added "1.0"}
   [x] (erlang/is_function.e x))
-
 
 (defn associative?
  "Returns true if coll implements Associative"

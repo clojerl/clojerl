@@ -28,17 +28,17 @@ end_per_suite(Config) -> Config.
 
 -spec init_per_testcase(atom(), config()) -> config().
 init_per_testcase(_, Config) ->
-  ok = 'clojerl.MultiFn':add_method(<<"test-method">>, default, default_method),
+  ok = 'clojerl.MultiFn':add_method(method_var(), default, default_method),
 
   HelloSym     = clj_rt:symbol(<<"hello">>),
   HelloSymMeta = clj_rt:with_meta(HelloSym, #{private => true}),
-  ok = 'clojerl.MultiFn':add_method( <<"test-method">>
+  ok = 'clojerl.MultiFn':add_method( method_var()
                                    , HelloSymMeta
                                    , symbol_method
                                    ),
 
   Vector = clj_rt:vector([default, HelloSym]),
-  ok = 'clojerl.MultiFn':add_method( <<"test-method">>
+  ok = 'clojerl.MultiFn':add_method( method_var()
                                    , Vector
                                    , vector_method
                                    ),
@@ -46,8 +46,14 @@ init_per_testcase(_, Config) ->
 
 -spec end_per_testcase(atom(), config()) -> config().
 end_per_testcase(_, Config) ->
-  'clojerl.MultiFn':remove_all(<<"test-method">>),
+  'clojerl.MultiFn':remove_all(method_var()),
   Config.
+
+-spec method_var() -> 'clojerl.Var':type().
+method_var() ->
+  'clojerl.Var':?CONSTRUCTOR( <<"clojerl_MultiFn_SUITE">>
+                            , <<"test-method">>
+                            ).
 
 %%------------------------------------------------------------------------------
 %% Test Cases
@@ -56,43 +62,44 @@ end_per_testcase(_, Config) ->
 -spec get_method(config()) -> result().
 get_method(_Config) ->
   ct:comment("Method with keyword value"),
-  default_method = 'clojerl.MultiFn':get_method(<<"test-method">>, default),
+  default_method = 'clojerl.MultiFn':get_method(method_var(), default),
 
   ct:comment("Method with symbol value"),
   HelloSym      = clj_rt:symbol(<<"hello">>),
   HelloSymMeta  = clj_rt:with_meta(HelloSym, #{private => true}),
-  symbol_method = 'clojerl.MultiFn':get_method(<<"test-method">>, HelloSymMeta),
-  symbol_method = 'clojerl.MultiFn':get_method(<<"test-method">>, HelloSym),
+  symbol_method = 'clojerl.MultiFn':get_method(method_var(), HelloSymMeta),
+  symbol_method = 'clojerl.MultiFn':get_method(method_var(), HelloSym),
 
   ct:comment("Method with vector value"),
   Vector      = clj_rt:vector([default, HelloSym]),
   VectorMeta  = clj_rt:with_meta(Vector, #{some => thing}),
   Vector2     = clj_rt:vector([default, HelloSymMeta]),
   VectorMeta2 = clj_rt:with_meta(Vector2, #{some => thing}),
-  vector_method = 'clojerl.MultiFn':get_method(<<"test-method">>, Vector),
-  vector_method = 'clojerl.MultiFn':get_method(<<"test-method">>, VectorMeta),
+  vector_method = 'clojerl.MultiFn':get_method(method_var(), Vector),
+  vector_method = 'clojerl.MultiFn':get_method(method_var(), VectorMeta),
 
   ct:comment("When elements differ in metadata the method should be found"),
-  true = vector_method =:= 'clojerl.MultiFn':get_method( <<"test-method">>
-                                                        , Vector2
-                                                        ),
-  true = vector_method =:= 'clojerl.MultiFn':get_method( <<"test-method">>
-                                                        , VectorMeta2
-                                                        ),
+  true = vector_method =:= 'clojerl.MultiFn':get_method( method_var()
+                                                       , Vector2
+                                                       ),
+  true = vector_method =:= 'clojerl.MultiFn':get_method( method_var()
+                                                       , VectorMeta2
+                                                       ),
 
   ct:comment("Some other value will return the default implementation"),
   default_method =
-    'clojerl.MultiFn':get_method(<<"test-method">>, hello, default, ?NIL),
+    'clojerl.MultiFn':get_method(method_var(), hello, default, ?NIL),
 
 
   ct:comment("Try to get a non-existent method"),
-  ?NIL = 'clojerl.MultiFn':get_method( <<"doesn't-exists">>, whatever),
+  AnotherVar = 'clojerl.Var':?CONSTRUCTOR(<<"ns">>, <<"doesn't-exists">>),
+  ?NIL = 'clojerl.MultiFn':get_method(AnotherVar, whatever),
 
   {comments, ""}.
 
 -spec get_method_table(config()) -> result().
 get_method_table(_Config) ->
-  MethodTable = 'clojerl.MultiFn':get_method_table(<<"test-method">>),
+  MethodTable = 'clojerl.MultiFn':get_method_table(method_var()),
 
   HelloSym    = clj_rt:symbol(<<"hello">>),
   Vector      = clj_rt:vector([default, HelloSym]),
@@ -110,12 +117,12 @@ get_method_table(_Config) ->
 
 -spec remove_method(config()) -> result().
 remove_method(_Config) ->
-  MethodTable = 'clojerl.MultiFn':get_method_table(<<"test-method">>),
+  MethodTable = 'clojerl.MultiFn':get_method_table(method_var()),
   3 = maps:size(MethodTable),
 
-  true = 'clojerl.MultiFn':remove_method(<<"test-method">>, default),
+  true = 'clojerl.MultiFn':remove_method(method_var(), default),
 
-  MethodTableAfter = 'clojerl.MultiFn':get_method_table(<<"test-method">>),
+  MethodTableAfter = 'clojerl.MultiFn':get_method_table(method_var()),
   2 = maps:size(MethodTableAfter),
   MethodTableAfter = maps:remove(default, MethodTable),
 
@@ -143,7 +150,7 @@ ets_heir(_Config) ->
 
   ct:comment("After killing the owner the contents should be there"),
   ok = gen_server:stop(GenServerName),
-  MethodTable = 'clojerl.MultiFn':get_method_table(<<"test-method">>),
+  MethodTable = 'clojerl.MultiFn':get_method_table(method_var()),
   3 = maps:size(MethodTable),
 
   ct:comment("Heir should be the same"),
