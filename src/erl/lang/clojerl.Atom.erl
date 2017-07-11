@@ -138,7 +138,6 @@ init([]) ->
 handle_call({compare_and_set, AtomId, Old, New}, _From, State) ->
   Reply = case clj_utils:ets_get(?MODULE, AtomId) of
             {AtomId, Current} when Current =/= Old ->
-              erlang:display({AtomId, Current, Old}),
               not_set;
             _ ->
               %% Otherwise it wasn't even there or it was the same
