@@ -539,11 +539,10 @@ maybe_on_load(OnLoadTable, Name, Exports0, Attrs0, Defs0) ->
       Fun    = on_load_function(OnLoadTable),
       Def    = {FName, Fun},
 
-      Exports1 = [FName | Exports0],
       Attrs1   = lists:usort([Attr | Attrs0]),
       Defs1    = [Def  | Defs0],
 
-      cerl:c_module(Name, Exports1, Attrs1, Defs1)
+      cerl:c_module(Name, Exports0, Attrs1, Defs1)
   end.
 
 %% @private
