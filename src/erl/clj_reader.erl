@@ -566,14 +566,16 @@ resolve_symbol(Symbol) ->
           NameSym   = 'clojerl.Namespace':name(CurrentNs),
           Namespace = clj_rt:name(NameSym),
           Name      = clj_rt:name(Symbol),
-          clj_rt:symbol(Namespace, Name);
+          Meta      = clj_rt:meta(Symbol),
+          clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta);
         _ ->
           Symbol
       end;
     Var ->
       Namespace = clj_rt:namespace(Var),
       Name      = clj_rt:name(Var),
-      clj_rt:symbol(Namespace, Name)
+      Meta      = clj_rt:meta(Symbol),
+      clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta)
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type()) -> any().
@@ -631,8 +633,9 @@ is_unquote(Form) ->
 
 is_unquote_splicing(Form) ->
   clj_rt:'seq?'(Form) andalso
-    clj_rt:first(Form) == clj_rt:symbol(<<"clojure.core">>,
-                                            <<"unquote-splicing">>).
+    clj_rt:first(Form) == clj_rt:symbol( <<"clojure.core">>
+                                       , <<"unquote-splicing">>
+                                       ).
 
 is_literal(Form) ->
   clj_rt:'keyword?'(Form)
