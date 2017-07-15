@@ -78,13 +78,25 @@ create_with_assoc(KeyValues0) ->
   KeyValues2 = lists:foldl(fun build_from_proplist/2, [], KeyValues1),
   ?CONSTRUCTOR(KeyValues2).
 
--spec create_with_assoc(any(), {key | value, list()}) -> [{any(), any()}].
+-spec create_with_assoc(any(), {key | value, list()}) -> {key | value, list()}.
 create_with_assoc(Key, {key, KeyValues}) ->
   {value, [Key | KeyValues]};
-create_with_assoc(Value, {value, [Key | KeyValues]}) ->
-  case lists:keyfind(Key, 1, KeyValues) of
-    false  -> {key, [{Key, Value} | KeyValues]};
-    {K, _} -> {key, lists:keyreplace(Key, 1, KeyValues, {K, Value})}
+create_with_assoc(Value, {value, [Key | KeyValues0]}) ->
+  KeyValues1 = try replace_key_value(Key, Value, KeyValues0)
+               catch throw:notfound -> [{Key, Value} | KeyValues0]
+               end,
+  {key, KeyValues1}.
+
+-spec replace_key_value(any(), any(), [{any(), any()}]) ->
+  [{any(), any()}].
+replace_key_value(_Key, _Value, []) ->
+  throw(notfound);
+replace_key_value(Key, Value, [{K, V} | KeyValues]) ->
+  case clj_rt:equiv(K, Key) of
+    true ->
+      [{K, Value} | KeyValues];
+    false ->
+      [{K, V} | replace_key_value(Key, Value, KeyValues)]
   end.
 
 -spec build_from_proplist(any(), list()) -> list().
@@ -99,7 +111,8 @@ to_erl_map(#?TYPE{name = ?M, data = TupleMap}) ->
                 (Value, {{Key}, MapAcc}) ->
                   {none, MapAcc#{Key => Value}}
               end,
-  lists:foldl(ErlMapFun, {none, #{}}, tuple_to_list(TupleMap)).
+  {_, Map} = lists:foldl(ErlMapFun, {none, #{}}, tuple_to_list(TupleMap)),
+  Map.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -123,7 +136,7 @@ entry_at(#?TYPE{name = ?M, data = TupleMap}, Key) ->
 assoc(#?TYPE{name = ?M, data = TupleMap0} = M, Key, Value) ->
   case index_of(TupleMap0, Key) of
     notfound ->
-      Count   = tuple_size(TupleMap0) / 2,
+      Count   = trunc(tuple_size(TupleMap0) / 2),
       ListMap = tuple_to_list(TupleMap0),
       case Count + 1 > ?HASHTABLE_THRESHOLD of
         true ->
@@ -140,14 +153,28 @@ assoc(#?TYPE{name = ?M, data = TupleMap0} = M, Key, Value) ->
 %% clojerl.Counted
 
 count(#?TYPE{name = ?M, data = TupleMap}) ->
-  tuple_size(TupleMap) / 2.
+  trunc(tuple_size(TupleMap) / 2).
 
 %% clojerl.IEquiv
 
 equiv( #?TYPE{name = ?M, data = TupleMapX}
      , #?TYPE{name = ?M, data = TupleMapY}
      ) ->
-  clj_rt:equiv(TupleMapX, TupleMapY);
+  Fun = fun
+          Fun([KeyX, ValX | Rest]) ->
+            case index_of(TupleMapY, KeyX) of
+              notfound -> false;
+              Index ->
+                ValY = element(Index + 1, TupleMapY),
+                case clj_rt:equiv(ValX, ValY) of
+                  false -> false;
+                  true  -> Fun(Rest)
+                end
+            end;
+          Fun([]) -> true
+        end,
+  tuple_size(TupleMapX) =:= tuple_size(TupleMapY)
+    andalso Fun(tuple_to_list(TupleMapX));
 equiv(#?TYPE{name = ?M, data = TupleMap}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
@@ -156,9 +183,10 @@ equiv(#?TYPE{name = ?M, data = TupleMap}, Y) ->
                 case clj_rt:equiv(Val, clj_rt:get(Y, Key)) of
                   false -> false;
                   true  -> Fun(Rest)
-                end
+                end;
+              Fun([]) -> true
             end,
-      tuple_size(TupleMap) / 2 =:= clj_rt:count(Y)
+      trunc(tuple_size(TupleMap) / 2) =:= clj_rt:count(Y)
         andalso Fun(tuple_to_list(TupleMap));
     false -> false
   end.
@@ -170,7 +198,7 @@ apply(#?TYPE{name = ?M} = M, [Key]) ->
 apply(#?TYPE{name = ?M, data = TupleMap}, [Key, NotFound]) ->
   case index_of(TupleMap, Key) of
     notfound -> NotFound;
-     Index   -> erlang:element(TupleMap, Index + 1)
+     Index   -> erlang:element(Index + 1, TupleMap)
   end;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -211,7 +239,7 @@ get(#?TYPE{name = ?M} = Map, Key) ->
 get(#?TYPE{name = ?M, data = TupleMap}, Key, NotFound) ->
   case index_of(TupleMap, Key) of
     notfound -> NotFound;
-    Index    -> erlang:element(TupleMap, Index + 1)
+    Index    -> erlang:element(Index + 1, TupleMap)
   end.
 
 %% clojerl.IMap
@@ -294,10 +322,10 @@ do_str([K, V | Rest], KeyValueStrs0) ->
 
 -spec index_of(tuple(), any()) -> pos_integer() | notfound.
 index_of(TupleMap, Key) ->
-  Fun = fun(Tuple, Pos, Acc) ->
-            K = element(Pos, Tuple),
+  Fun = fun(Tuple, Index, Acc) ->
+            K = element(Index, Tuple),
             case clj_rt:equiv(K, Key) of
-              true  -> {return, Pos};
+              true  -> {return, Index};
               false -> {acc, Acc}
             end
         end,
@@ -305,16 +333,16 @@ index_of(TupleMap, Key) ->
 
 fold(Fun, Acc, Tuple, Inc) ->
   Length = tuple_size(Tuple),
-  do_fold(Fun, {acc, Acc}, Tuple, 1, Length + 1, Inc).
+  do_fold(Fun, {acc, Acc}, Tuple, 1, Length, Inc).
 
 -type accumulator() :: {return, any()} | {acc, any()}.
 
 -spec do_fold(fun(), accumulator(), tuple(), integer(), integer(), integer()) ->
   any().
-do_fold(_Fun, {return, Value}, _Tuple, _Pos, _Length, _Inc) ->
+do_fold(_Fun, {return, Value}, _Tuple, _Index, _Length, _Inc) ->
   Value;
-do_fold(_Fun, {_, Value}, _Tuple, Pos, Length, _Inc) when Pos > Length->
+do_fold(_Fun, {_, Value}, _Tuple, Index, Length, _Inc) when Index > Length->
   Value;
-do_fold(Fun, {acc, Value}, Tuple, Pos, Length, Inc) ->
-  Acc = Fun(Tuple, Pos, Value),
-  do_fold(Fun, Acc, Tuple, Pos + Inc, Length, Inc).
+do_fold(Fun, {acc, Value}, Tuple, Index, Length, Inc) ->
+  Acc = Fun(Tuple, Index, Value),
+  do_fold(Fun, Acc, Tuple, Index + Inc, Length, Inc).
