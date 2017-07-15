@@ -93,7 +93,11 @@ entry_at(#?TYPE{name = ?M, data = {Keys, Vals}}, Key) ->
 
 assoc(#?TYPE{name = ?M, data = {Keys, Vals}} = M, Key, Value) ->
   Hash = 'clojerl.IHash':hash(Key),
-  M#?TYPE{data = {Keys#{Hash => Key}, Vals#{Hash => Value}}}.
+  Key1 = case maps:is_key(Hash, Keys) of
+           false -> Key;
+           true  -> maps:get(Hash, Keys)
+         end,
+  M#?TYPE{data = {Keys#{Hash => Key1}, Vals#{Hash => Value}}}.
 
 %% clojerl.Counted
 

@@ -3593,13 +3593,13 @@
   ([sym] (ns-resolve *ns* sym))
   ([env sym] (ns-resolve *ns* env sym)))
 
-#_((defn array-map
-     "Constructs an array-map. If any keys are equal, they are handled as
+(defn tuple-map
+  "Constructs a tuple-map. If any keys are equal, they are handled as
   if by repeated uses of assoc."
-     {:added "1.0"}
-     ([] (. clojure.lang.PersistentArrayMap EMPTY))
-     ([& keyvals]
-      (clojure.lang.PersistentArrayMap/createAsIfByAssoc (to-array keyvals)))))
+  {:added "1.0"}
+  ([] (new clojerl.TupleMap #erl()))
+  ([& keyvals]
+   (. clojerl.TupleMap (create_with_assoc (clj_rt/to_list.e keyvals)))))
 
 ;redefine let and loop  with destructuring
 (defn destructure [bindings]

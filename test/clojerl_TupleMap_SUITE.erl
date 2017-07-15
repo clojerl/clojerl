@@ -1,4 +1,4 @@
--module(clojerl_Map_SUITE).
+-module(clojerl_TupleMap_SUITE).
 
 -include("clojerl.hrl").
 -include("clj_test_utils.hrl").
@@ -35,46 +35,71 @@ end_per_suite(Config) -> Config.
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  Map = tuple_map([1, 2, 3, 4]),
   2 = clj_rt:get(Map, 1),
   4 = clj_rt:get(Map, 3),
+  ?NIL = clj_rt:get(Map, 5),
 
   [1, 3] = lists:sort(clj_rt:keys(Map)),
   [2, 4] = lists:sort(clj_rt:vals(Map)),
 
-  Map2 = clj_rt:hash_map([]),
+  Map2 = tuple_map([]),
   ?NIL = clj_rt:seq(Map2),
+
+  ct:comment("Create while checking for duplicate keys"),
+  Items1 = [a, 1, b, 2],
+  Map3   = tuple_map(Items1),
+  Map3   = 'clojerl.TupleMap':create_with_check(Items1),
+
+  ok = try 'clojerl.TupleMap':create_with_check([a, 1, b, 2, a, 2]), error
+       catch _:Reason ->
+           {match, _} = re:run(Reason, "Duplicate key"),
+           ok
+       end,
+
+  ct:comment("Create as if key-value pairs were added with assoc"),
+  Items2 = [a, 1, b, 2],
+  Map4   = tuple_map(Items2),
+  Map4   = 'clojerl.TupleMap':create_with_assoc([a, 2 | Items2]),
+
+  ct:comment("The first value for the key is kept"),
+  HelloSym1 = clj_rt:with_meta(clj_rt:symbol(<<"hello">>), #{a => 1}),
+  HelloSym2 = clj_rt:with_meta(clj_rt:symbol(<<"hello">>), #{b => 2}),
+  Items3    = [HelloSym1, 2, b, 2],
+  Map5      = tuple_map(Items3),
+  Items4    = [HelloSym1, 1, b, 2, HelloSym2, 2],
+  Map5      = 'clojerl.TupleMap':create_with_assoc(Items4),
 
   {comments, ""}.
 
 -spec count(config()) -> result().
 count(_Config) ->
-  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  Map = tuple_map([1, 2, 3, 4]),
   2 = clj_rt:count(Map),
 
-  Map2 = clj_rt:hash_map([]),
+  Map2 = tuple_map([]),
   0 = clj_rt:count(Map2),
 
   {comments, ""}.
 
 -spec str(config()) -> result().
 str(_Config) ->
-  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  Map = tuple_map([1, 2, 3, 4]),
   <<"{1 2, 3 4}">> = clj_rt:str(Map),
 
-  Map2 = clj_rt:hash_map([]),
+  Map2 = tuple_map([]),
   <<"{}">> = clj_rt:str(Map2),
 
   {comments, ""}.
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Map = clj_rt:hash_map([1, 2, 3, 4]),
+  Map = tuple_map([1, 2, 3, 4]),
 
   KVs  = lists:map(fun clj_rt:seq/1, clj_rt:seq(Map)),
   true = clj_rt:equiv([[1, 2], [3, 4]], lists:sort(KVs)),
 
-  Map2 = clj_rt:hash_map([]),
+  Map2 = tuple_map([]),
   ?NIL = clj_rt:seq(Map2),
 
   MapList = clj_rt:to_list(Map),
@@ -84,21 +109,26 @@ seq(_Config) ->
 
 -spec equiv(config()) -> result().
 equiv(_Config) ->
-  ct:comment("Check that maps with the same elements are equivalent"),
-  Map1 = clj_rt:with_meta(clj_rt:hash_map([1.0, 2, 3, 4]), #{a => 1}),
-  Map2 = clj_rt:with_meta(clj_rt:hash_map([3, 4, 1.0, 2]), #{b => 2}),
+  ct:comment("Maps with the same elements are equivalent"),
+  Map1 = clj_rt:with_meta(tuple_map([1.0, 2, 3, 4]), #{a => 1}),
+  Map2 = clj_rt:with_meta(tuple_map([3, 4, 1.0, 2]), #{b => 2}),
   true = clj_rt:equiv(Map1, Map2),
 
-  ct:comment("Check that maps with different elements are not equivalent"),
-  Map3 = clj_rt:with_meta(clj_rt:hash_map([5, 6, 3, 4]), #{c => 3}),
+  ct:comment("Maps with different elements are not equivalent"),
+  Map3 = clj_rt:with_meta(tuple_map([5, 6, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Map1, Map3),
 
-  ct:comment("A clojerl.Map and an clojerl.erlang.Map"),
-  true = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4}),
+  ct:comment("Maps with same keys different values are not equivalent"),
+  Map4 = clj_rt:with_meta(tuple_map([1.0, a, 3, b]), #{a => 1}),
+  false = clj_rt:equiv(Map1, Map4),
+
+  ct:comment("A clojerl.TupleMap and an clojerl.erlang.Map"),
+  true  = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4}),
   false = clj_rt:equiv(Map1, #{1.0 => 2}),
   false = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4, 5 => 6}),
+  false = clj_rt:equiv(Map1, #{1.0 => a, 3 => b}),
 
-  ct:comment("A clojerl.Map and something else"),
+  ct:comment("A clojerl.TupleMap and something else"),
   false = clj_rt:equiv(Map1, whatever),
   false = clj_rt:equiv(Map1, 1),
   false = clj_rt:equiv(Map1, [1]),
@@ -107,7 +137,7 @@ equiv(_Config) ->
 
 -spec apply(config()) -> result().
 apply(_Config) ->
-  Map = clj_rt:hash_map([1, a, 2, b]),
+  Map = tuple_map([1, a, 2, b]),
 
   ct:comment("Invoke a map"),
   a = clj_rt:apply(Map, [1]),
@@ -125,12 +155,13 @@ apply(_Config) ->
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  Map1 = clj_rt:hash_map([1, a, 2, b]),
-  Map1 = clj_rt:hash_map([2, b, 1, a]),
-  Map2 = clj_rt:hash_map([2, b, 1, a, 3, c]),
-  Map3 = clj_rt:hash_map([2.0, b, 1.0, a, 3.0, c]),
+  Map1a = tuple_map([1, a, 2, b]),
+  Map1b = tuple_map([2, b, 1, a]),
+  Map2  = tuple_map([2, b, 1, a, 3, c]),
+  Map3  = tuple_map([2.0, b, 1.0, a, 3.0, c]),
 
-  Hash1 = 'clojerl.IHash':hash(Map1),
+  Hash1 = 'clojerl.IHash':hash(Map1a),
+  Hash1 = 'clojerl.IHash':hash(Map1b),
   Hash2 = 'clojerl.IHash':hash(Map2),
   Hash3 = 'clojerl.IHash':hash(Map3),
 
@@ -141,7 +172,7 @@ hash(_Config) ->
 
 -spec cons(config()) -> result().
 cons(_Config) ->
-  EmptyMap = clj_rt:hash_map([]),
+  EmptyMap = tuple_map([]),
 
   ct:comment("Conj a key-value pair to an empty map"),
   OneMap = clj_rt:conj(EmptyMap, clj_rt:vector([1, 2])),
@@ -175,7 +206,7 @@ cons(_Config) ->
 -spec associative(config()) -> result().
 
 associative(_Config) ->
-  EmptyMap = clj_rt:hash_map([]),
+  EmptyMap = tuple_map([]),
   false    = clj_rt:'contains?'(EmptyMap, 1),
 
   OneMap = clj_rt:assoc(EmptyMap, 1, a),
@@ -206,15 +237,20 @@ associative(_Config) ->
   HelloMap2 = clj_rt:assoc(HelloMap, HelloSym2, a),
   HelloSym1 = clj_rt:first(clj_rt:find(HelloMap2, HelloSym2)),
 
+  ct:comment("Associng past the threshold returns a hash map"),
+  LimitMap      = tuple_map(lists:seq(1, 16 * 2)),
+  PastLimitMap  = clj_rt:assoc(LimitMap, 33, 34),
+  'clojerl.Map' = clj_rt:type_module(PastLimitMap),
+
   {comments, ""}.
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  NotEmptyMap = clj_rt:hash_map([a, b, 2, 3]),
+  NotEmptyMap = tuple_map([a, b, 2, 3]),
   EmptyMap    = clj_rt:empty(NotEmptyMap),
-  EmptyMap    = clj_rt:hash_map([]),
+  EmptyMap    = tuple_map([]),
 
-  MapMeta  = clj_rt:with_meta(clj_rt:hash_map([1, 2, 3, 4]), #{a => 1}),
+  MapMeta  = clj_rt:with_meta(tuple_map([1, 2, 3, 4]), #{a => 1}),
   #{a := 1} = clj_rt:meta(MapMeta),
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
@@ -224,6 +260,10 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
-  #{a := b, 2 := 3} = 'clojerl.Map':to_erl_map(NotEmptyMap),
+  #{a := b, 2 := 3} = 'clojerl.TupleMap':to_erl_map(NotEmptyMap),
 
   {comments, ""}.
+
+-spec tuple_map(list()) -> 'clojerl.TupleMap':type().
+tuple_map(KeyValues) ->
+  'clojerl.TupleMap':?CONSTRUCTOR(KeyValues).

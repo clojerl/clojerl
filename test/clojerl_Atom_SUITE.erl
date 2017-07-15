@@ -56,7 +56,7 @@ swap(_Config) ->
   ct:comment("Concurrent swaps"),
   Inc      = fun(X) -> X + 1 end,
   Self     = self(),
-  ResetFun = fun(N) ->
+  ResetFun = fun(_) ->
                  spawn(fun() -> 'clojerl.Atom':swap(Atom, Inc), Self ! ok end)
              end,
   N        = 100,
