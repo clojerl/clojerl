@@ -26,7 +26,7 @@
   (cl-format nil "~D" 2e6) "2000000"
   (cl-format nil "~D" 2000000) "2000000"
   (cl-format nil "~:D" 2000000) "2,000,000"
-  (cl-format nil "~D" 1/2) "1/2"
+  ;; (cl-format nil "~D" 1/2) "1/2"
   (cl-format nil "~D" 'fred) "fred"
 )
 
@@ -35,7 +35,7 @@
   "0 1 10 11 100 101 110 111 1000 1001\n"
   (with-out-str
     (dotimes [i 35]
-      (binding [*print-base* (+ i 2)]       ;print the decimal number 40 
+      (binding [*print-base* (+ i 2)]       ;print the decimal number 40
         (write 40)                          ;in each base from 2 to 36
         (if (zero? (mod i 10)) (prn) (cl-format true " ")))))
   "101000
@@ -44,11 +44,11 @@
 1h 1g 1f 1e 1d 1c 1b 1a 19 18
 17 16 15 14 "
   (with-out-str
-    (doseq [pb [2 3 8 10 16]]               
-      (binding [*print-radix* true      ;print the integer 10 and 
-            *print-base* pb]            ;the ratio 1/10 in bases 2, 
-        (cl-format true "~&~S  ~S~%" 10 1/10))))        ;3, 8, 10, 16
-  "#b1010  #b1/1010\n#3r101  #3r1/101\n#o12  #o1/12\n10.  #10r1/10\n#xa  #x1/a\n")
+    (doseq [pb [2 3 8 10 16]]
+      (binding [*print-radix* true      ;print the integer 10 in bases 2,
+                *print-base* pb]        ;3, 8, 10, 16
+        (cl-format true "~&~S~%" 10))))
+  "#b1010\n#3r101\n#o12\n10.\n#xa\n")
 
 
 
@@ -67,7 +67,7 @@
 
   (cl-format nil "~R" -44879032)
   "minus forty-four million, eight hundred seventy-nine thousand, thirty-two"
-  
+
   (cl-format nil "~R = ~:*~:D" 44000032)
   "forty-four million, thirty-two = 44,000,032"
 
@@ -98,7 +98,7 @@
 
   (cl-format nil "~:R" -44879032)
   "minus forty-four million, eight hundred seventy-nine thousand, thirty-second"
-  
+
   (cl-format nil "~:R = ~:*~:D" 44000032)
   "forty-four million, thirty-second = 44,000,032"
 
@@ -158,7 +158,7 @@
   (cl-format nil "*~10,2,2E*" 9.99999E99) "* 1.00E+100*"
   (cl-format nil "*~10,2,2,,'?E*" 9.99999E99) "*??????????*"
   )
-  
+
 (simple-tests $-tests
   (cl-format nil "~$" 22.3) "22.30"
   (cl-format nil "~$" 22.375) "22.38"
@@ -305,10 +305,10 @@
   (cl-format nil "I ~[don't ~:;d~&o ~]have one~%" 1) "I d\no have one\n")
 
 (simple-tests t-tests
-  (cl-format nil "~@{~&~A~8,4T~:*~A~}" 
+  (cl-format nil "~@{~&~A~8,4T~:*~A~}"
              'a 'aa 'aaa 'aaaa 'aaaaa 'aaaaaa 'aaaaaaa 'aaaaaaaa 'aaaaaaaaa 'aaaaaaaaaa)
   "a       a\naa      aa\naaa     aaa\naaaa    aaaa\naaaaa   aaaaa\naaaaaa  aaaaaa\naaaaaaa aaaaaaa\naaaaaaaa    aaaaaaaa\naaaaaaaaa   aaaaaaaaa\naaaaaaaaaa  aaaaaaaaaa"
-  (cl-format nil "~@{~&~A~,4T~:*~A~}" 
+  (cl-format nil "~@{~&~A~,4T~:*~A~}"
              'a 'aa 'aaa 'aaaa 'aaaaa 'aaaaaa 'aaaaaaa 'aaaaaaaa 'aaaaaaaaa 'aaaaaaaaaa)
   "a    a\naa   aa\naaa  aaa\naaaa aaaa\naaaaa    aaaaa\naaaaaa   aaaaaa\naaaaaaa  aaaaaaa\naaaaaaaa aaaaaaaa\naaaaaaaaa    aaaaaaaaa\naaaaaaaaaa   aaaaaaaaaa"
   (cl-format nil "~@{~&~A~2,6@T~:*~A~}" 'a 'aa 'aaa 'aaaa 'aaaaa 'aaaaaa 'aaaaaaa 'aaaaaaaa 'aaaaaaaaa 'aaaaaaaaaa)
@@ -321,13 +321,13 @@
   (cl-format nil "~@:(but this Is imporTant~)") "BUT THIS IS IMPORTANT"
   (cl-format nil "~:(the greAt gatsby~)!") "The Great Gatsby!"
   ;; Test cases from CLtL 18.3 - string-upcase, et al.
-  (cl-format nil "~@:(~A~)" "Dr. Livingstone, I presume?") "DR. LIVINGSTONE, I PRESUME?" 
-  (cl-format nil "~(~A~)" "Dr. Livingstone, I presume?") "dr. livingstone, i presume?" 
-  (cl-format nil "~:(~A~)" " hello ") " Hello " 
-  (cl-format nil "~:(~A~)" "occlUDeD cASEmenTs FOreSTAll iNADVertent DEFenestraTION") 
-  "Occluded Casements Forestall Inadvertent Defenestration" 
-  (cl-format nil "~:(~A~)" 'kludgy-hash-search) "Kludgy-Hash-Search" 
-  (cl-format nil "~:(~A~)" "DON'T!") "Don'T!"     ;not "Don't!" 
+  (cl-format nil "~@:(~A~)" "Dr. Livingstone, I presume?") "DR. LIVINGSTONE, I PRESUME?"
+  (cl-format nil "~(~A~)" "Dr. Livingstone, I presume?") "dr. livingstone, i presume?"
+  (cl-format nil "~:(~A~)" " hello ") " Hello "
+  (cl-format nil "~:(~A~)" "occlUDeD cASEmenTs FOreSTAll iNADVertent DEFenestraTION")
+  "Occluded Casements Forestall Inadvertent Defenestration"
+  (cl-format nil "~:(~A~)" 'kludgy-hash-search) "Kludgy-Hash-Search"
+  (cl-format nil "~:(~A~)" "DON'T!") "Don'T!"     ;not "Don't!"
   (cl-format nil "~:(~A~)" "pipe 13a, foo16c") "Pipe 13a, Foo16c"
   (cl-format nil "~:(~A~)" nil) "Nil"
   (cl-format nil "~:(~A~)" "") ""
@@ -345,7 +345,7 @@
   (cl-format nil "I ~[don't ~:;do ~]have one~%" 2) "I do have one\n"
   (cl-format nil "I ~[don't ~:;do ~]have one~%" 700) "I do have one\n"
 
-  ;; Tests for format with a colon 
+  ;; Tests for format with a colon
   (cl-format nil "I ~:[don't ~;do ~]have one~%" true) "I do have one\n"
   (cl-format nil "I ~:[don't ~;do ~]have one~%" 700) "I do have one\n"
   (cl-format nil "I ~:[don't ~;do ~]have one~%" '(a b)) "I do have one\n"
@@ -362,15 +362,15 @@
   "Max 15: Blue team 7.\n"
   (cl-format nil "Max ~D: ~[Blue team ~D~;Red team ~D~:;No team ~A~].~%" 15, 1, 12)
   "Max 15: Red team 12.\n"
-  (cl-format nil "Max ~D: ~[Blue team ~D~;Red team ~D~:;No team ~A~].~%" 
+  (cl-format nil "Max ~D: ~[Blue team ~D~;Red team ~D~:;No team ~A~].~%"
              15, -1, "(system failure)")
   "Max 15: No team (system failure).\n"
 
   ;; Nested format tests
-  (cl-format nil "Max ~D: ~[Blue team ~D~:[~; (complete success)~]~;Red team ~D~:;No team ~].~%" 
+  (cl-format nil "Max ~D: ~[Blue team ~D~:[~; (complete success)~]~;Red team ~D~:;No team ~].~%"
              15, 0, 7, true)
   "Max 15: Blue team 7 (complete success).\n"
-  (cl-format nil "Max ~D: ~[Blue team ~D~:[~; (complete success)~]~;Red team ~D~:;No team ~].~%" 
+  (cl-format nil "Max ~D: ~[Blue team ~D~:[~; (complete success)~]~;Red team ~D~:;No team ~].~%"
              15, 0, 7, false)
   "Max 15: Blue team 7.\n"
 
@@ -503,7 +503,7 @@
 ;; TODO tests for ~^ in ~[ constructs and other brackets
 ;; TODO test ~:^ generates an error when used improperly
 ;; TODO test ~:^ works in ~@:{...~}
-(let [aseq '(a quick brown fox jumped over the lazy dog)
+#_(let [aseq '(a quick brown fox jumped over the lazy dog)
       lseq (mapcat identity (for [x aseq] [x (.length (name x))]))]
   (simple-tests up-tests
     (cl-format nil "~{~a~^, ~}" aseq) "a, quick, brown, fox, jumped, over, the, lazy, dog"
@@ -536,14 +536,14 @@
 (cl-format true "~%;; ~{~<~%;; ~:; ~A~>~}.~%" (into [] (.split "This function computes the circular thermodynamic coefficient of the thrombulator angle for use in determining the reaction distance." "\\s"))))
 
 (defn list-to-table [aseq column-width]
-  (let [stream (get-pretty-writer (java.io.StringWriter.))]
+  (let [stream (get-pretty-writer (erlang.io.StringWriter.))]
     (binding [*out* stream]
      (doseq [row aseq]
        (doseq [col row]
          (cl-format true "~4D~7,vT" col column-width))
        (prn)))
-    (.flush stream)
-    (.toString (:base @@(:base @@stream)))))
+    (.ppflush stream)
+    (.str (:base @@(:base @@stream)))))
 
 (simple-tests column-writer-test
   (list-to-table (map #(vector % (* % %) (* % % %)) (range 1 21)) 8)
@@ -555,101 +555,92 @@
 
 (defn expt [base pow] (reduce * (repeat pow base)))
 
-(let [x 5, y "elephant", n 3]
+#_(let [x 5, y "elephant", n 3]
   (simple-tests cltl-intro-tests
-   (format nil "foo")  "foo" 
-   (format nil "The answer is ~D." x)  "The answer is 5." 
-   (format nil "The answer is ~3D." x)  "The answer is   5." 
-   (format nil "The answer is ~3,'0D." x)  "The answer is 005." 
+   (format nil "foo")  "foo"
+   (format nil "The answer is ~D." x)  "The answer is 5."
+   (format nil "The answer is ~3D." x)  "The answer is   5."
+   (format nil "The answer is ~3,'0D." x)  "The answer is 005."
    (format nil "The answer is ~:D." (expt 47 x)) "The answer is 229,345,007."
-   (format nil "Look at the ~A!" y)  "Look at the elephant!" 
-   (format nil "Type ~:C to ~A." (char 4) "delete all your files") 
+   (format nil "Look at the ~A!" y)  "Look at the elephant!"
+   (format nil "Type ~:C to ~A." (char 4) "delete all your files")
    "Type Control-D to delete all your files."
    (format nil "~D item~:P found." n)  "3 items found."
    (format nil "~R dog~:[s are~; is~] here." n (= n 1)) "three dogs are here."
    (format nil "~R dog~:*~[s are~; is~:;s are~] here." n) "three dogs are here."
    (format nil "Here ~[are~;is~:;are~] ~:*~R pupp~:@P." n) "Here are three puppies."))
- 
+
 (simple-tests cltl-B-tests
   ;; CLtL didn't have the colons here, but the spec requires them
-  (format nil "~,,' ,4:B" 0xFACE) "1111 1010 1100 1110" 
-  (format nil "~,,' ,4:B" 0x1CE) "1 1100 1110" 
-  (format nil "~19,,' ,4:B" 0xFACE) "1111 1010 1100 1110" 
+  (format nil "~,,' ,4:B" 0xFACE) "1111 1010 1100 1110"
+  (format nil "~,,' ,4:B" 0x1CE) "1 1100 1110"
+  (format nil "~19,,' ,4:B" 0xFACE) "1111 1010 1100 1110"
   ;; This one was a nice idea, but nothing in the spec supports it working this way
   ;; (and SBCL doesn't work this way either)
   ;(format nil "~19,,' ,4:B" 0x1CE) "0000 0001 1100 1110")
   )
 
 (simple-tests cltl-P-tests
-  (format nil "~D tr~:@P/~D win~:P" 7 1) "7 tries/1 win" 
-  (format nil "~D tr~:@P/~D win~:P" 1 0) "1 try/0 wins" 
+  (format nil "~D tr~:@P/~D win~:P" 7 1) "7 tries/1 win"
+  (format nil "~D tr~:@P/~D win~:P" 1 0) "1 try/0 wins"
   (format nil "~D tr~:@P/~D win~:P" 1 3) "1 try/3 wins")
 
-(defn foo [x] 
-  (format nil "~6,2F|~6,2,1,'*F|~6,2,,'?F|~6F|~,2F|~F" 
+(defn foo [x]
+  (format nil "~6,2F|~6,2,1,'*F|~6,2,,'?F|~6F|~,2F|~F"
           x x x x x x))
 
-;; big-pos-ratio is a ratio value that is larger than
-;; Double/MAX_VALUE, and has a non-terminating decimal representation
-;; if you attempt to represent it exactly.
-(def big-pos-ratio (/ (* 4 (bigint (. BigDecimal valueOf Double/MAX_VALUE))) 3))
-(def big-neg-ratio (- big-pos-ratio))
-;; tiny-pos-ratio is a ratio between 0 and Double/MIN_VALUE.
-(def tiny-pos-ratio (/ 1 (bigint (apply str (cons "1" (repeat 340 "0"))))))
-(def tiny-neg-ratio (- tiny-pos-ratio))
-
 (simple-tests cltl-F-tests
-  (cl-format false "~10,3f" 4/5) "     0.800"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3f" big-pos-ratio)) "239692417981642093333333333333333300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.000"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3f" big-neg-ratio)) "-239692417981642093333333333333333300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.000"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3f" tiny-pos-ratio)) "     0.000"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3f" tiny-neg-ratio)) "    -0.000"
-  (foo 3.14159)  "  3.14| 31.42|  3.14|3.1416|3.14|3.14159" 
-  (foo 314159/100000)
-                 "  3.14| 31.42|  3.14|3.1416|3.14|3.14159"
-  (foo -3.14159) " -3.14|-31.42| -3.14|-3.142|-3.14|-3.14159" 
-  (foo 100.0)    "100.00|******|100.00| 100.0|100.00|100.0" 
-  (foo 1234.0)   "1234.00|******|??????|1234.0|1234.00|1234.0" 
+  ;; (cl-format false "~10,3f" 4/5) "     0.800"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3f" big-pos-ratio)) "239692417981642093333333333333333300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.000"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3f" big-neg-ratio)) "-239692417981642093333333333333333300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.000"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3f" tiny-pos-ratio)) "     0.000"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3f" tiny-neg-ratio)) "    -0.000"
+  (foo 3.14159)  "  3.14| 31.42|  3.14|3.1416|3.14|3.14159"
+  ;; (foo 314159/100000)
+                 ;; "  3.14| 31.42|  3.14|3.1416|3.14|3.14159"
+  (foo -3.14159) " -3.14|-31.42| -3.14|-3.142|-3.14|-3.14159"
+  (foo 100.0)    "100.00|******|100.00| 100.0|100.00|100.0"
+  (foo 1234.0)   "1234.00|******|??????|1234.0|1234.00|1234.0"
   (foo 0.006)    "  0.01|  0.06|  0.01| 0.006|0.01|0.006")
 
-(defn foo-e [x] 
-  (format nil 
-          "~9,2,1,,'*E|~10,3,2,2,'?,,'$E|~9,3,2,-2,'%@E|~9,2E" 
-          x x x x)) 
+(defn foo-e [x]
+  (format nil
+          "~9,2,1,,'*E|~10,3,2,2,'?,,'$E|~9,3,2,-2,'%@E|~9,2E"
+          x x x x))
 
 ;; Clojure doesn't support float/double differences in representation
 (simple-tests cltl-E-tests
-  (cl-format false "~10,3e" 4/5) "  8.000E-1"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3e" big-pos-ratio)) "2.397E+308"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3e" big-neg-ratio)) "-2.397E+308"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3e" tiny-pos-ratio)) "1.000E-340"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3e" tiny-neg-ratio)) "-1.000E-340"
-  (foo-e 0.0314159) "  3.14E-2| 31.42$-03|+.003E+01|  3.14E-2"  ; Added this one 
-  (foo-e 314159/10000000)
-                    "  3.14E-2| 31.42$-03|+.003E+01|  3.14E-2"
-  (foo-e 3.14159)  "  3.14E+0| 31.42$-01|+.003E+03|  3.14E+0" 
+  ;; (cl-format false "~10,3e" 4/5) "  8.000E-1"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3e" big-pos-ratio)) "2.397E+308"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3e" big-neg-ratio)) "-2.397E+308"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3e" tiny-pos-ratio)) "1.000E-340"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3e" tiny-neg-ratio)) "-1.000E-340"
+  (foo-e 0.0314159) "  3.14E-2| 31.42$-03|+.003E+01|  3.14E-2"  ; Added this one
+  ;; (foo-e 314159/10000000)
+                    ;; "  3.14E-2| 31.42$-03|+.003E+01|  3.14E-2"
+  (foo-e 3.14159)  "  3.14E+0| 31.42$-01|+.003E+03|  3.14E+0"
   (foo-e -3.14159) " -3.14E+0|-31.42$-01|-.003E+03| -3.14E+0"
-  (foo-e 1100.0)   "  1.10E+3| 11.00$+02|+.001E+06|  1.10E+3" 
+  (foo-e 1100.0)   "  1.10E+3| 11.00$+02|+.001E+06|  1.10E+3"
 ; In Clojure, this is identical to the above
-;  (foo-e 1100.0L0) "  1.10L+3| 11.00$+02|+.001L+06|  1.10L+3" 
-  (foo-e 1.1E13)   "*********| 11.00$+12|+.001E+16| 1.10E+13" 
-  (foo-e 1.1E120)  "*********|??????????|%%%%%%%%%|1.10E+120" 
+;  (foo-e 1100.0L0) "  1.10L+3| 11.00$+02|+.001L+06|  1.10L+3"
+  (foo-e 1.1E13)   "*********| 11.00$+12|+.001E+16| 1.10E+13"
+  (foo-e 1.1E120)  "*********|??????????|%%%%%%%%%|1.10E+120"
 ; Clojure doesn't support real numbers this large
 ;  (foo-e 1.1L1200) "*********|??????????|%%%%%%%%%|1.10L+1200"
 )
 
 (simple-tests cltl-E-scale-tests
   (map
-    (fn [k] (format nil "Scale factor ~2D~:*: |~13,6,2,VE|" 
-                    (- k 5) 3.14159))              ;Prints 13 lines 
+    (fn [k] (format nil "Scale factor ~2D~:*: |~13,6,2,VE|"
+                    (- k 5) 3.14159))              ;Prints 13 lines
     (range 13))
   '("Scale factor -5: | 0.000003E+06|"
     "Scale factor -4: | 0.000031E+05|"
@@ -665,34 +656,34 @@
     "Scale factor  6: | 314159.0E-05|"
     "Scale factor  7: | 3141590.E-06|"))
 
-(defn foo-g [x] 
-  (format nil 
-          "~9,2,1,,'*G|~9,3,2,3,'?,,'$G|~9,3,2,0,'%G|~9,2G" 
-          x x x x)) 
+(defn foo-g [x]
+  (format nil
+          "~9,2,1,,'*G|~9,3,2,3,'?,,'$G|~9,3,2,0,'%G|~9,2G"
+          x x x x))
 
 ;; Clojure doesn't support float/double differences in representation
 (simple-tests cltl-G-tests
-  (cl-format false "~10,3g" 4/5)  " 0.800    "
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3g" big-pos-ratio)) "2.397E+308"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3g" big-neg-ratio)) "-2.397E+308"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3g" tiny-pos-ratio)) "1.000E-340"
-  (binding [*math-context* java.math.MathContext/DECIMAL128]
-    (cl-format false "~10,3g" tiny-neg-ratio)) "-1.000E-340"
-  (foo-g 0.0314159) "  3.14E-2|314.2$-04|0.314E-01|  3.14E-2" 
-  (foo-g 314159/10000000)
-                    "  3.14E-2|314.2$-04|0.314E-01|  3.14E-2"
-  (foo-g 0.314159)  "  0.31   |0.314    |0.314    | 0.31    " 
-  (foo-g 3.14159)   "   3.1   | 3.14    | 3.14    |  3.1    " 
-  (foo-g 31.4159)   "   31.   | 31.4    | 31.4    |  31.    " 
-  (foo-g 314.159)   "  3.14E+2| 314.    | 314.    |  3.14E+2" 
-  (foo-g 3141.59)   "  3.14E+3|314.2$+01|0.314E+04|  3.14E+3" 
+  ;; (cl-format false "~10,3g" 4/5)  " 0.800    "
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3g" big-pos-ratio)) "2.397E+308"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3g" big-neg-ratio)) "-2.397E+308"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3g" tiny-pos-ratio)) "1.000E-340"
+  ;; (binding [*math-context* java.math.MathContext/DECIMAL128]
+  ;;   (cl-format false "~10,3g" tiny-neg-ratio)) "-1.000E-340"
+  (foo-g 0.0314159) "  3.14E-2|314.2$-04|0.314E-01|  3.14E-2"
+  ;; (foo-g 314159/10000000)
+                    ;; "  3.14E-2|314.2$-04|0.314E-01|  3.14E-2"
+  (foo-g 0.314159)  "  0.31   |0.314    |0.314    | 0.31    "
+  (foo-g 3.14159)   "   3.1   | 3.14    | 3.14    |  3.1    "
+  (foo-g 31.4159)   "   31.   | 31.4    | 31.4    |  31.    "
+  (foo-g 314.159)   "  3.14E+2| 314.    | 314.    |  3.14E+2"
+  (foo-g 3141.59)   "  3.14E+3|314.2$+01|0.314E+04|  3.14E+3"
 ; In Clojure, this is identical to the above
-;  (foo-g 3141.59L0) "  3.14L+3|314.2$+01|0.314L+04|  3.14L+3" 
-  (foo-g 3.14E12)   "*********|314.0$+10|0.314E+13| 3.14E+12" 
-  (foo-g 3.14E120)  "*********|?????????|%%%%%%%%%|3.14E+120" 
+;  (foo-g 3141.59L0) "  3.14L+3|314.2$+01|0.314L+04|  3.14L+3"
+  (foo-g 3.14E12)   "*********|314.0$+10|0.314E+13| 3.14E+12"
+  (foo-g 3.14E120)  "*********|?????????|%%%%%%%%%|3.14E+120"
 ; Clojure doesn't support real numbers this large
 ;  (foo-g 3.14L1200) "*********|?????????|%%%%%%%%%|3.14L+1200"
 )
@@ -701,8 +692,8 @@
   (format nil ;; CLtL has this format string slightly wrong
           "~&Function ~S requires its ~:[~:R ~;~*~]~
            argument to be of type ~S,~%but it was called ~
-           with an argument of type ~S.~%" 
-          fun (= nargs 1) argnum right-type wrong-type)) 
+           with an argument of type ~S.~%"
+          fun (= nargs 1) argnum right-type wrong-type))
 
 (simple-tests cltl-Newline-tests
   (type-clash-error 'aref nil 2 'integer 'vector)
@@ -713,92 +704,92 @@ but it was called with an argument of type vector.\n"
 but it was called with an argument of type short-float.\n")
 
 (simple-tests cltl-?-tests
-  (format nil "~? ~D" "<~A ~D>" '("Foo" 5) 7) "<Foo 5> 7" 
+  (format nil "~? ~D" "<~A ~D>" '("Foo" 5) 7) "<Foo 5> 7"
   (format nil "~? ~D" "<~A ~D>" '("Foo" 5 14) 7) "<Foo 5> 7"
-  (format nil "~@? ~D" "<~A ~D>" "Foo" 5 7) "<Foo 5> 7" 
+  (format nil "~@? ~D" "<~A ~D>" "Foo" 5 7) "<Foo 5> 7"
   (format nil "~@? ~D" "<~A ~D>" "Foo" 5 14 7) "<Foo 5> 14")
 
-(defn f [n] (format nil "~@(~R~) error~:P detected." n)) 
+(defn f [n] (format nil "~@(~R~) error~:P detected." n))
 
 (simple-tests cltl-paren-tests
-  (format nil "~@R ~(~@R~)" 14 14) "XIV xiv" 
-  (f 0) "Zero errors detected." 
-  (f 1) "One error detected." 
+  (format nil "~@R ~(~@R~)" 14 14) "XIV xiv"
+  (f 0) "Zero errors detected."
+  (f 1) "One error detected."
   (f 23) "Twenty-three errors detected.")
 
-(let [*print-level* nil *print-length* 5] 
+#_(let [*print-level* nil *print-length* 5]
   (simple-tests cltl-bracket-tests
-    (format nil "~@[ print level = ~D~]~@[ print length = ~D~]" 
-            *print-level* *print-length*) 
+    (format nil "~@[ print level = ~D~]~@[ print length = ~D~]"
+            *print-level* *print-length*)
     " print length = 5"))
 
-(let [foo "Items:~#[ none~; ~S~; ~S and ~S~
+#_(let [foo "Items:~#[ none~; ~S~; ~S and ~S~
            ~:;~@{~#[~; and~] ~
            ~S~^,~}~]."]
   (simple-tests cltl-bracket1-tests
-    (format nil foo) "Items: none." 
-    (format nil foo 'foo) "Items: foo." 
-    (format nil foo 'foo 'bar) "Items: foo and bar." 
-    (format nil foo 'foo 'bar 'baz) "Items: foo, bar, and baz." 
+    (format nil foo) "Items: none."
+    (format nil foo 'foo) "Items: foo."
+    (format nil foo 'foo 'bar) "Items: foo and bar."
+    (format nil foo 'foo 'bar 'baz) "Items: foo, bar, and baz."
     (format nil foo 'foo 'bar 'baz 'quux) "Items: foo, bar, baz, and quux."))
 
 (simple-tests cltl-curly-bracket-tests
-  (format nil 
-        "The winners are:~{ ~S~}." 
-        '(fred harry jill)) 
-  "The winners are: fred harry jill." 
+  (format nil
+        "The winners are:~{ ~S~}."
+        '(fred harry jill))
+  "The winners are: fred harry jill."
 
-  (format nil "Pairs:~{ <~S,~S>~}." '(a 1 b 2 c 3)) 
+  (format nil "Pairs:~{ <~S,~S>~}." '(a 1 b 2 c 3))
   "Pairs: <a,1> <b,2> <c,3>."
 
-  (format nil "Pairs:~:{ <~S,~S>~}." '((a 1) (b 2) (c 3))) 
+  (format nil "Pairs:~:{ <~S,~S>~}." '((a 1) (b 2) (c 3)))
   "Pairs: <a,1> <b,2> <c,3>."
 
-  (format nil "Pairs:~@{ <~S,~S>~}." 'a 1 'b 2 'c 3) 
+  (format nil "Pairs:~@{ <~S,~S>~}." 'a 1 'b 2 'c 3)
   "Pairs: <a,1> <b,2> <c,3>."
 
-  (format nil "Pairs:~:@{ <~S,~S>~}." '(a 1) '(b 2) '(c 3)) 
+  (format nil "Pairs:~:@{ <~S,~S>~}." '(a 1) '(b 2) '(c 3))
   "Pairs: <a,1> <b,2> <c,3>.")
 
 (simple-tests cltl-angle-bracket-tests
-  (format nil "~10<foo~;bar~>")           "foo    bar" 
-  (format nil "~10:<foo~;bar~>")          "  foo  bar" 
-  (format nil "~10:@<foo~;bar~>")         "  foo bar " 
-  (format nil "~10<foobar~>")             "    foobar" 
-  (format nil "~10:<foobar~>")            "    foobar" 
-  (format nil "~10@<foobar~>")            "foobar    " 
+  (format nil "~10<foo~;bar~>")           "foo    bar"
+  (format nil "~10:<foo~;bar~>")          "  foo  bar"
+  (format nil "~10:@<foo~;bar~>")         "  foo bar "
+  (format nil "~10<foobar~>")             "    foobar"
+  (format nil "~10:<foobar~>")            "    foobar"
+  (format nil "~10@<foobar~>")            "foobar    "
   (format nil "~10:@<foobar~>")           "  foobar  ")
 
-(let [donestr "Done.~^  ~D warning~:P.~^  ~D error~:P."
+#_(let [donestr "Done.~^  ~D warning~:P.~^  ~D error~:P."
       tellstr "~@{~@(~@[~R~^ ~]~A~)~}."] ;; The CLtL example is a little wrong here
 
   (simple-tests cltl-up-tests
-    (format nil donestr) "Done." 
-    (format nil donestr 3) "Done.  3 warnings." 
+    (format nil donestr) "Done."
+    (format nil donestr 3) "Done.  3 warnings."
     (format nil donestr 1 5) "Done.  1 warning.  5 errors."
-    (format nil tellstr 23) "Twenty-three." 
-    (format nil tellstr nil "losers") "Losers." 
+    (format nil tellstr 23) "Twenty-three."
+    (format nil tellstr nil "losers") "Losers."
     (format nil tellstr 23 "losers") "Twenty-three losers."
-    (format nil "~15<~S~;~^~S~;~^~S~>" 'foo) 
-    "            foo" 
-    (format nil "~15<~S~;~^~S~;~^~S~>" 'foo 'bar) 
-    "foo         bar" 
-    (format nil "~15<~S~;~^~S~;~^~S~>" 'foo 'bar 'baz) 
+    (format nil "~15<~S~;~^~S~;~^~S~>" 'foo)
+    "            foo"
+    (format nil "~15<~S~;~^~S~;~^~S~>" 'foo 'bar)
+    "foo         bar"
+    (format nil "~15<~S~;~^~S~;~^~S~>" 'foo 'bar 'baz)
     "foo   bar   baz"))
 
 (simple-tests cltl-up-x3j13-tests
-  (format nil 
-          "~:{/~S~^ ...~}" 
-          '((hot dog) (hamburger) (ice cream) (french fries))) 
+  (format nil
+          "~:{/~S~^ ...~}"
+          '((hot dog) (hamburger) (ice cream) (french fries)))
   "/hot .../hamburger/ice .../french ..."
-  (format nil 
-          "~:{/~S~:^ ...~}" 
-          '((hot dog) (hamburger) (ice cream) (french fries))) 
+  (format nil
+          "~:{/~S~:^ ...~}"
+          '((hot dog) (hamburger) (ice cream) (french fries)))
   "/hot .../hamburger .../ice .../french"
 
-  (format nil 
+  (format nil
           "~:{/~S~#:^ ...~}"  ;; This is wrong in CLtL
-          '((hot dog) (hamburger) (ice cream) (french fries))) 
+          '((hot dog) (hamburger) (ice cream) (french fries)))
   "/hot .../hamburger")
 
 (simple-tests pprint-table-tests
@@ -815,12 +806,12 @@ but it was called with an argument of type short-float.\n")
   (with-out-str
     (print-table [:a :e :d :c]
                  [{:a 54.7e17 :b {:a 'is-a} :c ["hi" "there"]}
-                  {:b 5 :a -2/3 :c "dog" :d 'panda}]))
+                  {:b 5 :a -2 :c "dog" :d 'panda}]))
   "
 |      :a | :e |    :d |             :c |
 |---------+----+-------+----------------|
-| 5.47E18 |    |       | [\"hi\" \"there\"] |
-|    -2/3 |    | panda |            dog |
+| 5.47e18 |    |       | [\"hi\" \"there\"] |
+|      -2 |    | panda |            dog |
 "
   )
 

@@ -206,7 +206,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm
   (cond
    (integer? x) true
     ;;(decimal? x) ;;no decimal support
-   (float? x)   (= x (math/floor.e x))
+   (float? x)   (= x (clj_utils/floor.e x))
     ;;(ratio? x) ;;no ratio support
    :else        false))
 
@@ -1107,7 +1107,7 @@ string, or one character longer."
                (if (empty? s)
                  [nil nil]
                  (let [match (re-find #"\W\w" s)
-                       offset (and match (.index_of s match))]
+                       offset (and match (inc (.index_of s match)))]
                    (if offset
                      [(str (subs s 0 offset)
                            (.to_upper ^String (nth s offset)))
