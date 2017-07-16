@@ -3594,8 +3594,8 @@
   ([sym] (ns-resolve *ns* sym))
   ([env sym] (ns-resolve *ns* env sym)))
 
-(defn tuple-map
-  "Constructs a tuple-map. If any keys are equal, they are handled as
+(defn array-map
+  "Constructs an array-map. If any keys are equal, they are handled as
   if by repeated uses of assoc."
   {:added "1.0"}
   ([] (new clojerl.TupleMap #erl()))
