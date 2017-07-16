@@ -1011,7 +1011,7 @@
   "remainder of dividing numerator by denominator."
   {:added "1.0"}
   [num div]
-  (erlang/rem.e num div))
+  (clj_utils/rem.e num div))
 
 ;;Bit ops
 
