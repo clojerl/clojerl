@@ -257,6 +257,15 @@ comment(ReadAllFun) ->
   ct:comment("Comment reader"),
   [1, BlaKeyword] = ReadAllFun(<<"1 #! comment\n :bla ">>),
 
+  ct:comment("Comment after meta"),
+  [BarSym1] = ReadAllFun(<<"^:foo ;; comment\n bar">>),
+  <<"bar">> = clj_rt:name(BarSym1),
+  true      = clj_rt:get(clj_rt:meta(BarSym1), foo),
+
+  [_, BarSym2] = ReadAllFun(<<"hello ^:foo ;; comment\n bar">>),
+  <<"bar">> = clj_rt:name(BarSym2),
+  true      = clj_rt:get(clj_rt:meta(BarSym2), foo),
+
   {comments, ""}.
 
 quote(Config) when is_list(Config) ->

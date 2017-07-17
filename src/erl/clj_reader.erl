@@ -183,7 +183,7 @@ read_one(#{src := <<>>, opts := Opts} = State) ->
     eof ->
       throw({eof, Eof, State})
   end;
-read_one(#{ src := <<Ch/utf8, _/binary>>, return_on := Ch} = State) ->
+read_one(#{src := <<Ch/utf8, _/binary>>, return_on := Ch} = State) ->
   throw({return_on, consume_char(State)});
 read_one(#{src := <<First/utf8, Rest/binary>>} = State) ->
   Second = peek_src(State#{src := Rest}),
@@ -405,7 +405,8 @@ read_symbol(State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_comment(state()) -> state().
-read_comment(State) -> skip_line(State).
+read_comment(State0) ->
+  read_one(skip_line(State0)).
 
 %%------------------------------------------------------------------------------
 %% Quote
@@ -700,8 +701,8 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
 
   Items = lists:reverse(ReversedItems),
   Vector = clj_rt:with_meta( clj_rt:vector(Items)
-                             , file_location_meta(State0)
-                             ),
+                           , file_location_meta(State0)
+                           ),
 
   State2#{forms => [Vector | Forms]}.
 
@@ -724,8 +725,8 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
       Map = clj_rt:with_meta( clj_rt:hash_map(Items)
-                              , file_location_meta(State0)
-                              ),
+                            , file_location_meta(State0)
+                            ),
       State2#{forms => [Map | Forms]};
     _ ->
       clj_utils:error( <<"Map literal must contain an even number of forms">>
@@ -1461,22 +1462,24 @@ read_until(Delim, ReadFun, #{src := <<>>} = State) ->
                      , location(State)
                      )
   end;
-read_until(Delim, _ReadFun, #{src := <<Delim/utf8, _/binary>>} = State) ->
+read_until(Delim, ReadFun, State) ->
+  State1 = scope_put(read_delim, true, State#{return_on => Delim}),
+  try
+    read_until(Delim, ReadFun, ReadFun(State1))
+  catch throw:{return_on, State2} ->
+      finish_read_until(State2)
+  end.
+
+-spec finish_read_until(state()) -> state().
+finish_read_until(State) ->
   #{ forms         := Forms
    , pending_forms := PendingForms
    } = State,
-  State1 = State#{ forms := lists:reverse(PendingForms) ++ Forms
-                 , pending_forms => []
+  State1 = State#{ forms         := lists:reverse(PendingForms) ++ Forms
+                 , pending_forms := []
+                 , return_on     := ?NIL
                  },
-  consume_char(scope_put(read_delim, false, State1));
-read_until(Delim, ReadFun, #{src := <<X/utf8, _/binary>>} = State) ->
-  case clj_utils:char_type(X) of
-    whitespace ->
-      read_until(Delim, ReadFun, consume_char(State));
-    _ ->
-      State1 = scope_put(read_delim, true, State),
-      read_until(Delim, ReadFun, ReadFun(State1))
-  end.
+  scope_put(read_delim, false, State1).
 
 -spec is_macro_terminating(char()) -> boolean().
 is_macro_terminating(Char) ->
@@ -1502,9 +1505,9 @@ wrapped_read(Symbol, State) ->
 
 -spec read_pop_one(state()) -> {any(), state()}.
 read_pop_one(State0) ->
-  State = read_one(State0),
-  #{forms := [Form | Forms]} = State,
-  {Form, State#{forms => Forms}}.
+  State1 = read_one(State0),
+  #{forms := [Form | Forms]} = State1,
+  {Form, State1#{forms => Forms}}.
 
 -spec push_form(any(), state()) -> state().
 push_form(Form, #{forms := Forms} = State) ->
