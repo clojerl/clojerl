@@ -4689,9 +4689,8 @@
   else expr is unevaluated"
   {:added "1.0"}
   [name expr]
-  `(let [v# (def ~name)]
-     (when-not (clojerl.Var/has_root.e v#)
-       (def ~name ~expr))))
+  (if-not (find-var name)
+    `(def ~name ~expr)))
 
 ;;;;;;;;;;; require/use/load, contributed by Stephen C. Gilardi ;;;;;;;;;;;;;;;;;;
 
