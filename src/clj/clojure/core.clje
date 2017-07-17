@@ -3136,7 +3136,7 @@
    (pr-on x *out*))
   ([x & more]
    (pr x)
-   (erlang.io.IWriter/write.e *out* " ")
+   (erlang.io.IWriter/write.e *out* \space)
    (if-let [nmore (next more)]
      (recur (first more) nmore)
      (apply pr more))))
