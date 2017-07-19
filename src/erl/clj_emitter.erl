@@ -98,7 +98,7 @@ ast(#{op := def} = Expr, State) ->
   VarAst  = cerl:abstract(Var),
   VarAnn  = ann_from(Env),
 
-  {ValAst, State1} =
+  {ValAst0, State1} =
     case InitExpr of
       #{op := fn} = FnExpr ->
         { VarAst
@@ -118,15 +118,16 @@ ast(#{op := def} = Expr, State) ->
                                           , clj_env:location(Env)
                                           ),
                       cerl:abstract(InitAst00)
-                   end,
-
-        %% If the var is dynamic then the body of the val function needs
-        %% to take this into account.
-        case 'clojerl.Var':is_dynamic(Var) of
-          true  -> {var_val_function(InitAst, VarAst, VarAnn), StateTemp};
-          false -> {InitAst, StateTemp}
-        end
+                  end,
+        {InitAst, StateTemp}
     end,
+
+  %% If the var is dynamic then the body of the val function needs
+  %% to take this into account.
+  ValAst = case 'clojerl.Var':is_dynamic(Var) of
+             true  -> var_val_function(ValAst0, VarAst, VarAnn);
+             false -> ValAst0
+           end,
 
   ValFunAst = function_form(ValName, VarAnn, [], ValAst),
 
@@ -464,7 +465,7 @@ ast(#{op := invoke} = Expr, State) ->
 
   case FExpr of
     %% Var
-    #{op := var, var := Var, form := Symbol} ->
+    #{op := var, var := Var, form := Symbol, is_dynamic := false} ->
       Ast = var_invoke(Var, Symbol, Args, Ann, State),
 
       push_ast(Ast, State1);
