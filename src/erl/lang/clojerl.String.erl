@@ -159,11 +159,11 @@ length(Str) ->
 
 -spec split(binary(), binary()) -> [binary()].
 split(Str, Pattern) ->
-  split(Str, Pattern, [global]).
+  split(Str, Pattern, [{return, binary}]).
 
 -spec split(binary(), binary(), [any()]) -> [binary()].
 split(Str, Pattern, Options) ->
-  binary:split(Str, Pattern, Options).
+  re:split(Str, Pattern, Options).
 
 %%------------------------------------------------------------------------------
 %% Protocols
