@@ -113,3 +113,15 @@ beginning of aseq"
     (number? c) c
     (and (string? c) (== (.length ^clojerl.String c) 1)) (first (unicode/characters_to_list.e c :utf8))
     :else (throw "Argument to char-code must be a single-char string or a number")))
+
+(defn- print-char [c]
+  (.write ^erlang.io.IWriter *out*
+          (condp = c
+            \backspace "\\backspace"
+            \tab "\\tab"
+            \newline "\\newline"
+            \formfeed "\\formfeed"
+            \return "\\return"
+            \" "\\\""
+            \\ "\\\\"
+            (str "\\" c))))

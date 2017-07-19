@@ -499,7 +499,7 @@ Note this should only be used for the last one in the sequence"
     (condp = (:char-format params)
       \o (cl-format true "\\o~3,'0o" (char-code c))
       \u (cl-format true "\\u~4,'0x" (char-code c))
-      nil (pr c))
+      nil (print-char c))
     navigator))
 
 (defn- plain-character [params navigator offsets]
