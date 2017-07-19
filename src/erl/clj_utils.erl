@@ -45,6 +45,7 @@
         , code_from_binary/1
 
         , 'rem'/2
+        , quotient/2
         , floor/1
         , ceil/1
         , signum/1
@@ -469,6 +470,12 @@ location_to_binary(_) ->
 'rem'(X, Y) ->
   Q = trunc(X / Y),
   X - Q * Y.
+
+-spec quotient(number(), number()) -> number().
+quotient(X, Y) when is_integer(X), is_integer(Y) ->
+  X div Y;
+quotient(X, Y) ->
+  quotient(trunc(X), trunc(Y)).
 
 -spec floor(number()) -> number().
 floor(X) when X < 0 ->
