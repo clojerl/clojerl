@@ -140,9 +140,9 @@
 
 (defn- write-tokens [^IWriter this tokens force-trailing-whitespace]
   (doseq [token tokens]
-    (if-not (= (:type-tag token) :nl-t)
+    (if-not (nl-t? token)
       (if-let [^String tws (getf :trailing-white-space)]
-	(write-to-base tws)))
+        (write-to-base tws)))
     (write-token this token)
     (setf :trailing-white-space (:trailing-white-space token)))
   (let [^String tws (getf :trailing-white-space)]
@@ -228,8 +228,7 @@
         ^String prefix (:per-line-prefix lb)]
     (if prefix
       (write-to-base prefix))
-    (let [^String istr (apply str (repeat (- @(:indent lb) (count prefix))
-					  \space))]
+    (let [^String istr (apply str (repeat (- @(:indent lb) (count prefix)) \space))]
       (write-to-base istr))
     (update-nl-state lb)))
 
@@ -239,13 +238,13 @@
 
 ;;; Methods for showing token strings for debugging
 
-(defmulti ^{:private true} tok :type-tag)
-(defmethod tok :nl-t [token]
+(defmulti ^{:private true} tok type)
+(defmethod tok nl-t [token]
   (:type token))
-(defmethod tok :buffer-blob [token]
+(defmethod tok buffer-blob [token]
   (str \" (:data token) (:trailing-white-space token) \"))
 (defmethod tok :default [token]
-  (:type-tag token))
+  (type token))
 (defn- toks [toks] (map tok toks))
 
 ;;; write-token-string is called when the set of tokens in the buffer
@@ -355,7 +354,7 @@
     (condp = (type x)
       String
       (let [^String s0 (write-initial-lines this x)
-            ^String s (binary/replace.e s0 "\\s+$" "")
+            ^String s (.replace #"\s+$" s0 "")
             white-space (.substring s0 (count s))
             mode (getf :mode)]
         (if (= mode :writing)

@@ -499,7 +499,7 @@
          (condp = (class x)
            String
            (let [s0 (write-initial-lines this x)
-                 s (.replaceFirst s0 "\\s+$" "")
+                 s (.replace #"\s+$" s "")
                  white-space (.substring s0 (count s))
                  mode (getf :mode)]
              (if (= mode :writing)
