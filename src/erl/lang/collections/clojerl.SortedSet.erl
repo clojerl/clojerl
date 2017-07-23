@@ -125,7 +125,5 @@ to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = {_, Vals}}) ->
-  Items = [clj_rt:str(K) || {K, _} <- rbdict:to_list(Vals)],
-  Strs  = 'clojerl.String':join(Items, <<" ">>),
-  <<"#{", Strs/binary, "}">>.
+str(#?TYPE{name = ?M} = SortedSet) ->
+  clj_rt:print(SortedSet).

@@ -209,12 +209,5 @@ to_list(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
-  StrFun = fun(Hash) ->
-               KeyStr = clj_rt:str(maps:get(Hash, Keys)),
-               ValStr = clj_rt:str(maps:get(Hash, Vals)),
-               'clojerl.String':join([KeyStr, ValStr], <<" ">>)
-           end,
-  KeyValueStrs = lists:map(StrFun, maps:keys(Keys)),
-  Strs = 'clojerl.String':join(KeyValueStrs, <<", ">>),
-  <<"{", Strs/binary, "}">>.
+str(#?TYPE{name = ?M} = Map) ->
+  clj_rt:print(Map).

@@ -304,17 +304,7 @@ do_to_list([K, V | Rest], Acc0) ->
 %% clojerl.Stringable
 
 str(#?TYPE{name = ?M, data = TupleMap}) ->
-  do_str(tuple_to_list(TupleMap), []).
-
-do_str([], KeyValueStrs0) ->
-  KeyValueStrs1 = lists:reverse(KeyValueStrs0),
-  Strs = 'clojerl.String':join(KeyValueStrs1, <<", ">>),
-  <<"{", Strs/binary, "}">>;
-do_str([K, V | Rest], KeyValueStrs0) ->
-  KeyStr = clj_rt:str(K),
-  ValStr = clj_rt:str(V),
-  KeyValueStr = 'clojerl.String':join([KeyStr, ValStr], <<" ">>),
-  do_str(Rest, [KeyValueStr | KeyValueStrs0]).
+  clj_rt:print(TupleMap).
 
 %%------------------------------------------------------------------------------
 %% Helper functions

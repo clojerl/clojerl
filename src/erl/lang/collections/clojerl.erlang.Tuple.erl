@@ -66,7 +66,4 @@ seq(Tuple) -> tuple_to_list(Tuple).
 to_list(Tuple) -> tuple_to_list(Tuple).
 
 str(Tuple) when is_tuple(Tuple) ->
-  Items     = tuple_to_list(Tuple),
-  ItemsStrs = lists:map(fun clj_rt:str/1, Items),
-  Strs      = 'clojerl.String':join(ItemsStrs, <<", ">>),
-  <<"#erl[", Strs/binary, "]">>.
+  clj_rt:print(Tuple).

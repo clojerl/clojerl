@@ -120,6 +120,4 @@ to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) when Step < 0 ->
   lists:seq(Start, End + 1, Step).
 
 str(#?TYPE{name = ?M} = Range) ->
-  ItemsStrs = lists:map(fun clj_rt:str/1, to_list(Range)),
-  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
-  <<"(", Strs/binary, ")">>.
+  clj_rt:print(Range).

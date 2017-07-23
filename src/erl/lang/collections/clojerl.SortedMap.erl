@@ -209,12 +209,5 @@ to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = {_, Vals}}) ->
-  StrFun = fun({Key, Value}) ->
-               KeyStr = clj_rt:str(Key),
-               ValStr = clj_rt:str(Value),
-               'clojerl.String':join([KeyStr, ValStr], <<" ">>)
-           end,
-  KeyValueStrs = lists:map(StrFun, rbdict:to_list(Vals)),
-  Strs = 'clojerl.String':join(KeyValueStrs, <<", ">>),
-  <<"{", Strs/binary, "}">>.
+str(#?TYPE{name = ?M} = SortedMap) ->
+  clj_rt:print(SortedMap).

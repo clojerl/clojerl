@@ -103,4 +103,4 @@ to_list(#?TYPE{name = ?M, data = {First, More}}) ->
   [First | clj_rt:to_list(More)].
 
 str(#?TYPE{name = ?M} = Cons) ->
-  clj_rt:str(to_list(Cons)).
+  clj_rt:print(Cons).

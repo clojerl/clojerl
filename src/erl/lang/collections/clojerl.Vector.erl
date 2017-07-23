@@ -195,7 +195,5 @@ seq(#?TYPE{name = ?M, data = Array}) ->
 to_list(#?TYPE{name = ?M, data = Array}) ->
   array:to_list(Array).
 
-str(#?TYPE{name = ?M, data = Array}) ->
-  Items = lists:map(fun clj_rt:str/1, array:to_list(Array)),
-  Strs  = 'clojerl.String':join(Items, <<" ">>),
-  <<"[", Strs/binary, "]">>.
+str(#?TYPE{name = ?M} = Vector) ->
+  clj_rt:print(Vector).
