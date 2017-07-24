@@ -75,8 +75,8 @@ str(_Config) ->
   {match, _} = re:run(clj_rt:str(ReadCond), Regex),
 
   ct:comment("Check the str representation of reader cond with splicing"),
-  ReadCond1 = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([a, b], true),
-  SplicingRegex = <<"#?@\\(:a :b\\)">>,
+  ReadCond1     = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([a, b], true),
+  SplicingRegex = <<"#?@#erl\\(:a :b\\)">>,
   {match, _} = re:run(clj_rt:str(ReadCond1), SplicingRegex),
 
   {comments, ""}.

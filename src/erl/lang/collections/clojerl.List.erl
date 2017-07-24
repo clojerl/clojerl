@@ -129,7 +129,5 @@ to_list(#?TYPE{name = ?M, data = List}) -> List.
 
 str(#?TYPE{name = ?M, data = []}) ->
   <<"()">>;
-str(#?TYPE{name = ?M, data = Items}) ->
-  ItemsStrs = lists:map(fun clj_rt:str/1, Items),
-  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
-  <<"(", Strs/binary, ")">>.
+str(#?TYPE{name = ?M} = List) ->
+  clj_rt:print(List).

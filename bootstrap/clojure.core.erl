@@ -66,6 +66,11 @@
                             , #{meta => #{dynamic => true}}
                             }
 
+           , <<"print-initialized">> =>
+               { ?TYPE, 'clojerl.Var'
+               , {<<"clojure.core">>, <<"print-initialized">>}
+               , #{meta => #{dynamic => true, private => true}}
+               }
            , <<"*print-dup*">> =>
                { ?TYPE, 'clojerl.Var'
                , {<<"clojure.core">>, <<"*print-dup*">>}
@@ -119,6 +124,7 @@
         , '*in*__val'/0
         , '*err*__val'/0
 
+        , 'print-initialized__val'/0
         , '*print-dup*__val'/0
         , '*flush-on-newline*__val'/0
         , '*print-readably*__val'/0
@@ -200,6 +206,9 @@ ns__val() ->
 
 '*err*__val'() ->
   var_value(<<"#'clojure.core/*err*">>, standard_error).
+
+'print-initialized__val'() ->
+  var_value(<<"#'clojure.core/print-initialized">>, false).
 
 '*print-dup*__val'() ->
   var_value(<<"#'clojure.core/*print-dup*">>, false).

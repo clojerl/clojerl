@@ -60,9 +60,10 @@ get(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   ErlSymbol = clj_rt:symbol(<<"erl">>),
+  List      = clj_rt:list([]),
 
   ct:comment("Check the str representation of tagged literals"),
-  TaggedLit1 = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, []),
+  TaggedLit1 = 'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(ErlSymbol, List),
   Regex1 = <<"#erl \\(\\)">>,
   {match, _} = re:run(clj_rt:str(TaggedLit1), Regex1),
 

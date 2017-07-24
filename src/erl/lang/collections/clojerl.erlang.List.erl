@@ -61,11 +61,9 @@ do_reduce(_F, Acc, []) ->
   Acc.
 
 str([]) ->
-  <<"()">>;
+  <<"#erl()">>;
 str(Items) when is_list(Items) ->
-  ItemsStrs = lists:map(fun clj_rt:str/1, Items),
-  Strs = 'clojerl.String':join(ItemsStrs, <<" ">>),
-  <<"(", Strs/binary, ")">>.
+  clj_rt:print(Items).
 
 seq([]) -> ?NIL;
 seq(List) -> List.

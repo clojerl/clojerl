@@ -43,6 +43,6 @@ get(#?TYPE{name = ?M}, _, NotFound) ->
 %% clojerl.Stringable
 
 str(#?TYPE{name = ?M, data = {Tag, Form}}) ->
-  TagBin = clj_rt:str(Tag),
+  TagBin  = clj_rt:str(Tag),
   FormBin = clj_rt:str(Form),
   <<"#", TagBin/binary, " ", FormBin/binary>>.

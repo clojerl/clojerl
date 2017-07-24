@@ -119,7 +119,5 @@ to_list(#?TYPE{name = ?M, data = MapSet}) ->
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = MapSet}) ->
-  Items = lists:map(fun clj_rt:str/1, maps:values(MapSet)),
-  Strs  = 'clojerl.String':join(Items, <<" ">>),
-  <<"#{", Strs/binary, "}">>.
+str(#?TYPE{name = ?M} = Set) ->
+  clj_rt:print(Set).

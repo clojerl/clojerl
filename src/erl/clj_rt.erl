@@ -30,7 +30,7 @@
         , 'contains?'/2
         , boolean/1
         , byte/1, char/1, short/1
-        , str/1
+        , str/1, print/1
         , list/1, vector/1, hash_map/1, hash_set/1
         , subvec/3
         , keys/1, vals/1
@@ -458,6 +458,94 @@ short(X) when is_number(X), 0 =< X, X < 32768 ->
 -spec str(any()) -> binary().
 str(X) ->
   'clojerl.Stringable':str(X).
+
+-spec print(any()) -> binary().
+print(X) ->
+  case 'clojure.core':'print-initialized__val'() of
+    true  ->
+      StringWriter = 'erlang.io.StringWriter':?CONSTRUCTOR(),
+      'clojure.core':'pr-on'(X, StringWriter),
+      'erlang.io.StringWriter':str(StringWriter);
+    false ->
+      PrintReadably = boolean('clojure.core':'*print-readably*__val'()),
+      Type          = type_module(X),
+      do_print(X, Type, PrintReadably)
+  end.
+
+-spec do_print(any(), atom(), boolean()) -> binary().
+do_print(?NIL, _, _) ->
+  <<"nil">>;
+do_print(X, 'clojerl.String', true) ->
+  do_print_string(X, <<"\"">>);
+do_print(X, 'clojerl.String', false) ->
+  X;
+do_print(X, 'clojerl.Cons', _PrintReadably) ->
+  do_print_seq(X, <<"(">>, <<")">>);
+do_print(X, 'clojerl.LazySeq', _PrintReadably) ->
+  do_print_seq(X, <<"(">>, <<")">>);
+do_print(X, 'clojerl.List', _PrintReadably) ->
+  do_print_seq(X, <<"(">>, <<")">>);
+do_print(X, 'clojerl.Map', _PrintReadably) ->
+  do_print_map(X);
+do_print(X, 'clojerl.Range', _PrintReadably) ->
+  do_print_seq(X, <<"(">>, <<")">>);
+do_print(X, 'clojerl.Set', _PrintReadably) ->
+  do_print_seq(X, <<"#{">>, <<"}">>);
+do_print(X, 'clojerl.SortedSet', _PrintReadably) ->
+  do_print_seq(X, <<"#{">>, <<"}">>);
+do_print(X, 'clojerl.SortedMap', _PrintReadably) ->
+  do_print_map(X);
+do_print(X, 'clojerl.TupleMap', _PrintReadably) ->
+  do_print_map(X);
+do_print(X, 'clojerl.Vector', _PrintReadably) ->
+  do_print_seq(X, <<"[">>, <<"]">>);
+do_print(X, 'clojerl.erlang.List', _PrintReadably) ->
+  do_print_seq(X, <<"#erl(">>, <<")">>);
+do_print(X, 'clojerl.erlang.Map', _PrintReadably) ->
+  do_print_map(X, <<"#erl{">>, <<"}">>);
+do_print(X, 'clojerl.erlang.Tuple', _PrintReadably) ->
+  do_print_seq(X, <<"#erl[">>, <<"]">>);
+do_print(X, _Type, _PrintReadably) ->
+  str(X).
+
+-spec do_print_string(binary(), binary()) -> binary().
+do_print_string(<<>>, Acc) ->
+  <<Acc/binary, "\"">>;
+do_print_string(<<X/utf8, Rest/binary>>, Acc) ->
+  Ch = case <<X>> of
+         <<"\n">> -> <<"\\n">>;
+         <<"\t">> -> <<"\\t">>;
+         <<"\r">> -> <<"\\r">>;
+         <<"\"">> -> <<"\\\"">>;
+         <<"\\">> -> <<"\\\\">>;
+         <<"\f">> -> <<"\\f">>;
+         <<"\b">> -> <<"\\b">>;
+         Default  -> Default
+       end,
+  do_print_string(Rest, <<Acc/binary, Ch/binary>>).
+
+-spec do_print_seq(any(), binary(), binary()) -> binary().
+do_print_seq(X, First, Last) ->
+  Items = lists:map(fun print/1, to_list(X)),
+  Strs  = 'clojerl.String':join(Items, <<" ">>),
+  <<First/binary, Strs/binary, Last/binary>>.
+
+-spec do_print_map(any()) -> binary().
+do_print_map(X) ->
+  do_print_map(X, <<"{">>, <<"}">>).
+
+-spec do_print_map(any(), binary(), binary()) -> binary().
+do_print_map(X, First, Last) ->
+  Items    = lists:map(fun print/1, to_list(X)),
+  FunItem  = fun(Item) ->
+                 [K, V] = to_list(Item),
+                 Key    = print(K),
+                 Value  = print(V),
+                 <<Key/binary, " ", Value/binary>>
+             end,
+  ItemsStr = lists:map(FunItem, Items),
+  Strs  = 'clojerl.String':join(ItemsStr, <<", ">>),
+  <<First/binary, Strs/binary, Last/binary>>.
 
 -spec 'list'(list()) -> 'clojerl.List':type().
 list(Items) ->

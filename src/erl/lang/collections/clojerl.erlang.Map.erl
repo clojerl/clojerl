@@ -140,15 +140,7 @@ without(Map, Key) ->
   maps:remove(Key, Map).
 
 str(Map) when is_map(Map) ->
-  StrFun = fun(Key) ->
-               KeyStr = clj_rt:str(Key),
-               ValStr = clj_rt:str(maps:get(Key, Map)),
-
-               'clojerl.String':join([KeyStr, ValStr], <<" ">>)
-           end,
-  KeyValueStrs = lists:map(StrFun, maps:keys(Map)),
-  Strs = 'clojerl.String':join(KeyValueStrs, <<", ">>),
-  <<"{", Strs/binary, "}">>.
+  clj_rt:print(Map).
 
 seq(Map) when is_map(Map) ->
   FoldFun = fun(K, V, List) ->

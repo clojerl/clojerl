@@ -135,10 +135,15 @@
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
+(defmethod print-method clojerl.Range [o, ^IWriter w]
+  (print-meta o w)
+  (print-sequential "(" pr-on " " ")" o w))
+
 (defmethod print-dup clojerl.List [o ^IWriter w] (print-method o w))
 (defmethod print-dup clojerl.erlang.List [o ^IWriter w] (print-method o w))
 (defmethod print-dup clojerl.Cons [o ^IWriter w] (print-method o w))
 (defmethod print-dup clojerl.LazySeq [o ^IWriter w] (print-method o w))
+(defmethod print-dup clojerl.Range [o ^IWriter w] (print-method o w))
 
 (def ^{:tag clojerl.String
        :doc "Returns escape string for char or nil if none"
@@ -188,6 +193,14 @@
   (print-meta m w)
   (print-map "{" m "}" pr-on w))
 
+(defmethod print-method clojerl.SortedMap [m, ^IWriter w]
+  (print-meta m w)
+  (print-map "{" m "}" pr-on w))
+
+(defmethod print-method clojerl.TupleMap [m, ^IWriter w]
+  (print-meta m w)
+  (print-map "{" m "}" pr-on w))
+
 (defmethod print-method clojerl.erlang.Map [m, ^IWriter w]
   (print-meta m w)
   (print-map "#erl{" m "}" pr-on w))
@@ -196,6 +209,15 @@
   (print-meta s w)
   (print-sequential "#{" pr-on " " "}" (seq s) w))
 
+(defmethod print-method clojerl.SortedSet [s, ^IWriter w]
+  (print-meta s w)
+  (print-sequential "#{" pr-on " " "}" (seq s) w))
+
 (defmethod print-method clojerl.erlang.Tuple [s, ^IWriter w]
   (print-meta s w)
   (print-sequential "#erl[" pr-on " " "]" (seq s) w))
+
+;; Even though this is not the same as in Clojure JVM, it is still
+;; true since the on_load code will be evaluated before the value for
+;; this Var can even returned.
+(def ^:dynamic ^{:private true} print-initialized true)

@@ -56,7 +56,7 @@ str(_Config) ->
   ct:comment("Check the str representation of tagged literals"),
   Value1   = [some, value],
   Reduced1 = 'clojerl.Reduced':?CONSTRUCTOR(Value1),
-  Regex1 = <<"#<clojerl.Reduced \\(:some :value\\)">>,
+  Regex1 = <<"#<clojerl.Reduced #erl\\(:some :value\\)">>,
   {match, _} = re:run(clj_rt:str(Reduced1), Regex1),
 
   {comments, ""}.

@@ -586,7 +586,7 @@
        #_(is (= tl (tagged-literal 'js {:x 1 :y 2}))))
   (testing "print form roundtrips"
            (doseq [s ["#?(:clje foo :cljs bar)"
-                      "#?(:cljs #js {:x 1, :y 2})"
+                      "#?(:cljs #js {:y 2, :x 1})"
                       "#?(:clje #clojure.test-clojure.reader.TestRecord [42 85])"]]
                   (is (= s (pr-str (read-string {:read-cond :preserve} s)))))))
 
