@@ -192,7 +192,7 @@ Usage: *hello*
   "(ns autodoc.build-html
   \"This is the namespace that builds the HTML pages themselves.
 It is implemented with a number of custom enlive templates.\"
-  {:skip-wiki true, :author \"Tom Faulhaber\"}
+  {:author \"Tom Faulhaber\", :skip-wiki true}
   (:refer-clojure :exclude [empty complement])
   (:import [java.util.jar JarFile]
            [java.io File FileWriter BufferedWriter StringReader
