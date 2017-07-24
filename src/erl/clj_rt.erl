@@ -511,7 +511,7 @@ do_print(X, _Type, _PrintReadably) ->
 -spec do_print_string(binary(), binary()) -> binary().
 do_print_string(<<>>, Acc) ->
   <<Acc/binary, "\"">>;
-do_print_string(<<X/utf8, Rest>>, Acc) ->
+do_print_string(<<X/utf8, Rest/binary>>, Acc) ->
   Ch = case <<X>> of
          <<"\n">> -> <<"\\n">>;
          <<"\t">> -> <<"\\t">>;
@@ -522,7 +522,7 @@ do_print_string(<<X/utf8, Rest>>, Acc) ->
          <<"\b">> -> <<"\\b">>;
          Default  -> Default
        end,
-  do_print_string(Rest, <<Acc, Ch/binary>>).
+  do_print_string(Rest, <<Acc/binary, Ch/binary>>).
 
 -spec do_print_seq(any(), binary(), binary()) -> binary().
 do_print_seq(X, First, Last) ->
