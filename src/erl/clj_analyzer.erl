@@ -1518,6 +1518,7 @@ parse_dot(Form, Env) ->
                            andalso Module =/= ?NO_TAG
                          , [ <<"Cannot infer target type in ">>, Form
                            , <<" there is no function ">>, NameSym
+                           , <<" of arity ">>, Count
                            , <<" for type ">>
                            , 'erlang.Type':?CONSTRUCTOR(Module)
                            ]

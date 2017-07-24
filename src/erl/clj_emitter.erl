@@ -323,29 +323,30 @@ ast(#{op := defprotocol} = Expr, State) ->
   ok     = clj_module:ensure_loaded(file_from(Env), Module),
   Ann    = ann_from(Env),
 
-  TermType = cerl:ann_abstract(Ann, {type, Ann, term, []}),
-  CallbackAttrFun = fun(Sig) ->
-                        MethodNameSym = clj_rt:first(Sig),
-                        Arity         = clj_rt:second(Sig),
-                        ArgsTypes     = lists:duplicate(Arity, TermType),
-                        Value = { {sym_to_kw(MethodNameSym), Arity}
-                                , [{ type
-                                   , Ann
-                                   , 'fun'
-                                   , [ {type, Ann, product, ArgsTypes}
-                                     , TermType
-                                     ]
-                                   }
-                                  ]
-                                },
-                        { cerl:ann_c_atom(Ann, callback)
-                        , cerl:ann_abstract(Ann, Value)
-                        }
-                    end,
+  FunctionFun = fun(Sig) ->
+                    MethodSym = clj_rt:first(Sig),
+                    Arity     = clj_rt:second(Sig),
+                    Method    = sym_to_kw(MethodSym),
+                    Vars      = [new_c_var(Ann) || _ <- lists:seq(1, Arity)],
+                    Args      = [ cerl:c_atom(Module)
+                                , cerl:c_atom(Method)
+                                | Vars
+                                ],
+                    Body      = call_mfa(clj_protocol, resolve, Args, Ann),
+                    { cerl:c_fname(Method, Arity)
+                    , cerl:ann_c_fun(Ann, Vars, Body)
+                    }
+                end,
 
   ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:abstract([true])},
-  Attributes   = lists:map(CallbackAttrFun, MethodsSigs),
-  clj_module:add_attributes([ProtocolAttr | Attributes], Module),
+  Functions    = lists:map(FunctionFun, MethodsSigs),
+  Exports      = [ {cerl:fname_id(FName), cerl:fname_arity(FName)}
+                   || {FName, _} <- Functions
+                 ],
+
+  clj_module:add_attributes([ProtocolAttr], Module),
+  clj_module:add_functions(Functions, Module),
+  clj_module:add_exports(Exports, Module),
 
   Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
   Module = clj_compiler:compile_module(clj_module:get_module(Module), Opts),
