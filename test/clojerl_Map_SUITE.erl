@@ -60,7 +60,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Map = clj_rt:hash_map([1, 2, 3, 4]),
-  <<"{1 2, 3 4}">> = clj_rt:str(Map),
+  <<"{3 4, 1 2}">> = clj_rt:str(Map),
 
   Map2 = clj_rt:hash_map([]),
   <<"{}">> = clj_rt:str(Map2),

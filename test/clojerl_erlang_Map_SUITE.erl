@@ -60,10 +60,10 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Map = #{1 => 2, 3 => 4},
-  <<"{1 2, 3 4}">> = clj_rt:str(Map),
+  <<"#erl{3 4, 1 2}">> = clj_rt:str(Map),
 
-  Map2 = clj_rt:hash_map([]),
-  <<"{}">> = clj_rt:str(Map2),
+  Map2 = #{},
+  <<"#erl{}">> = clj_rt:str(Map2),
 
   {comments, ""}.
 

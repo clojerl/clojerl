@@ -502,7 +502,7 @@ do_print(X, 'clojerl.Vector', _PrintReadably) ->
 do_print(X, 'clojerl.erlang.List', _PrintReadably) ->
   do_print_seq(X, <<"#erl(">>, <<")">>);
 do_print(X, 'clojerl.erlang.Map', _PrintReadably) ->
-  do_print_map(X);
+  do_print_map(X, <<"#erl{">>, <<"}">>);
 do_print(X, 'clojerl.erlang.Tuple', _PrintReadably) ->
   do_print_seq(X, <<"#erl[">>, <<"]">>);
 do_print(X, _Type, _PrintReadably) ->
@@ -532,6 +532,10 @@ do_print_seq(X, First, Last) ->
 
 -spec do_print_map(any()) -> binary().
 do_print_map(X) ->
+  do_print_map(X, <<"{">>, <<"}">>).
+
+-spec do_print_map(any(), binary(), binary()) -> binary().
+do_print_map(X, First, Last) ->
   Items    = lists:map(fun print/1, to_list(X)),
   FunItem  = fun(Item) ->
                  [K, V] = to_list(Item),
@@ -541,7 +545,7 @@ do_print_map(X) ->
              end,
   ItemsStr = lists:map(FunItem, Items),
   Strs  = 'clojerl.String':join(ItemsStr, <<", ">>),
-  <<"{", Strs/binary, "}">>.
+  <<First/binary, Strs/binary, Last/binary>>.
 
 -spec 'list'(list()) -> 'clojerl.List':type().
 list(Items) ->

@@ -303,7 +303,7 @@ do_to_list([K, V | Rest], Acc0) ->
 
 %% clojerl.Stringable
 
-str(#?TYPE{name = ?M, data = TupleMap}) ->
+str(#?TYPE{name = ?M} = TupleMap) ->
   clj_rt:print(TupleMap).
 
 %%------------------------------------------------------------------------------

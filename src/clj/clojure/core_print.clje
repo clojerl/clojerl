@@ -193,11 +193,23 @@
   (print-meta m w)
   (print-map "{" m "}" pr-on w))
 
+(defmethod print-method clojerl.SortedMap [m, ^IWriter w]
+  (print-meta m w)
+  (print-map "{" m "}" pr-on w))
+
+(defmethod print-method clojerl.TupleMap [m, ^IWriter w]
+  (print-meta m w)
+  (print-map "{" m "}" pr-on w))
+
 (defmethod print-method clojerl.erlang.Map [m, ^IWriter w]
   (print-meta m w)
   (print-map "#erl{" m "}" pr-on w))
 
 (defmethod print-method clojerl.Set [s, ^IWriter w]
+  (print-meta s w)
+  (print-sequential "#{" pr-on " " "}" (seq s) w))
+
+(defmethod print-method clojerl.SortedSet [s, ^IWriter w]
   (print-meta s w)
   (print-sequential "#{" pr-on " " "}" (seq s) w))
 

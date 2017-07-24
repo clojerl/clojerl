@@ -108,7 +108,7 @@ seq(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Tuple = {1, 2, 3, 4},
-  <<"#erl[1, 2, 3, 4]">> = clj_rt:str(Tuple),
+  <<"#erl[1 2 3 4]">> = clj_rt:str(Tuple),
 
   EmptyTuple = {},
   <<"#erl[]">> = clj_rt:str(EmptyTuple),
