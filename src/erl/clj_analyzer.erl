@@ -27,20 +27,21 @@ macroexpand_1(Form, Env) ->
                 false -> ?NIL
               end,
 
-  case
-    not IsSpecial
-    andalso (MacroVar =/= ?NIL)
-    andalso ('clojerl.Var':is_macro(MacroVar))
-  of
-    true ->
-      Args = [Form, Env | clj_rt:to_list(clj_rt:rest(Form))],
-      'clojerl.IFn':apply(MacroVar, Args);
-    false ->
-      case IsSymbol andalso not IsSpecial of
-        true  -> maybe_macroexpand_symbol(Form, Op);
-        false -> Form
-      end
-  end.
+  Expanded  = case
+                not IsSpecial
+                andalso MacroVar =/= ?NIL
+                andalso 'clojerl.Var':is_macro(MacroVar)
+              of
+                true ->
+                  Args = [Form, Env | clj_rt:to_list(clj_rt:rest(Form))],
+                  'clojerl.IFn':apply(MacroVar, Args);
+                false ->
+                  case IsSymbol andalso not IsSpecial of
+                    true  -> maybe_macroexpand_symbol(Form, Op);
+                    false -> Form
+                  end
+              end,
+  keep_location_meta(Expanded, Form).
 
 %%------------------------------------------------------------------------------
 %% Internal
@@ -51,12 +52,11 @@ maybe_macroexpand_symbol(Form, OpSym) ->
   OpBin = clj_rt:name(OpSym),
   case 'clojerl.String':char_at(OpBin, 0) of
     <<".">> ->
-      DotSym     = clj_rt:symbol(<<".">>),
-      Length     = 'clojerl.String':count(OpBin),
-      NameBin    = 'clojerl.String':substring(OpBin, 1, Length),
-      NameSym    = clj_rt:symbol(NameBin),
+      DotSym  = clj_rt:symbol(<<".">>),
+      Length  = 'clojerl.String':count(OpBin),
+      NameBin = 'clojerl.String':substring(OpBin, 1, Length),
+      NameSym = clj_rt:symbol(NameBin),
       [_, Target | Args] = clj_rt:to_list(Form),
-
       clj_rt:list([DotSym, Target, NameSym | Args]);
     _ ->
       case 'clojerl.String':ends_with(OpBin, <<".">>) of
@@ -71,6 +71,19 @@ maybe_macroexpand_symbol(Form, OpSym) ->
         false ->
           Form
       end
+  end.
+
+-spec keep_location_meta(any(), any()) -> any().
+keep_location_meta(Form, Form) ->
+  Form;
+keep_location_meta(Expanded, Form) ->
+  case clj_rt:'meta?'(Form) andalso clj_rt:'meta?'(Expanded) of
+    true  ->
+      LocationMeta = clj_reader:location_meta(Form),
+      ExpandedMeta = clj_rt:meta(Expanded),
+      clj_rt:with_meta(Expanded, clj_rt:merge([ExpandedMeta, LocationMeta]));
+    false ->
+      Expanded
   end.
 
 -spec special_forms() -> #{'clojerl.Symbol':type() => fun() | ?NIL}.
