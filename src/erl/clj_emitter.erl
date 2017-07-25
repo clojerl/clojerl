@@ -1040,14 +1040,28 @@ ast(#{op := Unknown}, _State) ->
 %%------------------------------------------------------------------------------
 
 -spec list_ast(list()) -> ast().
-list_ast([]) ->
-  cerl:c_nil();
-list_ast(List) when is_list(List) ->
-  list_ast(List, cerl:c_nil()).
+list_ast(List) ->
+  list_ast(List, false).
 
--spec list_ast(list(), any()) -> ast().
-list_ast(Heads, Tail) when is_list(Heads) ->
-  do_list_ast(Heads, Tail).
+-spec list_ast(list(), boolean()) -> ast().
+list_ast([], _Pattern) ->
+  cerl:c_nil();
+list_ast(List, Pattern) when is_list(List) ->
+  list_ast(List, cerl:c_nil(), Pattern).
+
+-spec list_ast(list(), any(), boolean()) -> ast().
+list_ast(Heads, Tail, true) when is_list(Heads) ->
+  do_list_ast(Heads, Tail);
+list_ast(Heads, Tail, false) when is_list(Heads) ->
+  do_list_let_ast(Heads, Tail, []).
+
+-spec do_list_let_ast(list(), ast(), [ast()]) -> ast().
+do_list_let_ast([], Tail, Vars) ->
+  do_list_ast(lists:reverse(Vars), Tail);
+do_list_let_ast([H | Hs], Tail, Vars) ->
+  Var  = new_c_var([]),
+  Body = do_list_let_ast(Hs, Tail, [Var | Vars]),
+  cerl:c_let([Var], H, Body).
 
 -spec do_list_ast(list(), ast()) -> ast().
 do_list_ast([], Tail) ->
@@ -1128,7 +1142,7 @@ creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 
   %% Coerce argument into a clojerl.Map
   EmptyMapAst   = cerl:abstract('clojerl.Map':?CONSTRUCTOR([])),
-  ArgsListAst   = list_ast([EmptyMapAst, MapVarAst]),
+  ArgsListAst   = list_ast([EmptyMapAst, MapVarAst], true),
   MergeCallAst  = call_mfa(clj_rt, merge, [ArgsListAst], Ann),
 
   ExtMapAst     = lists:foldl(DissocFoldFun, MergeCallAst, AllFieldsAsts),
@@ -1302,9 +1316,12 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
             'case' when IsVariadic, ParamCount == 1 ->
               PatternArgs;
             'case' when IsVariadic ->
-              [list_ast(lists:droplast(PatternArgs), lists:last(PatternArgs))];
+              [list_ast( lists:droplast(PatternArgs), lists:last(PatternArgs)
+                       , true
+                       )
+              ];
             'case' ->
-              [list_ast(PatternArgs)]
+              [list_ast(PatternArgs, true)]
           end,
 
   {Guard0, State3} = pop_ast(ast(GuardExpr, State2)),
