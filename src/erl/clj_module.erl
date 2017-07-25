@@ -539,11 +539,10 @@ maybe_on_load(OnLoadTable, Name, Exports0, Attrs0, Defs0) ->
       Fun    = on_load_function(OnLoadTable),
       Def    = {FName, Fun},
 
-      Exports1 = [FName | Exports0],
       Attrs1   = lists:usort([Attr | Attrs0]),
       Defs1    = [Def  | Defs0],
 
-      cerl:c_module(Name, Exports1, Attrs1, Defs1)
+      cerl:c_module(Name, Exports0, Attrs1, Defs1)
   end.
 
 %% @private
@@ -596,12 +595,18 @@ new(CoreModule) ->
   Module = add_mappings(maps:to_list(Mappings), Module),
   Module = add_attributes(Attrs, Module),
 
-  %% Remove the on_load function and all its contents.
-  %% IMPORTANT: This means that whenever a namespace is recompiled all
-  %% `erl-on-load*' expressions need to be included in the compilation as
-  %% well or they won't be present in the resulting binary.
+  %% Keep expressions from the on_load function.
+  %% IMPORTANT: This means that for wiping them all out, the namespace
+  %% needs to be compiled from scratch.
   OnLoadId = {?ON_LOAD_FUNCTION, 0},
-  true     = ets:delete(Module#module.funs, OnLoadId),
+  case clj_utils:ets_get(Module#module.funs, OnLoadId) of
+    ?NIL ->
+      ok;
+    {OnLoadId, {_OnLoadName, OnLoadFun}} ->
+      Body = cerl:fun_body(OnLoadFun),
+      add_on_load(Body, Module),
+      true = ets:delete(Module#module.funs, OnLoadId)
+  end,
 
   add_exports(Exports, Module).
 
