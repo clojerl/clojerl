@@ -140,7 +140,7 @@
                         `(~'str [this#]
                           (str "#"
                                ~(str classname)
-                               (merge (tuple-map ~@(mapcat (juxt keyword identity) base-fields))
+                               (merge (array-map ~@(mapcat (juxt keyword identity) base-fields))
                                       ~'__extmap))))])]
       (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap istr)]
         `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~(conj hinted-fields '__meta '__extmap)

@@ -26,6 +26,8 @@
         , is_whitespace/1
         , is_printable/1
         , length/1
+        , split/2
+        , split/3
         ]).
 
 -export([count/1]).
@@ -154,6 +156,14 @@ length(Str) ->
     {error, _, _} -> error(<<"Invalid unicode binary string">>);
     List -> erlang:length(List)
   end.
+
+-spec split(binary(), binary()) -> [binary()].
+split(Str, Pattern) ->
+  split(Str, Pattern, [{return, binary}]).
+
+-spec split(binary(), binary(), [any()]) -> [binary()].
+split(Str, Pattern, Options) ->
+  re:split(Str, Pattern, Options).
 
 %%------------------------------------------------------------------------------
 %% Protocols

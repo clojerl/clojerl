@@ -156,7 +156,7 @@
 by default when a new command-line REPL is started."} repl-requires
   '[[clojure.repl :refer (source apropos dir pst doc find-doc)]
     #_[clojure.erlang.doc :refer (erlang-doc)]
-    #_[clojure.pprint :refer (pp pprint)]])
+    [clojure.pprint :refer (pp pprint)]])
 
 (defmacro with-read-known
   "Evaluates body with *read-eval* set to a \"known\" value,

@@ -444,9 +444,9 @@ boolean(_) -> true.
 byte(X) when is_number(X), 0 =< X, X =< 256 ->
   erlang:trunc(X).
 
--spec char(number()) -> binary().
+-spec char(integer()) -> binary().
 char(X) when is_number(X) ->
-  case unicode:characters_to_binary([X], utf8) of
+  case unicode:characters_to_binary([erlang:trunc(X)], utf8) of
     Char when is_binary(Char) -> Char;
     Error -> error(Error)
   end.

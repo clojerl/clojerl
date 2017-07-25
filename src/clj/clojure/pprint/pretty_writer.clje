@@ -1,0 +1,456 @@
+;;; pretty_writer.clj -- part of the pretty printer for Clojure
+
+;   Copyright (c) Rich Hickey. All rights reserved.
+;   The use and distribution terms for this software are covered by the
+;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;   which can be found in the file epl-v10.html at the root of this distribution.
+;   By using this software in any fashion, you are agreeing to be bound by
+;   the terms of this license.
+;   You must not remove this notice, or any other, from this software.
+
+;; Author: Tom Faulhaber
+;; April 3, 2009
+;; Revised to use proxy instead of gen-class April 2010
+
+;; This module implements a wrapper around a erlang.io.IWriter which implements the
+;; core of the XP algorithm.
+
+(in-ns 'clojure.pprint)
+
+(import [clojerl IDeref String Integer]
+        [erlang.io IWriter])
+
+;; TODO: Support for tab directives
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Forward declarations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare get-miser-width)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Macros to simplify dealing with types and classes. These are
+;;; really utilities, but I'm experimenting with them here.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro ^{:private true}
+  getf
+  "Get the value of the field named by the argument (which should be a keyword)."
+  [sym]
+  `(~sym @@~'this))
+
+(defmacro ^{:private true}
+  setf [sym new-val]
+  "Set the value of the field SYM to NEW-VAL"
+  `(swap! @~'this assoc ~sym ~new-val))
+
+(defmacro ^{:private true}
+  write-to-base
+  "Call .write on Writer (getf :base) with proper type-hinting to
+  avoid reflection."
+  [& args]
+  `(let [w# (getf :base)]
+     (erlang.io.IWriter/write.e w# ~@args)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; The data structures used by pretty-writer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrecord ^{:private true} logical-block
+    [parent section start-col indent
+     done-nl intra-block-nl
+     prefix per-line-prefix suffix
+     logical-block-callback])
+
+(defn- ancestor? [parent child]
+  (loop [child (:parent child)]
+    (cond
+     (nil? child) false
+     (identical? parent child) true
+     :else (recur (:parent child)))))
+
+(defrecord ^{:private true} section [parent])
+
+(defn- buffer-length [l]
+  (let [l (seq l)]
+    (if l
+      (- (:end-pos (last l)) (:start-pos (first l)))
+      0)))
+
+; A blob of characters (aka a string)
+(defrecord buffer-blob [data trailing-white-space start-pos end-pos])
+
+; A newline
+(defrecord nl-t [type logical-block start-pos end-pos])
+
+(defn nl-t? [x]
+  (instance? clojure.pprint.nl-t x))
+
+(defrecord start-block-t [logical-block start-pos end-pos])
+
+(defrecord end-block-t [logical-block start-pos end-pos])
+
+(defrecord indent-t [logical-block relative-to offset start-pos end-pos])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Functions to write tokens in the output buffer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def system-newline (erlang/list_to_binary.e (io_lib/nl.e)))
+
+(def ^:private pp-newline #(do system-newline))
+
+(declare emit-nl)
+
+(defmulti ^{:private true} write-token #(type %2))
+(defmethod write-token start-block-t [^IWriter this token]
+   (when-let [cb (getf :logical-block-callback)] (cb :start))
+   (let [lb (:logical-block token)]
+    (when-let [^String prefix (:prefix lb)]
+      (write-to-base prefix))
+    (let [col (get-column (getf :base))]
+      (reset! (:start-col lb) col)
+      (reset! (:indent lb) col))))
+
+(defmethod write-token end-block-t [^IWriter this token]
+  (when-let [cb (getf :logical-block-callback)] (cb :end))
+  (when-let [^String suffix (:suffix (:logical-block token))]
+    (write-to-base suffix)))
+
+(defmethod write-token indent-t [^IWriter this token]
+  (let [lb (:logical-block token)]
+    (reset! (:indent lb)
+             (+ (:offset token)
+                (condp = (:relative-to token)
+		  :block @(:start-col lb)
+		  :current (get-column (getf :base)))))))
+
+(defmethod write-token buffer-blob [^IWriter this token]
+  (write-to-base ^String (:data token)))
+
+(defmethod write-token nl-t [^IWriter this token]
+  (if (or (= (:type token) :mandatory)
+           (and (not (= (:type token) :fill))
+                @(:done-nl (:logical-block token))))
+    (emit-nl this token)
+    (if-let [^String tws (getf :trailing-white-space)]
+      (write-to-base tws)))
+  (setf :trailing-white-space nil))
+
+(defn- write-tokens [^IWriter this tokens force-trailing-whitespace]
+  (doseq [token tokens]
+    (if-not (nl-t? token)
+      (if-let [^String tws (getf :trailing-white-space)]
+        (write-to-base tws)))
+    (write-token this token)
+    (setf :trailing-white-space (:trailing-white-space token)))
+  (let [^String tws (getf :trailing-white-space)]
+    (when (and force-trailing-whitespace tws)
+      (write-to-base tws)
+      (setf :trailing-white-space nil))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; emit-nl? method defs for each type of new line. This makes
+;;; the decision about whether to print this type of new line.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn- tokens-fit? [^IWriter this tokens]
+  (let [maxcol (get-max-column (getf :base))]
+    (or
+     (nil? maxcol)
+     (< (+ (get-column (getf :base)) (buffer-length tokens)) maxcol))))
+
+(defn- linear-nl? [this lb section]
+  (or @(:done-nl lb)
+      (not (tokens-fit? this section))))
+
+(defn- miser-nl? [^IWriter this lb section]
+  (let [miser-width (get-miser-width this)
+        maxcol (get-max-column (getf :base))]
+    (and miser-width maxcol
+         (>= @(:start-col lb) (- maxcol miser-width))
+         (linear-nl? this lb section))))
+
+(defmulti ^{:private true} emit-nl? (fn [t _ _ _] (:type t)))
+
+(defmethod emit-nl? :linear [newl this section _]
+  (let [lb (:logical-block newl)]
+    (linear-nl? this lb section)))
+
+(defmethod emit-nl? :miser [newl this section _]
+  (let [lb (:logical-block newl)]
+    (miser-nl? this lb section)))
+
+(defmethod emit-nl? :fill [newl this section subsection]
+  (let [lb (:logical-block newl)]
+    (or @(:intra-block-nl lb)
+        (not (tokens-fit? this subsection))
+        (miser-nl? this lb section))))
+
+(defmethod emit-nl? :mandatory [_ _ _ _]
+  true)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Various support functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn- get-section [buffer]
+  (let [nl (first buffer)
+        lb (:logical-block nl)
+        section (seq (take-while #(not (and (nl-t? %) (ancestor? (:logical-block %) lb)))
+                                 (next buffer)))]
+    [section (seq (drop (inc (count section)) buffer))]))
+
+(defn- get-sub-section [buffer]
+  (let [nl (first buffer)
+        lb (:logical-block nl)
+        section (seq (take-while #(let [nl-lb (:logical-block %)]
+                                    (not (and (nl-t? %) (or (= nl-lb lb) (ancestor? nl-lb lb)))))
+                            (next buffer)))]
+    section))
+
+(defn- update-nl-state [lb]
+  (reset! (:intra-block-nl lb) false)
+  (reset! (:done-nl lb) true)
+  (loop [lb (:parent lb)]
+    (if lb
+      (do (reset! (:done-nl lb) true)
+          (reset! (:intra-block-nl lb) true)
+          (recur (:parent lb))))))
+
+(defn- emit-nl [^IWriter this nl]
+  (write-to-base ^String (pp-newline))
+  (setf :trailing-white-space nil)
+  (let [lb (:logical-block nl)
+        ^String prefix (:per-line-prefix lb)]
+    (if prefix
+      (write-to-base prefix))
+    (let [^String istr (apply str (repeat (- @(:indent lb) (count prefix)) \space))]
+      (write-to-base istr))
+    (update-nl-state lb)))
+
+(defn- split-at-newline [tokens]
+  (let [pre (seq (take-while #(not (nl-t? %)) tokens))]
+    [pre (seq (drop (count pre) tokens))]))
+
+;;; Methods for showing token strings for debugging
+
+(defmulti ^{:private true} tok type)
+(defmethod tok nl-t [token]
+  (:type token))
+(defmethod tok buffer-blob [token]
+  (str \" (:data token) (:trailing-white-space token) \"))
+(defmethod tok :default [token]
+  (type token))
+(defn- toks [toks] (map tok toks))
+
+;;; write-token-string is called when the set of tokens in the buffer
+;;; is longer than the available space on the line
+
+(defn- write-token-string [this tokens]
+  (let [[a b] (split-at-newline tokens)]
+    (if a (write-tokens this a false))
+    (if b
+      (let [[section remainder] (get-section b)
+            newl (first b)]
+        (let [do-nl (emit-nl? newl this section (get-sub-section b))
+              result (if do-nl
+                       (do
+                         (emit-nl this newl)
+                         (next b))
+                       b)
+              long-section (not (tokens-fit? this result))
+              result (if long-section
+                       (let [rem2 (write-token-string this section)]
+                         (if (= rem2 section)
+                           (do ; If that didn't produce any output, it has no nls
+                                        ; so we'll force it
+                             (write-tokens this section false)
+                             remainder)
+                           (into [] (concat rem2 remainder))))
+                       result)]
+          result)))))
+
+(defn- write-line [^IWriter this]
+  (loop [buffer (getf :buffer)]
+    (setf :buffer (into [] buffer))
+    (if (not (tokens-fit? this buffer))
+      (let [new-buffer (write-token-string this buffer)]
+        (if-not (identical? buffer new-buffer)
+          (recur new-buffer))))))
+
+;;; Add a buffer token to the buffer and see if it's time to start
+;;; writing
+(defn- add-to-buffer [^IWriter this token]
+  (setf :buffer (conj (getf :buffer) token))
+  (if (not (tokens-fit? this (getf :buffer)))
+    (write-line this)))
+
+;;; Write all the tokens that have been buffered
+(defn- write-buffered-output [^IWriter this]
+  (write-line this)
+  (if-let [buf (getf :buffer)]
+    (do
+      (write-tokens this buf true)
+      (setf :buffer []))))
+
+(defn- write-white-space [^IWriter this]
+  (when-let [^String tws (getf :trailing-white-space)]
+    (write-to-base tws)
+    (setf :trailing-white-space nil)))
+
+;;; If there are newlines in the string, print the lines up until the last newline,
+;;; making the appropriate adjustments. Return the remainder of the string
+(defn- write-initial-lines
+  [^IWriter this ^String s]
+  (let [lines (.split s "\n")]
+    (if (= (count lines) 1)
+      s
+      (let [^String prefix (:per-line-prefix (first (getf :logical-blocks)))
+            ^String l (first lines)]
+        (if (= :buffering (getf :mode))
+          (let [oldpos (getf :pos)
+                newpos (+ oldpos (count l))]
+            (setf :pos newpos)
+            (add-to-buffer this (->buffer-blob l nil oldpos newpos))
+            (write-buffered-output this))
+          (do
+            (write-white-space this)
+            (write-to-base l)))
+        (write-to-base \newline)
+        (doseq [^String l (next (butlast lines))]
+          (write-to-base l)
+          (write-to-base ^String (pp-newline))
+          (if prefix
+            (write-to-base prefix)))
+        (setf :buffering :writing)
+        (last lines)))))
+
+(defn- p-write-char [^IWriter this ^Integer c]
+  (if (= (getf :mode) :writing)
+    (do
+      (write-white-space this)
+      (write-to-base c))
+    (if (= c \newline)
+      (write-initial-lines this "\n")
+      (let [oldpos (getf :pos)
+            newpos (inc oldpos)]
+        (setf :pos newpos)
+        (add-to-buffer this (->buffer-blob (str (char c)) nil oldpos newpos))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Initialize the pretty-writer instance
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(deftype PrettyWriter [fields]
+  clojerl.IDeref
+  (deref [_] fields)
+
+  erlang.io.IWriter
+  (write [this x]
+    (condp = (type x)
+      String
+      (let [^String s0 (write-initial-lines this x)
+            ^String s (.replace #"\s+$" s0 "")
+            white-space (.substring s0 (count s))
+            mode (getf :mode)]
+        (if (= mode :writing)
+          (do
+            (write-white-space this)
+            (write-to-base s)
+            (setf :trailing-white-space white-space))
+          (let [oldpos (getf :pos)
+                newpos (+ oldpos (count s0))]
+            (setf :pos newpos)
+            (add-to-buffer this (->buffer-blob s white-space oldpos newpos)))))
+
+      Integer
+      (p-write-char this x)))
+
+  PrettyFlush
+  (ppflush [this]
+    (if (= (getf :mode) :buffering)
+      (do
+        (write-tokens this (getf :buffer) true)
+        (setf :buffer []))
+      (write-white-space this))
+    ;; The original PrettyFlush is an interface that returns void
+    nil))
+
+(defn- pretty-writer [writer max-columns miser-width]
+  (let [lb (->logical-block nil nil (atom 0) (atom 0) (atom false) (atom false)
+                            nil nil nil nil)
+        fields (atom {:pretty-writer true
+                     :base (column-writer writer max-columns)
+                     :logical-blocks lb
+                     :sections nil
+                     :mode :writing
+                     :buffer []
+                     :buffer-block lb
+                     :buffer-level 1
+                     :miser-width miser-width
+                     :trailing-white-space nil
+                     :pos 0})]
+    (PrettyWriter. fields)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Methods for pretty-writer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- start-block
+  [^IWriter this ^String prefix ^String per-line-prefix ^String suffix]
+  (let [lb (->logical-block (getf :logical-blocks) nil (atom 0) (atom 0)
+                            (atom false) (atom false)
+                            prefix per-line-prefix suffix nil)]
+    (setf :logical-blocks lb)
+    (if (= (getf :mode) :writing)
+      (do
+        (write-white-space this)
+        (when-let [cb (getf :logical-block-callback)] (cb :start))
+        (if prefix
+          (write-to-base prefix))
+        (let [col (get-column (getf :base))]
+          (reset! (:start-col lb) col)
+          (reset! (:indent lb) col)))
+      (let [oldpos (getf :pos)
+            newpos (+ oldpos (if prefix (count prefix) 0))]
+        (setf :pos newpos)
+        (add-to-buffer this (->start-block-t lb oldpos newpos))))))
+
+(defn- end-block [^IWriter this]
+  (let [lb (getf :logical-blocks)
+        ^String suffix (:suffix lb)]
+    (if (= (getf :mode) :writing)
+      (do
+        (write-white-space this)
+        (if suffix
+          (write-to-base suffix))
+        (when-let [cb (getf :logical-block-callback)] (cb :end)))
+      (let [oldpos (getf :pos)
+            newpos (+ oldpos (if suffix (count suffix) 0))]
+        (setf :pos newpos)
+        (add-to-buffer this (->end-block-t lb oldpos newpos))))
+    (setf :logical-blocks (:parent lb))))
+
+(defn- nl [^IWriter this type]
+  (setf :mode :buffering)
+  (let [pos (getf :pos)]
+    (add-to-buffer this (->nl-t type (getf :logical-blocks) pos pos))))
+
+(defn- indent [^IWriter this relative-to offset]
+  (let [lb (getf :logical-blocks)]
+    (if (= (getf :mode) :writing)
+      (do
+        (write-white-space this)
+        (reset! (:indent lb)
+                 (+ offset (condp = relative-to
+                             :block @(:start-col lb)
+                             :current (get-column (getf :base))))))
+      (let [pos (getf :pos)]
+        (add-to-buffer this (->indent-t lb relative-to offset pos pos))))))
+
+(defn- get-miser-width [^IWriter this]
+  (getf :miser-width))

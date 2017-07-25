@@ -218,7 +218,7 @@
            (clj_rt/meta.e x))))
 
 (def
-  ^{:arglists '([^clojure.lang.IObj obj m])
+  ^{:arglists '([^clojerl.IMeta obj m])
     :doc "Returns an object of the same type and value as obj, with
     map m as its metadata."
     :added "1.0"}
@@ -1005,13 +1005,13 @@
   "quot[ient] of dividing numerator by denominator."
   {:added "1.0"}
   [num div]
-  (erlang/trunc.e (/ num div)))
+  (clj_utils/quotient.e num div))
 
 (defn rem
   "remainder of dividing numerator by denominator."
   {:added "1.0"}
   [num div]
-  (erlang/rem.e num div))
+  (clj_utils/rem.e num div))
 
 ;;Bit ops
 
@@ -3570,7 +3570,7 @@
    (vector? name-vals-vec) "a vector for its binding"
    (even? (count name-vals-vec)) "an even number of forms in binding vector")
   `(let [~@(interleave (take-nth 2 name-vals-vec)
-                       (repeat '(.. clojure.lang.Var create setDynamic)))]
+                       (repeat '(.. clojerl.Var create setDynamic)))]
      (clojerl.Var/push_bindings.e (hash-map ~@name-vals-vec))
      (try
        ~@body
@@ -3594,8 +3594,8 @@
   ([sym] (ns-resolve *ns* sym))
   ([env sym] (ns-resolve *ns* env sym)))
 
-(defn tuple-map
-  "Constructs a tuple-map. If any keys are equal, they are handled as
+(defn array-map
+  "Constructs an array-map. If any keys are equal, they are handled as
   if by repeated uses of assoc."
   {:added "1.0"}
   ([] (new clojerl.TupleMap #erl()))
@@ -4076,7 +4076,7 @@
     (clj_analyzer/is_special.e s))
 
 (defn var?
-  "Returns true if v is of type clojure.lang.Var"
+  "Returns true if v is of type clojerl.Var"
   {:added "1.0"}
   [v] (instance? clojerl.Var v))
 
@@ -4111,8 +4111,7 @@
     (new erlang.util.Regex s)))
 
 (defn re-find
-  "Returns the next regex match, if any, of string to pattern.
-  Uses re-groups to return the groups."
+  "Returns the next regex match, if any, of string to pattern."
   {:added "1.0"}
   [re s]
   (let [matches (re-run re s #erl [:capture :all :binary])]
@@ -4690,9 +4689,8 @@
   else expr is unevaluated"
   {:added "1.0"}
   [name expr]
-  `(let [v# (def ~name)]
-     (when-not (clojerl.Var/has_root.e v#)
-       (def ~name ~expr))))
+  (if-not (find-var name)
+    `(def ~name ~expr)))
 
 ;;;;;;;;;;; require/use/load, contributed by Stephen C. Gilardi ;;;;;;;;;;;;;;;;;;
 

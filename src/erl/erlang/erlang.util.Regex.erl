@@ -7,6 +7,7 @@
 
 -export([ ?CONSTRUCTOR/1
         , run/3
+        , replace/3
         , replace/4
         , quote/1
         , split/3
@@ -26,11 +27,15 @@
 run(#?TYPE{name = ?M, data = {_, Regex}}, Str, Opts) ->
   re:run(Str, Regex, Opts).
 
+-spec replace(type(), binary(), binary()) -> binary().
+replace(#?TYPE{name = ?M} = Regex, Str, Replacement) ->
+  replace(Regex, Str, Replacement, [global, {return, binary}]).
+
 -spec replace(type(), binary(), binary(), [term()]) -> binary().
 replace(Regex, Str, Replacement, Opts) when is_binary(Regex) ->
   replace(?CONSTRUCTOR(Regex), Str, Replacement, Opts);
 replace(#?TYPE{name = ?M, data = {_, Regex}}, Str, Replacement, Opts) ->
-  erlang:iolist_to_binary(re:replace(Str, Regex, Replacement, Opts)).
+  re:replace(Str, Regex, Replacement, [{return, binary} | Opts]).
 
 -spec quote(binary()) -> binary().
 quote(Regex) when is_binary(Regex) ->

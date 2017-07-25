@@ -208,17 +208,17 @@ Design notes for clojure.string:
   ([s re]
    (vec (erlang.util.Regex/split.e re
                                   (when s (str s))
-                                  #erl ())))
+                                  #erl (:trim))))
   ([s re limit]
    (vec (erlang.util.Regex/split.e re
                                    (when s (str s))
-                                   (clj_rt/to_list.e [:global #erl [:match_limit limit]])))))
+                                   #erl(:trim :global #erl [:match_limit limit])))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."
   {:added "1.2"}
   [s]
-  (vec (split s #"\r?\n")))
+  (split s #"\r?\n"))
 
 (defn ^clojerl.String trim
   "Removes whitespace from both ends of string."

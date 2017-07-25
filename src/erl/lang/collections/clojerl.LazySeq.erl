@@ -105,21 +105,21 @@ first(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
     ?NIL -> ?NIL;
     #?TYPE{name = ?M} = LazySeq -> first(LazySeq);
-    Seq -> 'clojerl.ISeq':first(Seq)
+    Seq -> clj_rt:first(Seq)
   end.
 
 next(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
     ?NIL -> ?NIL;
     #?TYPE{name = ?M} = LazySeq -> next(LazySeq);
-    Seq -> 'clojerl.ISeq':next(Seq)
+    Seq -> clj_rt:next(Seq)
   end.
 
 more(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
     ?NIL -> [];
     #?TYPE{name = ?M} = LazySeq -> more(LazySeq);
-    Seq -> 'clojerl.ISeq':more(Seq)
+    Seq -> clj_rt:rest(Seq)
   end.
 
 '_'(_) -> ?NIL.
