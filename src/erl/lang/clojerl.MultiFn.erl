@@ -22,8 +22,8 @@
         , code_change/3
         ]).
 
--record(multifn, { id     :: {binary(), any()},
-                   name   :: binary() | '$1',
+-record(multifn, { key    :: {non_neg_integer(), any()},
+                   id     :: non_neg_integer() | '$1',
                    value  :: any(),
                    method :: any()
                  }).
@@ -37,43 +37,48 @@
 %% API
 %%------------------------------------------------------------------------------
 
--spec get_method(binary(), any()) -> any().
-get_method(Name, Value) ->
-  get_method(Name, Value, default, ?NIL).
+-spec get_method('clojerl.Var':type(), any()) -> any().
+get_method(Var, Value) ->
+  get_method(Var, Value, default, ?NIL).
 
--spec get_method(binary(), any(), any(), map() | ?NIL) -> any().
-get_method(Name, Value, Default, _Hierarchy) ->
-  case clj_utils:ets_get(?MODULE, {Name, 'clojerl.IHash':hash(Value)}) of
+-spec get_method('clojerl.Var':type(), any(), any(), map() | ?NIL) -> any().
+get_method(Var, Value, Default, _Hierarchy) ->
+  Id = 'clojerl.Var':hash(Var),
+  case clj_utils:ets_get(?MODULE, {Id, 'clojerl.IHash':hash(Value)}) of
     ?NIL ->
-      case clj_utils:ets_get(?MODULE, {Name, 'clojerl.IHash':hash(Default)}) of
+      case clj_utils:ets_get(?MODULE, {Id, 'clojerl.IHash':hash(Default)}) of
         ?NIL -> ?NIL;
         Method -> Method#multifn.method
       end;
     Method -> Method#multifn.method
   end.
 
--spec get_method_table(binary()) -> any().
-get_method_table(Name) ->
-  MultiFns = ets:match(?MODULE, by_name(Name)),
+-spec get_method_table('clojerl.Var':type()) -> any().
+get_method_table(Var) ->
+  Id        = 'clojerl.Var':hash(Var),
+  MultiFns  = ets:match(?MODULE, by_name(Id)),
   AddMultiFn = fun([_, V, M], Map) ->
                    maps:put(V, M, Map)
                end,
   lists:foldl(AddMultiFn, #{}, MultiFns).
 
--spec add_method(binary(), any(), any()) -> any().
-add_method(Name, Value, Method) ->
+-spec add_method('clojerl.Var':type(), any(), any()) -> any().
+add_method(Var, Value, Method) ->
+  Id   = 'clojerl.Var':hash(Var),
   Hash = 'clojerl.IHash':hash(Value),
   gen_server:call( ?MODULE
-                 , {add_method, Name, Value, Hash, Method}
+                 , {add_method, Id, Value, Hash, Method}
                  ).
 
--spec remove_all(binary()) -> boolean().
-remove_all(Name) ->
-  true = gen_server:call(?MODULE, {remove_all, Name}).
+-spec remove_all('clojerl.Var':type()) -> boolean().
+remove_all(Var) ->
+  Id = 'clojerl.Var':hash(Var),
+  true = gen_server:call(?MODULE, {remove_all, Id}).
 
--spec remove_method(binary(), any()) -> boolean().
-remove_method(Name, Value) ->
-  gen_server:call(?MODULE, {remove_method, Name, 'clojerl.IHash':hash(Value)}).
+-spec remove_method('clojerl.Var':type(), any()) -> boolean().
+remove_method(Var, Value) ->
+  Id = 'clojerl.Var':hash(Var),
+  gen_server:call(?MODULE, {remove_method, Id, 'clojerl.IHash':hash(Value)}).
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
@@ -87,14 +92,14 @@ init([]) ->
   ok         = init_ets(Pid),
   {ok, Ref}.
 
-handle_call({add_method, Name, Value, Hash, Method}, _From, State) ->
-  #multifn{} = new_method(Name, Value, Hash, Method),
+handle_call({add_method, Id, Value, Hash, Method}, _From, State) ->
+  #multifn{} = new_method(Id, Value, Hash, Method),
   {reply, ok, State};
-handle_call({remove_all, Name}, _From, State) ->
-  true = ets:match_delete(?METHODS, by_name(Name)),
+handle_call({remove_all, Id}, _From, State) ->
+  true = ets:match_delete(?METHODS, by_name(Id)),
   {reply, true, State};
-handle_call({remove_method, Name, Hash}, _From, State) ->
-  true = ets:delete(?METHODS, {Name, Hash}),
+handle_call({remove_method, Id, Hash}, _From, State) ->
+  true = ets:delete(?METHODS, {Id, Hash}),
   {reply, true, State}.
 
 handle_cast(_Msg, State) ->
@@ -149,19 +154,19 @@ init_ets(Pid) ->
   end,
   ok.
 
--spec new_method(binary(), any(), integer(), any()) -> multifn().
-new_method(Name, Value, Hash, Method) ->
-  MultiFn = #multifn{ id     = {Name, Hash}
-                    , name   = Name
+-spec new_method(non_neg_integer(), any(), integer(), any()) -> multifn().
+new_method(Id, Value, Hash, Method) ->
+  MultiFn = #multifn{ key    = {Id, Hash}
+                    , id     = Id
                     , value  = Value
                     , method = Method
                     },
   clj_utils:ets_save(?METHODS, MultiFn).
 
--spec by_name(binary()) -> multifn().
-by_name(Name) ->
-  #multifn{ id     = {Name, '_'}
-          , name   = '$1'
+-spec by_name(non_neg_integer()) -> multifn().
+by_name(Id) ->
+  #multifn{ key    = {Id, '_'}
+          , id     = '$1'
           , value  = '$2'
           , method = '$3'
           }.
