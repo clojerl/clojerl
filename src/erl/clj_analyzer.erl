@@ -1912,12 +1912,13 @@ erl_fun_expr(Symbol, Module, Function, Arity, Env) ->
   {map(), clj_env:env()}.
 var_expr(Var, Symbol, Env0) ->
   {TagExpr, Env1} = maybe_type_tag(Var, Env0),
-  VarExpr         = #{ op   => var
-                     , env  => Env0
-                     , form => Symbol
-                     , name => Symbol
-                     , tag  => TagExpr
-                     , var  => Var
+  VarExpr         = #{ op         => var
+                     , env        => Env0
+                     , form       => Symbol
+                     , name       => Symbol
+                     , tag        => TagExpr
+                     , var        => Var
+                     , is_dynamic => 'clojerl.Var':is_dynamic(Var)
                      },
   {VarExpr, Env1}.
 
