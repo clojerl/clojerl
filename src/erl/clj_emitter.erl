@@ -33,17 +33,21 @@ initial_state() ->
 
 -spec ast(map(), state()) -> state().
 ast(#{op := constant, form := Form, env := Env}, State) when is_binary(Form) ->
+  ?DEBUG(constant),
   Ast = binary_literal(ann_from(Env), Form),
   push_ast(Ast, State);
 ast(#{op := constant, form := Form, env := Env}, State) ->
+  ?DEBUG(constant),
   Ast = cerl:ann_abstract(ann_from(Env), Form),
   push_ast(Ast, State);
 ast(#{op := quote, expr := Expr}, State) ->
+  ?DEBUG(quote),
   ast(Expr, State);
 %%------------------------------------------------------------------------------
 %% var, binding & local
 %%------------------------------------------------------------------------------
 ast(#{op := var} = Expr, State) ->
+  ?DEBUG(var),
   #{ var  := Var
    , env  := Env
    } = Expr,
@@ -53,9 +57,11 @@ ast(#{op := var} = Expr, State) ->
 
   push_ast(Ast, State);
 ast(#{op := binding} = Expr, State) ->
+  ?DEBUG(binding),
   #{pattern := PatternExpr} = Expr,
   ast(PatternExpr, State);
 ast(#{op := local} = Expr, State) ->
+  ?DEBUG(local),
   #{env := Env} = Expr,
   NameBin = get_lexical_rename(Expr, State),
   Ast     = cerl:ann_c_var(ann_from(Env), binary_to_atom(NameBin, utf8)),
@@ -65,6 +71,7 @@ ast(#{op := local} = Expr, State) ->
 %% do
 %%------------------------------------------------------------------------------
 ast(#{op := do} = Expr, State) ->
+  ?DEBUG(do),
   #{ statements := StatementsExprs
    , ret        := ReturnExpr
    } = Expr,
@@ -86,6 +93,7 @@ ast(#{op := do} = Expr, State) ->
 %% def
 %%------------------------------------------------------------------------------
 ast(#{op := def} = Expr, State) ->
+  ?DEBUG(def),
   #{ var  := Var
    , init := InitExpr
    , env  := Env
@@ -140,6 +148,7 @@ ast(#{op := def} = Expr, State) ->
 %% import
 %%------------------------------------------------------------------------------
 ast(#{op := import} = Expr, State) ->
+  ?DEBUG(import),
   #{ typename := Typename
    , env      := Env
    } = Expr,
@@ -153,6 +162,7 @@ ast(#{op := import} = Expr, State) ->
 %% type
 %%------------------------------------------------------------------------------
 ast(#{op := type} = Expr, State) ->
+  ?DEBUG(type),
   #{ type := TypeSym
    , env  := Env
    } = Expr,
@@ -166,6 +176,7 @@ ast(#{op := type} = Expr, State) ->
 %% new
 %%------------------------------------------------------------------------------
 ast(#{op := new} = Expr, State) ->
+  ?DEBUG(new),
   #{ type := TypeExpr
    , args := ArgsExprs
    , env  := Env
@@ -185,6 +196,7 @@ ast(#{op := new} = Expr, State) ->
 %% deftype
 %%------------------------------------------------------------------------------
 ast(#{op := deftype} = Expr, State0) ->
+  ?DEBUG(deftype),
   #{ type      := TypeSym
    , name      := Name
    , fields    := FieldsExprs
@@ -300,6 +312,7 @@ ast(#{op := deftype} = Expr, State0) ->
 %% methods
 %%------------------------------------------------------------------------------
 ast(#{op := fn_method} = Expr, State0) ->
+  ?DEBUG(fn_method),
   #{ name := Name
    , env  := Env
    } = Expr,
@@ -315,6 +328,7 @@ ast(#{op := fn_method} = Expr, State0) ->
 %% defprotocol
 %%------------------------------------------------------------------------------
 ast(#{op := defprotocol} = Expr, State) ->
+  ?DEBUG(defprotocol),
   #{ name         := NameSym
    , methods_sigs := MethodsSigs
    , env          := Env
@@ -359,6 +373,7 @@ ast(#{op := defprotocol} = Expr, State) ->
 %% extend_type
 %%------------------------------------------------------------------------------
 ast(#{op := extend_type} = Expr, State) ->
+  ?DEBUG(extend_type),
   #{ type  := #{type := TypeSym}
    , impls := Impls
    , env   := Env
@@ -410,6 +425,7 @@ ast(#{op := extend_type} = Expr, State) ->
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
+  ?DEBUG(fn),
   #{ local   := LocalExpr = #{name := NameSym}
    , env     := Env
    } = Expr,
@@ -424,6 +440,7 @@ ast(#{op := fn} = Expr, State) ->
 
   push_ast(Ast, State1);
 ast(#{op := erl_fun} = Expr, State) ->
+  ?DEBUG(erl_fun),
   #{ module   := Module
    , function := Function
    , arity    := Arity
@@ -452,6 +469,7 @@ ast(#{op := erl_fun} = Expr, State) ->
 
   push_ast(Ast, State);
 ast(#{op := invoke} = Expr, State) ->
+  ?DEBUG(invoke),
   #{ args := ArgsExpr
    , f    := FExpr
    , env  := Env
@@ -515,6 +533,7 @@ ast(#{op := invoke} = Expr, State) ->
 %% letfn
 %%------------------------------------------------------------------------------
 ast(#{op := letfn} = Expr, State) ->
+  ?DEBUG(letfn),
   #{ vars := VarsExprs
    , fns  := FnsExprs
    , body := BodyExpr
@@ -541,6 +560,7 @@ ast(#{op := letfn} = Expr, State) ->
 %% with-meta
 %%------------------------------------------------------------------------------
 ast(#{op := with_meta} = WithMetaExpr, State) ->
+  ?DEBUG(with_meta),
   #{ meta := Meta
    , expr := Expr
    , env  := Env
@@ -556,6 +576,7 @@ ast(#{op := with_meta} = WithMetaExpr, State) ->
 %% Literal data structures
 %%------------------------------------------------------------------------------
 ast(#{op := vector} = Expr, State) ->
+  ?DEBUG(vector),
   #{ items := ItemsExprs
    , env   := Env
    } = Expr,
@@ -568,6 +589,7 @@ ast(#{op := vector} = Expr, State) ->
   Ast = call_mfa('clojerl.Vector', ?CONSTRUCTOR, [ListItems], ann_from(Env)),
   push_ast(Ast, State1);
 ast(#{op := map} = Expr, State) ->
+  ?DEBUG(map),
   #{ keys := KeysExprs
    , vals := ValsExprs
    , env  := Env
@@ -592,6 +614,7 @@ ast(#{op := map} = Expr, State) ->
   Ast = call_mfa('clojerl.Map', ?CONSTRUCTOR, [ListItems], ann_from(Env)),
   push_ast(Ast, State2);
 ast(#{op := erl_map} = Expr, State) ->
+  ?DEBUG(erl_map),
   #{ keys := KeysExprs
    , vals := ValsExprs
    , env  := Env
@@ -620,6 +643,7 @@ ast(#{op := erl_map} = Expr, State) ->
   Ast = cerl:ann_c_map(ann_from(Env), PairsAsts),
   push_ast(Ast, State2);
 ast(#{op := set} = Expr, State) ->
+  ?DEBUG(set),
   #{ items := ItemsExprs
    , env   := Env
    } = Expr,
@@ -632,6 +656,7 @@ ast(#{op := set} = Expr, State) ->
   Ast = call_mfa('clojerl.Set', ?CONSTRUCTOR, [ListItems], ann_from(Env)),
   push_ast(Ast, State1);
 ast(#{op := tuple} = Expr, State) ->
+  ?DEBUG(tuple),
   #{ items := ItemsExprs
    , env   := Env
    } = Expr,
@@ -643,6 +668,7 @@ ast(#{op := tuple} = Expr, State) ->
   Ast = cerl:ann_c_tuple(ann_from(Env), Items),
   push_ast(Ast, State1);
 ast(#{op := erl_list} = Expr, State) ->
+  ?DEBUG(erl_list),
   #{ env   := Env
    , items := ItemsExprs
    , tail  := TailExpr
@@ -659,6 +685,7 @@ ast(#{op := erl_list} = Expr, State) ->
   Ast = cerl:ann_make_list(ann_from(Env), Items, Tail),
   push_ast(Ast, State2);
 ast(#{op := erl_alias} = Expr, State0) ->
+  ?DEBUG(erl_alias),
   #{ env      := Env
    , variable := VariableExpr
    , pattern  := PatternExpr
@@ -675,6 +702,7 @@ ast(#{op := erl_alias} = Expr, State0) ->
 %% if
 %%------------------------------------------------------------------------------
 ast(#{op := 'if'} = Expr, State) ->
+  ?DEBUG('if'),
   #{ test := TestExpr
    , then := ThenExpr
    , else := ElseExpr
@@ -711,6 +739,7 @@ ast(#{op := 'if'} = Expr, State) ->
 %% case
 %%------------------------------------------------------------------------------
 ast(#{op := 'case'} = Expr, State) ->
+  ?DEBUG('case'),
   #{ test    := TestExpr
    , clauses := ClausesExprs
    , default := DefaultExpr
@@ -748,6 +777,7 @@ ast(#{op := 'case'} = Expr, State) ->
 %% let
 %%------------------------------------------------------------------------------
 ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
+  ?DEBUG(Op),
   #{ body     := BodyExpr
    , bindings := BindingsExprs
    , env      := Env
@@ -810,6 +840,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
 %% recur
 %%------------------------------------------------------------------------------
 ast(#{op := recur} = Expr, State) ->
+  ?DEBUG(recur),
   #{ loop_id   := LoopId
    , loop_type := LoopType
    , exprs     := ArgsExprs
@@ -841,6 +872,7 @@ ast(#{op := recur} = Expr, State) ->
 %% throw
 %%------------------------------------------------------------------------------
 ast(#{op := throw} = Expr, State) ->
+  ?DEBUG(throw),
   #{ exception := ExceptionExpr
    , env       := Env
    } = Expr,
@@ -854,6 +886,7 @@ ast(#{op := throw} = Expr, State) ->
 %% try
 %%------------------------------------------------------------------------------
 ast(#{op := 'try'} = Expr, State) ->
+  ?DEBUG('try'),
   #{ body    := BodyExpr
    , catches := CatchesExprs
    , finally := FinallyExpr
@@ -922,6 +955,7 @@ ast(#{op := 'try'} = Expr, State) ->
 %% catch
 %%------------------------------------------------------------------------------
 ast(#{op := 'catch'} = Expr, State) ->
+  ?DEBUG('catch'),
   #{ class := ErrType
    , local := PatternExpr
    , body  := BodyExpr
@@ -952,6 +986,7 @@ ast(#{op := 'catch'} = Expr, State) ->
 %% receive
 %%------------------------------------------------------------------------------
 ast(#{op := 'receive'} = Expr, State0) ->
+  ?DEBUG('receive'),
   #{ env     := Env
    , clauses := ClausesExprs
    , 'after' := AfterExpr
@@ -978,6 +1013,7 @@ ast(#{op := 'receive'} = Expr, State0) ->
 %% on_load
 %%------------------------------------------------------------------------------
 ast(#{op := on_load} = Expr, State) ->
+  ?DEBUG(on_load),
   #{ body := BodyExpr
    , env  := Env
    } = Expr,
@@ -995,6 +1031,7 @@ ast(#{op := on_load} = Expr, State) ->
 %% Erlang binary
 %%------------------------------------------------------------------------------
 ast(#{op := erl_binary} = Expr, State) ->
+  ?DEBUG(erl_binary),
   #{ env      := Env
    , segments := SegmentsExprs
    } = Expr,
@@ -1006,6 +1043,7 @@ ast(#{op := erl_binary} = Expr, State) ->
 
   push_ast(Ast, State2);
 ast(#{op := binary_segment} = Expr, State0) ->
+  ?DEBUG(binary_segment),
   #{ env   := Env
    , value := ValueExpr
    , size  := SizeExpr
