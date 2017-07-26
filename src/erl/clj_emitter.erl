@@ -1346,7 +1346,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
 
   {PatternArgs, PatternGuards} = clj_emitter_pattern:pattern_list(Args),
 
-  {Body, State2} = pop_ast(ast(BodyExpr, State1)),
+  {BodyAst, State2} = pop_ast(ast(BodyExpr, State1)),
 
   ParamCount = length(ParamsExprs),
   Args1 = case ClauseFor of
@@ -1370,7 +1370,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
   Clause = cerl:ann_c_clause(ann_from(Env)
                             , Args1
                             , Guard1
-                            , Body
+                            , BodyAst
                             ),
 
   State4 = remove_lexical_renames_scope(State3),
@@ -1577,7 +1577,8 @@ put_lexical_rename(_, State) ->
 
 -spec underscore_hash(map()) -> integer().
 underscore_hash(#{underscore := true} = LocalExpr) ->
-  erlang:phash2(LocalExpr#{env := ?NIL}).
+  %% Keep only some fields to avoid calculating a hash of a deeply nested value
+  erlang:phash2(maps:with([id, name, op], LocalExpr)).
 
 -spec hash_scope(map()) -> binary().
 hash_scope(LocalExpr) ->
