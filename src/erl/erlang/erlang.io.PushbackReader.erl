@@ -67,9 +67,10 @@ skip(#?TYPE{name = ?M, data = Pid}, Length) ->
 
 unread(#?TYPE{name = ?M, data = Pid} = Reader, Str) ->
   case send_command(Pid, {unread, Str}) of
-    {error, _} ->
-      TypeName = atom_to_binary(?MODULE, utf8),
-      error(<<"Couldn't unread to ", TypeName/binary>>);
+    {error, Reason} ->
+      TypeName  = atom_to_binary(?MODULE, utf8),
+      ReasonBin = clj_rt:str(Reason),
+      error(<<"Couldn't unread to ", TypeName/binary, ": ", ReasonBin/binary>>);
     ok ->
       Reader
   end.
