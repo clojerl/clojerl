@@ -63,14 +63,10 @@ namespace(#?TYPE{name = ?M, data = {Namespace, _}}) ->
 meta(#?TYPE{name = ?M, info = Info}) ->
   maps:get(meta, Info, ?NIL).
 
-with_meta( #?TYPE{name = ?M, info = Info} = Keyword
-                         , Metadata
-                         ) ->
+with_meta(#?TYPE{name = ?M, info = Info} = Keyword, Metadata) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-equiv( #?TYPE{name = ?M, data = X}
-                      , #?TYPE{name = ?M, data = X}
-                      ) ->
+equiv(#?TYPE{name = ?M, data = X}, #?TYPE{name = ?M, data = X}) ->
   true;
 equiv(_, _) ->
   false.
