@@ -69,6 +69,7 @@
   Prints a maximum of n stack frames (default: unlimited).
   Does not print chained exceptions (causes)."
   {:added "1.1"}
+  ([] (print-stack-trace (get-stacktrace) nil))
   ([st] (print-stack-trace st nil))
   ([st n]
    (newline)
