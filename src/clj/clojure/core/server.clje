@@ -25,14 +25,14 @@
   "Throw if opts does not contain prop."
   [opts prop]
   (when (nil? (get opts prop))
-    (throw (str "Missing required socket server property " prop))))
+    (throw (ex-info (str "Missing required socket server property " prop) opts))))
 
 (defn- validate-opts
   "Validate server config options"
   [{:keys [name port accept] :as opts}]
   (doseq [prop [:name :port :accept]] (required opts prop))
   (when (or (not (integer? port)) (not (< -1 port 65535)))
-    (throw (str "Invalid socket server port: " port))))
+    (throw (ex-info (str "Invalid socket server port: " port) opts))))
 
 (defn- accept-connection
   "Start accept function, to be invoked on a client thread, given:

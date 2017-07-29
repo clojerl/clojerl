@@ -17,9 +17,9 @@
   (try
     (#'clojure.core.server/validate-opts opts)
     (is nil)
-    (catch Exception e
+    (catch _ ^clojerl.ExceptionInfo e
       (is (= (ex-data e) opts))
-      (is (= msg (.getMessage e))))))
+      (is (= msg (.message e))))))
 
 (deftest test-validate-opts
   (check-invalid-opts {} "Missing required socket server property :name")
