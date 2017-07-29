@@ -3970,26 +3970,40 @@
   (with-out-str
     (apply println xs)))
 
-#_(import clojure.lang.ExceptionInfo clojure.lang.IExceptionInfo)
+(import clojerl.ExceptionInfo clojerl.IError)
 (defn ex-info
   "Create an instance of ExceptionInfo, a RuntimeException subclass
    that carries a map of additional data."
   {:added "1.4"}
   ([msg map]
-   (throw "unimplemented ex-info")
-   #_(ExceptionInfo. msg map))
+   (ExceptionInfo. msg map))
   ([msg map cause]
-   (throw "unimplemented ex-info")
-   #_(ExceptionInfo. msg map cause)))
+   (ExceptionInfo. msg map cause)))
 
 (defn ex-data
   "Returns exception data (a map) if ex is an IExceptionInfo.
    Otherwise returns nil."
   {:added "1.4"}
   [ex]
-  (throw "unimplemented ex-info")
-  #_(when (instance? IExceptionInfo ex)
-    (.getData ^IExceptionInfo ex)))
+  (when (instance? ExceptionInfo ex)
+    (.data ^ExceptionInfo ex)))
+
+(defn ex-message
+  "Returns the message attached to the given Error / ExceptionInfo object.
+  For non-Errors returns nil."
+  {:added "1.4"}
+  [ex]
+  (when (satisfies? IError ex)
+    (.message ^IError ex)))
+
+(defn ex-cause
+  "Returns exception cause (an Error / ExceptionInfo) if ex is an
+  ExceptionInfo.
+  Otherwise returns nil."
+  {:added "1.4"}
+  [ex]
+  (when (instance? ExceptionInfo ex)
+    (.cause ^ExceptionInfo ex)))
 
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to

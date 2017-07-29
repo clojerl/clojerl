@@ -63,7 +63,6 @@ str(_Config) ->
 
   LazySeq0     = range(1, 0),
   {match, _}   = re:run(clj_rt:str(LazySeq0), Regex),
-  erlang:display(clj_rt:rest(LazySeq0)),
   <<"#erl()">> = clj_rt:str(clj_rt:rest(LazySeq0)),
 
   {comments, ""}.
