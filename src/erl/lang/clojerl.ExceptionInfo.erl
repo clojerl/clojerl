@@ -29,6 +29,9 @@
 
 -spec ?CONSTRUCTOR(binary(), any(), any()) -> type().
 ?CONSTRUCTOR(Message, Data, Cause) when is_binary(Message) ->
+  clj_utils:error_when( Data =:= ?NIL
+                      , <<"Additional data must be non-nil.">>
+                      ),
   #?TYPE{data = #{message => Message, data => Data, cause => Cause}}.
 
 %%------------------------------------------------------------------------------
