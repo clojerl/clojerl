@@ -46,10 +46,12 @@ BOOT_SRC       := ${CURDIR}/bootstrap
 CLJ_SRC        := ${CURDIR}/src/clj
 CLJ_TEST       := ${CURDIR}/test/clj
 EXT            := .clje
+
 EXCLUDE_PPRINT := $(wildcard ${CLJ_SRC}/clojure/pprint/*${EXT})
 EXCLUDE_CORE   := $(addprefix ${CLJ_SRC}/clojure/,core${EXT} core_deftype${EXT} core_print${EXT})
 CLJ_EXCLUDE    := ${EXCLUDE_CORE} ${EXCLUDE_PPRINT}
-CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE},$(wildcard ${CLJ_SRC}/**/*${EXT}))
+CLJ_ALL_FILES  := $(shell find ${CLJ_SRC} -type f -name "*${EXT}")
+CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE}, ${CLJ_ALL_FILES})
 
 CODE_PATH   := ${EBIN} ${CLJ_SRC}
 CLOJERLC    := bin/compile -o ${EBIN} -pa ${EBIN} -pa ${CLJ_SRC} -pa ${CLJ_TEST}
