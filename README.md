@@ -85,7 +85,7 @@ Clojure or not, I will have learned a lot along the way.
 ### What is Clojerl?
 
 Clojerl is an experimental implementation of Clojure on the Erlang VM.
-It's goal is to leverage the features and abstractions of Clojure that
+Its goal is to leverage the features and abstractions of Clojure that
 we love (macros, collections, seq, protocols, multimethods, metadata,
 etc.), with the robustness the Erlang VM provides for building
 (distributed) systems.
