@@ -54,9 +54,7 @@
       (require (symbol (namespace accept)))
       (let [accept-fn (resolve accept)]
         (apply accept-fn args)))
-    (catch _ disconnect
-      (println :error disconnect)
-      (clojure.stacktrace/print-stack-trace))
+    (catch _ disconnect)
     (finally
       (swap! servers update-in [name :sessions] dissoc client-id)
       (gen_tcp/close.e conn))))
@@ -66,7 +64,8 @@
 
 (defn* lift-result
   ([#erl[:ok res]] res)
-  ([#erl[:error error]] (throw error)))
+  ([#erl[:error error]] (throw error))
+  ([res] res))
 
 (defn* getaddr
   ([nil]
@@ -86,10 +85,10 @@
 (deftype SocketWriter [conn]
   erlang.io.IWriter
   (write [this data]
-    (gen_tcp/send.e conn data))
+    (lift-result (gen_tcp/send.e conn data)))
   (write [this format values]
     (let [data (->> values (io_lib/format.e format) erlang/iolist_to_binary.1)]
-      (gen_tcp/send.e conn data))))
+      (lift-result (gen_tcp/send.e conn data)))))
 
 (deftype SocketReader [conn]
   erlang.io.IReader

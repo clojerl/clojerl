@@ -14,11 +14,11 @@
         ]).
 
 -export([close/1]).
--export([  read/1
-        ,  read/2
-        ,  read_line/1
-        ,  skip/2
-        ,  unread/2
+-export([ read/1
+        , read/2
+        , read_line/1
+        , skip/2
+        , unread/2
         ]).
 -export([str/1]).
 
@@ -115,9 +115,15 @@ init(Reader) ->
 loop(State) ->
   receive
     {io_request, From, ReplyAs, Request} ->
-      {Reply, NewState} = request(Request, State),
-      reply(From, ReplyAs, Reply),
-      ?MODULE:loop(NewState);
+      State2 = try
+                 {Reply, State1} = request(Request, State),
+                 reply(From, ReplyAs, Reply),
+                 State1
+               catch _:Reason ->
+                   reply(From, ReplyAs, {error, Reason}),
+                   State
+               end,
+      ?MODULE:loop(State2);
     {From, Ref, close} ->
       #{reader := Reader} = State,
       Result = try 'erlang.io.Closeable':close(Reader)
