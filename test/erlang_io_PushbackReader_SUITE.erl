@@ -52,12 +52,12 @@ read(_Config) ->
   Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   <<"Hello">> = 'erlang.io.IReader':read(Reader, 5),
-  Reader      = 'erlang.io.IReader':unread(Reader, <<"Hello">>),
+  Reader      = 'erlang.io.IPushbackReader':unread(Reader, <<"Hello">>),
   <<"H">>     = 'erlang.io.IReader':read(Reader),
   <<"ello ">> = 'erlang.io.IReader':read(Reader, 5),
   <<"world">> = 'erlang.io.IReader':read(Reader, 5),
   <<"!\n">>   = 'erlang.io.IReader':read(Reader, 2),
-  Reader      = 'erlang.io.IReader':unread(Reader, <<"yeah">>),
+  Reader      = 'erlang.io.IPushbackReader':unread(Reader, <<"yeah">>),
   <<"yeah">>  = 'erlang.io.IReader':read(Reader, 10),
   eof         = 'erlang.io.IReader':read(Reader),
 
@@ -71,11 +71,11 @@ read_line(_Config) ->
   Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
   <<"Hello world!\n">> = 'erlang.io.IReader':read_line(Reader),
-  Reader = 'erlang.io.IReader':unread(Reader, <<"hello\r">>),
+  Reader = 'erlang.io.IPushbackReader':unread(Reader, <<"hello\r">>),
   <<"hello">> = 'erlang.io.IReader':read_line(Reader),
-  Reader = 'erlang.io.IReader':unread(Reader, <<"hello\r\n">>),
+  Reader = 'erlang.io.IPushbackReader':unread(Reader, <<"hello\r\n">>),
   <<"hello">> = 'erlang.io.IReader':read_line(Reader),
-  Reader = 'erlang.io.IReader':unread(Reader, <<"hello\n">>),
+  Reader = 'erlang.io.IPushbackReader':unread(Reader, <<"hello\n">>),
   <<"hello">> = 'erlang.io.IReader':read_line(Reader),
 
   eof = 'erlang.io.IReader':read_line(Reader),
@@ -91,7 +91,7 @@ skip(_Config) ->
 
   6            = 'erlang.io.IReader':skip(Reader, 6), %% Skipped "Hello "
   <<"world!">> = 'erlang.io.IReader':read_line(Reader),
-  Reader       = 'erlang.io.IReader':unread(Reader, <<"world!">>),
+  Reader       = 'erlang.io.IPushbackReader':unread(Reader, <<"world!">>),
   3            = 'erlang.io.IReader':skip(Reader, 3), %% Skipped "wor"
   <<"ld">>     = 'erlang.io.IReader':read(Reader, 2),
   eof          = 'erlang.io.IReader':skip(Reader, 3), %% Skipped "!\n"
@@ -109,13 +109,13 @@ unread(_Config) ->
 
   <<"Hello">> = 'erlang.io.IReader':read(Reader, 5),
   <<" ">>     = 'erlang.io.IReader':read(Reader),
-  Reader      = 'erlang.io.IReader':unread(Reader, <<"_ _">>),
+  Reader      = 'erlang.io.IPushbackReader':unread(Reader, <<"_ _">>),
   <<"_ _">>   = 'erlang.io.IReader':read(Reader, 3),
   <<"world">> = 'erlang.io.IReader':read(Reader, 5),
   <<"!\n">>   = 'erlang.io.IReader':read(Reader, 2),
   eof         = 'erlang.io.IReader':read(Reader),
 
-  ok = try 'erlang.io.IReader':unread(Reader, something), error
+  ok = try 'erlang.io.IPushbackReader':unread(Reader, something), error
        catch _:_ -> ok
        end,
 

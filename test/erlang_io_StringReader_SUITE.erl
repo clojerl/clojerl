@@ -12,7 +12,6 @@
         , read/1
         , read_line/1
         , skip/1
-        , unread/1
         , close/1
         , complete_coverage/1
         ]).
@@ -107,35 +106,6 @@ skip(_Config) ->
   eof          = 'erlang.io.IReader':skip(Reader, 1),
 
   ?NIL = 'erlang.io.Closeable':close(Reader),
-
-  {comments, ""}.
-
--spec unread(config()) -> result().
-unread(_Config) ->
-  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello">>),
-
-  <<"h">> = 'erlang.io.IReader':read(Reader),
-  Reader  = 'erlang.io.IReader':unread(Reader, <<"h">>),
-  <<"h">> = 'erlang.io.IReader':read(Reader),
-  <<"e">> = 'erlang.io.IReader':read(Reader),
-  <<"l">> = 'erlang.io.IReader':read(Reader),
-  <<"l">> = 'erlang.io.IReader':read(Reader),
-  <<"o">> = 'erlang.io.IReader':read(Reader),
-  eof     = 'erlang.io.IReader':read(Reader),
-
-  ?NIL = 'erlang.io.Closeable':close(Reader),
-
-  Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello world!">>),
-
-  <<"he">>      = 'erlang.io.IReader':read(Reader2, 2),
-  <<"llo">>     = 'erlang.io.IReader':read(Reader2, 3),
-  Reader2       = 'erlang.io.IReader':unread(Reader2, <<"llo">>),
-  <<"llo">>     = 'erlang.io.IReader':read(Reader2, 3),
-  <<" ">>       = 'erlang.io.IReader':read(Reader2),
-  <<"world!">>  = 'erlang.io.IReader':read(Reader2, 7),
-  eof           = 'erlang.io.IReader':read(Reader2),
-
-  ?NIL = 'erlang.io.Closeable':close(Reader2),
 
   {comments, ""}.
 

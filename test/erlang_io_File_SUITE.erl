@@ -119,11 +119,6 @@ complete_coverage(_Config) ->
        catch _:_ -> ok
        end,
 
-  ct:comment("Unread is unsupported"),
-  ok = try 'erlang.io.IReader':unread(File, <<>>), error
-       catch _:_ -> ok
-       end,
-
   ct:comment("Open non-existing file"),
   ok = try 'erlang.io.File':open(<<"bla">>), error
        catch _:_ -> ok

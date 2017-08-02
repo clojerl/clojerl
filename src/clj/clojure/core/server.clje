@@ -104,9 +104,7 @@
           (recur (str line char))))))
   (skip [this length]
     (let [skipped (lift-result (gen_tcp/recv.e conn length))]
-      (count skipped)))
-  (unread [this]
-    (throw "Unsupported unread for SocketReader")))
+      (count skipped))))
 
 (defn start-server
   "Start a socket server given the specified opts:

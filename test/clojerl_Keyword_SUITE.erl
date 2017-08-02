@@ -114,11 +114,6 @@ read(_Config) ->
        catch _:_ -> ok
        end,
 
-  ct:comment("Unsupported unread"),
-  ok = try 'erlang.io.IReader':unread(io_loop, <<"hey">>), error
-       catch _:_ -> ok
-       end,
-
   {comments, ""}.
 
 -spec write(config()) -> result().

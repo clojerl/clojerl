@@ -21,7 +21,6 @@
         , read/2
         , read_line/1
         , skip/2
-        , unread/2
         ]).
 -export([ write/2
         , write/3
@@ -139,10 +138,6 @@ read_line(Name) ->
 
 skip(_IO, _Length) ->
   error(<<"unsupported operation: skip">>).
-
-unread(_IO, _Ch) ->
-  TypeName = atom_to_binary(?MODULE, utf8),
-  error(<<"Unsupported operation: unread for ", TypeName/binary>>).
 
 %% erlang.io.IWriter
 
