@@ -61,8 +61,6 @@
         "(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|"
         "([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?$").
 -define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
--define(RATIO_PATTERN, "^([-+]?[0-9]+)/([0-9]+)$").
-
 
 -type char_type() :: whitespace | number | string
                    | keyword | comment | quote
@@ -76,21 +74,19 @@
 %% Exported functions
 %%------------------------------------------------------------------------------
 
--spec parse_number(binary()) -> integer() | float() | ratio().
+-spec parse_number(binary()) -> integer() | float().
 parse_number(Number) ->
   Result = case number_type(Number) of
              int       -> parse_int(Number);
              float     -> parse_float(Number);
-             ratio     -> parse_ratio(Number);
              ?NIL -> ?NIL
            end,
 
-  case Result of
-    ?NIL ->
-      throw(<<"Invalid number format [", Number/binary, "]">>);
-    _ ->
-      Result
-  end.
+  error_when( Result =:= ?NIL
+            , <<"Invalid number format [", Number/binary, "]">>
+            ),
+
+  Result.
 
 -spec parse_symbol(binary()) ->
   {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()} | ?NIL.
@@ -407,22 +403,10 @@ parse_float(FloatBin) ->
 
   list_to_float(FloatStr).
 
--type ratio() :: {ratio, integer(), integer()}.
-
--spec parse_ratio(binary()) -> ratio().
-parse_ratio(RatioBin) ->
-  {match, [_ | Groups]} =
-    re:run(RatioBin, ?RATIO_PATTERN, [{capture, all, list}]),
-  Numerator = nth(1, Groups),
-  Denominator = nth(2, Groups),
-  {ratio,
-   list_to_integer(Numerator),
-   list_to_integer(Denominator)}.
-
 number_type(Number) ->
-  Regex = #{int   => ?INT_PATTERN,
-            float => ?FLOAT_PATTERN,
-            ratio => ?RATIO_PATTERN},
+  Regex = #{ int   => ?INT_PATTERN
+           , float => ?FLOAT_PATTERN
+           },
   Fun = fun(Type, RE, Acc) ->
             case re:run(Number, RE) of
               nomatch -> Acc;
