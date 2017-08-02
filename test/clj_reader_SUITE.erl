@@ -90,9 +90,11 @@ number(ReadFun, ReadAllFun) ->
   42 = ReadFun(<<"36r16">>),
   42 = ReadFun(<<"36R16">>),
 
-  {ratio, 1, 2} = ReadFun(<<"1/2">>),
+  ok = try ReadFun(<<"1/2">>), error
+       catch _:_ -> ok
+       end,
 
-  ok = try ReadFun(<<"12A">>)
+  ok = try ReadFun(<<"12A">>), error
        catch _:_ -> ok
        end,
 

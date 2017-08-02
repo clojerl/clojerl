@@ -42,7 +42,6 @@
       (float 0)
       (double 0)
 
-      0/2
       ""
       #""
       (symbol "")
@@ -62,7 +61,6 @@
       (float 2)
       (double 2)
 
-      2/3
       \a
       "abc"
       #"a*b"
@@ -161,8 +159,6 @@
       0.0
       42
       1.2
-      0/2
-      2/3
 
       ; characters
       \space
