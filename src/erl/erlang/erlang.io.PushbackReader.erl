@@ -14,11 +14,11 @@
         ]).
 
 -export([close/1]).
--export([  read/1
-        ,  read/2
-        ,  read_line/1
-        ,  skip/2
-        ,  unread/2
+-export([ read/1
+        , read/2
+        , read_line/1
+        , skip/2
+        , unread/2
         ]).
 -export([str/1]).
 
@@ -67,9 +67,10 @@ skip(#?TYPE{name = ?M, data = Pid}, Length) ->
 
 unread(#?TYPE{name = ?M, data = Pid} = Reader, Str) ->
   case send_command(Pid, {unread, Str}) of
-    {error, _} ->
-      TypeName = atom_to_binary(?MODULE, utf8),
-      error(<<"Couldn't unread to ", TypeName/binary>>);
+    {error, Reason} ->
+      TypeName  = atom_to_binary(?MODULE, utf8),
+      ReasonBin = clj_rt:str(Reason),
+      error(<<"Couldn't unread to ", TypeName/binary, ": ", ReasonBin/binary>>);
     ok ->
       Reader
   end.
@@ -114,9 +115,15 @@ init(Reader) ->
 loop(State) ->
   receive
     {io_request, From, ReplyAs, Request} ->
-      {Reply, NewState} = request(Request, State),
-      reply(From, ReplyAs, Reply),
-      ?MODULE:loop(NewState);
+      State2 = try
+                 {Reply, State1} = request(Request, State),
+                 reply(From, ReplyAs, Reply),
+                 State1
+               catch _:Reason ->
+                   reply(From, ReplyAs, {error, Reason}),
+                   State
+               end,
+      ?MODULE:loop(State2);
     {From, Ref, close} ->
       #{reader := Reader} = State,
       Result = try 'erlang.io.Closeable':close(Reader)

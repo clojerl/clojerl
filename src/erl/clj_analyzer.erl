@@ -1840,8 +1840,10 @@ signature_tag(ArgCount, Default, Var, Env) ->
             clj_rt:count(ArgsOnly) =:= ArgCount
         end,
   case lists:filter(Fun, ArgLists) of
-    []        -> {Default, Env};
-    [ArgList] -> maybe_type_tag(ArgList, Env)
+    [ArgList] -> maybe_type_tag(ArgList, Env);
+    %% This also handles the case where there are multiple clauses for the
+    %% same arity.
+    _         -> {Default, Env}
   end.
 
 %%------------------------------------------------------------------------------
