@@ -5,6 +5,7 @@
 -behaviour('erlang.io.Closeable').
 -behaviour('clojerl.Stringable').
 -behaviour('erlang.io.IReader').
+-behaviour('erlang.io.IPushbackReader').
 
 -export([?CONSTRUCTOR/1, at_line_start/1]).
 -export([ start_link/1
@@ -18,8 +19,8 @@
         , read/2
         , read_line/1
         , skip/2
-        , unread/2
         ]).
+-export([unread/2]).
 -export([str/1]).
 
 -type type() :: #?TYPE{data :: pid()}.

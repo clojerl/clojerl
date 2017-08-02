@@ -1,3 +1,13 @@
+;; Copyright (c) Rich Hickey All rights reserved. The use and
+;; distribution terms for this software are covered by the Eclipse Public
+;; License 1.0 (http://opensource.org/licenses/eclipse-1.0.php) which can be found
+;; in the file epl-v10.html at the root of this distribution. By using this
+;; software in any fashion, you are agreeing to be bound by the terms of
+;; this license. You must not remove this notice, or any other, from this
+;; software.
+
+;; Originally contributed by Stephen C. Gilardi
+
 (ns ^{:doc "Top-level main function for Clojure REPL and scripts."
       :author "Stephen C. Gilardi and Rich Hickey"}
   clojure.main
@@ -94,12 +104,12 @@
   must either be an instance of LineNumberingPushbackReader or duplicate
   its behavior of both supporting .unread and collapsing all of CR, LF, and
   CRLF to a single \\newline."
-  [s]
-  (let [c (erlang.io.IReader/read.e s)]
+  [^erlang.io.PushbackReader s]
+  (let [c (.read s)]
     (cond
      (= c \newline) :line-start
      (= c :eof) :stream-end
-     :else (do (erlang.io.IReader/unread.e s c) :body))))
+     :else (do (.unread s c) :body))))
 
 (defn whitespace? [x]
   (or (= " " x) (= x "\n") (= x "\r") (= x "\t")))
@@ -113,14 +123,14 @@
   instance of LineNumberingPushbackReader or duplicate its behavior of both
   supporting .unread and collapsing all of CR, LF, and CRLF to a single
   \\newline."
-  [s]
-  (loop [c (erlang.io.IReader/read.e s)]
+  [^erlang.io.PushbackReader s]
+  (loop [c (.read s)]
     (cond
      (= c \newline) :line-start
      (= c :eof) :stream-end
-     (= c \;) (do (erlang.io.IReader/read_line.e s) :line-start)
-     (or (whitespace? c) (= c \,)) (recur (erlang.io.IReader/read.e s))
-     :else (do (erlang.io.IReader/unread.e s c) :body))))
+     (= c \;) (do (.read_line s) :line-start)
+     (or (whitespace? c) (= c \,)) (recur (.read s))
+     :else (do (.unread s c) :body))))
 
 (defn repl-read
   "Default :read hook for repl. Reads from *in* which must either be an

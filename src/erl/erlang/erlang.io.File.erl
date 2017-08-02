@@ -15,7 +15,6 @@
         ,  read/2
         ,  read_line/1
         ,  skip/2
-        ,  unread/2
         ]).
 -export([ write/2
         , write/3
@@ -89,10 +88,6 @@ read_line(#?TYPE{name = ?M, data = Pid}) ->
 skip(#?TYPE{name = ?M}, _Length) ->
   TypeName = atom_to_binary(?MODULE, utf8),
   error(<<"Unsupported operation: skip for ", TypeName/binary>>).
-
-unread(#?TYPE{name = ?M}, _Ch) ->
-  TypeName = atom_to_binary(?MODULE, utf8),
-  error(<<"Unsupported operation: unread for ", TypeName/binary>>).
 
 write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
   ok = io:put_chars(Pid, Str),

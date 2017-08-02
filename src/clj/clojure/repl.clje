@@ -150,6 +150,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     (.read_line pbr))
   (skip [_ n]
     (.skip pbr n))
+
+  erlang.io.IPushbackReader
   (unread [_ ch]
     (let [len (count sw)]
       (.delete sw (dec len) len))

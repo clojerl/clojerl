@@ -18,7 +18,6 @@
         ,  read/2
         ,  read_line/1
         ,  skip/2
-        ,  unread/2
         ]).
 -export([str/1]).
 
@@ -54,10 +53,6 @@ read_line(#?TYPE{name = ?M, data = Pid}) ->
 skip(#?TYPE{name = ?M, data = Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
 
-unread(#?TYPE{name = ?M, data = Pid} = SR, Str) ->
-  ok = send_command(Pid, {unread, Str}),
-  SR.
-
 %%------------------------------------------------------------------------------
 %% IO server
 %%
@@ -90,9 +85,6 @@ loop(Str) ->
       ?MODULE:loop(NewStr);
     {From, Ref, close} ->
       From ! {Ref, ok};
-    {From, Ref, {unread, UnreadStr}} ->
-      From ! {Ref, ok},
-      ?MODULE:loop(<<UnreadStr/binary, Str/binary>>);
     _Unknown ->
       ?MODULE:loop(Str)
   end.

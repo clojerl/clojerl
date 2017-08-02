@@ -24,7 +24,7 @@
                    %% When 'eofthrow' then throw, otherwise return value.
                  , file           => file:filename_all()
                    %% Source file being read.
-                 , ?OPT_IO_READER => 'erlang.io.IReader':type()
+                 , ?OPT_IO_READER => 'erlang.io.IPushbackReader':type()
                    %% IReader that should be used when there are no more
                    %% characters to be read from the binary.
                  }.
@@ -1555,7 +1555,7 @@ peek_src(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}}) ->
   case 'erlang.io.IReader':read(Reader) of
     eof -> eof;
     <<Ch/utf8>> = ChBin ->
-      'erlang.io.IReader':unread(Reader, ChBin),
+      'erlang.io.IPushbackReader':unread(Reader, ChBin),
       Ch
   end;
 peek_src(_State) ->

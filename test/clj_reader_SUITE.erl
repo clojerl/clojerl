@@ -1191,13 +1191,13 @@ tagged(ReadFun) ->
 
 -spec read_io(binary()) -> any().
 read_io(Src) ->
-  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
-  clj_reader:read(<<>>, #{?OPT_IO_READER => Reader}).
+  read_io(Src, #{}).
 
 -spec read_io(binary(), clj_reader:opts()) -> any().
 read_io(Src, Opts) ->
-  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
-  clj_reader:read(<<>>, Opts#{?OPT_IO_READER => Reader}).
+  Reader         = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
+  PushbackReader = 'erlang.io.PushbackReader':?CONSTRUCTOR(Reader),
+  clj_reader:read(<<>>, Opts#{?OPT_IO_READER => PushbackReader}).
 
 -spec read(binary()) -> any().
 read(Src) ->
@@ -1209,8 +1209,9 @@ read(Src, Opts) ->
 
 -spec read_all_io(binary()) -> any().
 read_all_io(Src) ->
-  Reader = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
-  read_all(<<>>, #{?OPT_IO_READER => Reader}).
+  Reader         = 'erlang.io.StringReader':?CONSTRUCTOR(Src),
+  PushbackReader = 'erlang.io.PushbackReader':?CONSTRUCTOR(Reader),
+  read_all(<<>>, #{?OPT_IO_READER => PushbackReader}).
 
 %% @doc Read all forms.
 -spec read_all(binary()) -> [any()].
