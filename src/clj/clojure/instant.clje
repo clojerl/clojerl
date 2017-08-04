@@ -154,6 +154,34 @@ with invalid arguments."
 
 ;;; ------------------------------------------------------------------------
 ;;; print integration
+
+(defn- zero-left-padding
+  "Adds one zero to the left if necessary and transforms to string"
+  [int]
+  (if (< int 10)
+    (str "0" int)
+    (str int)))
+
+(defn- print-date
+  "Print a java.util.Date as RFC3339 timestamp, always in UTC.
+
+  Ex: #inst '2017-08-04T04:24:30.049-00:00'"
+  [d ^erlang.io.IWriter w]
+  (let [[[year month day] [hour minute second]] d]
+    (erlang.io.IWriter/write.e w "#inst \"")
+    (erlang.io.IWriter/write.e w (str year))
+    (erlang.io.IWriter/write.e w "-")
+    (erlang.io.IWriter/write.e w (zero-left-padding month))
+    (erlang.io.IWriter/write.e w "-")
+    (erlang.io.IWriter/write.e w (zero-left-padding day))
+    (erlang.io.IWriter/write.e w "T")
+    (erlang.io.IWriter/write.e w (zero-left-padding hour))
+    (erlang.io.IWriter/write.e w ":")
+    (erlang.io.IWriter/write.e w (zero-left-padding minute))
+    (erlang.io.IWriter/write.e w ":")
+    (erlang.io.IWriter/write.e w (zero-left-padding second))
+    (erlang.io.IWriter/write.e w ".000-00:00\"")))
+
 #_ ((def ^:private ^ThreadLocal thread-local-utc-date-format
       ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
       ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
