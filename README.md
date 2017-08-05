@@ -136,7 +136,7 @@ features into Clojerl's implementation.
 ### Can I reuse existing Clojure(Script) libraries?
 
 Yes, but they will need to be ported, just like for ClojureScript. In
-fact, most of Clojure's core namespaces where ported from the original
+fact, most of Clojure's core namespaces were ported from the original
 .clj files in the Clojure JVM repository.
 
 ## Discussion
