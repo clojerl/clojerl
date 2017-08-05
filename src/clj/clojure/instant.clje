@@ -166,8 +166,8 @@ with invalid arguments."
   "Print a java.util.Date as RFC3339 timestamp, always in UTC.
 
   Ex: #inst '2017-08-04T04:24:30.049-00:00'"
-  [d ^erlang.io.IWriter w]
-  (let [[[year month day] [hour minute second]] d]
+  [^erlang.util.Date d ^erlang.io.IWriter w]
+  (let [[[year month day] [hour minute second]] (erlang.util.Date/to_erl.e d)]
     (erlang.io.IWriter/write.e w "#inst \"")
     (erlang.io.IWriter/write.e w (str year))
     (erlang.io.IWriter/write.e w "-")
@@ -182,78 +182,13 @@ with invalid arguments."
     (erlang.io.IWriter/write.e w (zero-left-padding second))
     (erlang.io.IWriter/write.e w ".000-00:00\"")))
 
-#_ ((def ^:private ^ThreadLocal thread-local-utc-date-format
-      ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
-      ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
-      (proxy [ThreadLocal] []
-        (initialValue []
-          (doto (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS-00:00")
-            ;; RFC3339 says to use -00:00 when the timezone is unknown (+00:00 implies a known GMT)
-            (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))))
+(defmethod print-method erlang.util.Date
+  [^erlang.util.Date d, ^erlang.io.IWriter w]
+  (print-date d w))
 
-    (defn- print-date
-      "Print a java.util.Date as RFC3339 timestamp, always in UTC."
-      [^java.util.Date d, ^java.io.Writer w]
-      (let [^java.text.DateFormat utc-format (.get thread-local-utc-date-format)]
-        (.write w "#inst \"")
-        (.write w (.format utc-format d))
-        (.write w "\"")))
-
-    (defmethod print-method java.util.Date
-      [^java.util.Date d, ^java.io.Writer w]
-      (print-date d w))
-
-    (defmethod print-dup java.util.Date
-      [^java.util.Date d, ^java.io.Writer w]
-      (print-date d w))
-
-    (defn- print-calendar
-      "Print a java.util.Calendar as RFC3339 timestamp, preserving timezone."
-      [^java.util.Calendar c, ^java.io.Writer w]
-      (let [calstr (format "%1$tFT%1$tT.%1$tL%1$tz" c)
-            offset-minutes (- (.length calstr) 2)]
-        ;; calstr is almost right, but is missing the colon in the offset
-        (.write w "#inst \"")
-        (.write w calstr 0 offset-minutes)
-        (.write w ":")
-        (.write w calstr offset-minutes 2)
-        (.write w "\"")))
-
-    (defmethod print-method java.util.Calendar
-      [^java.util.Calendar c, ^java.io.Writer w]
-      (print-calendar c w))
-
-    (defmethod print-dup java.util.Calendar
-      [^java.util.Calendar c, ^java.io.Writer w]
-      (print-calendar c w))
-
-
-    (def ^:private ^ThreadLocal thread-local-utc-timestamp-format
-      ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
-      ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
-      (proxy [ThreadLocal] []
-        (initialValue []
-          (doto (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss")
-            (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))))
-
-    (defn- print-timestamp
-      "Print a java.sql.Timestamp as RFC3339 timestamp, always in UTC."
-      [^java.sql.Timestamp ts, ^java.io.Writer w]
-      (let [^java.text.DateFormat utc-format (.get thread-local-utc-timestamp-format)]
-        (.write w "#inst \"")
-        (.write w (.format utc-format ts))
-        ;; add on nanos and offset
-        ;; RFC3339 says to use -00:00 when the timezone is unknown (+00:00 implies a known GMT)
-        (.write w (format ".%09d-00:00" (.getNanos ts)))
-        (.write w "\"")))
-
-    (defmethod print-method java.sql.Timestamp
-      [^java.sql.Timestamp ts, ^java.io.Writer w]
-      (print-timestamp ts w))
-
-    (defmethod print-dup java.sql.Timestamp
-      [^java.sql.Timestamp ts, ^java.io.Writer w]
-      (print-timestamp ts w)))
+(defmethod print-dup erlang.util.Date
+  [^erlang.util.Date d, ^erlang.io.IWriter w]
+  (print-date d w))
 
 ;;; ------------------------------------------------------------------------
 ;;; reader integration
@@ -275,4 +210,4 @@ milliseconds since the epoch, UTC."
 this var as the value for the 'inst key. The timezone offset will be used
   to convert into UTC."
   [date]
-  (parse-timestamp (validated construct-date) date))
+  (new erlang.util.Date (parse-timestamp (validated construct-date) date)))
