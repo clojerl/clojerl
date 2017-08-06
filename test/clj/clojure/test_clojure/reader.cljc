@@ -411,16 +411,16 @@
                (is (= clojure.core// bar//))))))
 
 (deftest Instants
-  (testing "Instants are read as Erlang's calendar:datetime() by default"
-    (is (= clojerl.erlang.Tuple (type #inst "2010-11-12T13:14:15.666"))))
+  (testing "Instants are read as erlang.util.Date by default"
+    (is (= erlang.util.Date (type #inst "2010-11-12T13:14:15.666"))))
   (let [s "#inst \"2010-11-12T13:14:15.666-06:00\""]
     (binding [*data-readers* {'inst read-instant-date}]
       (testing "read-instant-date produces calendar:datetime()"
-        (is (= clojerl.erlang.Tuple (type (read-string s)))))
-      (testing "calendar:datetime() instants round-trips"
+        (is (= erlang.util.Date (type (read-string s)))))
+      (testing "Date round-trips"
         (is (= (-> s read-string)
                (-> s read-string pr-str read-string))))
-      (testing "calendar:datetime() instants round-trip throughout the year"
+      (testing "Date round-trips throughout the year"
         (doseq [month (range 1 13) day (range 1 29) hour (range 1 23)]
           (let [s (format "#inst \"2010-~2.10.0B-~2.10.0BT~2.10.0B:14:15.666-06:00\"" month day hour)]
             (is (= (-> s read-string)

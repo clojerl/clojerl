@@ -1146,7 +1146,7 @@ tagged(Config) when is_list(Config) ->
   tagged(fun read/1),
   tagged(fun read_io/1);
 tagged(ReadFun) ->
-  Date2016 = {{2016, 1, 1}, {0, 0, 0}},
+  Date2016 = 'erlang.util.Date':?CONSTRUCTOR({{2016, 1, 1}, {0, 0, 0}}),
   UUIDBin  = <<"de305d54-75b4-431b-adb2-eb6b9e546014">>,
   UUID     = 'erlang.util.UUID':?CONSTRUCTOR(UUIDBin),
   ct:comment("Use default readers"),
