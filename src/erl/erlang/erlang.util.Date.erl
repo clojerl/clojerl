@@ -10,10 +10,9 @@
 -export([hash/1]).
 -export([equiv/2]).
 
--type erlang_date() :: {{integer(), integer(), integer()}, {integer(), integer(), integer()}}.
--type type() :: #?TYPE{data :: erlang_date()}.
+-type type() :: #?TYPE{data :: calendar:datetime()}.
 
--spec ?CONSTRUCTOR(erlang_date()) -> type().
+-spec ?CONSTRUCTOR(calendar:datetime()) -> type().
 ?CONSTRUCTOR(Date) -> #?TYPE{data = Date}.
 
 to_erl(#?TYPE{data = Date}) ->
