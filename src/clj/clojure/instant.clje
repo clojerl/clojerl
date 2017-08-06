@@ -155,7 +155,7 @@ with invalid arguments."
 ;;; ------------------------------------------------------------------------
 ;;; print integration
 
-(defn- zero-left-padding
+(defn- pad-left-zero
   "Adds one zero to the left if necessary and transforms to string"
   [int]
   (if (< int 10)
@@ -167,20 +167,9 @@ with invalid arguments."
 
   Ex: #inst '2017-08-04T04:24:30.049-00:00'"
   [^erlang.util.Date d ^erlang.io.IWriter w]
-  (let [[[year month day] [hour minute second]] (erlang.util.Date/to_erl.e d)]
-    (erlang.io.IWriter/write.e w "#inst \"")
-    (erlang.io.IWriter/write.e w (str year))
-    (erlang.io.IWriter/write.e w "-")
-    (erlang.io.IWriter/write.e w (zero-left-padding month))
-    (erlang.io.IWriter/write.e w "-")
-    (erlang.io.IWriter/write.e w (zero-left-padding day))
-    (erlang.io.IWriter/write.e w "T")
-    (erlang.io.IWriter/write.e w (zero-left-padding hour))
-    (erlang.io.IWriter/write.e w ":")
-    (erlang.io.IWriter/write.e w (zero-left-padding minute))
-    (erlang.io.IWriter/write.e w ":")
-    (erlang.io.IWriter/write.e w (zero-left-padding second))
-    (erlang.io.IWriter/write.e w ".000-00:00\"")))
+  (let [[[year month day] [hour minute second]] (erlang.util.Date/to_erl.e d)
+        out-str (format "#inst \"~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.000-00:00\"" year month day hour minute second)]
+    (erlang.io.IWriter/write.e w out-str)))
 
 (defmethod print-method erlang.util.Date
   [^erlang.util.Date d, ^erlang.io.IWriter w]
