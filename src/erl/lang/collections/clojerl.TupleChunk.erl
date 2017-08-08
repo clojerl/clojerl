@@ -42,10 +42,10 @@ drop_first(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}) ->
 
 reduce(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}, Fun) ->
   Size  = erlang:tuple_size(Tuple),
-  Init  = erlang:element(Offset, Tuple),
+  Init  = erlang:element(Offset + 1, Tuple),
   Items = case Offset + 1 < Size of
             true ->
-              Indexes = lists:seq(Offset + 1, Size),
+              Indexes = lists:seq(Offset + 2, Size),
               [erlang:element(Index, Tuple)|| Index <- Indexes];
             false ->
               []
@@ -61,11 +61,11 @@ reduce(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}, Fun, Init) ->
   ApplyFun = fun(Item, Acc) -> clj_rt:apply(Fun, [Acc, Item]) end,
   lists:foldl(ApplyFun, Init, Items).
 
-nth(#?TYPE{name = ?M, data = {Tuple, Offset, _}}, N) ->
-  erlang:element(Offset + N + 1, Tuple).
+nth(#?TYPE{name = ?M} = TupleChunk, N) ->
+  nth(TupleChunk, N, ?NIL).
 
-nth(#?TYPE{name = ?M, data = {_, Offset, Size}} = TupleChunk, N, _Default)
+nth(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}, N, _Default)
   when N >= 0 andalso N < Size - Offset ->
-  nth(TupleChunk, N);
+  erlang:element(Offset + N + 1, Tuple);
 nth(#?TYPE{name = ?M}, _N, Default) ->
   Default.
