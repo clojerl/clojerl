@@ -13,6 +13,7 @@
         , str/1
         , is_sequential/1
         , hash/1
+        , chunked/1
         , seq/1
         , equiv/1
         , cons/1
@@ -86,6 +87,34 @@ hash(_Config) ->
   Hash2 = 'clojerl.IHash':hash(Range2),
 
   true = Hash1 =/= Hash2,
+
+  {comments, ""}.
+
+-spec chunked(config()) -> result().
+chunked(_Config) ->
+  Range1 = 'clojerl.Range':?CONSTRUCTOR(0, 33, 1),
+
+  Chunk1a = 'clojerl.IChunkedSeq':chunked_first(Range1),
+  ?CHUNK_SIZE = clj_rt:count(Chunk1a),
+  0 = clj_rt:nth(Chunk1a, 0),
+
+  ChunkNext1 = 'clojerl.IChunkedSeq':chunked_more(Range1),
+  Chunk1b = 'clojerl.IChunkedSeq':chunked_first(ChunkNext1),
+  32 = clj_rt:nth(Chunk1b, 0),
+
+  ?NIL = 'clojerl.IChunkedSeq':chunked_next(ChunkNext1),
+
+  Range2  = 'clojerl.Range':?CONSTRUCTOR(32, -1, -1),
+
+  Chunk2a = 'clojerl.IChunkedSeq':chunked_first(Range2),
+  ?CHUNK_SIZE = clj_rt:count(Chunk2a),
+  32 = clj_rt:nth(Chunk2a, 0),
+
+  ChunkNext2 = 'clojerl.IChunkedSeq':chunked_more(Range2),
+  Chunk2b = 'clojerl.IChunkedSeq':chunked_first(ChunkNext2),
+  0 = clj_rt:nth(Chunk2b, 0),
+
+  ?NIL = 'clojerl.IChunkedSeq':chunked_next(ChunkNext2),
 
   {comments, ""}.
 
