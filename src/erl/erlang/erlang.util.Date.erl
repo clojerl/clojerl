@@ -22,8 +22,8 @@ to_erl(#?TYPE{data = Date}) ->
 %% Protocols
 %% ------------------------------------------------------------------------------
 
-hash(Str) ->
-  erlang:phash2(Str).
+hash(Date) ->
+  erlang:phash2(Date).
 
-equiv(#?TYPE{data = DateA}, #?TYPE{data = DateB}) ->
-  DateA == DateB.
+equiv(#?TYPE{data = Date}, #?TYPE{data = Date}) -> true;
+equiv(_ , _) -> false.

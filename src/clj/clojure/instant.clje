@@ -155,13 +155,6 @@ with invalid arguments."
 ;;; ------------------------------------------------------------------------
 ;;; print integration
 
-(defn- pad-left-zero
-  "Adds one zero to the left if necessary and transforms to string"
-  [int]
-  (if (< int 10)
-    (str "0" int)
-    (str int)))
-
 (defn- print-date
   "Print a java.util.Date as RFC3339 timestamp, always in UTC.
 
@@ -169,7 +162,7 @@ with invalid arguments."
   [^erlang.util.Date d ^erlang.io.IWriter w]
   (let [[[year month day] [hour minute second]] (erlang.util.Date/to_erl.e d)
         out-str (format "#inst \"~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.000-00:00\"" year month day hour minute second)]
-    (erlang.io.IWriter/write.e w out-str)))
+    (.write w out-str)))
 
 (defmethod print-method erlang.util.Date
   [^erlang.util.Date d, ^erlang.io.IWriter w]
