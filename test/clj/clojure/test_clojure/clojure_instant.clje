@@ -1,0 +1,8 @@
+(ns clojure.test-clojure.clojure-instant
+  (:use clojure.test)
+  (:require [clojure.instant :as instant]))
+
+(deftest test-roundtrip
+  (is (= "#inst \"1990-12-19T10:10:00.000-00:00\"" (pr-str #inst "1990-12-19T10:10:00.000-00:00")))
+  (is (= #erl[#erl[1990 12 19] #erl[10 10 0]] (erlang.util.Date/to_erl.e #inst "1990-12-19T10:10:00.000-00:00")))
+  (is (= (type (calendar/local_time.e)) (type (erlang.util.Date/to_erl.e #inst "1990-12-19T10:10:00.000-00:00")))))
