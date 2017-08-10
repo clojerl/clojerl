@@ -16,17 +16,17 @@
 -export([nth/2, nth/3]).
 -export([reduce/2, reduce/3]).
 
--type type() :: #?TYPE{data :: {tuple(), pos_integer()}}.
+-type type() :: #?TYPE{data :: {tuple(), non_neg_integer(), non_neg_integer()}}.
 
 -spec ?CONSTRUCTOR(tuple()) -> type().
 ?CONSTRUCTOR(Tuple) when is_tuple(Tuple) ->
   ?CONSTRUCTOR(Tuple, 0).
 
--spec ?CONSTRUCTOR(tuple(), pos_integer()) -> type().
+-spec ?CONSTRUCTOR(tuple(), non_neg_integer()) -> type().
 ?CONSTRUCTOR(Tuple, Offset) when is_tuple(Tuple), is_integer(Offset) ->
   ?CONSTRUCTOR(Tuple, Offset, erlang:tuple_size(Tuple)).
 
--spec ?CONSTRUCTOR(tuple(), pos_integer(), pos_integer()) -> type().
+-spec ?CONSTRUCTOR(tuple(), non_neg_integer(), non_neg_integer()) -> type().
 ?CONSTRUCTOR(Tuple, Pos, End) when is_tuple(Tuple),
                                    is_integer(Pos),
                                    is_integer(End) ->
