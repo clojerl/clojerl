@@ -4,6 +4,7 @@
 
 -behavior('clojerl.Counted').
 -behavior('clojerl.IChunk').
+-behavior('clojerl.IHash').
 -behavior('clojerl.Indexed').
 -behavior('clojerl.IReduce').
 
@@ -11,6 +12,7 @@
 
 -export([count/1]).
 -export([drop_first/1]).
+-export([hash/1]).
 -export([nth/2, nth/3]).
 -export([reduce/2, reduce/3]).
 
@@ -39,6 +41,11 @@ count(#?TYPE{name = ?M, data = {_, Offset, Size}}) ->
 
 drop_first(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}) ->
   #?TYPE{name = ?M, data = {Tuple, Offset + 1, Size}}.
+
+hash(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}) ->
+  Indexes = lists:seq(Offset + 1, Size),
+  Items   = [erlang:element(I, Tuple)|| I <- Indexes],
+  clj_murmur3:ordered(Items).
 
 reduce(#?TYPE{name = ?M, data = {Tuple, Offset, Size}}, Fun) ->
   Size  = erlang:tuple_size(Tuple),

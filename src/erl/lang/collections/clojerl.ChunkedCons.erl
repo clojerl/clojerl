@@ -89,7 +89,7 @@ with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
 
 reduce(#?TYPE{name = ?M} = ChunkedCons, F) ->
   case to_list(ChunkedCons) of
-    [] -> ?NIL;
+    [] -> clj_rt:apply(F, []);
     [X | Rest] -> do_reduce(F, X, Rest)
   end.
 
@@ -117,15 +117,13 @@ next(#?TYPE{name = ?M, data = {Chunk0, More}} = ChunkedCons) ->
       chunked_next(ChunkedCons)
   end.
 
-more(#?TYPE{name = ?M, data = {Chunk0, More}}) ->
+more(#?TYPE{name = ?M, data = {Chunk0, More}} = ChunkedCons) ->
   case clj_rt:count(Chunk0) > 1 of
     true ->
       Chunk1 = 'clojerl.IChunk':drop_first(Chunk0),
       'clojerl.ChunkedCons':?CONSTRUCTOR(Chunk1, More);
-    false when More =:= ?NIL ->
-      [];
-    false ->
-      More
+    false  ->
+      chunked_more(ChunkedCons)
   end.
 
 '_'(_) -> ?NIL.
@@ -136,8 +134,9 @@ to_list(#?TYPE{name = ?M, data = {Chunk, More}}) ->
   Tail    = clj_rt:to_list(More),
   Count   = 'clojerl.TupleChunk':count(Chunk),
   Indexes = lists:seq(Count - 1, 0, -1),
-  Cons    = fun(I, Acc) -> ['clojerl.TupleChunk':nth(I, Chunk) | Acc] end,
+  Cons    = fun(I, Acc) -> ['clojerl.TupleChunk':nth(Chunk, I) | Acc] end,
   lists:foldl(Cons, Tail, Indexes).
 
 str(#?TYPE{name = ?M} = ChunkedCons) ->
-  clj_rt:print(ChunkedCons).
+  List = clj_rt:list(to_list(ChunkedCons)),
+  clj_rt:print(List).
