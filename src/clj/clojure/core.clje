@@ -619,40 +619,31 @@
   [& body]
   (list 'new 'clojerl.LazySeq (list* '^{:once true} fn* [] body)))
 
-#_(
-   (defn ^clojure.lang.ChunkBuffer chunk-buffer ^clojure.lang.ChunkBuffer [capacity]
-     (throw "unimplemented chunked seq")
-     #_(clojure.lang.ChunkBuffer. capacity))
+(defn chunk-buffer [capacity]
+  #erl())
 
-   (defn chunk-append [^clojure.lang.ChunkBuffer b x]
-     (throw "unimplemented chunked seq")
-     #_(.add b x))
+(defn chunk-append [b x]
+  (conj b x))
 
-   (defn ^clojure.lang.IChunk chunk [^clojure.lang.ChunkBuffer b]
-     (throw "unimplemented chunked seq")
-     #_(.chunk b))
+(defn ^clojerl.IChunk chunk [b]
+  (clojerl.TupleChunk. (erlang/list_to_tuple.1 (lists/reverse.e b))))
 
-   (defn  ^clojure.lang.IChunk chunk-first ^clojure.lang.IChunk [^clojure.lang.IChunkedSeq s]
-     (throw "unimplemented chunked seq")
-     #_(.chunkedFirst s))
+(defn  ^clojerl.IChunk chunk-first ^clojerl.IChunk [^clojerl.IChunkedSeq s]
+  (.chunked_first s))
 
-   #(defn ^clojerl.ISeq chunk-rest ^clojerl.ISeq [^clojure.lang.IChunkedSeq s]
-      (throw "unimplemented chunked seq")
-      #_(.chunkedMore s))
+(defn ^clojerl.ISeq chunk-rest ^clojerl.ISeq [^clojerl.IChunkedSeq s]
+  (.chunked_more s))
 
-   (defn ^clojerl.ISeq chunk-next ^clojerl.ISeq [^clojure.lang.IChunkedSeq s]
-     (throw "unimplemented chunked seq")
-     #_(.chunkedNext s))
+(defn ^clojerl.ISeq chunk-next ^clojerl.ISeq [^clojerl.IChunkedSeq s]
+  (.chunked_next s))
 
-   (defn chunk-cons [chunk rest]
-     (throw "unimplemented chunked seq")
-     #_(if (clojure.lang.Numbers/isZero (clojure.lang.RT/count chunk))
-         rest
-         (clojure.lang.ChunkedCons. chunk rest)))
+(defn chunk-cons [chunk rest]
+  (if (erlang/==.e (clj_rt/count.e chunk) 0)
+    rest
+    (clojerl.ChunkedCons. chunk rest)))
 
-   (defn chunked-seq? [s]
-     (throw "unimplemented chunked seq")
-     #_(instance? clojure.lang.IChunkedSeq s)))
+(defn chunked-seq? [s]
+  (satisfies? clojerl.IChunkedSeq s))
 
 (defn concat
     "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
@@ -663,14 +654,19 @@
      (lazy-seq
       (let [s (seq x)]
         (if s
-          (cons (first s) (concat (rest s) y))
+          (if (chunked-seq? s)
+            (chunk-cons (chunk-first s) (concat (chunk-rest s) y))
+            (cons (first s) (concat (rest s) y)))
           y))))
     ([x y & zs]
      (let [cat (fn cat [xys zs]
                  (lazy-seq
                   (let [xys (seq xys)]
                     (if xys
-                      (cons (first xys) (cat (rest xys) zs))
+                      (if (chunked-seq? xys)
+                        (chunk-cons (chunk-first xys)
+                                    (cat (chunk-rest xys) zs))
+                        (cons (first xys) (cat (rest xys) zs)))
                       (when zs
                         (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
@@ -833,7 +829,11 @@
   ([f val coll]
    (let [s (seq coll)]
      (if s
-       (recur f (f val (first s)) (next s))
+       (if (chunked-seq? s)
+         (recur f
+                (.reduce (chunk-first s) f val)
+                (chunk-next s))
+         (recur f (f val (first s)) (next s)))
        val))))
 
 (defn reverse
@@ -2359,7 +2359,15 @@
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      (cons (f (first s)) (map f (rest s))))))
+      (if (chunked-seq? s)
+        (let [^clojerl.TupleChunk c (chunk-first s)
+              size (int (count c))
+              b (loop [b (chunk-buffer size) i 0]
+                  (if (< i size)
+                    (recur (chunk-append b (f (.nth c i))) (inc i))
+                    b))]
+          (chunk-cons (chunk b) (map f (chunk-rest s))))
+        (cons (f (first s)) (map f (rest s)))))))
   ([f c1 c2]
    (lazy-seq
     (let [s1 (seq c1) s2 (seq c2)]
@@ -2413,14 +2421,15 @@
   ([pred coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      (if true #_(chunked-seq? s)
-        #_(let [c (chunk-first s)
+      (if (chunked-seq? s)
+        (let [^clojerl.TupleChunk c (chunk-first s)
               size (count c)
-              b (chunk-buffer size)]
-          (dotimes [i size]
-              (let [v (.nth c i)]
-                (when (pred v)
-                  (chunk-append b v))))
+              b (loop [b (chunk-buffer size) i 0]
+                  (if (< i size)
+                    (let [v (.nth c i)]
+                      (recur (if (pred v) (chunk-append b v) b)
+                             (inc i)))
+                    b))]
           (chunk-cons (chunk b) (filter pred (chunk-rest s))))
         (let [f (first s) r (rest s)]
           (if (pred f)
@@ -2829,8 +2838,8 @@
                                ~subform-chunk
                                ~@(when needrec [recform-chunk]))
                              (when-let [~seq- (seq ~seq-)]
-                               (if true #_(chunked-seq? ~seq-)
-                                 #_(let [c# (chunk-first ~seq-)]
+                               (if (chunked-seq? ~seq-)
+                                 (let [c# (chunk-first ~seq-)]
                                    (recur (chunk-rest ~seq-) c#
                                           (int (count c#)) (int 0)))
                                  (let [~k (first ~seq-)]
@@ -3885,31 +3894,30 @@
                                           (= k :when) `(if ~v
                                                          ~(do-cmod etc)
                                                          (recur
-                                                           (inc ~gi)))
+                                                           (inc ~gi) ~gb))
                                           (keyword? k)
                                             (err "Invalid 'for' keyword " k)
                                           :else
-                                            `(do (chunk-append ~gb ~body-expr)
-                                                 (recur (inc ~gi)))))]
+                                          `(recur (inc ~gi) (chunk-append ~gb ~body-expr))))]
                           `(fn ~giter [~gxs]
                              (lazy-seq
                                (loop [~gxs ~gxs]
                                  (when-let [~gxs (seq ~gxs)]
-                                   #_(if false (chunked-seq? ~gxs)
+                                   (if (chunked-seq? ~gxs)
                                      (let [c# (chunk-first ~gxs)
                                            size# (int (count c#))
-                                           ~gb (chunk-buffer size#)]
-                                       (if (loop [~gi (int 0)]
-                                             (if (< ~gi size#)
-                                               (let [~bind (clj_rt/nth.e c# ~gi)]
-                                                 ~(do-cmod mod-pairs))
-                                               true))
+                                           ~gb (loop [~gi (int 0) ~gb (chunk-buffer size#)]
+                                                 (if (< ~gi size#)
+                                                   (let [~bind (clojerl.TupleChunk/nth.e c# ~gi)]
+                                                     ~(do-cmod mod-pairs))
+                                                   ~gb))]
+                                       (if ~gb
                                          (chunk-cons
                                            (chunk ~gb)
                                            (~giter (chunk-rest ~gxs)))
-                                         (chunk-cons (chunk ~gb) nil))))
-                                   (let [~bind (first ~gxs)]
-                                     ~(do-mod mod-pairs))))))))))]
+                                         (chunk-cons (chunk ~gb) nil)))
+                                     (let [~bind (first ~gxs)]
+                                       ~(do-mod mod-pairs)))))))))))]
     `(let [iter# ~(emit-bind (to-groups seq-exprs))]
         (iter# ~(second seq-exprs)))))
 
@@ -5952,14 +5960,16 @@
    (letfn [(mapi [idx coll]
                  (lazy-seq
                    (when-let [s (seq coll)]
-                     #_(if (chunked-seq? s)
-                       (let [c (chunk-first s)
+                     (if (chunked-seq? s)
+                       (let [^clojerl.TupleChunk c (chunk-first s)
                              size (int (count c))
-                             b (chunk-buffer size)]
-                         (dotimes [i size]
-                           (chunk-append b (f (+ idx i) (.nth c i))))
-                         (chunk-cons (chunk b) (mapi (+ idx size) (chunk-rest s)))))
-                     (cons (f idx (first s)) (mapi (inc idx) (rest s))))))]
+                             b (loop [b (chunk-buffer size) i 0]
+                                 (if (< i size)
+                                   (recur (chunk-append b (f (+ idx i) (.nth c i)))
+                                          (inc i))
+                                   b))]
+                         (chunk-cons (chunk b) (mapi (+ idx size) (chunk-rest s))))
+                       (cons (f idx (first s)) (mapi (inc idx) (rest s)))))))]
      (mapi 0 coll))))
 
 (defn keep
@@ -5980,19 +5990,59 @@
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      #_(if (chunked-seq? s)
-        (let [c (chunk-first s)
+      (if (chunked-seq? s)
+        (let [^clojerl.TupleChunk c (chunk-first s)
               size (count c)
-              b (chunk-buffer size)]
-          (dotimes [i size]
-            (let [x (f (nth c i))]
-              (when-not (nil? x)
-                (chunk-append b x))))
-          (chunk-cons (chunk b) (keep f (chunk-rest s)))))
-      (let [x (f (first s))]
-        (if (nil? x)
-          (keep f (rest s))
-          (cons x (keep f (rest s)))))))))
+              b (loop [b (chunk-buffer size) i 0]
+                  (if (< i size)
+                    (let [x (f (.nth c i))]
+                      (recur (if (nil? x) b (chunk-append b x))
+                             (inc i)))
+                    b))]
+          (chunk-cons (chunk b) (keep f (chunk-rest s))))
+        (let [x (f (first s))]
+          (if (nil? x)
+            (keep f (rest s))
+            (cons x (keep f (rest s))))))))))
+
+(defn keep-indexed
+  "Returns a lazy sequence of the non-nil results of (f index item). Note,
+  this means false return values will be included.  f must be free of
+  side-effects.  Returns a stateful transducer when no collection is
+  provided."
+  {:added "1.2"
+   :static true}
+  ([f]
+   #_(fn [rf]
+     (let [iv (volatile! -1)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+            (let [i (vswap! iv inc)
+                  v (f i input)]
+              (if (nil? v)
+                result
+                (rf result v))))))))
+  ([f coll]
+     (letfn [(keepi [idx coll]
+               (lazy-seq
+                (when-let [s (seq coll)]
+                  (if (chunked-seq? s)
+                    (let [^clojerl.TupleChunk c (chunk-first s)
+                          size (count c)
+                          b (loop [b (chunk-buffer size) i 0]
+                              (if (< i size)
+                                (let [x (f (+ idx i) (.nth c i))]
+                                  (recur (if (nil? x) b (chunk-append b x))
+                                         (inc i)))
+                                b))]
+                      (chunk-cons (chunk b) (keepi (+ idx size) (chunk-rest s))))
+                    (let [x (f idx (first s))]
+                      (if (nil? x)
+                        (keepi (inc idx) (rest s))
+                        (cons x (keepi (inc idx) (rest s)))))))))]
+       (keepi 0 coll))))
 
 (defn every-pred
   "Takes a set of predicates and returns a function f that returns true if all of its

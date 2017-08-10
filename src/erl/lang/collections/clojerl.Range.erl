@@ -4,6 +4,7 @@
 
 -behavior('clojerl.Counted').
 -behavior('clojerl.IColl').
+-behavior('clojerl.IChunkedSeq').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
@@ -18,6 +19,10 @@
 -export([count/1]).
 -export([ cons/2
         , empty/1
+        ]).
+-export([ chunked_first/1
+        , chunked_more/1
+        , chunked_next/1
         ]).
 -export([equiv/2]).
 -export([hash/1]).
@@ -37,7 +42,7 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #?TYPE{data :: {integer(), integer(), integer()}}.
 
 -spec ?CONSTRUCTOR(integer(), integer(), integer()) -> type().
 ?CONSTRUCTOR(Start, End, Step) when Step >= 0, End =< Start;
@@ -57,6 +62,23 @@ cons(#?TYPE{name = ?M} = Range, X) ->
   'clojerl.Cons':?CONSTRUCTOR(X, Range).
 
 empty(_) -> [].
+
+chunked_first(#?TYPE{name = ?M, data = {Start0, End0, Step0}}) ->
+  End1    = Start0 + ?CHUNK_SIZE * Step0,
+  End2    = case Step0 >= 0 of
+              true  -> lists:min([End0, End1]) - 1;
+              false -> lists:max([End0, End1]) + 1
+            end,
+  Numbers = lists:seq(Start0, End2, Step0),
+  Tuple   = list_to_tuple(Numbers),
+  'clojerl.TupleChunk':?CONSTRUCTOR(Tuple).
+
+chunked_next(#?TYPE{name = ?M} = Range) ->
+  clj_rt:seq(chunked_more(Range)).
+
+chunked_more(#?TYPE{name = ?M, data = {Start0, End0, Step0}}) ->
+  Start1 = Start0 + ?CHUNK_SIZE * Step0,
+  ?CONSTRUCTOR(Start1, End0, Step0).
 
 equiv( #?TYPE{name = ?M, data = X}
      , #?TYPE{name = ?M, data = Y}

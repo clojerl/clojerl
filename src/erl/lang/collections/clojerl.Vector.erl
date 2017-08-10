@@ -189,7 +189,8 @@ pop(#?TYPE{name = ?M, data = Array} = Vector) ->
 seq(#?TYPE{name = ?M, data = Array}) ->
   case array:size(Array) of
     0 -> ?NIL;
-    _ -> 'clojerl.List':?CONSTRUCTOR(array:to_list(Array))
+    Size when Size =< ?CHUNK_SIZE -> array:to_list(Array);
+    _ -> 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0)
   end.
 
 to_list(#?TYPE{name = ?M, data = Array}) ->
