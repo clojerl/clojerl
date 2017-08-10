@@ -62,7 +62,8 @@ chunked_first(#?TYPE{name = ?M, data = {Array, Index}}) ->
   'clojerl.TupleChunk':?CONSTRUCTOR(list_to_tuple(List)).
 
 chunked_next(#?TYPE{name = ?M, data = {Array, Index}}) ->
-  case Index < array:size(Array) of
+  End = lists:min([array:size(Array), Index + ?CHUNK_SIZE]),
+  case End < array:size(Array) of
     true  -> ?CONSTRUCTOR(Array, Index + ?CHUNK_SIZE);
     false -> ?NIL
   end.
@@ -76,7 +77,7 @@ chunked_more(#?TYPE{name = ?M} = ChunkedSeq) ->
 equiv( #?TYPE{name = ?M, data = {X, _}}
      , #?TYPE{name = ?M, data = {Y, _}}
      ) ->
-  case array:size(X) == array:size(Y) of
+  case array:size(X) =:= array:size(Y) of
     true ->
       X1 = array:to_list(X),
       Y1 = array:to_list(Y),
@@ -125,4 +126,5 @@ to_list(#?TYPE{name = ?M, data = {Array, Index}}) ->
   [array:get(I, Array) || I <- lists:seq(Index, array:size(Array) - 1)].
 
 str(#?TYPE{name = ?M} = ChunkedSeq) ->
-  clj_rt:print(to_list(ChunkedSeq)).
+  List = clj_rt:list(to_list(ChunkedSeq)),
+  clj_rt:print(List).
