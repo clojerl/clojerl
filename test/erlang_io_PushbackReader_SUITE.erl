@@ -172,6 +172,10 @@ complete_coverage(_Config) ->
   ct:comment("Send an unexpected io_request"),
   {error, request} = io:request(Pid, {io_request, self(), ref, unexpected}),
 
+  ct:comment("Generate error when the underlying reader is closed"),
+  ?NIL       = 'erlang.io.Closeable':close(File),
+  {error, _} = 'erlang.io.IReader':skip(Reader, 1),
+
   ?NIL = 'erlang.io.Closeable':close(Reader),
 
   ct:comment("Generate error when closing a PushbackReader that wraps a file"),

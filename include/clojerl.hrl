@@ -43,3 +43,7 @@
 -else.
 -define(DEBUG(Term), ok).
 -endif.
+
+%% Internal
+
+-define(CHUNK_SIZE, 32).
