@@ -102,6 +102,8 @@ ast(#{op := def} = Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
+  ?DEBUG({def, Module, Name}),
+
   ok      = clj_module:ensure_loaded(file_from(Env), Module),
   VarAst  = cerl:abstract(Var),
   VarAnn  = ann_from(Env),
@@ -1083,6 +1085,8 @@ list_ast(List) ->
   list_ast(List, false).
 
 -spec list_ast(list(), boolean()) -> ast().
+list_ast(?NIL, _Pattern) ->
+  cerl:c_nil();
 list_ast([], _Pattern) ->
   cerl:c_nil();
 list_ast(List, Pattern) when is_list(List) ->

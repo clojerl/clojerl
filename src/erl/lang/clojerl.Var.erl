@@ -231,28 +231,40 @@ apply(#?TYPE{name = ?M} = Var, Args) ->
   erlang:apply(Fun, Args2).
 
 -spec process_args(type(), [any()], function()) -> [any()].
-process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
+process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
   Meta = case meta(Var) of
            ?NIL -> #{};
            M -> M
          end,
-
   case maps:get('variadic?', Meta, false) of
-    false -> Args;
+    false -> clj_rt:to_list(Args);
     true ->
       MaxFixedArity = maps:get(max_fixed_arity, Meta),
       VariadicArity = maps:get(variadic_arity, Meta),
-      ArgCount = length(Args),
+      {Length, Args1, Rest} = bounded_length(Args, VariadicArity),
       if
-        MaxFixedArity =:= ?NIL;
-        MaxFixedArity < ArgCount, ArgCount >= VariadicArity ->
-          {Args1, Rest} = case VariadicArity < ArgCount of
-                            true  -> lists:split(VariadicArity, Args);
-                            false -> {Args, []}
-                          end,
+        MaxFixedArity =:= ?NIL
+        orelse Rest =/= ?NIL
+        orelse (MaxFixedArity < Length andalso Length >= VariadicArity)->
           Args1 ++ [RestFun(Rest)];
-        true -> Args
+        true ->
+          Args1
       end
-  end;
-process_args(Var, Args, RestFun) ->
-  process_args(Var, clj_rt:to_list(Args), RestFun).
+  end.
+
+bounded_length(Args, Max) ->
+  TypeModule = clj_rt:type_module(Args),
+  bounded_length(TypeModule:seq(Args), 0, Max, []).
+
+bounded_length(?NIL, N, _Max, Acc) ->
+  ?DEBUG({bounded_length, nil}),
+  {N, lists:reverse(Acc), ?NIL};
+bounded_length(Rest, N, _Max = N, Acc) ->
+  ?DEBUG({bounded_length, limit, N}),
+  {N, lists:reverse(Acc), Rest};
+bounded_length(Rest, N, Max, Acc) ->
+  ?DEBUG({bounded_length, loop, N}),
+  TypeModule = clj_rt:type_module(Rest),
+  First = TypeModule:first(Rest),
+  Rest1 = TypeModule:next(Rest),
+  bounded_length(Rest1, N + 1, Max, [First | Acc]).

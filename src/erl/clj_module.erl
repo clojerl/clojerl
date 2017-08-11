@@ -406,6 +406,7 @@ is_loaded(Name) ->
 %% @private
 -spec build_fake_fun(atom(), integer(), clj_module()) -> function().
 build_fake_fun(Function, Arity, Module) ->
+  ?DEBUG({build_fake_fun, Module#module.name, Function, Arity}),
   {_, FunctionAst} = clj_utils:ets_get(Module#module.funs, {Function, Arity}),
 
   {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),

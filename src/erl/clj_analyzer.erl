@@ -33,7 +33,7 @@ macroexpand_1(Form, Env) ->
                 andalso 'clojerl.Var':is_macro(MacroVar)
               of
                 true ->
-                  Args = [Form, Env | clj_rt:to_list(clj_rt:rest(Form))],
+                  Args = clj_rt:cons(Form, clj_rt:cons(Env, clj_rt:rest(Form))),
                   'clojerl.IFn':apply(MacroVar, Args);
                 false ->
                   case IsSymbol andalso not IsSpecial of
@@ -81,7 +81,8 @@ keep_location_meta(Expanded, Form) ->
     true  ->
       LocationMeta = clj_reader:location_meta(Form),
       ExpandedMeta = clj_rt:meta(Expanded),
-      clj_rt:with_meta(Expanded, clj_rt:merge([ExpandedMeta, LocationMeta]));
+      Meta         = clj_rt:merge([ExpandedMeta, LocationMeta]),
+      clj_rt:with_meta(Expanded, Meta);
     false ->
       Expanded
   end.
@@ -1024,13 +1025,13 @@ parse_def(List, Env) ->
   QuoteSym     = clj_rt:symbol(<<"quote">>),
   NameBin      = clj_rt:name(VarSymbol),
   VarMeta      = clj_rt:merge([ clj_rt:meta(Var0)
-                                , SymbolMeta
-                                , #{ ns   => [QuoteSym, VarNsSym]
-                                   , name => [ QuoteSym
-                                             , clj_rt:symbol(NameBin)
-                                             ]
-                                   }
-                                ]),
+                              , SymbolMeta
+                              , #{ ns   => [QuoteSym, VarNsSym]
+                                 , name => [ QuoteSym
+                                           , clj_rt:symbol(NameBin)
+                                           ]
+                                 }
+                              ]),
   Var          = clj_rt:with_meta(Var0, VarMeta),
   IsDynamic    = 'clojerl.Var':is_dynamic(Var),
 
