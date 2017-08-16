@@ -102,6 +102,8 @@ ast(#{op := def} = Expr, State) ->
   Name    = 'clojerl.Var':function(Var),
   ValName = 'clojerl.Var':val_function(Var),
 
+  ?DEBUG({def, Module, Name}),
+
   ok      = clj_module:ensure_loaded(file_from(Env), Module),
   VarAst  = cerl:abstract(Var),
   VarAnn  = ann_from(Env),
@@ -1083,6 +1085,8 @@ list_ast(List) ->
   list_ast(List, false).
 
 -spec list_ast(list(), boolean()) -> ast().
+list_ast(?NIL, _Pattern) ->
+  cerl:c_nil();
 list_ast([], _Pattern) ->
   cerl:c_nil();
 list_ast(List, Pattern) when is_list(List) ->
@@ -1626,7 +1630,7 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
   case clj_rt:get(VarMeta, 'fn?', false) of
     true ->
       Function    = 'clojerl.Var':function(Var),
-      Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+      {_, Args1}  = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
       CurrentNs   = 'clojerl.Namespace':current(),
       NsName      = clj_rt:name('clojerl.Namespace':name(CurrentNs)),
       VarNsName   = clj_rt:namespace(Var),

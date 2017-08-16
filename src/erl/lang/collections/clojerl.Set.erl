@@ -37,7 +37,9 @@
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
   KVs = lists:map(fun(X) -> {'clojerl.IHash':hash(X), X} end, Values),
-  #?TYPE{data = maps:from_list(KVs)}.
+  #?TYPE{data = maps:from_list(KVs)};
+?CONSTRUCTOR(Values) ->
+  ?CONSTRUCTOR(clj_rt:to_list(Values)).
 
 %%------------------------------------------------------------------------------
 %% Protocols

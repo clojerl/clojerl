@@ -50,7 +50,9 @@
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
   Mappings = lists:foldl(fun build_mappings/2, {#{}, #{}}, KeyValuePairs),
-  #?TYPE{name = ?M, data = Mappings}.
+  #?TYPE{name = ?M, data = Mappings};
+?CONSTRUCTOR(KeyValues) ->
+  ?CONSTRUCTOR(clj_rt:to_list(KeyValues)).
 
 -spec to_erl_map(type()) -> map().
 to_erl_map(#?TYPE{name = ?M, data = {Keys, Vals}}) ->

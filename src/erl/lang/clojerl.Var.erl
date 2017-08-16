@@ -217,42 +217,60 @@ with_meta( #?TYPE{name = ?M, info = Info} = Keyword
          ) ->
   Keyword#?TYPE{info = Info#{meta => Metadata}}.
 
-apply(#?TYPE{name = ?M} = Var, Args) ->
-  Module   = module(Var),
-  Function = function(Var),
-  Args1    = case clj_rt:seq(Args) of
-               ?NIL -> [];
-               Seq       -> Seq
-             end,
-  Args2    = process_args(Var, Args1, fun clj_rt:seq/1),
+apply(#?TYPE{name = ?M} = Var, Args0) ->
+  Module         = module(Var),
+  Function       = function(Var),
+  {Arity, Args1} = process_args(Var, Args0, fun clj_rt:seq/1),
   %% HACK
-  Fun      = clj_module:fake_fun(Module, Function, length(Args2)),
+  Fun            = clj_module:fake_fun(Module, Function, Arity),
 
-  erlang:apply(Fun, Args2).
+  erlang:apply(Fun, Args1).
 
--spec process_args(type(), [any()], function()) -> [any()].
-process_args(#?TYPE{name = ?M} = Var, Args, RestFun) when is_list(Args) ->
+-spec process_args(type(), [any()], function()) -> {arity(), [any()]}.
+process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
   Meta = case meta(Var) of
            ?NIL -> #{};
            M -> M
          end,
-
   case maps:get('variadic?', Meta, false) of
-    false -> Args;
+    false ->
+      Args1 = clj_rt:to_list(Args),
+      {length(Args1), Args1};
     true ->
       MaxFixedArity = maps:get(max_fixed_arity, Meta),
       VariadicArity = maps:get(variadic_arity, Meta),
-      ArgCount = length(Args),
+      {Length, Args1, Rest} = bounded_length(Args, VariadicArity),
       if
-        MaxFixedArity =:= ?NIL;
-        MaxFixedArity < ArgCount, ArgCount >= VariadicArity ->
-          {Args1, Rest} = case VariadicArity < ArgCount of
-                            true  -> lists:split(VariadicArity, Args);
-                            false -> {Args, []}
-                          end,
-          Args1 ++ [RestFun(Rest)];
-        true -> Args
+        MaxFixedArity =:= ?NIL
+        orelse Rest =/= ?NIL
+        orelse (MaxFixedArity < Length andalso Length >= VariadicArity)->
+          {Length + 1, Args1 ++ [RestFun(Rest)]};
+        true ->
+          {Length, Args1}
       end
+  end.
+
+bounded_length(Args, Max) when is_list(Args) ->
+  Length = length(Args),
+  case Length =< Max of
+    true  -> {Length, Args, ?NIL};
+    false ->
+      {Args1, Rest} = lists:split(Max, Args),
+      {Max, Args1, Rest}
   end;
-process_args(Var, Args, RestFun) ->
-  process_args(Var, clj_rt:to_list(Args), RestFun).
+bounded_length(Args, Max) ->
+  TypeModule = clj_rt:type_module(Args),
+  bounded_length(TypeModule:seq(Args), 0, Max, []).
+
+bounded_length(?NIL, N, _Max, Acc) ->
+  ?DEBUG({bounded_length, nil}),
+  {N, lists:reverse(Acc), ?NIL};
+bounded_length(Rest, N, _Max = N, Acc) ->
+  ?DEBUG({bounded_length, limit, N}),
+  {N, lists:reverse(Acc), Rest};
+bounded_length(Rest, N, Max, Acc) ->
+  ?DEBUG({bounded_length, loop, N}),
+  TypeModule = clj_rt:type_module(Rest),
+  First = TypeModule:first(Rest),
+  Rest1 = TypeModule:next(Rest),
+  bounded_length(Rest1, N + 1, Max, [First | Acc]).
