@@ -1630,7 +1630,7 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
   case clj_rt:get(VarMeta, 'fn?', false) of
     true ->
       Function    = 'clojerl.Var':function(Var),
-      Args1       = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+      {_, Args1}  = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
       CurrentNs   = 'clojerl.Namespace':current(),
       NsName      = clj_rt:name('clojerl.Namespace':name(CurrentNs)),
       VarNsName   = clj_rt:namespace(Var),
