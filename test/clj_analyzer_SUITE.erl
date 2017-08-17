@@ -1121,7 +1121,7 @@ extend_type(_Config) ->
    , type  := #{op := type, type := TypeSym}
    , impls := Impls
    } = analyze_one(<<"(extend-type* clojerl.String "
-                     "  clojerl.Stringable "
+                     "  clojerl.IStringable "
                      "  (str [this] :string))">>
                   ),
 
@@ -1130,7 +1130,7 @@ extend_type(_Config) ->
    , type := StringableSym
    } = Stringable,
   true = clj_rt:'symbol?'(StringableSym),
-  <<"clojerl.Stringable">> = clj_rt:str(StringableSym),
+  <<"clojerl.IStringable">> = clj_rt:str(StringableSym),
 
   [#{op := fn_method, name := StrSym}] = maps:get(Stringable, Impls),
   true = clj_rt:'symbol?'(StrSym),
@@ -1141,7 +1141,7 @@ extend_type(_Config) ->
    , type  := #{op := type, type := TypeSym}
    , impls := Impls2
    } = analyze_one(<<"(extend-type* clojerl.String "
-                     "  clojerl.Stringable "
+                     "  clojerl.IStringable "
                      "  (str [this] :string) "
                      "  clojerl.IMeta "
                      "  (meta [this] :meta) "

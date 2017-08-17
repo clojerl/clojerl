@@ -1,4 +1,4 @@
--module(clojerl_erlang_Tuple_SUITE).
+-module(erlang_Tuple_SUITE).
 
 -include("clojerl.hrl").
 -include("clj_test_utils.hrl").
@@ -117,6 +117,6 @@ str(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.erlang.Tuple':'_'(?NIL),
+  ?NIL = 'erlang.Tuple':'_'(?NIL),
 
   {comments, ""}.

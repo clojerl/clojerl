@@ -122,7 +122,7 @@ equiv(_Config) ->
   List3 = clj_rt:with_meta(clj_rt:list([1, 2, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(List1, List3),
 
-  ct:comment("A clojerl.List and an clojerl.erlang.List"),
+  ct:comment("A clojerl.List and an erlang.List"),
   true = clj_rt:equiv(List1, [1, 2, 3]),
   false = clj_rt:equiv(List1, [1, 2, 3, a]),
 

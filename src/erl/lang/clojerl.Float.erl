@@ -1,12 +1,12 @@
 -module('clojerl.Float').
 
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([hash/1]).
 -export([str/1]).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(Float) when is_float(Float) ->
   list_to_binary(io_lib:format("~w", [Float])).

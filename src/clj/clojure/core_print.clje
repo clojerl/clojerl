@@ -128,7 +128,7 @@
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
 
-(defmethod print-method clojerl.erlang.List [o, ^IWriter w]
+(defmethod print-method erlang.List [o, ^IWriter w]
   (print-meta o w)
   (if (io_lib/printable_unicode_list.e o)
     (.write w (str "#erl\"" (erlang/list_to_binary.e o) "\""))
@@ -147,7 +147,7 @@
   (print-sequential "(" pr-on " " ")" o w))
 
 (defmethod print-dup clojerl.List [o ^IWriter w] (print-method o w))
-(defmethod print-dup clojerl.erlang.List [o ^IWriter w] (print-method o w))
+(defmethod print-dup erlang.List [o ^IWriter w] (print-method o w))
 (defmethod print-dup clojerl.Cons [o ^IWriter w] (print-method o w))
 (defmethod print-dup clojerl.LazySeq [o ^IWriter w] (print-method o w))
 (defmethod print-dup clojerl.Range [o ^IWriter w] (print-method o w))
@@ -230,7 +230,7 @@
   (print-meta m w)
   (print-map "{" m "}" pr-on w))
 
-(defmethod print-method clojerl.erlang.Map [m, ^IWriter w]
+(defmethod print-method erlang.Map [m, ^IWriter w]
   (print-meta m w)
   (print-map "#erl{" m "}" pr-on w))
 
@@ -242,7 +242,7 @@
   (print-meta s w)
   (print-sequential "#{" pr-on " " "}" (seq s) w))
 
-(defmethod print-method clojerl.erlang.Tuple [s, ^IWriter w]
+(defmethod print-method erlang.Tuple [s, ^IWriter w]
   (print-meta s w)
   (print-sequential "#erl[" pr-on " " "]" (seq s) w))
 

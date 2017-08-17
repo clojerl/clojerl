@@ -2,8 +2,8 @@
 
 -include("clojerl.hrl").
 
--behaviour('clojerl.Counted').
--behaviour('clojerl.Stringable').
+-behaviour('clojerl.ICounted').
+-behaviour('clojerl.IStringable').
 -behaviour('erlang.io.Closeable').
 -behaviour('erlang.io.IWriter').
 

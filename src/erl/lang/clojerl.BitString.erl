@@ -2,11 +2,11 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ISequential').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([count/1]).
 -export([hash/1]).

@@ -1,17 +1,17 @@
--module('clojerl.erlang.Map').
+-module('erlang.Map').
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Associative').
--behavior('clojerl.Counted').
+-behavior('clojerl.IAssociative').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([ contains_key/2
         , entry_at/2

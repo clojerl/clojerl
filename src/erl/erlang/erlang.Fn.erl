@@ -1,10 +1,10 @@
--module('clojerl.erlang.Fn').
+-module('erlang.Fn').
 
 -compile({no_auto_import, [{apply, 2}]}).
 
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
--behaviour('clojerl.Stringable').
+-behaviour('clojerl.IStringable').
 
 -export([ apply/2
         , hash/1

@@ -3,8 +3,8 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IHash').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([hash/1]).
 -export([ seq/1

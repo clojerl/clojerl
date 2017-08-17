@@ -3,7 +3,7 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/1
         , module/1

@@ -1,7 +1,7 @@
 -module('clojerl.Boolean').
 
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([hash/1]).
 -export([str/1]).

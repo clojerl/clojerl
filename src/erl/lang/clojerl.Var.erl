@@ -7,8 +7,8 @@
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
--behavior('clojerl.Named').
--behavior('clojerl.Stringable').
+-behavior('clojerl.INamed').
+-behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/2
         , is_dynamic/1

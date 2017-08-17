@@ -1,14 +1,14 @@
--module('clojerl.erlang.Tuple').
+-module('erlang.Tuple').
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ISequential').
--behavior('clojerl.Indexed').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IIndexed').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([count/1]).
 -export([equiv/2]).
@@ -35,7 +35,7 @@ equiv(X, Y) when is_tuple(X), is_tuple(Y) ->
   end;
 equiv(X, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> 'clojerl.erlang.List':equiv(to_list(X), Y);
+    true  -> 'erlang.List':equiv(to_list(X), Y);
     false -> false
   end.
 

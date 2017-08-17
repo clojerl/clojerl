@@ -1,4 +1,4 @@
--module('clojerl.Counted').
+-module('clojerl.ICounted').
 
 -clojure(true).
 -protocol(true).

@@ -150,7 +150,7 @@ equiv(_Config) ->
   Range3 = clj_rt:with_meta('clojerl.Range':?CONSTRUCTOR(1, 4, 1), #{c => 3}),
   false  = clj_rt:equiv(Range1, Range3),
 
-  ct:comment("A clojerl.List and an clojerl.erlang.List"),
+  ct:comment("A clojerl.List and an erlang.List"),
   true  = clj_rt:equiv(Range, [0, 1, 2]),
   false = clj_rt:equiv(Range, [1, 2, 3, a]),
 

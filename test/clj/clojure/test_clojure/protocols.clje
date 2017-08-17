@@ -202,7 +202,7 @@
     (is (not (.contains_key empty :a)))))
 
 (deftest defrecord-protocols-test
-  (testing "clojerl.Counted"
+  (testing "clojerl.ICounted"
     (let [rec (r 1 2)]
       (is (= 2 (.count rec)))))
   (testing "clojerl.IColl"
@@ -222,7 +222,7 @@
       (is (.contains_key rec :a))
       (is (= [:a 1] (.entry_at rec :a)))
       (is (= {:a 1 :b 2 :c 3} (.assoc rec :c 3)))))
-  (testing "clojerl.Seqable"
+  (testing "clojerl.ISeqable"
     (let [rec (r 1 2)]
       (is (= #{[:a 1] [:b 2]} (set (.seq rec))))
       (is (= #{[:a 1] [:b 2] [:c 3]} (set (.seq (assoc rec :c 3)))))))
@@ -406,7 +406,7 @@
 (defrecord RecordToTestLiterals [a])
 (defrecord TestNode [v l r])
 (deftype TypeToTestLiterals [a]
-  clojerl.Stringable
+  clojerl.IStringable
   (str [_] (str "#TypeToTestLiterals[" a "]")))
 (def lang-str "en")
 (deftest exercise-literals

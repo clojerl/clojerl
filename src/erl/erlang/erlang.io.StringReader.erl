@@ -3,7 +3,7 @@
 -include("clojerl.hrl").
 
 -behaviour('erlang.io.Closeable').
--behaviour('clojerl.Stringable').
+-behaviour('clojerl.IStringable').
 -behaviour('erlang.io.IReader').
 
 -export([?CONSTRUCTOR/1]).

@@ -1,4 +1,4 @@
--module(clojerl_erlang_Process_SUITE).
+-module(erlang_Reference_SUITE).
 
 -include("clj_test_utils.hrl").
 
@@ -26,12 +26,12 @@ end_per_suite(Config) -> Config.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  ct:comment("Different process are different"),
-  Pid1 = spawn(fun() -> ok end),
-  Pid2 = spawn(fun() -> ok end),
+  ct:comment("Different references are different"),
+  Ref1 = erlang:make_ref(),
+  Ref2 = erlang:make_ref(),
 
-  Hash1 = 'clojerl.IHash':hash(Pid1),
-  Hash2 = 'clojerl.IHash':hash(Pid2),
+  Hash1 = 'clojerl.IHash':hash(Ref1),
+  Hash2 = 'clojerl.IHash':hash(Ref2),
 
   true = Hash1 =/= Hash2,
 
@@ -39,8 +39,8 @@ hash(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  ct:comment("Check the str representation of a pid"),
-  Regex = <<"#<\\d+\\.\\d+\\.\\d+>">>,
-  match = re:run(clj_rt:str(self()), Regex, [{capture, none}]),
+  ct:comment("Check the str representation of a reference"),
+  Regex = <<"#<Ref \\d+\\.\\d+\\.\\d+\\.\\d+>">>,
+  match = re:run(clj_rt:str(make_ref()), Regex, [{capture, none}]),
 
   {comments, ""}.

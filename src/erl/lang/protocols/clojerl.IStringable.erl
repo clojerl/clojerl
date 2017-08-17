@@ -1,4 +1,4 @@
--module('clojerl.Stringable').
+-module('clojerl.IStringable').
 
 -clojure(true).
 -protocol(true).

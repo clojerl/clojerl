@@ -4,7 +4,7 @@
 (deftype SomeType [value1 value2]
   clojerl.IHash
   (hash [_] 42)
-  clojerl.Stringable
+  clojerl.IStringable
   (str [_]
     (str "#SomeType[value1 = " value1 ", value2 = " value2 "]")))
 

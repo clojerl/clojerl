@@ -2,15 +2,15 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/1]).
 -export([count/1]).
@@ -45,7 +45,7 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
-%% clojerl.Counted
+%% clojerl.ICounted
 
 count(#?TYPE{name = ?M, data = MapSet}) -> maps:size(MapSet).
 
@@ -108,7 +108,7 @@ get(#?TYPE{name = ?M, data = MapSet}, Value) ->
     false -> ?NIL
   end.
 
-%% clojerl.Seqable
+%% clojerl.ISeqable
 
 seq(#?TYPE{name = ?M, data = MapSet}) ->
   case maps:size(MapSet) of
@@ -119,7 +119,7 @@ seq(#?TYPE{name = ?M, data = MapSet}) ->
 to_list(#?TYPE{name = ?M, data = MapSet}) ->
   maps:values(MapSet).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M} = Set) ->
   clj_rt:print(Set).

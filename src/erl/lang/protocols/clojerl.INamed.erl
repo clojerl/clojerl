@@ -1,4 +1,4 @@
--module('clojerl.Named').
+-module('clojerl.INamed').
 
 -include("clojerl.hrl").
 

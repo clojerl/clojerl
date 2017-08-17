@@ -2,7 +2,7 @@
 %% catch all implementation
 -module('clojerl.Default').
 
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([str/1]).
 

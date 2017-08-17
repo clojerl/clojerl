@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
@@ -10,8 +10,8 @@
 -behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/1]).
 
@@ -50,7 +50,7 @@
 count(#?TYPE{name = ?M, data = Fn}) ->
   case Fn([]) of
     ?NIL -> 0;
-    Seq       -> 'clojerl.Counted':count(Seq)
+    Seq       -> 'clojerl.ICounted':count(Seq)
   end.
 
 cons(#?TYPE{name = ?M} = LazySeq, X) ->
@@ -64,7 +64,7 @@ equiv( #?TYPE{name = ?M, data = X}
   clj_rt:equiv(X, Y);
 equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv('clojerl.Seqable':to_list(LazySeq), Y);
+    true  -> clj_rt:equiv('clojerl.ISeqable':to_list(LazySeq), Y);
     false -> false
   end.
 
@@ -131,7 +131,7 @@ seq(#?TYPE{name = ?M, data = Fn}) ->
     #?TYPE{name = ?M} = LazySeq ->
       seq(LazySeq);
     Seq ->
-      'clojerl.Seqable':seq(Seq)
+      'clojerl.ISeqable':seq(Seq)
   end.
 
 to_list(#?TYPE{name = ?M} = LazySeq) ->
@@ -141,7 +141,7 @@ to_list(#?TYPE{name = ?M} = LazySeq) ->
 do_to_list(?NIL, Acc) ->
   lists:reverse(Acc);
 do_to_list(Seq0, Acc) ->
-  case 'clojerl.Seqable':seq(Seq0) of
+  case 'clojerl.ISeqable':seq(Seq0) of
     ?NIL -> do_to_list(?NIL, Acc);
     Seq ->
       First = 'clojerl.ISeq':first(Seq),
@@ -151,5 +151,5 @@ do_to_list(Seq0, Acc) ->
 
 str(#?TYPE{name = ?M, data = Fn}) ->
   {uniq, Uniq} = erlang:fun_info(Fn, uniq),
-  UniqBin = 'clojerl.Stringable':str(Uniq),
+  UniqBin = 'clojerl.IStringable':str(Uniq),
   <<"#<clojerl.LazySeq@", UniqBin/binary, ">">>.

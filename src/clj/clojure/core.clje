@@ -1262,7 +1262,7 @@
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   {:tag clojerl.String
    :added "1.0"}
-  [^clojerl.Named x]
+  [^clojerl.INamed x]
   (clj_rt/namespace.e x))
 
 (defmacro ..
@@ -4528,13 +4528,13 @@
   {:added "1.0"}
   ([tag parent]
    (assert (namespace parent))
-   (assert (or (class? tag) (and (satisfies? clojerl.Named tag) (namespace tag))))
+   (assert (or (class? tag) (and (satisfies? clojerl.INamed tag) (namespace tag))))
 
    (alter-var-root #'global-hierarchy derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
-   (assert (or (class? tag) (satisfies? clojerl.Named tag)))
-   (assert (satisfies? clojerl.Named parent))
+   (assert (or (class? tag) (satisfies? clojerl.INamed tag)))
+   (assert (satisfies? clojerl.INamed parent))
 
    (let [tp (:parents h)
          td (:descendants h)
@@ -5092,7 +5092,7 @@
   "Returns true if x implements IPersistentList"
   {:added "1.0"}
   [x] (or  (instance? clojerl.List x)
-           (instance? clojerl.erlang.List x)))
+           (instance? erlang.List x)))
 
 (defn ifn?
   "Returns true if x implements IFn. Note that many data structures
@@ -5108,7 +5108,7 @@
 (defn associative?
  "Returns true if coll implements Associative"
  {:added "1.0"}
-  [coll] (satisfies? clojerl.Associative coll))
+  [coll] (satisfies? clojerl.IAssociative coll))
 
 (defn sequential?
  "Returns true if coll implements Sequential"
@@ -5125,7 +5125,7 @@
 (defn counted?
  "Returns true if coll implements count in constant time"
  {:added "1.0"}
-  [coll] (satisfies? clojerl.Counted coll))
+  [coll] (satisfies? clojerl.ICounted coll))
 
 (defn reversible?
  "Returns true if coll implements Reversible"
