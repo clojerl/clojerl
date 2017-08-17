@@ -93,7 +93,7 @@ equiv(_Config) ->
   Map3 = clj_rt:with_meta(clj_rt:hash_map([5, 6, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Map1, Map3),
 
-  ct:comment("A clojerl.Map and an clojerl.erlang.Map"),
+  ct:comment("A clojerl.Map and an erlang.Map"),
   true = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4}),
   false = clj_rt:equiv(Map1, #{1.0 => 2}),
   false = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4, 5 => 6}),

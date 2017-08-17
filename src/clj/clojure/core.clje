@@ -5092,7 +5092,7 @@
   "Returns true if x implements IPersistentList"
   {:added "1.0"}
   [x] (or  (instance? clojerl.List x)
-           (instance? clojerl.erlang.List x)))
+           (instance? erlang.List x)))
 
 (defn ifn?
   "Returns true if x implements IFn. Note that many data structures

@@ -122,7 +122,7 @@ equiv(_Config) ->
   Map4 = clj_rt:with_meta(tuple_map([1.0, a, 3, b]), #{a => 1}),
   false = clj_rt:equiv(Map1, Map4),
 
-  ct:comment("A clojerl.TupleMap and an clojerl.erlang.Map"),
+  ct:comment("A clojerl.TupleMap and an erlang.Map"),
   true  = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4}),
   false = clj_rt:equiv(Map1, #{1.0 => 2}),
   false = clj_rt:equiv(Map1, #{1.0 => 2, 3 => 4, 5 => 6}),

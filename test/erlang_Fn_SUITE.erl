@@ -1,4 +1,4 @@
--module(clojerl_erlang_Fn_SUITE).
+-module(erlang_Fn_SUITE).
 
 -include("clj_test_utils.hrl").
 
@@ -53,7 +53,7 @@ apply(_Config) ->
        catch _:_ -> ok end,
 
   ct:comment("Apply a fun built from a function"),
-  FunFunction = fun clojerl_erlang_Fn_SUITE:all/0,
+  FunFunction = fun erlang_Fn_SUITE:all/0,
   [_ | _] = clj_rt:apply(FunFunction, []),
 
   ct:comment("Apply a non Clojure fun generated through erl_eval"),

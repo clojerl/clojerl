@@ -156,7 +156,7 @@ equiv(_Config) ->
   Vector3 = clj_rt:with_meta(clj_rt:vector([1, 2, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Vector1, Vector3),
 
-  ct:comment("A clojerl.Vector and an clojerl.erlang.List"),
+  ct:comment("A clojerl.Vector and an erlang.List"),
   true = clj_rt:equiv(Vector1, [1, 2, 3]),
   false = clj_rt:equiv(Vector1, [1, 2, 3, a]),
 

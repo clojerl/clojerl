@@ -1,4 +1,4 @@
--module('clojerl.erlang.Fn').
+-module('erlang.Fn').
 
 -compile({no_auto_import, [{apply, 2}]}).
 

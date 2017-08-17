@@ -117,7 +117,7 @@
   clojerl.List
   (diff-similar [a b] (diff-sequential a b))
 
-  clojerl.erlang.List
+  erlang.List
   (diff-similar [a b] (diff-sequential a b))
 
   clojerl.Map
@@ -128,7 +128,7 @@
   (diff-similar [a b]
     (diff-associative a b (set/union (keys a) (keys b))))
 
-  clojerl.erlang.Map
+  erlang.Map
   (diff-similar [a b]
     (diff-associative a b (set/union (keys a) (keys b)))))
 

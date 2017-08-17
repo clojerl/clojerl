@@ -1,4 +1,4 @@
--module('clojerl.erlang.Map').
+-module('erlang.Map').
 
 -include("clojerl.hrl").
 

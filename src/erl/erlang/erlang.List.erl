@@ -1,4 +1,4 @@
--module('clojerl.erlang.List').
+-module('erlang.List').
 
 -include("clojerl.hrl").
 

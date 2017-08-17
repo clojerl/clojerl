@@ -1,4 +1,4 @@
--module('clojerl.erlang.Reference').
+-module('erlang.Reference').
 
 -behaviour('clojerl.Stringable').
 -behaviour('clojerl.IHash').

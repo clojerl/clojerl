@@ -1,4 +1,4 @@
--module(clojerl_erlang_List_SUITE).
+-module(erlang_List_SUITE).
 
 -include("clojerl.hrl").
 -include("clj_test_utils.hrl").
@@ -119,15 +119,15 @@ equiv(_Config) ->
   List3 = [a, b, c],
   false = clj_rt:equiv(List1, List3),
 
-  ct:comment("A clojerl.erlang.List and a clojerl.List"),
+  ct:comment("A erlang.List and a clojerl.List"),
   true = clj_rt:equiv(List1, clj_rt:list([1, 2, 3])),
   false = clj_rt:equiv(List1, clj_rt:list([1, 2, 3, a])),
 
-  ct:comment("A clojerl.erlang.List and a clojerl.Vector"),
+  ct:comment("A erlang.List and a clojerl.Vector"),
   true = clj_rt:equiv(List1, clj_rt:vector([1, 2, 3])),
   false = clj_rt:equiv(List1, clj_rt:vector([1, 2, 3, a])),
 
-  ct:comment("A clojerl.erlang.List and something else"),
+  ct:comment("A erlang.List and something else"),
   false = clj_rt:equiv(List1, whatever),
   false = clj_rt:equiv(List1, #{}),
 
@@ -198,7 +198,7 @@ reduce(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.erlang.List':'_'(?NIL),
+  ?NIL = 'erlang.List':'_'(?NIL),
 
   NotEmptyList = [a, b, 2, 3],
   EmptyList    = clj_rt:empty(NotEmptyList),
@@ -207,6 +207,6 @@ complete_coverage(_Config) ->
   ListMeta  = clj_rt:with_meta(clj_rt:list([1, 2, 3]), #{a => 1}),
   #{a := 1} = clj_rt:meta(ListMeta),
 
-  [1, 2, 3] = 'clojerl.erlang.List':to_list([1, 2, 3]),
+  [1, 2, 3] = 'erlang.List':to_list([1, 2, 3]),
 
   {comments, ""}.

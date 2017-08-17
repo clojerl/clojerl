@@ -1,4 +1,4 @@
--module('clojerl.erlang.Process').
+-module('erlang.Process').
 
 -behaviour('clojerl.Stringable').
 -behaviour('clojerl.IHash').

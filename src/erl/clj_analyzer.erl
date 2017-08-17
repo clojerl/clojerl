@@ -2195,7 +2195,7 @@ analyze_set(Set, Env0) ->
 %% Analyze tuple
 %%------------------------------------------------------------------------------
 
--spec analyze_tuple('clojerl.erlang.Tuple':type(), clj_env:env()) ->
+-spec analyze_tuple('erlang.Tuple':type(), clj_env:env()) ->
   clj_env:env().
 analyze_tuple(Tuple, Env0) ->
   Env1    = clj_env:push(#{context => expr}, Env0),

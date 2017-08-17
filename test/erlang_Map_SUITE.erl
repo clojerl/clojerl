@@ -1,4 +1,4 @@
--module(clojerl_erlang_Map_SUITE).
+-module(erlang_Map_SUITE).
 
 -include("clojerl.hrl").
 -include("clj_test_utils.hrl").
@@ -96,12 +96,12 @@ equiv(_Config) ->
   Map4 = #{5 => 6, 3 => 4, 7 => 8},
   false = clj_rt:equiv(Map1, Map4),
 
-  ct:comment("A clojerl.erlang.Map and an clojerl.Map"),
+  ct:comment("A erlang.Map and an clojerl.Map"),
   true = clj_rt:equiv(Map1, clj_rt:hash_map([1, 2, Symbol, 4])),
   false = clj_rt:equiv(Map1, clj_rt:hash_map([1, 2])),
   false = clj_rt:equiv(Map1, clj_rt:hash_map([1, 2, 3, 4, 5, 6])),
 
-  ct:comment("A clojerl.erlang.Map and something else"),
+  ct:comment("A erlang.Map and something else"),
   false = clj_rt:equiv(Map1, whatever),
   false = clj_rt:equiv(Map1, 1),
   false = clj_rt:equiv(Map1, [1]),

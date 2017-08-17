@@ -1,4 +1,4 @@
--module('clojerl.erlang.Port').
+-module('erlang.Port').
 
 -behaviour('clojerl.Stringable').
 -behaviour('clojerl.IHash').

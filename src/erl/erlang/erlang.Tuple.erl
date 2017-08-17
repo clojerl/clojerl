@@ -1,4 +1,4 @@
--module('clojerl.erlang.Tuple').
+-module('erlang.Tuple').
 
 -include("clojerl.hrl").
 
@@ -35,7 +35,7 @@ equiv(X, Y) when is_tuple(X), is_tuple(Y) ->
   end;
 equiv(X, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> 'clojerl.erlang.List':equiv(to_list(X), Y);
+    true  -> 'erlang.List':equiv(to_list(X), Y);
     false -> false
   end.
 

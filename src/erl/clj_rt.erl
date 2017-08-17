@@ -51,15 +51,15 @@ type_module(X) when is_bitstring(X) -> 'clojerl.BitString';
 type_module(X) when is_integer(X)   -> 'clojerl.Integer';
 type_module(X) when is_float(X)     -> 'clojerl.Float';
 type_module(X) when is_boolean(X)   -> 'clojerl.Boolean';
-type_module(X) when is_list(X)      -> 'clojerl.erlang.List';
-type_module(X) when is_map(X)       -> 'clojerl.erlang.Map';
-type_module(X) when is_tuple(X)     -> 'clojerl.erlang.Tuple';
-type_module(X) when is_function(X)  -> 'clojerl.erlang.Fn';
+type_module(X) when is_list(X)      -> 'erlang.List';
+type_module(X) when is_map(X)       -> 'erlang.Map';
+type_module(X) when is_tuple(X)     -> 'erlang.Tuple';
+type_module(X) when is_function(X)  -> 'erlang.Fn';
 type_module(?NIL)                   -> ?NIL_TYPE;
 type_module(X) when is_atom(X)      -> 'clojerl.Keyword';
-type_module(X) when is_port(X)      -> 'clojerl.erlang.Port';
-type_module(X) when is_pid(X)       -> 'clojerl.erlang.Process';
-type_module(X) when is_reference(X) -> 'clojerl.erlang.Reference';
+type_module(X) when is_port(X)      -> 'erlang.Port';
+type_module(X) when is_pid(X)       -> 'erlang.Process';
+type_module(X) when is_reference(X) -> 'erlang.Reference';
 type_module(Value) -> throw({Value, <<" has an unsupported type">>}).
 
 -spec load(binary()) -> ?NIL.
@@ -499,11 +499,11 @@ do_print(X, 'clojerl.TupleMap', _PrintReadably) ->
   do_print_map(X);
 do_print(X, 'clojerl.Vector', _PrintReadably) ->
   do_print_seq(X, <<"[">>, <<"]">>);
-do_print(X, 'clojerl.erlang.List', _PrintReadably) ->
+do_print(X, 'erlang.List', _PrintReadably) ->
   do_print_seq(X, <<"#erl(">>, <<")">>);
-do_print(X, 'clojerl.erlang.Map', _PrintReadably) ->
+do_print(X, 'erlang.Map', _PrintReadably) ->
   do_print_map(X, <<"#erl{">>, <<"}">>);
-do_print(X, 'clojerl.erlang.Tuple', _PrintReadably) ->
+do_print(X, 'erlang.Tuple', _PrintReadably) ->
   do_print_seq(X, <<"#erl[">>, <<"]">>);
 do_print(X, _Type, _PrintReadably) ->
   str(X).

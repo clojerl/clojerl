@@ -1062,7 +1062,7 @@ erl_literals(ReadFun) ->
 
   ct:comment("Read a tuple whose first element is an keyword"),
   T = ReadFun(<<"#erl [:random, :hello, 2.5, 'world]">>),
-  'clojerl.erlang.Tuple' = clj_rt:type_module(T),
+  'erlang.Tuple' = clj_rt:type_module(T),
 
   %% List
   ct:comment("Read an empty list"),
