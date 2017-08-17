@@ -4,8 +4,8 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Associative').
--behavior('clojerl.Counted').
+-behavior('clojerl.IAssociative').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
@@ -13,8 +13,8 @@
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/1
         , create_with_assoc/1
@@ -118,7 +118,7 @@ to_erl_map(#?TYPE{name = ?M, data = TupleMap}) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-%% clojerl.Associative
+%% clojerl.IAssociative
 
 contains_key(#?TYPE{name = ?M, data = TupleMap}, Key) ->
   index_of(TupleMap, Key) =/= notfound.
@@ -150,7 +150,7 @@ assoc(#?TYPE{name = ?M, data = TupleMap0} = M, Key, Value) ->
       M#?TYPE{data = TupleMap1}
   end.
 
-%% clojerl.Counted
+%% clojerl.ICounted
 
 count(#?TYPE{name = ?M, data = TupleMap}) ->
   trunc(tuple_size(TupleMap) / 2).
@@ -284,7 +284,7 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 with_meta(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
   Map#?TYPE{info = Info#{meta => Metadata}}.
 
-%% clojerl.Seqable
+%% clojerl.ISeqable
 
 seq(#?TYPE{name = ?M} = Map) ->
   case to_list(Map) of
@@ -301,7 +301,7 @@ do_to_list([K, V | Rest], Acc0) ->
   Acc1 = [clj_rt:vector([K, V]) | Acc0],
   do_to_list(Rest, Acc1).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M} = TupleMap) ->
   clj_rt:print(TupleMap).

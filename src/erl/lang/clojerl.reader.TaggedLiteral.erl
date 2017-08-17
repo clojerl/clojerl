@@ -4,7 +4,7 @@
 
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.ILookup').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/2]).
 -export([equiv/2]).
@@ -40,7 +40,7 @@ get(#?TYPE{name = ?M, data = {_, Form}}, form, _) ->
 get(#?TYPE{name = ?M}, _, NotFound) ->
   NotFound.
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M, data = {Tag, Form}}) ->
   TagBin  = clj_rt:str(Tag),

@@ -99,8 +99,8 @@
                                    (get ~'__extmap k# else#))))])
           imap (fn [[i m]]
                  [(conj i
-                        'clojerl.Counted 'clojerl.IColl 'clojerl.IEquiv
-                        'clojerl.Associative 'clojerl.Seqable 'clojerl.IMap)
+                        'clojerl.ICounted 'clojerl.IColl 'clojerl.IEquiv
+                        'clojerl.IAssociative 'clojerl.ISeqable 'clojerl.IMap)
                   (conj m
                         `(~'count [this#] (+ ~(count base-fields) (count ~'__extmap)))
                         `(~'empty [this#] (throw (str "Can't create empty: " ~(str classname))))
@@ -126,7 +126,7 @@
                                                      ~'__extmap)))
                         `(~'to_list [this#]
                           ;; TODO: Improve this implementation
-                          (clojerl.Seqable/to_list.e (concat [~@(map #(vector (keyword %) %) base-fields)]
+                          (clojerl.ISeqable/to_list.e (concat [~@(map #(vector (keyword %) %) base-fields)]
                                                              ~'__extmap)))
                         `(~'keys [this#] (map first (seq this#)))
                         `(~'vals [this#] (map second (seq this#)))
@@ -135,7 +135,7 @@
                                                  (new ~classname ~@(remove #{'__extmap} fields)
                                                       (not-empty (dissoc ~'__extmap k#))))))])
           istr (fn [[i m]]
-                 [(conj i 'clojerl.Stringable)
+                 [(conj i 'clojerl.IStringable)
                   (conj m
                         `(~'str [this#]
                           (str "#"

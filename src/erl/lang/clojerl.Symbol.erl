@@ -6,8 +6,8 @@
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
--behavior('clojerl.Named').
--behavior('clojerl.Stringable').
+-behavior('clojerl.INamed').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/1, ?CONSTRUCTOR/2]).
 
@@ -48,7 +48,7 @@ apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for symbol, got: ", CountBin/binary>>).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M, data = {?NIL, Name}}) ->
   Name;

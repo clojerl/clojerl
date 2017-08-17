@@ -1,4 +1,4 @@
--module('clojerl.Indexed').
+-module('clojerl.IIndexed').
 
 -clojure(true).
 -protocol(true).

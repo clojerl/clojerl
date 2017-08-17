@@ -5,7 +5,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/2]).
 
@@ -46,7 +46,7 @@ get(#?TYPE{name = ?M, data = {_, IsSplicing}}, 'splicing?', _) ->
 get(#?TYPE{name = ?M}, _, NotFound) ->
   NotFound.
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M, data = {List, IsSplicing}}) ->
   Splice = case IsSplicing of

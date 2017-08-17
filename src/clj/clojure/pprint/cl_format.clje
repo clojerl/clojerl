@@ -1879,7 +1879,7 @@ column number or pretty printing"
            (finally
              (if-not (identical? real-stream wrapped-stream)
                (.ppflush ^PrettyFlush wrapped-stream))))
-         (if (not stream) (.str ^clojerl.Stringable real-stream)))))
+         (if (not stream) (.str ^clojerl.IStringable real-stream)))))
   ([format args]
    (map-passing-context
     (fn [element context]

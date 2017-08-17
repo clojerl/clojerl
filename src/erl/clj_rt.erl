@@ -110,15 +110,15 @@ resolve_file(Path, Exts) ->
 
 -spec count(any()) -> integer().
 count(?NIL) -> 0;
-count(Seq)       -> 'clojerl.Counted':count(Seq).
+count(Seq)       -> 'clojerl.ICounted':count(Seq).
 
 -spec nth(any(), integer()) -> any().
 nth(?NIL, _) -> ?NIL;
 nth([], _) -> ?NIL;
 nth(Coll, N) ->
   Type = type_module(Coll),
-  case clj_protocol:'satisfies?'('clojerl.Indexed', Type) of
-    true  -> 'clojerl.Indexed':nth(Coll, N);
+  case clj_protocol:'satisfies?'('clojerl.IIndexed', Type) of
+    true  -> 'clojerl.IIndexed':nth(Coll, N);
     false -> nth_from(Coll, N, ?NIL)
   end.
 
@@ -127,8 +127,8 @@ nth(?NIL, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
   Type = type_module(Coll),
-  case clj_protocol:'satisfies?'('clojerl.Indexed', Type) of
-    true  -> 'clojerl.Indexed':nth(Coll, N, NotFound);
+  case clj_protocol:'satisfies?'('clojerl.IIndexed', Type) of
+    true  -> 'clojerl.IIndexed':nth(Coll, N, NotFound);
     false -> nth_from(Coll, N, NotFound)
   end.
 
@@ -142,7 +142,7 @@ nth_from(Coll, N, NotFound) ->
 
 -spec 'empty?'(any()) -> boolean().
 'empty?'(Seq) ->
-  'clojerl.Seqable':seq(Seq) == ?NIL.
+  'clojerl.ISeqable':seq(Seq) == ?NIL.
 
 -spec empty(any()) -> integer().
 empty(Coll) ->
@@ -150,7 +150,7 @@ empty(Coll) ->
 
 -spec seq(any()) -> any() | ?NIL.
 seq(Seqable) ->
-  'clojerl.Seqable':seq(Seqable).
+  'clojerl.ISeqable':seq(Seqable).
 
 -spec seq_or_else(any()) -> any() | ?NIL.
 seq_or_else(Seqable) ->
@@ -163,7 +163,7 @@ seq_or_else(Seqable) ->
 to_list(?NIL) -> [];
 to_list(List) when is_list(List) -> List;
 to_list(Seqable) ->
-  'clojerl.Seqable':to_list(Seqable).
+  'clojerl.ISeqable':to_list(Seqable).
 
 -spec equiv(any(), any()) -> boolean().
 equiv(X, Y) ->
@@ -246,11 +246,11 @@ pop(Stack)     -> 'clojerl.IStack':pop(Stack).
 
 -spec name(any()) -> binary() | ?NIL.
 name(X) when is_binary(X) -> X;
-name(X) -> 'clojerl.Named':name(X).
+name(X) -> 'clojerl.INamed':name(X).
 
 -spec namespace(any()) -> binary() | ?NIL.
 namespace(X) ->
-  'clojerl.Named':namespace(X).
+  'clojerl.INamed':namespace(X).
 
 -spec symbol(binary()) -> 'clojerl.Symbol':type().
 symbol(Name) ->
@@ -284,7 +284,7 @@ keyword(Namespace, Name) ->
 
 -spec 'associative?'(any()) -> boolean().
 'associative?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.Associative', type_module(X)).
+  clj_protocol:'satisfies?'('clojerl.IAssociative', type_module(X)).
 
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
@@ -374,7 +374,7 @@ with_meta(X, Meta) ->
   IsSet = 'set?'(Coll),
 
   if
-    IsAssociative -> 'clojerl.Associative':contains_key(Coll, Key);
+    IsAssociative -> 'clojerl.IAssociative':contains_key(Coll, Key);
     IsSet -> 'clojerl.ISet':contains(Coll, Key);
     true  -> clj_utils:error(["contains? not supported on type: ", type(Coll)])
   end.
@@ -399,12 +399,12 @@ get(X, Key, NotFound) ->
     false -> 'clojerl.ILookup':get(X, Key, NotFound)
   end.
 
--spec assoc('clojerl.Associative':type(), any(), any()) ->
-  'clojerl.Associative':type().
+-spec assoc('clojerl.IAssociative':type(), any(), any()) ->
+  'clojerl.IAssociative':type().
 assoc(?NIL, Key, Value) ->
   hash_map([Key, Value]);
 assoc(Map, Key, Value) ->
-  'clojerl.Associative':assoc(Map, Key, Value).
+  'clojerl.IAssociative':assoc(Map, Key, Value).
 
 -spec dissoc('clojerl.IMap':type(), any()) -> 'clojerl.IMap':type().
 dissoc(?NIL, _Key) ->
@@ -417,7 +417,7 @@ find(?NIL, _) ->
   ?NIL;
 find(Map, Key) ->
   case 'associative?'(Map) of
-    true  -> 'clojerl.Associative':entry_at(Map, Key);
+    true  -> 'clojerl.IAssociative':entry_at(Map, Key);
     false -> ?NIL
   end.
 
@@ -457,7 +457,7 @@ short(X) when is_number(X), 0 =< X, X < 32768 ->
 
 -spec str(any()) -> binary().
 str(X) ->
-  'clojerl.Stringable':str(X).
+  'clojerl.IStringable':str(X).
 
 -spec print(any()) -> binary().
 print(X) ->

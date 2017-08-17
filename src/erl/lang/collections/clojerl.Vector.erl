@@ -2,8 +2,8 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Associative').
--behavior('clojerl.Counted').
+-behavior('clojerl.IAssociative').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
@@ -11,11 +11,11 @@
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
--behavior('clojerl.Indexed').
+-behavior('clojerl.IIndexed').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/1, subvec/3]).
 -export([ contains_key/2
@@ -68,7 +68,7 @@ subvec(Vector, Start, End) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-%% clojerl.Associative
+%% clojerl.IAssociative
 
 contains_key(#?TYPE{name = ?M, data = Array}, Index) ->
   Index < array:size(Array).

@@ -6,7 +6,7 @@
 -behavior('clojerl.IError').
 -behavior('clojerl.IExceptionInfo').
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/2, ?CONSTRUCTOR/3]).
 
@@ -63,7 +63,7 @@ cause(#?TYPE{name = ?M, data = #{cause := Cause}}) ->
 hash(#?TYPE{name = ?M, data = Data}) ->
   erlang:phash2(Data).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M, data = #{message := Message, data := Data}}) ->
   TypeBin = erlang:atom_to_binary(?MODULE, utf8),

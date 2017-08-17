@@ -4,8 +4,8 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Associative').
--behavior('clojerl.Counted').
+-behavior('clojerl.IAssociative').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
@@ -13,8 +13,8 @@
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/1, to_erl_map/1]).
 -export([ contains_key/2
@@ -78,7 +78,7 @@ build_mappings({K, V}, {Keys, Values}) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-%% clojerl.Associative
+%% clojerl.IAssociative
 
 contains_key(#?TYPE{name = ?M, data = {Keys, _}}, Key) ->
   maps:is_key('clojerl.IHash':hash(Key), Keys).
@@ -101,7 +101,7 @@ assoc(#?TYPE{name = ?M, data = {Keys, Vals}} = M, Key, Value) ->
          end,
   M#?TYPE{data = {Keys#{Hash => Key1}, Vals#{Hash => Value}}}.
 
-%% clojerl.Counted
+%% clojerl.ICounted
 
 count(#?TYPE{name = ?M, data = {Keys, _}}) ->
   maps:size(Keys).
@@ -195,7 +195,7 @@ meta(#?TYPE{name = ?M, info = Info}) ->
 with_meta(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
   Map#?TYPE{info = Info#{meta => Metadata}}.
 
-%% clojerl.Seqable
+%% clojerl.ISeqable
 
 seq(#?TYPE{name = ?M} = Map) ->
   case to_list(Map) of
@@ -209,7 +209,7 @@ to_list(#?TYPE{name = ?M, data = {Keys, Vals}}) ->
             end,
   maps:fold(FoldFun, [], Keys).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M} = Map) ->
   clj_rt:print(Map).

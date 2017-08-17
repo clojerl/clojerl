@@ -2,15 +2,15 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([?CONSTRUCTOR/1]).
 -export([count/1]).
@@ -44,7 +44,7 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
-%% clojerl.Counted
+%% clojerl.ICounted
 
 count(#?TYPE{name = ?M, data = {Hashes, _}}) -> maps:size(Hashes).
 
@@ -112,7 +112,7 @@ get(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
     false -> ?NIL
   end.
 
-%% clojerl.Seqable
+%% clojerl.ISeqable
 
 seq(#?TYPE{name = ?M, data = {Hashes, _}} = Set) ->
   case maps:size(Hashes) of
@@ -123,7 +123,7 @@ seq(#?TYPE{name = ?M, data = {Hashes, _}} = Set) ->
 to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
   [K || {K, _} <- rbdict:to_list(Vals)].
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M} = SortedSet) ->
   clj_rt:print(SortedSet).

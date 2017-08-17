@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 -behavior('clojerl.IHash').
 
 -export([?CONSTRUCTOR/1, random/0]).

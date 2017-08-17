@@ -4,7 +4,7 @@
 
 -behaviour(gen_server).
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([hash/1]).
 -export([str/1]).
@@ -77,7 +77,7 @@
 hash(Ns = #?TYPE{name = ?M}) ->
   erlang:phash2(Ns).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(#?TYPE{name = ?M, info = #{name :=  Name}}) ->
   'clojerl.Symbol':name(Name).

@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IHash').
@@ -10,8 +10,8 @@
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
--behavior('clojerl.Seqable').
--behavior('clojerl.Stringable').
+-behavior('clojerl.ISeqable').
+-behavior('clojerl.IStringable').
 
 -export([count/1]).
 -export([equiv/2]).

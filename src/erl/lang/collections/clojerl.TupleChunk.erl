@@ -2,10 +2,10 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.Counted').
+-behavior('clojerl.ICounted').
 -behavior('clojerl.IChunk').
 -behavior('clojerl.IHash').
--behavior('clojerl.Indexed').
+-behavior('clojerl.IIndexed').
 -behavior('clojerl.IReduce').
 
 -export([?CONSTRUCTOR/1, ?CONSTRUCTOR/2, ?CONSTRUCTOR/3]).

@@ -1,4 +1,4 @@
--module('clojerl.Seqable').
+-module('clojerl.ISeqable').
 
 -include("clojerl.hrl").
 

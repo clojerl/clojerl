@@ -4,7 +4,7 @@
 
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([deref/1]).
 -export([hash/1]).

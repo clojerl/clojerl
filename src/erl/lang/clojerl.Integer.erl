@@ -1,12 +1,12 @@
 -module('clojerl.Integer').
 
 -behavior('clojerl.IHash').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([hash/1]).
 -export([str/1]).
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(Int) when is_integer(Int) ->
   integer_to_binary(Int).

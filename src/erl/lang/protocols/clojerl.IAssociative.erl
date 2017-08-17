@@ -1,4 +1,4 @@
--module('clojerl.Associative').
+-module('clojerl.IAssociative').
 
 -clojure(true).
 -protocol(true).

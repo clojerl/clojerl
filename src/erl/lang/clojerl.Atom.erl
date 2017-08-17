@@ -7,7 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
--behavior('clojerl.Stringable').
+-behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/1
         , swap/2

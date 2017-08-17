@@ -4,8 +4,8 @@
 
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
--behavior('clojerl.Named').
--behavior('clojerl.Stringable').
+-behavior('clojerl.INamed').
+-behavior('clojerl.IStringable').
 -behaviour('erlang.io.IWriter').
 -behaviour('erlang.io.IReader').
 
@@ -87,7 +87,7 @@ apply(Keyword, Args) ->
 hash(Keyword) when is_atom(Keyword) ->
   erlang:phash2(Keyword).
 
-%% clojerl.Named
+%% clojerl.INamed
 
 name(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
@@ -103,7 +103,7 @@ namespace(Keyword) ->
     [Namespace, _] -> Namespace
   end.
 
-%% clojerl.Stringable
+%% clojerl.IStringable
 
 str(Keyword) ->
   KeywordBin = atom_to_binary(Keyword, utf8),
