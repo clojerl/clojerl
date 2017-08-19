@@ -47,7 +47,7 @@ type(X) ->
   'erlang.Type':?CONSTRUCTOR(type_module(X)).
 
 -spec type_module(any()) -> module().
-type_module(X) when is_record(X, ?TYPE) -> X#?TYPE.name;
+type_module(#{?TYPE := Name})       -> Name;
 type_module(X) when is_binary(X)    -> 'clojerl.String';
 type_module(X) when is_bitstring(X) -> 'clojerl.BitString';
 type_module(X) when is_integer(X)   -> 'clojerl.Integer';

@@ -46,56 +46,64 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: {binary(), binary()}}.
+-type type() :: #{ ?TYPE => ?M
+                 , ns    => binary()
+                 , name  => binary()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(binary(), binary()) -> type().
 ?CONSTRUCTOR(Ns, Name) ->
-  #?TYPE{data = {Ns, Name}}.
+  #{ ?TYPE => ?M
+   , ns    => Ns
+   , name  => Name
+   , meta  => ?NIL
+   }.
 
 -spec is_dynamic(type()) -> boolean().
-is_dynamic(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+is_dynamic(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
   maps:get(dynamic, Meta, false);
-is_dynamic(#?TYPE{name = ?M}) ->
+is_dynamic(#{?TYPE := ?M}) ->
   false.
 
 -spec is_macro(type()) -> boolean().
-is_macro(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+is_macro(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
   maps:get(macro, Meta, false);
-is_macro(#?TYPE{name = ?M}) ->
+is_macro(#{?TYPE := ?M}) ->
   false.
 
 -spec is_public(type()) -> boolean().
-is_public(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+is_public(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
   not maps:get(private, Meta, false);
-is_public(#?TYPE{name = ?M}) ->
+is_public(#{?TYPE := ?M}) ->
   true.
 
 -spec is_bound(type()) -> boolean().
-is_bound(#?TYPE{name = ?M} = Var) ->
+is_bound(#{?TYPE := ?M} = Var) ->
   case deref(Var) of
     ?UNBOUND -> false;
     _ -> true
   end.
 
 -spec has_root(type()) -> boolean().
-has_root(#?TYPE{name = ?M, info = #{meta := Meta}}) when is_map(Meta) ->
+has_root(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
   maps:get(has_root, Meta, false);
-has_root(#?TYPE{name = ?M}) ->
+has_root(#{?TYPE := ?M}) ->
   false.
 
 -spec get(type()) -> boolean().
 get(Var) -> deref(Var).
 
 -spec module(type()) -> atom().
-module(#?TYPE{name = ?M, data = {Ns, _}}) ->
+module(#{?TYPE := ?M, ns := Ns}) ->
   binary_to_atom(Ns, utf8).
 
 -spec function(type()) -> atom().
-function(#?TYPE{name = ?M, data = {_, Name}}) ->
+function(#{?TYPE := ?M, name := Name}) ->
   binary_to_atom(Name, utf8).
 
 -spec val_function(type()) -> atom().
-val_function(#?TYPE{name = ?M, data = {_, Name}}) ->
+val_function(#{?TYPE := ?M, name := Name}) ->
   binary_to_atom(<<Name/binary, "__val">>, utf8).
 
 -spec push_bindings('clojerl.IMap':type()) -> ok.
@@ -169,16 +177,16 @@ dynamic_binding(Var, Value) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-name(#?TYPE{name = ?M, data = {_, Name}}) ->
+name(#{?TYPE := ?M, name := Name}) ->
   Name.
 
-namespace(#?TYPE{name = ?M, data = {Namespace, _}}) ->
-  Namespace.
+namespace(#{?TYPE := ?M, ns := Ns}) ->
+  Ns.
 
-str(#?TYPE{name = ?M, data = {Ns, Name}}) ->
+str(#{?TYPE := ?M, ns := Ns, name := Name}) ->
   <<"#'", Ns/binary, "/", Name/binary>>.
 
-deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
+deref(#{?TYPE := ?M, ns := Ns, name := Name} = Var) ->
   Module      = module(Var),
   FunctionVal = val_function(Var),
   %% HACK
@@ -199,25 +207,22 @@ deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
       end
   end.
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = X}
+equiv( #{?TYPE := ?M, ns := Ns, name := Name}
+     , #{?TYPE := ?M, ns := Ns, name := Name}
      ) ->
   true;
 equiv(_, _) ->
   false.
 
-hash(#?TYPE{name = ?M, data = Data}) ->
-  erlang:phash2(Data).
+hash(#{?TYPE := ?M, ns := Ns, name := Name}) ->
+  erlang:phash2({Ns, Name}).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta( #?TYPE{name = ?M, info = Info} = Keyword
-         , Metadata
-         ) ->
-  Keyword#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Var, Metadata) ->
+  Var#{meta => Metadata}.
 
-apply(#?TYPE{name = ?M} = Var, Args0) ->
+apply(#{?TYPE := ?M} = Var, Args0) ->
   Module         = module(Var),
   Function       = function(Var),
   {Arity, Args1} = process_args(Var, Args0, fun clj_rt:seq/1),
@@ -227,7 +232,7 @@ apply(#?TYPE{name = ?M} = Var, Args0) ->
   erlang:apply(Fun, Args1).
 
 -spec process_args(type(), [any()], function()) -> {arity(), [any()]}.
-process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
+process_args(#{?TYPE := ?M} = Var, Args, RestFun) ->
   Meta = case meta(Var) of
            ?NIL -> #{};
            M -> M

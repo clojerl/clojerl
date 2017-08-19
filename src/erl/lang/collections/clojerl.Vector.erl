@@ -50,11 +50,17 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , array => array:array()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Items) when is_list(Items) ->
-  #?TYPE{data = array:from_list(Items, ?NIL)}.
+  #{ ?TYPE => ?M
+   , array => array:from_list(Items, ?NIL)
+   , meta  => ?NIL
+   }.
 
 -spec subvec(type(), integer(), integer()) -> type().
 subvec(Vector, Start, End) ->
@@ -70,28 +76,28 @@ subvec(Vector, Start, End) ->
 
 %% clojerl.IAssociative
 
-contains_key(#?TYPE{name = ?M, data = Array}, Index) ->
+contains_key(#{?TYPE := ?M, array := Array}, Index) ->
   Index < array:size(Array).
 
-entry_at(#?TYPE{name = ?M, data = Array}, Index) ->
+entry_at(#{?TYPE := ?M, array := Array}, Index) ->
   array:get(Index, Array).
 
-assoc(#?TYPE{ name = ?M, data = Array} = Vector, Index, Value) ->
+assoc(#{?TYPE := ?M, array := Array} = Vector, Index, Value) ->
   case  Index =< array:size(Array) of
-    true  -> Vector#?TYPE{data = array:set(Index, Value, Array)};
+    true  -> Vector#{array => array:set(Index, Value, Array)};
     false -> error(<<"Index out of bounds">>)
   end.
 
-count(#?TYPE{name = ?M, data = Array}) -> array:size(Array).
+count(#{?TYPE := ?M, array := Array}) -> array:size(Array).
 
-cons(#?TYPE{name = ?M, data = Array} = Vector, X) ->
+cons(#{?TYPE := ?M, array := Array} = Vector, X) ->
   NewArray = array:set(array:size(Array), X, Array),
-  Vector#?TYPE{data = NewArray}.
+  Vector#{array => NewArray}.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
+equiv( #{?TYPE := ?M, array := X}
+     , #{?TYPE := ?M, array := Y}
      ) ->
   case array:size(X) == array:size(Y) of
     true ->
@@ -100,27 +106,27 @@ equiv( #?TYPE{name = ?M, data = X}
       clj_rt:equiv(X1, Y1);
     false -> false
   end;
-equiv(#?TYPE{name = ?M, data = X}, Y) ->
+equiv(#{?TYPE := ?M, array := X}, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(array:to_list(X), Y);
     false -> false
   end.
 
-apply(#?TYPE{name = ?M, data = Array}, [Index]) ->
+apply(#{?TYPE := ?M, array := Array}, [Index]) ->
   array:get(Index, Array);
-apply(#?TYPE{name = ?M}, Args) ->
+apply(#{?TYPE := ?M}, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
 
-hash(#?TYPE{name = ?M, data = Array}) ->
+hash(#{?TYPE := ?M, array := Array}) ->
   clj_murmur3:ordered(array:to_list(Array)).
 
 %% clojerl.ILookup
 
-get(#?TYPE{name = ?M} = Vector, Index) ->
+get(#{?TYPE := ?M} = Vector, Index) ->
   get(Vector, Index, ?NIL).
 
-get(#?TYPE{name = ?M, data = Array}, Index, NotFound) ->
+get(#{?TYPE := ?M, array := Array}, Index, NotFound) ->
   case Index < array:size(Array) of
     true  -> array:get(Index, Array);
     false -> NotFound
@@ -128,15 +134,14 @@ get(#?TYPE{name = ?M, data = Array}, Index, NotFound) ->
 
 %% clojerl.IMeta
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = Vector, Metadata) ->
-  Vector#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Vector, Meta) ->
+  Vector#{meta => Meta}.
 
 %% clojerl.IReduce
 
-reduce(#?TYPE{name = ?M, data = Array}, F) ->
+reduce(#{?TYPE := ?M, array := Array}, F) ->
   case array:size(Array) of
     0    -> clj_rt:apply(F, []);
     Size ->
@@ -144,7 +149,7 @@ reduce(#?TYPE{name = ?M, data = Array}, F) ->
       do_reduce(F, Init, 1, Size, Array)
   end.
 
-reduce(#?TYPE{name = ?M, data = Array}, F, Init) ->
+reduce(#{?TYPE := ?M, array := Array}, F, Init) ->
   Fold = fun(_, Item, Acc) ->
              clj_rt:apply(F, [Acc, Item])
          end,
@@ -163,41 +168,41 @@ do_reduce(_F, Acc, _Index, _Size, _Array) ->
 
 '_'(_) -> ?NIL.
 
-nth(#?TYPE{name = ?M, data = Array}, N) ->
+nth(#{?TYPE := ?M, array := Array}, N) ->
   case N < array:size(Array) of
     true  -> array:get(N, Array);
     false -> error(badarg)
   end.
 
-nth(#?TYPE{name = ?M, data = Array}, N, NotFound) ->
+nth(#{?TYPE := ?M, array := Array}, N, NotFound) ->
   case N < array:size(Array) of
     true  -> array:get(N, Array);
     false -> NotFound
   end.
 
-peek(#?TYPE{name = ?M, data = Array}) ->
+peek(#{?TYPE := ?M, array := Array}) ->
   case array:size(Array) of
     0    -> ?NIL;
     Size -> array:get(Size - 1, Array)
   end.
 
-pop(#?TYPE{name = ?M, data = Array} = Vector) ->
+pop(#{?TYPE := ?M, array := Array} = Vector) ->
   case array:size(Array) of
     0    -> error(<<"Can't pop empty vector">>);
     Size ->
       NewArray = array:resize(Size - 1, Array),
-      Vector#?TYPE{data = NewArray}
+      Vector#{array => NewArray}
   end.
 
-seq(#?TYPE{name = ?M, data = Array}) ->
+seq(#{?TYPE := ?M, array := Array}) ->
   case array:size(Array) of
     0 -> ?NIL;
     Size when Size =< ?CHUNK_SIZE -> array:to_list(Array);
     _ -> 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0)
   end.
 
-to_list(#?TYPE{name = ?M, data = Array}) ->
+to_list(#{?TYPE := ?M, array := Array}) ->
   array:to_list(Array).
 
-str(#?TYPE{name = ?M} = Vector) ->
+str(#{?TYPE := ?M} = Vector) ->
   clj_rt:print(Vector).

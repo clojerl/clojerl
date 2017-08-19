@@ -23,14 +23,18 @@
 -export([unread/2]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: pid()}.
+-type type() :: #{ ?TYPE => ?M
+                 , pid   => pid()
+                 }.
 
 -spec ?CONSTRUCTOR('erlang.io.IReader':type()) -> type().
 ?CONSTRUCTOR(Reader) ->
-  #?TYPE{data = start_link(Reader)}.
+  #{ ?TYPE => ?M
+   , pid   => start_link(Reader)
+   }.
 
 -spec at_line_start('erlang.io.IReader':type()) -> type().
-at_line_start(#?TYPE{name = ?M, data = Pid}) ->
+at_line_start(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, at_line_start) of
     {error, _} -> error(<<"Can't determine if at line start">>);
     Result     -> Result
@@ -40,7 +44,7 @@ at_line_start(#?TYPE{name = ?M, data = Pid}) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-close(#?TYPE{name = ?M, data = Pid}) ->
+close(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, close) of
     {error, _} ->
       TypeName = atom_to_binary(?MODULE, utf8),
@@ -49,24 +53,24 @@ close(#?TYPE{name = ?M, data = Pid}) ->
       ?NIL
   end.
 
-str(#?TYPE{name = ?M, data = Pid}) ->
+str(#{?TYPE := ?M, pid := Pid}) ->
   TypeName = atom_to_binary(?MODULE, utf8),
   <<"<", PidStr/binary>> = erlang:list_to_binary(erlang:pid_to_list(Pid)),
   <<"#<", TypeName/binary, " ", PidStr/binary>>.
 
-read(#?TYPE{name = ?M, data = Pid}) ->
+read(#{?TYPE := ?M, pid := Pid}) ->
   io:get_chars(Pid, "", 1).
 
-read(#?TYPE{name = ?M, data = Pid}, Length) ->
+read(#{?TYPE := ?M, pid := Pid}, Length) ->
   io:get_chars(Pid, "", Length).
 
-read_line(#?TYPE{name = ?M, data = Pid}) ->
+read_line(#{?TYPE := ?M, pid := Pid}) ->
   io:request(Pid, {get_line, unicode, ""}).
 
-skip(#?TYPE{name = ?M, data = Pid}, Length) ->
+skip(#{?TYPE := ?M, pid := Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
 
-unread(#?TYPE{name = ?M, data = Pid} = Reader, Str) ->
+unread(#{?TYPE := ?M, pid := Pid} = Reader, Str) ->
   case send_command(Pid, {unread, Str}) of
     {error, Reason} ->
       TypeName  = atom_to_binary(?MODULE, utf8),

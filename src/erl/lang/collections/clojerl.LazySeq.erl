@@ -37,51 +37,56 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , fn    => function()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(function()) -> type().
 ?CONSTRUCTOR(Fn) when is_function(Fn) ->
-  #?TYPE{data = Fn}.
+  #{ ?TYPE => ?M
+   , fn    => Fn
+   , meta  => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = Fn}) ->
+count(#{?TYPE := ?M, fn := Fn}) ->
   case Fn([]) of
     ?NIL -> 0;
     Seq       -> 'clojerl.ICounted':count(Seq)
   end.
 
-cons(#?TYPE{name = ?M} = LazySeq, X) ->
+cons(#{?TYPE := ?M} = LazySeq, X) ->
   'clojerl.Cons':?CONSTRUCTOR(X, LazySeq).
 
 empty(_) -> [].
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = X}
+equiv( #{?TYPE := ?M, fn := X}
+     , #{?TYPE := ?M, fn := X}
      ) ->
   true;
-equiv( #?TYPE{name = ?M} = X
-     , #?TYPE{name = ?M} = Y
+equiv( #{?TYPE := ?M} = X
+     , #{?TYPE := ?M} = Y
      ) ->
   clj_rt:equiv(to_list(X), to_list(Y));
-equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
+equiv(#{?TYPE := ?M} = LazySeq, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(to_list(LazySeq), Y);
     false -> false
   end.
 
-hash(#?TYPE{name = ?M} = LazySeq) ->
+hash(#{?TYPE := ?M} = LazySeq) ->
   clj_murmur3:ordered(LazySeq).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
-  List#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = List, Metadata) ->
+  List#{meta => Metadata}.
 
-reduce(#?TYPE{name = ?M} = LazySeq, F) ->
+reduce(#{?TYPE := ?M} = LazySeq, F) ->
   case seq(LazySeq) of
     ?NIL -> clj_rt:apply(F, []);
     Seq  ->
@@ -90,10 +95,10 @@ reduce(#?TYPE{name = ?M} = LazySeq, F) ->
       do_reduce(F, Init, Next)
   end.
 
-reduce(#?TYPE{name = ?M} = LazySeq, F, Init) ->
+reduce(#{?TYPE := ?M} = LazySeq, F, Init) ->
   do_reduce(F, Init, LazySeq).
 
-do_reduce(F, Acc, #?TYPE{name = ?M} = LazySeq) ->
+do_reduce(F, Acc, #{?TYPE := ?M} = LazySeq) ->
   do_reduce(F, Acc, seq(LazySeq));
 do_reduce(F, Acc, Seq) when Seq =/= ?NIL ->
   First = 'clojerl.ISeq':first(Seq),
@@ -105,46 +110,46 @@ do_reduce(F, Acc, Seq) when Seq =/= ?NIL ->
 do_reduce(_F, Acc, _Seq) ->
   Acc.
 
-first(#?TYPE{name = ?M, data = Fn}) ->
+first(#{?TYPE := ?M, fn := Fn}) ->
   case Fn([]) of
     ?NIL -> ?NIL;
-    #?TYPE{name = ?M} = LazySeq -> first(LazySeq);
+    #{?TYPE := ?M} = LazySeq -> first(LazySeq);
     Seq -> clj_rt:first(Seq)
   end.
 
-next(#?TYPE{name = ?M, data = Fn}) ->
+next(#{?TYPE := ?M, fn := Fn}) ->
   case Fn([]) of
     ?NIL -> ?NIL;
-    #?TYPE{name = ?M} = LazySeq -> next(LazySeq);
+    #{?TYPE := ?M} = LazySeq -> next(LazySeq);
     Seq -> clj_rt:next(Seq)
   end.
 
-more(#?TYPE{name = ?M, data = Fn}) ->
+more(#{?TYPE := ?M, fn := Fn}) ->
   case Fn([]) of
     ?NIL -> [];
-    #?TYPE{name = ?M} = LazySeq -> more(LazySeq);
+    #{?TYPE := ?M} = LazySeq -> more(LazySeq);
     Seq -> clj_rt:rest(Seq)
   end.
 
 '_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M, data = Fn}) ->
+seq(#{?TYPE := ?M, fn := Fn}) ->
   case Fn([]) of
     ?NIL ->
       ?NIL;
-    #?TYPE{name = ?M} = LazySeq ->
+    #{?TYPE := ?M} = LazySeq ->
       seq(LazySeq);
     Seq ->
       'clojerl.ISeqable':seq(Seq)
   end.
 
-to_list(#?TYPE{name = ?M} = LazySeq) ->
+to_list(#{?TYPE := ?M} = LazySeq) ->
   do_to_list(LazySeq, []).
 
 -spec do_to_list(?NIL | any(), [any()]) -> [any()].
 do_to_list(?NIL, Acc) ->
   lists:reverse(Acc);
-do_to_list(#?TYPE{name = ?M} = LazySeq, Acc) ->
+do_to_list(#{?TYPE := ?M} = LazySeq, Acc) ->
   do_to_list(seq(LazySeq), Acc);
 do_to_list(Seq0, Acc) ->
   Seq1  = 'clojerl.ISeqable':seq(Seq0),
@@ -152,7 +157,7 @@ do_to_list(Seq0, Acc) ->
   Rest  = 'clojerl.ISeq':next(Seq1),
   do_to_list(Rest, [First | Acc]).
 
-str(#?TYPE{name = ?M, data = Fn}) ->
+str(#{?TYPE := ?M, fn := Fn}) ->
   {uniq, Uniq} = erlang:fun_info(Fn, uniq),
   UniqBin = 'clojerl.IStringable':str(Uniq),
   <<"#<clojerl.LazySeq@", UniqBin/binary, ">">>.

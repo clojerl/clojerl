@@ -124,7 +124,7 @@ close(_Config) ->
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   Reader = 'erlang.io.StringReader':?CONSTRUCTOR(<<"hello\nworld!\n">>),
-  Pid    = Reader#?TYPE.data,
+  Pid    = maps:get(pid, Reader),
 
   ct:comment("Send an unexpected message"),
   Pid ! {},

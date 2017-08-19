@@ -38,44 +38,52 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , array => array:array()
+                 , index => non_neg_integer()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(array:array(), non_neg_integer()) -> type().
 ?CONSTRUCTOR(Array, Index) ->
-  #?TYPE{data = {Array, Index}}.
+  #{ ?TYPE => ?M
+   , array => Array
+   , index => Index
+   , meta  => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = {Array, Index}}) ->
+count(#{?TYPE := ?M, array := Array, index := Index}) ->
   array:size(Array) - Index.
 
-cons(#?TYPE{name = ?M} = ChunkedSeq, X) ->
+cons(#{?TYPE := ?M} = ChunkedSeq, X) ->
   clj_rt:cons(X, ChunkedSeq).
 
 empty(_) -> clj_rt:list([]).
 
-chunked_first(#?TYPE{name = ?M, data = {Array, Index}}) ->
+chunked_first(#{?TYPE := ?M, array := Array, index := Index}) ->
   End  = lists:min([array:size(Array), Index + ?CHUNK_SIZE]),
   List = [array:get(I, Array) || I <- lists:seq(Index, End - 1)],
   'clojerl.TupleChunk':?CONSTRUCTOR(list_to_tuple(List)).
 
-chunked_next(#?TYPE{name = ?M, data = {Array, Index}}) ->
+chunked_next(#{?TYPE := ?M, array := Array, index := Index}) ->
   End = lists:min([array:size(Array), Index + ?CHUNK_SIZE]),
   case End < array:size(Array) of
     true  -> ?CONSTRUCTOR(Array, Index + ?CHUNK_SIZE);
     false -> ?NIL
   end.
 
-chunked_more(#?TYPE{name = ?M} = ChunkedSeq) ->
+chunked_more(#{?TYPE := ?M} = ChunkedSeq) ->
   case chunked_next(ChunkedSeq) of
     ?NIL -> clj_rt:list([]);
     Seq  -> Seq
   end.
 
-equiv( #?TYPE{name = ?M, data = {X, _}}
-     , #?TYPE{name = ?M, data = {Y, _}}
+equiv( #{?TYPE := ?M, array := X}
+     , #{?TYPE := ?M, array := Y}
      ) ->
   case array:size(X) =:= array:size(Y) of
     true ->
@@ -84,31 +92,30 @@ equiv( #?TYPE{name = ?M, data = {X, _}}
       clj_rt:equiv(X1, Y1);
     false -> false
   end;
-equiv(#?TYPE{name = ?M, data = {X, _}}, Y) ->
+equiv(#{?TYPE := ?M, array := X}, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(array:to_list(X), Y);
     false -> false
   end.
 
-hash(#?TYPE{name = ?M, data = {Array, _}}) ->
+hash(#{?TYPE := ?M, array := Array}) ->
   clj_murmur3:ordered(array:to_list(Array)).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = ChunkedSeq, Metadata) ->
-  ChunkedSeq#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = ChunkedSeq, Meta) ->
+  ChunkedSeq#{meta => Meta}.
 
-first(#?TYPE{name = ?M, data = {Array, Index}}) ->
+first(#{?TYPE := ?M, array := Array, index := Index}) ->
   array:get(Index, Array).
 
-next(#?TYPE{name = ?M, data = {Array, Index}}) ->
+next(#{?TYPE := ?M, array := Array, index := Index}) ->
   case Index + 1 < array:size(Array) of
     true  -> ?CONSTRUCTOR(Array, Index + 1);
     false -> ?NIL
   end.
 
-more(#?TYPE{name = ?M} = ChunkedSeq) ->
+more(#{?TYPE := ?M} = ChunkedSeq) ->
   case next(ChunkedSeq) of
     ?NIL -> clj_rt:list([]);
     Seq  -> Seq
@@ -116,15 +123,15 @@ more(#?TYPE{name = ?M} = ChunkedSeq) ->
 
 '_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M, data = {Array, Index}}  = ChunkedSeq) ->
+seq(#{?TYPE := ?M, array := Array, index := Index}  = ChunkedSeq) ->
   case Index < array:size(Array) of
     true  -> ChunkedSeq;
     false -> ?NIL
   end.
 
-to_list(#?TYPE{name = ?M, data = {Array, Index}}) ->
+to_list(#{?TYPE := ?M, array := Array, index := Index}) ->
   [array:get(I, Array) || I <- lists:seq(Index, array:size(Array) - 1)].
 
-str(#?TYPE{name = ?M} = ChunkedSeq) ->
+str(#{?TYPE := ?M} = ChunkedSeq) ->
   List = clj_rt:list(to_list(ChunkedSeq)),
   clj_rt:print(List).

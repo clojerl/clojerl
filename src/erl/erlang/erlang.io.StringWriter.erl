@@ -21,7 +21,9 @@
 
 -export([delete/3]).
 
--type type() :: #?TYPE{data :: pid()}.
+-type type() :: #{ ?TYPE => ?M
+                 , pid   => pid()
+                 }.
 
 -spec ?CONSTRUCTOR() -> type().
 ?CONSTRUCTOR() ->
@@ -29,10 +31,12 @@
 
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Str) ->
-  #?TYPE{data = start_link(Str)}.
+  #{ ?TYPE => ?M
+   , pid   => start_link(Str)
+   }.
 
 -spec delete(type(), pos_integer(), pos_integer()) -> type().
-delete(SW = #?TYPE{name = ?M, data = Pid}, Start, End) ->
+delete(SW = #{?TYPE := ?M, pid := Pid}, Start, End) ->
   case send_command(Pid, {delete, Start, End}) of
     {error, _} -> error(<<"Couldn't delete range in erlang.io.StringWriter">>);
     ok         -> SW
@@ -42,30 +46,30 @@ delete(SW = #?TYPE{name = ?M, data = Pid}, Start, End) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = Pid}) ->
+count(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, count) of
     {error, _} -> error(<<"Couldn't get length from erlang.io.StringWriter">>);
     Count      -> Count
   end.
 
 
-str(#?TYPE{name = ?M, data = Pid}) ->
+str(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, str) of
     {error, _} -> error(<<"Couldn't get string from erlang.io.StringWriter">>);
     Str        -> Str
   end.
 
-close(#?TYPE{name = ?M, data = Pid}) ->
+close(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, close) of
     {error, _} -> error(<<"Couldn't close erlang.io.StringWriter">>);
     _          -> ?NIL
   end.
 
-write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
+write(#{?TYPE := ?M, pid := Pid} = SW, Str) ->
   ok = io:put_chars(Pid, Str),
   SW.
 
-write(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
+write(#{?TYPE := ?M, pid := Pid} = SW, Format, Values) ->
   ok = io:fwrite(Pid, Format, clj_rt:to_list(Values)),
   SW.
 

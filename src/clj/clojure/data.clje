@@ -78,9 +78,9 @@
 
 (extend-type default
   Diff
-  (diff-similar [a b] ((if (tuple? a) diff-sequential atom-diff) a b))
+  (diff-similar [a b] ((if (sequential? a) diff-sequential atom-diff) a b))
   EqualityPartition
-  (equality-partition [x] (if (tuple? x) :sequential :atom)))
+  (equality-partition [x] (if (sequential? x) :sequential :atom)))
 
 (extend-protocol EqualityPartition
   nil
@@ -92,7 +92,19 @@
   clojerl.List
   (equality-partition [x] :sequential)
 
+  erlang.List
+  (equality-partition [x] :sequential)
+
+  clojerl.Vector
+  (equality-partition [x] :sequential)
+
   clojerl.Map
+  (equality-partition [x] :map)
+
+  clojerl.SortedMap
+  (equality-partition [x] :map)
+
+  erlang.Map
   (equality-partition [x] :map))
 
 (defn- as-set-value

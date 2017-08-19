@@ -15,26 +15,32 @@
 -export([hash/1]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: {binary(), tuple()}}.
+-type type() :: #{ ?TYPE   => ?M
+                 , pattern => binary()
+                 , regex   => any()
+                 }.
 
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Pattern) when is_binary(Pattern) ->
   {ok, Regex} = re:compile(Pattern),
-  #?TYPE{data = {Pattern, Regex}}.
+  #{ ?TYPE   => ?M
+   , pattern => Pattern
+   , regex   => Regex
+   }.
 
 -spec run(type(), binary(), [term()]) ->
   {match, term()} | match | nomatch | {error, term()}.
-run(#?TYPE{name = ?M, data = {_, Regex}}, Str, Opts) ->
+run(#{?TYPE := ?M, regex := Regex}, Str, Opts) ->
   re:run(Str, Regex, Opts).
 
 -spec replace(type(), binary(), binary()) -> binary().
-replace(#?TYPE{name = ?M} = Regex, Str, Replacement) ->
+replace(#{?TYPE := ?M} = Regex, Str, Replacement) ->
   replace(Regex, Str, Replacement, [global, {return, binary}]).
 
 -spec replace(type(), binary(), binary(), [term()]) -> binary().
 replace(Regex, Str, Replacement, Opts) when is_binary(Regex) ->
   replace(?CONSTRUCTOR(Regex), Str, Replacement, Opts);
-replace(#?TYPE{name = ?M, data = {_, Regex}}, Str, Replacement, Opts) ->
+replace(#{?TYPE := ?M, regex := Regex}, Str, Replacement, Opts) ->
   re:replace(Str, Regex, Replacement, [{return, binary} | Opts]).
 
 -spec quote(binary()) -> binary().
@@ -44,16 +50,16 @@ quote(Regex) when is_binary(Regex) ->
 -spec split(type(), binary(), [term()]) -> [binary()].
 split(Regex, Str, Opts) when is_binary(Regex) ->
   split(?CONSTRUCTOR(Regex), Str, Opts);
-split(#?TYPE{name = ?M, data = {_, Regex}}, Str, Opts) ->
+split(#{?TYPE := ?M, regex := Regex}, Str, Opts) ->
   re:split(Str, Regex, Opts).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-hash(#?TYPE{name = ?M, data = {Pattern, _}}) -> erlang:phash2(Pattern).
+hash(#{?TYPE := ?M, pattern := Pattern}) -> erlang:phash2(Pattern).
 
-str(#?TYPE{name = ?M, data = {Pattern, _}}) -> <<"#\"", Pattern/binary, "\"">>.
+str(#{?TYPE := ?M, pattern := Pattern}) -> <<"#\"", Pattern/binary, "\"">>.
 
 %%------------------------------------------------------------------------------
 %% Helper functions

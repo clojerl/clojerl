@@ -32,12 +32,18 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , set   => map()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
   KVs = lists:map(fun(X) -> {'clojerl.IHash':hash(X), X} end, Values),
-  #?TYPE{data = maps:from_list(KVs)};
+  #{ ?TYPE => ?M
+   , set   => maps:from_list(KVs)
+   , meta  => ?NIL
+   };
 ?CONSTRUCTOR(Values) ->
   ?CONSTRUCTOR(clj_rt:to_list(Values)).
 
@@ -47,31 +53,31 @@
 
 %% clojerl.ICounted
 
-count(#?TYPE{name = ?M, data = MapSet}) -> maps:size(MapSet).
+count(#{?TYPE := ?M, set := MapSet}) -> maps:size(MapSet).
 
 %% clojerl.IColl
 
-cons(#?TYPE{name = ?M, data = MapSet} = Set, X) ->
+cons(#{?TYPE := ?M, set := MapSet} = Set, X) ->
   Hash = 'clojerl.IHash':hash(X),
   case maps:is_key(Hash, MapSet) of
     true  -> Set;
-    false -> Set#?TYPE{data = MapSet#{Hash => X}}
+    false -> Set#{set => MapSet#{Hash => X}}
   end.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IEquiv
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
+equiv( #{?TYPE := ?M, set := X}
+     , #{?TYPE := ?M, set := Y}
      ) ->
   clj_rt:equiv(X, Y);
-equiv(#?TYPE{name = ?M} = X, Y) ->
+equiv(#{?TYPE := ?M} = X, Y) ->
   clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
-apply(#?TYPE{name = ?M, data = MapSet}, [Item]) ->
+apply(#{?TYPE := ?M, set := MapSet}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
   maps:get(Hash, MapSet, ?NIL);
 apply(_, Args) ->
@@ -80,28 +86,27 @@ apply(_, Args) ->
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M, data = MapSet}) ->
+hash(#{?TYPE := ?M, set := MapSet}) ->
   clj_murmur3:unordered(maps:values(MapSet)).
 
 %% clojerl.IMeta
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
-  Set#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Set, Metadata) ->
+  Set#{meta => Metadata}.
 
 %% clojerl.ISet
 
-disjoin(#?TYPE{name = ?M, data = MapSet} = Set, Value) ->
+disjoin(#{?TYPE := ?M, set := MapSet} = Set, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
-  Set#?TYPE{name = ?M, data = maps:remove(Hash, MapSet)}.
+  Set#{set => maps:remove(Hash, MapSet)}.
 
-contains(#?TYPE{name = ?M, data = MapSet}, Value) ->
+contains(#{?TYPE := ?M, set := MapSet}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   maps:is_key(Hash, MapSet).
 
-get(#?TYPE{name = ?M, data = MapSet}, Value) ->
+get(#{?TYPE := ?M, set := MapSet}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   case maps:is_key(Hash, MapSet) of
     true  -> maps:get(Hash, MapSet);
@@ -110,16 +115,16 @@ get(#?TYPE{name = ?M, data = MapSet}, Value) ->
 
 %% clojerl.ISeqable
 
-seq(#?TYPE{name = ?M, data = MapSet}) ->
+seq(#{?TYPE := ?M, set := MapSet}) ->
   case maps:size(MapSet) of
     0 -> ?NIL;
     _ -> maps:values(MapSet)
   end.
 
-to_list(#?TYPE{name = ?M, data = MapSet}) ->
+to_list(#{?TYPE := ?M, set := MapSet}) ->
   maps:values(MapSet).
 
 %% clojerl.IStringable
 
-str(#?TYPE{name = ?M} = Set) ->
+str(#{?TYPE := ?M} = Set) ->
   clj_rt:print(Set).

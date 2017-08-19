@@ -36,47 +36,54 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , first => any()
+                 , more  => any()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(any(), any()) -> type().
 ?CONSTRUCTOR(First, More) ->
-  #?TYPE{data = {First, More}}.
+  #{ ?TYPE => ?M
+   , first => First
+   , more  => More
+   , meta  => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = {_, More}}) ->
+count(#{?TYPE := ?M, more := More}) ->
   1 + clj_rt:count(More).
 
-cons(#?TYPE{name = ?M} = Cons, X) -> ?CONSTRUCTOR(X, Cons).
+cons(#{?TYPE := ?M} = Cons, X) -> ?CONSTRUCTOR(X, Cons).
 
 empty(_) -> [].
 
-equiv( #?TYPE{name = ?M, data = {XFirst, XMore}}
-                      , #?TYPE{name = ?M, data = {YFirst, YMore}}
-                      ) ->
-  clj_rt:equiv(XFirst, YFirst) andalso clj_rt:equiv(XMore, YMore);
-equiv(#?TYPE{name = ?M} = Cons, Y) ->
+equiv( #{?TYPE := ?M, first := FirstX, more := MoreX}
+     , #{?TYPE := ?M, first := FirstY, more := MoreY}
+     ) ->
+  clj_rt:equiv(FirstX, FirstY) andalso clj_rt:equiv(MoreX, MoreY);
+equiv(#{?TYPE := ?M} = Cons, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(to_list(Cons), clj_rt:seq(Y));
     false -> false
   end.
 
-hash(#?TYPE{name = ?M, data = Cons}) ->
-  clj_murmur3:ordered(Cons).
+hash(#{?TYPE := ?M, first := First, more := More}) ->
+  clj_murmur3:ordered({First, More}).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
-  List#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = List, Metadata) ->
+  List#{meta => Metadata}.
 
-reduce(#?TYPE{name = ?M, data = {First, Rest}}, F) ->
-  do_reduce(F, First, clj_rt:to_list(Rest)).
+reduce(#{?TYPE := ?M, first := First, more := More}, F) ->
+  do_reduce(F, First, clj_rt:to_list(More)).
 
-reduce(#?TYPE{name = ?M, data = {First, Rest}}, F, Init) ->
-  do_reduce(F, Init, clj_rt:conj(clj_rt:to_list(Rest), First)).
+reduce(#{?TYPE := ?M, first := First, more := More}, F, Init) ->
+  do_reduce(F, Init, clj_rt:conj(clj_rt:to_list(More), First)).
 
 do_reduce(F, Acc, [First | Items]) ->
   Val = clj_rt:apply(F, [Acc, First]),
@@ -87,20 +94,20 @@ do_reduce(F, Acc, [First | Items]) ->
 do_reduce(_F, Acc, []) ->
   Acc.
 
-first(#?TYPE{name = ?M, data = {First, _}}) -> First.
+first(#{?TYPE := ?M, first := First}) -> First.
 
-next(#?TYPE{name = ?M, data = {_, ?NIL}}) -> ?NIL;
-next(#?TYPE{name = ?M, data = {_, More}}) -> clj_rt:seq(More).
+next(#{?TYPE := ?M, more := ?NIL}) -> ?NIL;
+next(#{?TYPE := ?M, more := More}) -> clj_rt:seq(More).
 
-more(#?TYPE{name = ?M, data = {_, ?NIL}}) -> [];
-more(#?TYPE{name = ?M, data = {_, More}}) -> More.
+more(#{?TYPE := ?M, more := ?NIL}) -> [];
+more(#{?TYPE := ?M, more := More}) -> More.
 
 '_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M} = Cons) -> Cons.
+seq(#{?TYPE := ?M} = Cons) -> Cons.
 
-to_list(#?TYPE{name = ?M, data = {First, More}}) ->
+to_list(#{?TYPE := ?M, first := First, more := More}) ->
   [First | clj_rt:to_list(More)].
 
-str(#?TYPE{name = ?M} = Cons) ->
+str(#{?TYPE := ?M} = Cons) ->
   clj_rt:print(Cons).

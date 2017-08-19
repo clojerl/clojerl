@@ -11,19 +11,21 @@
 -export([hash/1]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: module()}.
+-type type() :: #{ ?TYPE => ?M
+                 , name  => atom()
+                 }.
 
 -spec ?CONSTRUCTOR(atom()) -> type().
 ?CONSTRUCTOR(Name) when is_atom(Name) ->
-  #?TYPE{data = Name}.
+  #{?TYPE => ?M, name => Name}.
 
 -spec module(type()) -> module().
-module(#?TYPE{name = ?M, data = Name}) -> Name.
+module(#{?TYPE := ?M, name := Name}) -> Name.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-hash(#?TYPE{name = ?M, data = Name}) -> erlang:phash2(Name).
+hash(#{?TYPE := ?M, name := Name}) -> erlang:phash2(Name).
 
-str(#?TYPE{name = ?M, data = Name}) -> erlang:atom_to_binary(Name, utf8).
+str(#{?TYPE := ?M, name := Name}) -> erlang:atom_to_binary(Name, utf8).

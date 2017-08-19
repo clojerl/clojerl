@@ -41,59 +41,66 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , chunk => any()
+                 , more  => any()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(any(), any()) -> type().
 ?CONSTRUCTOR(Chunk, More) ->
-  #?TYPE{data = {Chunk, More}}.
+  #{ ?TYPE => ?M
+   , chunk => Chunk
+   , more  => More
+   , meta  => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = {Chunk, More}}) ->
+count(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
   clj_rt:count(Chunk) + clj_rt:count(More).
 
-cons(#?TYPE{name = ?M} = ChunkedCons, X) ->
+cons(#{?TYPE := ?M} = ChunkedCons, X) ->
   clj_rt:cons(X, ChunkedCons).
 
 empty(_) -> [].
 
-chunked_first(#?TYPE{name = ?M, data = {Chunk, _}}) ->
+chunked_first(#{?TYPE := ?M, chunk := Chunk}) ->
   Chunk.
 
-chunked_next(#?TYPE{name = ?M} = ChunkedCons) ->
+chunked_next(#{?TYPE := ?M} = ChunkedCons) ->
   clj_rt:seq(chunked_more(ChunkedCons)).
 
-chunked_more(#?TYPE{name = ?M, data = {_, ?NIL}}) -> [];
-chunked_more(#?TYPE{name = ?M, data = {_, More}}) -> More.
+chunked_more(#{?TYPE := ?M, more := ?NIL}) -> [];
+chunked_more(#{?TYPE := ?M, more := More}) -> More.
 
-equiv( #?TYPE{name = ?M, data = {ChunkX, MoreX}}
-     , #?TYPE{name = ?M, data = {ChunkY, MoreY}}
+equiv( #{?TYPE := ?M, chunk := ChunkX, more := MoreX}
+     , #{?TYPE := ?M, chunk := ChunkY, more := MoreY}
      ) ->
   clj_rt:equiv(ChunkX, ChunkY) andalso clj_rt:equiv(MoreX, MoreY);
-equiv(#?TYPE{name = ?M} = ChunkedCons, Y) ->
+equiv(#{?TYPE := ?M} = ChunkedCons, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(to_list(ChunkedCons), clj_rt:seq(Y));
     false -> false
   end.
 
-hash(#?TYPE{name = ?M, data = Cons}) ->
-  clj_murmur3:ordered(Cons).
+hash(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
+  clj_murmur3:ordered({Chunk, More}).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
-  List#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = List, Metadata) ->
+  List#{meta => Metadata}.
 
-reduce(#?TYPE{name = ?M} = ChunkedCons, F) ->
+reduce(#{?TYPE := ?M} = ChunkedCons, F) ->
   case to_list(ChunkedCons) of
     [] -> clj_rt:apply(F, []);
     [X | Rest] -> do_reduce(F, X, Rest)
   end.
 
-reduce(#?TYPE{name = ?M} = ChunkedCons, F, Init) ->
+reduce(#{?TYPE := ?M} = ChunkedCons, F, Init) ->
   do_reduce(F, Init, to_list(ChunkedCons)).
 
 do_reduce(F, Acc, [Chunk | Items]) ->
@@ -105,10 +112,10 @@ do_reduce(F, Acc, [Chunk | Items]) ->
 do_reduce(_F, Acc, []) ->
   Acc.
 
-first(#?TYPE{name = ?M, data = {Chunk, _}}) ->
+first(#{?TYPE := ?M, chunk := Chunk}) ->
   clj_rt:nth(Chunk, 0).
 
-next(#?TYPE{name = ?M, data = {Chunk0, More}} = ChunkedCons) ->
+next(#{?TYPE := ?M, chunk := Chunk0, more := More} = ChunkedCons) ->
   case clj_rt:count(Chunk0) > 1 of
     true ->
       Chunk1 = 'clojerl.IChunk':drop_first(Chunk0),
@@ -117,7 +124,7 @@ next(#?TYPE{name = ?M, data = {Chunk0, More}} = ChunkedCons) ->
       chunked_next(ChunkedCons)
   end.
 
-more(#?TYPE{name = ?M, data = {Chunk0, More}} = ChunkedCons) ->
+more(#{?TYPE := ?M, chunk := Chunk0, more := More} = ChunkedCons) ->
   case clj_rt:count(Chunk0) > 1 of
     true ->
       Chunk1 = 'clojerl.IChunk':drop_first(Chunk0),
@@ -128,15 +135,15 @@ more(#?TYPE{name = ?M, data = {Chunk0, More}} = ChunkedCons) ->
 
 '_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M} = Cons) -> Cons.
+seq(#{?TYPE := ?M} = Cons) -> Cons.
 
-to_list(#?TYPE{name = ?M, data = {Chunk, More}}) ->
+to_list(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
   Tail    = clj_rt:to_list(More),
   Count   = 'clojerl.TupleChunk':count(Chunk),
   Indexes = lists:seq(Count - 1, 0, -1),
   Cons    = fun(I, Acc) -> ['clojerl.TupleChunk':nth(Chunk, I) | Acc] end,
   lists:foldl(Cons, Tail, Indexes).
 
-str(#?TYPE{name = ?M} = ChunkedCons) ->
+str(#{?TYPE := ?M} = ChunkedCons) ->
   List = clj_rt:list(to_list(ChunkedCons)),
   clj_rt:print(List).

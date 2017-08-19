@@ -16,14 +16,20 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE       => ?M
+                 , list        => any()
+                 , is_splicing => boolean()
+                 }.
 
 -spec ?CONSTRUCTOR('clojerl.List':type(), boolean()) -> type().
 ?CONSTRUCTOR(List, IsSplicing) ->
-  #?TYPE{data = {List, IsSplicing}}.
+  #{ ?TYPE       => ?M
+   , list        => List
+   , is_splicing => IsSplicing
+   }.
 
-equiv( #?TYPE{name = ?M, data = {X1, Y}}
-     , #?TYPE{name = ?M, data = {X2, Y}}
+equiv( #{?TYPE := ?M, list := X1, is_splicing := Y}
+     , #{?TYPE := ?M, list := X2, is_splicing := Y}
      ) ->
   clj_rt:equiv(X1, X2);
 equiv(_, _) ->
@@ -31,24 +37,24 @@ equiv(_, _) ->
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M} = ReaderCond) ->
+hash(#{?TYPE := ?M} = ReaderCond) ->
   erlang:phash2(ReaderCond).
 
 %% clojerl.ILookup
 
-get(#?TYPE{name = ?M} = ReaderCond, Key) ->
+get(#{?TYPE := ?M} = ReaderCond, Key) ->
   get(ReaderCond, Key, ?NIL).
 
-get(#?TYPE{name = ?M, data = {Form, _}}, form, _) ->
+get(#{?TYPE := ?M, list := Form}, form, _) ->
   Form;
-get(#?TYPE{name = ?M, data = {_, IsSplicing}}, 'splicing?', _) ->
+get(#{?TYPE := ?M, is_splicing := IsSplicing}, 'splicing?', _) ->
   IsSplicing;
-get(#?TYPE{name = ?M}, _, NotFound) ->
+get(#{?TYPE := ?M}, _, NotFound) ->
   NotFound.
 
 %% clojerl.IStringable
 
-str(#?TYPE{name = ?M, data = {List, IsSplicing}}) ->
+str(#{?TYPE := ?M, list := List, is_splicing := IsSplicing}) ->
   Splice = case IsSplicing of
              true  -> <<"@">>;
              false -> <<>>

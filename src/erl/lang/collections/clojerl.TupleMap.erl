@@ -48,15 +48,20 @@
         ]).
 -export([str/1]).
 
--type mappings() :: {map(), map()}.
--type type()     :: #?TYPE{data :: mappings()}.
+-type type() :: #{ ?TYPE => ?M
+                 , tuple => tuple()
+                 , meta  => ?NIL | any()
+                 }.
 
 -define(HASHTABLE_THRESHOLD, 16).
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   TupleMap = list_to_tuple(KeyValues),
-  #?TYPE{name = ?M, data = TupleMap}.
+  #{ ?TYPE => ?M
+   , tuple => TupleMap
+   , meta  => ?NIL
+   }.
 
 -spec create_with_check(list()) -> type().
 create_with_check(KeyValues) ->
@@ -104,7 +109,7 @@ build_from_proplist({Key, Value}, Acc) ->
   [Key, Value | Acc].
 
 -spec to_erl_map(type()) -> map().
-to_erl_map(#?TYPE{name = ?M, data = TupleMap}) ->
+to_erl_map(#{?TYPE := ?M, tuple := TupleMap}) ->
   ErlMapFun = fun
                 (Key, {none, MapAcc}) ->
                   {{Key}, MapAcc};
@@ -120,10 +125,10 @@ to_erl_map(#?TYPE{name = ?M, data = TupleMap}) ->
 
 %% clojerl.IAssociative
 
-contains_key(#?TYPE{name = ?M, data = TupleMap}, Key) ->
+contains_key(#{?TYPE := ?M, tuple := TupleMap}, Key) ->
   index_of(TupleMap, Key) =/= notfound.
 
-entry_at(#?TYPE{name = ?M, data = TupleMap}, Key) ->
+entry_at(#{?TYPE := ?M, tuple := TupleMap}, Key) ->
   case index_of(TupleMap, Key) of
     notfound ->
       ?NIL;
@@ -133,7 +138,7 @@ entry_at(#?TYPE{name = ?M, data = TupleMap}, Key) ->
       clj_rt:vector([KeyFound, Val])
   end.
 
-assoc(#?TYPE{name = ?M, data = TupleMap0} = M, Key, Value) ->
+assoc(#{?TYPE := ?M, tuple := TupleMap0} = M, Key, Value) ->
   case index_of(TupleMap0, Key) of
     notfound ->
       Count   = trunc(tuple_size(TupleMap0) / 2),
@@ -143,22 +148,22 @@ assoc(#?TYPE{name = ?M, data = TupleMap0} = M, Key, Value) ->
           clj_rt:hash_map([Key, Value | ListMap]);
         false ->
           TupleMap1 = list_to_tuple([Key, Value | ListMap]),
-          M#?TYPE{data = TupleMap1}
+          M#{tuple => TupleMap1}
         end;
     Index ->
       TupleMap1 = erlang:setelement(Index + 1, TupleMap0, Value),
-      M#?TYPE{data = TupleMap1}
+      M#{tuple => TupleMap1}
   end.
 
 %% clojerl.ICounted
 
-count(#?TYPE{name = ?M, data = TupleMap}) ->
+count(#{?TYPE := ?M, tuple := TupleMap}) ->
   trunc(tuple_size(TupleMap) / 2).
 
 %% clojerl.IEquiv
 
-equiv( #?TYPE{name = ?M, data = TupleMapX}
-     , #?TYPE{name = ?M, data = TupleMapY}
+equiv( #{?TYPE := ?M, tuple := TupleMapX}
+     , #{?TYPE := ?M, tuple := TupleMapY}
      ) ->
   Fun = fun
           Fun([KeyX, ValX | Rest]) ->
@@ -175,7 +180,7 @@ equiv( #?TYPE{name = ?M, data = TupleMapX}
         end,
   tuple_size(TupleMapX) =:= tuple_size(TupleMapY)
     andalso Fun(tuple_to_list(TupleMapX));
-equiv(#?TYPE{name = ?M, data = TupleMap}, Y) ->
+equiv(#{?TYPE := ?M, tuple := TupleMap}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
       Fun = fun
@@ -193,9 +198,9 @@ equiv(#?TYPE{name = ?M, data = TupleMap}, Y) ->
 
 %% clojerl.IFn
 
-apply(#?TYPE{name = ?M} = M, [Key]) ->
+apply(#{?TYPE := ?M} = M, [Key]) ->
   apply(M, [Key, ?NIL]);
-apply(#?TYPE{name = ?M, data = TupleMap}, [Key, NotFound]) ->
+apply(#{?TYPE := ?M, tuple := TupleMap}, [Key, NotFound]) ->
   case index_of(TupleMap, Key) of
     notfound -> NotFound;
      Index   -> erlang:element(Index + 1, TupleMap)
@@ -206,9 +211,9 @@ apply(_, Args) ->
 
 %% clojerl.IColl
 
-cons(#?TYPE{name = ?M} = Map, ?NIL) ->
+cons(#{?TYPE := ?M} = Map, ?NIL) ->
   Map;
-cons(#?TYPE{name = ?M} = Map, X) ->
+cons(#{?TYPE := ?M} = Map, X) ->
   IsVector = clj_rt:'vector?'(X),
   IsMap    = clj_rt:'map?'(X),
   case clj_rt:to_list(X) of
@@ -228,15 +233,15 @@ empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M} = Map) ->
+hash(#{?TYPE := ?M} = Map) ->
   clj_murmur3:unordered(Map).
 
 %% clojerl.ILookup
 
-get(#?TYPE{name = ?M} = Map, Key) ->
+get(#{?TYPE := ?M} = Map, Key) ->
   get(Map, Key, ?NIL).
 
-get(#?TYPE{name = ?M, data = TupleMap}, Key, NotFound) ->
+get(#{?TYPE := ?M, tuple := TupleMap}, Key, NotFound) ->
   case index_of(TupleMap, Key) of
     notfound -> NotFound;
     Index    -> erlang:element(Index + 1, TupleMap)
@@ -244,7 +249,7 @@ get(#?TYPE{name = ?M, data = TupleMap}, Key, NotFound) ->
 
 %% clojerl.IMap
 
-keys(#?TYPE{name = ?M, data = TupleMap}) ->
+keys(#{?TYPE := ?M, tuple := TupleMap}) ->
   Fun = fun
           Fun([], Acc) ->
             lists:reverse(Acc);
@@ -253,7 +258,7 @@ keys(#?TYPE{name = ?M, data = TupleMap}) ->
         end,
   Fun(tuple_to_list(TupleMap), []).
 
-vals(#?TYPE{name = ?M, data = TupleMap}) ->
+vals(#{?TYPE := ?M, tuple := TupleMap}) ->
   Fun = fun
           Fun([], Acc) ->
             lists:reverse(Acc);
@@ -262,9 +267,9 @@ vals(#?TYPE{name = ?M, data = TupleMap}) ->
         end,
   Fun(tuple_to_list(TupleMap), []).
 
-without(#?TYPE{name = ?M, data = TupleMap0} = M, Key) ->
+without(#{?TYPE := ?M, tuple := TupleMap0} = M, Key) ->
   TupleMap1 = do_without(tuple_to_list(TupleMap0), [], Key),
-  M#?TYPE{data = TupleMap1}.
+  M#{tuple => TupleMap1}.
 
 -spec do_without(list(), list(), any()) ->
   tuple().
@@ -278,21 +283,20 @@ do_without([K, V | Rest], Acc, Key) ->
 
 %% clojerl.IMeta
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = Map, Metadata) ->
-  Map#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Map, Metadata) ->
+  Map#{meta => Metadata}.
 
 %% clojerl.ISeqable
 
-seq(#?TYPE{name = ?M} = Map) ->
+seq(#{?TYPE := ?M} = Map) ->
   case to_list(Map) of
     [] -> ?NIL;
     X -> X
   end.
 
-to_list(#?TYPE{name = ?M, data = TupleMap}) ->
+to_list(#{?TYPE := ?M, tuple := TupleMap}) ->
   do_to_list(tuple_to_list(TupleMap), []).
 
 do_to_list([], Acc) ->
@@ -303,7 +307,7 @@ do_to_list([K, V | Rest], Acc0) ->
 
 %% clojerl.IStringable
 
-str(#?TYPE{name = ?M} = TupleMap) ->
+str(#{?TYPE := ?M} = TupleMap) ->
   clj_rt:print(TupleMap).
 
 %%------------------------------------------------------------------------------

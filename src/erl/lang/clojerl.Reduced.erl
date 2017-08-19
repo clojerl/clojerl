@@ -13,24 +13,26 @@
 -export([?CONSTRUCTOR/1]).
 -export([is_reduced/1]).
 
--type type() :: #?TYPE{data :: any()}.
+-type type() :: #{ ?TYPE => ?M
+                 , value => any()
+                 }.
 
 -spec ?CONSTRUCTOR(any()) -> type().
 ?CONSTRUCTOR(Value) ->
-  #?TYPE{data = Value}.
+  #{?TYPE => ?M, value => Value}.
 
 -spec is_reduced(type()) -> boolean().
-is_reduced(#?TYPE{name = ?M}) -> true;
+is_reduced(#{?TYPE := ?M}) -> true;
 is_reduced(_) -> false.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-deref(#?TYPE{name = ?M, data = Value}) -> Value.
+deref(#{?TYPE := ?M, value := Value}) -> Value.
 
-hash(#?TYPE{name = ?M} = X) -> erlang:phash2(X).
+hash(#{?TYPE := ?M} = X) -> erlang:phash2(X).
 
-str(#?TYPE{name = ?M, data = Value}) ->
+str(#{?TYPE := ?M, value := Value}) ->
   ValueStr = clj_rt:str(Value),
   <<"#<clojerl.Reduced ", ValueStr/binary, ">">>.

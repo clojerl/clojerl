@@ -36,36 +36,44 @@
         , code_change/3
         ]).
 
--type type() :: #?TYPE{data :: {binary(), any()}}.
+-type type() :: #{ ?TYPE => ?M
+                 , id    => binary()
+                 , value => any()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(any()) -> type().
 ?CONSTRUCTOR(Value) ->
   UUID = 'erlang.util.UUID':random(),
   Id   = 'erlang.util.UUID':str(UUID),
-  #?TYPE{data = {Id, Value}}.
+  #{ ?TYPE => ?M
+   , id    => Id
+   , value => Value
+   , meta  => ?NIL
+   }.
 
 -spec swap(type(), any()) -> any().
-swap(#?TYPE{name = ?M, data = {Id, Initial}}, Fun) ->
-  do_swap(Id, Initial, Fun, []).
+swap(#{?TYPE := ?M, id := Id, value := Value}, Fun) ->
+  do_swap(Id, Value, Fun, []).
 
 -spec swap(type(), any(), any()) -> any().
-swap(#?TYPE{name = ?M, data = {Id, Initial}}, Fun, X) ->
-  do_swap(Id, Initial, Fun, [X]).
+swap(#{?TYPE := ?M, id := Id, value := Value}, Fun, X) ->
+  do_swap(Id, Value, Fun, [X]).
 
 -spec swap(type(), any(), any(), any()) -> any().
-swap(#?TYPE{name = ?M, data = {Id, Initial}}, Fun, X, Y) ->
-  do_swap(Id, Initial, Fun, [X, Y]).
+swap(#{?TYPE := ?M, id := Id, value := Value}, Fun, X, Y) ->
+  do_swap(Id, Value, Fun, [X, Y]).
 
 -spec swap(type(), any(), any(), any(), any()) -> any().
-swap(#?TYPE{name = ?M, data = {Id, Initial}}, Fun, X, Y, Args) ->
-  do_swap(Id, Initial, Fun, [X, Y | clj_rt:to_list(Args)]).
+swap(#{?TYPE := ?M, id := Id, value := Value}, Fun, X, Y, Args) ->
+  do_swap(Id, Value, Fun, [X, Y | clj_rt:to_list(Args)]).
 
 -spec reset(type(), any()) -> any().
-reset(#?TYPE{name = ?M, data = {Id, Initial}}, Value) ->
+reset(#{?TYPE := ?M, id := Id, value := Initial}, Value) ->
   do_reset(Id, Initial, Value).
 
 -spec compare_and_set(type(), any(), any()) -> any().
-compare_and_set(#?TYPE{name = ?M, data = {Id, _Initial}}, Old, New) ->
+compare_and_set(#{?TYPE := ?M, id := Id}, Old, New) ->
   case do_compare_and_set(Id, Old, New) of
     {ok, New} -> true;
     not_set   -> false
@@ -107,27 +115,27 @@ current(AtomId, Initial) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-str(#?TYPE{name = ?M, data = {Id, _}}) ->
+str(#{?TYPE := ?M, id := Id}) ->
   <<"#<clojerl.Atom ", Id/binary, ">">>.
 
-deref(#?TYPE{name = ?M, data = {Id, Initial}} = _Atom) ->
+deref(#{?TYPE := ?M, id := Id, value := Initial} = _Atom) ->
   current(Id, Initial).
 
-equiv( #?TYPE{name = ?M, data = {Id1, _}}
-     , #?TYPE{name = ?M, data = {Id2, _}}
+equiv( #{?TYPE := ?M, id := Id1}
+     , #{?TYPE := ?M, id := Id2}
      ) ->
   Id1 =:= Id2;
 equiv(_, _) ->
   false.
 
-hash(#?TYPE{name = ?M, data = {ID, _}}) ->
-  erlang:phash2(ID).
+hash(#{?TYPE := ?M, id := Id}) ->
+  erlang:phash2(Id).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Metadata}) ->
+  Metadata.
 
-with_meta( #?TYPE{name = ?M, info = Info} = Keyword, Metadata) ->
-  Keyword#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Atom, Metadata) ->
+  Atom#{meta => Metadata}.
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
