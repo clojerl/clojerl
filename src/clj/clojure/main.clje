@@ -67,6 +67,10 @@
 
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
 
+(defn compile-path []
+  (-> #erl"clojerl.compile.path"
+      (os/getenv.e #erl"ebin")
+      erlang/list_to_binary.1))
 
 (defmacro with-bindings
   "Executes body in the context of thread-local bindings for several vars
@@ -82,7 +86,7 @@
              *warn-on-infer* *warn-on-infer*
              *data-readers* *data-readers*
              *default-data-reader-fn* *default-data-reader-fn*
-             *compile-path* (os/getenv.e #erl"CLOJERL_COMPILE_PATH" #erl"ebin")
+             *compile-path* (compile-path)
              *command-line-args* *command-line-args*
              *assert* *assert*
              *in* (new erlang.io.PushbackReader *in*)
@@ -281,14 +285,14 @@ by default when a new command-line REPL is started."} repl-requires
 (defn- eval-opt
   "Evals expressions in str, prints each non-nil result using prn"
   [str]
-  (let [eof (erlang/make_ref.e)
-        reader (new erlang.io.StringReader str)]
+  (let [eof (erlang/make_ref.e)]
+    (with-open [reader (-> (erlang.io.StringReader. str) erlang.io.PushbackReader.)]
       (loop [input (with-read-known (read reader false eof))]
         (when-not (= input eof)
           (let [value (eval input)]
             (when-not (nil? value)
               (prn value))
-            (recur (with-read-known (read reader false eof))))))))
+            (recur (with-read-known (read reader false eof)))))))))
 
 (defn- init-dispatch
   "Returns the handler associated with an init opt"
