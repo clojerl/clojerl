@@ -196,19 +196,19 @@
   ;; verifies the stream is still usable after compiling.
   (spit "dummy.clj" "(ns dummy)")
   (try
-    (let [compile-path (os/getenv.e #erl"CLOJERL_COMPILE_PATH")
+    (let [compile-path (os/getenv.e #erl"clojerl.compile.path")
           tmp "tmp"
           new-out (erlang.io.StringWriter.)]
       (binding [clojure.core/*out* new-out]
         (try
           (filelib/ensure_dir.e tmp)
-          (os/putenv.e #erl"CLOJERL_COMPILE_PATH" #erl"tmp")
+          (os/putenv.e #erl"clojerl.compile.path" #erl"tmp")
           (clj_compiler/compile_file.e "dummy.clj")
           (println "this should still work without throwing an exception" )
           (finally
             (if compile-path
-              (os/putenv.e #erl"CLOJERL_COMPILE_PATH" compile-path)
-              (os/unsetenv.e #erl"CLOJERL_COMPILE_PATH"))
+              (os/putenv.e #erl"clojerl.compile.path" compile-path)
+              (os/unsetenv.e #erl"clojerl.compile.path"))
             (doseq [f (file/list_dir.e tmp)]
               (file/delete.e f))
             (file/delete.e tmp)))))

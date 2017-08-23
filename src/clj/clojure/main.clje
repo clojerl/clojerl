@@ -67,6 +67,10 @@
 
 ;;;;;;;;;;;;;;;;;;; end of redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
 
+(defn compile-path []
+  (-> #erl"clojerl.compile.path"
+      (os/getenv.e #erl"ebin")
+      erlang/list_to_binary.1))
 
 (defmacro with-bindings
   "Executes body in the context of thread-local bindings for several vars
@@ -82,7 +86,7 @@
              *warn-on-infer* *warn-on-infer*
              *data-readers* *data-readers*
              *default-data-reader-fn* *default-data-reader-fn*
-             *compile-path* (os/getenv.e #erl"CLOJERL_COMPILE_PATH" #erl"ebin")
+             *compile-path* (compile-path)
              *command-line-args* *command-line-args*
              *assert* *assert*
              *in* (new erlang.io.PushbackReader *in*)
