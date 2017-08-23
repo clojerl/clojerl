@@ -285,14 +285,14 @@ by default when a new command-line REPL is started."} repl-requires
 (defn- eval-opt
   "Evals expressions in str, prints each non-nil result using prn"
   [str]
-  (let [eof (erlang/make_ref.e)
-        reader (new erlang.io.StringReader str)]
+  (let [eof (erlang/make_ref.e)]
+    (with-open [reader (-> (erlang.io.StringReader. str) erlang.io.PushbackReader.)]
       (loop [input (with-read-known (read reader false eof))]
         (when-not (= input eof)
           (let [value (eval input)]
             (when-not (nil? value)
               (prn value))
-            (recur (with-read-known (read reader false eof))))))))
+            (recur (with-read-known (read reader false eof)))))))))
 
 (defn- init-dispatch
   "Returns the handler associated with an init opt"

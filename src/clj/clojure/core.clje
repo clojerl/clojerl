@@ -3942,7 +3942,7 @@
   StringReader initialized with the string s."
   {:added "1.0"}
   [s & body]
-  `(with-open [s# (new erlang.io.StringReader ~s)]
+  `(with-open [s# (-> (erlang.io.StringReader. ~s) erlang.io.PushbackReader.)]
      (binding [*in* s#]
        ~@body)))
 
