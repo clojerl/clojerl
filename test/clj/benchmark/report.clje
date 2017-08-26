@@ -1,0 +1,45 @@
+(ns benchmark.report
+  (:require [clojure.string :as str]
+            [clojure.pprint :as pp]))
+
+(defn process-line
+  [acc line]
+  (let [[_ expr runs time] (re-find #"(.*), (\d+) runs, (\d+) ms" line)
+        time (when time (erlang/binary_to_integer.e time))
+        item {:expr expr :runs runs :time time}]
+    (if expr
+      (assoc acc expr item)
+      acc)))
+
+(defn make-report
+  [content]
+  (->> (str/split content #"\n")
+       (reduce process-line {})))
+
+(defn print-report
+  [items]
+  (pp/print-table [:expr :runs :time-prev :time :diff :diff%] items))
+
+(defn compare-item
+  [items item-prev]
+  (let [expr   (:expr item-prev)
+        item   (items expr)
+        t      (:time item)
+        t-prev (:time item-prev)
+        diff   (when t (- t t-prev))
+        diff%  (when t (-> diff (/ t-prev) (* 100)))]
+    (assoc items expr (assoc item
+                             :time-prev t-prev
+                             :diff diff
+                             :diff% (int diff%)))))
+
+(defn compare
+  [items items-prev]
+  (vals (reduce compare-item items items-prev)))
+
+(defn -main [& [path path-prev]]
+  (let [items (make-report (slurp path))
+        items-prev (when path-prev
+                     (vals (make-report (slurp path-prev))))
+        result (compare items items-prev)]
+    (print-report result)))

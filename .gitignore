@@ -12,3 +12,4 @@ c_src/*.mk
 rebar.lock
 *.dump
 ebin/
+result.prev.txt
