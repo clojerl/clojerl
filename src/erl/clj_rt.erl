@@ -38,6 +38,7 @@
         , apply/2
         , next_id/0
         , gensym/0, gensym/1
+        , compare/2, compare_fun/1
         ]).
 
 -spec type(any()) -> 'erlang.Type':type().
@@ -617,3 +618,15 @@ gensym() ->
 gensym(Prefix) ->
   PartsBin = [Prefix, integer_to_list(next_id())],
   symbol(iolist_to_binary(PartsBin)).
+
+-spec compare(any(), any()) -> integer().
+compare(X, Y) ->
+  if
+    X < Y   -> -1;
+    X =:= Y -> 0;
+    X > Y   -> 1
+  end.
+
+-spec compare_fun('erlang.Fn':type()) -> function().
+compare_fun(Fun) ->
+  fun(X, Y) -> clj_rt:apply(Fun, [X, Y]) =< 0 end.

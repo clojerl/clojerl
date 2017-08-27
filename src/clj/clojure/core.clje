@@ -2696,7 +2696,7 @@
    (sort compare coll))
   ([comp coll]
    (if (seq coll)
-     (lists/sort.e (clj_rt/to_list.e coll))
+     (lists/sort.e (clj_rt/compare_fun.e comp) (clj_rt/to_list.e coll))
      ())))
 
 (defn sort-by

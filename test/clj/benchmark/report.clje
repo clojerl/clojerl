@@ -18,7 +18,9 @@
 
 (defn print-report
   [items]
-  (pp/print-table [:expr :runs :time-prev :time :diff :diff%] items))
+  (->> items
+       (sort-by :diff%)
+       (pp/print-table [:expr :runs :time-prev :time :diff :diff%])))
 
 (defn compare-item
   [items item-prev]
