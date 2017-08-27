@@ -12,7 +12,9 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/1]).
+-export([ ?CONSTRUCTOR/1
+        , ?CONSTRUCTOR/2
+        ]).
 -export([count/1]).
 -export([ cons/2
         , empty/1
@@ -40,6 +42,12 @@
   Vals   = [{X, true} || X <- Values],
   #?TYPE{data = {maps:from_list(Hashes), rbdict:from_list(Vals)}}.
 
+-spec ?CONSTRUCTOR(function(), list()) -> type().
+?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
+  Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
+  Vals   = [{X, true} || X <- Values],
+  #?TYPE{data = {maps:from_list(Hashes), rbdict:from_list(Compare, Vals)}}.
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
@@ -57,7 +65,9 @@ cons(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, X) ->
     false -> S#?TYPE{data = {Hashes#{Hash => X}, rbdict:store(X, true, Vals)}}
   end.
 
-empty(_) -> ?CONSTRUCTOR([]).
+empty(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  Compare = rbdict:compare_fun(Vals),
+  ?CONSTRUCTOR(Compare, []).
 
 %% clojerl.IEquiv
 

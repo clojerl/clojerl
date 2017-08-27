@@ -387,8 +387,7 @@
   repeated uses of assoc."
   {:added "1.0"}
   ([comparator & keyvals]
-   (throw "unsupported sorted-map")
-   #_(clojure.lang.PersistentTreeMap/create comparator keyvals)))
+   (new clojerl.SortedMap (clj_rt/compare_fun.e comparator :clojure) keyvals)))
 
 (defn sorted-set
   "Returns a new sorted set with supplied keys.  Any equal keys are
@@ -403,8 +402,7 @@
   conj."
   {:added "1.1"}
   ([comparator & keys]
-   (throw "unsupported sorted-set")
-   #_(clojure.lang.PersistentTreeSet/create comparator keys)))
+   (new clojerl.SortedSet (clj_rt/compare_fun.e comparator :clojure) keys)))
 
 ;;;;;;;;;;;;;;;;;;;;
 
