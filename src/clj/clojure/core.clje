@@ -2696,7 +2696,7 @@
    (sort compare coll))
   ([comp coll]
    (if (seq coll)
-     (lists/sort.e (clj_rt/compare_fun.e comp) (clj_rt/to_list.e coll))
+     (lists/sort.e (clj_rt/compare_fun.e comp :erlang) (clj_rt/to_list.e coll))
      ())))
 
 (defn sort-by
@@ -5935,7 +5935,7 @@
   "Return a random permutation of coll"
   {:added "1.2"}
   [coll]
-  (throw "unimplemented shuffle"))
+  (clj_rt/shuffle.e coll))
 
 (defn map-indexed
   "Returns a lazy sequence consisting of the result of applying f to 0
