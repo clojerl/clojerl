@@ -6,7 +6,6 @@
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IHash').
--behavior('clojerl.ISequential').
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
@@ -32,7 +31,6 @@
 
 -export([count/1]).
 -export([hash/1]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -174,8 +172,6 @@ count(Str) ->
 
 hash(Str) ->
   erlang:phash2(Str).
-
-'_'(_) -> ?NIL.
 
 seq(<<>>) -> ?NIL;
 seq(Str)  -> to_seq(Str, []).
