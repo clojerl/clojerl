@@ -59,12 +59,16 @@ cons(#?TYPE{name = ?M} = LazySeq, X) ->
 empty(_) -> [].
 
 equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
+     , #?TYPE{name = ?M, data = X}
      ) ->
-  clj_rt:equiv(X, Y);
+  true;
+equiv( #?TYPE{name = ?M} = X
+     , #?TYPE{name = ?M} = Y
+     ) ->
+  clj_rt:equiv(to_list(X), to_list(Y));
 equiv(#?TYPE{name = ?M} = LazySeq, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv('clojerl.ISeqable':to_list(LazySeq), Y);
+    true  -> clj_rt:equiv(to_list(LazySeq), Y);
     false -> false
   end.
 
@@ -140,6 +144,8 @@ to_list(#?TYPE{name = ?M} = LazySeq) ->
 -spec do_to_list(?NIL | any(), [any()]) -> [any()].
 do_to_list(?NIL, Acc) ->
   lists:reverse(Acc);
+do_to_list(#?TYPE{name = ?M} = LazySeq, Acc) ->
+  do_to_list(seq(LazySeq), Acc);
 do_to_list(Seq0, Acc) ->
   case 'clojerl.ISeqable':seq(Seq0) of
     ?NIL -> do_to_list(?NIL, Acc);
