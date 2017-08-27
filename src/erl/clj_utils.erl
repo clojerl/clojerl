@@ -421,7 +421,10 @@ number_type(Number) ->
 %% @doc Like lists:nth/2 but returns nil if `Index` is
 %%      larger than the amount of elements in `List`.
 nth(Index, List) ->
-  nth(Index, List, ?NIL).
+  case Index =< length(List) of
+    true  -> lists:nth(Index, List);
+    false -> error(<<"Index out of bounds">>)
+  end.
 
 nth(Index, List, Default) ->
   case Index =< length(List) of

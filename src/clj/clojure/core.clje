@@ -5237,12 +5237,8 @@
   (let [gpred (gensym "pred__")
         gexpr (gensym "expr__")
         emit (fn emit [pred expr args]
-               (let [res    (split-at (if (= :>> (second args)) 3 2) args)
-                     clause (first res)
-                     a      (first clause)
-                     b      (second clause)
-                     c      (nth clause 2)
-                     more   (second res)
+               (let [[[a b c :as clause] more]
+                     (split-at (if (= :>> (second args)) 3 2) args)
                      n (count clause)]
                  (cond
                    (= 0 n) `(throw (str "No matching clause: " ~expr))

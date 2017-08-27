@@ -120,7 +120,7 @@ nth(Coll, N) ->
   Type = type_module(Coll),
   case clj_protocol:'satisfies?'('clojerl.IIndexed', Type) of
     true  -> 'clojerl.IIndexed':nth(Coll, N);
-    false -> nth_from(Coll, N, ?NIL)
+    false -> nth_from(Coll, N)
   end.
 
 -spec nth(any(), integer(), any()) -> any().
@@ -133,12 +133,36 @@ nth(Coll, N, NotFound) ->
     false -> nth_from(Coll, N, NotFound)
   end.
 
+-spec nth_from(any(), integer()) -> any().
+nth_from(Coll, N) ->
+  Type = type_module(Coll),
+  case Type of
+    'clojerl.String' ->
+      case N < 'clojerl.String':count(Coll) of
+        true  -> 'clojerl.String':char_at(Coll, N);
+        false -> clj_utils:error(<<"Index out of bounds">>)
+      end;
+    _ ->
+      case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
+        true  -> clj_utils:nth(N + 1, to_list(Coll));
+        false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+      end
+  end.
+
 -spec nth_from(any(), integer(), any()) -> any().
 nth_from(Coll, N, NotFound) ->
   Type = type_module(Coll),
-  case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
-    true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
-    false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+  case Type of
+    'clojerl.String' ->
+      case N < 'clojerl.String':count(Coll) of
+        true  -> 'clojerl.String':char_at(Coll, N);
+        false -> NotFound
+      end;
+    _ ->
+      case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
+        true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
+        false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+      end
   end.
 
 -spec 'empty?'(any()) -> boolean().

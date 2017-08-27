@@ -164,12 +164,15 @@ do_reduce(_F, Acc, _Index, _Size, _Array) ->
 '_'(_) -> ?NIL.
 
 nth(#?TYPE{name = ?M, data = Array}, N) ->
-  array:get(N, Array).
+  case N < array:size(Array) of
+    true  -> array:get(N, Array);
+    false -> error(badarg)
+  end.
 
 nth(#?TYPE{name = ?M, data = Array}, N, NotFound) ->
-  case N > array:size(Array) of
-    true  -> NotFound;
-    false -> array:get(N, Array)
+  case N < array:size(Array) of
+    true  -> array:get(N, Array);
+    false -> NotFound
   end.
 
 peek(#?TYPE{name = ?M, data = Array}) ->
