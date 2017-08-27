@@ -11,10 +11,11 @@
 
 (ns clojure.test-clojure.sequences
   (:require [clojure.test :refer :all]
-            [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]
-            [clojure.test.check.clojure-test :refer (defspec)])
-  (:import clojure.lang.IReduce))
+            ;; [clojure.test.check.generators :as gen]
+            ;; [clojure.test.check.properties :as prop]
+            ;; [clojure.test.check.clojure-test :refer (defspec)]
+            )
+  (:import clojerl.IReduce))
 
 ;; *** Tests ***
 
@@ -24,67 +25,69 @@
 
 (deftest test-reduce-from-chunked-into-unchunked
   (is (= [1 2 \a \b] (into [] (concat [1 2] "ab")))))
- 
+
 (deftest test-reduce
   (let [int+ (fn [a b] (+ (int a) (int b)))
         arange (range 1 100) ;; enough to cross nodes
         avec (into [] arange)
         alist (into () arange)
-        obj-array (into-array arange)
-        int-array (into-array Integer/TYPE (map #(Integer. (int %)) arange))
-        long-array (into-array Long/TYPE arange)
-        float-array (into-array Float/TYPE arange)
-        char-array (into-array Character/TYPE (map char arange))
-        double-array (into-array Double/TYPE arange)
-        byte-array (into-array Byte/TYPE (map byte arange))
-        int-vec (into (vector-of :int) arange)
-        long-vec (into (vector-of :long) arange)
-        float-vec (into (vector-of :float) arange)
-        char-vec (into (vector-of :char) (map char arange))
-        double-vec (into (vector-of :double) arange)
-        byte-vec (into (vector-of :byte) (map byte arange))
-        all-true (into-array Boolean/TYPE (repeat 10 true))]
+        obj-array (into-tuple arange)
+        ;; int-array (into-array Integer/TYPE (map #(Integer. (int %)) arange))
+        ;; long-array (into-array Long/TYPE arange)
+        ;; float-array (into-array Float/TYPE arange)
+        ;; char-array (into-array Character/TYPE (map char arange))
+        ;; double-array (into-array Double/TYPE arange)
+        ;; byte-array (into-array Byte/TYPE (map byte arange))
+        ;; int-vec (into (vector-of :int) arange)
+        ;; long-vec (into (vector-of :long) arange)
+        ;; float-vec (into (vector-of :float) arange)
+        ;; char-vec (into (vector-of :char) (map char arange))
+        ;; double-vec (into (vector-of :double) arange)
+        ;; byte-vec (into (vector-of :byte) (map byte arange))
+        all-true (into-tuple (repeat 10 true))]
     (is (== 4950
            (reduce + arange)
            (reduce + avec)
            (.reduce ^IReduce avec +)
            (reduce + alist)
            (reduce + obj-array)
-           (reduce + int-array)
-           (reduce + long-array)
-           (reduce + float-array)
-           (reduce int+ char-array)
-           (reduce + double-array)
-           (reduce int+ byte-array)
-           (reduce + int-vec)
-           (reduce + long-vec)
-           (reduce + float-vec)
-           (reduce int+ char-vec)
-           (reduce + double-vec)
-           (reduce int+ byte-vec)))
+           ;; (reduce + int-array)
+           ;; (reduce + long-array)
+           ;; (reduce + float-array)
+           ;; (reduce int+ char-array)
+           ;; (reduce + double-array)
+           ;; (reduce int+ byte-array)
+           ;; (reduce + int-vec)
+           ;; (reduce + long-vec)
+           ;; (reduce + float-vec)
+           ;; (reduce int+ char-vec)
+           ;; (reduce + double-vec)
+           ;; (reduce int+ byte-vec)
+           ))
     (is (== 4951
            (reduce + 1 arange)
            (reduce + 1 avec)
            (.reduce ^IReduce avec + 1)
            (reduce + 1 alist)
            (reduce + 1 obj-array)
-           (reduce + 1 int-array)
-           (reduce + 1 long-array)
-           (reduce + 1 float-array)
-           (reduce int+ 1 char-array)
-           (reduce + 1 double-array)
-           (reduce int+ 1 byte-array)
-           (reduce + 1 int-vec)
-           (reduce + 1 long-vec)
-           (reduce + 1 float-vec)
-           (reduce int+ 1 char-vec)
-           (reduce + 1 double-vec)
-           (reduce int+ 1 byte-vec)))
+           ;; (reduce + 1 int-array)
+           ;; (reduce + 1 long-array)
+           ;; (reduce + 1 float-array)
+           ;; (reduce int+ 1 char-array)
+           ;; (reduce + 1 double-array)
+           ;; (reduce int+ 1 byte-array)
+           ;; (reduce + 1 int-vec)
+           ;; (reduce + 1 long-vec)
+           ;; (reduce + 1 float-vec)
+           ;; (reduce int+ 1 char-vec)
+           ;; (reduce + 1 double-vec)
+           ;; (reduce int+ 1 byte-vec)
+           ))
     (is (= true
            (reduce #(and %1 %2) all-true)
            (reduce #(and %1 %2) true all-true)))))
 
-(deftest test-into-IReduceInit
+#_(deftest test-into-IReduceInit
   (let [iri (reify clojure.lang.IReduceInit
               (reduce [_ f start]
                 (reduce f start (range 5))))]
@@ -99,7 +102,7 @@
 
   (is (= 4500000
          (->> (range 100000)
-              (mapcat (fn [_] (java.util.ArrayList. (range 10))))
+              (mapcat (fn [_] (range 10)))
               (reduce +)))))
 
 (deftest test-equality
@@ -112,8 +115,10 @@
       (map inc []) ()
       (map inc #{}) ()
       (map inc {}) ()
-      (sequence (map inc) (range 10)) (range 1 11)
-      (range 1 11) (sequence (map inc) (range 10))))
+      ;; TODO: transducers missing
+      ;; (sequence (map inc) (range 10)) (range 1 11)
+      ;; (range 1 11) (sequence (map inc) (range 10))
+      ))
 
 
 (deftest test-lazy-seq
@@ -122,7 +127,7 @@
       (lazy-seq [])
       (lazy-seq [1 2]))
 
-  (is (not (.equals (lazy-seq [3]) (lazy-seq [3N]))))
+  ;; (is (not (= (lazy-seq [3]) (lazy-seq [3N]))))
 
   (are [x y] (= x y)
       (lazy-seq nil) ()
@@ -133,7 +138,7 @@
       (lazy-seq #{}) ()
       (lazy-seq {}) ()
       (lazy-seq "") ()
-      (lazy-seq (into-array [])) ()
+      (lazy-seq (into-tuple [])) ()
 
       (lazy-seq [3]) [3N]
       (lazy-seq (list 1 2)) '(1 2)
@@ -141,14 +146,14 @@
       (lazy-seq (sorted-set 1 2)) '(1 2)
       (lazy-seq (sorted-map :a 1 :b 2)) '([:a 1] [:b 2])
       (lazy-seq "abc") '(\a \b \c)
-      (lazy-seq (into-array [1 2])) '(1 2) ))
+      (lazy-seq (into-tuple [1 2])) '(1 2) ))
 
 
 (deftest test-seq
   (is (not (seq? (seq []))))
   (is (seq? (seq [1 2])))
-  (is (not (.equals (seq [3]) (seq [3N]))))
-  
+  ;; (is (not (= (seq [3]) (seq [3N]))))
+
   (are [x y] (= x y)
     (seq nil) nil
     (seq [nil]) '(nil)
@@ -158,7 +163,7 @@
     (seq #{}) nil
     (seq {}) nil
     (seq "") nil
-    (seq (into-array [])) nil
+    (seq (into-tuple [])) nil
 
     (seq [3]) [3N]
     (seq (list 1 2)) '(1 2)
@@ -166,11 +171,11 @@
     (seq (sorted-set 1 2)) '(1 2)
     (seq (sorted-map :a 1 :b 2)) '([:a 1] [:b 2])
     (seq "abc") '(\a \b \c)
-    (seq (into-array [1 2])) '(1 2) ))
+    (seq (into-tuple [1 2])) '(1 2) ))
 
 
 (deftest test-cons
-  (is (thrown? IllegalArgumentException (cons 1 2)))
+  (is (thrown? :error (cons 1 2)))
   (are [x y] (= x y)
     (cons 1 nil) '(1)
     (cons nil nil) '(nil)
@@ -188,8 +193,8 @@
     (cons 1 #{}) '(1)
     (cons 1 (sorted-set 2 3)) '(1 2 3)
 
-    (cons 1 (into-array [])) '(1)
-    (cons 1 (into-array [2 3])) '(1 2 3) ))
+    (cons 1 (into-tuple [])) '(1)
+    (cons 1 (into-tuple [2 3])) '(1 2 3) ))
 
 
 (deftest test-empty
@@ -239,7 +244,7 @@
 ;The first element should be the same in each set if preserved.
 (deftest test-empty-sorted
   (let [inv-compare (comp - compare)]
-    (are [x y] (= (first (into (empty x) x)) 
+    (are [x y] (= (first (into (empty x) x))
 		  (first y))
 	 (sorted-set 1 2 3) (sorted-set 1 2 3)
 	 (sorted-set-by inv-compare 1 2 3) (sorted-set-by inv-compare 1 2 3)
@@ -275,13 +280,14 @@
 
 (deftest test-first
   ;(is (thrown? Exception (first)))
-  (is (thrown? IllegalArgumentException (first true)))
-  (is (thrown? IllegalArgumentException (first false)))
-  (is (thrown? IllegalArgumentException (first 1)))
-  ;(is (thrown? IllegalArgumentException (first 1 2)))
-  (is (thrown? IllegalArgumentException (first \a)))
-  (is (thrown? IllegalArgumentException (first 's)))
-  (is (thrown? IllegalArgumentException (first :k)))
+  (is (thrown? :error (first true)))
+  (is (thrown? :error (first false)))
+  (is (thrown? :error (first 1)))
+  ;(is (thrown? :error (first 1 2)))
+  ;; NA: characters are single-char strings
+  ;; (is (thrown? :error (first \a)))
+  (is (thrown? :error (first 's)))
+  (is (thrown? :error (first :k)))
   (are [x y] (= x y)
     (first nil) nil
 
@@ -332,23 +338,24 @@
     (first (sorted-map :a 1 :b 2 :c 3)) '(:a 1)
 
     ; array
-    (first (into-array [])) nil
-    (first (into-array [1])) 1
-    (first (into-array [1 2 3])) 1
-    (first (to-array [nil])) nil
-    (first (to-array [1 nil])) 1
-    (first (to-array [nil 2])) nil ))
+    (first (into-tuple [])) nil
+    (first (into-tuple [1])) 1
+    (first (into-tuple [1 2 3])) 1
+    (first (into-tuple [nil])) nil
+    (first (into-tuple [1 nil])) 1
+    (first (into-tuple [nil 2])) nil ))
 
 
 (deftest test-next
- ; (is (thrown? IllegalArgumentException (next)))
-  (is (thrown? IllegalArgumentException (next true)))
-  (is (thrown? IllegalArgumentException (next false)))
-  (is (thrown? IllegalArgumentException (next 1)))
-  ;(is (thrown? IllegalArgumentException (next 1 2)))
-  (is (thrown? IllegalArgumentException (next \a)))
-  (is (thrown? IllegalArgumentException (next 's)))
-  (is (thrown? IllegalArgumentException (next :k)))
+ ; (is (thrown? :error (next)))
+  (is (thrown? :error (next true)))
+  (is (thrown? :error (next false)))
+  (is (thrown? :error (next 1)))
+  ;(is (thrown? :error (next 1 2)))
+  ;; NA: characters are single-char strings
+  ;; (is (thrown? :error (next \a)))
+  (is (thrown? :error (next 's)))
+  (is (thrown? :error (next :k)))
   (are [x y] (= x y)
     (next nil) nil
 
@@ -401,17 +408,17 @@
     (next (sorted-map :a 1 :b 2 :c 3)) '((:b 2) (:c 3))
 
     ; array
-    (next (into-array [])) nil
-    (next (into-array [1])) nil
-    (next (into-array [1 2 3])) '(2 3)
+    (next (into-tuple [])) nil
+    (next (into-tuple [1])) nil
+    (next (into-tuple [1 2 3])) '(2 3)
 
-    (next (to-array [nil])) nil
-    (next (to-array [1 nil])) '(nil)
-    ;(next (to-array [1 (into-array [])])) (list (into-array []))
-    (next (to-array [nil 2])) '(2)
-    (next (to-array [(into-array [])])) nil
-    (next (to-array [(into-array []) nil])) '(nil)
-    (next (to-array [(into-array []) 2 nil])) '(2 nil) ))
+    (next (into-tuple [nil])) nil
+    (next (into-tuple [1 nil])) '(nil)
+    ;(next (into-tuple [1 (into-tuple [])])) (list (into-tuple []))
+    (next (into-tuple [nil 2])) '(2)
+    (next (into-tuple [(into-tuple [])])) nil
+    (next (into-tuple [(into-tuple []) nil])) '(nil)
+    (next (into-tuple [(into-tuple []) 2 nil])) '(2 nil) ))
 
 
 (deftest test-last
@@ -465,18 +472,18 @@
       (last "abc") \c
 
       ; array
-      (last (into-array [])) nil
-      (last (into-array [1])) 1
-      (last (into-array [1 2 3])) 3
-      (last (to-array [nil])) nil
-      (last (to-array [1 nil])) nil
-      (last (to-array [nil 2])) 2 ))
+      (last (into-tuple [])) nil
+      (last (into-tuple [1])) 1
+      (last (into-tuple [1 2 3])) 3
+      (last (into-tuple [nil])) nil
+      (last (into-tuple [1 nil])) nil
+      (last (into-tuple [nil 2])) 2 ))
 
 
 ;; (ffirst coll) = (first (first coll))
 ;;
 (deftest test-ffirst
-;  (is (thrown? IllegalArgumentException (ffirst)))
+;  (is (thrown? :error (ffirst)))
   (are [x y] (= x y)
     (ffirst nil) nil
 
@@ -496,7 +503,7 @@
 ;; (fnext coll) = (first (next coll)) = (second coll)
 ;;
 (deftest test-fnext
-;  (is (thrown? IllegalArgumentException (fnext)))
+;  (is (thrown? :error (fnext)))
   (are [x y] (= x y)
     (fnext nil) nil
 
@@ -520,7 +527,7 @@
 ;; (nfirst coll) = (next (first coll))
 ;;
 (deftest test-nfirst
-;  (is (thrown? IllegalArgumentException (nfirst)))
+;  (is (thrown? :error (nfirst)))
   (are [x y] (= x y)
     (nfirst nil) nil
 
@@ -540,7 +547,7 @@
 ;; (nnext coll) = (next (next coll))
 ;;
 (deftest test-nnext
-;  (is (thrown? IllegalArgumentException (nnext)))
+;  (is (thrown? :error (nnext)))
   (are [x y] (= x y)
     (nnext nil) nil
 
@@ -567,36 +574,36 @@
 
 (deftest test-nth
   ; maps, sets are not supported
-  (is (thrown? UnsupportedOperationException (nth {} 0)))
-  (is (thrown? UnsupportedOperationException (nth {:a 1 :b 2} 0)))
-  (is (thrown? UnsupportedOperationException (nth #{} 0)))
-  (is (thrown? UnsupportedOperationException (nth #{1 2 3} 0)))
+  (is (thrown? :error (nth {} 0)))
+  (is (thrown? :error (nth {:a 1 :b 2} 0)))
+  (is (thrown? :error (nth #{} 0)))
+  (is (thrown? :error (nth #{1 2 3} 0)))
 
   ; out of bounds
-  (is (thrown? IndexOutOfBoundsException (nth '() 0)))
-  (is (thrown? IndexOutOfBoundsException (nth '(1 2 3) 5)))
-  (is (thrown? IndexOutOfBoundsException (nth '() -1)))
-  (is (thrown? IndexOutOfBoundsException (nth '(1 2 3) -1)))
+  (is (thrown? :error (nth '() 0)))
+  (is (thrown? :error (nth '(1 2 3) 5)))
+  (is (thrown? :error (nth '() -1)))
+  (is (thrown? :error (nth '(1 2 3) -1)))
 
-  (is (thrown? IndexOutOfBoundsException (nth [] 0)))
-  (is (thrown? IndexOutOfBoundsException (nth [1 2 3] 5)))
-  (is (thrown? IndexOutOfBoundsException (nth [] -1)))
-  (is (thrown? IndexOutOfBoundsException (nth [1 2 3] -1)))  ; ???
+  (is (thrown? :error (nth [] 0)))
+  (is (thrown? :error (nth [1 2 3] 5)))
+  (is (thrown? :error (nth [] -1)))
+  (is (thrown? :error (nth [1 2 3] -1)))  ; ???
 
-  (is (thrown? IndexOutOfBoundsException (nth (into-array []) 0)))
-  (is (thrown? IndexOutOfBoundsException (nth (into-array [1 2 3]) 5)))
-  (is (thrown? IndexOutOfBoundsException (nth (into-array []) -1)))
-  (is (thrown? IndexOutOfBoundsException (nth (into-array [1 2 3]) -1)))
+  (is (thrown? :error (nth (into-tuple []) 0)))
+  (is (thrown? :error (nth (into-tuple [1 2 3]) 5)))
+  (is (thrown? :error (nth (into-tuple []) -1)))
+  (is (thrown? :error (nth (into-tuple [1 2 3]) -1)))
 
-  (is (thrown? StringIndexOutOfBoundsException (nth "" 0)))
-  (is (thrown? StringIndexOutOfBoundsException (nth "abc" 5)))
-  (is (thrown? StringIndexOutOfBoundsException (nth "" -1)))
-  (is (thrown? StringIndexOutOfBoundsException (nth "abc" -1)))
+  (is (thrown? :error (nth "" 0)))
+  (is (thrown? :error (nth "abc" 5)))
+  (is (thrown? :error (nth "" -1)))
+  (is (thrown? :error (nth "abc" -1)))
 
-  (is (thrown? IndexOutOfBoundsException (nth (java.util.ArrayList. []) 0)))
-  (is (thrown? IndexOutOfBoundsException (nth (java.util.ArrayList. [1 2 3]) 5)))
-  (is (thrown? IndexOutOfBoundsException (nth (java.util.ArrayList. []) -1)))       ; ???
-  (is (thrown? IndexOutOfBoundsException (nth (java.util.ArrayList. [1 2 3]) -1)))  ; ???
+  (is (thrown? :error (nth [] 0)))
+  (is (thrown? :error (nth [1 2 3] 5)))
+  (is (thrown? :error (nth [] -1)))       ; ???
+  (is (thrown? :error (nth [1 2 3] -1)))  ; ???
 
   (are [x y] (= x y)
       (nth '(1) 0) 1
@@ -611,11 +618,11 @@
       (nth [1 2 3 4 5] 4) 5
       (nth [1 2 3] 5 :not-found) :not-found
 
-      (nth (into-array [1]) 0) 1
-      (nth (into-array [1 2 3]) 0) 1
-      (nth (into-array [1 2 3 4 5]) 1) 2
-      (nth (into-array [1 2 3 4 5]) 4) 5
-      (nth (into-array [1 2 3]) 5 :not-found) :not-found
+      (nth (into-tuple [1]) 0) 1
+      (nth (into-tuple [1 2 3]) 0) 1
+      (nth (into-tuple [1 2 3 4 5]) 1) 2
+      (nth (into-tuple [1 2 3 4 5]) 4) 5
+      (nth (into-tuple [1 2 3]) 5 :not-found) :not-found
 
       (nth "a" 0) \a
       (nth "abc" 0) \a
@@ -623,14 +630,14 @@
       (nth "abcde" 4) \e
       (nth "abc" 5 :not-found) :not-found
 
-      (nth (java.util.ArrayList. [1]) 0) 1
-      (nth (java.util.ArrayList. [1 2 3]) 0) 1
-      (nth (java.util.ArrayList. [1 2 3 4 5]) 1) 2
-      (nth (java.util.ArrayList. [1 2 3 4 5]) 4) 5
-      (nth (java.util.ArrayList. [1 2 3]) 5 :not-found) :not-found )
+      (nth [1] 0) 1
+      (nth [1 2 3] 0) 1
+      (nth [1 2 3 4 5] 1) 2
+      (nth [1 2 3 4 5] 4) 5
+      (nth [1 2 3] 5 :not-found) :not-found )
 
   ; regex Matchers
-  (let [m (re-matcher #"(a)(b)" "ababaa")]
+  #_(let [m (re-matcher #"(a)(b)" "ababaa")]
     (re-find m) ; => ["ab" "a" "b"]
     (are [x y] (= x y)
         (nth m 0) "ab"
@@ -638,18 +645,18 @@
         (nth m 2) "b"
         (nth m 3 :not-found) :not-found
         (nth m -1 :not-found) :not-found )
-    (is (thrown? IndexOutOfBoundsException (nth m 3)))
-    (is (thrown? IndexOutOfBoundsException (nth m -1))))
+    (is (thrown? :error (nth m 3)))
+    (is (thrown? :error (nth m -1))))
 
-  (let [m (re-matcher #"c" "ababaa")]
+  #_(let [m (re-matcher #"c" "ababaa")]
     (re-find m) ; => nil
     (are [x y] (= x y)
         (nth m 0 :not-found) :not-found
         (nth m 2 :not-found) :not-found
         (nth m -1 :not-found) :not-found )
-    (is (thrown? IllegalStateException (nth m 0)))
-    (is (thrown? IllegalStateException (nth m 2)))
-    (is (thrown? IllegalStateException (nth m -1)))))
+    (is (thrown? :error (nth m 0)))
+    (is (thrown? :error (nth m 2)))
+    (is (thrown? :error (nth m -1)))))
 
 
 ; distinct was broken for nil & false:
@@ -679,12 +686,11 @@
       (distinct "aaab") '(\a \b)
       (distinct "abab") '(\a \b) )
 
-  (are [x] (= (distinct [x x]) [x])   
+  (are [x] (= (distinct [x x]) [x])
       nil
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -756,14 +762,16 @@
 
     (take 3 (cycle [nil])) '(nil nil nil)
 
-    (transduce (take 5) + (cycle [1])) 5
-    (transduce (take 5) + 2 (cycle [1])) 7
-    (transduce (take 5) + (cycle [3 7])) 23
-    (transduce (take 5) + 2 (cycle [3 7])) 25
+    ;; (transduce (take 5) + (cycle [1])) 5
+    ;; (transduce (take 5) + 2 (cycle [1])) 7
+    ;; (transduce (take 5) + (cycle [3 7])) 23
+    ;; (transduce (take 5) + 2 (cycle [3 7])) 25
 
     (take 2 (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
     (first (next (cycle (map #(/ 42 %) '(2 1 0))))) 42
-    (into [] (take 2) (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)))
+    ;; (into [] (take 2) (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
+    )
+  )
 
 
 (deftest test-partition
@@ -806,15 +814,16 @@
 
       ;; test other fns
       (is (= '(:foo 42 :foo 42) (take 4 (iterate #(if (= % :foo) 42 :foo) :foo))))
-      (is (= '(1 false true true) (take 4 (iterate #(instance? Boolean %) 1))))
+      (is (= '(1 false true true) (take 4 (iterate #(instance? clojerl.Boolean %) 1))))
       (is (= '(256 128 64 32 16 8 4 2 1 0) (take 10 (iterate #(quot % 2) 256))))
       (is (= '(0 true) (take 2 (iterate zero? 0))))
       (is (= 2 (first (next (next (iterate inc 0))))))
-      (is (= [1 2 3] (into [] (take 3) (next (iterate inc 0)))))
+      ;; (is (= [1 2 3] (into [] (take 3) (next (iterate inc 0)))))
 
       ;; reduce via transduce
-      (is (= (transduce (take 5) + (iterate #(* 2 %) 2)) 62))
-      (is (= (transduce (take 5) + 1 (iterate #(* 2 %) 2)) 63)) )
+      ;; (is (= (transduce (take 5) + (iterate #(* 2 %) 2)) 62))
+      ;; (is (= (transduce (take 5) + 1 (iterate #(* 2 %) 2)) 63))
+  )
 
 
 (deftest test-reverse
@@ -952,7 +961,7 @@
 
 
 (deftest test-repeat
-  ;(is (thrown? IllegalArgumentException (repeat)))
+  ;(is (thrown? :error (repeat)))
 
   ; infinite sequence => use take
   (are [x y] (= x y)
@@ -977,7 +986,6 @@
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -988,7 +996,7 @@
       {} {:a 1 :b 2}
       #{} #{1 2} ))
 
-(defspec longrange-equals-range 100
+#_(defspec longrange-equals-range 100
   (prop/for-all [start gen/int
                  end gen/int
                  step gen/s-pos-int]
@@ -1007,7 +1015,6 @@
       (range -3) ()
 
       (range 2.5) '(0 1 2)
-      (range 7/3) '(0 1 2)
 
       (range 0 3) '(0 1 2)
       (range 0 1) '(0)
@@ -1043,10 +1050,9 @@
 
       (take 100 (range)) (take 100 (iterate inc 0))
 
-      (range 1/2 5 1/3) '(1/2 5/6 7/6 3/2 11/6 13/6 5/2 17/6 19/6 7/2 23/6 25/6 9/2 29/6)
       (range 0.5 8 1.2) '(0.5 1.7 2.9 4.1 5.3 6.5 7.7)
       (range 0.5 -4 -2) '(0.5 -1.5 -3.5)
-      (take 3 (range Long/MAX_VALUE Double/POSITIVE_INFINITY)) '(9223372036854775807 9223372036854775808N 9223372036854775809N)
+      ;; (take 3 (range Long/MAX_VALUE Double/POSITIVE_INFINITY)) '(9223372036854775807 9223372036854775808N 9223372036854775809N)
 
       (reduce + (take 100 (range))) 4950
       (reduce + 0 (take 100 (range))) 4950
@@ -1055,17 +1061,17 @@
       (reduce + (range 0.0 100.0)) 4950.0
       (reduce + 0 (range 0.0 100.0)) 4950.0
 
-      (reduce + (iterator-seq (.iterator (range 100)))) 4950
-      (reduce + (iterator-seq (.iterator (range 0.0 100.0 1.0)))) 4950.0 ))
+      #_(reduce + (iterator-seq (.iterator (range 100)))) 4950
+      #_(reduce + (iterator-seq (.iterator (range 0.0 100.0 1.0)))) 4950.0 ))
 
 (defn unlimited-range-create [& args]
   (let [[arg1 arg2 arg3] args]
     (case (count args)
-      1 (clojure.lang.Range/create arg1)
-      2 (clojure.lang.Range/create arg1 arg2)
-      3 (clojure.lang.Range/create arg1 arg2 arg3))))
+      1 (clojerl.Range. arg1)
+      2 (clojerl.Range. arg1 arg2)
+      3 (clojerl.Range. arg1 arg2 arg3))))
 
-(deftest test-longrange-corners
+#_(deftest test-longrange-corners
   (let [lmax Long/MAX_VALUE
         lmax-1 (- Long/MAX_VALUE 1)
         lmax-2 (- Long/MAX_VALUE 2)
@@ -1101,7 +1107,7 @@
     {}
     #{}
     ""
-    (into-array []) )
+    (into-tuple []) )
 
   (are [x] (not (empty? x))
     '(1 2)
@@ -1110,7 +1116,7 @@
     {:a 1 :b 2}
     #{1 2}
     "abc"
-    (into-array [1 2]) ))
+    (into-tuple [1 2]) ))
 
 
 (deftest test-every?
@@ -1119,7 +1125,7 @@
       nil
       () [] {} #{}
       (lazy-seq [])
-      (into-array []) )
+      (into-tuple []) )
 
   (are [x y] (= x y)
       true (every? pos? [1])
@@ -1147,7 +1153,7 @@
       nil
       () [] {} #{}
       (lazy-seq [])
-      (into-array []) )
+      (into-tuple []) )
 
   (are [x y] (= x y)
       false (not-every? pos? [1])
@@ -1174,7 +1180,7 @@
       nil
       () [] {} #{}
       (lazy-seq [])
-      (into-array []) )
+      (into-tuple []) )
 
   (are [x y] (= x y)
       false (not-any? pos? [1])
@@ -1202,23 +1208,23 @@
        nil
        () [] {} #{}
        (lazy-seq [])
-       (into-array []))
-  
+       (into-tuple []))
+
   (are [x y] (= x y)
        nil (some nil nil)
-       
+
        true (some pos? [1])
        true (some pos? [1 2])
-       
+
        nil (some pos? [-1])
        nil (some pos? [-1 -2])
        true (some pos? [-1 2])
        true (some pos? [1 -2])
-       
+
        :a (some #{:a} [:a :a])
        :a (some #{:a} [:b :a])
        nil (some #{:a} [:b :b])
-       
+
        :a (some #{:a} '(:a :b))
        :a (some #{:a} #{:a :b})
        ))
@@ -1230,7 +1236,6 @@
        [] 1
        [] 'test
        [] :keyword
-       [] 1/2
        [] #"[\r\n]"
        [] true
        [] false
@@ -1260,7 +1265,7 @@
        [count even? odd?] [count even? odd?]))
 
 (deftest test-group-by
-  (is (= (group-by even? [1 2 3 4 5]) 
+  (is (= (group-by even? [1 2 3 4 5])
 	 {false [1 3 5], true [2 4]})))
 
 (deftest test-partition-by
@@ -1315,7 +1320,7 @@
   (let [shuffled-seq (shuffle [1 2 3 4])]
     (is (every? #{1 2 3 4} shuffled-seq))))
 
-(deftest test-ArrayIter
+#_(deftest test-ArrayIter
   (are [arr expected]
     (let [iter (clojure.lang.ArrayIter/createFromObject arr)]
       (loop [accum []]
@@ -1336,7 +1341,7 @@
 (deftest CLJ-1633
   (is (= ((fn [& args] (apply (fn [a & b] (apply list b)) args)) 1 2 3) '(2 3))))
 
-(deftest test-subseq
+#_(deftest test-subseq
   (let [s1 (range 100)
         s2 (into (sorted-set) s1)]
     (is (= s1 (seq s2)))
