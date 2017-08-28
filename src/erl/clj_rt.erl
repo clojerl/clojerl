@@ -295,6 +295,8 @@ keyword(Namespace, Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Namespace, Name).
 
 -spec 'satisfies?'('erlang.Type':type(), 'erlang.Type':type()) -> boolean().
+'satisfies?'(Protocol, Type) when is_atom(Protocol) andalso is_atom(Type) ->
+  clj_protocol:'satisfies?'(Protocol, Type);
 'satisfies?'(Protocol, Type) ->
   ProtocolModule = 'erlang.Type':module(Protocol),
   TypeModule     = 'erlang.Type':module(Type),
