@@ -160,8 +160,14 @@ with invalid arguments."
 
   Ex: #inst '2017-08-04T04:24:30.049-00:00'"
   [^erlang.util.Date d ^erlang.io.IWriter w]
-  (let [[[year month day] [hour minute second]] (erlang.util.Date/to_erl.e d)
-        out-str (format "#inst \"~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.000-00:00\"" year month day hour minute second)]
+  (let [fmt-str "#inst \"~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.000-00:00\""
+        out-str (format fmt-str
+                        (.year d)
+                        (.month d)
+                        (.day d)
+                        (.hours d)
+                        (.minutes d)
+                        (.seconds d))]
     (.write w out-str)))
 
 (defmethod print-method erlang.util.Date

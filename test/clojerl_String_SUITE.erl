@@ -172,8 +172,6 @@ complete_coverage(_Config) ->
 
   <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
 
-  ?NIL = 'clojerl.String':'_'(?NIL),
-
   true = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
 
   {comments, ""}.

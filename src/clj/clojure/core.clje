@@ -387,8 +387,7 @@
   repeated uses of assoc."
   {:added "1.0"}
   ([comparator & keyvals]
-   (throw "unsupported sorted-map")
-   #_(clojure.lang.PersistentTreeMap/create comparator keyvals)))
+   (new clojerl.SortedMap (clj_rt/compare_fun.e comparator :clojure) keyvals)))
 
 (defn sorted-set
   "Returns a new sorted set with supplied keys.  Any equal keys are
@@ -403,8 +402,7 @@
   conj."
   {:added "1.1"}
   ([comparator & keys]
-   (throw "unsupported sorted-set")
-   #_(clojure.lang.PersistentTreeSet/create comparator keys)))
+   (new clojerl.SortedSet (clj_rt/compare_fun.e comparator :clojure) keys)))
 
 ;;;;;;;;;;;;;;;;;;;;
 
@@ -2696,7 +2694,7 @@
    (sort compare coll))
   ([comp coll]
    (if (seq coll)
-     (lists/sort.e (clj_rt/to_list.e coll))
+     (lists/sort.e (clj_rt/compare_fun.e comp :erlang) (clj_rt/to_list.e coll))
      ())))
 
 (defn sort-by
@@ -5237,12 +5235,8 @@
   (let [gpred (gensym "pred__")
         gexpr (gensym "expr__")
         emit (fn emit [pred expr args]
-               (let [res    (split-at (if (= :>> (second args)) 3 2) args)
-                     clause (first res)
-                     a      (first clause)
-                     b      (second clause)
-                     c      (nth clause 2)
-                     more   (second res)
+               (let [[[a b c :as clause] more]
+                     (split-at (if (= :>> (second args)) 3 2) args)
                      n (count clause)]
                  (cond
                    (= 0 n) `(throw (str "No matching clause: " ~expr))
@@ -5939,7 +5933,7 @@
   "Return a random permutation of coll"
   {:added "1.2"}
   [coll]
-  (throw "unimplemented shuffle"))
+  (clj_rt/shuffle.e coll))
 
 (defn map-indexed
   "Returns a lazy sequence consisting of the result of applying f to 0

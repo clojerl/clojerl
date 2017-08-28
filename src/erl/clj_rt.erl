@@ -38,6 +38,8 @@
         , apply/2
         , next_id/0
         , gensym/0, gensym/1
+        , compare_fun/2
+        , shuffle/1
         ]).
 
 -spec type(any()) -> 'erlang.Type':type().
@@ -119,7 +121,7 @@ nth(Coll, N) ->
   Type = type_module(Coll),
   case clj_protocol:'satisfies?'('clojerl.IIndexed', Type) of
     true  -> 'clojerl.IIndexed':nth(Coll, N);
-    false -> nth_from(Coll, N, ?NIL)
+    false -> nth_from(Coll, N)
   end.
 
 -spec nth(any(), integer(), any()) -> any().
@@ -132,12 +134,36 @@ nth(Coll, N, NotFound) ->
     false -> nth_from(Coll, N, NotFound)
   end.
 
+-spec nth_from(any(), integer()) -> any().
+nth_from(Coll, N) ->
+  Type = type_module(Coll),
+  case Type of
+    'clojerl.String' ->
+      case N < 'clojerl.String':count(Coll) of
+        true  -> 'clojerl.String':char_at(Coll, N);
+        false -> clj_utils:error(<<"Index out of bounds">>)
+      end;
+    _ ->
+      case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
+        true  -> clj_utils:nth(N + 1, to_list(Coll));
+        false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+      end
+  end.
+
 -spec nth_from(any(), integer(), any()) -> any().
 nth_from(Coll, N, NotFound) ->
   Type = type_module(Coll),
-  case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
-    true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
-    false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+  case Type of
+    'clojerl.String' ->
+      case N < 'clojerl.String':count(Coll) of
+        true  -> 'clojerl.String':char_at(Coll, N);
+        false -> NotFound
+      end;
+    _ ->
+      case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
+        true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
+        false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+      end
   end.
 
 -spec 'empty?'(any()) -> boolean().
@@ -617,3 +643,14 @@ gensym() ->
 gensym(Prefix) ->
   PartsBin = [Prefix, integer_to_list(next_id())],
   symbol(iolist_to_binary(PartsBin)).
+
+-spec compare_fun('erlang.Fn':type(), erlang | clojure) -> function().
+compare_fun(Fun, erlang) ->
+  fun(X, Y) -> clj_rt:apply(Fun, [X, Y]) =< 0 end;
+compare_fun(Fun, clojure) ->
+  fun(X, Y) -> clj_rt:apply(Fun, [X, Y]) end.
+
+-spec shuffle(any()) -> [any()].
+shuffle(Seq) ->
+  Items = [{rand:uniform(), X} || X <- to_list(Seq)],
+  [X || {_, X} <- lists:sort(Items)].

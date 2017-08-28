@@ -16,7 +16,9 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/1]).
+-export([ ?CONSTRUCTOR/1
+        , ?CONSTRUCTOR/2
+        ]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -50,6 +52,13 @@
   KeyValuePairs = build_key_values([], KeyValues),
   Keys   = lists:foldl(fun fold_key_values/2, #{}, KeyValuePairs),
   Values = rbdict:from_list(KeyValuePairs),
+  #?TYPE{name = ?M, data = {Keys, Values}}.
+
+-spec ?CONSTRUCTOR(function(), [any()]) -> type().
+?CONSTRUCTOR(Compare, KeyValues) when is_list(KeyValues) ->
+  KeyValuePairs = build_key_values([], KeyValues),
+  Keys   = lists:foldl(fun fold_key_values/2, #{}, KeyValuePairs),
+  Values = rbdict:from_list(Compare, KeyValuePairs),
   #?TYPE{name = ?M, data = {Keys, Values}}.
 
 %% @private
@@ -150,7 +159,9 @@ cons(#?TYPE{name = ?M} = M, X) ->
               "another map to a map.">>)
   end.
 
-empty(_) -> ?CONSTRUCTOR([]).
+empty(#?TYPE{name = ?M, data = {_, Vals}}) ->
+  Compare = rbdict:compare_fun(Vals),
+  ?CONSTRUCTOR(Compare, []).
 
 %% clojerl.IHash
 

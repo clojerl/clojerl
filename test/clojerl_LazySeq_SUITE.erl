@@ -114,6 +114,9 @@ seq(_Config) ->
   3 = clj_rt:first(clj_rt:next(clj_rt:next(LazySeqBis))),
   [1, 2, 3] = clj_rt:to_list(clj_rt:seq(LazySeqBis)),
 
+  LazySeqEmpty = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> [] end),
+  [] = clj_rt:to_list(LazySeqEmpty),
+
   {comments, ""}.
 
 -spec equiv(config()) -> result().
