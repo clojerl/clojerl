@@ -135,6 +135,17 @@ seq(_Config) ->
   ?NIL = clj_rt:next(Range3),
   [] = clj_rt:rest(Range3),
 
+  Range4 = 'clojerl.Range':?CONSTRUCTOR(0, 1, 0.2),
+  0 = clj_rt:first(Range4),
+  [0.2, 0.4, 0.4 + 0.2, 0.8] = clj_rt:to_list(clj_rt:next(Range4)),
+
+  Range5 = 'clojerl.Range':?CONSTRUCTOR(0, 1.2, 0.2),
+  0 = clj_rt:first(Range5),
+  [0.2, 0.4, 0.4 + 0.2, 0.8, 1.0] = clj_rt:to_list(clj_rt:next(Range5)),
+
+  Range6 = 'clojerl.Range':?CONSTRUCTOR(0.3, 0, -0.1),
+  [0.3, 0.3 - 0.1, 0.3 - 0.1 - 0.1] = clj_rt:to_list(Range6),
+
   {comments, ""}.
 
 -spec equiv(config()) -> result().

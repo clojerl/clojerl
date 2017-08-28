@@ -147,13 +147,10 @@ do_to_list(?NIL, Acc) ->
 do_to_list(#?TYPE{name = ?M} = LazySeq, Acc) ->
   do_to_list(seq(LazySeq), Acc);
 do_to_list(Seq0, Acc) ->
-  case 'clojerl.ISeqable':seq(Seq0) of
-    ?NIL -> do_to_list(?NIL, Acc);
-    Seq ->
-      First = 'clojerl.ISeq':first(Seq),
-      Rest  = 'clojerl.ISeq':next(Seq),
-      do_to_list(Rest, [First | Acc])
-  end.
+  Seq1  = 'clojerl.ISeqable':seq(Seq0),
+  First = 'clojerl.ISeq':first(Seq1),
+  Rest  = 'clojerl.ISeq':next(Seq1),
+  do_to_list(Rest, [First | Acc]).
 
 str(#?TYPE{name = ?M, data = Fn}) ->
   {uniq, Uniq} = erlang:fun_info(Fn, uniq),
