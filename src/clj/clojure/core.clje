@@ -805,17 +805,11 @@
        (< y (first more)))
      false)))
 
-(defn inc'
-  "Returns a number one greater than num. Supports arbitrary precision.
-  See also: inc"
-  {:added "1.0"}
-  [x] (erlang/+.e x 1))
-
 (defn inc
   "Returns a number one greater than num. Does not auto-promote
-  longs, will throw on overflow. See also: inc'"
+  longs, will throw on overflow."
   {:added "1.2"}
-  [x] (inc' x))
+  [x] (erlang/+.e x 1))
 
 ;; reduce is defined again later after InternalReduce loads
 (defn ^:private
@@ -841,19 +835,9 @@
   [coll]
   (reduce1 conj '() coll))
 
-(defn +'
-  "Returns the sum of nums. (+) returns 0. Supports arbitrary precision.
-  See also: +"
-  {:added "1.0"}
-  ([] 0)
-  ([x] x)
-  ([x y] (erlang/+.e x y))
-  ([x y & more]
-   (reduce1 +' (+' x y) more)))
-
 (defn +
   "Returns the sum of nums. (+) returns 0. Does not auto-promote
-  longs, will throw on overflow. See also: +'"
+  longs, will throw on overflow."
   {:added "1.2"}
   ([] 0)
   ([x] x)
@@ -861,23 +845,13 @@
   ([x y & more]
    (reduce1 erlang/+.2 (+ x y) more)))
 
-(defn *'
-  "Returns the product of nums. (*) returns 1. Supports arbitrary precision.
-  See also: *"
-  {:added "1.0"}
-  ([] 1)
-  ([x] x)
-  ([x y] (erlang/*.e x y))
-  ([x y & more]
-   (reduce1 *' (*' x y) more)))
-
 (defn *
   "Returns the product of nums. (*) returns 1. Does not auto-promote
-  longs, will throw on overflow. See also: *'"
+  longs, will throw on overflow."
   {:added "1.2"}
   ([] 1)
   ([x] x)
-  ([x y] (*' x y))
+  ([x y] (erlang/*.e x y))
   ([x y & more]
    (reduce1 * (* x y) more)))
 
@@ -890,23 +864,13 @@
   ([x y & more]
    (reduce1 / (/ x y) more)))
 
-(defn -'
-  "If no ys are supplied, returns the negation of x, else subtracts
-  the ys from x and returns the result. Supports arbitrary precision.
-  See also: -"
-  {:added "1.0"}
-  ([x] (erlang/-.e x))
-  ([x y] (erlang/-.e x y))
-  ([x y & more]
-   (reduce1 -' (-' x y) more)))
-
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result. Does not auto-promote
-  longs, will throw on overflow. See also: -'"
+  longs, will throw on overflow."
   {:added "1.2"}
-  ([x] (-' x))
-  ([x y] (-' x y))
+  ([x] (erlang/-.e x))
+  ([x y] (erlang/-.e x y))
   ([x y & more]
    (reduce1 - (- x y) more)))
 
@@ -978,15 +942,9 @@
   ([x y & more]
    (reduce1 min (min x y) more)))
 
-(defn dec'
-  "Returns a number one less than num. Supports arbitrary precision.
-  See also: dec"
-  {:added "1.0"}
-  [x] (erlang/-.e x 1))
-
 (defn dec
   "Returns a number one less than num. Does not auto-promote
-  longs, will throw on overflow. See also: dec'"
+  longs, will throw on overflow."
   {:added "1.2"}
   [x] (erlang/-.e x 1))
 
@@ -2899,7 +2857,7 @@
      (= 2 (count bindings)) "exactly 2 forms in binding vector")
   (let [i (first bindings)
         n (second bindings)]
-    `(let [n# (long ~n)]
+    `(let [n# ~n]
        (loop [~i 0]
          (when (< ~i n#)
            ~@body
