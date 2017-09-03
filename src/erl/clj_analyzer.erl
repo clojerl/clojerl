@@ -239,14 +239,14 @@ parse_quote(List, Env) ->
 
   Second = clj_rt:second(List),
 
-  { #{tag := Tag} = ConstExpr
+  { #{tag := TagExpr} = ConstExpr
   , NewEnv
   } = clj_env:pop_expr(analyze_const(Second, Env)),
 
   Expr = #{ op   => quote
           , env  => Env
           , expr => ConstExpr
-          , tag  => Tag
+          , tag  => TagExpr
           , form => List
           },
   clj_env:push_expr(Expr, NewEnv).
@@ -271,7 +271,7 @@ parse_fn(List, Env) ->
                   false -> clj_rt:to_list(Methods)
                 end,
 
-  {TagExpr, Env0} = maybe_type_tag(NameSym, clj_env:add_locals_scope(Env)),
+  {TagExpr, Env0} = fetch_type_tag(NameSym, clj_env:add_locals_scope(Env)),
   %% Add the name of the fn as a local binding
   LocalExpr     = #{ op   => local
                    , env  => Env
@@ -382,7 +382,7 @@ parse_fn(List, Env) ->
         {MethodsExprs, Env2}
     end,
 
-  {TagExpr, Env5} = maybe_type_tag(NameSym, Env4),
+  {TagExpr, Env5} = fetch_type_tag(NameSym, Env4),
 
   FnExpr = #{ op              => fn
             , env             => Env
@@ -472,7 +472,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
     end,
 
   %% TODO: check for a single symbol after '&
-  {TagExpr, Env7} = maybe_type_tag(Params, Env6),
+  {TagExpr, Env7} = fetch_type_tag(Params, Env6),
 
   FnMethodExpr = #{ op          => fn_method
                   , env         => Env0
@@ -510,7 +510,8 @@ analyze_method_params(IsVariadic, Arity, Params, Env0) ->
                      , 'variadic?' => IsVariadic andalso Id == Arity - 1
                      , arg_id      => Id
                      , local       => arg
-                      },
+                     , tag         => type_tag(PatExpr)
+                     },
         {Id + 1, clj_env:push_expr(ParamExpr, EnvAcc1)}
     end,
 
@@ -569,6 +570,7 @@ parse_do(Form, Env0) ->
             , form       => Statements
             , statements => StatementsExprs
             , ret        => ReturnExpr
+            , tag        => type_tag(ReturnExpr)
             },
 
   clj_env:push_expr(DoExpr, Env5).
@@ -601,12 +603,21 @@ parse_if(Form, Env0) ->
   Env3 = analyze_forms([Then, Else], clj_env:pop(Env2)),
   {[ThenExpr, ElseExpr], Env4} = clj_env:last_exprs(2, Env3),
 
+  TagExpr = case type_tag(ThenExpr) of
+              TagExprCase when ?NO_TAG =:= TagExprCase;
+                               ?RECUR_TAG =:= TagExprCase ->
+                type_tag(ElseExpr);
+              TagExprCase ->
+                TagExprCase
+            end,
+
   IfExpr = #{ op   => 'if'
             , form => Form
             , env  => Env0
             , test => TestExpr
             , then => ThenExpr
             , else => ElseExpr
+            , tag  => TagExpr
             },
 
   clj_env:push_expr(IfExpr, Env4).
@@ -683,6 +694,7 @@ analyze_let(Form, Env0) ->
 
   LetExprExtra = #{ body     => BodyExpr
                   , bindings => BindingsExprs
+                  , tag      => type_tag(BodyExpr)
                   },
 
   Env5 = clj_env:remove_locals_scope(Env4),
@@ -705,7 +717,7 @@ parse_binding({Pattern, Init}, Env0) ->
               , init    => InitExpr
               , form    => Pattern
               , local   => OpAtom
-              , tag     => maps:get(tag, PatternExpr, ?NO_TAG)
+              , tag     => type_tag(PatternExpr)
               },
 
   LocalExprs = clj_env:get(pattern_locals, [], Env2),
@@ -767,6 +779,7 @@ parse_recur(List, Env) ->
                , exprs      => ArgsExprs
                , loop_id    => LoopId
                , loop_type  => LoopType
+               , tag        => ?RECUR_TAG
                },
 
   clj_env:push_expr(RecurExpr, clj_env:pop(Env3)).
@@ -785,13 +798,13 @@ parse_letfn(Form, Env0) ->
   {FnNames, FnForms} = partition_fun_defs(clj_rt:to_list(FnSpecs)),
   Env = clj_env:add_locals_scope(Env0),
   BindingFun = fun(FnName, {FnNamesExprsAcc, EnvAcc0}) ->
-                   {TagExpr, EnvAcc1} = maybe_type_tag(FnName, EnvAcc0),
+                   {TagExpr, EnvAcc1} = fetch_type_tag(FnName, EnvAcc0),
                    FnNameExpr = #{ op     => local
                                  , env    => Env
                                  , name   => FnName
-                                 , tag    => TagExpr
                                  , shadow => clj_env:get_local(FnName, Env)
                                  , form   => FnName
+                                 , tag    => TagExpr
                                  },
                    { [FnNameExpr|FnNamesExprsAcc]
                    , clj_env:put_locals([FnNameExpr], EnvAcc1)
@@ -810,6 +823,7 @@ parse_letfn(Form, Env0) ->
                , vars => FnNamesExprs
                , fns  => FnsExprs
                , body => BodyExpr
+               , tag  => type_tag(BodyExpr)
                },
 
   Env4 = clj_env:remove_locals_scope(Env3),
@@ -843,12 +857,19 @@ parse_case(List, Env) ->
   , Env2
   } = parse_patterns_bodies(PatternsBodiesList, Env1),
 
+  BodyExprs = [B || {_, B} <- ClausesExprs],
+  Exprs     = case DefaultExpr of
+                ?NIL -> BodyExprs;
+                _    -> [DefaultExpr | BodyExprs]
+              end,
+
   CaseExpr = #{ op      => 'case'
               , env     => Env
               , form    => List
               , test    => TestExpr
               , clauses => ClausesExprs
               , default => DefaultExpr
+              , tag     => resolve_exprs_type_tag(Exprs)
               },
 
   clj_env:push_expr(CaseExpr, Env2).
@@ -929,10 +950,10 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => erl_map
                , env     => Env
                , form    => Form
-               , tag     => type_expr(Form, Env)
                , keys    => KeysExprs
                , vals    => ValsExprs
                , pattern => true
+               , tag     => type_expr(Form, Env)
                },
         clj_env:push_expr(Ast, InnerEnv2);
       is_tuple(Form), not ?IS_TYPE(Form) ->
@@ -944,8 +965,8 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => tuple
                , env     => Env
                , form    => Form
-               , tag     => type_expr(Form, Env)
                , items   => ValsExprs
+               , tag     => type_expr(Form, Env)
                },
         clj_env:push_expr(Ast, InnerEnv1);
       is_list(Form) ->
@@ -955,8 +976,8 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => erl_list
                , env     => Env
                , form    => Form
-               , tag     => type_expr(Form, Env)
                , items   => ValsExprs
+               , tag     => type_expr(Form, Env)
                },
         clj_env:push_expr(Ast, InnerEnv1);
       is_number(Form);
@@ -1063,16 +1084,16 @@ parse_def(List, Env) ->
   Var2     = 'clojerl.Var':with_meta(Var1, VarMeta1),
   'clojerl.Namespace':update_var(Var2),
 
-  {TagExpr, Env2} = maybe_type_tag(VarSymbol, Env1),
+  {TagExpr, Env2} = fetch_type_tag(VarSymbol, Env1),
 
   DefExpr = #{ op      => def
              , env     => Env
              , form    => List
              , name    => VarSymbol
-             , tag     => TagExpr
              , var     => Var2
              , init    => InitExpr
              , dynamic => IsDynamic
+             , tag     => TagExpr
              },
 
   Env3 = clj_env:pop(Env2),
@@ -1200,6 +1221,7 @@ parse_import(Form, Env) ->
              , env      => Env
              , form     => Form
              , typename => TypeName
+             , tag      => type_expr(?NIL, Env)
              },
 
   clj_env:push_expr(NewExpr, Env).
@@ -1219,9 +1241,9 @@ parse_new(Form, Env) ->
   NewExpr = #{ op   => new
              , env  => Env
              , form => Form
-             , tag  => TypeExpr
              , type => TypeExpr
              , args => ArgsExprs
+             , tag  => TypeExpr
              },
 
   clj_env:push_expr(NewExpr, Env2).
@@ -1267,6 +1289,7 @@ parse_deftype(Form, Env0) ->
                       , fields    => FieldsExprs
                       , protocols => []
                       , methods   => []
+                      , tag       => type_expr(?NIL, Env0)
                       },
   _ = clj_emitter:emit(clj_env:push_expr(DeftypeDummyExpr, Env4)),
 
@@ -1287,6 +1310,7 @@ parse_deftype(Form, Env0) ->
                  , protocols => InterfacesExprs
                  , opts      => Opts
                  , methods   => MethodsExprs
+                 , tag       => type_expr(?NIL, Env0)
                  },
 
   Env8 = clj_env:remove_locals_scope(Env7),
@@ -1332,6 +1356,7 @@ analyze_deftype_method(Form, Env) ->
                              , env  => Env
                              , form => Form
                              , name => MethodName
+                             , tag  => type_tag(MethodExpr)
                              }
                           ),
 
@@ -1359,6 +1384,7 @@ parse_defprotocol(List, Env) ->
                   , env          => Env
                   , name         => FQNameSym
                   , methods_sigs => MethodsSigs
+                  , tag          => type_expr(?NIL, Env)
                   },
 
   clj_env:push_expr(ProtocolExpr, Env).
@@ -1411,6 +1437,7 @@ parse_extend_type(List, Env) ->
                     , type  => TypeExpr
                     , form  => List
                     , impls => ProtoImplsMap
+                    , tag   => type_expr(?NIL, Env)
                     },
 
   clj_env:push_expr(ExtendTypeExpr, Env2).
@@ -1493,7 +1520,7 @@ parse_dot(Form, Env) ->
   {ArgsExprs, Env2} = clj_env:last_exprs( length(ArgsList)
                                         , analyze_forms(ArgsList, Env1)
                                         ),
-  {TagExpr, Env3}   = maybe_type_tag(Form, Env2),
+  {TagExpr, Env3}   = fetch_type_tag(Form, Env2),
 
   case TargetExpr of
     #{ op   := type
@@ -1505,14 +1532,14 @@ parse_dot(Form, Env) ->
       InvokeExpr = #{ op   => invoke
                     , env  => Env
                     , form => Form
-                    , tag  => TagExpr
                     , f    => ErlFunExpr
                     , args => ArgsExprs
+                    , tag  => TagExpr
                     },
 
       clj_env:push_expr(InvokeExpr, Env3);
     _ ->
-      Module          = type_tag(TargetExpr),
+      Module          = type_tag_module(TargetExpr),
       Function        = clj_rt:keyword(NameSym),
 
       WarnOnInferVar  = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
@@ -1547,42 +1574,45 @@ parse_dot(Form, Env) ->
                              , env      => Env
                              , form     => Target
                              , function => Function
+                             , tag      => ?NO_TAG
                              }
                         end,
 
       InvokeExpr      = #{ op   => invoke
                          , env  => Env
                          , form => Form
-                         , tag  => TagExpr
                          , f    => FunExpr
                          , args => [TargetExpr | ArgsExprs]
+                         , tag  => TagExpr
                          },
 
       clj_env:push_expr(InvokeExpr, Env3)
   end.
 
+%% @doc Adds the type tag of the provided form if it is other than ?NO_TAG
 -spec add_type_tag(any(), map(), clj_env:env()) ->
   {map(), clj_env:env()}.
 add_type_tag(Form, Expr, Env0) ->
-  case maybe_type_tag(Form, Env0) of
+  case fetch_type_tag(Form, Env0) of
     {?NO_TAG, Env1} -> {Expr, Env1};
     {TagExpr, Env1} -> {Expr#{tag => TagExpr}, Env1}
   end.
 
--spec maybe_type_tag(any(), clj_env:env()) ->
+%% @doc Find the type tag for the form. Returns the tag if found or ?NO_TAG
+-spec fetch_type_tag(any(), clj_env:env()) ->
   {?NO_TAG | map(), clj_env:env()}.
-maybe_type_tag(Form, Env) ->
+fetch_type_tag(Form, Env) ->
   Meta = clj_rt:'meta?'(Form) andalso clj_rt:meta(Form),
   case Meta =/= false andalso clj_rt:get(Meta, tag) of
     X when X =:= false; X =:= ?NIL ->
       {?NO_TAG, Env};
     Tag ->
-      maybe_resolve_type_tag(Tag, Env)
+      resolve_type_tag(Tag, Env)
   end.
 
--spec maybe_resolve_type_tag(any(), clj_env:env()) ->
+-spec resolve_type_tag(any(), clj_env:env()) ->
   {any(), clj_env:env()}.
-maybe_resolve_type_tag(Tag, Env) ->
+resolve_type_tag(Tag, Env) ->
   Symbol = case clj_rt:type_module(Tag) of
              'clojerl.Symbol' ->
                Tag;
@@ -1600,20 +1630,38 @@ maybe_resolve_type_tag(Tag, Env) ->
                               )
            end,
 
-  resolve_type_tag(Symbol, Env).
+  do_resolve_type_tag(Symbol, Env).
 
--spec resolve_type_tag('clojerl.Symbol':type(), clj_env:env()) ->
+-spec do_resolve_type_tag('clojerl.Symbol':type(), clj_env:env()) ->
   {any(), clj_env:env()}.
-resolve_type_tag(Symbol, Env) ->
+do_resolve_type_tag(Symbol, Env) ->
   Mapping = #{in_pattern => false},
   Env1    = clj_env:push(Mapping, Env),
   Env2    = analyze_form(Symbol, Env1),
   clj_env:pop_expr(clj_env:pop(Env2)).
 
--spec type_tag(map()) -> ?NO_TAG | module().
-type_tag(#{tag := #{op := type, type := TypeSym}}) ->
+-spec resolve_exprs_type_tag([map()]) -> ?NO_TAG | map().
+resolve_exprs_type_tag(Exprs) ->
+  FoldFun = fun
+              (_Expr, ?NO_TAG) -> ?NO_TAG;
+              (Expr, ?NIL)     -> type_tag(Expr);
+              (Expr, TagExpr) ->
+                case type_tag(Expr) of
+                  TagExpr -> TagExpr;
+                  _       -> ?NO_TAG
+                end
+            end,
+
+  lists:foldl(FoldFun, ?NIL, Exprs).
+
+-spec type_tag(map()) -> ?NO_TAG | map().
+type_tag(Expr) when is_map(Expr) ->
+  maps:get(tag, Expr, ?NO_TAG).
+
+-spec type_tag_module(map()) -> ?NO_TAG | module().
+type_tag_module(#{tag := #{op := type, type := TypeSym}}) ->
   clj_rt:keyword(TypeSym);
-type_tag(_) ->
+type_tag_module(_) ->
   ?NO_TAG.
 
 %%------------------------------------------------------------------------------
@@ -1638,6 +1686,7 @@ parse_throw(List, Env0) ->
                , env       => Env0
                , form      => List
                , exception => ExceptionExpr
+               , tag       => type_tag(ExceptionExpr)
                },
 
   clj_env:push_expr(ThrowExpr, clj_env:pop(Env2)).
@@ -1705,6 +1754,7 @@ parse_try(List, Env) ->
              , body    => BodyExpr
              , catches => CatchesExprs
              , finally => FinallyExpr
+             , tag     => type_tag(BodyExpr)
              },
 
   clj_env:push_expr(TryExpr, clj_env:pop(Env6)).
@@ -1733,6 +1783,7 @@ parse_catch(List, Env) ->
            , env     => Env
            , form    => ErrName
            , pattern => ErrExpr
+           , tag     => type_tag(ErrExpr)
            },
 
   LocalExprs = clj_env:get(pattern_locals, [], Env2),
@@ -1748,6 +1799,7 @@ parse_catch(List, Env) ->
                , form  => List
                , guard => GuardExpr
                , body  => BodyExpr
+               , tag   => type_tag(BodyExpr)
                },
 
   Env6 = clj_env:pop(clj_env:remove_locals_scope(Env5)),
@@ -1778,8 +1830,8 @@ parse_var(List, Env) ->
     {{var, Var}, Env1} ->
       VarConstExpr = #{ op   => constant
                       , env  => Env
-                      , tag  => type_expr(Var, Env)
                       , form => Var
+                      , tag  => type_expr(Var, Env)
                       },
       clj_env:push_expr(VarConstExpr, Env1);
     {_, _} ->
@@ -1806,26 +1858,29 @@ analyze_invoke(Form, Env) ->
                                        , analyze_forms(Args, Env1)
                                        ),
 
-  {TagExpr, Env3} = case FExpr of
+  {FormTagExpr, Env3} = fetch_type_tag(Form, Env2),
+  {TagExpr, Env4} = case FExpr of
+                      _ when FormTagExpr =/= ?NO_TAG ->
+                        {FormTagExpr, Env3};
                       #{op := fn, tag := Tag0} ->
-                        {Tag0, Env2};
+                        {Tag0, Env3};
                       #{op := var, var := Var, tag := Tag0} ->
-                        signature_tag(ArgCount, Tag0, Var, Env2);
+                        signature_tag(ArgCount, Tag0, Var, Env3);
                       _   ->
-                        {?NO_TAG, Env2}
+                        {?NO_TAG, Env3}
                     end,
 
   InvokeExpr0 = #{ op   => invoke
                  , env  => Env
                  , form => Form
-                 , tag  => TagExpr
                  , f    => FExpr#{arity => ArgCount}
                  , args => ArgsExpr
+                 , tag  => TagExpr
                  },
 
-  {InvokeExpr1, Env4} = add_type_tag(Form, InvokeExpr0, Env3),
+  {InvokeExpr1, Env5} = add_type_tag(Form, InvokeExpr0, Env4),
 
-  clj_env:push_expr(InvokeExpr1, Env4).
+  clj_env:push_expr(InvokeExpr1, Env5).
 
 -spec signature_tag( integer()
                    , map() | ?NO_TAG
@@ -1841,7 +1896,7 @@ signature_tag(ArgCount, Default, Var, Env) ->
             clj_rt:count(ArgsOnly) =:= ArgCount
         end,
   case lists:filter(Fun, ArgLists) of
-    [ArgList] -> maybe_type_tag(ArgList, Env);
+    [ArgList] -> fetch_type_tag(ArgList, Env);
     %% This also handles the case where there are multiple clauses for the
     %% same arity.
     _         -> {Default, Env}
@@ -1909,19 +1964,20 @@ erl_fun_expr(Symbol, Module, Function, Arity, Env) ->
    , module   => Module
    , function => Function
    , arity    => Arity
+   , tag      => ?NO_TAG
    }.
 
 -spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
   {map(), clj_env:env()}.
 var_expr(Var, Symbol, Env0) ->
-  {TagExpr, Env1} = maybe_type_tag(Var, Env0),
+  {TagExpr, Env1} = fetch_type_tag(Var, Env0),
   VarExpr         = #{ op         => var
                      , env        => Env0
                      , form       => Symbol
                      , name       => Symbol
-                     , tag        => TagExpr
                      , var        => Var
                      , is_dynamic => 'clojerl.Var':is_dynamic(Var)
+                     , tag        => TagExpr
                      },
   {VarExpr, Env1}.
 
@@ -1935,15 +1991,14 @@ type_expr(Type, Symbol, Env) ->
   , env  => Env
   , form => Symbol
   , type => Type
+  , tag  => 'erlang.Type':?CONSTRUCTOR('erlang.Type')
   }.
 
--spec type_expr( any(), clj_env:env()) -> map().
+-spec type_expr(any(), clj_env:env()) -> map().
 type_expr(Value, Env) ->
-  Type = clj_rt:type_module(Value),
- #{ op   => type
-  , env  => Env
-  , type => clj_rt:symbol(atom_to_binary(Type, utf8))
-  }.
+  Type    = clj_rt:type_module(Value),
+  TypeSym = clj_rt:symbol(atom_to_binary(Type, utf8)),
+  type_expr(TypeSym, TypeSym, Env).
 
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
 
@@ -2074,7 +2129,7 @@ is_maybe_type(Symbol) ->
 %%------------------------------------------------------------------------------
 
 -spec wrapping_meta(map(), clj_env:env()) -> clj_env:env().
-wrapping_meta(#{form := Form, tag := Tag} = Expr, Env) ->
+wrapping_meta(#{form := Form, tag := TagExpr} = Expr, Env) ->
   Meta = case clj_rt:'meta?'(Form) of
            true  -> clj_reader:remove_location(clj_rt:meta(Form));
            false -> ?NIL
@@ -2085,9 +2140,9 @@ wrapping_meta(#{form := Form, tag := Tag} = Expr, Env) ->
       WithMetaExpr = #{ op   => with_meta
                       , env  => Env
                       , form => Form
-                      , tag  => Tag
                       , meta => MetaExpr
                       , expr => Expr
+                      , tag  => TagExpr
                       },
       clj_env:push_expr(WithMetaExpr, Env1);
     Meta ->
@@ -2109,8 +2164,8 @@ analyze_vector(Vector, Env0) ->
   VectorExpr = #{ op    => vector
                 , env   => Env0
                 , form  => Vector
-                , tag   => type_expr(Vector, Env0)
                 , items => ItemsExpr
+                , tag   => type_expr(Vector, Env0)
                 },
 
   wrapping_meta(VectorExpr, clj_env:pop(Env3)).
@@ -2135,9 +2190,9 @@ analyze_map(Map, Env0) ->
   MapExpr = #{ op   => map
              , env  => Env0
              , form => Map
-             , tag  => type_expr(Map, Env0)
              , keys => KeysExpr
              , vals => ValsExpr
+             , tag  => type_expr(Map, Env0)
              },
 
   wrapping_meta(MapExpr, clj_env:pop(Env5)).
@@ -2162,9 +2217,9 @@ analyze_erl_map(Map, Env0) ->
   MapExpr = #{ op   => erl_map
              , env  => Env0
              , form => Map
-             , tag  => type_expr(Map, Env0)
              , keys => KeysExpr
              , vals => ValsExpr
+             , tag  => type_expr(Map, Env0)
              },
 
   wrapping_meta(MapExpr, clj_env:pop(Env5)).
@@ -2185,8 +2240,8 @@ analyze_set(Set, Env0) ->
   SetExpr = #{ op    => set
              , env   => Env0
              , form  => Set
-             , tag   => type_expr(Set, Env0)
              , items => ItemsExpr
+             , tag   => type_expr(Set, Env0)
              },
 
   wrapping_meta(SetExpr, clj_env:pop(Env3)).
@@ -2208,8 +2263,8 @@ analyze_tuple(Tuple, Env0) ->
   TupleExpr = #{ op    => tuple
                , env   => Env0
                , form  => Tuple
-               , tag   => type_expr(Tuple, Env0)
                , items => ItemsExpr
+               , tag   => type_expr(Tuple, Env0)
                },
 
   clj_env:push_expr(TupleExpr, clj_env:pop(Env3)).
@@ -2239,9 +2294,9 @@ parse_receive(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  {ClausesExprs, Default, Env1} = parse_patterns_bodies(Clauses, Env),
+  {ClausesExprs, DefaultExpr, Env1} = parse_patterns_bodies(Clauses, Env),
 
-  clj_utils:error_when( Default =/= ?NIL
+  clj_utils:error_when( DefaultExpr =/= ?NIL
                       , [ <<"Expected an even number of forms in"
                             " a receive expression, got: ">>
                         , length(ClausesExprs) + 1
@@ -2256,11 +2311,13 @@ parse_receive(List, Env) ->
                           clj_env:pop_expr(parse_after(After, Env1))
                       end,
 
+  BodyExprs   = [B || {_, B} <- ClausesExprs],
   ReceiveExpr = #{ op      => 'receive'
                  , env     => Env
                  , form    => List
                  , clauses => ClausesExprs
                  , 'after' => AfterExpr
+                 , tag     => resolve_exprs_type_tag(BodyExprs)
                  },
 
   clj_env:push_expr(ReceiveExpr, Env2).
@@ -2280,6 +2337,7 @@ parse_after(List, Env) ->
                , form    => List
                , timeout => TimeoutExpr
                , body    => BodyExpr
+               , tag     => type_tag(BodyExpr)
                },
 
   clj_env:push_expr(AfterExpr, Env2).
@@ -2302,6 +2360,7 @@ parse_erlang_binary(List, Env0) ->
                 , env      => Env0
                 , form     => List
                 , segments => SegmentsExprs
+                , tag      => type_expr(<<>>, Env0)
                 },
 
   clj_env:push_expr(BinaryExpr, Env2).
@@ -2335,6 +2394,7 @@ parse_segment(Segment0, Env0) ->
                  , unit  => UnitExpr
                  , type  => TypeExpr
                  , flags => FlagsExpr
+                 , tag   => ?NO_TAG
                  },
 
   clj_env:push_expr(SegmentExpr, Env5).
@@ -2482,6 +2542,7 @@ parse_erlang_list(List, Env0) ->
               , form    => List
               , items   => ItemsExprs
               , tail    => TailExpr
+              , tag     => type_expr([], Env0)
               },
 
   clj_env:push_expr(ListExpr, Env2).
@@ -2526,6 +2587,7 @@ parse_erlang_alias(List, Env0) ->
                  , form     => List
                  , variable => VariableExpr
                  , pattern  => PatternExpr
+                 , tag      => type_tag(VariableExpr)
                  },
 
   clj_env:push_expr(MatchExpr, Env2).
@@ -2544,6 +2606,7 @@ parse_on_load(List, Env0) ->
           , env   => Env0
           , form  => List
           , body  => BodyExpr
+          , tag   => ?NO_TAG
           },
 
   clj_env:push_expr(Expr, Env).
