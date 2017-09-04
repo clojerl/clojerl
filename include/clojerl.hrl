@@ -3,6 +3,7 @@
 -define(NIL_TYPE, 'clojerl.Nil').
 
 -define(NO_TAG, no_tag).
+-define(RECUR_TAG, recur_tag).
 
 %% Use a value that would be invalid for a keyword literal
 -define(TYPE, '7ype').
