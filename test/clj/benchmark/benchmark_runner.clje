@@ -3,7 +3,7 @@
 
 (defrecord Foo [bar baz])
 
-(defn run []
+(defn -main [& args]
   (simple-benchmark [x 1] (identity x) 1000000)
 
   (println ";; symbol construction")
@@ -196,5 +196,3 @@
   (simple-benchmark [f vector] (f 1 2 3 4 5 6 7 8 9 0) 100000)
   (simple-benchmark [] (= 1 1 1 1 1 1 1 1 1 0) 100000)
   )
-
-(run)

@@ -66,8 +66,7 @@ clojure: clojure.core $(call clj_to,${CLJ_FILES},)
 
 benchmark: all
 	${V} cp ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
-	${V} ${CLOJERLC} --time -pa `rebar3 path --ebin` ${CLJ_TEST}/benchmark/benchmark_runner${EXT} | \
-	tee ${CLJ_TEST}/benchmark/result.txt
+	${V} (time ${CLOJERLMAIN} -m benchmark.benchmark-runner) 2>&1 | tee ${CLJ_TEST}/benchmark/result.txt
 	${V} ${CLOJERLMAIN} -m benchmark.report ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
 
 # This target is special since it is built from two sources erl and clj
