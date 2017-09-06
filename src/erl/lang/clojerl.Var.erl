@@ -181,8 +181,11 @@ str(#?TYPE{name = ?M, data = {Ns, Name}}) ->
 deref(#?TYPE{name = ?M, data = {Ns, Name}} = Var) ->
   Module      = module(Var),
   FunctionVal = val_function(Var),
-  %% HACK
-  Fun         = clj_module:fake_fun(Module, FunctionVal, 0),
+
+  Fun = case erlang:get(clj_compiling) of
+          undefined -> fun Module:FunctionVal/0;
+          true      -> clj_module:fake_fun(Module, FunctionVal, 0)
+        end,
 
   try
     %% Make the call in case the module is not loaded and handle the case
@@ -221,10 +224,14 @@ apply(#?TYPE{name = ?M} = Var, Args0) ->
   Module         = module(Var),
   Function       = function(Var),
   {Arity, Args1} = process_args(Var, Args0, fun clj_rt:seq/1),
-  %% HACK
-  Fun            = clj_module:fake_fun(Module, Function, Arity),
 
-  erlang:apply(Fun, Args1).
+  case erlang:get(clj_compiling) of
+    undefined ->
+      erlang:apply(Module, Function, Args1);
+    true ->
+      Fun = clj_module:fake_fun(Module, Function, Arity),
+      erlang:apply(Fun, Args1)
+  end.
 
 -spec process_args(type(), [any()], function()) -> {arity(), [any()]}.
 process_args(#?TYPE{name = ?M} = Var, Args, RestFun) ->
