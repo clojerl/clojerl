@@ -77,7 +77,14 @@ empty(_) -> #{}.
 
 %% clojerl.IEquiv
 
+equiv(X, #{?TYPE := _} = Y) when is_map(X) ->
+  equiv_other(X, Y);
 equiv(X, Y) when is_map(X), is_map(Y) ->
+  equiv_erl_maps(X, Y);
+equiv(X, Y) when is_map(X) ->
+  equiv_other(X, Y).
+
+equiv_erl_maps(X, Y) ->
   case maps:size(X) =:= maps:size(Y) of
     false -> false;
     true  ->
@@ -86,27 +93,26 @@ equiv(X, Y) when is_map(X), is_map(Y) ->
 
       FunEquiv = fun(K) ->
                      maps:is_key(K, Y1)
-                       andalso clj_rt:equiv( maps:get(K, X1)
-                                             , maps:get(K, Y1))
+                     andalso clj_rt:equiv(maps:get(K, X1), maps:get(K, Y1))
                  end,
 
       lists:all(FunEquiv, maps:keys(X1))
-  end;
-equiv(X, Y) when is_map(X) ->
-  case clj_rt:'map?'(Y) of
-    true  ->
-      Keys = clj_rt:keys(Y),
-      Fun = fun(Key) ->
-                maps:is_key(Key, X) andalso
-                  clj_rt:equiv(maps:get(Key, X), clj_rt:get(Y, Key))
+  end.
+
+equiv_other(X, Y) ->
+  case clj_rt:'map?'(Y) andalso maps:size(X) =:= clj_rt:count(Y) of
+    true ->
+      Keys = maps:keys(X),
+      Fun = fun(K) ->
+                clj_rt:'contains?'(Y, K)
+                andalso clj_rt:equiv(maps:get(K, X), clj_rt:get(Y, K))
             end,
-      maps:size(X) == clj_rt:count(Y)
-        andalso lists:all(Fun, Keys);
+      lists:all(Fun, Keys);
     false -> false
   end.
 
-remove_meta(#?TYPE{} = K, V, Acc) ->
-  K1 = K#?TYPE{info = #{}},
+remove_meta(#{?TYPE := _, meta := _} = K, V, Acc) ->
+  K1 = K#{meta => ?NIL},
   Acc#{K1 => V};
 remove_meta(K, V, Acc) ->
   Acc#{K => V}.

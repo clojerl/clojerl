@@ -91,7 +91,7 @@ close(_Config) ->
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(<<"hello\nworld!\n">>),
-  Pid    = Writer#?TYPE.data,
+  Pid    = maps:get(pid, Writer),
 
   ct:comment("Get the length"),
   13 = clj_rt:count(Writer),

@@ -140,7 +140,7 @@ at_line_start(_Config) ->
 
   ct:comment("At line start fails"),
   FakePid = spawn_link(fun fake_loop/0),
-  FakeReader = Reader#?TYPE{data = FakePid},
+  FakeReader = Reader#{pid => FakePid},
   ok = try 'erlang.io.PushbackReader':at_line_start(FakeReader), error
        catch _:_ -> ok
        end,
@@ -164,7 +164,7 @@ close(_Config) ->
 complete_coverage(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
-  Pid    = Reader#?TYPE.data,
+  Pid    = maps:get(pid, Reader),
 
   ct:comment("Send an unexpected message"),
   Pid ! {},

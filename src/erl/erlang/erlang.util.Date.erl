@@ -17,35 +17,36 @@
 -export([hash/1]).
 -export([equiv/2]).
 
--type type() :: #?TYPE{data :: calendar:datetime()}.
+-type type() :: #{ ?TYPE => ?M
+                 , date  => calendar:datetime()
+                 }.
 
 -spec ?CONSTRUCTOR(calendar:datetime()) -> type().
-?CONSTRUCTOR(Date) -> #?TYPE{data = Date}.
+?CONSTRUCTOR(Date) -> #{?TYPE => ?M, date => Date}.
 
 -spec year(type()) -> integer().
-year(#?TYPE{name = ?M, data = {{Y, _, _}, _}}) -> Y.
+year(#{?TYPE := ?M, date := {{Y, _, _}, _}}) -> Y.
 
 -spec month(type()) -> integer().
-month(#?TYPE{name = ?M, data = {{_, M, _}, _}}) -> M.
+month(#{?TYPE := ?M, date := {{_, M, _}, _}}) -> M.
 
 -spec day(type()) -> integer().
-day(#?TYPE{name = ?M, data = {{_, _, D}, _}}) -> D.
+day(#{?TYPE := ?M, date := {{_, _, D}, _}}) -> D.
 
 -spec hours(type()) -> integer().
-hours(#?TYPE{name = ?M, data = {_, {H, _, _}}}) -> H.
+hours(#{?TYPE := ?M, date := {_, {H, _, _}}}) -> H.
 
 -spec minutes(type()) -> integer().
-minutes(#?TYPE{name = ?M, data = {_, {_, M, _}}}) -> M.
+minutes(#{?TYPE := ?M, date := {_, {_, M, _}}}) -> M.
 
 -spec seconds(type()) -> integer().
-seconds(#?TYPE{name = ?M, data = {_, {_, _, S}}}) -> S.
+seconds(#{?TYPE := ?M, date := {_, {_, _, S}}}) -> S.
 
 %% -----------------------------------------------------------------------------
 %% Protocols
 %% -----------------------------------------------------------------------------
 
-hash(Date) ->
-  erlang:phash2(Date).
+hash(Date) -> erlang:phash2(Date).
 
-equiv(#?TYPE{data = Date}, #?TYPE{data = Date}) -> true;
+equiv( #{?TYPE := ?M, date := Date}, #{?TYPE := ?M, date := Date}) -> true;
 equiv(_ , _) -> false.

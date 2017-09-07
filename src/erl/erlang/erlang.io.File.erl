@@ -22,7 +22,10 @@
 -export([str/1]).
 
 -type path() :: binary().
--type type() :: #?TYPE{data :: pid() | file:fd()}.
+-type type() :: #{ ?TYPE => ?M
+                 , pid   => pid() | file:fd()
+                 , path  => path()
+                 }.
 
 -spec open(path()) -> type().
 open(Path) when is_binary(Path) ->
@@ -31,12 +34,12 @@ open(Path) when is_binary(Path) ->
 -spec open(path(), [atom()]) -> type().
 open(Path, Modes) when is_binary(Path) ->
   case file:open(Path, Modes) of
-    {ok, Pid}       -> #?TYPE{data = Pid, info = #{path => Path}};
+    {ok, Pid}       -> #{?TYPE => ?M, pid => Pid, path => Path};
     {error, Reason} -> error(Reason)
   end.
 
 -spec path(type()) -> binary().
-path(#?TYPE{name = ?M, info = #{path := Path}}) ->
+path(#{?TYPE := ?M, path := Path}) ->
   Path.
 
 -spec make_temp(binary(), binary()) -> type().
@@ -62,7 +65,7 @@ tmp_dir() ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-close(#?TYPE{name = ?M, data = Pid, info = #{path := Path}}) ->
+close(#{?TYPE := ?M, pid := Pid, path := Path}) ->
   case file:close(Pid) of
     {error, _Reason} ->
       error(<<"Couldn't close ", Path/binary>>);
@@ -73,29 +76,29 @@ close(#?TYPE{name = ?M, data = Pid, info = #{path := Path}}) ->
 read(File) ->
   read(File, 1).
 
-read(#?TYPE{name = ?M, data = Pid}, Length) ->
+read(#{?TYPE := ?M, pid := Pid}, Length) ->
   case io:get_chars(Pid, "", Length) of
     eof -> eof;
     Str -> list_to_binary(Str)
   end.
 
-read_line(#?TYPE{name = ?M, data = Pid}) ->
+read_line(#{?TYPE := ?M, pid := Pid}) ->
   case io:request(Pid, {get_line, unicode, ""}) of
     eof -> eof;
     Str -> list_to_binary(Str)
   end.
 
-skip(#?TYPE{name = ?M}, _Length) ->
+skip(#{?TYPE := ?M}, _Length) ->
   TypeName = atom_to_binary(?MODULE, utf8),
   error(<<"Unsupported operation: skip for ", TypeName/binary>>).
 
-write(#?TYPE{name = ?M, data = Pid} = SW, Str) ->
+write(#{?TYPE := ?M, pid := Pid} = SW, Str) ->
   ok = io:put_chars(Pid, Str),
   SW.
 
-write(#?TYPE{name = ?M, data = Pid} = SW, Format, Values) ->
+write(#{?TYPE := ?M, pid := Pid} = SW, Format, Values) ->
   ok = io:fwrite(Pid, Format, clj_rt:to_list(Values)),
   SW.
 
-str(#?TYPE{name = ?M, info = #{path := Path}}) ->
+str(#{?TYPE := ?M, path := Path}) ->
   <<"#<erlang.io.File ", Path/binary, ">">>.

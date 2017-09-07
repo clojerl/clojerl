@@ -11,12 +11,7 @@
 -define(CONSTRUCTOR, '__new__').
 -define(UNBOUND, '__unbound__').
 
--record(?TYPE, { name = ?M  :: atom()
-               , data       :: any()
-               , info = #{} :: map()
-               }).
-
--define(IS_TYPE(X), (is_tuple(X) andalso element(1, X) == ?TYPE)).
+-define(IS_TYPE(X), (is_map(X) andalso maps:is_key(?TYPE, X))).
 
 %% default type for protocol
 -define(DEFAULT_TYPE, 'clojerl.Default').

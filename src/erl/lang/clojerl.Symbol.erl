@@ -22,7 +22,11 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: {?NIL | binary(), binary()}}.
+-type type() :: #{ ?TYPE => ?M
+                 , ns    => ?NIL | binary()
+                 , name  => binary()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Name) when is_binary(Name) ->
@@ -32,7 +36,11 @@
 ?CONSTRUCTOR(Namespace, Name)
   when is_binary(Namespace) orelse Namespace == ?NIL,
        is_binary(Name) ->
-  #?TYPE{data = {Namespace, Name}}.
+  #{ ?TYPE => ?M
+   , ns    => Namespace
+   , name  => Name
+   , meta  => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -40,9 +48,9 @@
 
 %% clojerl.IFn
 
-apply(#?TYPE{name = ?M} = Symbol, [Map]) ->
+apply(#{?TYPE := ?M} = Symbol, [Map]) ->
   clj_rt:get(Map, Symbol);
-apply(#?TYPE{name = ?M} = Symbol, [Map, NotFound]) ->
+apply(#{?TYPE := ?M} = Symbol, [Map, NotFound]) ->
   clj_rt:get(Map, Symbol, NotFound);
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -50,26 +58,26 @@ apply(_, Args) ->
 
 %% clojerl.IStringable
 
-str(#?TYPE{name = ?M, data = {?NIL, Name}}) ->
+str(#{?TYPE := ?M, ns := ?NIL, name := Name}) ->
   Name;
-str(#?TYPE{name = ?M, data = {Namespace, Name}}) ->
-  <<Namespace/binary, "/", Name/binary>>.
+str(#{?TYPE := ?M, ns := Ns, name := Name}) ->
+  <<Ns/binary, "/", Name/binary>>.
 
-name(#?TYPE{name = ?M, data = {_, Name}}) -> Name.
+name(#{?TYPE := ?M, name := Name}) -> Name.
 
-namespace(#?TYPE{name = ?M, data = {Namespace, _}}) ->
-  Namespace.
+namespace(#{?TYPE := ?M, ns := Ns}) -> Ns.
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = Keyword, Metadata) ->
-  Keyword#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Symbol, Metadata) ->
+  Symbol#{meta => Metadata}.
 
-equiv(#?TYPE{name = ?M, data = X}, #?TYPE{name = ?M, data = X}) ->
+equiv( #{?TYPE := ?M, ns := Ns, name := Name}
+     , #{?TYPE := ?M, ns := Ns, name := Name}
+     ) ->
   true;
 equiv(_, _) ->
   false.
 
-hash(#?TYPE{name = ?M, data = Data}) ->
-  erlang:phash2(Data).
+hash(#{?TYPE := ?M, ns := Ns, name := Name}) ->
+  erlang:phash2({Ns, Name}).

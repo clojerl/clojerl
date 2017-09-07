@@ -132,16 +132,17 @@ analyze_forms(Forms, Env) ->
 
 -spec analyze_form(any(), clj_env:env()) -> clj_env:env().
 analyze_form(Form, Env) ->
-  IsSeq    = clj_rt:'seq?'(Form),
-  IsSymbol = clj_rt:'symbol?'(Form),
-  IsRecord = clj_rt:'record?'(Form),
-  IsType   = clj_rt:'type?'(Form),
-  IsVector = clj_rt:'vector?'(Form),
-  IsMap    = clj_rt:'map?'(Form),
-  IsErlMap = is_map(Form),
-  IsSet    = clj_rt:'set?'(Form),
-  IsVar    = clj_rt:'var?'(Form),
-  IsTuple  = erlang:is_tuple(Form),
+  IsSeq     = clj_rt:'seq?'(Form),
+  IsSymbol  = clj_rt:'symbol?'(Form),
+  IsRecord  = clj_rt:'record?'(Form),
+  IsType    = clj_rt:'type?'(Form),
+  IsVector  = clj_rt:'vector?'(Form),
+  IsMap     = clj_rt:'map?'(Form),
+  IsMapType = ?IS_TYPE(Form),
+  IsErlMap  = is_map(Form),
+  IsSet     = clj_rt:'set?'(Form),
+  IsVar     = clj_rt:'var?'(Form),
+  IsTuple   = erlang:is_tuple(Form),
   if
     IsSeq ->
       case clj_rt:'empty?'(Form) of
@@ -156,13 +157,13 @@ analyze_form(Form, Env) ->
       analyze_const(Form, Env);
     IsVector ->
       analyze_vector(Form, Env);
-    IsErlMap ->
+    IsErlMap andalso not IsMapType ->
       analyze_erl_map(Form, Env);
     IsMap ->
       analyze_map(Form, Env);
     IsSet ->
       analyze_set(Form, Env);
-    IsTuple andalso element(1, Form) =/= ?TYPE ->
+    IsTuple ->
       analyze_tuple(Form, Env);
     IsVar ->
       %% The var's metadata should already have been analyzed
@@ -932,13 +933,14 @@ add_pattern_local(LocalExpr, Env) ->
 -spec parse_pattern(any(), clj_env:env()) -> clj_env:env().
 parse_pattern(Form, Env) ->
   IsSymbol = clj_rt:'symbol?'(Form),
+  IsType   = ?IS_TYPE(Form),
   Mapping  = #{in_pattern => true},
   Env1     = clj_env:push(Mapping, Env),
   Env2     =
     if
       IsSymbol ->
         analyze_symbol(Form, Env1);
-      is_map(Form) ->
+      is_map(Form) andalso not IsType ->
         Keys  = maps:keys(Form),
         Vals  = maps:values(Form),
         Count = maps:size(Form),
@@ -956,7 +958,7 @@ parse_pattern(Form, Env) ->
                , tag     => type_expr(Form, Env)
                },
         clj_env:push_expr(Ast, InnerEnv2);
-      is_tuple(Form), not ?IS_TYPE(Form) ->
+      is_tuple(Form) ->
         Vals = tuple_to_list(Form),
 
         InnerEnv0 = lists:foldl(fun parse_pattern/2, Env1, Vals),
@@ -2404,7 +2406,7 @@ segment_to_list(Binary) when is_binary(Binary) ->
   [Binary, type,  binary];
 segment_to_list(Integer) when is_number(Integer) ->
   [Integer, type, integer];
-segment_to_list(X) when ?IS_TYPE(X) ->
+segment_to_list(#{?TYPE := _} = X) ->
   IsVector = clj_rt:'vector?'(X),
   IsSymbol = clj_rt:'symbol?'(X),
   if

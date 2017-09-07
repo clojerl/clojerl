@@ -41,55 +41,57 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE => ?M
+                 , items => list()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Items) when is_list(Items) ->
-  #?TYPE{data = Items};
+  #{?TYPE => ?M, items => Items, meta => ?NIL};
 ?CONSTRUCTOR(?NIL) ->
-  #?TYPE{data = []};
+  ?CONSTRUCTOR([]);
 ?CONSTRUCTOR(Items) ->
-  #?TYPE{data = clj_rt:to_list(Items)}.
+  ?CONSTRUCTOR(clj_rt:to_list(Items)).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = Items}) -> length(Items).
+count(#{?TYPE := ?M, items := Items}) -> length(Items).
 
-cons(#?TYPE{name = ?M, data = []} = List, X) ->
-  List#?TYPE{data = [X]};
-cons(#?TYPE{name = ?M, data = Items} = List, X) ->
-  List#?TYPE{data = [X | Items]}.
+cons(#{?TYPE := ?M, items := []} = List, X) ->
+  List#{items => [X]};
+cons(#{?TYPE := ?M, items := Items} = List, X) ->
+  List#{items => [X | Items]}.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
+equiv( #{?TYPE := ?M, items := X}
+     , #{?TYPE := ?M, items := Y}
      ) ->
   clj_rt:equiv(X, Y);
-equiv(#?TYPE{name = ?M, data = X}, Y) ->
+equiv(#{?TYPE := ?M, items := X}, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(X, Y);
     false -> false
   end.
 
-hash(#?TYPE{name = ?M, data = X}) ->
+hash(#{?TYPE := ?M, items := X}) ->
   clj_murmur3:ordered(X).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = List, Metadata) ->
-  List#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = List, Metadata) ->
+  List#{meta => Metadata}.
 
-reduce(#?TYPE{name = ?M, data = []}, F) ->
+reduce(#{?TYPE := ?M, items := []}, F) ->
   clj_rt:apply(F, []);
-reduce(#?TYPE{name = ?M, data = [First | Rest]}, F) ->
+reduce(#{?TYPE := ?M, items := [First | Rest]}, F) ->
   do_reduce(F, First, Rest).
 
-reduce(#?TYPE{name = ?M, data = List}, F, Init) ->
-  do_reduce(F, Init, List).
+reduce(#{?TYPE := ?M, items := Items}, F, Init) ->
+  do_reduce(F, Init, Items).
 
 do_reduce(F, Acc, [First | Items]) ->
   Val = clj_rt:apply(F, [Acc, First]),
@@ -100,34 +102,34 @@ do_reduce(F, Acc, [First | Items]) ->
 do_reduce(_F, Acc, []) ->
   Acc.
 
-first(#?TYPE{name = ?M, data = []}) -> ?NIL;
-first(#?TYPE{name = ?M, data = [First | _]}) -> First.
+first(#{?TYPE := ?M, items := []}) -> ?NIL;
+first(#{?TYPE := ?M, items := [First | _]}) -> First.
 
-next(#?TYPE{name = ?M, data = []}) -> ?NIL;
-next(#?TYPE{name = ?M, data = [_ | []]}) -> ?NIL;
-next(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
-  List#?TYPE{name = ?M, data = Rest}.
+next(#{?TYPE := ?M, items := []}) -> ?NIL;
+next(#{?TYPE := ?M, items := [_ | []]}) -> ?NIL;
+next(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
+  List#{items => Rest}.
 
-more(#?TYPE{name = ?M, data = []}) -> ?NIL;
-more(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
-  List#?TYPE{data = Rest}.
+more(#{?TYPE := ?M, items := []}) -> ?NIL;
+more(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
+  List#{items => Rest}.
 
 '_'(_) -> ?NIL.
 
-peek(#?TYPE{name = ?M, data = List}) ->
-  clj_rt:peek(List).
+peek(#{?TYPE := ?M, items := Items}) ->
+  clj_rt:peek(Items).
 
-pop(#?TYPE{name = ?M, data = []} = List) ->
+pop(#{?TYPE := ?M, items := []} = List) ->
   List;
-pop(#?TYPE{name = ?M, data = [_ | Rest]} = List) ->
-  List#?TYPE{data = Rest}.
+pop(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
+  List#{items => Rest}.
 
-seq(#?TYPE{name = ?M, data = []}) -> ?NIL;
-seq(#?TYPE{name = ?M, data = Seq}) -> Seq.
+seq(#{?TYPE := ?M, items := []}) -> ?NIL;
+seq(#{?TYPE := ?M, items := Seq}) -> Seq.
 
-to_list(#?TYPE{name = ?M, data = List}) -> List.
+to_list(#{?TYPE := ?M, items := Items}) -> Items.
 
-str(#?TYPE{name = ?M, data = []}) ->
+str(#{?TYPE := ?M, items := []}) ->
   <<"()">>;
-str(#?TYPE{name = ?M} = List) ->
+str(#{?TYPE := ?M} = List) ->
   clj_rt:print(List).

@@ -21,36 +21,40 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: pid()}.
+-type type() :: #{ ?TYPE => ?M
+                 , pid   => pid()
+                 }.
 
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Str) when is_binary(Str) ->
-  #?TYPE{data = start_link(Str)}.
+  #{ ?TYPE => ?M
+   , pid   => start_link(Str)
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-close(#?TYPE{name = ?M, data = Pid}) ->
+close(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, close) of
     {error, _} -> error(<<"Couldn't close erlang.io.StringReader">>);
     _          -> ?NIL
   end.
 
-str(#?TYPE{name = ?M, data = Pid}) ->
+str(#{?TYPE := ?M, pid := Pid}) ->
   <<_/utf8, PidStr/binary>> = erlang:list_to_binary(erlang:pid_to_list(Pid)),
   <<"#<erlang.io.StringReader ", PidStr/binary>>.
 
-read(#?TYPE{name = ?M, data = Pid}) ->
+read(#{?TYPE := ?M, pid := Pid}) ->
   io:get_chars(Pid, "", 1).
 
-read(#?TYPE{name = ?M, data = Pid}, Length) ->
+read(#{?TYPE := ?M, pid := Pid}, Length) ->
   io:get_chars(Pid, "", Length).
 
-read_line(#?TYPE{name = ?M, data = Pid}) ->
+read_line(#{?TYPE := ?M, pid := Pid}) ->
   io:request(Pid, {get_line, unicode, ""}).
 
-skip(#?TYPE{name = ?M, data = Pid}, Length) ->
+skip(#{?TYPE := ?M, pid := Pid}, Length) ->
   io:request(Pid, {get_until, unicode, "", ?MODULE, skip, [Length]}).
 
 %%------------------------------------------------------------------------------

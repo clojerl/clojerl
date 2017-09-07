@@ -42,7 +42,12 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: {integer(), integer(), integer()}}.
+-type type() :: #{ ?TYPE => ?M
+                 , start => integer()
+                 , 'end' => integer()
+                 , step  => integer()
+                 , meta  => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(integer(), integer(), integer()) -> type().
 ?CONSTRUCTOR(Start, End, Step) when Step > 0, End =< Start;
@@ -50,21 +55,26 @@
                                     Start == End ->
   [];
 ?CONSTRUCTOR(Start, End, Step) ->
-  #?TYPE{data = {Start, End, Step}}.
+  #{ ?TYPE => ?M
+   , start => Start
+   , 'end' => End
+   , step  => Step
+   , meta  => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-count(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
+count(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   (End - Start + Step) div Step - 1.
 
-cons(#?TYPE{name = ?M} = Range, X) ->
+cons(#{?TYPE := ?M} = Range, X) ->
   'clojerl.Cons':?CONSTRUCTOR(X, Range).
 
 empty(_) -> [].
 
-chunked_first(#?TYPE{name = ?M, data = {Start0, End0, Step0}}) ->
+chunked_first(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   End1    = Start0 + ?CHUNK_SIZE * Step0,
   End2    = case Step0 >= 0 of
               true  -> lists:min([End0, End1]);
@@ -74,36 +84,35 @@ chunked_first(#?TYPE{name = ?M, data = {Start0, End0, Step0}}) ->
   Tuple   = list_to_tuple(Numbers),
   'clojerl.TupleChunk':?CONSTRUCTOR(Tuple).
 
-chunked_next(#?TYPE{name = ?M} = Range) ->
+chunked_next(#{?TYPE := ?M} = Range) ->
   clj_rt:seq(chunked_more(Range)).
 
-chunked_more(#?TYPE{name = ?M, data = {Start0, End0, Step0}}) ->
+chunked_more(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   Start1 = Start0 + ?CHUNK_SIZE * Step0,
   ?CONSTRUCTOR(Start1, End0, Step0).
 
-equiv( #?TYPE{name = ?M, data = X}
-     , #?TYPE{name = ?M, data = Y}
+equiv( #{?TYPE := ?M, start := Start, 'end' := End, step := Step}
+     , #{?TYPE := ?M, start := Start, 'end' := End, step := Step}
      ) ->
-  clj_rt:equiv(X, Y);
-equiv(#?TYPE{name = ?M} = X, Y) ->
+  true;
+equiv(#{?TYPE := ?M} = X, Y) ->
   case clj_rt:'sequential?'(Y) of
     true  -> clj_rt:equiv(to_list(X), Y);
     false -> false
   end.
 
-hash(#?TYPE{name = ?M} = X) ->
+hash(#{?TYPE := ?M} = X) ->
   clj_murmur3:ordered(to_list(X)).
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = Range, Metadata) ->
-  Range#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Range, Metadata) ->
+  Range#{meta => Metadata}.
 
-reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F) ->
+reduce(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}, F) ->
   do_reduce(F, Start, Start + Step, End, Step).
 
-reduce(#?TYPE{name = ?M, data = {Start, End, Step}}, F, Init) ->
+reduce(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}, F, Init) ->
   do_reduce(F, Init, Start, End, Step).
 
 do_reduce(_F, Acc, Start, End, Step) when
@@ -117,30 +126,30 @@ do_reduce(F, Acc, Start, End, Step) ->
     false -> do_reduce(F, Val, Start + Step, End, Step)
   end.
 
-first(#?TYPE{name = ?M, data = {Start, _, _}}) -> Start.
+first(#{?TYPE := ?M, start := Start}) -> Start.
 
-next(#?TYPE{name = ?M, data = {Start, End, Step}}) when
+next(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) when
     Step > 0, Start + Step >= End;
     Step < 0, Start + Step =< End ->
   ?NIL;
-next(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
+next(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
 
-more(#?TYPE{name = ?M, data = {Start, End, Step}}) when
+more(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) when
     Step > 0, Start + Step >= End;
     Step < 0, Start + Step =< End ->
   [];
-more(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
+more(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
 
 '_'(_) -> ?NIL.
 
-seq(#?TYPE{name = ?M} = Seq) -> Seq.
+seq(#{?TYPE := ?M} = Seq) -> Seq.
 
-to_list(#?TYPE{name = ?M, data = {Start, End, Step}}) ->
+to_list(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   to_list(Start, End, Step).
 
-str(#?TYPE{name = ?M} = Range) ->
+str(#{?TYPE := ?M} = Range) ->
   clj_rt:print(Range).
 
 %%------------------------------------------------------------------------------

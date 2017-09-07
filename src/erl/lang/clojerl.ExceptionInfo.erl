@@ -18,10 +18,11 @@
 -export([hash/1]).
 -export([str/1]).
 
--type type() :: #?TYPE{data :: #{ message   => binary()
-                                , data  => any()
-                                , cause => any()
-                                }}.
+-type type() :: #{ ?TYPE   => ?M
+                 , message => binary()
+                 , data    => any()
+                 , cause   => any()
+                 }.
 
 -spec ?CONSTRUCTOR(binary(), any()) -> type().
 ?CONSTRUCTOR(Message, Data) when is_binary(Message) ->
@@ -32,7 +33,11 @@
   clj_utils:error_when( Data =:= ?NIL
                       , <<"Additional data must be non-nil.">>
                       ),
-  #?TYPE{data = #{message => Message, data => Data, cause => Cause}}.
+  #{?TYPE    => ?M
+   , message => Message
+   , data    => Data
+   , cause   => Cause
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -40,32 +45,34 @@
 
 %% clojerl.IEquiv
 
-equiv(#?TYPE{name = ?M, data = X}, #?TYPE{name = ?M, data = X}) ->
+equiv( #{?TYPE := ?M, message := Msg, data := Data, cause := Cause}
+     , #{?TYPE := ?M, message := Msg, data := Data, cause := Cause}
+     ) ->
   true;
 equiv(_, _) ->
   false.
 
 %% clojerl.IError
 
-message(#?TYPE{name = ?M, data = #{message := Message}}) ->
-  Message.
+message(#{?TYPE := ?M, message := Msg}) ->
+  Msg.
 
 %% clojerl.IExceptionInfo
 
-data(#?TYPE{name = ?M, data = #{data := Data}}) ->
+data(#{?TYPE := ?M, data := Data}) ->
   Data.
 
-cause(#?TYPE{name = ?M, data = #{cause := Cause}}) ->
+cause(#{?TYPE := ?M, cause := Cause}) ->
   Cause.
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M, data = Data}) ->
+hash(#{?TYPE := ?M, data := Data}) ->
   erlang:phash2(Data).
 
 %% clojerl.IStringable
 
-str(#?TYPE{name = ?M, data = #{message := Message, data := Data}}) ->
+str(#{?TYPE := ?M, message := Msg, data := Data}) ->
   TypeBin = erlang:atom_to_binary(?MODULE, utf8),
   DataBin = clj_rt:str(Data),
-  <<TypeBin/binary, ": ", Message/binary, " ", DataBin/binary>>.
+  <<TypeBin/binary, ": ", Msg/binary, " ", DataBin/binary>>.

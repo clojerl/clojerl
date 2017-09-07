@@ -34,19 +34,31 @@
         ]).
 -export([str/1]).
 
--type type() :: #?TYPE{}.
+-type type() :: #{ ?TYPE  => ?M
+                 , hashes => map()
+                 , dict   => any()
+                 , meta   => ?NIL | any()
+                 }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
   Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
-  #?TYPE{data = {maps:from_list(Hashes), rbdict:from_list(Vals)}}.
+  #{ ?TYPE  => ?M
+   , hashes => maps:from_list(Hashes)
+   , dict   => rbdict:from_list(Vals)
+   , meta   => ?NIL
+   }.
 
 -spec ?CONSTRUCTOR(function(), list()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
   Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
-  #?TYPE{data = {maps:from_list(Hashes), rbdict:from_list(Compare, Vals)}}.
+  #{ ?TYPE  => ?M
+   , hashes => maps:from_list(Hashes)
+   , dict   => rbdict:from_list(Compare, Vals)
+   , meta   => ?NIL
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -54,31 +66,33 @@
 
 %% clojerl.ICounted
 
-count(#?TYPE{name = ?M, data = {Hashes, _}}) -> maps:size(Hashes).
+count(#{?TYPE := ?M, hashes := Hashes}) -> maps:size(Hashes).
 
 %% clojerl.IColl
 
-cons(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, X) ->
+cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, X) ->
   Hash = 'clojerl.IHash':hash(X),
   case maps:is_key(Hash, Hashes) of
     true  -> S;
-    false -> S#?TYPE{data = {Hashes#{Hash => X}, rbdict:store(X, true, Vals)}}
+    false -> S#{ hashes => Hashes#{Hash => X}
+               , dict   => rbdict:store(X, true, Dict)
+               }
   end.
 
-empty(#?TYPE{name = ?M, data = {_, Vals}}) ->
+empty(#{?TYPE := ?M, dict := Vals}) ->
   Compare = rbdict:compare_fun(Vals),
   ?CONSTRUCTOR(Compare, []).
 
 %% clojerl.IEquiv
 
-equiv(#?TYPE{name = ?M} = X, #?TYPE{name = ?M} = Y) ->
+equiv(#{?TYPE := ?M} = X, #{?TYPE := ?M} = Y) ->
   hash(X) =:= hash(Y);
-equiv(#?TYPE{name = ?M} = X, Y) ->
+equiv(#{?TYPE := ?M} = X, Y) ->
   clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
-apply(#?TYPE{name = ?M, data = {Hashes, _}}, [Item]) ->
+apply(#{?TYPE := ?M, hashes := Hashes}, [Item]) ->
   Hash = 'clojerl.IHash':hash(Item),
   case maps:is_key(Hash, Hashes) of
     true  -> maps:get(Hash, Hashes);
@@ -90,32 +104,33 @@ apply(_, Args) ->
 
 %% clojerl.IHash
 
-hash(#?TYPE{name = ?M, data = {Hashes, _}}) ->
+hash(#{?TYPE := ?M, hashes := Hashes}) ->
   clj_murmur3:unordered(maps:values(Hashes)).
 
 %% clojerl.IMeta
 
-meta(#?TYPE{name = ?M, info = Info}) ->
-  maps:get(meta, Info, ?NIL).
+meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#?TYPE{name = ?M, info = Info} = Set, Metadata) ->
-  Set#?TYPE{info = Info#{meta => Metadata}}.
+with_meta(#{?TYPE := ?M} = Set, Metadata) ->
+  Set#{meta => Metadata}.
 
 %% clojerl.ISet
 
-disjoin(#?TYPE{name = ?M, data = {Hashes, Vals}} = S, Value) ->
+disjoin(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   case maps:is_key(Hash, Hashes) of
     false -> S;
     true  ->
-      S#?TYPE{data = {maps:remove(Hash, Hashes), rbdict:erase(Value, Vals)}}
+      S#{ hashes => maps:remove(Hash, Hashes)
+        , dict   => rbdict:erase(Value, Dict)
+        }
   end.
 
-contains(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
+contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   maps:is_key(Hash, Hashes).
 
-get(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
+get(#{?TYPE := ?M, hashes := Hashes}, Value) ->
   Hash = 'clojerl.IHash':hash(Value),
   case maps:is_key(Hash, Hashes) of
     true  -> maps:get(Hash, Hashes);
@@ -124,16 +139,16 @@ get(#?TYPE{name = ?M, data = {Hashes, _}}, Value) ->
 
 %% clojerl.ISeqable
 
-seq(#?TYPE{name = ?M, data = {Hashes, _}} = Set) ->
+seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
   case maps:size(Hashes) of
     0 -> ?NIL;
     _ -> to_list(Set)
   end.
 
-to_list(#?TYPE{name = ?M, data = {_, Vals}}) ->
-  [K || {K, _} <- rbdict:to_list(Vals)].
+to_list(#{?TYPE := ?M, dict := Dict}) ->
+  [K || {K, _} <- rbdict:to_list(Dict)].
 
 %% clojerl.IStringable
 
-str(#?TYPE{name = ?M} = SortedSet) ->
+str(#{?TYPE := ?M} = SortedSet) ->
   clj_rt:print(SortedSet).
