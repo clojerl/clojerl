@@ -71,10 +71,10 @@ equiv( #{?TYPE := ?M, fn := X}
 equiv( #{?TYPE := ?M} = X
      , #{?TYPE := ?M} = Y
      ) ->
-  clj_rt:equiv(to_list(X), to_list(Y));
+  'erlang.List':equiv(to_list(X), to_list(Y));
 equiv(#{?TYPE := ?M} = LazySeq, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv(to_list(LazySeq), Y);
+    true  -> 'erlang.List':equiv(to_list(LazySeq), Y);
     false -> false
   end.
 
@@ -101,11 +101,12 @@ reduce(#{?TYPE := ?M} = LazySeq, F, Init) ->
 do_reduce(F, Acc, #{?TYPE := ?M} = LazySeq) ->
   do_reduce(F, Acc, seq(LazySeq));
 do_reduce(F, Acc, Seq) when Seq =/= ?NIL ->
-  First = 'clojerl.ISeq':first(Seq),
-  Val   = clj_rt:apply(F, [Acc, First]),
+  Module = clj_rt:type_module(Seq),
+  First  = Module:first(Seq),
+  Val    = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> Val;
-    false -> do_reduce(F, Val, 'clojerl.ISeq':next(Seq))
+    false -> do_reduce(F, Val, Module:next(Seq))
   end;
 do_reduce(_F, Acc, _Seq) ->
   Acc.
@@ -140,7 +141,8 @@ seq(#{?TYPE := ?M, fn := Fn}) ->
     #{?TYPE := ?M} = LazySeq ->
       seq(LazySeq);
     Seq ->
-      'clojerl.ISeqable':seq(Seq)
+      Module = clj_rt:type_module(Seq),
+      Module:seq(Seq)
   end.
 
 to_list(#{?TYPE := ?M} = LazySeq) ->
@@ -152,9 +154,10 @@ do_to_list(?NIL, Acc) ->
 do_to_list(#{?TYPE := ?M} = LazySeq, Acc) ->
   do_to_list(seq(LazySeq), Acc);
 do_to_list(Seq0, Acc) ->
-  Seq1  = 'clojerl.ISeqable':seq(Seq0),
-  First = 'clojerl.ISeq':first(Seq1),
-  Rest  = 'clojerl.ISeq':next(Seq1),
+  Module0 = clj_rt:type_module(Seq0),
+  Seq1    = Module0:seq(Seq0),
+  First   = 'clojerl.ISeq':first(Seq1),
+  Rest    = 'clojerl.ISeq':next(Seq1),
   do_to_list(Rest, [First | Acc]).
 
 str(#{?TYPE := ?M, fn := Fn}) ->

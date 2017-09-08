@@ -14,6 +14,7 @@ ERLC      := erlc -o ${EBIN} -I ${INCLUDE} -pa ${EBIN} ${ERL_OPTS}
 all: compile
 
 compile:
+	${V} if [ -n "${NO_CLOJURE}" ]; then echo "Not compiling clojure files"; fi;
 	${V} ${REBAR3} compile
 
 test: clean

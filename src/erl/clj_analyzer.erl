@@ -15,7 +15,7 @@ analyze(Form, Env0) ->
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
   clj_rt:'symbol?'(S) andalso
-    maps:is_key(clj_rt:str(S), special_forms()).
+    maps:is_key('clojerl.Symbol':str(S), special_forms()).
 
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
@@ -49,7 +49,7 @@ macroexpand_1(Form, Env) ->
 
 -spec maybe_macroexpand_symbol(any(), 'clojerl.Symbol':type()) -> any().
 maybe_macroexpand_symbol(Form, OpSym) ->
-  OpBin = clj_rt:name(OpSym),
+  OpBin = 'clojerl.Symbol':name(OpSym),
   case 'clojerl.String':char_at(OpBin, 0) of
     <<".">> ->
       DotSym  = clj_rt:symbol(<<".">>),
@@ -216,7 +216,9 @@ analyze_seq(List, Env0) ->
              AnaInvoke = fun analyze_invoke/2,
              Fun = case clj_rt:'symbol?'(Op) of
                      true ->
-                       maps:get(clj_rt:str(Op), special_forms(), AnaInvoke);
+                       maps:get( 'clojerl.Symbol':str(Op)
+                               , special_forms()
+                               , AnaInvoke);
                      false ->
                        AnaInvoke
                    end,
@@ -283,15 +285,16 @@ parse_fn(List, Env) ->
   %% If there is a def var we add it to the local scope
   DefNameSym  = clj_env:get(def_name, Env),
   IsDef       = DefNameSym =/= ?NIL,
-  DefVar      = case IsDef of
-                  true  ->
-                    DefVarNs    = 'clojerl.Namespace':current(),
-                    DefVarNsSym = 'clojerl.Namespace':name(DefVarNs),
-                    'clojerl.Var':?CONSTRUCTOR( clj_rt:name(DefVarNsSym)
-                                              , clj_rt:name(DefNameSym)
-                                              );
-                  false -> ?NIL
-                end,
+  DefVar      =
+    case IsDef of
+      true  ->
+        DefVarNs    = 'clojerl.Namespace':current(),
+        DefVarNsSym = 'clojerl.Namespace':name(DefVarNs),
+        'clojerl.Var':?CONSTRUCTOR( 'clojerl.Symbol':name(DefVarNsSym)
+                                  , 'clojerl.Symbol':name(DefNameSym)
+                                  );
+      false -> ?NIL
+    end,
 
   %% If it is a def we register the var, otherwise register the local.
   Env1 = case IsDef of
@@ -529,7 +532,7 @@ analyze_body(List, Env) ->
 is_valid_bind_symbol(X) ->
   clj_rt:'symbol?'(X)
     andalso not clj_rt:boolean(clj_rt:namespace(X))
-    andalso nomatch == re:run(clj_rt:name(X), <<"\\.">>).
+    andalso nomatch == re:run('clojerl.Symbol':name(X), <<"\\.">>).
 
 -spec check_guard(any()) -> {boolean(), any(), any()}.
 check_guard(List) ->
@@ -1036,17 +1039,17 @@ parse_def(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  VarNsSym     = clj_rt:symbol(clj_rt:namespace(Var0)),
+  VarNsSym     = clj_rt:symbol('clojerl.Var':namespace(Var0)),
   CurrentNs    = 'clojerl.Namespace':current(),
   CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
-  clj_utils:error_when( clj_rt:namespace(VarSymbol) =/= ?NIL
-                        andalso not clj_rt:equiv(CurrentNsSym, VarNsSym)
+  clj_utils:error_when( 'clojerl.Symbol':namespace(VarSymbol) =/= ?NIL andalso
+                        not 'clojerl.Symbol':equiv(CurrentNsSym, VarNsSym)
                       , <<"Can't create defs outside of current ns">>
                       , clj_env:location(Env)
                       ),
 
   QuoteSym     = clj_rt:symbol(<<"quote">>),
-  NameBin      = clj_rt:name(VarSymbol),
+  NameBin      = 'clojerl.Symbol':name(VarSymbol),
   VarMeta      = clj_rt:merge([ clj_rt:meta(Var0)
                               , SymbolMeta
                               , #{ ns   => [QuoteSym, VarNsSym]
@@ -1168,12 +1171,12 @@ lookup_var(VarSymbol, true = _CreateNew) ->
                    ?NIL  -> ?NIL;
                    NsStr -> clj_rt:symbol(NsStr)
                  end,
-  NameSym      = clj_rt:symbol(clj_rt:name(VarSymbol)),
+  NameSym      = clj_rt:symbol('clojerl.Symbol':name(VarSymbol)),
 
   CurrentNs    = 'clojerl.Namespace':current(),
   CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
 
-  case clj_rt:equiv(CurrentNsSym, NsSym) of
+  case 'clojerl.Symbol':equiv(CurrentNsSym, NsSym) of
     Equal when Equal orelse NsSym =:= ?NIL ->
       'clojerl.Namespace':intern(NameSym, CurrentNs),
       lookup_var(VarSymbol, false);
@@ -1181,8 +1184,8 @@ lookup_var(VarSymbol, true = _CreateNew) ->
       lookup_var(VarSymbol, false)
   end;
 lookup_var(VarSymbol, false = _CreateNew) ->
-  NsStr   = clj_rt:namespace(VarSymbol),
-  NameStr = clj_rt:name(VarSymbol),
+  NsStr   = 'clojerl.Symbol':namespace(VarSymbol),
+  NameStr = 'clojerl.Symbol':name(VarSymbol),
 
   case {NsStr, NameStr} of
     {?NIL, NameStr} when NameStr =:= <<"ns">> orelse
@@ -1192,7 +1195,7 @@ lookup_var(VarSymbol, false = _CreateNew) ->
     {?NIL, _} ->
       CurrentNs    = 'clojerl.Namespace':current(),
       CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
-      Symbol = clj_rt:symbol(clj_rt:name(CurrentNsSym), NameStr),
+      Symbol = clj_rt:symbol('clojerl.Symbol':name(CurrentNsSym), NameStr),
       'clojerl.Namespace':find_var(Symbol);
     {NsStr, NameStr} ->
       Symbol = clj_rt:symbol(NsStr, NameStr),
@@ -1812,7 +1815,7 @@ is_valid_error_type(error) -> true;
 is_valid_error_type(exit)  -> true;
 is_valid_error_type(throw) -> true;
 is_valid_error_type(Form)  ->
-  clj_rt:'symbol?'(Form) andalso clj_rt:str(Form) =:= <<"_">>.
+  clj_rt:'symbol?'(Form) andalso 'clojerl.Symbol':str(Form) =:= <<"_">>.
 
 %%------------------------------------------------------------------------------
 %% Parse var
@@ -1927,7 +1930,7 @@ do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
            , env        => Env0
            , name       => Symbol
            , shadow     => clj_env:get_local(Symbol, Env0)
-           , underscore => clj_rt:name(Symbol) =:= <<"_">>
+           , underscore => 'clojerl.Symbol':name(Symbol) =:= <<"_">>
            , id         => erlang:unique_integer()
            },
   %% We need to do this here so that the registered local has a type tag.
@@ -2026,7 +2029,7 @@ resolve(Symbol, Env) ->
 resolve(Symbol, CheckPrivate, Env) ->
   CurrentNs = 'clojerl.Namespace':current(),
   Local     = clj_env:get_local(Symbol, Env),
-  NsStr     = clj_rt:namespace(Symbol),
+  NsStr     = 'clojerl.Symbol':namespace(Symbol),
   MappedVal = 'clojerl.Namespace':find_mapping(Symbol, CurrentNs),
 
   if
@@ -2035,7 +2038,8 @@ resolve(Symbol, CheckPrivate, Env) ->
     MappedVal =/= ?NIL ->
       case clj_rt:'var?'(MappedVal) of
         true ->
-          CurrentNsName = clj_rt:name('clojerl.Namespace':name(CurrentNs)),
+          CurrentNsSym  = 'clojerl.Namespace':name(CurrentNs),
+          CurrentNsName = 'clojerl.Symbol':name(CurrentNsSym),
           clj_utils:error_when( CheckPrivate
                                 andalso NsStr =/= ?NIL
                                 andalso NsStr =/= CurrentNsName
@@ -2060,15 +2064,15 @@ resolve(Symbol, CheckPrivate, Env) ->
 
 -spec erl_fun('clojerl.Symbol':type(), clj_env:env()) -> erl_fun().
 erl_fun(Symbol, Env0) ->
-  NsSym          = clj_rt:symbol(clj_rt:namespace(Symbol)),
+  NsSym          = clj_rt:symbol('clojerl.Symbol':namespace(Symbol)),
   {NsName, Env}  = case resolve(NsSym, Env0) of
                      {{type, TypeSym}, EnvTmp} ->
-                       {clj_rt:name(TypeSym), EnvTmp};
+                       {'clojerl.Symbol':name(TypeSym), EnvTmp};
                      {_, EnvTmp} ->
-                       {clj_rt:name(NsSym), EnvTmp}
+                       {'clojerl.Symbol':name(NsSym), EnvTmp}
                   end,
   NsAtom        = binary_to_atom(NsName, utf8),
-  {Name, Arity} = erl_fun_arity(clj_rt:name(Symbol)),
+  {Name, Arity} = erl_fun_arity('clojerl.Symbol':name(Symbol)),
   NameAtom      = binary_to_atom(Name, utf8),
 
   NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
@@ -2109,11 +2113,9 @@ erl_fun_arity(Name) ->
   end.
 
 -spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
-is_maybe_type(?NIL) ->
-  false;
 is_maybe_type(Symbol) ->
-  ?NIL = clj_rt:namespace(Symbol),
-  Name = clj_rt:name(Symbol),
+  ?NIL = 'clojerl.Symbol':namespace(Symbol),
+  Name = 'clojerl.Symbol':name(Symbol),
   Re   = <<"([a-z]\\w*\\.)+[A-Za-z]\\w*">>,
   case re:run(Name, Re, [global, {capture, none}]) of
     match ->
@@ -2178,8 +2180,8 @@ analyze_vector(Vector, Env0) ->
 
 -spec analyze_map('clojerl.Map':type(), clj_env:env()) -> clj_env:env().
 analyze_map(Map, Env0) ->
-  Keys  = clj_rt:to_list(clj_rt:keys(Map)),
-  Vals  = clj_rt:to_list(clj_rt:vals(Map)),
+  Keys  = clj_rt:to_list('clojerl.Map':keys(Map)),
+  Vals  = clj_rt:to_list('clojerl.Map':vals(Map)),
 
   Count = clj_rt:count(Map),
   Env1  = clj_env:push(#{context => expr}, Env0),

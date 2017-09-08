@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rebar3 as dev do compile
+
 MODULE=${1:-"erlang"}
 FUNCTION=${2:-"self"}
 ARGS=${3:-"[]"}
@@ -10,7 +12,7 @@ SVG_FILE="$TRACE_FILE_SORTED.svg"
 
 echo "Running eflame..."
 
-PID=`erl -sname eflame-expr -pa _build/*/lib/*/ebin -pa ebin -s clojerl -noshell -eval "eflame:apply(normal_with_children, \"$TRACE_FILE\", '$MODULE', '$FUNCTION', $ARGS), io:format(\"~p~n\", [self()]), erlang:halt(0)."`
+PID=`erl -sname eflame-expr -pa _build/*/lib/*/ebin -pa ebin -s clojerl -noshell -eval "erlang:apply('$MODULE', '$FUNCTION', $ARGS), eflame:apply(normal_with_children, \"$TRACE_FILE\", '$MODULE', '$FUNCTION', $ARGS), io:format(\"~p~n\", [self()]), erlang:halt(0)."`
 
 echo "PID: $PID"
 

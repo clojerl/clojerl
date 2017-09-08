@@ -42,7 +42,7 @@
 -export([str/1]).
 
 -type type() :: #{ ?TYPE => ?M
-                 , chunk => any()
+                 , chunk => 'clojerl.TupleChunk':type()
                  , more  => any()
                  , meta  => ?NIL | any()
                  }.
@@ -60,7 +60,7 @@
 %%------------------------------------------------------------------------------
 
 count(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
-  clj_rt:count(Chunk) + clj_rt:count(More).
+  'clojerl.TupleChunk':count(Chunk) + clj_rt:count(More).
 
 cons(#{?TYPE := ?M} = ChunkedCons, X) ->
   clj_rt:cons(X, ChunkedCons).
@@ -79,10 +79,10 @@ chunked_more(#{?TYPE := ?M, more := More}) -> More.
 equiv( #{?TYPE := ?M, chunk := ChunkX, more := MoreX}
      , #{?TYPE := ?M, chunk := ChunkY, more := MoreY}
      ) ->
-  clj_rt:equiv(ChunkX, ChunkY) andalso clj_rt:equiv(MoreX, MoreY);
+  'clojerl.TupleChunk':equiv(ChunkX, ChunkY) andalso clj_rt:equiv(MoreX, MoreY);
 equiv(#{?TYPE := ?M} = ChunkedCons, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv(to_list(ChunkedCons), clj_rt:seq(Y));
+    true  -> 'erlang.List':equiv(to_list(ChunkedCons), clj_rt:seq(Y));
     false -> false
   end.
 
@@ -113,21 +113,21 @@ do_reduce(_F, Acc, []) ->
   Acc.
 
 first(#{?TYPE := ?M, chunk := Chunk}) ->
-  clj_rt:nth(Chunk, 0).
+  'clojerl.TupleChunk':nth(Chunk, 0).
 
 next(#{?TYPE := ?M, chunk := Chunk0, more := More} = ChunkedCons) ->
-  case clj_rt:count(Chunk0) > 1 of
+  case 'clojerl.TupleChunk':count(Chunk0) > 1 of
     true ->
-      Chunk1 = 'clojerl.IChunk':drop_first(Chunk0),
+      Chunk1 = 'clojerl.TupleChunk':drop_first(Chunk0),
       'clojerl.ChunkedCons':?CONSTRUCTOR(Chunk1, More);
     false ->
       chunked_next(ChunkedCons)
   end.
 
 more(#{?TYPE := ?M, chunk := Chunk0, more := More} = ChunkedCons) ->
-  case clj_rt:count(Chunk0) > 1 of
+  case 'clojerl.TupleChunk':count(Chunk0) > 1 of
     true ->
-      Chunk1 = 'clojerl.IChunk':drop_first(Chunk0),
+      Chunk1 = 'clojerl.TupleChunk':drop_first(Chunk0),
       'clojerl.ChunkedCons':?CONSTRUCTOR(Chunk1, More);
     false  ->
       chunked_more(ChunkedCons)

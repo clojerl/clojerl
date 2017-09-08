@@ -120,19 +120,20 @@ count(#{?TYPE := ?M, keys := Keys}) ->
 equiv( #{?TYPE := ?M, keys := KeysX, vals := ValsX}
      , #{?TYPE := ?M, keys := KeysY, vals := ValsY}
      ) ->
-  clj_rt:equiv(KeysX, KeysY) andalso clj_rt:equiv(ValsX, ValsY);
+  'erlang.Map':equiv(KeysX, KeysY) andalso 'erlang.Map':equiv(ValsX, ValsY);
 equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
+      TypeModule   = clj_rt:type_module(Y),
       KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
-                              , clj_rt:to_list(clj_rt:keys(Y))
+                              , clj_rt:to_list(TypeModule:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
                 maps:is_key(Hash, Keys) andalso
-                  clj_rt:equiv(maps:get(Hash, Vals), clj_rt:get(Y, Key))
+                  clj_rt:equiv(maps:get(Hash, Vals), TypeModule:get(Y, Key))
             end,
-      maps:size(Keys) =:= clj_rt:count(Y)
+      maps:size(Keys) =:= TypeModule:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.

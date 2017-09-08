@@ -60,7 +60,7 @@ count(#{?TYPE := ?M, array := Array, index := Index}) ->
   array:size(Array) - Index.
 
 cons(#{?TYPE := ?M} = ChunkedSeq, X) ->
-  clj_rt:cons(X, ChunkedSeq).
+  'clojerl.Cons':?CONSTRUCTOR(X, ChunkedSeq).
 
 empty(_) -> clj_rt:list([]).
 
@@ -89,12 +89,12 @@ equiv( #{?TYPE := ?M, array := X}
     true ->
       X1 = array:to_list(X),
       Y1 = array:to_list(Y),
-      clj_rt:equiv(X1, Y1);
+      'erlang.List':equiv(X1, Y1);
     false -> false
   end;
 equiv(#{?TYPE := ?M, array := X}, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv(array:to_list(X), Y);
+    true  -> 'erlang.List':equiv(array:to_list(X), Y);
     false -> false
   end.
 

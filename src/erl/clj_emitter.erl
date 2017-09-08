@@ -169,7 +169,7 @@ ast(#{op := type} = Expr, State) ->
    , env  := Env
    } = Expr,
 
-  TypeModule = sym_to_kw(TypeSym),
+  TypeModule = to_atom(TypeSym),
   Type       = 'erlang.Type':?CONSTRUCTOR(TypeModule),
   Ast        = cerl:ann_abstract(ann_from(Env), Type),
 
@@ -207,13 +207,13 @@ ast(#{op := deftype} = Expr, State0) ->
    , env       := Env
    } = Expr,
 
-  Module = sym_to_kw(TypeSym),
+  Module = to_atom(TypeSym),
   Ann    = ann_from(Env),
   ok     = clj_module:ensure_loaded(file_from(Env), Module),
 
   %% Attributes
   Attributes = [ { cerl:ann_c_atom(Ann, behavior)
-                 , cerl:ann_abstract(Ann, [sym_to_kw(ProtocolName)])
+                 , cerl:ann_abstract(Ann, [to_atom(ProtocolName)])
                  }
                  || #{type := ProtocolName} <- ProtocolsExprs
                ],
@@ -315,15 +315,14 @@ ast(#{op := deftype} = Expr, State0) ->
 %%------------------------------------------------------------------------------
 ast(#{op := fn_method} = Expr, State0) ->
   ?DEBUG(fn_method),
-  #{ name := Name
+  #{ name := NameSym
    , env  := Env
    } = Expr,
 
   {ClauseAst, State1} = pop_ast(method_to_function_clause(Expr, State0)),
-  Args    = cerl:clause_pats(ClauseAst),
-  Body    = cerl:clause_body(ClauseAst),
-  NameSym = clj_rt:name(Name),
-  FunAst  = function_form(sym_to_kw(NameSym), ann_from(Env), Args, Body),
+  Args   = cerl:clause_pats(ClauseAst),
+  Body   = cerl:clause_body(ClauseAst),
+  FunAst = function_form(to_atom(NameSym), ann_from(Env), Args, Body),
 
   push_ast(FunAst, State1);
 %%------------------------------------------------------------------------------
@@ -336,14 +335,14 @@ ast(#{op := defprotocol} = Expr, State) ->
    , env          := Env
    } = Expr,
 
-  Module = sym_to_kw(NameSym),
+  Module = to_atom(NameSym),
   ok     = clj_module:ensure_loaded(file_from(Env), Module),
   Ann    = ann_from(Env),
 
   FunctionFun = fun(Sig) ->
                     MethodSym = clj_rt:first(Sig),
                     Arity     = clj_rt:second(Sig),
-                    Method    = sym_to_kw(MethodSym),
+                    Method    = to_atom(MethodSym),
                     Vars      = [new_c_var(Ann) || _ <- lists:seq(1, Arity)],
                     Args      = [ cerl:c_atom(Module)
                                 , cerl:c_atom(Method)
@@ -383,8 +382,8 @@ ast(#{op := extend_type} = Expr, State) ->
 
   EmitProtocolFun =
     fun(#{type := ProtoSym} = Proto, StateAcc) ->
-        ProtoBin = clj_rt:str(ProtoSym),
-        TypeBin  = clj_rt:str(TypeSym),
+        ProtoBin = 'clojerl.Symbol':str(ProtoSym),
+        TypeBin  = 'clojerl.Symbol':str(TypeSym),
         Module   = clj_protocol:impl_module(ProtoBin, TypeBin),
 
         clj_module:ensure_loaded(file_from(Env), Module),
@@ -436,7 +435,7 @@ ast(#{op := fn} = Expr, State) ->
 
   {DefsAsts, State1} = letrec_defs([LocalExpr], [Expr], State),
 
-  NameAtom = sym_to_kw(NameSym),
+  NameAtom = to_atom(NameSym),
   FName    = cerl:ann_c_fname(Ann, NameAtom, 1),
   Ast      = cerl:ann_c_letrec(Ann, DefsAsts, FName),
 
@@ -822,7 +821,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             Patterns   = [P || {_, P, _, _} <- lists:reverse(Bindings)],
 
             LoopId     = maps:get(loop_id, Expr),
-            LoopIdAtom = binary_to_atom(clj_rt:str(LoopId), utf8),
+            LoopIdAtom = to_atom(LoopId),
 
             FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, length(Patterns)),
             ClauseAst  = cerl:ann_c_clause(Ann, Patterns, Body),
@@ -853,7 +852,7 @@ ast(#{op := recur} = Expr, State) ->
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ArgsExprs)
                           , length(ArgsExprs)
                           ),
-  LoopIdAtom     = binary_to_atom(clj_rt:str(LoopId), utf8),
+  LoopIdAtom     = to_atom(LoopId),
 
   %% We need to use invoke so that recur also works inside functions
   %% (i.e not funs)
@@ -970,7 +969,7 @@ ast(#{op := 'catch'} = Expr, State) ->
                         ErrType when is_atom(ErrType) ->
                           cerl:ann_c_atom(Ann, ErrType);
                         ErrType -> % If it's not an atom it's a symbol
-                          ErrTypeBin = clj_rt:name(ErrType),
+                          ErrTypeBin = 'clojerl.Symbol':name(ErrType),
                           cerl:ann_c_var(Ann, binary_to_atom(ErrTypeBin, utf8))
                       end,
   {PatternAst0, State1} = pop_ast(ast(PatternExpr, State)),
@@ -1024,7 +1023,7 @@ ast(#{op := on_load} = Expr, State) ->
 
   CurrentNs  = 'clojerl.Namespace':current(),
   NameSym    = 'clojerl.Namespace':name(CurrentNs),
-  ModuleName = binary_to_atom(clj_rt:name(NameSym), utf8),
+  ModuleName = to_atom(NameSym),
   ok         = clj_module:ensure_loaded(file_from(Env), ModuleName),
   clj_module:add_on_load(Ast, ModuleName),
 
@@ -1217,7 +1216,7 @@ creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 -spec get_basis_function([any()], [map()]) -> ast().
 get_basis_function(Ann, FieldsExprs) ->
   FilterMapFun   = fun(#{pattern := #{name := NameSym}}) ->
-                       NameBin = clj_rt:name(NameSym),
+                       NameBin = 'clojerl.Symbol':name(NameSym),
                        case lists:member(NameBin, hidden_fields()) of
                          true  -> false;
                          false -> {true, cerl:ann_abstract(Ann, NameSym)}
@@ -1449,7 +1448,7 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                               , length(VarsExprs)
                               ),
 
-  FNamesAsts = [ cerl:ann_c_fname(ann_from(VarEnv), sym_to_kw(VarName), 1)
+  FNamesAsts = [ cerl:ann_c_fname(ann_from(VarEnv), to_atom(VarName), 1)
                  || #{name := VarName, env := VarEnv} <- VarsExprs
                ],
 
@@ -1547,7 +1546,10 @@ get_lexical_rename(LocalExpr, State) ->
                      maps:get(name, LocalExpr)
                  end,
 
-  clj_rt:str(RenameSym).
+  case RenameSym of
+    ?NIL      -> 'clojerl.Nil':str(?NIL);
+    RenameSym -> 'clojerl.Symbol':str(RenameSym)
+  end.
 
 -spec put_lexical_rename(map(), state()) -> state().
 put_lexical_rename(#{pattern := #{underscore := true} = LocalExpr}, State) ->
@@ -1564,7 +1566,7 @@ put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
   #{lexical_renames := Renames} = State,
 
   Code       = hash_scope(LocalExpr),
-  NameBin    = clj_rt:name(Name),
+  NameBin    = 'clojerl.Symbol':name(Name),
   ShadowName = <<NameBin/binary, "__shadow__">>,
 
   NewRenames = clj_scope:put(Code, clj_rt:gensym(ShadowName), Renames),
@@ -1582,7 +1584,7 @@ underscore_hash(#{underscore := true} = LocalExpr) ->
 hash_scope(LocalExpr) ->
   Depth = shadow_depth(LocalExpr),
   #{name := Name} = LocalExpr,
-  NameBin = clj_rt:name(Name),
+  NameBin = 'clojerl.Symbol':name(Name),
   term_to_binary({NameBin, Depth}).
 
 -spec shadow_depth(map()) -> non_neg_integer().
@@ -1623,16 +1625,17 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
 
   case clj_rt:get(VarMeta, 'fn?', false) of
     true ->
-      Function    = 'clojerl.Var':function(Var),
-      {_, Args1}  = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
-      CurrentNs   = 'clojerl.Namespace':current(),
-      NsName      = clj_rt:name('clojerl.Namespace':name(CurrentNs)),
-      VarNsName   = clj_rt:namespace(Var),
-      ForceRemote = maps:get(force_remote_invoke, State),
+      Function     = 'clojerl.Var':function(Var),
+      {_, Args1}   = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+      CurrentNs    = 'clojerl.Namespace':current(),
+      CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
+      NsName       = 'clojerl.Symbol':name(CurrentNsSym),
+      VarNsName    = 'clojerl.Var':namespace(Var),
+      ForceRemote  = maps:get(force_remote_invoke, State),
       %% When the var's symbol is not namespace qualified and the var's
       %% namespace is the current namespace, emit a local function
       %% call, otherwise emit a remote call.
-      case clj_rt:namespace(Symbol) of
+      case 'clojerl.Symbol':namespace(Symbol) of
         ?NIL when NsName =:= VarNsName, not ForceRemote ->
           call_fa(Function, Args1, Ann);
         _ ->
@@ -1671,9 +1674,9 @@ ann_from(Env) ->
 
 %% ----- Misc -------
 
--spec sym_to_kw('clojerl.Symbol':type()) -> atom().
-sym_to_kw(Symbol) ->
-  binary_to_atom(clj_rt:str(Symbol), utf8).
+-spec to_atom('clojerl.Symbol':type()) -> atom().
+to_atom(Symbol) ->
+  binary_to_atom('clojerl.Symbol':name(Symbol), utf8).
 
 -spec default_compiler_options() -> clj_compiler:opts().
 default_compiler_options() ->

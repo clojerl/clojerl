@@ -94,7 +94,7 @@ location_meta(X) ->
       end
   end.
 
--spec add_location_field(atom(), any(), map()) -> map().
+-spec add_location_field(any(), any(), map()) -> map().
 add_location_field(Meta, Name, Location) ->
   case clj_rt:get(Meta, Name) of
     ?NIL -> Location;
@@ -364,7 +364,7 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
               {?NIL, <<":", Name/binary>>} ->
                 Ns    = 'clojerl.Namespace':current(),
                 NsSym = 'clojerl.Namespace':name(Ns),
-                Namespace = clj_rt:name(NsSym),
+                Namespace = 'clojerl.Symbol':name(NsSym),
                 clj_rt:keyword(Namespace, Name);
               {?NIL, Name} ->
                 clj_rt:keyword(Name);
@@ -525,9 +525,9 @@ flatten_map(MapSeq, Vector) ->
 
 -spec syntax_quote_symbol(any()) -> any().
 syntax_quote_symbol(Symbol) ->
-  NamespaceStr = clj_rt:namespace(Symbol),
-  NameStr = clj_rt:name(Symbol),
-  IsGenSym = 'clojerl.String':ends_with(NameStr, <<"#">>),
+  NamespaceStr = 'clojerl.Symbol':namespace(Symbol),
+  NameStr      = 'clojerl.Symbol':name(Symbol),
+  IsGenSym     = 'clojerl.String':ends_with(NameStr, <<"#">>),
   case {NamespaceStr, IsGenSym} of
     {?NIL, true} ->
       register_gensym(Symbol);
@@ -541,14 +541,14 @@ register_gensym(Symbol) ->
                 undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
-  case maps:get(clj_rt:name(Symbol), GensymEnv, ?NIL) of
+  case maps:get('clojerl.Symbol':name(Symbol), GensymEnv, ?NIL) of
     ?NIL ->
-      NameStr = clj_rt:name(Symbol),
-      NameStr2 = binary:part(NameStr, 0, byte_size(NameStr) - 1),
-      Parts = [NameStr2, <<"__">>, clj_rt:next_id(), <<"__auto__">>],
-      PartsStr = lists:map(fun clj_rt:str/1, Parts),
-      GenSym = clj_rt:symbol(erlang:iolist_to_binary(PartsStr)),
-      SymbolName = clj_rt:name(Symbol),
+      NameStr    = 'clojerl.Symbol':name(Symbol),
+      NameStr2   = binary:part(NameStr, 0, byte_size(NameStr) - 1),
+      Parts      = [NameStr2, <<"__">>, clj_rt:next_id(), <<"__auto__">>],
+      PartsStr   = lists:map(fun clj_rt:str/1, Parts),
+      GenSym     = clj_rt:symbol(erlang:iolist_to_binary(PartsStr)),
+      SymbolName = 'clojerl.Symbol':name(Symbol),
       erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
       GenSym;
     GenSym ->
@@ -557,24 +557,24 @@ register_gensym(Symbol) ->
 
 -spec resolve_symbol(any()) -> any().
 resolve_symbol(Symbol) ->
-  HasDot = binary:match(clj_rt:str(Symbol), <<"\.">>) =/= nomatch,
+  HasDot = binary:match('clojerl.Symbol':str(Symbol), <<"\.">>) =/= nomatch,
   case HasDot orelse 'clojerl.Namespace':find_var(Symbol) of
     true -> Symbol;
     ?NIL ->
-      case clj_rt:namespace(Symbol) of
+      case 'clojerl.Symbol':namespace(Symbol) of
         ?NIL ->
           CurrentNs = 'clojerl.Namespace':current(),
           NameSym   = 'clojerl.Namespace':name(CurrentNs),
-          Namespace = clj_rt:name(NameSym),
-          Name      = clj_rt:name(Symbol),
-          Meta      = clj_rt:meta(Symbol),
+          Namespace = 'clojerl.Symbol':name(NameSym),
+          Name      = 'clojerl.Symbol':name(Symbol),
+          Meta      = 'clojerl.Symbol':meta(Symbol),
           clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta);
         _ ->
           Symbol
       end;
     Var ->
-      Namespace = clj_rt:namespace(Var),
-      Name      = clj_rt:name(Var),
+      Namespace = 'clojerl.Var':namespace(Var),
+      Name      = 'clojerl.Var':name(Var),
       Meta      = clj_rt:meta(Symbol),
       clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta)
   end.
@@ -680,7 +680,9 @@ read_list(#{ src   := <<"("/utf8, _/binary>>
   #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
-  List = clj_rt:with_meta(clj_rt:list(Items), file_location_meta(State0)),
+  List = 'clojerl.List':with_meta( clj_rt:list(Items)
+                                 , file_location_meta(State0)
+                                 ),
 
   State2#{forms => [List | Forms]}.
 
@@ -700,9 +702,9 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
   #{forms := ReversedItems} = State2,
 
   Items = lists:reverse(ReversedItems),
-  Vector = clj_rt:with_meta( clj_rt:vector(Items)
-                           , file_location_meta(State0)
-                           ),
+  Vector = 'clojerl.Vector':with_meta( clj_rt:vector(Items)
+                                     , file_location_meta(State0)
+                                     ),
 
   State2#{forms => [Vector | Forms]}.
 
@@ -724,9 +726,9 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = clj_rt:with_meta( clj_rt:hash_map(Items)
-                            , file_location_meta(State0)
-                            ),
+      Map = 'clojerl.Map':with_meta( clj_rt:hash_map(Items)
+                                   , file_location_meta(State0)
+                                   ),
       State2#{forms => [Map | Forms]};
     _ ->
       clj_utils:error( <<"Map literal must contain an even number of forms">>
@@ -948,7 +950,7 @@ read_fn(State) ->
 
   FnSymbol = clj_rt:symbol(<<"fn*">>),
   FnForm   = clj_rt:list([FnSymbol, ArgsVector, Form]),
-  FnFormWithMeta = clj_rt:with_meta(FnForm, file_location_meta(State)),
+  FnFormWithMeta = 'clojerl.List':with_meta(FnForm, file_location_meta(State)),
 
   push_form(FnFormWithMeta, NewState).
 
@@ -975,7 +977,7 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
 
   Items       = lists:reverse(ReversedItems),
   Set         = clj_rt:hash_set(Items),
-  SetWithMeta = clj_rt:with_meta(Set, file_location_meta(State0)),
+  SetWithMeta = 'clojerl.Set':with_meta(Set, file_location_meta(State0)),
 
   State2#{forms => [SetWithMeta | Forms]}.
 
@@ -1183,7 +1185,7 @@ read_tagged(State) ->
     _ when SupressRead =:= true ->
       push_form(tagged_literal(Symbol, Form), State2);
     _ ->
-      case 'clojerl.String':contains(clj_rt:name(Symbol), <<".">>) of
+      case 'clojerl.String':contains('clojerl.Symbol':name(Symbol), <<".">>) of
         true  -> read_record(Symbol, Form, State2);
         false -> read_tagged(Symbol, Form, location(State), State2)
       end
@@ -1239,7 +1241,7 @@ read_record(Symbol, Form, State) ->
                                           , <<"*read-eval*">>
                                           ),
 
-  clj_utils:error_when( not clj_rt:boolean(clj_rt:deref(ReadEvalVar))
+  clj_utils:error_when( not clj_rt:boolean('clojerl.Var':deref(ReadEvalVar))
                       , <<"Record construction syntax can only be used "
                           "when *read-eval* == true">>
                       , location(State)
@@ -1254,7 +1256,7 @@ read_record(Symbol, Form, State) ->
                       , location(State)
                       ),
 
-  Type = try erlang:binary_to_existing_atom(clj_rt:str(Symbol), utf8)
+  Type = try erlang:binary_to_existing_atom('clojerl.Symbol':str(Symbol), utf8)
          catch throw:badarg ->
              clj_utils:error( [Symbol, <<" is not loaded or doesn't exist">>]
                             , location(State)
@@ -1308,10 +1310,10 @@ read_tagged(Symbol, Form, Location, State) ->
                               , <<"*default-data-reader-fn*">>
                               ),
 
-  DataReaders = clj_rt:deref(DataReadersVar),
+  DataReaders = 'clojerl.Var':deref(DataReadersVar),
   Reader0     = clj_rt:get(DataReaders, Symbol, ?NIL),
 
-  DefaultDataReaders = clj_rt:deref(DefaultDataReadersVar),
+  DefaultDataReaders = 'clojerl.Var':deref(DefaultDataReadersVar),
   Reader1 = case
               Reader0 =/= ?NIL
               orelse clj_rt:get(DefaultDataReaders, Symbol, ?NIL)
@@ -1320,10 +1322,11 @@ read_tagged(Symbol, Form, Location, State) ->
               DefaultDataReader -> DefaultDataReader
             end,
 
-  {IsDefault, Reader2} = case Reader1 =/= ?NIL of
-                           true  -> {false, Reader1};
-                           false -> {true, clj_rt:deref(DefaultReaderFunVar)}
-                         end,
+  {IsDefault, Reader2} =
+    case Reader1 =/= ?NIL of
+      true  -> {false, Reader1};
+      false -> {true, 'clojerl.Var':deref(DefaultReaderFunVar)}
+    end,
 
   clj_utils:error_when( Reader2 =:= ?NIL
                       , [<<"No reader function for tag ">>, Symbol]

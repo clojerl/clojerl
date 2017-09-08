@@ -67,7 +67,7 @@ equiv( #{?TYPE := ?M, first := FirstX, more := MoreX}
   clj_rt:equiv(FirstX, FirstY) andalso clj_rt:equiv(MoreX, MoreY);
 equiv(#{?TYPE := ?M} = Cons, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv(to_list(Cons), clj_rt:seq(Y));
+    true  -> 'erlang.List':equiv(to_list(Cons), clj_rt:seq(Y));
     false -> false
   end.
 
@@ -83,7 +83,7 @@ reduce(#{?TYPE := ?M, first := First, more := More}, F) ->
   do_reduce(F, First, clj_rt:to_list(More)).
 
 reduce(#{?TYPE := ?M, first := First, more := More}, F, Init) ->
-  do_reduce(F, Init, clj_rt:conj(clj_rt:to_list(More), First)).
+  do_reduce(F, Init, 'erlang.List':cons(clj_rt:to_list(More), First)).
 
 do_reduce(F, Acc, [First | Items]) ->
   Val = clj_rt:apply(F, [Acc, First]),

@@ -73,7 +73,7 @@ equiv( #{?TYPE := ?M, items := X}
   clj_rt:equiv(X, Y);
 equiv(#{?TYPE := ?M, items := X}, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv(X, Y);
+    true  -> 'erlang.List':equiv(X, Y);
     false -> false
   end.
 
@@ -117,7 +117,7 @@ more(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
 '_'(_) -> ?NIL.
 
 peek(#{?TYPE := ?M, items := Items}) ->
-  clj_rt:peek(Items).
+  'erlang.List':peek(Items).
 
 pop(#{?TYPE := ?M, items := []} = List) ->
   List;

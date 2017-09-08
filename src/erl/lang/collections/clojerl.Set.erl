@@ -71,7 +71,7 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv( #{?TYPE := ?M, set := X}
      , #{?TYPE := ?M, set := Y}
      ) ->
-  clj_rt:equiv(X, Y);
+  'erlang.Map':equiv(X, Y);
 equiv(#{?TYPE := ?M} = X, Y) ->
   clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
 
