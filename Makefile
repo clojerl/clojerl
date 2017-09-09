@@ -1,9 +1,14 @@
 .SILENT:
 
 REBAR3    := rebar3
+RLWRAP    := $(shell type rlwrap &> /dev/null && echo rlwrap || echo)
 V         := @
 
 EBIN      ?= ${CURDIR}/ebin
+ifeq (${NO_CLOJURE},)
+	EBIN = ${REBAR_DEPS_DIR}/clojerl/ebin
+endif
+
 ERL_SRC   := ${CURDIR}/src/erl
 INCLUDE   := ${CURDIR}/include
 ERL_OPTS  := +debug_info
@@ -32,12 +37,12 @@ clean:
 	${V} rm -rf ${EBIN}
 	${V} rm -rf priv/*.so c_src/*.o
 
-travis-ci: test dialyzer
+ci: test dialyzer
 
 repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
 repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: compile
-	${V} rlwrap erl -pa `rebar3 path --ebin` ${CODE_PATH} ${SHELL_OPTS}
+	${V} ${RLWRAP} erl -pa `rebar3 path --ebin` ${CODE_PATH} ${SHELL_OPTS}
 
 # ------------------------------------------------------------------------------
 # Clojure compilation
