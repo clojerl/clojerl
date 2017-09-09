@@ -5,6 +5,7 @@
 -compile({no_auto_import, [get/1]}).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 -include_lib("compiler/src/core_parse.hrl").
 
 -export([ with_context/1

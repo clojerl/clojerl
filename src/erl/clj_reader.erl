@@ -1,6 +1,7 @@
 -module(clj_reader).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -export([ read_fold/4
         , read/1, read/2

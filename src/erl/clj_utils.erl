@@ -1,6 +1,7 @@
 -module(clj_utils).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -dialyzer([ {nowarn_function, throw/2}
           , {nowarn_function, throw_when/2}

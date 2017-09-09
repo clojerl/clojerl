@@ -1,6 +1,7 @@
 -module(clojerl_Range_SUITE).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 -include("clj_test_utils.hrl").
 
 -export([ all/0

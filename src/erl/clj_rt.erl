@@ -1,6 +1,7 @@
 -module(clj_rt).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -export([ type/1, type_module/1
         , load/1, load/2
