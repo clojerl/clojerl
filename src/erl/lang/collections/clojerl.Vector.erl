@@ -1,6 +1,7 @@
 -module('clojerl.Vector').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IAssociative').
 -behavior('clojerl.ICounted').

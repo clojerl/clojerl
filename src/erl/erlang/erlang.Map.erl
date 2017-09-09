@@ -77,7 +77,7 @@ empty(_) -> #{}.
 
 %% clojerl.IEquiv
 
-equiv(X, #{?TYPE := _} = Y) when is_map(X) ->
+equiv(X, ?MATCH_TYPE = Y) when is_map(X) ->
   equiv_other(X, Y);
 equiv(X, Y) when is_map(X), is_map(Y) ->
   equiv_erl_maps(X, Y);

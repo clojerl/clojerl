@@ -1,6 +1,7 @@
 -module(clj_compiler).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -dialyzer(no_return).
 

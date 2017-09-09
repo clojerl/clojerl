@@ -1,6 +1,7 @@
 -module(clj_emitter).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -export([ emit/1
         , new_c_var/1

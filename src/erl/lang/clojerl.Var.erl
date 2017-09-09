@@ -268,13 +268,10 @@ bounded_length(Args, Max) ->
   bounded_length(TypeModule:seq(Args), 0, Max, []).
 
 bounded_length(?NIL, N, _Max, Acc) ->
-  ?DEBUG({bounded_length, nil}),
   {N, lists:reverse(Acc), ?NIL};
 bounded_length(Rest, N, _Max = N, Acc) ->
-  ?DEBUG({bounded_length, limit, N}),
   {N, lists:reverse(Acc), Rest};
 bounded_length(Rest, N, Max, Acc) ->
-  ?DEBUG({bounded_length, loop, N}),
   TypeModule = clj_rt:type_module(Rest),
   First = TypeModule:first(Rest),
   Rest1 = TypeModule:next(Rest),

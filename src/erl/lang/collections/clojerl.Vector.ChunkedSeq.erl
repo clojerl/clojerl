@@ -1,6 +1,7 @@
 -module('clojerl.Vector.ChunkedSeq').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').

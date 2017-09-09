@@ -1,6 +1,7 @@
 -module('clojure.core').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -clojure(true).
 

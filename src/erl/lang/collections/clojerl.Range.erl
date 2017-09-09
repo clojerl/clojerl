@@ -1,6 +1,7 @@
 -module('clojerl.Range').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').

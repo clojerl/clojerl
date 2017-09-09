@@ -1,6 +1,7 @@
 -module(clj_protocol).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -export([ resolve/3
         , resolve/4

@@ -1,6 +1,7 @@
 -module(clj_analyzer).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -export([ analyze/2
         , macroexpand_1/2
