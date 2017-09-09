@@ -103,6 +103,7 @@ chunked(_Config) ->
   32 = clj_rt:nth(Chunk1b, 0),
 
   ?NIL = 'clojerl.IChunkedSeq':chunked_next(ChunkNext1),
+  true = ?NIL =/= 'clojerl.IChunkedSeq':chunked_next(Range1),
 
   Range2  = 'clojerl.Range':?CONSTRUCTOR(32, -1, -1),
 

@@ -338,7 +338,8 @@ eval_expressions(Expressions) ->
 eval_expressions(Expressions, ReplaceCalls) ->
   CurrentNs     = 'clojerl.Namespace':current(),
   CurrentNsSym  = 'clojerl.Namespace':name(CurrentNs),
-  CurrentNsAtom = binary_to_existing_atom(clj_rt:str(CurrentNsSym), utf8),
+  CurrentNsBin  = 'clojerl.Symbol':str(CurrentNsSym),
+  CurrentNsAtom = binary_to_existing_atom(CurrentNsBin, utf8),
   ReplacedExprs = case ReplaceCalls of
                     true  -> [ clj_module:replace_calls(Expr, CurrentNsAtom)
                                || Expr <- Expressions

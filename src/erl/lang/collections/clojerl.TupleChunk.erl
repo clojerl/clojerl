@@ -4,6 +4,7 @@
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IChunk').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IIndexed').
 -behavior('clojerl.IReduce').
@@ -12,6 +13,7 @@
 
 -export([count/1]).
 -export([drop_first/1]).
+-export([equiv/2]).
 -export([hash/1]).
 -export([nth/2, nth/3]).
 -export([reduce/2, reduce/3]).
@@ -53,6 +55,13 @@ drop_first(#{ ?TYPE  := ?M
             , offset := Offset
             } = TupleChunk) ->
   TupleChunk#{offset => Offset + 1}.
+
+equiv( #{?TYPE := ?M, size := S, offset := Offset, tuple := X}
+     , #{?TYPE := ?M, size := S, offset := Offset, tuple := Y}
+     ) ->
+  'erlang.Tuple':equiv(X, Y);
+equiv(#{?TYPE := ?M}, _) ->
+  false.
 
 hash(#{?TYPE := ?M, tuple := Tuple, offset := Offset, size := Size}) ->
   Indexes = lists:seq(Offset + 1, Size),

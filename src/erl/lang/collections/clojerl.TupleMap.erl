@@ -183,15 +183,16 @@ equiv( #{?TYPE := ?M, tuple := TupleMapX}
 equiv(#{?TYPE := ?M, tuple := TupleMap}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
+      TypeModule = clj_rt:type_module(Y),
       Fun = fun
               Fun([Key, Val | Rest]) ->
-                case clj_rt:equiv(Val, clj_rt:get(Y, Key)) of
+                case clj_rt:equiv(Val, TypeModule:get(Y, Key)) of
                   false -> false;
                   true  -> Fun(Rest)
                 end;
               Fun([]) -> true
             end,
-      trunc(tuple_size(TupleMap) / 2) =:= clj_rt:count(Y)
+      trunc(tuple_size(TupleMap) / 2) =:= TypeModule:count(Y)
         andalso Fun(tuple_to_list(TupleMap));
     false -> false
   end.

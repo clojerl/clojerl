@@ -564,14 +564,13 @@ do_print_map(X) ->
 
 -spec do_print_map(any(), binary(), binary()) -> binary().
 do_print_map(X, First, Last) ->
-  Items    = lists:map(fun print/1, to_list(X)),
   FunItem  = fun(Item) ->
                  [K, V] = to_list(Item),
                  Key    = print(K),
                  Value  = print(V),
                  <<Key/binary, " ", Value/binary>>
              end,
-  ItemsStr = lists:map(FunItem, Items),
+  ItemsStr = lists:map(FunItem, to_list(X)),
   Strs  = 'clojerl.String':join(ItemsStr, <<", ">>),
   <<First/binary, Strs/binary, Last/binary>>.
 

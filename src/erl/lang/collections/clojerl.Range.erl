@@ -49,7 +49,7 @@
                  , meta  => ?NIL | any()
                  }.
 
--spec ?CONSTRUCTOR(integer(), integer(), integer()) -> type().
+-spec ?CONSTRUCTOR(integer(), integer(), integer()) -> type() | [].
 ?CONSTRUCTOR(Start, End, Step) when Step > 0, End =< Start;
                                     Step < 0, Start =< End;
                                     Start == End ->
@@ -85,7 +85,10 @@ chunked_first(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   'clojerl.TupleChunk':?CONSTRUCTOR(Tuple).
 
 chunked_next(#{?TYPE := ?M} = Range) ->
-  clj_rt:seq(chunked_more(Range)).
+  case chunked_more(Range) of
+    [] -> ?NIL;
+    More -> More
+  end.
 
 chunked_more(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   Start1 = Start0 + ?CHUNK_SIZE * Step0,
@@ -97,7 +100,7 @@ equiv( #{?TYPE := ?M, start := Start, 'end' := End, step := Step}
   true;
 equiv(#{?TYPE := ?M} = X, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> clj_rt:equiv(to_list(X), Y);
+    true  -> 'erlang.List':equiv(to_list(X), Y);
     false -> false
   end.
 
