@@ -8,6 +8,6 @@ install:
   - chmod +x rebar3
   - export PATH=$PATH:$PWD
 script:
-  - make travis-ci
+  - make ci
 notifications:
   email: false

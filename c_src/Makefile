@@ -11,10 +11,17 @@ ERL_INTERFACE_INCLUDE_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(
 ERL_INTERFACE_LIB_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(\"~s\", [code:lib_dir(erl_interface, lib)]).")
 
 C_SRC_DIR = $(CURDIR)
-C_SRC_OUTPUT ?= $(CURDIR)/../priv/$(PROJECT).so
+C_SRC_OUTPUT ?= $(CURDIR)/../priv/$(PROJECT)
+
+ifeq ($(OS), Windows_NT)
+	C_SRC_OUTPUT_SHARED_EXTENSION ?= .dll
+else
+	C_SRC_OUTPUT_SHARED_EXTENSION ?= .so
+endif
+
+C_SRC_OUTPUT_FILE = $(C_SRC_OUTPUT)$(C_SRC_OUTPUT_SHARED_EXTENSION)
 
 # System type and C compiler/flags.
-
 UNAME_SYS := $(shell uname -s)
 ifeq ($(UNAME_SYS), Darwin)
 	CC ?= cc
@@ -29,12 +36,22 @@ else ifeq ($(UNAME_SYS), Linux)
 	CC ?= gcc
 	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
 	CXXFLAGS ?= -O3 -finline-functions -Wall
+else ifeq ($(OS), Windows_NT)
+	CC = /mingw64/bin/gcc
+	export CC
+	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -Wall
 endif
 
-CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
-CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
+ifneq ($(OS),Windows_NT)
+	CFLAGS += -fPIC
+	CXXFLAGS += -fPIC
+endif
 
-LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lerl_interface -lei
+CFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)"
+CXXFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)"
+
+LDLIBS += -L "$(ERL_INTERFACE_LIB_DIR)" -lerl_interface -lei
 LDFLAGS += -shared
 
 # Verbosity.
@@ -54,9 +71,9 @@ OBJECTS = $(addsuffix .o, $(basename $(SOURCES)))
 COMPILE_C = $(c_verbose) $(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE_CPP = $(cpp_verbose) $(CXX) $(CXXFLAGS) $(CPPFLAGS) -c
 
-$(C_SRC_OUTPUT): $(OBJECTS)
+$(C_SRC_OUTPUT_FILE): $(OBJECTS)
 	@mkdir -p $(BASEDIR)/priv/
-	$(link_verbose) $(CC) $(OBJECTS) $(LDFLAGS) $(LDLIBS) -o $(C_SRC_OUTPUT)
+	$(link_verbose) $(CC) $(OBJECTS) $(LDFLAGS) $(LDLIBS) -o $(C_SRC_OUTPUT_FILE)
 
 %.o: %.c
 	$(COMPILE_C) $(OUTPUT_OPTION) $<

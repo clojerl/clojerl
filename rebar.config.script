@@ -1,6 +1,6 @@
 case os:getenv("NO_CLOJURE") of
   false ->
-    [ {post_hooks, [{compile, "make EBIN=$REBAR_DEPS_DIR/clojerl/ebin clojure"}]}
+    [ {post_hooks, [{compile, "make clojure"}]}
       | CONFIG
     ];
   _ ->

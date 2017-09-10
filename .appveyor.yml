@@ -1,0 +1,10 @@
+version: "{build}"
+build: off
+environment:
+  matrix:
+  - erlang_vsn: 20.0
+install:
+  - ps: choco install erlang --version $env:erlang_vsn
+  - ps: wget https://s3.amazonaws.com/rebar3/rebar3 -OutFile C:\msys64\usr\bin\rebar3
+test_script:
+  - cmd: C:\msys64\usr\bin\bash.exe --login -c "export PATH=/mingw64/bin:$PATH; cd /c/projects/clojerl; make ci"

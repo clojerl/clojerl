@@ -6,6 +6,7 @@ clojerl.d
 callgrind.*
 *.so
 *.o
+*.dll
 c_src/*.mk
 *.plt
 *.out*
