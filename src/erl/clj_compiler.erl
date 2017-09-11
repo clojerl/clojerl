@@ -207,6 +207,7 @@ run_monitored(Fun) ->
 
 -spec do_compile(binary(), options(), clj_env:env()) -> no_return().
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
+  erlang:put(clj_compiling, true),
   Opts     = maps:merge(default_options(), Opts0),
   CljFlags = maps:get(clj_flags, Opts),
   RdrOpts  = maps:get(reader_opts, Opts, #{}),
