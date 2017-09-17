@@ -58,7 +58,7 @@ maybe_macroexpand_symbol(Form, OpSym) ->
       NameBin = 'clojerl.String':substring(OpBin, 1, Length),
       NameSym = clj_rt:symbol(NameBin),
       [_, Target | Args] = clj_rt:to_list(Form),
-      clj_rt:list([DotSym, Target, NameSym | Args]);
+      keep_tag(Form, clj_rt:list([DotSym, Target, NameSym | Args]));
     _ ->
       case 'clojerl.String':ends_with(OpBin, <<".">>) of
         true ->
@@ -68,10 +68,23 @@ maybe_macroexpand_symbol(Form, OpSym) ->
           NameSym = clj_rt:symbol(NameBin),
           [_ | Args]  = clj_rt:to_list(Form),
 
-          clj_rt:list([NewSym, NameSym | Args]);
+          keep_tag(Form, clj_rt:list([NewSym, NameSym | Args]));
         false ->
           Form
       end
+  end.
+
+-spec keep_tag(any(), X) -> X.
+keep_tag(Form, List) ->
+  case clj_rt:'meta?'(Form) of
+    true ->
+      Meta = clj_rt:meta(Form),
+      case clj_rt:get(Meta, tag) of
+        ?NIL -> List;
+        Tag  -> clj_rt:with_meta(List, #{tag => Tag})
+      end;
+    false ->
+      List
   end.
 
 -spec keep_location_meta(any(), any()) -> any().
