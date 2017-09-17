@@ -548,10 +548,14 @@ register_gensym(Symbol) ->
       NameStr2   = binary:part(NameStr, 0, byte_size(NameStr) - 1),
       Parts      = [NameStr2, <<"__">>, clj_rt:next_id(), <<"__auto__">>],
       PartsStr   = lists:map(fun clj_rt:str/1, Parts),
-      GenSym     = clj_rt:symbol(erlang:iolist_to_binary(PartsStr)),
+      GenSym0    = clj_rt:symbol(erlang:iolist_to_binary(PartsStr)),
+
+      Meta       = 'clojerl.Symbol':meta(Symbol),
+      GenSym1    = 'clojerl.Symbol':with_meta(GenSym0, Meta),
+
       SymbolName = 'clojerl.Symbol':name(Symbol),
-      erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym}),
-      GenSym;
+      erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym1}),
+      GenSym1;
     GenSym ->
       GenSym
   end.
