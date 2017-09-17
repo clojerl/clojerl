@@ -1209,6 +1209,15 @@ dot(_Config) ->
    , f  := #{op := resolve_type}
    } = InvokeExpr2,
 
+  #{ op  := invoke
+   , tag := StringTypeExpr
+   } = analyze_one(<<"^clojerl.String (.substring \"foo\" 1)">>),
+
+  #{ op   := type
+   , type := StringTypeSym
+   } = StringTypeExpr,
+  <<"clojerl.String">> = clj_rt:name(StringTypeSym),
+
   ct:comment("Require at least 3 forms"),
   ok = try analyze_one(<<"(. a)">>), error
        catch _:Message ->
