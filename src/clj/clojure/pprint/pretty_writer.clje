@@ -50,8 +50,8 @@
   "Call .write on Writer (getf :base) with proper type-hinting to
   avoid reflection."
   [& args]
-  `(let [w# (getf :base)]
-     (erlang.io.IWriter/write.e w# ~@args)))
+  `(let [^erlang.io.IWriter w# (getf :base)]
+     (.write w# ~@args)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; The data structures used by pretty-writer

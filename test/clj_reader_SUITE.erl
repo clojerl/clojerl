@@ -438,16 +438,16 @@ syntax_quote(ReadFun) ->
   HelloSyntaxQuote = ReadFun(<<"`hello">>),
   true = clj_rt:equiv(clj_rt:first(HelloSyntaxQuote), WithMetaSym),
   true = clj_rt:equiv( clj_rt:second(HelloSyntaxQuote)
-                       , QuoteFun(UserHelloSym)
-                       ),
+                     , QuoteFun(UserHelloSym)
+                     ),
 
   ct:comment("Read qualified symbol"),
   SomeNsHelloSym = clj_rt:symbol(<<"some-ns">>, <<"hello">>),
   SomeNsHelloSyntaxQuote = ReadFun(<<"`some-ns/hello">>),
   true = clj_rt:equiv(clj_rt:first(SomeNsHelloSyntaxQuote), WithMetaSym),
   true = clj_rt:equiv( clj_rt:second(SomeNsHelloSyntaxQuote)
-                       , QuoteFun(SomeNsHelloSym)
-                       ),
+                     , QuoteFun(SomeNsHelloSym)
+                     ),
 
   ct:comment("Read auto-gen symbol"),
   ListGenSym = ReadFun(<<"`hello#">>),
@@ -463,8 +463,8 @@ syntax_quote(ReadFun) ->
   ListSecond = clj_rt:second(ListConcat),
   ListThird  = clj_rt:third(ListConcat),
   true = clj_rt:equiv( clj_rt:second(ListSecond)
-                       , clj_rt:second(ListThird)
-                       ),
+                     , clj_rt:second(ListThird)
+                     ),
 
   ct:comment("Read unquote"),
   HelloSym = clj_rt:symbol(<<"hello">>),
@@ -482,14 +482,14 @@ syntax_quote(ReadFun) ->
                              "  (clojure.core/list 'clojure.core/hello)"
                              "  (clojure.core/list :world))">>),
   true = clj_rt:equiv( clj_rt:third(clj_rt:second(WithMetaListHello))
-                       , ListHelloCheck
-                       ),
+                     , ListHelloCheck
+                     ),
 
   WithMetaEmptyList = ReadFun(<<"`()">>),
   EmptyListCheck = ReadFun(<<"(clojure.core/list)">>),
   true = clj_rt:equiv( clj_rt:third(clj_rt:second(WithMetaEmptyList))
-                       , EmptyListCheck
-                       ),
+                     , EmptyListCheck
+                     ),
 
   ct:comment("Read map"),
   MapWithMeta = ReadFun(<<"`{hello :world}">>),
@@ -528,8 +528,8 @@ syntax_quote(ReadFun) ->
                                  "  (hello world)"
                                  "  (clojure.core/list :sup?))">>),
   true = clj_rt:equiv( clj_rt:third(clj_rt:second(WithMetaHelloWorldSup))
-                       , HelloWorldSupCheck
-                       ),
+                     , HelloWorldSupCheck
+                     ),
 
   ct:comment("Read unquote inside list"),
   ListWithMetaHelloWorld = ReadFun(<<"`(~hello :world)">>),
@@ -537,16 +537,27 @@ syntax_quote(ReadFun) ->
                                   "  (clojure.core/list hello)"
                                   "  (clojure.core/list :world))">>),
   true = clj_rt:equiv( clj_rt:third(clj_rt:second(ListWithMetaHelloWorld))
-                       , ListHelloWorldCheck
-                       ),
+                     , ListHelloWorldCheck
+                     ),
 
   ct:comment("Syntax quote a symbol with dots"),
   HelloWorldWithDot = ReadFun(<<"`hello.world">>),
   HelloWorldWithDotCheck = ReadFun(<<"(quote hello.world)">>),
   true = clj_rt:equiv( clj_rt:second(HelloWorldWithDot)
-                       , HelloWorldWithDotCheck
-                       ),
+                     , HelloWorldWithDotCheck
+                     ),
 
+  ct:comment("Generated symbol in nested structure keeps meta"),
+  FooSymbol       = clj_rt:symbol(<<"foo">>),
+  GenSymWithMeta0 = ReadFun(<<"`(^foo w#)">>),
+  GenSymWithMeta1 = clj_rt:second(GenSymWithMeta0),
+  GenSymWithMeta2 = clj_rt:nth(GenSymWithMeta1, 2),
+  GenSymWithMeta3 = clj_rt:second(clj_rt:second(clj_rt:second(GenSymWithMeta2))),
+  GenSymMeta      = clj_rt:meta(GenSymWithMeta3),
+
+  true = clj_rt:equiv( clj_rt:get(GenSymMeta, tag)
+                     , FooSymbol
+                     ),
   {comments, ""}.
 
 unquote(Config) when is_list(Config) ->
