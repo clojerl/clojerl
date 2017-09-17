@@ -22,8 +22,13 @@ compile:
 	${V} if [ -n "${NO_CLOJURE}" ]; then echo "Not compiling clojure files"; fi;
 	${V} ${REBAR3} compile
 
-test: clean
+test: test-ct test-clj
+
+test-ct: clean
 	${V} ${REBAR3} as test do ct, cover, cover_result
+
+test-clj: test-ct
+	${V} ${CLOJERLMAIN} -m examples.run-tests test/clj/clojure/test_clojure/ test/clj/
 
 dialyzer: clean
 	${V} NO_CLOJURE=1 ${REBAR3} dialyzer
