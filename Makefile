@@ -28,7 +28,7 @@ test-ct: clean
 	${V} ${REBAR3} as test do ct, cover, cover_result
 
 test-clj: test-ct
-	${V} ${CLOJERLMAIN} -m examples.run-tests test/clj/clojure/test_clojure/ test/clj/
+	${V} ${CLOJURE_MAIN} -m examples.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}
 
 dialyzer: clean
 	${V} NO_CLOJURE=1 ${REBAR3} dialyzer
@@ -44,10 +44,8 @@ clean:
 
 ci: test dialyzer
 
-repl: SHELL_OPTS = -sname clojerl-repl -setcookie clojerl -s clojerl
-repl: SHELL_OPTS += -eval "'clojure.main':main([<<\"-r\">>])." -s clojerl start -noshell +pc unicode
 repl: compile
-	${V} ${RLWRAP} erl -pa `rebar3 path --ebin` ${CODE_PATH} ${SHELL_OPTS}
+	${V} ${RLWRAP} ${CLOJURE_MAIN} -r
 
 # ------------------------------------------------------------------------------
 # Clojure compilation
@@ -64,9 +62,9 @@ CLJ_EXCLUDE    := ${EXCLUDE_CORE} ${EXCLUDE_PPRINT}
 CLJ_ALL_FILES  := $(shell find ${CLJ_SRC} -type f -name "*${EXT}")
 CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE}, ${CLJ_ALL_FILES})
 
-CODE_PATH   := ${EBIN} ${CLJ_SRC}
-CLOJERLC    := bin/compile -o ${EBIN} -pa ${EBIN} -pa ${CLJ_SRC} -pa ${CLJ_TEST}
-CLOJERLMAIN := bin/clojure.main
+CLOJERL      := bin/clojerl -pa ${CLJ_SRC} -pa ${CLJ_TEST}
+CLOJERLC     := ${CLOJERL} --compile -o ${EBIN}
+CLOJURE_MAIN := ${CLOJERL} --clojure.main
 
 # Maps clj to target beam or ns: path/to/ns/some_file${EXT} -> ns.some-file[.ext]
 define clj_to
@@ -77,8 +75,8 @@ clojure: clojure.core $(call clj_to,${CLJ_FILES},)
 
 benchmark: all
 	${V} cp ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
-	${V} (time ${CLOJERLMAIN} -m benchmark.benchmark-runner) 2>&1 | tee ${CLJ_TEST}/benchmark/result.txt
-	${V} ${CLOJERLMAIN} -m benchmark.report ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
+	${V} (time ${CLOJURE_MAIN} -m benchmark.benchmark-runner) 2>&1 | tee ${CLJ_TEST}/benchmark/result.txt
+	${V} ${CLOJURE_MAIN} -m benchmark.report ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
 
 # This target is special since it is built from two sources erl and clj
 ${EBIN}/clojure.core.beam: ${BOOT_SRC}/clojure.core.erl ${CLJ_SRC}/clojure/core${EXT}
