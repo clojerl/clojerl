@@ -19,6 +19,7 @@
         , seq/1
         , str/1
         , substring/1
+        , split/1
         , complete_coverage/1
         ]).
 
@@ -143,6 +144,13 @@ substring(_Config) ->
   ok = try 'clojerl.String':substring(<<>>, 5, 4), error
        catch _:_ -> ok
        end,
+
+  {comments, ""}.
+
+-spec split(config()) -> result().
+split(_Config) ->
+  [<<"h">>, <<"llo">>] = 'clojerl.String':split(<<"hello">>, <<"e">>),
+  [<<"1">>, <<"2">>, <<"3">>] = 'clojerl.String':split(<<"1,2,3">>, <<",">>),
 
   {comments, ""}.
 

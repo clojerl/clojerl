@@ -32,6 +32,7 @@ end_per_suite(Config) ->
 replace(_Config) ->
   Regex = 'erlang.util.Regex':?CONSTRUCTOR(<<"a">>),
 
+  <<"foo">> = 'erlang.util.Regex':replace(Regex, <<"faa">>, <<"o">>),
   <<"foa">> = 'erlang.util.Regex':replace(Regex, <<"faa">>, <<"o">>, []),
   <<"foo">> = 'erlang.util.Regex':replace(Regex, <<"faa">>, <<"o">>, [global]),
   <<"foo">> = 'erlang.util.Regex':replace(Regex, <<"foo">>, <<"e">>, []),

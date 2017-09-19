@@ -117,6 +117,9 @@ nth(_Config) ->
   3 = clj_rt:nth(Vector, 2, not_found),
   not_found = clj_rt:nth(Vector, 42, not_found),
 
+  ok = try clj_rt:nth(Vector, 3), error
+       catch error:badarg -> ok end,
+
   {comments, ""}.
 
 -spec seq(config()) -> result().
