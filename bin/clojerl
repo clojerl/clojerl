@@ -4,10 +4,7 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
 
   -v                          Prints version and exits
   -pa PATH                    Prepends the given path to Erlang code path (*)
-  -pz PATH                    Appends the given path to Erlang code path (*)
-
-  --eval EXPR                 Evaluates the given expression
-  --no-halt                   Does not halt the Erlang VM after execution" >&2
+  -pz PATH                    Appends the given path to Erlang code path (*)" >&2
   exit 1
 fi
 
@@ -25,5 +22,27 @@ SELF=$(readlink_f "$0")
 CLJE_BINDIR=$(dirname "$SELF")
 CLJE_ROOT=$(dirname "$CLJE_BINDIR")
 
+ERL_ARGS="-s clojerl_cli start +pc unicode -noshell"
+
+while [[ $# -gt 1 ]]
+do
+    key="$1"
+
+    case $key in
+        -pa)
+            ERL_ARGS="$ERL_ARGS -pa $2"
+            shift # past argument
+            ;;
+        -pz)
+            ERL_ARGS="$ERL_ARGS -pz $2"
+            shift # past argument
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift # past argument or value
+done
+
 export ERL_LIBS="$CLJE_ROOT/_build/default/lib:$ERL_LIBS"
-exec erl -s clojerl_cli start +pc unicode -noshell -extra "$@"
+exec erl $ERL_ARGS -extra "$@"

@@ -1,6 +1,9 @@
 case os:getenv("NO_CLOJURE") of
   false ->
-    [ {post_hooks, [{compile, "make clojure"}]}
+    [ {post_hooks, [ {compile, "make clojure"}
+                   , {ct,      "make test-clj"}
+                   ]
+      }
       | CONFIG
     ];
   _ ->

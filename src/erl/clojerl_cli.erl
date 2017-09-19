@@ -2,29 +2,24 @@
 
 -export([start/0]).
 
--type options() :: #{ compile_path => string()
-                    , compile      => boolean()
-                    , verbose      => boolean()
-                    , time         => boolean()
-                    , code_paths   => [string()]
-                    , files        => [string()]
+-type options() :: #{ compile_path      => string()
+                    , compile           => boolean()
+                    , compile_opts      => clj_compiler:options()
+                    , code_paths        => [string()]
+                    , files             => [string()]
+                    , clojure_main      => boolean()
+                    , clojure_main_args => [string()]
                     }.
 
--spec start() -> ok.
+-spec start() -> no_return().
 start() ->
   Args  = init:get_plain_arguments(),
   Opts  = parse_args(Args),
   ok    = process_options(Opts),
   ok    = clojerl:start(),
-
-  run_commands(Opts),
+  ok    = run_commands(Opts),
 
   erlang:halt(0).
-
--spec compile_file(string(), options()) -> term().
-compile_file(Path, Opts) ->
-  PathBin = list_to_binary(Path),
-  clj_compiler:compile_file(PathBin, Opts).
 
 -spec default_options() -> options().
 default_options() ->
@@ -32,8 +27,9 @@ default_options() ->
    , compile      => false
    , code_paths   => []
    , files        => []
-   , time         => false
-   , verbose      => false
+   , compile_opts => #{ time    => false
+                      , verbose => false
+                      }
    }.
 
 -spec parse_args([string()]) -> options().
@@ -49,12 +45,12 @@ parse_args(["--compile" | Rest], Opts) ->
   parse_args(Rest, Opts#{compile => true});
 parse_args(["-pa", CodePath | Rest], Opts = #{code_paths := CodePaths}) ->
   parse_args(Rest, Opts#{code_paths => [CodePath | CodePaths]});
-parse_args([TimeOpt | Rest], Opts)
+parse_args([TimeOpt | Rest], #{compile_opts := CompileOpts} = Opts)
   when TimeOpt =:= "-t"; TimeOpt =:= "--time" ->
-  parse_args(Rest, Opts#{time => true});
-parse_args([VerboseOpt | Rest], Opts)
+  parse_args(Rest, Opts#{compile_opts := CompileOpts#{time := true}});
+parse_args([VerboseOpt | Rest], #{compile_opts := CompileOpts} = Opts)
   when VerboseOpt =:= "-vv"; VerboseOpt =:= "--verbose" ->
-  parse_args(Rest, Opts#{verbose => true});
+  parse_args(Rest, Opts#{compile_opts := CompileOpts#{verbose := true}});
 parse_args(["--clojure.main" | Args], Opts0) ->
   Opts1   = Opts0#{ clojure_main      => true
                   , clojure_main_args => Args
@@ -77,14 +73,16 @@ process_options(Opts) ->
 run_commands(#{ compile      := true
               , files        := Files
               , compile_path := CompilePath
+              , compile_opts := CompileOpts
               } = Opts) ->
   CompilePathBin = list_to_binary(CompilePath),
   Bindings       = #{ <<"#'clojure.core/*compile-path*">>  => CompilePathBin
                     , <<"#'clojure.core/*compile-files*">> => true
                     },
+  FilesBin       = [list_to_binary(F) || F <- Files],
   try
     ok = 'clojerl.Var':push_bindings(Bindings),
-    ok = lists:foreach(fun(X) -> compile_file(X, Opts) end, Files)
+    [clj_compiler:compile_file(F, CompileOpts) || F <- FilesBin]
   after
     ok = 'clojerl.Var':pop_bindings()
   end,

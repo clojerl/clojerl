@@ -22,13 +22,13 @@ compile:
 	${V} if [ -n "${NO_CLOJURE}" ]; then echo "Not compiling clojure files"; fi;
 	${V} ${REBAR3} compile
 
-test: test-ct test-clj
+test: test-ct
 
 test-ct: clean
 	${V} ${REBAR3} as test do ct, cover, cover_result
 
-test-clj: test-ct
-	${V} ${CLOJURE_MAIN} -m examples.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}
+test-clj:
+	${V} ${CLOJURE_MAIN} -m examples.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}/
 
 dialyzer: clean
 	${V} NO_CLOJURE=1 ${REBAR3} dialyzer
@@ -62,7 +62,7 @@ CLJ_EXCLUDE    := ${EXCLUDE_CORE} ${EXCLUDE_PPRINT}
 CLJ_ALL_FILES  := $(shell find ${CLJ_SRC} -type f -name "*${EXT}")
 CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE}, ${CLJ_ALL_FILES})
 
-CLOJERL      := bin/clojerl -pa ${CLJ_SRC} -pa ${CLJ_TEST}
+CLOJERL      := bin/clojerl -pa ${CLJ_SRC} -pa ${CLJ_TEST} -pa ${EBIN}
 CLOJERLC     := ${CLOJERL} --compile -o ${EBIN}
 CLOJURE_MAIN := ${CLOJERL} --clojure.main
 
