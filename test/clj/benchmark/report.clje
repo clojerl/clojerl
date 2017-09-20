@@ -28,12 +28,13 @@
         item   (items expr)
         t      (:time item)
         t-prev (:time item-prev)
-        diff   (when t (- t t-prev))
-        diff%  (when t (-> diff (/ t-prev) (* 100)))]
-    (assoc items expr (assoc item
+        diff   (if t (- t t-prev) "-")
+        diff%  (if t (-> diff (/ t-prev) (* 100) int) "-")]
+    (assoc items expr (assoc item-prev
                              :time-prev t-prev
+                             :time t
                              :diff diff
-                             :diff% (int diff%)))))
+                             :diff% diff%))))
 
 (defn compare
   [items items-prev]

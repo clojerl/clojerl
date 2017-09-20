@@ -5,7 +5,6 @@
 -type options() :: #{ compile_path      => string()
                     , compile           => boolean()
                     , compile_opts      => clj_compiler:options()
-                    , code_paths        => [string()]
                     , files             => [string()]
                     , clojure_main      => boolean()
                     , clojure_main_args => [string()]
@@ -13,11 +12,10 @@
 
 -spec start() -> no_return().
 start() ->
-  Args  = init:get_plain_arguments(),
-  Opts  = parse_args(Args),
-  ok    = process_options(Opts),
-  ok    = clojerl:start(),
-  ok    = run_commands(Opts),
+  Args = init:get_plain_arguments(),
+  Opts = parse_args(Args),
+  ok   = clojerl:start(),
+  ok   = run_commands(Opts),
 
   erlang:halt(0).
 
@@ -25,7 +23,6 @@ start() ->
 default_options() ->
   #{ compile_path => "ebin"
    , compile      => false
-   , code_paths   => []
    , files        => []
    , compile_opts => #{ time    => false
                       , verbose => false
@@ -43,8 +40,6 @@ parse_args(["-o", CompilePath | Rest], Opts) ->
   parse_args(Rest, Opts#{compile_path => CompilePath});
 parse_args(["--compile" | Rest], Opts) ->
   parse_args(Rest, Opts#{compile => true});
-parse_args(["-pa", CodePath | Rest], Opts = #{code_paths := CodePaths}) ->
-  parse_args(Rest, Opts#{code_paths => [CodePath | CodePaths]});
 parse_args([TimeOpt | Rest], #{compile_opts := CompileOpts} = Opts)
   when TimeOpt =:= "-t"; TimeOpt =:= "--time" ->
   parse_args(Rest, Opts#{compile_opts := CompileOpts#{time := true}});
@@ -62,19 +57,14 @@ parse_args([Unknown | _], _Opts) ->
   io:format("Unknown argument: ~s", [Unknown]),
   erlang:halt(0).
 
--spec process_options(options()) -> ok.
-process_options(Opts) ->
-  #{ compile_path := CompilePath
-   , code_paths   := CodePaths
-   } = Opts,
-  ok = code:add_paths([CompilePath | CodePaths]).
-
 -spec run_commands(options()) -> ok.
 run_commands(#{ compile      := true
               , files        := Files
               , compile_path := CompilePath
               , compile_opts := CompileOpts
               } = Opts) ->
+
+  true           = code:add_path(CompilePath),
   CompilePathBin = list_to_binary(CompilePath),
   Bindings       = #{ <<"#'clojure.core/*compile-path*">>  => CompilePathBin
                     , <<"#'clojure.core/*compile-files*">> => true
