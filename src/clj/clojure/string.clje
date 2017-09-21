@@ -37,8 +37,8 @@ Design notes for clojure.string:
 (defn ^clojerl.String reverse
   "Returns s with its characters reversed."
   {:added "1.2"}
-  [^clojerl.String s]
-  (-> (when s (str s))
+  [^clojerl.IStringable s]
+  (-> (.str s)
       unicode/characters_to_list.1
       lists/reverse.1
       erlang/list_to_binary.1))
@@ -48,14 +48,15 @@ Design notes for clojure.string:
    replacement for a pattern match in replace or replace-first, do the
    necessary escaping of special characters in the replacement."
   {:added "1.5"}
-  [^clojerl.String replacement]
-  (erlang.util.Regex/quote.e (when replacement (str replacement))))
+  [^clojerl.IStringable replacement]
+  (erlang.util.Regex/quote.e (.str replacement)))
 
 (defn- replace-by
-  [s re f]
+  [^clojerl.IStringable s re f]
   (with-open [buffer (new erlang.io.StringWriter)]
-    (let [append erlang.io.StringWriter/write.2
-          length (count s)
+    (let [^clojerl.String s (.str s)
+          append erlang.io.StringWriter/write.2
+          length (.length s)
           matches (re-run re s :global #erl [:capture :all :index])]
       (loop [index 0
              [[[i len] :as m] & ms] matches]
@@ -93,8 +94,8 @@ Design notes for clojure.string:
    (clojure.string/replace \"Almost Pig Latin\" #\"\\b(\\w)(\\w+)\\b\" \"$2$1ay\")
    -> \"lmostAay igPay atinLay\""
   {:added "1.2"}
-  [s match replacement]
-  (let [s (when s (str s))
+  [^clojerl.IStringable s match replacement]
+  (let [^clojerl.String s (.str s)
         replace erlang.util.Regex/replace.4
         opts #erl(:global)]
     (cond
@@ -106,10 +107,10 @@ Design notes for clojure.string:
       :else (throw (str "Invalid match arg: " match)))))
 
 (defn- replace-first-by
-  [s re f]
+  [^clojerl.String s re f]
   (with-open [buffer (new erlang.io.StringWriter)]
     (let [append erlang.io.StringWriter/write.2
-          length (count s)
+          length (.length s)
           [[i len] :as matches] (re-run re s #erl [:capture :all :index])
           matches (map (fn [[i len]] (subs s i (+ i len))) matches)
           matches (if (= (count matches) 1) (first matches) matches)]
@@ -122,9 +123,8 @@ Design notes for clojure.string:
         s))))
 
 (defn- replace-first-str
-  [s match replace]
-  (let [s (str s)
-        i (clojerl.String/index_of.e s match)]
+  [^clojerl.String s match replace]
+  (let [i (.index_of s match)]
     (if (= -1 i)
       s
       (str (subs s 0 i) replace (subs s (+ i (count match)))))))
@@ -154,8 +154,8 @@ Design notes for clojure.string:
                                  #\"(\\w+)(\\s+)(\\w+)\" \"$3$2$1\")
    -> \"first swap two words\""
   {:added "1.2"}
-  [s match replacement]
-  (let [s (when s (str s))
+  [^clojerl.IStringable s match replacement]
+  (let [^clojerl.String s (.str s)
         replace erlang.util.Regex/replace.4
         opts #erl ()]
     (cond
@@ -181,21 +181,21 @@ Design notes for clojure.string:
 (defn ^clojerl.String upper-case
   "Converts string to all upper-case."
   {:added "1.2"}
-  [^clojerl.String s]
-  (clojerl.String/to_upper.e (when s (str s))))
+  [^clojerl.IStringable s]
+  (.to_upper ^clojerl.String (.str s)))
 
 (defn ^clojerl.String lower-case
   "Converts string to all lower-case."
   {:added "1.2"}
-  [^clojerl.String s]
-  (clojerl.String/to_lower.e (when s (str s))))
+  [^clojerl.IStringable s]
+  (.to_lower ^clojerl.String (.str s)))
 
 (defn ^clojerl.String capitalize
   "Converts first character of the string to upper-case, all other
   characters to lower-case."
   {:added "1.2"}
-  [^clojerl.String s]
-  (let [s (when s (str s))]
+  [^clojerl.IStringable s]
+  (let [^clojerl.String s (.str s)]
     (if (< (count s) 2)
       (upper-case s)
       (str (upper-case (subs s 0 1))
@@ -205,14 +205,10 @@ Design notes for clojure.string:
   "Splits string on a regular expression.  Optional argument limit is
   the maximum number of splits. Not lazy. Returns vector of the splits."
   {:added "1.2"}
-  ([s re]
-   (vec (erlang.util.Regex/split.e re
-                                  (when s (str s))
-                                  #erl (:trim))))
-  ([s re limit]
-   (vec (erlang.util.Regex/split.e re
-                                   (when s (str s))
-                                   #erl(:trim :global #erl [:match_limit limit])))))
+  ([^clojerl.IStringable s ^erlang.util.Regex re]
+   (vec (.split re (.str s) #erl (:trim))))
+  ([^clojerl.IStringable s ^erlang.util.Regex re limit]
+   (vec (.split re (.str s) #erl(:trim :global #erl [:match_limit limit])))))
 
 (defn split-lines
   "Splits s on \\n or \\r\\n."
@@ -223,43 +219,43 @@ Design notes for clojure.string:
 (defn ^clojerl.String trim
   "Removes whitespace from both ends of string."
   {:added "1.2"}
-  [s]
-  (let [s (when s (str s))
-        len (when s (count s))]
+  [^clojerl.IStringable s]
+  (let [^clojerl.String s (.str s)
+        len (.length s)]
     (loop [rindex len]
       (if (zero? rindex)
         ""
-        (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s (dec rindex)))
+        (if (.is_whitespace ^clojerl.String (.char_at s (dec rindex)))
           (recur (dec rindex))
           ;; there is at least one non-whitespace char in the string,
           ;; so no need to check for lindex reaching len.
           (loop [lindex 0]
-            (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s lindex))
+            (if (.is_whitespace ^clojerl.String (.char_at s lindex))
               (recur (inc lindex))
               (subs s lindex rindex))))))))
 
 (defn ^clojerl.String triml
   "Removes whitespace from the left side of string."
   {:added "1.2"}
-  [^clojerl.String s]
-  (let [s (when s (str s))
-        len (when s (count s))]
+  [^clojerl.IStringable s]
+  (let [^clojerl.String s (.str s)
+        len (.length s)]
     (loop [index 0]
       (if (= len index)
         ""
-        (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s index))
+        (if (.is_whitespace ^clojerl.String (.char_at s index))
           (recur (inc index))
           (subs s index len))))))
 
 (defn ^clojerl.String trimr
   "Removes whitespace from the right side of string."
   {:added "1.2"}
-  [^clojerl.String s]
-  (let [s (when s (str s))]
-    (loop [index (when s (count s))]
+  [^clojerl.IStringable s]
+  (let [^clojerl.String s (.str s)]
+    (loop [index (.length s)]
       (if (zero? index)
         ""
-        (if (clojerl.String/is_whitespace.e (clojerl.String/char_at.e s (dec index)))
+        (if (.is_whitespace ^clojerl.String (.char_at s (dec index)))
           (recur (dec index))
           (subs s 0 index))))))
 
@@ -267,36 +263,36 @@ Design notes for clojure.string:
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
   {:added "1.2"}
-  [^clojerl.String s]
-  (let [s (when s (str s))]
-    (loop [index (when s (count s))]
+  [^clojerl.IStringable s]
+  (let [^clojerl.String s (.str s)]
+    (loop [index (.length s)]
       (if (zero? index)
         ""
-        (let [ch (clojerl.String/char_at.e s (dec index))]
+        (let [ch (.char_at s (dec index))]
           (if (or (= ch \newline) (= ch \return))
             (recur (dec index))
-            (subs (str s) 0 index)))))))
+            (subs (.str s) 0 index)))))))
 
 (defn blank?
   "True if s is nil, empty, or contains only whitespace."
   {:added "1.2"}
-  [s]
-  (let [s (when s (str s))
-        len (count s)]
-    (if s
+  [^clojerl.IStringable s]
+  (if s
+    (let [^clojerl.String s (.str s)
+          len (.length s)]
       (loop [index (int 0)]
         (if (= len index)
           true
           (if (= :whitespace (clj_utils/char_type.e (binary/at.e s index)))
             (recur (inc index))
-            false)))
-      true)))
+            false))))
+    true))
 
 (defn starts-with?
   "True if s starts with substr."
   {:added "1.8"}
-  [s substr]
-  (clojerl.String/starts_with.e (when s (str s)) substr))
+  [^clojerl.IStringable s substr]
+  (.starts_with ^clojerl.String (.str s) substr))
 
 (defn ^clojerl.String escape
   "Return a new string, using cmap to escape each character ch
@@ -305,16 +301,16 @@ Design notes for clojure.string:
    If (cmap ch) is nil, append ch to the new string.
    If (cmap ch) is non-nil, append (str (cmap ch)) instead."
   {:added "1.2"}
-  [s cmap]
-  (let [s (when s (str s))
-        length (count s)
+  [^clojerl.IStringable s cmap]
+  (let [^clojerl.String s (.str s)
+        length (.length s)
         append erlang.io.StringWriter/write.2]
     (with-open [buffer (new erlang.io.StringWriter)]
       (loop [index 0
              buffer buffer]
         (if (= length index)
           (str buffer)
-          (let [ch (clojerl.String/char_at.e s index)]
+          (let [ch (.char_at s index)]
             (if-let [replacement (cmap ch)]
               (append buffer replacement)
               (append buffer ch))
@@ -324,13 +320,13 @@ Design notes for clojure.string:
   "Return index of value (string or char) in s, optionally searching
   forward from from-index or nil if not found."
   {:added "1.8"}
-  ([s value]
-   (let [result (clojerl.String/index_of.e (str s) value)]
+  ([^clojerl.IStringable s value]
+   (let [result (.index_of ^clojerl.String (.str s) value)]
      (if (= result -1)
        nil
        result)))
-  ([s value from-index]
-   (let [result (clojerl.String/index_of.e (str s) value from-index)]
+  ([^clojerl.IStringable s value from-index]
+   (let [result (.index_of ^clojerl.String (.str s) value from-index)]
      (if (= result -1)
        nil
        result))))
@@ -339,13 +335,13 @@ Design notes for clojure.string:
   "Return last index of value (string or char) in s, optionally
   searching backward from from-index or nil if not found."
   {:added "1.8"}
-  ([^clojerl.String s value]
-   (let [result (clojerl.String/last_index_of.e (str s) value)]
+  ([^clojerl.IStringable s value]
+   (let [result (.last_index_of ^clojerl.String (.str s) value)]
      (if (= result -1)
        nil
        result)))
-  ([^clojerl.String s value ^long from-index]
-   (let [result (clojerl.String/last_index_of.e (str s) value from-index)]
+  ([^clojerl.IStringable s value from-index]
+   (let [result (.last_index_of ^clojerl.String (.str s) value from-index)]
      (if (= result -1)
        nil
        result))))
@@ -353,11 +349,11 @@ Design notes for clojure.string:
 (defn ends-with?
   "True if s ends with substr."
   {:added "1.8"}
-  [^clojerl.String s ^clojerl.String substr]
-  (clojerl.String/ends_with.e (str s) substr))
+  [^clojerl.IStringable s ^clojerl.String substr]
+  (.ends_with ^clojerl.String (.str s) substr))
 
 (defn includes?
   "True if s includes substr."
   {:added "1.8"}
-  [^clojerl.String s ^clojerl.String substr]
-  (clojerl.String/contains.e (str s) substr))
+  [^clojerl.IStringable s ^clojerl.String substr]
+  (.contains ^clojerl.String (.str s) substr))
