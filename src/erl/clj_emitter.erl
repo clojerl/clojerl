@@ -1548,7 +1548,7 @@ get_lexical_rename(LocalExpr, State) ->
                  end,
 
   case RenameSym of
-    ?NIL      -> 'clojerl.Nil':str(?NIL);
+    ?NIL      -> <<"">>;
     RenameSym -> 'clojerl.Symbol':str(RenameSym)
   end.
 

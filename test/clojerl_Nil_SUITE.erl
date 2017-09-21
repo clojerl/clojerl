@@ -11,7 +11,6 @@
 -export([ cons/1
         , hash/1
         , seq/1
-        , str/1
         , complete_coverage/1
         ]).
 
@@ -56,13 +55,6 @@ seq(_Config) ->
   ?NIL = clj_rt:first(Nil),
   ?NIL = clj_rt:next(Nil),
   [] = clj_rt:rest(Nil),
-
-  {comments, ""}.
-
--spec str(config()) -> result().
-str(_Config) ->
-  ct:comment("Check the string representation of true and false"),
-  <<"">> = clj_rt:str(?NIL),
 
   {comments, ""}.
 
