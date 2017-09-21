@@ -80,7 +80,7 @@ build_key_values(KeyValues, [K, V | Items]) ->
 %% @private
 -spec build_mappings({any(), any()}, mappings()) -> mappings().
 build_mappings({K, V}, {Keys, Values}) ->
-  KHash = 'clojerl.IHash':hash(K),
+  KHash = clj_rt:hash(K),
   {Keys#{KHash => K}, Values#{KHash => V}}.
 
 %%------------------------------------------------------------------------------
@@ -90,10 +90,10 @@ build_mappings({K, V}, {Keys, Values}) ->
 %% clojerl.IAssociative
 
 contains_key(#{?TYPE := ?M, keys := Keys}, Key) ->
-  maps:is_key('clojerl.IHash':hash(Key), Keys).
+  maps:is_key(clj_rt:hash(Key), Keys).
 
 entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   case maps:is_key(Hash, Keys) of
     true ->
       KeyFound = maps:get(Hash, Keys),
@@ -103,7 +103,7 @@ entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
   end.
 
 assoc(#{?TYPE := ?M, keys := Keys, vals := Vals} = M, Key, Value) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   Key1 = case maps:is_key(Hash, Keys) of
            false -> Key;
            true  -> maps:get(Hash, Keys)
@@ -125,7 +125,7 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
       TypeModule   = clj_rt:type_module(Y),
-      KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
+      KeyHashFun   = fun(X) -> {X, clj_rt:hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
                               , clj_rt:to_list(TypeModule:keys(Y))
                               ),
@@ -143,7 +143,7 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
 apply(#{?TYPE := ?M} = M, [Key]) ->
   apply(M, [Key, ?NIL]);
 apply(#{?TYPE := ?M, vals := Vals}, [Key, NotFound]) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   maps:get(Hash, Vals, NotFound);
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -182,7 +182,7 @@ get(#{?TYPE := ?M} = Map, Key) ->
   get(Map, Key, ?NIL).
 
 get(#{?TYPE := ?M, vals := Vals}, Key, NotFound) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   maps:get(Hash, Vals, NotFound).
 
 %% clojerl.IMap
@@ -194,7 +194,7 @@ vals(#{?TYPE := ?M, vals := Vals}) ->
   maps:values(Vals).
 
 without(#{?TYPE := ?M, keys := Keys, vals := Vals} = M, Key) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   M#{ keys => maps:remove(Hash, Keys)
     , vals => maps:remove(Hash, Vals)
     }.

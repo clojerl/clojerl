@@ -41,6 +41,7 @@
         , gensym/0, gensym/1
         , compare_fun/2
         , shuffle/1
+        , hash/1
         ]).
 
 -spec type(any()) -> 'erlang.Type':type().
@@ -168,16 +169,16 @@ nth_from(Coll, N, NotFound) ->
   end.
 
 -spec 'empty?'(any()) -> boolean().
-'empty?'(Seq) ->
-  'clojerl.ISeqable':seq(Seq) == ?NIL.
+'empty?'(?NIL) -> true;
+'empty?'(Seq)  -> 'clojerl.ISeqable':seq(Seq) == ?NIL.
 
 -spec empty(any()) -> integer().
 empty(Coll) ->
   'clojerl.IColl':empty(Coll).
 
 -spec seq(any()) -> any() | ?NIL.
-seq(Seqable) ->
-  'clojerl.ISeqable':seq(Seqable).
+seq(?NIL)    -> ?NIL;
+seq(Seqable) -> 'clojerl.ISeqable':seq(Seqable).
 
 -spec seq_or_else(any()) -> any() | ?NIL.
 seq_or_else(Seqable) ->
@@ -656,3 +657,7 @@ compare_fun(Fun, clojure) ->
 shuffle(Seq) ->
   Items = [{rand:uniform(), X} || X <- to_list(Seq)],
   [X || {_, X} <- lists:sort(Items)].
+
+-spec hash(any()) -> integer().
+hash(?NIL) -> 0;
+hash(X)    -> 'clojerl.IHash':hash(X).

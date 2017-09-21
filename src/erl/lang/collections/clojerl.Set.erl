@@ -39,7 +39,7 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  KVs = lists:map(fun(X) -> {'clojerl.IHash':hash(X), X} end, Values),
+  KVs = lists:map(fun(X) -> {clj_rt:hash(X), X} end, Values),
   #{ ?TYPE => ?M
    , set   => maps:from_list(KVs)
    , meta  => ?NIL
@@ -58,7 +58,7 @@ count(#{?TYPE := ?M, set := MapSet}) -> maps:size(MapSet).
 %% clojerl.IColl
 
 cons(#{?TYPE := ?M, set := MapSet} = Set, X) ->
-  Hash = 'clojerl.IHash':hash(X),
+  Hash = clj_rt:hash(X),
   case maps:is_key(Hash, MapSet) of
     true  -> Set;
     false -> Set#{set => MapSet#{Hash => X}}
@@ -73,12 +73,12 @@ equiv( #{?TYPE := ?M, set := X}
      ) ->
   'erlang.Map':equiv(X, Y);
 equiv(#{?TYPE := ?M} = X, Y) ->
-  clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
+  clj_rt:'set?'(Y) andalso clj_rt:hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
 apply(#{?TYPE := ?M, set := MapSet}, [Item]) ->
-  Hash = 'clojerl.IHash':hash(Item),
+  Hash = clj_rt:hash(Item),
   maps:get(Hash, MapSet, ?NIL);
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -99,15 +99,15 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 %% clojerl.ISet
 
 disjoin(#{?TYPE := ?M, set := MapSet} = Set, Value) ->
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   Set#{set => maps:remove(Hash, MapSet)}.
 
 contains(#{?TYPE := ?M, set := MapSet}, Value) ->
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   maps:is_key(Hash, MapSet).
 
 get(#{?TYPE := ?M, set := MapSet}, Value) ->
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   case maps:is_key(Hash, MapSet) of
     true  -> maps:get(Hash, MapSet);
     false -> ?NIL

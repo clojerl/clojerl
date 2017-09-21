@@ -81,6 +81,8 @@ index_of(_Config) ->
   -1 = 'clojerl.String':index_of(<<"hello">>, <<"f">>),
   -1 = 'clojerl.String':index_of(<<>>, <<"f">>),
 
+  6  = 'clojerl.String':index_of(<<"foobarfoo">>, <<"f">>, 2),
+
   {comments, ""}.
 
 -spec last_index_of(config()) -> result().
@@ -140,6 +142,7 @@ substring(_Config) ->
   <<"">>    = 'clojerl.String':substring(<<"hello">>, 4, 4),
   <<"o">>   = 'clojerl.String':substring(<<"hello">>, 4, 5),
   <<>>      = 'clojerl.String':substring(<<>>, 0, 1),
+  <<"lo">>  = 'clojerl.String':substring(<<"hello">>, 3),
 
   ok = try 'clojerl.String':substring(<<>>, 5, 4), error
        catch _:_ -> ok
@@ -180,6 +183,9 @@ complete_coverage(_Config) ->
 
   <<"3">> = 'clojerl.String':char_at(<<"123456">>, 2),
 
-  true = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
+  true  = erlang:is_integer('clojerl.IHash':hash(<<"123456">>)),
+
+  true  = 'clojerl.String':is_printable(<<"123456">>),
+  false = 'clojerl.String':is_printable(<<"123456", 0>>),
 
   {comments, ""}.
