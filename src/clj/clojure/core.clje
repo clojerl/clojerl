@@ -506,10 +506,10 @@
   (^clojerl.String [x & ys]
                     ((fn [acc more]
                        (if more
-                         (recur (clojerl.String/append.e acc (str (first more)))
+                         (recur (.append acc (str (first more)))
                                 (next more))
                          acc))
-                     (clj_rt/str.e x) ys)))
+                     (str x) ys)))
 
 (defn keyword?
   "Return true if x is a Keyword"

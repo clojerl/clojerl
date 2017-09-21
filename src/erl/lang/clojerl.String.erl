@@ -16,6 +16,7 @@
         , contains/2
         , append/2
         , index_of/2
+        , index_of/3
         , last_index_of/2
         , last_index_of/3
         , join/2
@@ -81,20 +82,28 @@ append(X, Y) when is_binary(X), is_binary(Y) ->
   <<X/binary, Y/binary>>.
 
 -spec index_of(binary(), binary()) -> integer().
-index_of(<<>>, _Value) ->
-  -1;
 index_of(Str, Value) ->
-  do_index_of(Str, Value, erlang:size(Value), 0).
+  index_of(Str, Value, 0).
 
--spec do_index_of(binary(), binary(), integer(), integer()) -> integer().
-do_index_of(<<>>, _, _, _) ->
+-spec index_of(binary(), binary(), integer()) -> integer().
+index_of(<<>>, _Value, _FromIndex) ->
   -1;
-do_index_of(Str, Value, Length, Index) ->
+index_of(Str, Value, FromIndex) ->
+  do_index_of(Str, Value, erlang:size(Value), 0, FromIndex).
+
+-spec do_index_of(binary(), binary(), integer(), integer(), integer()) ->
+  integer().
+do_index_of(<<>>, _, _, _, _) ->
+  -1;
+do_index_of(<<_/utf8, Rest/binary>>, Value, Length, Index, FromIndex)
+  when Index < FromIndex ->
+  do_index_of(Rest, Value, Length, Index + 1, FromIndex);
+do_index_of(Str, Value, Length, Index, FromIndex) ->
   case Str of
     <<Value:Length/binary, _/binary>> ->
       Index;
     <<_/utf8, Rest/binary>> ->
-      do_index_of(Rest, Value, Length, Index + 1)
+      do_index_of(Rest, Value, Length, Index + 1, FromIndex)
   end.
 
 -spec last_index_of(binary(), binary()) -> integer().

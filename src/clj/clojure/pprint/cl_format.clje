@@ -987,7 +987,7 @@ string, or one character longer."
       (let [clause (first clauses)
             [iter-result result-str] (binding [*out* (erlang.io.StringWriter.)]
                                        [(execute-sub-format clause navigator base-navigator)
-                                        (.str ^erlang.io.StringWriter  *out*)])]
+                                        (.str ^erlang.io.StringWriter *out*)])]
         (if (= :up-arrow (first iter-result))
           [acc (second iter-result)]
           (recur (next clauses) (conj acc result-str) iter-result))))))

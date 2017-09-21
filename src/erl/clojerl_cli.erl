@@ -73,6 +73,9 @@ run_commands(#{ compile      := true
   try
     ok = 'clojerl.Var':push_bindings(Bindings),
     [clj_compiler:compile_file(F, CompileOpts) || F <- FilesBin]
+  catch Type:Reason ->
+      io:format("[~p] ~p~n~p", [Type, Reason, erlang:get_stacktrace()]),
+      erlang:halt(1)
   after
     ok = 'clojerl.Var':pop_bindings()
   end,
