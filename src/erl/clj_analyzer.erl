@@ -449,8 +449,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
 
   ParamsList = clj_rt:to_list(Params),
 
-  IsNotAmpersandFun = fun(X) -> clj_rt:str(X) =/= <<"&">> end,
-  ParamsOnly        = lists:filter(IsNotAmpersandFun, ParamsList),
+  ParamsOnly        = lists:filter(fun is_not_ampersand/1, ParamsList),
   IsVariadic        = length(ParamsOnly) =/= length(ParamsList),
 
   Env1   = clj_env:add_locals_scope(Env0),
@@ -507,6 +506,10 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
   Env8  = clj_env:remove_locals_scope(Env7),
   Env9  = clj_env:pop(Env8),
   clj_env:push_expr(FnMethodExpr, Env9).
+
+-spec is_not_ampersand(any()) -> boolean().
+is_not_ampersand(?NIL) -> true;
+is_not_ampersand(X)    -> clj_rt:str(X) =/= <<"&">>.
 
 -spec analyze_method_params(['clojerl.Symbol':type()], clj_env:env()) ->
   clj_env:env().
@@ -1909,9 +1912,10 @@ analyze_invoke(Form, Env) ->
   {map() | ?NO_TAG, clj_env:env()}.
 signature_tag(ArgCount, Default, Var, Env) ->
   ArgLists = clj_rt:to_list(clj_rt:get(clj_rt:meta(Var), arglists)),
-  IsNotAmpersandFun = fun(X) -> clj_rt:str(X) =/= <<"&">> end,
   Fun = fun(ArgList) ->
-            ArgsOnly = lists:filter(IsNotAmpersandFun, clj_rt:to_list(ArgList)),
+            ArgsOnly = lists:filter( fun is_not_ampersand/1
+                                   , clj_rt:to_list(ArgList)
+                                   ),
             clj_rt:count(ArgsOnly) =:= ArgCount
         end,
   case lists:filter(Fun, ArgLists) of
@@ -2534,9 +2538,7 @@ parse_erlang_list(List, Env0) ->
   | AllItems
   ] = clj_rt:to_list(List),
 
-  AmpersandSym   = clj_rt:symbol(<<"&">>),
-  IsNotAmpersand = fun(X) -> not clj_rt:equiv(AmpersandSym, X) end,
-  {Items, Tails} = lists:splitwith(IsNotAmpersand, AllItems),
+  {Items, Tails} = lists:splitwith(fun is_not_ampersand/1, AllItems),
 
   clj_utils:error_when( length(Tails) > 0 andalso length(Tails) =/= 2
                       , [<<"There has to be one expression after &, got ">>
