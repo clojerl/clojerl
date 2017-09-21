@@ -11,7 +11,6 @@
 -export([ cons/1
         , hash/1
         , seq/1
-        , complete_coverage/1
         ]).
 
 -spec all() -> [atom()].
@@ -41,7 +40,7 @@ cons(_Config) ->
 
 -spec hash(config()) -> result().
 hash(_Config) ->
-  HashNil = 'clojerl.IHash':hash(?NIL),
+  HashNil = clj_rt:hash(?NIL),
   true = is_integer(HashNil),
 
   {comments, ""}.
@@ -56,10 +55,6 @@ seq(_Config) ->
   ?NIL = clj_rt:next(Nil),
   [] = clj_rt:rest(Nil),
 
-  {comments, ""}.
-
--spec complete_coverage(config()) -> result().
-complete_coverage(_Config) ->
-  [] = 'clojerl.Nil':to_list(?NIL),
+  [] = clj_rt:to_list(?NIL),
 
   {comments, ""}.

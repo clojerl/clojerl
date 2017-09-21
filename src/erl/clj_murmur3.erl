@@ -18,13 +18,13 @@
 -spec ordered(any()) -> integer().
 ordered(Seq) ->
   List = clj_rt:to_list(Seq),
-  Hashes = ['clojerl.IHash':hash(X) || X <- List],
+  Hashes = [clj_rt:hash(X) || X <- List],
   murmur_ordered_coll(Hashes).
 
 -spec unordered(any()) -> integer().
 unordered(Seq) ->
   List = clj_rt:to_list(Seq),
-  Hashes = ['clojerl.IHash':hash(X) || X <- List],
+  Hashes = [clj_rt:hash(X) || X <- List],
   murmur_unordered_coll(Hashes).
 
 %%------------------------------------------------------------------------------

@@ -44,9 +44,9 @@ get_method(Var, Value) ->
 -spec get_method('clojerl.Var':type(), any(), any(), map() | ?NIL) -> any().
 get_method(Var, Value, Default, _Hierarchy) ->
   Id = 'clojerl.Var':hash(Var),
-  case clj_utils:ets_get(?MODULE, {Id, 'clojerl.IHash':hash(Value)}) of
+  case clj_utils:ets_get(?MODULE, {Id, clj_rt:hash(Value)}) of
     ?NIL ->
-      case clj_utils:ets_get(?MODULE, {Id, 'clojerl.IHash':hash(Default)}) of
+      case clj_utils:ets_get(?MODULE, {Id, clj_rt:hash(Default)}) of
         ?NIL -> ?NIL;
         Method -> Method#multifn.method
       end;
@@ -65,7 +65,7 @@ get_method_table(Var) ->
 -spec add_method('clojerl.Var':type(), any(), any()) -> any().
 add_method(Var, Value, Method) ->
   Id   = 'clojerl.Var':hash(Var),
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   gen_server:call( ?MODULE
                  , {add_method, Id, Value, Hash, Method}
                  ).
@@ -78,7 +78,7 @@ remove_all(Var) ->
 -spec remove_method('clojerl.Var':type(), any()) -> boolean().
 remove_method(Var, Value) ->
   Id = 'clojerl.Var':hash(Var),
-  gen_server:call(?MODULE, {remove_method, Id, 'clojerl.IHash':hash(Value)}).
+  gen_server:call(?MODULE, {remove_method, Id, clj_rt:hash(Value)}).
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks

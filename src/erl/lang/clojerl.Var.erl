@@ -263,6 +263,8 @@ bounded_length(Args, Max) when is_list(Args) ->
       {Args1, Rest} = lists:split(Max, Args),
       {Max, Args1, Rest}
   end;
+bounded_length(?NIL, Max) ->
+  bounded_length(?NIL, 0, Max, []);
 bounded_length(Args, Max) ->
   TypeModule = clj_rt:type_module(Args),
   bounded_length(TypeModule:seq(Args), 0, Max, []).

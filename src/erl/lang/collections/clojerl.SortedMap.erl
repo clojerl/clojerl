@@ -83,7 +83,7 @@ build_key_values(KeyValues, [K, V | Items]) ->
 %% @private
 -spec fold_key_values({any(), any()}, map()) -> map().
 fold_key_values({K, _}, Map) ->
-  maps:put('clojerl.IHash':hash(K), K, Map).
+  maps:put(clj_rt:hash(K), K, Map).
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -92,11 +92,11 @@ fold_key_values({K, _}, Map) ->
 %% clojerl.IAssociative
 
 contains_key(#{?TYPE := ?M, keys := Keys}, Key) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   maps:is_key(Hash, Keys).
 
 entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   case maps:is_key(Hash, Keys) of
     true ->
       FoundKey = maps:get(Hash, Keys),
@@ -106,7 +106,7 @@ entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
   end.
 
 assoc(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key, Value) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   Vals = case maps:get(Hash, Keys, ?NIL) of
            ?NIL -> Vals0;
            K -> rbdict:erase(K, Vals0)
@@ -131,7 +131,7 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
       TypeModule   = clj_rt:type_module(Y),
-      KeyHashFun   = fun(X) -> {X, 'clojerl.IHash':hash(X)} end,
+      KeyHashFun   = fun(X) -> {X, clj_rt:hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
                               , 'erlang.List':to_list(TypeModule:keys(Y))
                               ),
@@ -189,7 +189,7 @@ get(#{?TYPE := ?M} = Map, Key) ->
   get(Map, Key, ?NIL).
 
 get(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key, NotFound) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   case maps:is_key(Hash, Keys) of
     true  -> rbdict:fetch(maps:get(Hash, Keys), Vals);
     false -> NotFound
@@ -204,7 +204,7 @@ vals(#{?TYPE := ?M, vals := Vals}) ->
   [Val || {_, Val} <- rbdict:to_list(Vals)].
 
 without(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key) ->
-  Hash = 'clojerl.IHash':hash(Key),
+  Hash = clj_rt:hash(Key),
   Vals = case maps:is_key(Hash, Keys) of
            true  -> rbdict:erase(maps:get(Hash, Keys), Vals0);
            false -> Vals0

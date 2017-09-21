@@ -42,7 +42,7 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
+  Hashes = [{clj_rt:hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
   #{ ?TYPE  => ?M
    , hashes => maps:from_list(Hashes)
@@ -52,7 +52,7 @@
 
 -spec ?CONSTRUCTOR(function(), list()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
-  Hashes = [{'clojerl.IHash':hash(X), X} || X <- Values],
+  Hashes = [{clj_rt:hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
   #{ ?TYPE  => ?M
    , hashes => maps:from_list(Hashes)
@@ -71,7 +71,7 @@ count(#{?TYPE := ?M, hashes := Hashes}) -> maps:size(Hashes).
 %% clojerl.IColl
 
 cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, X) ->
-  Hash = 'clojerl.IHash':hash(X),
+  Hash = clj_rt:hash(X),
   case maps:is_key(Hash, Hashes) of
     true  -> S;
     false -> S#{ hashes => Hashes#{Hash => X}
@@ -88,12 +88,12 @@ empty(#{?TYPE := ?M, dict := Vals}) ->
 equiv(#{?TYPE := ?M} = X, #{?TYPE := ?M} = Y) ->
   hash(X) =:= hash(Y);
 equiv(#{?TYPE := ?M} = X, Y) ->
-  clj_rt:'set?'(Y) andalso 'clojerl.IHash':hash(Y) =:= hash(X).
+  clj_rt:'set?'(Y) andalso clj_rt:hash(Y) =:= hash(X).
 
 %% clojerl.IFn
 
 apply(#{?TYPE := ?M, hashes := Hashes}, [Item]) ->
-  Hash = 'clojerl.IHash':hash(Item),
+  Hash = clj_rt:hash(Item),
   case maps:is_key(Hash, Hashes) of
     true  -> maps:get(Hash, Hashes);
     false -> ?NIL
@@ -117,7 +117,7 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 %% clojerl.ISet
 
 disjoin(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, Value) ->
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   case maps:is_key(Hash, Hashes) of
     false -> S;
     true  ->
@@ -127,11 +127,11 @@ disjoin(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, Value) ->
   end.
 
 contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   maps:is_key(Hash, Hashes).
 
 get(#{?TYPE := ?M, hashes := Hashes}, Value) ->
-  Hash = 'clojerl.IHash':hash(Value),
+  Hash = clj_rt:hash(Value),
   case maps:is_key(Hash, Hashes) of
     true  -> maps:get(Hash, Hashes);
     false -> ?NIL
