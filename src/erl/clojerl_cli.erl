@@ -8,6 +8,7 @@
                     , files             => [string()]
                     , clojure_main      => boolean()
                     , clojure_main_args => [string()]
+                    , version           => boolean()
                     }.
 
 -spec start() -> no_return().
@@ -36,6 +37,8 @@ parse_args(Args) ->
 -spec parse_args([string()], options()) -> options().
 parse_args([], Opts) ->
   Opts;
+parse_args(["-v" | Rest], Opts) ->
+  parse_args(Rest, Opts#{version => true});
 parse_args(["-o", CompilePath | Rest], Opts) ->
   parse_args(Rest, Opts#{compile_path => CompilePath});
 parse_args(["--compile" | Rest], Opts) ->
@@ -58,13 +61,17 @@ parse_args([Unknown | _], _Opts) ->
   erlang:halt(0).
 
 -spec run_commands(options()) -> ok.
+run_commands(#{version := true}) ->
+  ErlangVersion  = erlang:system_info(system_version),
+  ClojerlVersion = 'clojure.core':'clojure-version'(),
+  io:format("~s~nClojerl ~s~n", [ErlangVersion, ClojerlVersion]),
+  erlang:halt(0);
 run_commands(#{ compile      := true
               , files        := Files
               , compile_path := CompilePath
               , compile_opts := CompileOpts
               } = Opts) ->
 
-  true           = code:add_path(CompilePath),
   CompilePathBin = list_to_binary(CompilePath),
   Bindings       = #{ <<"#'clojure.core/*compile-path*">>  => CompilePathBin
                     , <<"#'clojure.core/*compile-files*">> => true

@@ -2,10 +2,19 @@
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
   echo "Usage: `basename $0` [options] [.clje file] [data]
 
-  -v                          Prints version and exits
-  -pa PATH                    Prepends the given path to Erlang code path (*)
-  -pz PATH                    Appends the given path to Erlang code path (*)" >&2
-  exit 1
+  -h, --help            Print this help
+  -v                    Prints version and exits
+
+  --compile             Compile files
+  -pa PATH              Adds PATH to the beginning of the code path
+  -pz PATH              Adds PATH to the end of the code path
+  -o PATH               Specify output directory for compiled files
+  -t, --time            Print the time spent on compiling
+  -vv, --verbose        Verbose compiling
+
+  --clojure.main ARGS   Run clojure.main/main with the provided ARGS,
+                        this should be the last option when used." >&2
+  exit 0
 fi
 
 readlink_f () {
@@ -22,7 +31,7 @@ SELF=$(readlink_f "$0")
 CLJE_BINDIR=$(dirname "$SELF")
 CLJE_ROOT=$(dirname "$CLJE_BINDIR")
 
-ERL_ARGS="-s clojerl_cli start +pc unicode -noshell"
+ERL_ARGS="$ERL_ARGS -s clojerl_cli start +pc unicode -noshell"
 
 while [[ $# -gt 1 ]]
 do
