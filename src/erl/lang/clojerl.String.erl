@@ -122,7 +122,7 @@ last_index_of(Str, Value, FromIndex) ->
       Index
   end.
 
--spec join([binary()], binary()) -> binary().
+-spec join([any()], binary()) -> binary().
 join([], _) ->
   <<>>;
 join([S], _) ->
