@@ -356,12 +356,7 @@ eval_expressions(Expressions, ReplaceCalls) ->
   case compile:noenv_forms(EvalModule, Opts) of
     {ok, _, Beam, _Warnings} ->
       code:load_binary(ModuleName, "", Beam),
-      try
-        ModuleName:eval()
-      after
-        code:purge(ModuleName),
-        code:delete(ModuleName)
-      end;
+      ModuleName:eval();
     {error, Errors, Warnings} ->
       error({Errors, Warnings})
   end.
