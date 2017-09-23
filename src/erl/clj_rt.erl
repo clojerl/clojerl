@@ -486,8 +486,8 @@ short(X) when is_number(X), 0 =< X, X < 32768 ->
   erlang:trunc(X).
 
 -spec str(any()) -> binary().
-str(X) ->
-  'clojerl.IStringable':str(X).
+str(?NIL) -> <<"">>;
+str(X)    -> 'clojerl.IStringable':str(X).
 
 -spec print(any()) -> binary().
 print(X) ->
