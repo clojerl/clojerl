@@ -9,6 +9,7 @@
 -include_lib("compiler/src/core_parse.hrl").
 
 -export([ with_context/1
+        , in_context/0
 
         , all_modules/0
         , get_module/1
@@ -20,6 +21,7 @@
         , replace_calls/2
 
         , add_mappings/2
+        , add_alias/3
         , add_attributes/2
         , add_exports/2
         , add_functions/2
@@ -47,8 +49,12 @@
 -record(module, { name              :: atom(),
                   source = ""       :: string(),
                   %% ETS table where mappings are kept. The key is the var's
-                  %% name as a binary.
+                  %% name as a binary and the value can be either a var or
+                  %% a type.
                   mappings          :: ets:tid(),
+                  %% ETS table where aliases are kept. The key is the var's
+                  %% name as a binary and the value is the namespace symbol.
+                  aliases           :: ets:tid(),
                   %% ETS table where functions are kept. The key is the
                   %% function's name and arity.
                   funs              :: ets:tid(),
@@ -75,6 +81,7 @@
 
 -define(ON_LOAD_FUNCTION, '$_clj_on_load').
 -define(MODULE_INFO, 'module_info').
+-define(CLJ_MODULE_CONTEXT, '$clj_module_compiling').
 
 %%------------------------------------------------------------------------------
 %% Exported Functions
@@ -83,10 +90,17 @@
 -spec with_context(fun()) -> ok.
 with_context(Fun) ->
   try
-    Fun()
+    erlang:put(?CLJ_MODULE_CONTEXT, true),
+    X = Fun(),
+    erlang:erase(?CLJ_MODULE_CONTEXT),
+    X
   after
     cleanup()
   end.
+
+-spec in_context() -> boolean().
+in_context() ->
+  erlang:get(?CLJ_MODULE_CONTEXT) =:= true.
 
 %% @doc Returns a list where each element is Core Erlang module.
 %% @end
@@ -227,6 +241,18 @@ add_mappings(Mappings, Module) ->
                clj_utils:ets_save(Module#module.mappings, {K, V})
            end,
   lists:foreach(AddFun, Mappings),
+  Module.
+
+-spec add_alias( 'clojerl.Symbol':type()
+               , 'clojerl.Symbol':type()
+               , module() | clj_module()
+               ) -> clj_module().
+add_alias(AliasSym, AliasedNsSym, ModuleName) when is_atom(ModuleName)  ->
+  ok = ensure_loaded(<<?NO_SOURCE>>, ModuleName),
+  add_alias(AliasSym, AliasedNsSym, clj_utils:ets_get(?MODULE, ModuleName));
+add_alias(AliasSym, AliasedNsSym, Module) ->
+  K = clj_rt:name(AliasSym),
+  clj_utils:ets_save(Module#module.aliases, {K, AliasedNsSym}),
   Module.
 
 -spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module() | module()) ->
@@ -467,6 +493,7 @@ to_module(#module{} = Module) ->
   #module{ name     = Name
          , source   = Source
          , mappings = MappingsTable
+         , aliases  = AliasesTable
          , funs     = FunsTable
          , exports  = ExportsTable
          , on_load  = OnLoadTable
@@ -481,6 +508,10 @@ to_module(#module{} = Module) ->
   Mappings     = maps:from_list(MappingsList),
   MappingsAttr = {cerl:c_atom(mappings), cerl:abstract([Mappings])},
 
+  AliasesList  = ets:tab2list(AliasesTable),
+  Aliases      = maps:from_list(AliasesList),
+  AliasesAttr  = {cerl:c_atom(aliases), cerl:abstract([Aliases])},
+
   Exports      = [cerl:c_fname(FName, Arity)
                   || {{FName, Arity}} <- ets:tab2list(ExportsTable)
                  ],
@@ -490,7 +521,7 @@ to_module(#module{} = Module) ->
   Attrs        = [X || {X} <- ets:tab2list(AttrsTable)],
   UniqueAttrs  = lists:usort([ClojureAttr | Attrs]),
 
-  AllAttrs     = [FileAttr, MappingsAttr | UniqueAttrs],
+  AllAttrs     = [FileAttr, MappingsAttr, AliasesAttr | UniqueAttrs],
 
   Defs         = [X || {_, X} <- ets:tab2list(FunsTable)],
 
@@ -578,11 +609,15 @@ new(CoreModule) ->
   AllAttrs = cerl:module_attrs(CoreModule),
   Funs     = cerl:module_defs(CoreModule),
 
-  {Attrs, Extracted} = extract_attrs(AllAttrs, [mappings, file]),
+  {Attrs, Extracted} = extract_attrs(AllAttrs, [mappings, aliases, file]),
 
   Mappings = case maps:get(mappings, Extracted, #{}) of
                [V] -> V;
                V -> V
+             end,
+  Aliases  = case maps:get(aliases, Extracted, #{}) of
+               [X] -> X;
+               X -> X
              end,
   Path     = maps:get(file, Extracted, ""),
 
@@ -590,7 +625,8 @@ new(CoreModule) ->
   TableOpts = [set, public, {keypos, 1}],
   Module = #module{ name         = Name
                   , source       = Path
-                  , mappings     = ets:new(var, TableOpts)
+                  , mappings     = ets:new(mappings, TableOpts)
+                  , aliases      = ets:new(aliases, TableOpts)
                   , funs         = ets:new(funs, TableOpts)
                   , fake_funs    = ets:new(fake_funs, TableOpts)
                   , fake_modules = ets:new(fake_modules, TableOpts)
@@ -601,6 +637,7 @@ new(CoreModule) ->
 
   Module = add_functions(Funs, Module),
   Module = add_mappings(maps:to_list(Mappings), Module),
+  [add_alias(A, Ns, Module) || {A, Ns} <- maps:to_list(Aliases)],
   Module = add_attributes(Attrs, Module),
 
   %% Keep expressions from the on_load function.

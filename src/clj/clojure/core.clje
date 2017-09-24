@@ -3461,7 +3461,7 @@
   to calling this directly."
   {:added "1.0"}
   [alias namespace-sym]
-  (clojerl.Namespace/add_alias.e alias (the-ns namespace-sym) *ns*))
+  (.add_alias *ns* alias (the-ns namespace-sym)))
 
 (defn ns-aliases
   "Returns a map of the aliases for the namespace."

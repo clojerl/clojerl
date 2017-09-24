@@ -130,6 +130,8 @@
                 }
            }).
 
+-aliases(#{}).
+
 -export([ ns/4
         , ns__val/0
         , 'in-ns'/1

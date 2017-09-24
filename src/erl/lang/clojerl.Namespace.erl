@@ -103,9 +103,8 @@ current(#{?TYPE := ?M} = Ns) ->
 -spec all() -> [type()].
 all() -> [Ns || {_, Ns} <- ets:tab2list(?MODULE)].
 
-%% @doc Tries to get the mappings from the module associated to the
-%%      namespace. If the module is not found or if it doesn't
-%%      have a 'mappings' attribute, then nil is returned.
+%% @doc Finds the ns for the provided symbol, if it's not loaded
+%%      it tries to load it from a compiled module.
 -spec find('clojerl.Symbol':type()) -> type() | ?NIL.
 find(Name) ->
   case clj_utils:ets_get(?MODULE, clj_rt:str(Name)) of
@@ -243,12 +242,19 @@ unmap(Sym, Ns) ->
 
   gen_server:call(?MODULE, {unmap, Ns, Sym}).
 
--spec add_alias('clojerl.Symbol':type(), type(), type()) ->
+-spec add_alias(type(), 'clojerl.Symbol':type(), type()) ->
   type().
-add_alias(AliasSym, AliasedNs, Ns) ->
+add_alias(#{?TYPE := ?M, name := NsName} = Ns, AliasSym, AliasedNs) ->
   clj_utils:error_when( not clj_rt:'symbol?'(AliasSym)
                       , <<"Name for refer var is not a symbol">>
                       ),
+
+  case clj_module:in_context() of
+    false -> ok;
+    true  ->
+      NsNameAtom = clj_rt:keyword(NsName),
+      clj_module:add_alias(AliasSym, name(AliasedNs), NsNameAtom)
+  end,
 
   gen_server:call(?MODULE, {add_alias, Ns, AliasSym, AliasedNs}).
 
@@ -368,28 +374,44 @@ code_change(_Msg, _From, State) ->
 
 -spec load('clojerl.Symbol':type()) -> type() | ?NIL.
 load(Name) ->
-  NameStr = clj_rt:name(Name),
-  Module  = binary_to_atom(NameStr, utf8),
+  Module = clj_rt:keyword(Name),
+  case code:ensure_loaded(Module) of
+    {module, _} ->
+      maybe_load_ns(Name, Module);
+    {error, _} -> ?NIL
+  end.
 
-  Mappings = case code:ensure_loaded(Module) of
-               {module, _} ->
-                 Attrs = Module:module_info(attributes),
-                 case lists:keyfind(mappings, 1, Attrs) of
-                   {mappings, [Map]} -> Map;
-                   false             -> ?NIL
-                 end;
-               {error, _} -> ?NIL
-             end,
+-spec maybe_load_ns('clojerl.Symbol':type(), module()) -> type() | ?NIL.
+maybe_load_ns(Name, Module) ->
+  case clj_module:is_clojure(Module) of
+    true -> load_ns(Name, Module);
+    false -> ?NIL
+  end.
 
-  case Mappings of
-    ?NIL -> ?NIL;
-    _ ->
-      Ns = ?CONSTRUCTOR(Name),
-      #{?TYPE := ?M, mappings := MappingsId} = Ns,
+-spec load_ns('clojerl.Symbol':type(), module()) -> type().
+load_ns(Name, Module) ->
+  Attrs    = Module:module_info(attributes),
+  Mappings = fetch_attribute(mappings, Attrs),
+  Aliases  = fetch_attribute(aliases, Attrs),
+  Ns = ?CONSTRUCTOR(Name),
+  #{ ?TYPE    := ?M
+   , mappings := MappingsId
+   , aliases  := AliasesId
+   } = Ns,
 
-      SaveFun = fun(K, V) ->
-                    clj_utils:ets_save(MappingsId, {K, V})
-                end,
-      maps:map(SaveFun, Mappings),
-      Ns
+  MappingsFun = fun(K, V) -> clj_utils:ets_save(MappingsId, {K, V}) end,
+  maps:map(MappingsFun, Mappings),
+
+  AliasesFun = fun(K, V) ->
+                   LoadedNs = load(V),
+                   clj_utils:ets_save(AliasesId, {K, LoadedNs})
+               end,
+  maps:map(AliasesFun, Aliases),
+  Ns.
+
+-spec fetch_attribute(atom(), [any()]) -> map() | ?NIL.
+fetch_attribute(Name, Attributes) ->
+  case lists:keyfind(Name, 1, Attributes) of
+    {Name, [Map]} -> Map;
+    false         -> #{}
   end.
