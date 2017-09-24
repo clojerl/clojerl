@@ -151,6 +151,9 @@ resolve_ns(#{?TYPE := ?M} = DefaultNs, Symbol) ->
 
 -spec find_or_create('clojerl.Symbol':type()) -> type().
 find_or_create(Name) ->
+  clj_utils:error_when( not clj_rt:'symbol?'(Name)
+                      , <<"Argument must be a symbol">>
+                      ),
   Ns = case find(Name) of
          ?NIL -> gen_server:call(?MODULE, {new, Name});
          X -> X

@@ -181,7 +181,7 @@ find(QualifiedSymbol) ->
                       , <<"Symbol must be namespace-qualified">>
                       ),
 
-  Ns = 'clojerl.Namespace':find(NsName),
+  Ns = 'clojerl.Namespace':find(clj_rt:symbol(NsName)),
   clj_utils:error_when( Ns =:= ?NIL
                       , [<<"No such namespace: ">>, NsName]
                       ),
