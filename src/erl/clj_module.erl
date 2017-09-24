@@ -215,6 +215,7 @@ fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
 
 -spec add_mappings(['clojerl.Var':type()], module() | clj_module()) ->
   clj_module().
+add_mappings(_, ?NIL) -> error(badarg);
 add_mappings(Mappings, ModuleName) when is_atom(ModuleName)  ->
   add_mappings(Mappings, clj_utils:ets_get(?MODULE, ModuleName));
 add_mappings(Mappings, Module) ->
@@ -230,6 +231,7 @@ add_mappings(Mappings, Module) ->
 
 -spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module() | module()) ->
   clj_module().
+add_attributes(_, ?NIL) -> error(badarg);
 add_attributes(Attrs, ModuleName) when is_atom(ModuleName)  ->
   add_attributes(Attrs, clj_utils:ets_get(?MODULE, ModuleName));
 add_attributes([], Module) ->
@@ -241,6 +243,7 @@ add_attributes(Attrs, Module) ->
 
 -spec add_exports([{atom(), non_neg_integer()}], clj_module() | module()) ->
   clj_module().
+add_exports(_, ?NIL) -> error(badarg);
 add_exports(Exports, ModuleName) when is_atom(ModuleName)  ->
   add_exports(Exports, clj_utils:ets_get(?MODULE, ModuleName));
 add_exports(Exports, Module) ->
@@ -252,6 +255,7 @@ add_exports(Exports, Module) ->
 
 -spec add_functions([{cerl:cerl(), cerl:cerl()}], module() | clj_module()) ->
   clj_module().
+add_functions(_, ?NIL) -> error(badarg);
 add_functions(Funs, ModuleName) when is_atom(ModuleName)  ->
   add_functions(Funs, clj_utils:ets_get(?MODULE, ModuleName));
 add_functions(Funs, Module) ->
@@ -265,6 +269,7 @@ add_functions(Funs, Module) ->
 
 -spec remove_all_functions(module() | clj_module()) ->
   clj_module().
+remove_all_functions(?NIL) -> error(badarg);
 remove_all_functions(ModuleName) when is_atom(ModuleName)  ->
   remove_all_functions(clj_utils:ets_get(?MODULE, ModuleName));
 remove_all_functions(Module) ->
@@ -274,6 +279,7 @@ remove_all_functions(Module) ->
 
 -spec add_on_load(cerl:cerl(), module() | clj_module()) ->
   clj_module().
+add_on_load(_, ?NIL) -> error(badarg);
 add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
   case clj_utils:ets_get(?MODULE, ModuleName) of
     undefined -> error({not_found, ModuleName});
