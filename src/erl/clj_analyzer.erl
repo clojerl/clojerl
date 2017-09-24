@@ -1316,6 +1316,8 @@ parse_deftype(Form, Env0) ->
   LocalExprs  = clj_env:get(pattern_locals, [], Env3),
   Env4        = clj_env:put_locals(lists:reverse(LocalExprs), Env3),
 
+  TypeModule  = clj_rt:keyword(TypeSym),
+  Type        = 'erlang.Type':?CONSTRUCTOR(TypeModule),
   %% HACK: by emitting the type we make the module available, which means the
   %% type gets resolved. But we remove all protocols and methods, thus
   %% generating just a dummy erlang module for the type.
@@ -1323,7 +1325,7 @@ parse_deftype(Form, Env0) ->
                       , env       => Env0
                       , form      => Form
                       , name      => Name
-                      , type      => TypeSym
+                      , type      => Type
                       , fields    => FieldsExprs
                       , protocols => []
                       , methods   => []
@@ -1343,7 +1345,7 @@ parse_deftype(Form, Env0) ->
                  , env       => Env0
                  , form      => Form
                  , name      => Name
-                 , type      => TypeSym
+                 , type      => Type
                  , fields    => FieldsExprs
                  , protocols => InterfacesExprs
                  , opts      => Opts
@@ -1562,8 +1564,8 @@ parse_dot(Form, Env) ->
 
   case TargetExpr of
     #{ op   := type
-     , type := TypeSym} ->
-      Module     = clj_rt:keyword(TypeSym),
+     , type := Type} ->
+      Module     = 'erlang.Type':module(Type),
       Function   = clj_rt:keyword(NameSym),
       ErlFunExpr = erl_fun_expr(Form, Module, Function, length(ArgsList), Env),
 
@@ -1697,8 +1699,8 @@ type_tag(Expr) when is_map(Expr) ->
   maps:get(tag, Expr, ?NO_TAG).
 
 -spec type_tag_module(map()) -> ?NO_TAG | module().
-type_tag_module(#{tag := #{op := type, type := TypeSym}}) ->
-  clj_rt:keyword(TypeSym);
+type_tag_module(#{tag := #{op := type, type := Type}}) ->
+  'erlang.Type':module(Type);
 type_tag_module(_) ->
   ?NO_TAG.
 
@@ -2035,9 +2037,10 @@ type_expr(Type, Symbol, Env) ->
 
 -spec type_expr(any(), clj_env:env()) -> map().
 type_expr(Value, Env) ->
-  Type    = clj_rt:type_module(Value),
-  TypeSym = clj_rt:symbol(atom_to_binary(Type, utf8)),
-  type_expr(TypeSym, TypeSym, Env).
+  Type       = clj_rt:type(Value),
+  TypeModule = 'erlang.Type':module(Type),
+  TypeSym    = clj_rt:symbol(atom_to_binary(TypeModule, utf8)),
+  type_expr(Type, TypeSym, Env).
 
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
 
@@ -2091,7 +2094,10 @@ resolve(Symbol, CheckPrivate, Env) ->
       {erl_fun(Symbol, Env), Env};
     true ->
       case is_maybe_type(Symbol) of
-        true  -> {{type, Symbol}, Env};
+        true  ->
+          TypeModule = clj_rt:keyword(Symbol),
+          Type = 'erlang.Type':?CONSTRUCTOR(TypeModule),
+          {{type, Type}, Env};
         false -> {?NIL, Env}
       end
   end.
@@ -2100,8 +2106,9 @@ resolve(Symbol, CheckPrivate, Env) ->
 erl_fun(Symbol, Env0) ->
   NsSym          = clj_rt:symbol('clojerl.Symbol':namespace(Symbol)),
   {NsName, Env}  = case resolve(NsSym, Env0) of
-                     {{type, TypeSym}, EnvTmp} ->
-                       {'clojerl.Symbol':name(TypeSym), EnvTmp};
+                     {{type, Type}, EnvTmp} ->
+                       TypeModule = 'erlang.Type':module(Type),
+                       {atom_to_binary(TypeModule, utf8), EnvTmp};
                      {_, EnvTmp} ->
                        {'clojerl.Symbol':name(NsSym), EnvTmp}
                   end,

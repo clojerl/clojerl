@@ -175,13 +175,11 @@ ast(#{op := import} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := type} = Expr, State) ->
   ?DEBUG(type),
-  #{ type := TypeSym
+  #{ type := Type
    , env  := Env
    } = Expr,
 
-  TypeModule = to_atom(TypeSym),
-  Type       = 'erlang.Type':?CONSTRUCTOR(TypeModule),
-  Ast        = cerl:ann_abstract(ann_from(Env), Type),
+  Ast = cerl:ann_abstract(ann_from(Env), Type),
 
   push_ast(Ast, State);
 %%------------------------------------------------------------------------------
@@ -209,7 +207,7 @@ ast(#{op := new} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := deftype} = Expr, State0) ->
   ?DEBUG(deftype),
-  #{ type      := TypeSym
+  #{ type      := Type
    , name      := Name
    , fields    := FieldsExprs
    , methods   := MethodsExprs
@@ -217,15 +215,15 @@ ast(#{op := deftype} = Expr, State0) ->
    , env       := Env
    } = Expr,
 
-  Module = to_atom(TypeSym),
+  Module = 'erlang.Type':module(Type),
   Ann    = ann_from(Env),
   ok     = clj_module:ensure_loaded(file_from(Env), Module),
 
   %% Attributes
   Attributes = [ { cerl:ann_c_atom(Ann, behavior)
-                 , cerl:ann_abstract(Ann, [to_atom(ProtocolName)])
+                 , cerl:ann_abstract(Ann, ['erlang.Type':module(ProtocolType)])
                  }
-                 || #{type := ProtocolName} <- ProtocolsExprs
+                 || #{type := ProtocolType} <- ProtocolsExprs
                ],
 
   %% Functions
@@ -385,15 +383,15 @@ ast(#{op := defprotocol} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := extend_type} = Expr, State) ->
   ?DEBUG(extend_type),
-  #{ type  := #{type := TypeSym}
+  #{ type  := #{type := Type}
    , impls := Impls
    , env   := Env
    } = Expr,
 
   EmitProtocolFun =
-    fun(#{type := ProtoSym} = Proto, StateAcc) ->
-        ProtoBin = 'clojerl.Symbol':str(ProtoSym),
-        TypeBin  = 'clojerl.Symbol':str(TypeSym),
+    fun(#{type := ProtoType} = Proto, StateAcc) ->
+        ProtoBin = 'erlang.Type':str(ProtoType),
+        TypeBin  = 'erlang.Type':str(Type),
         Module   = clj_protocol:impl_module(ProtoBin, TypeBin),
 
         clj_module:ensure_loaded(file_from(Env), Module),

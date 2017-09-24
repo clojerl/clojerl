@@ -213,20 +213,20 @@ import_type(TypeName) ->
 
 -spec import_type(binary(), boolean()) -> type().
 import_type(TypeName, CheckLoaded) ->
-  Type = binary_to_atom(TypeName, utf8),
+  Module = binary_to_atom(TypeName, utf8),
   clj_utils:error_when( CheckLoaded
-                        andalso {module, Type} =/= code:ensure_loaded(Type)
+                        andalso {module, Module} =/= code:ensure_loaded(Module)
                       , [ <<"Type ">>, TypeName, <<" could not be loaded. ">>]
                       ),
 
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
   Sym     = clj_rt:symbol(SymName),
-  TypeSym = clj_rt:symbol(TypeName),
+  Type    = 'erlang.Type':?CONSTRUCTOR(Module),
   Ns      = current(),
   Exists  = mapping(Ns, Sym),
 
   clj_utils:warn_when( Exists =/= ?NIL
-                       andalso not clj_rt:equiv(Exists, TypeSym)
+                       andalso not clj_rt:equiv(Exists, Type)
                      , [ Sym
                        , <<" already refers to: ">>
                        , Exists
@@ -235,7 +235,7 @@ import_type(TypeName, CheckLoaded) ->
                        ]
                      ),
 
-  gen_server:call(?MODULE, {intern, Ns, Sym, TypeSym}).
+  gen_server:call(?MODULE, {intern, Ns, Sym, Type}).
 
 -spec unmap(type(), 'clojerl.Symbol':type()) -> type().
 unmap(#{?TYPE := ?M} = Ns, Sym) ->
