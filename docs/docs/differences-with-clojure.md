@@ -1,5 +1,3 @@
-# Differences from Clojure
-
 (This document was built using the
 [one from ClojureScript](https://clojurescript.org/about/differences)
 as a guide).
