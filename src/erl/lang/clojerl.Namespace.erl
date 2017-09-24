@@ -139,6 +139,10 @@ find_mapping(#{?TYPE := ?M} = DefaultNs, Symbol) ->
 -spec resolve_ns(type(), 'clojerl.Symbol':type()) ->
   type() | ?NIL.
 resolve_ns(#{?TYPE := ?M} = DefaultNs, Symbol) ->
+  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
+                      , <<"Argument must be a symbol">>
+                      ),
+
   case clj_rt:namespace(Symbol) of
     ?NIL  -> DefaultNs;
     NsStr ->
@@ -162,6 +166,9 @@ find_or_create(Name) ->
 
 -spec remove('clojerl.Symbol':type()) -> boolean().
 remove(Name) ->
+  clj_utils:error_when( not clj_rt:'symbol?'(Name)
+                      , <<"Argument must be a symbol">>
+                      ),
   gen_server:call(?MODULE, {remove, Name}).
 
 -spec name(type()) -> 'clojerl.Symbol':type().
@@ -169,6 +176,10 @@ name(#{?TYPE := ?M, name := Name}) -> Name.
 
 -spec intern(type(), 'clojerl.Symbol':type()) -> type().
 intern(#{?TYPE := ?M, name := NsName} = Ns, Symbol) ->
+  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
+                      , <<"Argument must be a symbol">>
+                      ),
+
   clj_utils:error_when( clj_rt:namespace(Symbol) =/= ?NIL
                       , <<"Can't intern namespace-qualified symbol">>
                       ),
@@ -184,6 +195,10 @@ update_var(Var) ->
 
 -spec update_var('clojerl.Var':type(), type()) -> type().
 update_var(#{?TYPE := ?M} = Ns, Var) ->
+  clj_utils:error_when( not clj_rt:'var?'(Var)
+                      , <<"Argument must be a var">>
+                      ),
+
   gen_server:call(?MODULE, {update_var, Ns, Var}).
 
 -spec get_mappings(type()) -> map().
@@ -247,7 +262,10 @@ unmap(#{?TYPE := ?M} = Ns, Sym) ->
 
 -spec add_alias(type(), 'clojerl.Symbol':type(), type()) ->
   type().
-add_alias(#{?TYPE := ?M, name := NsName} = Ns, AliasSym, AliasedNs) ->
+add_alias( #{?TYPE := ?M, name := NsName} = Ns
+         , AliasSym
+         , #{?TYPE := ?M} = AliasedNs
+         ) ->
   clj_utils:error_when( not clj_rt:'symbol?'(AliasSym)
                       , <<"Name for refer var is not a symbol">>
                       ),
@@ -273,6 +291,10 @@ remove_alias(#{?TYPE := ?M} = Ns, AliasSym) ->
 -spec mapping(type(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | ?NIL.
 mapping(#{?TYPE := ?M, mappings := Mappings}, Symbol) ->
+  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
+                      , <<"Argument must be a symbol">>
+                      ),
+
   case clj_utils:ets_get(Mappings, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
     ?NIL -> ?NIL
@@ -281,6 +303,10 @@ mapping(#{?TYPE := ?M, mappings := Mappings}, Symbol) ->
 -spec alias(type(), 'clojerl.Symbol':type()) ->
   'clojerl.Symbol':type() | ?NIL.
 alias(#{?TYPE := ?M, aliases := Aliases}, Symbol) ->
+  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
+                      , <<"Argument must be a symbol">>
+                      ),
+
   case clj_utils:ets_get(Aliases, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
     ?NIL -> ?NIL
