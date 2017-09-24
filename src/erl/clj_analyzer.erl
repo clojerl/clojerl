@@ -5,13 +5,13 @@
 
 -export([ analyze/2
         , macroexpand_1/2
+        , macroexpand/2
         , is_special/1
         ]).
 
 -spec analyze(any(), clj_env:env()) -> clj_env:env().
 analyze(Form, Env0) ->
-  {Expr, Env1} =  clj_env:pop_expr(analyze_form(Form, Env0)),
-  clj_env:push_expr(Expr#{top_level => true}, Env1).
+  analyze_form(Form, Env0).
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -20,29 +20,45 @@ is_special(S) ->
 
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
-  Op        = clj_rt:first(Form),
-  IsSymbol  = clj_rt:'symbol?'(Op),
-  IsSpecial = is_special(Op),
-  MacroVar  = case IsSymbol of
-                true -> lookup_var(Op, false);
-                false -> ?NIL
-              end,
+  case clj_rt:'seq?'(Form) of
+    true ->
+      Op        = clj_rt:first(Form),
+      IsSymbol  = clj_rt:'symbol?'(Op),
+      IsSpecial = is_special(Op),
+      MacroVar  = case IsSymbol of
+                    true -> lookup_var(Op, false);
+                    false -> ?NIL
+                  end,
 
-  Expanded  = case
-                not IsSpecial
-                andalso MacroVar =/= ?NIL
-                andalso 'clojerl.Var':is_macro(MacroVar)
-              of
-                true ->
-                  Args = clj_rt:cons(Form, clj_rt:cons(Env, clj_rt:rest(Form))),
-                  'clojerl.IFn':apply(MacroVar, Args);
-                false ->
-                  case IsSymbol andalso not IsSpecial of
-                    true  -> maybe_macroexpand_symbol(Form, Op);
-                    false -> Form
-                  end
-              end,
-  keep_location_meta(Expanded, Form).
+      Expanded  = case
+                    not IsSpecial
+                    andalso MacroVar =/= ?NIL
+                    andalso 'clojerl.Var':is_macro(MacroVar)
+                  of
+                    true ->
+                      Args = clj_rt:cons( Form
+                                        , clj_rt:cons( Env
+                                                     , clj_rt:rest(Form)
+                                                     )
+                                        ),
+                      'clojerl.IFn':apply(MacroVar, Args);
+                    false ->
+                      case IsSymbol andalso not IsSpecial of
+                        true  -> maybe_macroexpand_symbol(Form, Op);
+                        false -> Form
+                      end
+                  end,
+      keep_location_meta(Expanded, Form);
+    false ->
+      Form
+  end.
+
+-spec macroexpand(any(), clj_env:env()) -> any().
+macroexpand(Form, Env) ->
+  case macroexpand_1(Form, Env) of
+    Form     -> Form;
+    Expanded -> macroexpand(Expanded, Env)
+  end.
 
 %%------------------------------------------------------------------------------
 %% Internal

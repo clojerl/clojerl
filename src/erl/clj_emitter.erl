@@ -1661,7 +1661,10 @@ c_map_pair_exact(K, V) ->
 
 -spec file_from(clj_env:env()) -> binary().
 file_from(Env) ->
-  maps:get(file, clj_env:location(Env), <<>>).
+  case clj_env:location(Env) of
+    ?NIL -> <<>>;
+    Location -> maps:get(file, Location, <<>>)
+  end.
 
 -spec ann_from(clj_env:env()) -> [term()].
 ann_from(Env) ->

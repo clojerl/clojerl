@@ -149,23 +149,13 @@ eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
-eval(Form, Opts, Env) ->
-  DoSymbol = clj_rt:symbol(<<"do">>),
-  case
-    clj_rt:'seq?'(Form)
-    andalso clj_rt:equiv(clj_rt:first(Form), DoSymbol)
-  of
-    true ->
-      Forms = clj_rt:to_list(clj_rt:rest(Form)),
-      FoldFun = fun(F, {_, EnvAcc}) ->
-                    eval1(F, Opts, EnvAcc)
-                end,
-      lists:foldl(FoldFun, {?NIL, Env}, Forms);
-    false ->
-      eval1(Form, Opts, Env)
-  end.
+eval(Form, Opts, Env0) ->
+  Fun  = fun(F, EnvAcc) -> eval1(F, Opts, EnvAcc) end,
+  Env1 = clj_env:push(#{}, Env0),
+  Env2 = check_top_level_do(Fun, Form, Env1),
+  {clj_env:get(eval, Env2), Env2}.
 
--spec eval1(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
+-spec eval1(any(), options(), clj_env:env()) -> clj_env:env().
 eval1(Form, Opts, Env) ->
   ProcDict = erlang:get(),
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
@@ -173,8 +163,7 @@ eval1(Form, Opts, Env) ->
 
   lists:foreach(compile_module_fun(Opts), Modules),
   Value = eval_expressions(Exprs),
-
-  {Value, Env1}.
+  clj_env:put(eval, Value, Env1).
 
 %% Flags
 
@@ -225,7 +214,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                  fun() ->
                      clj_utils:time( "Read, Analyze & Emit"
                                    , fun clj_reader:read_fold/4
-                                   , [ fun emit_eval_form/2
+                                   , [ fun analyze_emit_eval/2
                                      , Src
                                      , RdrOpts
                                      , Env1
@@ -234,7 +223,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
                  end;
                _ ->
                  fun () ->
-                     clj_reader:read_fold( fun emit_eval_form/2
+                     clj_reader:read_fold( fun analyze_emit_eval/2
                                          , Src
                                          , RdrOpts
                                          , Env1
@@ -297,12 +286,30 @@ check_flag(Flag, Env) ->
       false
   end.
 
--spec emit_eval_form(any(), clj_env:env()) -> clj_env:env().
-emit_eval_form(Form, Env) ->
+-spec analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
+analyze_emit_eval(Form, Env) ->
+  check_top_level_do(fun do_analyze_emit_eval/2, Form, Env).
+
+-spec do_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
+do_analyze_emit_eval(Form, Env) ->
   Env1          = clj_analyzer:analyze(Form, Env),
   {Exprs, Env2} = clj_emitter:emit(Env1),
   Value         = eval_expressions(Exprs),
   clj_env:update(eval, Value, Env2).
+
+-spec check_top_level_do(function(), any(), clj_env:env()) -> clj_env:env().
+check_top_level_do(Fun, Form, Env) ->
+  Expanded = clj_analyzer:macroexpand(Form, Env),
+  case
+    clj_rt:'seq?'(Expanded)
+    andalso clj_rt:equiv(clj_rt:first(Expanded), clj_rt:symbol(<<"do">>))
+  of
+    true ->
+      Rest = clj_rt:rest(Expanded),
+      lists:foldl(Fun, Env, clj_rt:to_list(Rest));
+    false ->
+      Fun(Expanded, Env)
+  end.
 
 -spec compile_module_fun(options()) -> function().
 compile_module_fun(#{time := true} = Opts) ->
