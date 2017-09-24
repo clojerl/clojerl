@@ -4578,21 +4578,6 @@
          (finally
           (. clojure.lang.Var (popThreadBindings)))))))
 
-(defn maybe-unquote
-  [name]
-  (if (seq? name)
-    (if (= (first name) 'quote)
-      (second name)
-      name)
-    name))
-
-(defn in-ns
-  [name]
-  (let [name (maybe-unquote name)]
-    (if (symbol? name)
-      (clojerl.Namespace/find_or_create.e name)
-      (throw (str "First argument to in-ns must be a symbol, got: " (type name))))))
-
 (defmacro ns
   "Sets *ns* to the namespace named by name (unevaluated), creating it
   if needed.  references can be zero or more of: (:refer-clojure ...)
