@@ -32,6 +32,7 @@
         , reset_bindings/1
         , dynamic_binding/1
         , dynamic_binding/2
+        , find/1
         ]).
 
 -export([deref/1]).
@@ -172,6 +173,20 @@ dynamic_binding(Var, Value) ->
       erlang:put(dynamic_bindings, NewBindings),
       Value
   end.
+
+-spec find('clojerl.Symbol':type()) -> type() | ?NIL.
+find(QualifiedSymbol) ->
+  NsName = clj_rt:namespace(QualifiedSymbol),
+  clj_utils:error_when( NsName =:= ?NIL
+                      , <<"Symbol must be namespace-qualified">>
+                      ),
+
+  Ns = 'clojerl.Namespace':find(NsName),
+  clj_utils:error_when( Ns =:= ?NIL
+                      , [<<"No such namespace: ">>, NsName]
+                      ),
+
+  'clojerl.Namespace':find_var(Ns, QualifiedSymbol).
 
 %%------------------------------------------------------------------------------
 %% Protocols

@@ -1211,7 +1211,7 @@ lookup_var(VarSymbol, true = _CreateNew) ->
 
   case 'clojerl.Symbol':equiv(CurrentNsSym, NsSym) of
     Equal when Equal orelse NsSym =:= ?NIL ->
-      'clojerl.Namespace':intern(NameSym, CurrentNs),
+      'clojerl.Namespace':intern(CurrentNs, NameSym),
       lookup_var(VarSymbol, false);
     false ->
       lookup_var(VarSymbol, false)
@@ -2064,7 +2064,7 @@ resolve(Symbol, CheckPrivate, Env) ->
   CurrentNs = 'clojerl.Namespace':current(),
   Local     = clj_env:get_local(Symbol, Env),
   NsStr     = 'clojerl.Symbol':namespace(Symbol),
-  MappedVal = 'clojerl.Namespace':find_mapping(Symbol, CurrentNs),
+  MappedVal = 'clojerl.Namespace':find_mapping(CurrentNs, Symbol),
 
   if
     Local =/= ?NIL ->
