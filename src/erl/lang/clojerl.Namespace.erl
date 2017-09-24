@@ -193,7 +193,7 @@ update_var(Var) ->
   VarNsSym = clj_rt:symbol(clj_rt:namespace(Var)),
   update_var(find(VarNsSym), Var).
 
--spec update_var('clojerl.Var':type(), type()) -> type().
+-spec update_var(type(), 'clojerl.Var':type()) -> type().
 update_var(#{?TYPE := ?M} = Ns, Var) ->
   clj_utils:error_when( not clj_rt:'var?'(Var)
                       , <<"Argument must be a var">>

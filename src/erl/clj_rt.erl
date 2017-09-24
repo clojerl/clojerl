@@ -288,7 +288,7 @@ symbol(Name) ->
 symbol(Namespace, Name) ->
   'clojerl.Symbol':?CONSTRUCTOR(Namespace, Name).
 
--spec keyword(binary()) -> 'clojerl.Keyword':type().
+-spec keyword('clojerl.Symbol':type() | binary()) -> 'clojerl.Keyword':type().
 keyword(Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Name).
 

@@ -327,14 +327,14 @@ parse_fn(List, Env) ->
     end,
 
   %% If it is a def we register the var, otherwise register the local.
-  Env1 = case IsDef of
-           true  ->
+  Env1 = case DefVar of
+           ?NIL ->
+             clj_env:put_local(NameSym, LocalExpr, Env0);
+           DefVar  ->
              'clojerl.Namespace':update_var(DefVar),
              %% Register a local mapping the symbol fn to the var
              {VarExpr, Env0Tmp} = var_expr(DefVar, DefNameSym, Env0),
-             clj_env:put_local(NameSym, VarExpr, Env0Tmp);
-           false ->
-             clj_env:put_local(NameSym, LocalExpr, Env0)
+             clj_env:put_local(NameSym, VarExpr, Env0Tmp)
          end,
 
   OpMeta      = clj_rt:meta(Op),
