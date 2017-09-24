@@ -152,11 +152,20 @@ ast(#{op := def} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := import} = Expr, State) ->
   ?DEBUG(import),
-  #{ typename := Typename
+  #{ typename := TypeName
    , env      := Env
    } = Expr,
 
-  TypenameAst = cerl:abstract(Typename),
+  SymName   = lists:last(binary:split(TypeName, <<".">>, [global])),
+  Type      = 'erlang.Type':?CONSTRUCTOR(binary_to_atom(TypeName, utf8)),
+  CurrentNs = 'clojerl.Namespace':current(),
+  NameSym   = 'clojerl.Namespace':name(CurrentNs),
+  Module    = to_atom(NameSym),
+
+  ok = clj_module:ensure_loaded(file_from(Env), Module),
+  clj_module:add_mappings([{SymName, Type}], Module),
+
+  TypenameAst = cerl:abstract(TypeName),
   Ann         = ann_from(Env),
   ImportAst   = call_mfa('clojerl.Namespace', import_type, [TypenameAst], Ann),
 

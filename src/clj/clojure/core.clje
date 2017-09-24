@@ -3393,7 +3393,7 @@
   "Returns a map of the import mappings for the namespace."
   {:added "1.0"}
   [ns]
-  (throw "unsupported import"))
+  (filter-key val (partial instance? erlang.Type) (ns-map ns)))
 
 (defn ns-interns
   "Returns a map of the intern mappings for the namespace."
