@@ -755,9 +755,9 @@ invoke(_Config) ->
 
   ct:comment("type hints are respected"),
   #{ op  := invoke
-   , tag := #{op := type, type := StringSym}
+   , tag := #{op := type, type := String}
    } = analyze_one(<<"^clojerl.String (:foo {:foo 1})">>),
-  true = clj_rt:equiv(StringSym, clj_rt:symbol(<<"clojerl.String">>)),
+  'clojerl.String' = 'erlang.Type':module(String),
 
   {comments, ""}.
 
@@ -1040,19 +1040,17 @@ import(_Config) ->
 new(_Config) ->
   ct:comment("Use new with no args"),
   #{ op   := new
-   , type := #{op := type, type := StringSymbol}
+   , type := #{op := type, type := String}
    , args := []
    } = analyze_one(<<"(new clojerl.String)">>),
-  true                 = clj_rt:'symbol?'(StringSymbol),
-  <<"clojerl.String">> = clj_rt:str(StringSymbol),
+  'clojerl.String' = 'erlang.Type':module(String),
 
   ct:comment("Use new with 1 arg"),
   #{ op   := new
-   , type := #{op := type, type := StringSymbol}
+   , type := #{op := type, type := String}
    , args := [#{op := constant, form := <<"hello">>}]
    } = analyze_one(<<"(new clojerl.String \"hello\")">>),
-  true                 = clj_rt:'symbol?'(StringSymbol),
-  <<"clojerl.String">> = clj_rt:str(StringSymbol),
+  'clojerl.String' = 'erlang.Type':module(String),
 
   {comments, ""}.
 
@@ -1061,20 +1059,19 @@ deftype(_Config) ->
   ct:comment("Simple deftype*"),
   #{ op        := deftype
    , name      := NameSymbol
-   , type      := TypeSymbol
+   , type      := Type
    , fields    := [_, _]
    , protocols := []
    , methods   := []
    } = analyze_one(<<"(deftype* MyType ns.MyType [a b] :implements [])">>),
   true            = clj_rt:'symbol?'(NameSymbol),
   <<"MyType">>    = clj_rt:str(NameSymbol),
-  true            = clj_rt:'symbol?'(TypeSymbol),
-  <<"ns.MyType">> = clj_rt:str(TypeSymbol),
+  'ns.MyType'     = 'erlang.Type':module(Type),
 
   ct:comment("deftype* with an interface and a method"),
   #{ op        := deftype
    , name      := NameSymbol
-   , type      := TypeSymbol
+   , type      := Type
    , fields    := [_, _, _]
    , protocols := [_]
    , methods   := [#{op := fn_method}]
@@ -1111,11 +1108,10 @@ defprotocol(_Config) ->
 extend_type(_Config) ->
   ct:comment("No protocols"),
   #{ op    := extend_type
-   , type  := #{op := type, type := TypeSym}
+   , type  := #{op := type, type := String}
    , impls := #{}
    } = analyze_one(<<"(extend-type* clojerl.String)">>),
-  true = clj_rt:'symbol?'(TypeSym),
-  <<"clojerl.String">> = clj_rt:str(TypeSym),
+  'clojerl.String' = 'erlang.Type':module(String),
 
   ct:comment("Extend one protocol"),
   #{ op    := extend_type
@@ -1126,14 +1122,13 @@ extend_type(_Config) ->
                      "  (str [this] :string))">>
                   ),
 
-  [Stringable] = maps:keys(Impls),
+  [IStringableExpr] = maps:keys(Impls),
   #{ op   := type
-   , type := StringableSym
-   } = Stringable,
-  true = clj_rt:'symbol?'(StringableSym),
-  <<"clojerl.IStringable">> = clj_rt:str(StringableSym),
+   , type := IStringable
+   } = IStringableExpr,
+  'clojerl.IStringable' = 'erlang.Type':module(IStringable),
 
-  [#{op := fn_method, name := StrSym}] = maps:get(Stringable, Impls),
+  [#{op := fn_method, name := StrSym}] = maps:get(IStringableExpr, Impls),
   true = clj_rt:'symbol?'(StrSym),
   <<"str">> = clj_rt:str(StrSym),
 
@@ -1149,15 +1144,14 @@ extend_type(_Config) ->
                      "  (with_meta [this meta] :with-meta))">>
                   ),
 
-  NotStringable = fun(#{type := T}) -> not clj_rt:equiv(T, StringableSym) end,
-  [IMeta] = lists:filter(NotStringable, maps:keys(Impls2)),
+  NotStringable = fun(#{type := T}) -> T =/= IStringable end,
+  [IMetaExpr] = lists:filter(NotStringable, maps:keys(Impls2)),
   #{ op   := type
-   , type := IMetaSym
-   } = IMeta,
-  true = clj_rt:'symbol?'(IMetaSym),
-  <<"clojerl.IMeta">> = clj_rt:str(IMetaSym),
+   , type := IMeta
+   } = IMetaExpr,
+  'clojerl.IMeta' = 'erlang.Type':module(IMeta),
 
-  [_, _] = maps:get(IMeta, Impls2),
+  [_, _] = maps:get(IMetaExpr, Impls2),
 
   ct:comment("Use non-existing type"),
   ok = try analyze_one(<<"(extend-type* foo.Bar)">>), error
@@ -1214,9 +1208,9 @@ dot(_Config) ->
    } = analyze_one(<<"^clojerl.String (.substring \"foo\" 1)">>),
 
   #{ op   := type
-   , type := StringTypeSym
+   , type := String
    } = StringTypeExpr,
-  <<"clojerl.String">> = clj_rt:name(StringTypeSym),
+  'clojerl.String' = 'erlang.Type':module(String),
 
   ct:comment("Require at least 3 forms"),
   ok = try analyze_one(<<"(. a)">>), error

@@ -32,7 +32,7 @@
 
 -type type() :: atom().
 
--spec ?CONSTRUCTOR(binary()) -> type().
+-spec ?CONSTRUCTOR('clojerl.Symbol':type() | binary()) -> type().
 ?CONSTRUCTOR(Name) when is_binary(Name) ->
   binary_to_atom(Name, utf8);
 ?CONSTRUCTOR(Name) when is_atom(Name) ->

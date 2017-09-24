@@ -5,13 +5,13 @@
 
 -export([ analyze/2
         , macroexpand_1/2
+        , macroexpand/2
         , is_special/1
         ]).
 
 -spec analyze(any(), clj_env:env()) -> clj_env:env().
 analyze(Form, Env0) ->
-  {Expr, Env1} =  clj_env:pop_expr(analyze_form(Form, Env0)),
-  clj_env:push_expr(Expr#{top_level => true}, Env1).
+  analyze_form(Form, Env0).
 
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
@@ -20,29 +20,45 @@ is_special(S) ->
 
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
-  Op        = clj_rt:first(Form),
-  IsSymbol  = clj_rt:'symbol?'(Op),
-  IsSpecial = is_special(Op),
-  MacroVar  = case IsSymbol of
-                true -> lookup_var(Op, false);
-                false -> ?NIL
-              end,
+  case clj_rt:'seq?'(Form) of
+    true ->
+      Op        = clj_rt:first(Form),
+      IsSymbol  = clj_rt:'symbol?'(Op),
+      IsSpecial = is_special(Op),
+      MacroVar  = case IsSymbol of
+                    true -> lookup_var(Op, false);
+                    false -> ?NIL
+                  end,
 
-  Expanded  = case
-                not IsSpecial
-                andalso MacroVar =/= ?NIL
-                andalso 'clojerl.Var':is_macro(MacroVar)
-              of
-                true ->
-                  Args = clj_rt:cons(Form, clj_rt:cons(Env, clj_rt:rest(Form))),
-                  'clojerl.IFn':apply(MacroVar, Args);
-                false ->
-                  case IsSymbol andalso not IsSpecial of
-                    true  -> maybe_macroexpand_symbol(Form, Op);
-                    false -> Form
-                  end
-              end,
-  keep_location_meta(Expanded, Form).
+      Expanded  = case
+                    not IsSpecial
+                    andalso MacroVar =/= ?NIL
+                    andalso 'clojerl.Var':is_macro(MacroVar)
+                  of
+                    true ->
+                      Args = clj_rt:cons( Form
+                                        , clj_rt:cons( Env
+                                                     , clj_rt:rest(Form)
+                                                     )
+                                        ),
+                      'clojerl.IFn':apply(MacroVar, Args);
+                    false ->
+                      case IsSymbol andalso not IsSpecial of
+                        true  -> maybe_macroexpand_symbol(Form, Op);
+                        false -> Form
+                      end
+                  end,
+      keep_location_meta(Expanded, Form);
+    false ->
+      Form
+  end.
+
+-spec macroexpand(any(), clj_env:env()) -> any().
+macroexpand(Form, Env) ->
+  case macroexpand_1(Form, Env) of
+    Form     -> Form;
+    Expanded -> macroexpand(Expanded, Env)
+  end.
 
 %%------------------------------------------------------------------------------
 %% Internal
@@ -311,14 +327,14 @@ parse_fn(List, Env) ->
     end,
 
   %% If it is a def we register the var, otherwise register the local.
-  Env1 = case IsDef of
-           true  ->
+  Env1 = case DefVar of
+           ?NIL ->
+             clj_env:put_local(NameSym, LocalExpr, Env0);
+           DefVar  ->
              'clojerl.Namespace':update_var(DefVar),
              %% Register a local mapping the symbol fn to the var
              {VarExpr, Env0Tmp} = var_expr(DefVar, DefNameSym, Env0),
-             clj_env:put_local(NameSym, VarExpr, Env0Tmp);
-           false ->
-             clj_env:put_local(NameSym, LocalExpr, Env0)
+             clj_env:put_local(NameSym, VarExpr, Env0Tmp)
          end,
 
   OpMeta      = clj_rt:meta(Op),
@@ -1195,7 +1211,7 @@ lookup_var(VarSymbol, true = _CreateNew) ->
 
   case 'clojerl.Symbol':equiv(CurrentNsSym, NsSym) of
     Equal when Equal orelse NsSym =:= ?NIL ->
-      'clojerl.Namespace':intern(NameSym, CurrentNs),
+      'clojerl.Namespace':intern(CurrentNs, NameSym),
       lookup_var(VarSymbol, false);
     false ->
       lookup_var(VarSymbol, false)
@@ -1300,6 +1316,8 @@ parse_deftype(Form, Env0) ->
   LocalExprs  = clj_env:get(pattern_locals, [], Env3),
   Env4        = clj_env:put_locals(lists:reverse(LocalExprs), Env3),
 
+  TypeModule  = clj_rt:keyword(TypeSym),
+  Type        = 'erlang.Type':?CONSTRUCTOR(TypeModule),
   %% HACK: by emitting the type we make the module available, which means the
   %% type gets resolved. But we remove all protocols and methods, thus
   %% generating just a dummy erlang module for the type.
@@ -1307,7 +1325,7 @@ parse_deftype(Form, Env0) ->
                       , env       => Env0
                       , form      => Form
                       , name      => Name
-                      , type      => TypeSym
+                      , type      => Type
                       , fields    => FieldsExprs
                       , protocols => []
                       , methods   => []
@@ -1327,7 +1345,7 @@ parse_deftype(Form, Env0) ->
                  , env       => Env0
                  , form      => Form
                  , name      => Name
-                 , type      => TypeSym
+                 , type      => Type
                  , fields    => FieldsExprs
                  , protocols => InterfacesExprs
                  , opts      => Opts
@@ -1546,8 +1564,8 @@ parse_dot(Form, Env) ->
 
   case TargetExpr of
     #{ op   := type
-     , type := TypeSym} ->
-      Module     = clj_rt:keyword(TypeSym),
+     , type := Type} ->
+      Module     = 'erlang.Type':module(Type),
       Function   = clj_rt:keyword(NameSym),
       ErlFunExpr = erl_fun_expr(Form, Module, Function, length(ArgsList), Env),
 
@@ -1681,8 +1699,8 @@ type_tag(Expr) when is_map(Expr) ->
   maps:get(tag, Expr, ?NO_TAG).
 
 -spec type_tag_module(map()) -> ?NO_TAG | module().
-type_tag_module(#{tag := #{op := type, type := TypeSym}}) ->
-  clj_rt:keyword(TypeSym);
+type_tag_module(#{tag := #{op := type, type := Type}}) ->
+  'erlang.Type':module(Type);
 type_tag_module(_) ->
   ?NO_TAG.
 
@@ -2019,9 +2037,10 @@ type_expr(Type, Symbol, Env) ->
 
 -spec type_expr(any(), clj_env:env()) -> map().
 type_expr(Value, Env) ->
-  Type    = clj_rt:type_module(Value),
-  TypeSym = clj_rt:symbol(atom_to_binary(Type, utf8)),
-  type_expr(TypeSym, TypeSym, Env).
+  Type       = clj_rt:type(Value),
+  TypeModule = 'erlang.Type':module(Type),
+  TypeSym    = clj_rt:symbol(atom_to_binary(TypeModule, utf8)),
+  type_expr(Type, TypeSym, Env).
 
 -type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
 
@@ -2048,7 +2067,7 @@ resolve(Symbol, CheckPrivate, Env) ->
   CurrentNs = 'clojerl.Namespace':current(),
   Local     = clj_env:get_local(Symbol, Env),
   NsStr     = 'clojerl.Symbol':namespace(Symbol),
-  MappedVal = 'clojerl.Namespace':find_mapping(Symbol, CurrentNs),
+  MappedVal = 'clojerl.Namespace':find_mapping(CurrentNs, Symbol),
 
   if
     Local =/= ?NIL ->
@@ -2075,7 +2094,10 @@ resolve(Symbol, CheckPrivate, Env) ->
       {erl_fun(Symbol, Env), Env};
     true ->
       case is_maybe_type(Symbol) of
-        true  -> {{type, Symbol}, Env};
+        true  ->
+          TypeModule = clj_rt:keyword(Symbol),
+          Type = 'erlang.Type':?CONSTRUCTOR(TypeModule),
+          {{type, Type}, Env};
         false -> {?NIL, Env}
       end
   end.
@@ -2084,8 +2106,9 @@ resolve(Symbol, CheckPrivate, Env) ->
 erl_fun(Symbol, Env0) ->
   NsSym          = clj_rt:symbol('clojerl.Symbol':namespace(Symbol)),
   {NsName, Env}  = case resolve(NsSym, Env0) of
-                     {{type, TypeSym}, EnvTmp} ->
-                       {'clojerl.Symbol':name(TypeSym), EnvTmp};
+                     {{type, Type}, EnvTmp} ->
+                       TypeModule = 'erlang.Type':module(Type),
+                       {atom_to_binary(TypeModule, utf8), EnvTmp};
                      {_, EnvTmp} ->
                        {'clojerl.Symbol':name(NsSym), EnvTmp}
                   end,

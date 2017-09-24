@@ -24,15 +24,9 @@
         , name/1
         , str/1
         , dynamic_bindings/1
+        , find/1
         , complete_coverage/1
         ]).
-
--mappings(#{<<"forty-two">> => { ?TYPE
-                               , 'clojerl.Var'
-                               , {<<"clojerl_Var_SUITE">>, <<"forty-two">>}
-                               , #{}
-                               }
-           }).
 
 -spec all() -> [atom()].
 all() -> clj_test_utils:all(?MODULE, ['forty-two']).
@@ -141,9 +135,12 @@ apply(_Config) ->
             , variadic_arity  => 1
             },
   Var42Variadic = clj_rt:with_meta(Var42, Meta42),
+  42 = clj_rt:apply(Var42Variadic, ?NIL),
+  42 = clj_rt:apply(Var42Variadic, clj_rt:list([])),
   43 = clj_rt:apply(Var42Variadic, [1]),
   47 = clj_rt:apply(Var42Variadic, [3, 2]),
   50 = clj_rt:apply(Var42Variadic, [3, 2, 1, 2]),
+  50 = clj_rt:apply(Var42Variadic, clj_rt:list([3, 2, 1, 2])),
 
   false = 'clojerl.Var':is_dynamic(Var42Variadic),
   false = 'clojerl.Var':is_macro(Var42Variadic),
@@ -255,6 +252,43 @@ dynamic_bindings(_Config) ->
 
   'clojerl.Var':pop_bindings(),
   42 = clj_rt:deref(Var),
+
+  {comments, ""}.
+
+-spec find(config()) -> result().
+find(_Config) ->
+  NsName = <<"clojerl_Var_SUITE">>,
+  Name42 = <<"forty-two">>,
+  NsSym  = clj_rt:symbol(NsName),
+  Ns     = 'clojerl.Namespace':find_or_create(NsSym),
+
+  FortyTwoSym = clj_rt:symbol(Name42),
+  'clojerl.Namespace':intern(Ns, FortyTwoSym),
+
+  FortyTwoQualifiedSym = clj_rt:symbol(NsName, Name42),
+  true = 'clojerl.Var':find(FortyTwoQualifiedSym) =/= ?NIL,
+
+  FooQualifiedSym = clj_rt:symbol(NsName, <<"foo">>),
+  ?NIL = 'clojerl.Var':find(FooQualifiedSym),
+
+  ok = try 'clojerl.Var':find(clj_rt:gensym()), error
+       catch error:Message1 ->
+           match = re:run( Message1
+                         , <<"Symbol must be namespace-qualified">>
+                         , [{capture, none}]
+                         ),
+           ok
+       end,
+
+  FooBarQualifiedSym = clj_rt:symbol(<<"foo">>, <<"bar">>),
+  ok = try 'clojerl.Var':find(FooBarQualifiedSym), error
+       catch error:Message2 ->
+           match = re:run( Message2
+                         , <<"No such namespace: foo">>
+                         , [{capture, none}]
+                         ),
+           ok
+       end,
 
   {comments, ""}.
 
