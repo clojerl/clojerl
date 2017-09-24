@@ -25,7 +25,11 @@
            , <<"*ns*">>  => #{ ?TYPE => 'clojerl.Var'
                              , ns    => <<"clojure.core">>
                              , name  => <<"*ns*">>
-                             , meta  => #{dynamic => true}
+                             , meta  => #{ dynamic => true
+                                         , tag => #{ ?TYPE => 'erlang.Type'
+                                                   , name  => 'clojerl.Namespace'
+                                                   }
+                                         }
                              }
 
            , <<"*compile-path*">> =>
