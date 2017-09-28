@@ -1,5 +1,6 @@
 *.beam
 _build/
+_site/
 logs/
 clojerl.d
 *.trace
