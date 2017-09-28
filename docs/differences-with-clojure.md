@@ -262,8 +262,8 @@ Reducers are not implemented.
 - `clojure.string`
 - `clojure.test`
 - `clojure.walk`
-- `clojure.xml` (Missing)
+- `clojure.xml`
 - `clojure.zip`
 - `clojure.core.reducers` (Missing)
 - `clojure.spec` (Missing)
-- `clojure.pprint` (Missing)
+- `clojure.pprint`

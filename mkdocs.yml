@@ -1,6 +1,6 @@
 site_name: Clojerl
 theme: readthedocs
 pages:
-  - Introduction             : index.md
-  - Available features       : available-features.md
+  - Clojerl                  : index.md
+  - Available Features       : available-features.md
   - Differences with Clojure : differences-with-clojure.md
