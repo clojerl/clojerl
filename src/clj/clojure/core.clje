@@ -1199,8 +1199,8 @@
   "Returns, in constant time, a seq of the items in rev (which
   can be a vector or sorted-map), in reverse order. If rev is empty returns nil"
   {:added "1.0"}
-  [rev]
-    (clj_rt/rseq.e rev))
+  [^clojerl.IReversible rev]
+    (. rev (rseq)))
 
 (defn name
   "Returns the name String of a string, symbol or keyword."
@@ -4917,8 +4917,7 @@
  "Returns true if coll implements Sorted"
  {:added "1.0"}
   [coll]
-  (throw "unimplemented sorted")
-  #_(satisfies? clojerl.Sorted coll))
+  (satisfies? clojerl.ISorted coll))
 
 (defn counted?
  "Returns true if coll implements count in constant time"
@@ -4929,8 +4928,7 @@
  "Returns true if coll implements Reversible"
  {:added "1.0"}
   [coll]
-  (throw "unimplemented reversible")
-  #_(satisfies? clojerl.Reversible coll))
+  (satisfies? clojerl.IReversible coll))
 
 (def ^:dynamic
  ^{:doc "bound in a repl thread to the most recent value printed"
