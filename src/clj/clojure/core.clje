@@ -1042,12 +1042,6 @@
   {:added "1.0"}
   [x n] (erlang/bsr.e x n))
 
-(defn unsigned-bit-shift-right
-  "Bitwise shift right, without sign-extension."
-  {:added "1.6"}
-  [x n]
-  (throw "unsupported unsigned operation"))
-
 (defn integer?
   "Returns true if n is an integer"
   {:added "1.0"}
@@ -1205,8 +1199,8 @@
   "Returns, in constant time, a seq of the items in rev (which
   can be a vector or sorted-map), in reverse order. If rev is empty returns nil"
   {:added "1.0"}
-  [rev]
-    (clj_rt/rseq.e rev))
+  [^clojerl.IReversible rev]
+    (. rev (rseq)))
 
 (defn name
   "Returns the name String of a string, symbol or keyword."
@@ -2035,7 +2029,7 @@
   "Returns the history count of a ref"
   {:added "1.1"}
   [ref]
-  (throw "unimplemented")
+  (throw "unimplemented ref")
   #_(.getHistoryCount ref))
 
 (defn ref-min-history
@@ -2097,41 +2091,7 @@
        (throw (new IllegalStateException ~(or message "I/O in transaction")))
        (do ~@body))))
 
-#_(defn volatile!
-  "Creates and returns a Volatile with an initial value of val."
-  {:added "1.7"
-   :tag clojure.lang.Volatile}
-  [val]
-  (throw "unimplemented volatile")
-  #_(clojure.lang.Volatile. val))
-
-#_(defn vreset!
-  "Sets the value of volatile to newval without regard for the
-   current value. Returns newval."
-  {:added "1.7"}
-  [^clojure.lang.Volatile vol newval]
-  (throw "unimplemented volatile")
-  #_(.reset vol newval))
-
-#_(defmacro vswap!
-  "Non-atomically swaps the value of the volatile as if:
-   (apply f current-value-of-vol args). Returns the value that
-   was swapped in."
-  {:added "1.7"}
-  [vol f & args]
-  (throw "unimplemented volatile")
-  #_(let [v (with-meta vol {:tag 'clojure.lang.Volatile})]
-    `(.reset ~v (~f (.deref ~v) ~@args))))
-
-#_(defn volatile?
-  "Returns true if x is a volatile."
-  {:added "1.7"}
-  [x]
-  (throw "unimplemented volatile")
-  #_(instance? clojure.lang.Volatile x))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
-
 
 (defn comp
   "Takes a set of functions and returns a fn that is the composition
@@ -2872,84 +2832,6 @@
       (if items
         (recur (conj ret (first items)) (next items))
         ret)))
-
-;;;;;;;;;;;;;;;;;;;;; editable collections ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn transient
-  "Returns a new, transient version of the collection, in constant time."
-  {:added "1.1"}
-  [coll]
-  (throw "unimplemented transient")
-  #_(.asTransient coll))
-
-(defn persistent!
-  "Returns a new, persistent version of the transient collection, in
-  constant time. The transient collection cannot be used after this
-  call, any such use will throw an exception."
-  {:added "1.1"}
-  [coll]
-  (throw "unimplemented transient")
-  #_(.persistent coll))
-
-(defn conj!
-  "Adds x to the transient collection, and return coll. The 'addition'
-  may happen at different 'places' depending on the concrete type."
-  {:added "1.1"}
-  ([] (transient []))
-  ([coll] coll)
-  ([coll x]
-   (throw "unimplemented transient")
-   #_(.conj coll x)))
-
-(defn assoc!
-  "When applied to a transient map, adds mapping of key(s) to
-  val(s). When applied to a transient vector, sets the val at index.
-  Note - index must be <= (count vector). Returns coll."
-  {:added "1.1"}
-  ([coll key val]
-   (throw "unimplemented transient")
-   #_(.assoc coll key val))
-  ([coll key val & kvs]
-   (throw "unimplemented transient")
-   #_(let [ret (.assoc coll key val)]
-       (if kvs
-         (recur ret (first kvs) (second kvs) (nnext kvs))
-         ret))))
-
-(defn dissoc!
-  "Returns a transient map that doesn't contain a mapping for key(s)."
-  {:added "1.1"}
-  ([map key]
-   (throw "unimplemented transient")
-   #_(.without map key))
-  ([map key & ks]
-   (throw "unimplemented transient")
-   #_(let [ret (.without map key)]
-       (if ks
-         (recur ret (first ks) (next ks))
-         ret))))
-
-(defn pop!
-  "Removes the last item from a transient vector. If
-  the collection is empty, throws an exception. Returns coll"
-  {:added "1.1"}
-  [coll]
-  (throw "unimplemented transient")
-  #_(.pop coll))
-
-(defn disj!
-  "disj[oin]. Returns a transient set of the same (hashed/sorted) type, that
-  does not contain key(s)."
-  {:added "1.1"}
-  ([set] set)
-  ([set key]
-   (throw "unimplemented transient")
-   #_(. set (disjoin key)))
-  ([set key & ks]
-   (throw "unimplemented transient")
-   #_(let [ret (. set (disjoin key))]
-     (if ks
-       (recur ret (first ks) (next ks))
-       ret))))
 
 ;redef into with batch support
 (defn ^:private into1
@@ -4370,12 +4252,6 @@
      (send-off agt fill)
      (drain))))
 
-(defn class?
-  "Returns true if x is an instance of Class"
-  {:added "1.0"}
-  [x]
-  (throw "unsupported class"))
-
 (defn alter-var-root
   "Atomically alters the root binding of var v by applying f to its
   current value plus any args"
@@ -4410,18 +4286,6 @@
   {:added "1.0"}
   [coll] (when (seq coll) coll))
 
-(defn bases
-  "Returns the immediate superclass and direct interfaces of c, if any"
-  {:added "1.0"}
-  [c]
-  (throw "unsupported classes and interfaces"))
-
-(defn supers
-  "Returns the immediate and indirect superclasses and interfaces of c, if any"
-  {:added "1.0"}
-  [class]
-  (throw "unsupported classes and interfaces"))
-
 (defn isa?
   "Returns true if (= child parent), or child is directly or indirectly derived
   from parent, via a relationship established via derive. h must be a hierarchy
@@ -4445,11 +4309,7 @@
   supplied defaults to the global hierarchy"
   {:added "1.0"}
   ([tag] (parents global-hierarchy tag))
-  ([h tag] (not-empty
-            (let [tp (get (:parents h) tag)]
-              (if (class? tag)
-                (into1 (set (bases tag)) tp)
-                tp)))))
+  ([h tag] (not-empty (get (:parents h) tag))))
 
 (defn ancestors
   "Returns the immediate and indirect parents of tag, via a relationship
@@ -4457,14 +4317,7 @@
   if not supplied defaults to the global hierarchy"
   {:added "1.0"}
   ([tag] (ancestors global-hierarchy tag))
-  ([h tag] (not-empty
-            (let [ta (get (:ancestors h) tag)]
-              (if (class? tag)
-                (let [superclasses (set (supers tag))]
-                  (reduce1 into1 superclasses
-                    (cons ta
-                          (map #(get (:ancestors h) %) superclasses))))
-                ta)))))
+  ([h tag] (not-empty (get (:ancestors h) tag))))
 
 (defn descendants
   "Returns the immediate and indirect children of tag, through a
@@ -4473,9 +4326,7 @@
   hierarchy."
   {:added "1.0"}
   ([tag] (descendants global-hierarchy tag))
-  ([h tag] (if (class? tag)
-             (throw "Can't get descendants of classes")
-             (not-empty (get (:descendants h) tag)))))
+  ([h tag] (not-empty (get (:descendants h) tag))))
 
 (defn derive
   "Establishes a parent/child relationship between parent and
@@ -4486,12 +4337,12 @@
   {:added "1.0"}
   ([tag parent]
    (assert (namespace parent))
-   (assert (or (class? tag) (and (satisfies? clojerl.INamed tag) (namespace tag))))
+   (assert (and (satisfies? clojerl.INamed tag) (namespace tag)))
 
    (alter-var-root #'global-hierarchy derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
-   (assert (or (class? tag) (satisfies? clojerl.INamed tag)))
+   (assert (satisfies? clojerl.INamed tag))
    (assert (satisfies? clojerl.INamed parent))
 
    (let [tp (:parents h)
@@ -5066,8 +4917,7 @@
  "Returns true if coll implements Sorted"
  {:added "1.0"}
   [coll]
-  (throw "unimplemented sorted")
-  #_(satisfies? clojerl.Sorted coll))
+  (satisfies? clojerl.ISorted coll))
 
 (defn counted?
  "Returns true if coll implements count in constant time"
@@ -5078,8 +4928,7 @@
  "Returns true if coll implements Reversible"
  {:added "1.0"}
   [coll]
-  (throw "unimplemented reversible")
-  #_(satisfies? clojerl.Reversible coll))
+  (satisfies? clojerl.IReversible coll))
 
 (def ^:dynamic
  ^{:doc "bound in a repl thread to the most recent value printed"

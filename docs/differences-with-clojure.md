@@ -1,5 +1,3 @@
-# Differences from Clojure
-
 (This document was built using the
 [one from ClojureScript](https://clojurescript.org/about/differences)
 as a guide).
@@ -264,8 +262,8 @@ Reducers are not implemented.
 - `clojure.string`
 - `clojure.test`
 - `clojure.walk`
-- `clojure.xml` (Missing)
+- `clojure.xml`
 - `clojure.zip`
 - `clojure.core.reducers` (Missing)
 - `clojure.spec` (Missing)
-- `clojure.pprint` (Missing)
+- `clojure.pprint`

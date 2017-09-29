@@ -10,6 +10,7 @@
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.ISeqable').
+-behavior('clojerl.ISorted').
 -behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/1
@@ -32,6 +33,7 @@
 -export([ seq/1
         , to_list/1
         ]).
+-export(['_'/1]).
 -export([str/1]).
 
 -type type() :: #{ ?TYPE  => ?M
@@ -147,6 +149,10 @@ seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
 
 to_list(#{?TYPE := ?M, dict := Dict}) ->
   [K || {K, _} <- rbdict:to_list(Dict)].
+
+%% clojerl.ISorted
+
+'_'(_) -> ?NIL.
 
 %% clojerl.IStringable
 
