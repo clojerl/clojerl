@@ -1318,6 +1318,9 @@ parse_deftype(Form, Env0) ->
 
   TypeModule  = clj_rt:keyword(TypeSym),
   Type        = 'erlang.Type':?CONSTRUCTOR(TypeModule),
+
+  'clojerl.Namespace':import_type(atom_to_binary(TypeModule, utf8), false),
+
   %% HACK: by emitting the type we make the module available, which means the
   %% type gets resolved. But we remove all protocols and methods, thus
   %% generating just a dummy erlang module for the type.

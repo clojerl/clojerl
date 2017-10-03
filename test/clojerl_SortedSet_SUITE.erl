@@ -185,6 +185,8 @@ complete_coverage(_Config) ->
   SetMeta  = clj_rt:with_meta(sorted_set([1, 2, 3, 4]), #{a => 1}),
   #{a := 1} = clj_rt:meta(SetMeta),
 
+  ?NIL = 'clojerl.SortedSet':'_'([]),
+
   {comments, ""}.
 
 -spec sorted_set([any()]) -> 'clojerl.SortedSet':type().
