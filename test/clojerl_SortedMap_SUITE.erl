@@ -221,9 +221,11 @@ complete_coverage(_Config) ->
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
   Hash2 = 'clojerl.IHash':hash(EmptyMap),
 
-  true = Hash1 =/= Hash2,
+  true  = Hash1 =/= Hash2,
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
+
+  ?NIL  = 'clojerl.SortedMap':'_'([]),
 
   {comments, ""}.
 
