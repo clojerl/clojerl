@@ -121,7 +121,8 @@ impl_module(ProtocolBin, TypeBin)
   case erlang:get(Key) of
     undefined ->
       ImplModule = impl_module(Protocol, Type),
-      Value = ( erlang:function_exported(Type, module_info, 1) andalso
+      Value = ( {module, Type} =:= code:ensure_loaded(Type) andalso
+                erlang:function_exported(Type, module_info, 1) andalso
                 lists:keymember([Protocol], 2, Type:module_info(attributes))
               ) orelse {module, ImplModule} =:= code:ensure_loaded(ImplModule),
       erlang:put(Key, {ok, Value}),
