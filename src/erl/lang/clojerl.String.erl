@@ -28,6 +28,7 @@
         , length/1
         , split/2
         , split/3
+        , replace/3
         ]).
 
 -export([count/1]).
@@ -171,6 +172,10 @@ split(Str, Pattern) ->
 -spec split(binary(), binary(), [any()]) -> [binary()].
 split(Str, Pattern, Options) ->
   re:split(Str, Pattern, Options).
+
+-spec replace(binary(), binary(), binary()) -> binary().
+replace(Str, Target, Replacement) ->
+  binary:replace(Str, Target, Replacement, [global]).
 
 %%------------------------------------------------------------------------------
 %% Protocols

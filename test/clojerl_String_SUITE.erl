@@ -20,6 +20,7 @@
         , str/1
         , substring/1
         , split/1
+        , replace/1
         , complete_coverage/1
         ]).
 
@@ -154,6 +155,13 @@ substring(_Config) ->
 split(_Config) ->
   [<<"h">>, <<"llo">>] = 'clojerl.String':split(<<"hello">>, <<"e">>),
   [<<"1">>, <<"2">>, <<"3">>] = 'clojerl.String':split(<<"1,2,3">>, <<",">>),
+
+  {comments, ""}.
+
+-spec replace(config()) -> result().
+replace(_Config) ->
+  <<"faabarfaa">> = 'clojerl.String':replace(<<"foobarfoo">>, <<"o">>, <<"a">>),
+  <<"fbarf">> = 'clojerl.String':replace(<<"foobarfoo">>, <<"oo">>, <<"">>),
 
   {comments, ""}.
 

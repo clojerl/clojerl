@@ -99,7 +99,7 @@ Design notes for clojure.string:
         replace erlang.util.Regex/replace.4
         opts #erl(:global)]
     (cond
-      (string? match) (replace match s (str replacement) opts)
+      (string? match) (.replace ^clojerl.String s match replacement)
       (regex? match) (if (or (string? replacement)
                              (instance? erlang.io.StringWriter replacement))
                        (replace match s (str replacement) opts)
