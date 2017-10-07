@@ -1,7 +1,7 @@
 { application, clojerl
 , [ {description, "Clojure for the Erlang VM"}
   , {vsn, git}
-  , {applications, [kernel, stdlib]}
+  , {applications, [kernel, stdlib, compiler]}
   , {mod, {clojerl, []}}
   , {modules, []}
   , {registered, []}
