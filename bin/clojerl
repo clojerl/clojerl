@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
   echo "Usage: `basename $0` [options] [.clje file] [data]
 
@@ -33,7 +33,7 @@ CLJE_ROOT=$(dirname "$CLJE_BINDIR")
 
 ERL_ARGS="$ERL_ARGS -s clojerl_cli start +pc unicode -noshell"
 
-while [[ $# -gt 1 ]]
+while [ "$#" -gt 1 ]
 do
     key="$1"
 
