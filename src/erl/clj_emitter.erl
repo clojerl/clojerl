@@ -1129,7 +1129,7 @@ hidden_fields() ->
 %%
 %% This function is used for deftype methods so that the fields are available
 %% in the scope of the body of each method.
--spec expand_first_argument(ast(), ast()) -> ast().
+-spec expand_first_argument({ast(), ast()}, ast()) -> {ast(), ast()}.
 expand_first_argument( {FNameAst, FunAst}
                      , TypeTupleAst
                      ) ->
@@ -1148,7 +1148,8 @@ expand_first_argument( {FNameAst, FunAst}
 %%
 %% The constructor will take AllFields -- HiddenFields as arguments.
 %% Hidden fields will be assigned the value `?NIL'.
--spec constructor_function(atom(), [term()], [ast()], [ast()]) -> ast().
+-spec constructor_function(atom(), [term()], [ast()], [ast()]) ->
+  {ast(), ast()}.
 constructor_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
   FieldsAsts  = AllFieldsAsts -- HiddenFieldsAsts,
   TupleAst    = type_map( Typename
@@ -1162,7 +1163,7 @@ constructor_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 %% @doc Builds an accessor function for the specified type and field.
 %%
 %% The accessor function generated has a '-' as a prefix.
--spec accessor_function(atom(), ast()) -> ast().
+-spec accessor_function(atom(), ast()) -> {ast(), ast()}.
 accessor_function(Typename, FieldAst) ->
   Ann             = cerl:get_ann(FieldAst),
   FieldName       = cerl:var_name(FieldAst),
@@ -1172,7 +1173,7 @@ accessor_function(Typename, FieldAst) ->
   {Vars, CaseAst} = case_from_clauses(Ann, [ClauseAst]),
   function_form(AccessorName, Ann, Vars, CaseAst).
 
--spec creation_function(atom(), [term()], [ast()], [ast()]) -> ast().
+-spec creation_function(atom(), [term()], [ast()], [ast()]) -> {ast(), ast()}.
 creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
   MapVarAst     = new_c_var(Ann),
   GetAstFun     = fun(FName) ->
@@ -1221,7 +1222,7 @@ creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 
   function_form(create, Ann, [MapVarAst], MapAst).
 
--spec get_basis_function([any()], [map()]) -> ast().
+-spec get_basis_function([any()], [map()]) -> {ast(), ast()}.
 get_basis_function(Ann, FieldsExprs) ->
   FilterMapFun   = fun(#{pattern := #{name := NameSym}}) ->
                        NameBin = 'clojerl.Symbol':name(NameSym),
@@ -1290,8 +1291,7 @@ fail_clause(Reason, Ann) ->
   FailAst     = cerl:ann_c_primop(Ann, cerl:c_atom(match_fail), [BadmatchAst]),
   cerl:ann_c_clause([compiler_generated | Ann], [VarAst], FailAst).
 
--spec clause({clj_analyzer:expr(), clj_analyzer:expr()}, state()) ->
-  ast().
+-spec clause({map(), map()}, state()) -> state().
 clause({PatternExpr, BodyExpr}, StateAcc) ->
   #{ env   := EnvPattern
    , guard := GuardExpr
@@ -1315,7 +1315,7 @@ function_form(Name, Ann, Args, Body) when is_atom(Name) ->
   EvalFun  = cerl:ann_c_fun(Ann, Args, Body),
   {EvalName, EvalFun}.
 
--spec function_signature(ast()) -> {atom(), arity()}.
+-spec function_signature({ast(), ast()}) -> {atom(), arity()}.
 function_signature({FName, _}) ->
   {cerl:fname_id(FName), cerl:fname_arity(FName)}.
 
@@ -1449,7 +1449,7 @@ case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
 
 %% ----- letrec -------
 
--spec letrec_defs([ast()], [ast()], state()) ->
+-spec letrec_defs([map()], [map()], state()) ->
   {[{ast(), ast()}], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
   {VarsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State0, VarsExprs)
@@ -1502,7 +1502,7 @@ binary_literal(Ann, Binary) ->
 
 %% ----- Push & pop asts -------
 
--spec push_ast(ast(), state()) -> state().
+-spec push_ast(ast() | {ast(), ast()}, state()) -> state().
 push_ast(Ast, State = #{asts := Asts}) ->
   State#{asts => [Ast | Asts]}.
 
