@@ -162,7 +162,10 @@ fake_fun(ModuleName, Function, Arity) ->
 %%      in the function's own module for a call to the fun returned by
 %%      clj_module:fake_fun/3.
 %% @end
--spec replace_calls(cerl:cerl(), module()) -> cerl:cerl().
+-spec replace_calls( cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}
+                   , module()
+                   ) ->
+  cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
 replace_calls( #c_call{ module = ModuleAst
                       , name   = FunctionAst
                       , args   = ArgsAsts
@@ -532,7 +535,8 @@ add_module_info_functions(Module) ->
   add_functions(Funs, Module),
   add_exports([{module_info, 0}, {module_info, 1}], Module).
 
--spec module_info_funs(module()) -> {[cerl:cerl()], [cerl:cerl()]}.
+-spec module_info_funs(module()) ->
+  {[cerl:cerl()], [{cerl:cerl(), cerl:cerl()}]}.
 module_info_funs(Name) ->
   InfoName0 = cerl:c_fname(?MODULE_INFO, 0),
   InfoFun0  = cerl:c_fun( []
@@ -543,7 +547,7 @@ module_info_funs(Name) ->
                         ),
 
   InfoName1 = cerl:c_fname(?MODULE_INFO, 1),
-  Arg             = cerl:c_var(x),
+  Arg       = cerl:c_var(x),
   InfoFun1  = cerl:c_fun( [Arg]
                         , cerl:c_call( cerl:c_atom(erlang)
                                      , cerl:c_atom(get_module_info)
@@ -554,7 +558,8 @@ module_info_funs(Name) ->
   { [InfoName0, InfoName1]
   , [ {InfoName0, InfoFun0}
     , {InfoName1, InfoFun1}
-    ]}.
+    ]
+  }.
 
 %% @doc Only add an on_load function if there are any expressions to be added.
 -spec maybe_on_load( ets:tid()
