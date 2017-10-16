@@ -58,11 +58,9 @@ count(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  List = [1, 2, 3],
-  <<"#erl(1 2 3)">> = clj_rt:str(List),
-
-  List2 = [],
-  <<"#erl()">> = clj_rt:str(List2),
+  <<"#erl(1 2 3)">> = clj_rt:str([1, 2, 3]),
+  <<"">>            = clj_rt:str([]),
+  <<"foo">>         = clj_rt:str("foo"),
 
   {comments, ""}.
 

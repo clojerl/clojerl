@@ -61,7 +61,7 @@ do_reduce(_F, Acc, []) ->
   Acc.
 
 str([]) ->
-  <<"#erl()">>;
+  <<"">>;
 str(Items) when is_list(Items) ->
   clj_rt:print(Items).
 

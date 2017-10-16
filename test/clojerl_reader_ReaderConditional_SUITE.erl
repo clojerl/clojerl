@@ -70,7 +70,9 @@ get(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   ct:comment("Check the str representation of reader cond with no splicing"),
-  ReadCond = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR([], false),
+  ReadCond = 'clojerl.reader.ReaderConditional':?CONSTRUCTOR( clj_rt:list([])
+                                                            , false
+                                                            ),
   Regex = <<"#?\\(\\)">>,
   {match, _} = re:run(clj_rt:str(ReadCond), Regex),
 
