@@ -169,10 +169,9 @@
     (let [printable? (clojerl.String/is_printable.e s)]
       (.write w (if printable? \" "#bin["))
       (if printable?
-        (dotimes [n (.count s)]
-          (let [c (clojerl.String/char_at.e s n)
-                e (char-escape-string c)]
-            (if e (.write w e) (.write w c))))
+        (let [chars (map #(or (char-escape-string %) %) s)
+              s     (apply str chars)]
+          (.write w s))
         (->> (erlang/binary_to_list.e s)
              (interpose " ")
              (apply str)
