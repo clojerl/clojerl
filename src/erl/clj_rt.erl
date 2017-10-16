@@ -530,7 +530,10 @@ do_print(X, 'clojerl.TupleMap', _PrintReadably) ->
 do_print(X, 'clojerl.Vector', _PrintReadably) ->
   do_print_seq(X, <<"[">>, <<"]">>);
 do_print(X, 'erlang.List', _PrintReadably) ->
-  do_print_seq(X, <<"#erl(">>, <<")">>);
+  case io_lib:printable_unicode_list(X) of
+    true  -> erlang:list_to_binary(X);
+    false -> do_print_seq(X, <<"#erl(">>, <<")">>)
+  end;
 do_print(X, 'erlang.Map', _PrintReadably) ->
   do_print_map(X, <<"#erl{">>, <<"}">>);
 do_print(X, 'erlang.Tuple', _PrintReadably) ->

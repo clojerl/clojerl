@@ -131,7 +131,7 @@
 (defmethod print-method erlang.List [o, ^IWriter w]
   (print-meta o w)
   (if (io_lib/printable_unicode_list.e o)
-    (.write w (str "#erl\"" (erlang/list_to_binary.e o) "\""))
+    (.write w (erlang/list_to_binary.e o))
     (print-sequential "#erl(" pr-on " " ")" o w)))
 
 (defmethod print-method clojerl.Cons [o, ^IWriter w]

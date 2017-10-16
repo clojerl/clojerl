@@ -68,7 +68,7 @@ str(_Config) ->
   <<"(0 1 2 3 4)">> = clj_rt:str(Range),
 
   Range2 = 'clojerl.Range':?CONSTRUCTOR(5, 0, 1),
-  <<"#erl()">> = clj_rt:str(Range2),
+  <<"">> = clj_rt:str(Range2),
 
   {comments, ""}.
 
