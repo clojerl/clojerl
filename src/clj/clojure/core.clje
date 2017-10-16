@@ -251,7 +251,7 @@
         (loop [ret [] fdecls fdecl]
           (if fdecls
             (recur (conj ret (asig (first fdecls))) (next fdecls))
-            (seq ret)))
+            (clojerl.List. (seq ret))))
         (list (asig fdecl))))))
 
 (def
