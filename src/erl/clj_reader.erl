@@ -1215,8 +1215,10 @@ erlang_literal(Form, State) ->
                                | unicode:characters_to_list(Form)
                                ]
                                );
-      true     -> clj_utils:error(<<"Can only have list, map, tuple "
-                                    "or Erlang string literals">>
+      true     -> clj_utils:error( [ <<"Can only have list, map, tuple ">>
+                                   , <<"or Erlang string literals, had: ">>
+                                   , clj_rt:type(Form)
+                                   ]
                                  , location(State)
                                  )
     end,
