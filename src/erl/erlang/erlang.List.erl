@@ -63,7 +63,10 @@ do_reduce(_F, Acc, []) ->
 str([]) ->
   <<"">>;
 str(Items) when is_list(Items) ->
-  clj_rt:print(Items).
+  case io_lib:printable_unicode_list(Items) of
+    true  -> unicode:characters_to_binary(Items);
+    false -> clj_rt:print(Items)
+  end.
 
 seq([]) -> ?NIL;
 seq(List) -> List.
