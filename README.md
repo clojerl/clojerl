@@ -6,9 +6,9 @@ Clojure implemented on the Erlang VM.
 
 ## Building
 
-Building `clojerl` requires *Erlang/OTP 18+* and *rebar3*.
+Building `clojerl` requires *Erlang/OTP 18+* and [*rebar3*](https://github.com/erlang/rebar3).
 
-    git clone https://github.com/jfacorro/clojerl
+    git clone https://github.com/clojerl/clojerl
     cd clojerl
     make
 
