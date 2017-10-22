@@ -32,8 +32,9 @@ CLJE_BINDIR=$(dirname "$SELF")
 CLJE_ROOT=$(dirname "$CLJE_BINDIR")
 
 ERL_ARGS="$ERL_ARGS -s clojerl_cli start +pc unicode -noshell"
+EXTRA_ARGS=""
 
-while [ "$#" -gt 1 ]
+while [ "$#" -gt 0 ]
 do
     key="$1"
 
@@ -47,11 +48,11 @@ do
             shift # past argument
             ;;
         *)
-            break
+            EXTRA_ARGS="$EXTRA_ARGS $1"
             ;;
     esac
     shift # past argument or value
 done
 
 export ERL_LIBS="$CLJE_ROOT/_build/default/lib:$ERL_LIBS"
-exec erl $ERL_ARGS -extra "$@"
+exec erl $ERL_ARGS -extra $EXTRA_ARGS

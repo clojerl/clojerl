@@ -5,8 +5,10 @@ RLWRAP    := $(shell type rlwrap &> /dev/null && echo rlwrap || echo)
 V         := @
 
 EBIN      ?= ${CURDIR}/ebin
-ifeq (${NO_CLOJURE},)
+ifndef NO_CLOJURE
+ifdef REBAR_DEPS_DIR
 	EBIN = ${REBAR_DEPS_DIR}/clojerl/ebin
+endif
 endif
 
 ERL_SRC   := ${CURDIR}/src/erl
@@ -21,6 +23,9 @@ all: compile
 compile:
 	${V} if [ -n "${NO_CLOJURE}" ]; then echo "Not compiling clojure files"; fi;
 	${V} ${REBAR3} compile
+
+compile-examples: compile
+	${V} ${CLOJERLC} test/clj/examples/*.clje
 
 test: test-ct
 
