@@ -413,23 +413,18 @@ code_change(_Msg, _From, State) ->
 check_if_override(_, _, ?NIL, _) ->
   ok;
 check_if_override(Ns, Sym, Old, New) ->
-  case clj_rt:'var?'(Old) of
-    true  ->
-      NsName   = 'clojerl.Symbol':name(name(Ns)),
-      OldVarNs = 'clojerl.Var':namespace(Old),
-      NewVarNs = 'clojerl.Var':namespace(New),
-      Message  = [ Sym, <<" already refers to: ">>, Old
-                 , <<" in namespace: ">>, Ns
-                 ],
-      Warn     = OldVarNs =/= NsName andalso NewVarNs =/= <<"clojure.core">>,
-      clj_utils:error_when( Warn andalso OldVarNs =/= <<"clojure.core">>
-                          , Message
-                          ),
+  NsName   = 'clojerl.Symbol':name(name(Ns)),
+  OldVarNs = 'clojerl.Var':namespace(Old),
+  NewVarNs = 'clojerl.Var':namespace(New),
 
-      clj_utils:warn_when(Warn, [<<"WARNING: ">>, Message]);
-    false ->
-      ok
-  end.
+  Message  = [Sym, <<" already refers to: ">>, Old, <<" in namespace: ">>, Ns],
+  Warn     = OldVarNs =/= NsName andalso NewVarNs =/= <<"clojure.core">>,
+
+  clj_utils:error_when( Warn andalso OldVarNs =/= <<"clojure.core">>
+                      , Message
+                      ),
+
+  clj_utils:warn_when(Warn, [<<"WARNING: ">>, Message]).
 
 -spec load('clojerl.Symbol':type()) -> type() | ?NIL.
 load(Name) ->
