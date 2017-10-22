@@ -304,12 +304,13 @@ add_core_to_binary(BeamBinary, CoreModule) ->
 
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
 code_from_binary(Name) when is_atom(Name) ->
-  case code:get_object_code(Name) of
-    {Name, Binary, _} ->
-      core_from_binary(Binary);
+  %% First try to fetch the binary from memory
+  case clj_cache:get({beam, Name}) of
+    {ok, Binary} -> core_from_binary(Binary);
     _ ->
-      case clj_cache:get({beam, Name}) of
-        {ok, Binary} -> core_from_binary(Binary);
+      %% Then try to fetch it from the beam file
+      case code:get_object_code(Name) of
+        {Name, Binary, _} -> core_from_binary(Binary);
         _ ->
           error([ <<"Could not load object code for namespace: ">>
                 , atom_to_binary(Name, utf8)

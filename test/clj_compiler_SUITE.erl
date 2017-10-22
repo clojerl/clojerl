@@ -14,6 +14,7 @@
         , compile_file/1
         , compile_files/1
         , eval/1
+        , def_var_compiled_ns/1
         ]).
 
 -spec all() -> [atom()].
@@ -123,6 +124,15 @@ eval(_Config) ->
 
   {comments, ""}.
 
+-spec def_var_compiled_ns(config()) -> result().
+def_var_compiled_ns(_Config) ->
+  ct:comment("Defining new var in compiled namespace is persisted"),
+  _  = clj_compiler:compile(<<"(ns examples.simple) (def foo 2)">>),
+  _  = clj_compiler:compile(<<"(ns examples.simple) (def x 1)">>),
+  check_var_value(<<"examples.simple">>, <<"foo">>, 2),
+
+  {comments, ""}.
+
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
@@ -135,7 +145,7 @@ check_var_value(Namespace, Name, Value) ->
 -spec find_var(binary(), binary()) -> 'clojerl.Var':type().
 find_var(Namespace, Name) ->
   Symbol = clj_rt:symbol(Namespace, Name),
-  case 'clojerl.Namespace':find_var(Symbol) of
+  case 'clojerl.Var':find(Symbol) of
     ?NIL -> error;
     V -> V
   end.
