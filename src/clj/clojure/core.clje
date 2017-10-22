@@ -3311,21 +3311,20 @@
         rename (or (:rename fs) {})
         exclude (set (:exclude fs))
         to-do (if (= :all (:refer fs))
-                (keys nspublics)
-                (or (:refer fs) (:only fs) (keys nspublics)))]
+                (map symbol (keys nspublics))
+                (or (:refer fs) (:only fs) (map symbol (keys nspublics))))]
     (when (and to-do (not (satisfies? clojerl.ISequential to-do)))
       (throw ":only/:refer value must be a sequential collection of symbols"))
     ;; keys in maps are strings to avoid be able to use the underlying map
     ;; implementation. We convert all to-do's to strings since some filters
     ;; could contains symbols
-    (doseq [name (map name to-do)]
-      (when-not (exclude name)
-        (let [v   (nspublics name)
-              sym (symbol name)]
+    (doseq [sym to-do]
+      (when-not (exclude sym)
+        (let [v   (nspublics (name sym))]
           (when-not v
-            (throw (if (get (ns-interns ns) name)
-                     (str name " is not public")
-                     (str name " does not exist"))))
+            (throw (if (get (ns-interns ns) (name sym))
+                     (str sym " is not public")
+                     (str sym " does not exist"))))
           (.refer *ns* (or (rename sym) sym) v))))))
 
 (defn ns-refers
