@@ -184,8 +184,12 @@ intern(#{?TYPE := ?M, name := NsName} = Ns, Symbol) ->
                       , <<"Can't intern namespace-qualified symbol">>
                       ),
 
+
   SymName = clj_rt:name(Symbol),
   Var     = 'clojerl.Var':?CONSTRUCTOR(clj_rt:name(NsName), SymName),
+
+  check_if_override(Ns, Symbol, mapping(Ns, Symbol), Var),
+
   gen_server:call(?MODULE, {intern, Ns, Symbol, Var}).
 
 -spec update_var('clojerl.Var':type()) -> type().
@@ -220,6 +224,8 @@ refer(#{?TYPE := ?M} = Ns, Sym, Var) ->
                       , <<"Can't refer namespace-qualified symbol">>
                       ),
 
+  check_if_override(Ns, Sym, mapping(Ns, Sym), Var),
+
   gen_server:call(?MODULE, {intern, Ns, Sym, Var}).
 
 -spec import_type(binary()) -> type().
@@ -242,11 +248,8 @@ import_type(TypeName, CheckLoaded) ->
 
   clj_utils:warn_when( Exists =/= ?NIL
                        andalso not clj_rt:equiv(Exists, Type)
-                     , [ Sym
-                       , <<" already refers to: ">>
-                       , Exists
-                       , <<" in namespace: ">>
-                       , name(Ns)
+                     , [ Sym , <<" already refers to: ">> , Exists
+                       , <<" in namespace: ">> , name(Ns)
                        ]
                      ),
 
@@ -400,6 +403,33 @@ code_change(_Msg, _From, State) ->
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
+
+-spec check_if_override( type()
+                       , 'clojerl.Symbol':type()
+                       , ?NIL | 'clojerl.Var':type()
+                       , 'clojerl.Var':type()
+                       ) ->
+  ok.
+check_if_override(_, _, ?NIL, _) ->
+  ok;
+check_if_override(Ns, Sym, Old, New) ->
+  case clj_rt:'var?'(Old) of
+    true  ->
+      NsName   = 'clojerl.Symbol':name(name(Ns)),
+      OldVarNs = 'clojerl.Var':namespace(Old),
+      NewVarNs = 'clojerl.Var':namespace(New),
+      Message  = [ Sym, <<" already refers to: ">>, Old
+                 , <<" in namespace: ">>, Ns
+                 ],
+      Warn     = OldVarNs =/= NsName andalso NewVarNs =/= <<"clojure.core">>,
+      clj_utils:error_when( Warn andalso OldVarNs =/= <<"clojure.core">>
+                          , Message
+                          ),
+
+      clj_utils:warn_when(Warn, [<<"WARNING: ">>, Message]);
+    false ->
+      ok
+  end.
 
 -spec load('clojerl.Symbol':type()) -> type() | ?NIL.
 load(Name) ->
