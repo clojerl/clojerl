@@ -2047,8 +2047,7 @@ do_analyze_symbol(false = _InPattern, Symbol, Env0) ->
                      );
     {{local, Local}, Env1} ->
       {Local#{env => Env0}, Env1};
-    {{erl_fun, Module, Function, Arity}, Env1} ->
-      FunExpr = erl_fun_expr(Symbol, Module, Function, Arity, Env1),
+    {{erl_fun, FunExpr}, Env1} ->
       {FunExpr, Env1};
     {{var, Var}, Env1} ->
       var_expr(Var, Symbol, Env1);
@@ -2111,14 +2110,12 @@ type_expr(Value, Env) ->
   TypeSym    = clj_rt:symbol(atom_to_binary(TypeModule, utf8)),
   type_expr(Type, TypeSym, Env).
 
--type erl_fun() ::  {erl_fun, module(), atom(), integer()}.
-
 -spec resolve('clojerl.Symbol':env(), clj_env:env()) ->
   { {var, 'clojerl.Var':type()}
-    | erl_fun()
-    | {local, map()}
+    | {erl_fun, erl_fun_expr()}
+    | {local, expr()}
+    | {type, 'erlang.Type':type()}
     | ?NIL
-    | {type, any()}
   , clj_env:env()
   }.
 resolve(Symbol, Env) ->
@@ -2126,10 +2123,10 @@ resolve(Symbol, Env) ->
 
 -spec resolve('clojerl.Symbol':env(), boolean(), clj_env:env()) ->
   { {var , 'clojerl.Var':type()}
-    | erl_fun()
+    | {erl_fun, erl_fun_expr()}
     | {local, expr()}
-    | ?NIL
     | {type, 'erlang.Type':type()}
+    | ?NIL
   , clj_env:env()
   }.
 resolve(Symbol, CheckPrivate, Env) ->
@@ -2160,7 +2157,8 @@ resolve(Symbol, CheckPrivate, Env) ->
     NsStr =/= ?NIL ->
       %% If there is no var then assume it's a Module:Function pair.
       %% Let's see how this works out.
-      {erl_fun(Symbol, Env), Env};
+      Expr = erl_fun(Symbol, Env),
+      {{erl_fun, Expr}, Env};
     true ->
       case is_maybe_type(Symbol) of
         true  ->
@@ -2171,11 +2169,12 @@ resolve(Symbol, CheckPrivate, Env) ->
       end
   end.
 
--spec erl_fun('clojerl.Symbol':type(), clj_env:env()) -> erl_fun().
+-spec erl_fun('clojerl.Symbol':type(), clj_env:env()) -> erl_fun_expr().
 erl_fun(Symbol, Env0) ->
   {Ns0, Name, Arity} = clj_utils:parse_erl_fun(Symbol),
+  NameAtom           = binary_to_atom(Name, utf8),
   NsSym              = clj_rt:symbol(Ns0),
-  {NsAtom, Env}      = case resolve(NsSym, Env0) of
+  {NsAtom, Env}     = case resolve(NsSym, Env0) of
                          {{type, Type}, EnvTmp} ->
                            {'erlang.Type':module(Type), EnvTmp};
                          {_, EnvTmp} ->
@@ -2184,18 +2183,7 @@ erl_fun(Symbol, Env0) ->
                            }
                        end,
 
-  NameAtom     = binary_to_atom(Name, utf8),
-
-  NoWarnErlFun = clj_compiler:no_warn_symbol_as_erl_fun(Env),
-  clj_utils:warn_when( not NoWarnErlFun
-                     , [ <<"'">>, Symbol, <<"'">>
-                       , <<" resolved to an Erlang function.">>
-                       , <<" Use '#erl' to remove this warning.">>
-                       ]
-                     , clj_env:location(Env0)
-                     ),
-
-  {erl_fun, NsAtom, NameAtom, Arity}.
+  erl_fun_expr(Symbol, NsAtom, NameAtom, Arity, Env).
 
 -spec is_maybe_type('clojerl.Symbol':type()) -> boolean().
 is_maybe_type(Symbol) ->

@@ -467,6 +467,8 @@ ast(#{op := erl_fun} = Expr, State) ->
                       , clj_env:location(Env)
                       ),
 
+  clj_utils:check_erl_fun(Expr),
+
   Ann  = ann_from(Env),
   Ast  = case Module of
            ?NIL ->
@@ -508,11 +510,14 @@ ast(#{op := invoke} = Expr, State) ->
      , function := Function
      , env      := EnvErlFun
      } ->
+      clj_utils:check_erl_fun(FExpr),
+
       AnnErlFun = ann_from(EnvErlFun),
       Ast       = case Module of
                     ?NIL -> call_fa(Function, Args, AnnErlFun);
                     _    -> call_mfa(Module, Function, Args, AnnErlFun)
                   end,
+
       push_ast(Ast, State);
     %% Resolve Target Type
     #{ op       := resolve_type
