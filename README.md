@@ -1,14 +1,14 @@
 # clojerl
 
-[![Travis](https://travis-ci.org/jfacorro/clojerl.svg?branch=master)](https://travis-ci.org/jfacorro/clojerl)
+[![Travis](https://travis-ci.org/clojerl/clojerl.svg?branch=master)](https://travis-ci.org/clojerl/clojerl)
 
 Clojure implemented on the Erlang VM.
 
 ## Building
 
-Building `clojerl` requires *Erlang/OTP 18+* and *rebar3*.
+Building `clojerl` requires *Erlang/OTP 18+* and [*rebar3*](https://github.com/erlang/rebar3).
 
-    git clone https://github.com/jfacorro/clojerl
+    git clone https://github.com/clojerl/clojerl
     cd clojerl
     make
 
