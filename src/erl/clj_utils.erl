@@ -330,18 +330,7 @@ core_from_binary(Binary) ->
         %% This case is only for bootstrapping clojure.core since it
         %% is written in Erlang it has erlang abstract syntax forms.
         {raw_abstract_v1, Code0} ->
-          %% Since OTP 20 there is no sys_pre_expand module.
-          {Code1, Opts1} = case code:ensure_loaded(sys_pre_expand) of
-                           {module, _} ->
-                             { Mod
-                             , Exp
-                             , Forms
-                             , Opts0
-                             } = sys_pre_expand:module(Code0, []),
-                             {{Mod, Exp, Forms}, Opts0};
-                           {error, _} ->
-                             {Code0, []}
-                         end,
+          {Code1, Opts1} = maybe_sys_pre_expand(Code0),
           {ok, CoreModule, _} = v3_core:module(Code1, Opts1),
           CoreModule;
         missing_chunk ->
@@ -349,6 +338,17 @@ core_from_binary(Binary) ->
         end;
     CoreModule ->
       erlang:binary_to_term(CoreModule)
+  end.
+
+%% Since OTP 20 there is no sys_pre_expand module.
+-spec maybe_sys_pre_expand(any()) -> {any(), [any()]}.
+maybe_sys_pre_expand(Code) ->
+  case code:ensure_loaded(sys_pre_expand) of
+    {module, _} ->
+      { Mod, Exp, Forms, Opts0} = sys_pre_expand:module(Code, []),
+      {{Mod, Exp, Forms}, Opts0};
+    {error, _} ->
+      {Code, []}
   end.
 
 %%------------------------------------------------------------------------------

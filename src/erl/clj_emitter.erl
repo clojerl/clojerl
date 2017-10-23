@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
+-include("clojerl_expr.hrl").
 
 -export([ emit/1
         , new_c_var/1
@@ -32,7 +33,7 @@ initial_state() ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec ast(map(), state()) -> state().
+-spec ast(expr(), state()) -> state().
 ast(#{op := constant, form := Form, env := Env}, State) when is_binary(Form) ->
   ?DEBUG(constant),
   Ast = binary_literal(ann_from(Env), Form),
@@ -1222,7 +1223,7 @@ creation_function(Typename, Ann, AllFieldsAsts, HiddenFieldsAsts) ->
 
   function_form(create, Ann, [MapVarAst], MapAst).
 
--spec get_basis_function([any()], [map()]) -> {ast(), ast()}.
+-spec get_basis_function([any()], [expr()]) -> {ast(), ast()}.
 get_basis_function(Ann, FieldsExprs) ->
   FilterMapFun   = fun(#{pattern := #{name := NameSym}}) ->
                        NameBin = 'clojerl.Symbol':name(NameSym),
@@ -1291,7 +1292,7 @@ fail_clause(Reason, Ann) ->
   FailAst     = cerl:ann_c_primop(Ann, cerl:c_atom(match_fail), [BadmatchAst]),
   cerl:ann_c_clause([compiler_generated | Ann], [VarAst], FailAst).
 
--spec clause({map(), map()}, state()) -> state().
+-spec clause({expr(), expr()}, state()) -> state().
 clause({PatternExpr, BodyExpr}, StateAcc) ->
   #{ env   := EnvPattern
    , guard := GuardExpr
@@ -1391,12 +1392,12 @@ call_fa(Function, Args, Ann) ->
   FName = cerl:ann_c_fname(Ann, Function, length(Args)),
   cerl:ann_c_apply(Ann, FName, Args).
 
--spec group_methods([map()]) -> #{integer() => [map()]}.
+-spec group_methods([expr()]) -> #{integer() => [expr()]}.
 group_methods(Methods) ->
   ParamCountFun = fun(#{params := Params}) -> length(Params) end,
   clj_utils:group_by(ParamCountFun, Methods).
 
--spec add_functions(module(), atom(), [term()], map(), state()) ->
+-spec add_functions(module(), atom(), [term()], expr(), state()) ->
   state().
 add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
   GroupedMethods = group_methods(Methods),
@@ -1449,7 +1450,7 @@ case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
 
 %% ----- letrec -------
 
--spec letrec_defs([map()], [map()], state()) ->
+-spec letrec_defs([expr()], [expr()], state()) ->
   {[{ast(), ast()}], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
   {VarsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State0, VarsExprs)
@@ -1537,7 +1538,7 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 %% is always registered in the lexixal scope, the analyzer makes sure
 %% this happens.
 %% @end
--spec get_lexical_rename(map(), state()) -> binary().
+-spec get_lexical_rename(local_expr(), state()) -> binary().
 get_lexical_rename(LocalExpr, State) ->
   #{lexical_renames := Renames} = State,
   IsUnderscore = maps:get(underscore, LocalExpr, false),
@@ -1559,7 +1560,7 @@ get_lexical_rename(LocalExpr, State) ->
     RenameSym -> 'clojerl.Symbol':str(RenameSym)
   end.
 
--spec put_lexical_rename(map(), state()) -> state().
+-spec put_lexical_rename(binding_expr(), state()) -> state().
 put_lexical_rename(#{pattern := #{underscore := true} = LocalExpr}, State) ->
   #{lexical_renames := Renames} = State,
 
@@ -1583,25 +1584,25 @@ put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
 put_lexical_rename(_, State) ->
   State.
 
--spec underscore_hash(map()) -> integer().
+-spec underscore_hash(local_expr()) -> integer().
 underscore_hash(#{underscore := true} = LocalExpr) ->
   %% Keep only some fields to avoid calculating a hash of a deeply nested value
   erlang:phash2(maps:with([id, name, op], LocalExpr)).
 
--spec hash_scope(map()) -> binary().
+-spec hash_scope(local_expr()) -> binary().
 hash_scope(LocalExpr) ->
   Depth = shadow_depth(LocalExpr),
   #{name := Name} = LocalExpr,
   NameBin = 'clojerl.Symbol':name(Name),
   term_to_binary({NameBin, Depth}).
 
--spec shadow_depth(map()) -> non_neg_integer().
+-spec shadow_depth(local_expr()) -> non_neg_integer().
 shadow_depth(LocalExpr = #{shadow := _}) ->
   do_shadow_depth(LocalExpr, 0);
 shadow_depth(_) ->
   0.
 
--spec do_shadow_depth(map(), non_neg_integer()) -> non_neg_integer().
+-spec do_shadow_depth(local_expr(), non_neg_integer()) -> non_neg_integer().
 do_shadow_depth(#{shadow := Shadowed}, Depth) when Shadowed =/= ?NIL ->
   do_shadow_depth(Shadowed, Depth + 1);
 do_shadow_depth(_, Depth) ->

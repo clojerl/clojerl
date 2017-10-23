@@ -51,7 +51,12 @@ swap(_Config) ->
   3 = 'clojerl.Atom':swap(Atom, fun(X) -> X + 1 end),
   4 = 'clojerl.Atom':swap(Atom, fun(X, Y) -> X + Y end, 1),
   6 = 'clojerl.Atom':swap(Atom, fun(X, Y, Z) -> X + Y + Z end, 1, 1),
-  9 = 'clojerl.Atom':swap(Atom, fun(X, Y, Z, W) -> X + Y + Z + W end, 1, 1, [1]),
+  9 = 'clojerl.Atom':swap( Atom
+                         , fun(X, Y, Z, W) -> X + Y + Z + W end
+                         , 1
+                         , 1
+                         , [1]
+                         ),
 
   ct:comment("Concurrent swaps"),
   Inc      = fun(X) -> X + 1 end,

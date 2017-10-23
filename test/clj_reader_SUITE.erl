@@ -552,7 +552,8 @@ syntax_quote(ReadFun) ->
   GenSymWithMeta0 = ReadFun(<<"`(^foo w#)">>),
   GenSymWithMeta1 = clj_rt:second(GenSymWithMeta0),
   GenSymWithMeta2 = clj_rt:nth(GenSymWithMeta1, 2),
-  GenSymWithMeta3 = clj_rt:second(clj_rt:second(clj_rt:second(GenSymWithMeta2))),
+  GenSymWithMeta3 =
+    clj_rt:second(clj_rt:second(clj_rt:second(GenSymWithMeta2))),
   GenSymMeta      = clj_rt:meta(GenSymWithMeta3),
 
   true = clj_rt:equiv( clj_rt:get(GenSymMeta, tag)

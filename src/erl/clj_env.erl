@@ -1,6 +1,7 @@
 -module(clj_env).
 
 -include("clojerl.hrl").
+-include("clojerl_expr.hrl").
 
 -export([ default/0
         , context/1
@@ -28,7 +29,7 @@
 -type context() :: expr | return | statement.
 
 -type env() :: #{ context    => context()
-                , exprs      => [map()]
+                , exprs      => [expr()]
                 , locals     => clj_scope:scope()
                 , mapping    => clj_scope:scope()
                 }.
@@ -48,11 +49,11 @@ context(Env) -> get(context, expr, Env).
 -spec location(env()) -> ?NIL | clj_reader:location().
 location(Env) -> get(location, Env).
 
--spec push_expr(map(), env()) -> env().
+-spec push_expr(expr(), env()) -> env().
 push_expr(Expr, Env = #{exprs := Exprs}) ->
   Env#{exprs => [Expr | Exprs]}.
 
--spec pop_expr(env()) -> {map(), env()}.
+-spec pop_expr(env()) -> {expr(), env()}.
 pop_expr(Env = #{exprs := [H | Exprs]}) ->
   {H, Env#{exprs => Exprs}}.
 

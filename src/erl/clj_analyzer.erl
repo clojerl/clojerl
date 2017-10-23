@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
+-include("clojerl_expr.hrl").
 
 -export([ analyze/2
         , macroexpand_1/2
@@ -21,37 +22,39 @@ is_special(S) ->
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
   case clj_rt:'seq?'(Form) of
-    true ->
-      Op        = clj_rt:first(Form),
-      IsSymbol  = clj_rt:'symbol?'(Op),
-      IsSpecial = is_special(Op),
-      MacroVar  = case IsSymbol of
-                    true -> lookup_var(Op, false);
-                    false -> ?NIL
-                  end,
-
-      Expanded  = case
-                    not IsSpecial
-                    andalso MacroVar =/= ?NIL
-                    andalso 'clojerl.Var':is_macro(MacroVar)
-                  of
-                    true ->
-                      Args = clj_rt:cons( Form
-                                        , clj_rt:cons( Env
-                                                     , clj_rt:rest(Form)
-                                                     )
-                                        ),
-                      'clojerl.IFn':apply(MacroVar, Args);
-                    false ->
-                      case IsSymbol andalso not IsSpecial of
-                        true  -> maybe_macroexpand_symbol(Form, Op);
-                        false -> Form
-                      end
-                  end,
-      keep_location_meta(Expanded, Form);
-    false ->
-      Form
+    true  -> do_macroexpand_1(Form, Env);
+    false -> Form
   end.
+
+-spec do_macroexpand_1(any(), clj_env:env()) -> any().
+do_macroexpand_1(Form, Env) ->
+  Op        = clj_rt:first(Form),
+  IsSymbol  = clj_rt:'symbol?'(Op),
+  IsSpecial = is_special(Op),
+  MacroVar  = case IsSymbol of
+                true -> lookup_var(Op, false);
+                false -> ?NIL
+              end,
+
+  Expanded  = case
+                not IsSpecial
+                andalso MacroVar =/= ?NIL
+                andalso 'clojerl.Var':is_macro(MacroVar)
+              of
+                true ->
+                  Args = clj_rt:cons( Form
+                                    , clj_rt:cons( Env
+                                                 , clj_rt:rest(Form)
+                                                 )
+                                    ),
+                  'clojerl.IFn':apply(MacroVar, Args);
+                false ->
+                  case IsSymbol andalso not IsSpecial of
+                    true  -> maybe_macroexpand_symbol(Form, Op);
+                    false -> Form
+                  end
+              end,
+  keep_location_meta(Expanded, Form).
 
 -spec macroexpand(any(), clj_env:env()) -> any().
 macroexpand(Form, Env) ->
@@ -278,9 +281,9 @@ parse_quote(List, Env) ->
 
   Expr = #{ op   => quote
           , env  => Env
-          , expr => ConstExpr
-          , tag  => TagExpr
           , form => List
+          , tag  => TagExpr
+          , expr => ConstExpr
           },
   clj_env:push_expr(Expr, NewEnv).
 
@@ -306,10 +309,14 @@ parse_fn(List, Env) ->
 
   {TagExpr, Env0} = fetch_type_tag(NameSym, clj_env:add_locals_scope(Env)),
   %% Add the name of the fn as a local binding
-  LocalExpr     = #{ op   => local
-                   , env  => Env
-                   , name => NameSym
-                   , tag  => TagExpr
+  LocalExpr     = #{ op         => local
+                   , env        => Env
+                   , form       => NameSym
+                   , tag        => TagExpr
+                   , name       => NameSym
+                   , shadow     => ?NIL
+                   , underscore => is_underscore(NameSym)
+                   , id         => erlang:unique_integer()
                    },
 
   %% If there is a def var we add it to the local scope
@@ -343,18 +350,23 @@ parse_fn(List, Env) ->
 
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
-  LoopId = case clj_env:get(def_name, Env) of
-             ?NIL -> {fn, NameSym};
-             _    -> {var, DefNameSym}
-           end,
+  {LoopType, LoopId} = case clj_env:get(def_name, Env) of
+                         ?NIL -> {fn, NameSym};
+                         _    -> {var, DefNameSym}
+                       end,
 
   %% Remove def_name so that inner fn* are not influenced by it.
   Env1Bis = clj_env:push(#{def_name => ?NIL}, Env1),
 
   %% If it is a def analyze methods' args but not the body,
   %% we just want arity information first.
-  {MethodsExprs, Env2} =
-    analyze_fn_methods(MethodsList, LoopId, IsOnce, not IsDef, Env1Bis),
+  {MethodsExprs, Env2} = analyze_fn_methods( MethodsList
+                                           , LoopType
+                                           , LoopId
+                                           , IsOnce
+                                           , not IsDef
+                                           , Env1Bis
+                                           ),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
@@ -411,7 +423,7 @@ parse_fn(List, Env) ->
         DefVar1 = clj_rt:with_meta(DefVar, VarMeta),
         'clojerl.Namespace':update_var(DefVar1),
 
-        analyze_fn_methods(MethodsList, LoopId, IsOnce, true, Env2);
+        analyze_fn_methods(MethodsList, LoopType, LoopId, IsOnce, true, Env2);
       false ->
         {MethodsExprs, Env2}
     end,
@@ -435,28 +447,35 @@ parse_fn(List, Env) ->
   clj_env:push_expr(FnExpr, Env7).
 
 -spec analyze_fn_methods( ['clojerl.List':type()]
-                        , 'clojerl.Symbol':type()
+                        , loop_type()
+                        , loop_id()
                         , boolean()
                         , boolean()
                         , clj_env:env()
                         ) ->
- {[map()], clj_env:env()}.
-analyze_fn_methods(MethodsList, LoopId, IsOnce, AnalyzeBody, Env) ->
+ {[expr()], clj_env:env()}.
+analyze_fn_methods(MethodsList, LoopType, LoopId, IsOnce, AnalyzeBody, Env) ->
   MethodEnv = clj_env:put(once, IsOnce, clj_env:put(in_try, false, Env)),
   AnalyzeFnMethodFun = fun(M, EnvAcc) ->
-                           analyze_fn_method(M, LoopId, AnalyzeBody, EnvAcc)
+                           analyze_fn_method( M
+                                            , LoopType
+                                            , LoopId
+                                            , AnalyzeBody
+                                            , EnvAcc
+                                            )
                        end,
 
   Env1 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
   clj_env:last_exprs(length(MethodsList), Env1).
 
 -spec analyze_fn_method( 'clojerl.List':type()
-                       , 'clojerl.Symbol':type()
+                       , loop_type()
+                       , loop_id()
                        , boolean()
                        , clj_env:env()
                        ) ->
   clj_env:env().
-analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
+analyze_fn_method(List, LoopType, LoopId, AnalyzeBody, Env0) ->
   Params = clj_rt:first(List),
   clj_utils:error_when( not clj_rt:'vector?'(Params)
                       , <<"Parameter declaration should be a vector">>
@@ -489,6 +508,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
         BodyEnv0   = clj_env:put_locals(lists:reverse(LocalExprs), Env4),
         Mapping    = #{ context     => return
                       , loop_id     => LoopId
+                      , loop_type   => LoopType
                       , loop_locals => length(ParamsExprs)
                       },
         BodyEnv1   = clj_env:push(Mapping, BodyEnv0),
@@ -510,13 +530,14 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
   FnMethodExpr = #{ op          => fn_method
                   , env         => Env0
                   , form        => List
+                  , tag         => TagExpr
                   , loop_id     => LoopId
+                  , loop_type   => LoopType
                   , 'variadic?' => IsVariadic
                   , params      => ParamsExprs
                   , guard       => GuardExpr
                   , fixed_arity => FixedArity
                   , body        => BodyExpr
-                  , tag         => TagExpr
                   },
 
   Env8  = clj_env:remove_locals_scope(Env7),
@@ -543,11 +564,12 @@ analyze_method_params(IsVariadic, Arity, Params, Env0) ->
         {PatExpr, EnvAcc1} = clj_env:pop_expr(parse_pattern(Pattern, EnvAcc0)),
         ParamExpr = #{ op          => binding
                      , env         => Env0
+                     , form        => Pattern
+                     , tag         => type_tag(PatExpr)
                      , pattern     => PatExpr
                      , 'variadic?' => IsVariadic andalso Id == Arity - 1
                      , arg_id      => Id
                      , local       => arg
-                     , tag         => type_tag(PatExpr)
                      },
         {Id + 1, clj_env:push_expr(ParamExpr, EnvAcc1)}
     end,
@@ -605,9 +627,9 @@ parse_do(Form, Env0) ->
   DoExpr = #{ op         => do
             , env        => Env0
             , form       => Statements
+            , tag        => type_tag(ReturnExpr)
             , statements => StatementsExprs
             , ret        => ReturnExpr
-            , tag        => type_tag(ReturnExpr)
             },
 
   clj_env:push_expr(DoExpr, Env5).
@@ -677,13 +699,14 @@ parse_let(Form, Env) ->
 -spec parse_loop('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_loop(Form, Env) ->
   LoopId = clj_rt:gensym(<<"loop_">>),
-  Env1   = clj_env:push(#{loop_id => {loop, LoopId}}, Env),
+  Env1   = clj_env:push(#{loop_id => LoopId, loop_type => loop}, Env),
 
   {LoopExprExtra, Env2} = analyze_let(Form, Env1),
-  LoopExpr = maps:merge(#{ op      => loop
-                         , form    => Form
-                         , env     => Env
-                         , loop_id => LoopId
+  LoopExpr = maps:merge(#{ op        => loop
+                         , form      => Form
+                         , env       => Env
+                         , loop_id   => LoopId
+                         , loop_type => loop
                          },
                         LoopExprExtra),
 
@@ -789,8 +812,9 @@ validate_bindings(Form, Env) ->
 
 -spec parse_recur('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_recur(List, Env) ->
-  {LoopType, LoopId} = clj_env:get(loop_id, Env),
-  LoopLocals         = clj_env:get(loop_locals, Env),
+  LoopId     = clj_env:get(loop_id, Env),
+  LoopType   = clj_env:get(loop_type, Env),
+  LoopLocals = clj_env:get(loop_locals, Env),
 
   clj_utils:error_when( clj_env:context(Env) =/= return
                       , <<"Can only recur from tail position">>
@@ -836,12 +860,14 @@ parse_letfn(Form, Env0) ->
   Env = clj_env:add_locals_scope(Env0),
   BindingFun = fun(FnName, {FnNamesExprsAcc, EnvAcc0}) ->
                    {TagExpr, EnvAcc1} = fetch_type_tag(FnName, EnvAcc0),
-                   FnNameExpr = #{ op     => local
-                                 , env    => Env
-                                 , name   => FnName
-                                 , shadow => clj_env:get_local(FnName, Env)
-                                 , form   => FnName
-                                 , tag    => TagExpr
+                   FnNameExpr = #{ op         => local
+                                 , env        => Env
+                                 , form       => FnName
+                                 , tag        => TagExpr
+                                 , name       => FnName
+                                 , shadow     => clj_env:get_local(FnName, Env)
+                                 , underscore => is_underscore(FnName)
+                                 , id         => erlang:unique_integer()
                                  },
                    { [FnNameExpr|FnNamesExprsAcc]
                    , clj_env:put_locals([FnNameExpr], EnvAcc1)
@@ -857,10 +883,10 @@ parse_letfn(Form, Env0) ->
   LetFnExpr = #{ op   => letfn
                , env  => Env
                , form => Form
+               , tag  => type_tag(BodyExpr)
                , vars => FnNamesExprs
                , fns  => FnsExprs
                , body => BodyExpr
-               , tag  => type_tag(BodyExpr)
                },
 
   Env4 = clj_env:remove_locals_scope(Env3),
@@ -903,21 +929,21 @@ parse_case(List, Env) ->
   CaseExpr = #{ op      => 'case'
               , env     => Env
               , form    => List
+              , tag     => resolve_exprs_type_tag(Exprs)
               , test    => TestExpr
               , clauses => ClausesExprs
               , default => DefaultExpr
-              , tag     => resolve_exprs_type_tag(Exprs)
               },
 
   clj_env:push_expr(CaseExpr, Env2).
 
 -spec parse_patterns_bodies([any()], clj_env:env()) ->
-  {list(), any(), clj_env:env()}.
+  {[{expr(), expr()}], expr() | ?NIL, clj_env:env()}.
 parse_patterns_bodies(PatternsBodies, Env1) ->
   parse_patterns_bodies(PatternsBodies, [], Env1).
 
 -spec parse_patterns_bodies([any()], [any()], clj_env:env()) ->
-  {list(), any(), clj_env:env()}.
+  {[{expr(), expr()}], expr() | ?NIL, clj_env:env()}.
 parse_patterns_bodies([], PatternBodyPairs, Env) ->
   { lists:reverse(PatternBodyPairs)
   , ?NIL
@@ -1003,8 +1029,8 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => tuple
                , env     => Env
                , form    => Form
-               , items   => ValsExprs
                , tag     => type_expr(Form, Env)
+               , items   => ValsExprs
                },
         clj_env:push_expr(Ast, InnerEnv1);
       is_list(Form) ->
@@ -1014,8 +1040,9 @@ parse_pattern(Form, Env) ->
         Ast = #{ op      => erl_list
                , env     => Env
                , form    => Form
-               , items   => ValsExprs
                , tag     => type_expr(Form, Env)
+               , items   => ValsExprs
+               , tail    => ?NIL
                },
         clj_env:push_expr(Ast, InnerEnv1);
       is_number(Form);
@@ -1152,7 +1179,7 @@ process_var_meta(Var, Env) ->
 
   VarMeta.
 
--spec var_fn_info('clojerl.Var':type(), map()) -> 'clojerl.Var':type().
+-spec var_fn_info('clojerl.Var':type(), expr()) -> 'clojerl.Var':type().
 var_fn_info(Var, #{op := fn} = Expr) ->
   %% Add information about the associated function
   %% to the var's metadata.
@@ -1258,8 +1285,8 @@ parse_import(Form, Env) ->
   NewExpr = #{ op       => import
              , env      => Env
              , form     => Form
-             , typename => TypeName
              , tag      => type_expr(?NIL, Env)
+             , typename => TypeName
              },
 
   clj_env:push_expr(NewExpr, Env).
@@ -1327,12 +1354,13 @@ parse_deftype(Form, Env0) ->
   DeftypeDummyExpr = #{ op        => deftype
                       , env       => Env0
                       , form      => Form
+                      , tag       => type_expr(?NIL, Env0)
                       , name      => Name
                       , type      => Type
                       , fields    => FieldsExprs
                       , protocols => []
                       , methods   => []
-                      , tag       => type_expr(?NIL, Env0)
+                      , opts      => []
                       },
   _ = clj_emitter:emit(clj_env:push_expr(DeftypeDummyExpr, Env4)),
 
@@ -1347,13 +1375,13 @@ parse_deftype(Form, Env0) ->
   DeftypeExpr = #{ op        => deftype
                  , env       => Env0
                  , form      => Form
+                 , tag       => type_expr(?NIL, Env0)
                  , name      => Name
                  , type      => Type
                  , fields    => FieldsExprs
                  , protocols => InterfacesExprs
-                 , opts      => Opts
                  , methods   => MethodsExprs
-                 , tag       => type_expr(?NIL, Env0)
+                 , opts      => Opts
                  },
 
   Env8 = clj_env:remove_locals_scope(Env7),
@@ -1387,9 +1415,9 @@ analyze_deftype_method(Form, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  LoopId = {function, MethodName},
   {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( clj_rt:rest(Form)
-                                                         , LoopId
+                                                         , function
+                                                         , MethodName
                                                          , true
                                                          , Env
                                                          )),
@@ -1398,8 +1426,8 @@ analyze_deftype_method(Form, Env) ->
                           , #{ op   => fn_method
                              , env  => Env
                              , form => Form
-                             , name => MethodName
                              , tag  => type_tag(MethodExpr)
+                             , name => MethodName
                              }
                           ),
 
@@ -1423,14 +1451,45 @@ parse_defprotocol(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
+  [validate_method_sig(MethodSig, Env) || MethodSig <- MethodsSigs],
+
   ProtocolExpr = #{ op           => defprotocol
                   , env          => Env
                   , name         => FQNameSym
-                  , methods_sigs => MethodsSigs
                   , tag          => type_expr(?NIL, Env)
+                  , methods_sigs => MethodsSigs
                   },
 
   clj_env:push_expr(ProtocolExpr, Env).
+
+-spec validate_method_sig(any(), clj_env:env()) -> ok.
+validate_method_sig(MethodSig, Env) ->
+  clj_utils:error_when( not clj_rt:'vector?'(MethodSig)
+                      , [ <<"Method signature should be a vector, had: ">>
+                        , clj_rt:type(MethodSig)
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  Name  = clj_rt:first(MethodSig),
+
+  clj_utils:error_when( not clj_rt:'symbol?'(Name)
+                      , [ <<"Method name should be a symbol, had: ">>
+                        , clj_rt:type(Name)
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  Arity = clj_rt:second(MethodSig),
+
+  clj_utils:error_when( not clj_rt:'number?'(Arity)
+                      , [ <<"Method name should be a number, had: ">>
+                        , clj_rt:type(Arity)
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  ok.
 
 %%------------------------------------------------------------------------------
 %% Parse extend-type
@@ -1477,10 +1536,10 @@ parse_extend_type(List, Env) ->
 
   ExtendTypeExpr = #{ op    => extend_type
                     , env   => Env
-                    , type  => TypeExpr
                     , form  => List
-                    , impls => ProtoImplsMap
                     , tag   => type_expr(?NIL, Env)
+                    , type  => TypeExpr
+                    , impls => ProtoImplsMap
                     },
 
   clj_env:push_expr(ExtendTypeExpr, Env2).
@@ -1616,25 +1675,25 @@ parse_dot(Form, Env) ->
                             #{ op       => resolve_type
                              , env      => Env
                              , form     => Target
-                             , function => Function
                              , tag      => ?NO_TAG
+                             , function => Function
                              }
                         end,
 
       InvokeExpr      = #{ op   => invoke
                          , env  => Env
                          , form => Form
+                         , tag  => TagExpr
                          , f    => FunExpr
                          , args => [TargetExpr | ArgsExprs]
-                         , tag  => TagExpr
                          },
 
       clj_env:push_expr(InvokeExpr, Env3)
   end.
 
 %% @doc Adds the type tag of the provided form if it is other than ?NO_TAG
--spec add_type_tag(any(), map(), clj_env:env()) ->
-  {map(), clj_env:env()}.
+-spec add_type_tag(any(), expr(), clj_env:env()) ->
+  {expr(), clj_env:env()}.
 add_type_tag(Form, Expr, Env0) ->
   case fetch_type_tag(Form, Env0) of
     {?NO_TAG, Env1} -> {Expr, Env1};
@@ -1643,7 +1702,7 @@ add_type_tag(Form, Expr, Env0) ->
 
 %% @doc Find the type tag for the form. Returns the tag if found or ?NO_TAG
 -spec fetch_type_tag(any(), clj_env:env()) ->
-  {?NO_TAG | map(), clj_env:env()}.
+  {?NO_TAG | expr(), clj_env:env()}.
 fetch_type_tag(Form, Env) ->
   Meta = clj_rt:'meta?'(Form) andalso clj_rt:meta(Form),
   case Meta =/= false andalso clj_rt:get(Meta, tag) of
@@ -1683,7 +1742,7 @@ do_resolve_type_tag(Symbol, Env) ->
   Env2    = analyze_form(Symbol, Env1),
   clj_env:pop_expr(clj_env:pop(Env2)).
 
--spec resolve_exprs_type_tag([map()]) -> ?NO_TAG | map().
+-spec resolve_exprs_type_tag([expr()]) -> ?NO_TAG | expr().
 resolve_exprs_type_tag(Exprs) ->
   FoldFun = fun
               (_Expr, ?NO_TAG) -> ?NO_TAG;
@@ -1697,11 +1756,11 @@ resolve_exprs_type_tag(Exprs) ->
 
   lists:foldl(FoldFun, ?NIL, Exprs).
 
--spec type_tag(map()) -> ?NO_TAG | map().
+-spec type_tag(expr()) -> ?NO_TAG | expr().
 type_tag(Expr) when is_map(Expr) ->
   maps:get(tag, Expr, ?NO_TAG).
 
--spec type_tag_module(map()) -> ?NO_TAG | module().
+-spec type_tag_module(expr()) -> ?NO_TAG | module().
 type_tag_module(#{tag := #{op := type, type := Type}}) ->
   'erlang.Type':module(Type);
 type_tag_module(_) ->
@@ -1728,8 +1787,8 @@ parse_throw(List, Env0) ->
   ThrowExpr = #{ op        => throw
                , env       => Env0
                , form      => List
-               , exception => ExceptionExpr
                , tag       => type_tag(ExceptionExpr)
+               , exception => ExceptionExpr
                },
 
   clj_env:push_expr(ThrowExpr, clj_env:pop(Env2)).
@@ -1794,10 +1853,10 @@ parse_try(List, Env) ->
   TryExpr = #{ op      => 'try'
              , env     => Env
              , form    => List
+             , tag     => type_tag(BodyExpr)
              , body    => BodyExpr
              , catches => CatchesExprs
              , finally => FinallyExpr
-             , tag     => type_tag(BodyExpr)
              },
 
   clj_env:push_expr(TryExpr, clj_env:pop(Env6)).
@@ -1837,12 +1896,12 @@ parse_catch(List, Env) ->
 
   CatchExpr = #{ op    => 'catch'
                , env   => Env
+               , form  => List
+               , tag   => type_tag(BodyExpr)
                , class => ErrType
                , local => Local
-               , form  => List
                , guard => GuardExpr
                , body  => BodyExpr
-               , tag   => type_tag(BodyExpr)
                },
 
   Env6 = clj_env:pop(clj_env:remove_locals_scope(Env5)),
@@ -1926,11 +1985,11 @@ analyze_invoke(Form, Env) ->
   clj_env:push_expr(InvokeExpr1, Env5).
 
 -spec signature_tag( integer()
-                   , map() | ?NO_TAG
+                   , expr() | ?NO_TAG
                    , 'clojerl.Var':type()
                    , clj_env:env()
                    ) ->
-  {map() | ?NO_TAG, clj_env:env()}.
+  {expr() | ?NO_TAG, clj_env:env()}.
 signature_tag(ArgCount, Default, Var, Env) ->
   ArgLists = clj_rt:to_list(clj_rt:get(clj_rt:meta(Var), arglists)),
   Fun = fun(ArgList) ->
@@ -1958,7 +2017,7 @@ analyze_symbol(Symbol, Env0) ->
   clj_env:push_expr(Expr1, Env2).
 
 -spec do_analyze_symbol(boolean(), 'clojerl.Symbol':t(), clj_env:env()) ->
-  {map(), clj_env:env()}.
+  {expr(), clj_env:env()}.
 do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
   clj_utils:error_when( not is_valid_bind_symbol(Symbol)
                       , [<<"Not a valid binding symbol, had: ">>, Symbol]
@@ -1967,9 +2026,11 @@ do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
 
   Expr0 = #{ op         => local
            , env        => Env0
+           , form       => Symbol
+           , tag        => ?NO_TAG
            , name       => Symbol
            , shadow     => clj_env:get_local(Symbol, Env0)
-           , underscore => 'clojerl.Symbol':name(Symbol) =:= <<"_">>
+           , underscore => is_underscore(Symbol)
            , id         => erlang:unique_integer()
            },
   %% We need to do this here so that the registered local has a type tag.
@@ -1995,24 +2056,28 @@ do_analyze_symbol(false = _InPattern, Symbol, Env0) ->
       {TypeExpr, Env1}
   end.
 
+-spec is_underscore('clojerl.Symbol':type()) -> boolean().
+is_underscore(Symbol) ->
+  'clojerl.Symbol':name(Symbol) =:= <<"_">>.
+
 -spec erl_fun_expr( 'clojerl.Symbol':type()
                   , module()
                   , atom()
                   , arity()
                   , clj_env:env()
-                  ) -> map().
+                  ) -> expr().
 erl_fun_expr(Symbol, Module, Function, Arity, Env) ->
   #{ op       => erl_fun
    , env      => Env
    , form     => Symbol
+   , tag      => ?NO_TAG
    , module   => Module
    , function => Function
    , arity    => Arity
-   , tag      => ?NO_TAG
    }.
 
 -spec var_expr('clojerl.Var':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
-  {map(), clj_env:env()}.
+  {expr(), clj_env:env()}.
 var_expr(Var, Symbol, Env0) ->
   {TagExpr, Env1} = fetch_type_tag(Var, Env0),
   VarExpr         = #{ op         => var
@@ -2029,16 +2094,16 @@ var_expr(Var, Symbol, Env0) ->
                , 'clojerl.Symbol':type()
                , clj_env:env()
                ) ->
-  map().
+  expr().
 type_expr(Type, Symbol, Env) ->
  #{ op   => type
   , env  => Env
   , form => Symbol
-  , type => Type
   , tag  => 'erlang.Type':?CONSTRUCTOR('erlang.Type')
+  , type => Type
   }.
 
--spec type_expr(any(), clj_env:env()) -> map().
+-spec type_expr(any(), clj_env:env()) -> expr().
 type_expr(Value, Env) ->
   Type       = clj_rt:type(Value),
   TypeModule = 'erlang.Type':module(Type),
@@ -2061,9 +2126,9 @@ resolve(Symbol, Env) ->
 -spec resolve('clojerl.Symbol':env(), boolean(), clj_env:env()) ->
   { {var , 'clojerl.Var':type()}
     | erl_fun()
-    | {local, map()}
+    | {local, expr()}
     | ?NIL
-    | {type, any()}
+    | {type, 'erlang.Type':type()}
   , clj_env:env()
   }.
 resolve(Symbol, CheckPrivate, Env) ->
@@ -2176,7 +2241,7 @@ is_maybe_type(Symbol) ->
 %% Helper for wrappping expressions with a with-meta if they have any metadata
 %%------------------------------------------------------------------------------
 
--spec wrapping_meta(map(), clj_env:env()) -> clj_env:env().
+-spec wrapping_meta(expr(), clj_env:env()) -> clj_env:env().
 wrapping_meta(#{form := Form, tag := TagExpr} = Expr, Env) ->
   Meta = case clj_rt:'meta?'(Form) of
            true  -> clj_reader:remove_location(clj_rt:meta(Form));
@@ -2188,9 +2253,9 @@ wrapping_meta(#{form := Form, tag := TagExpr} = Expr, Env) ->
       WithMetaExpr = #{ op   => with_meta
                       , env  => Env
                       , form => Form
+                      , tag  => TagExpr
                       , meta => MetaExpr
                       , expr => Expr
-                      , tag  => TagExpr
                       },
       clj_env:push_expr(WithMetaExpr, Env1);
     Meta ->
@@ -2212,8 +2277,8 @@ analyze_vector(Vector, Env0) ->
   VectorExpr = #{ op    => vector
                 , env   => Env0
                 , form  => Vector
-                , items => ItemsExpr
                 , tag   => type_expr(Vector, Env0)
+                , items => ItemsExpr
                 },
 
   wrapping_meta(VectorExpr, clj_env:pop(Env3)).
@@ -2238,9 +2303,9 @@ analyze_map(Map, Env0) ->
   MapExpr = #{ op   => map
              , env  => Env0
              , form => Map
+             , tag  => type_expr(Map, Env0)
              , keys => KeysExpr
              , vals => ValsExpr
-             , tag  => type_expr(Map, Env0)
              },
 
   wrapping_meta(MapExpr, clj_env:pop(Env5)).
@@ -2262,12 +2327,13 @@ analyze_erl_map(Map, Env0) ->
   Env4 = analyze_forms(Vals, Env3),
   {ValsExpr, Env5} = clj_env:last_exprs(Count, Env4),
 
-  MapExpr = #{ op   => erl_map
-             , env  => Env0
-             , form => Map
-             , keys => KeysExpr
-             , vals => ValsExpr
-             , tag  => type_expr(Map, Env0)
+  MapExpr = #{ op      => erl_map
+             , env     => Env0
+             , form    => Map
+             , tag     => type_expr(Map, Env0)
+             , keys    => KeysExpr
+             , vals    => ValsExpr
+             , pattern => false
              },
 
   wrapping_meta(MapExpr, clj_env:pop(Env5)).
@@ -2311,8 +2377,8 @@ analyze_tuple(Tuple, Env0) ->
   TupleExpr = #{ op    => tuple
                , env   => Env0
                , form  => Tuple
-               , items => ItemsExpr
                , tag   => type_expr(Tuple, Env0)
+               , items => ItemsExpr
                },
 
   clj_env:push_expr(TupleExpr, clj_env:pop(Env3)).
@@ -2363,9 +2429,9 @@ parse_receive(List, Env) ->
   ReceiveExpr = #{ op      => 'receive'
                  , env     => Env
                  , form    => List
+                 , tag     => resolve_exprs_type_tag(BodyExprs)
                  , clauses => ClausesExprs
                  , 'after' => AfterExpr
-                 , tag     => resolve_exprs_type_tag(BodyExprs)
                  },
 
   clj_env:push_expr(ReceiveExpr, Env2).
@@ -2383,9 +2449,9 @@ parse_after(List, Env) ->
   AfterExpr = #{ op      => 'after'
                , env     => Env
                , form    => List
+               , tag     => type_tag(BodyExpr)
                , timeout => TimeoutExpr
                , body    => BodyExpr
-               , tag     => type_tag(BodyExpr)
                },
 
   clj_env:push_expr(AfterExpr, Env2).
@@ -2407,8 +2473,8 @@ parse_erlang_binary(List, Env0) ->
   BinaryExpr = #{ op       => erl_binary
                 , env      => Env0
                 , form     => List
-                , segments => SegmentsExprs
                 , tag      => type_expr(<<>>, Env0)
+                , segments => SegmentsExprs
                 },
 
   clj_env:push_expr(BinaryExpr, Env2).
@@ -2437,12 +2503,12 @@ parse_segment(Segment0, Env0) ->
   SegmentExpr = #{ op    => binary_segment
                  , env   => Env0
                  , form  => Segment
+                 , tag   => ?NO_TAG
                  , value => ValueExpr
                  , size  => SizeExpr
                  , unit  => UnitExpr
                  , type  => TypeExpr
                  , flags => FlagsExpr
-                 , tag   => ?NO_TAG
                  },
 
   clj_env:push_expr(SegmentExpr, Env5).
@@ -2564,11 +2630,11 @@ parse_erlang_list(List, Env0) ->
   | AllItems
   ] = clj_rt:to_list(List),
 
-  {Items, Tails} = lists:splitwith(fun is_not_ampersand/1, AllItems),
+  {Items, Tail} = lists:splitwith(fun is_not_ampersand/1, AllItems),
 
-  clj_utils:error_when( length(Tails) > 0 andalso length(Tails) =/= 2
+  clj_utils:error_when( length(Tail) > 0 andalso length(Tail) =/= 2
                       , [<<"There has to be one expression after &, got ">>
-                        , length(Tails)
+                        , length(Tail)
                         ]
                       , clj_env:location(Env0)
                       ),
@@ -2576,19 +2642,19 @@ parse_erlang_list(List, Env0) ->
   {ItemsExprs, Env1} = clj_env:last_exprs( length(Items)
                                          , analyze_forms(Items, Env0)
                                          ),
-  {TailExpr, Env2}   = case Tails of
-                         [_, Tail] ->
-                           clj_env:pop_expr(analyze_form(Tail, Env1));
+  {TailExpr, Env2}   = case Tail of
+                         [_, TailItem] ->
+                           clj_env:pop_expr(analyze_form(TailItem, Env1));
                          [] ->
-                           {undefined, Env1}
+                           {?NIL, Env1}
                        end,
 
   ListExpr = #{ op      => erl_list
               , env     => Env0
               , form    => List
+              , tag     => type_expr([], Env0)
               , items   => ItemsExprs
               , tail    => TailExpr
-              , tag     => type_expr([], Env0)
               },
 
   clj_env:push_expr(ListExpr, Env2).
@@ -2631,9 +2697,9 @@ parse_erlang_alias(List, Env0) ->
   MatchExpr   = #{ op       => erl_alias
                  , env      => Env0
                  , form     => List
+                 , tag      => type_tag(VariableExpr)
                  , variable => VariableExpr
                  , pattern  => PatternExpr
-                 , tag      => type_tag(VariableExpr)
                  },
 
   clj_env:push_expr(MatchExpr, Env2).
