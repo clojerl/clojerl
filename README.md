@@ -1,6 +1,6 @@
 # clojerl
 
-[![Travis](https://travis-ci.org/jfacorro/clojerl.svg?branch=master)](https://travis-ci.org/jfacorro/clojerl)
+[![Travis](https://travis-ci.org/clojerl/clojerl.svg?branch=master)](https://travis-ci.org/clojerl/clojerl)
 
 Clojure implemented on the Erlang VM.
 
