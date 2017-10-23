@@ -307,13 +307,14 @@ parse_fn(List, Env) ->
 
   {TagExpr, Env0} = fetch_type_tag(NameSym, clj_env:add_locals_scope(Env)),
   %% Add the name of the fn as a local binding
-  LocalExpr     = #{ op     => local
-                   , env    => Env
-                   , form   => NameSym
-                   , tag    => TagExpr
-                   , name   => NameSym
-                   , shadow => ?NIL
-                   , id     => erlang:unique_integer()
+  LocalExpr     = #{ op         => local
+                   , env        => Env
+                   , form       => NameSym
+                   , tag        => TagExpr
+                   , name       => NameSym
+                   , shadow     => ?NIL
+                   , underscore => is_underscore(NameSym)
+                   , id         => erlang:unique_integer()
                    },
 
   %% If there is a def var we add it to the local scope
@@ -857,13 +858,14 @@ parse_letfn(Form, Env0) ->
   Env = clj_env:add_locals_scope(Env0),
   BindingFun = fun(FnName, {FnNamesExprsAcc, EnvAcc0}) ->
                    {TagExpr, EnvAcc1} = fetch_type_tag(FnName, EnvAcc0),
-                   FnNameExpr = #{ op     => local
-                                 , env    => Env
-                                 , form   => FnName
-                                 , tag    => TagExpr
-                                 , name   => FnName
-                                 , shadow => clj_env:get_local(FnName, Env)
-                                 , id     => erlang:unique_integer()
+                   FnNameExpr = #{ op         => local
+                                 , env        => Env
+                                 , form       => FnName
+                                 , tag        => TagExpr
+                                 , name       => FnName
+                                 , shadow     => clj_env:get_local(FnName, Env)
+                                 , underscore => is_underscore(FnName)
+                                 , id         => erlang:unique_integer()
                                  },
                    { [FnNameExpr|FnNamesExprsAcc]
                    , clj_env:put_locals([FnNameExpr], EnvAcc1)
@@ -1995,7 +1997,7 @@ do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
            , tag        => ?NO_TAG
            , name       => Symbol
            , shadow     => clj_env:get_local(Symbol, Env0)
-           , underscore => 'clojerl.Symbol':name(Symbol) =:= <<"_">>
+           , underscore => is_underscore(Symbol)
            , id         => erlang:unique_integer()
            },
   %% We need to do this here so that the registered local has a type tag.
@@ -2020,6 +2022,10 @@ do_analyze_symbol(false = _InPattern, Symbol, Env0) ->
       TypeExpr = type_expr(Type, Symbol, Env1),
       {TypeExpr, Env1}
   end.
+
+-spec is_underscore('clojerl.Symbol':type()) -> boolean().
+is_underscore(Symbol) ->
+  'clojerl.Symbol':name(Symbol) =:= <<"_">>.
 
 -spec erl_fun_expr( 'clojerl.Symbol':type()
                   , module()

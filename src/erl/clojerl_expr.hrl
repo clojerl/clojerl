@@ -30,13 +30,14 @@
                            , tag  => expr()
                            }.
 
--type local_expr()     :: #{ op     => local
-                           , env    => clj_env:env()
-                           , form   => any()
-                           , tag    => expr()
-                           , name   => 'clojerl.Symbol':type()
-                           , shadow => any()
-                           , id     => integer()
+-type local_expr()     :: #{ op         => local
+                           , env        => clj_env:env()
+                           , form       => any()
+                           , tag        => expr()
+                           , name       => 'clojerl.Symbol':type()
+                           , shadow     => any()
+                           , underscore => boolean()
+                           , id         => integer()
                            }.
 
 -type binding_expr()   :: #{ op          => binding
