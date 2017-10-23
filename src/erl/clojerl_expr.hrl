@@ -14,7 +14,7 @@
                 %% Type
               | resolve_type | type.
 
--type loop_type()      :: fn | var | loop.
+-type loop_type()      :: fn | var | loop | function.
 -type loop_id()        :: 'clojerl.Symbol':type().
 
 -type constant_expr()  :: #{ op   => constant
@@ -268,7 +268,7 @@
                               , tag       => expr()
                                 %% TODO: should this be a type
                               , class     => 'clojerl.Symbol':type()
-                              , local     => local_expr()
+                              , local     => binding_expr()
                               , guard     => expr()
                               , body      => expr()
                               }.
