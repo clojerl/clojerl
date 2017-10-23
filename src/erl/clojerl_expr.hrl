@@ -1,19 +1,3 @@
-%% Analyzer expressions
-
--type op()   :: local | binding
-              | def | var | do | quote | 'if' | 'let' | 'case'
-              | letfn | fn_method | fn | invoke | loop | recur
-              | import | new | deftype | defprotocol | extend_type
-              | throw | 'try' | 'catch'
-                %% Values
-              | constant | vector | map | set | with_meta
-                %% Erlang
-              | erl_map | erl_list | erl_alias | erl_fun | tuple
-              | erl_binary | binary_segment
-              | 'receive' | 'after' | on_load
-                %% Type
-              | resolve_type | type.
-
 -type loop_type()      :: fn | var | loop | function.
 -type loop_id()        :: 'clojerl.Symbol':type().
 
@@ -216,7 +200,6 @@
                            , opts      => [any()]
                            }.
 
-%% TODO: validate methods_sigs in analyzer
 -type defprotocol_expr() :: #{ op           => defprotocol
                              , env          => clj_env:env()
                              , form         => any()
@@ -267,7 +250,6 @@
                               , env       => clj_env:env()
                               , form      => any()
                               , tag       => expr()
-                                %% TODO: should this be a type
                               , class     => 'clojerl.Symbol':type()
                               , local     => binding_expr()
                               , guard     => expr()
