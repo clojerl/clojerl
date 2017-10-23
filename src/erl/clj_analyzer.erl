@@ -347,18 +347,23 @@ parse_fn(List, Env) ->
 
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
-  LoopId = case clj_env:get(def_name, Env) of
-             ?NIL -> {fn, NameSym};
-             _    -> {var, DefNameSym}
-           end,
+  {LoopType, LoopId} = case clj_env:get(def_name, Env) of
+                         ?NIL -> {fn, NameSym};
+                         _    -> {var, DefNameSym}
+                       end,
 
   %% Remove def_name so that inner fn* are not influenced by it.
   Env1Bis = clj_env:push(#{def_name => ?NIL}, Env1),
 
   %% If it is a def analyze methods' args but not the body,
   %% we just want arity information first.
-  {MethodsExprs, Env2} =
-    analyze_fn_methods(MethodsList, LoopId, IsOnce, not IsDef, Env1Bis),
+  {MethodsExprs, Env2} = analyze_fn_methods( MethodsList
+                                           , LoopType
+                                           , LoopId
+                                           , IsOnce
+                                           , not IsDef
+                                           , Env1Bis
+                                           ),
 
   MethodArityFun = fun (#{fixed_arity := Arity}) -> Arity end,
   IsVariadicFun  = fun (#{'variadic?' := true}) -> true;
@@ -415,7 +420,7 @@ parse_fn(List, Env) ->
         DefVar1 = clj_rt:with_meta(DefVar, VarMeta),
         'clojerl.Namespace':update_var(DefVar1),
 
-        analyze_fn_methods(MethodsList, LoopId, IsOnce, true, Env2);
+        analyze_fn_methods(MethodsList, LoopType, LoopId, IsOnce, true, Env2);
       false ->
         {MethodsExprs, Env2}
     end,
@@ -439,28 +444,35 @@ parse_fn(List, Env) ->
   clj_env:push_expr(FnExpr, Env7).
 
 -spec analyze_fn_methods( ['clojerl.List':type()]
-                        , 'clojerl.Symbol':type()
+                        , loop_type()
+                        , loop_id()
                         , boolean()
                         , boolean()
                         , clj_env:env()
                         ) ->
  {[expr()], clj_env:env()}.
-analyze_fn_methods(MethodsList, LoopId, IsOnce, AnalyzeBody, Env) ->
+analyze_fn_methods(MethodsList, LoopType, LoopId, IsOnce, AnalyzeBody, Env) ->
   MethodEnv = clj_env:put(once, IsOnce, clj_env:put(in_try, false, Env)),
   AnalyzeFnMethodFun = fun(M, EnvAcc) ->
-                           analyze_fn_method(M, LoopId, AnalyzeBody, EnvAcc)
+                           analyze_fn_method( M
+                                            , LoopType
+                                            , LoopId
+                                            , AnalyzeBody
+                                            , EnvAcc
+                                            )
                        end,
 
   Env1 = lists:foldl(AnalyzeFnMethodFun, MethodEnv, MethodsList),
   clj_env:last_exprs(length(MethodsList), Env1).
 
 -spec analyze_fn_method( 'clojerl.List':type()
-                       , 'clojerl.Symbol':type()
+                       , loop_type()
+                       , loop_id()
                        , boolean()
                        , clj_env:env()
                        ) ->
   clj_env:env().
-analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
+analyze_fn_method(List, LoopType, LoopId, AnalyzeBody, Env0) ->
   Params = clj_rt:first(List),
   clj_utils:error_when( not clj_rt:'vector?'(Params)
                       , <<"Parameter declaration should be a vector">>
@@ -493,6 +505,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
         BodyEnv0   = clj_env:put_locals(lists:reverse(LocalExprs), Env4),
         Mapping    = #{ context     => return
                       , loop_id     => LoopId
+                      , loop_type   => LoopType
                       , loop_locals => length(ParamsExprs)
                       },
         BodyEnv1   = clj_env:push(Mapping, BodyEnv0),
@@ -516,6 +529,7 @@ analyze_fn_method(List, LoopId, AnalyzeBody, Env0) ->
                   , form        => List
                   , tag         => TagExpr
                   , loop_id     => LoopId
+                  , loop_type   => LoopType
                   , 'variadic?' => IsVariadic
                   , params      => ParamsExprs
                   , guard       => GuardExpr
@@ -682,13 +696,14 @@ parse_let(Form, Env) ->
 -spec parse_loop('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_loop(Form, Env) ->
   LoopId = clj_rt:gensym(<<"loop_">>),
-  Env1   = clj_env:push(#{loop_id => {loop, LoopId}}, Env),
+  Env1   = clj_env:push(#{loop_id => LoopId, loop_type => loop}, Env),
 
   {LoopExprExtra, Env2} = analyze_let(Form, Env1),
-  LoopExpr = maps:merge(#{ op      => loop
-                         , form    => Form
-                         , env     => Env
-                         , loop_id => LoopId
+  LoopExpr = maps:merge(#{ op        => loop
+                         , form      => Form
+                         , env       => Env
+                         , loop_id   => LoopId
+                         , loop_type => loop
                          },
                         LoopExprExtra),
 
@@ -794,8 +809,9 @@ validate_bindings(Form, Env) ->
 
 -spec parse_recur('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_recur(List, Env) ->
-  {LoopType, LoopId} = clj_env:get(loop_id, Env),
-  LoopLocals         = clj_env:get(loop_locals, Env),
+  LoopId     = clj_env:get(loop_id, Env),
+  LoopType   = clj_env:get(loop_type, Env),
+  LoopLocals = clj_env:get(loop_locals, Env),
 
   clj_utils:error_when( clj_env:context(Env) =/= return
                       , <<"Can only recur from tail position">>
@@ -1395,9 +1411,9 @@ analyze_deftype_method(Form, Env) ->
                       , clj_env:location(Env)
                       ),
 
-  LoopId = {function, MethodName},
   {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( clj_rt:rest(Form)
-                                                         , LoopId
+                                                         , function
+                                                         , MethodName
                                                          , true
                                                          , Env
                                                          )),

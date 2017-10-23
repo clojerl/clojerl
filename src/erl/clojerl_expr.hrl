@@ -14,6 +14,9 @@
                 %% Type
               | resolve_type | type.
 
+-type loop_type()      :: fn | var | loop.
+-type loop_id()        :: 'clojerl.Symbol':type().
+
 -type constant_expr()  :: #{ op   => constant
                            , env  => clj_env:env()
                            , form => any()
@@ -63,7 +66,8 @@
                            , form        => any()
                            , tag         => expr()
                            %% , name        => 'clojerl.Symbol':type()
-                           , loop_id     => atom()
+                           , loop_id     => loop_id()
+                           , loop_type   => loop_type()
                            , 'variadic?' => boolean()
                            , params      => [expr()]
                            , guard       => expr()
@@ -100,7 +104,7 @@
                            , env      => clj_env:env()
                            , form     => any()
                            , tag      => expr()
-                           , loop_id  => atom()
+                           , loop_id  => loop_id()
                            , body     => expr()
                            , bindings => [expr()]
                            }.
@@ -110,8 +114,8 @@
                            , form      => any()
                            , tag       => expr()
                            , exprs     => [expr()]
-                           , loop_id   => atom()
-                           , loop_type => loop | fn | var
+                           , loop_id   => loop_id()
+                           , loop_type => loop_type()
                            }.
 
 -type letfn_expr()     :: #{ op        => letfn
