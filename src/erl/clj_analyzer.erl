@@ -1449,6 +1449,8 @@ parse_defprotocol(List, Env) ->
                       , clj_env:location(Env)
                       ),
 
+  [validate_method_sig(MethodSig, Env) || MethodSig <- MethodsSigs],
+
   ProtocolExpr = #{ op           => defprotocol
                   , env          => Env
                   , name         => FQNameSym
@@ -1457,6 +1459,35 @@ parse_defprotocol(List, Env) ->
                   },
 
   clj_env:push_expr(ProtocolExpr, Env).
+
+-spec validate_method_sig(any(), clj_env:env()) -> ok.
+validate_method_sig(MethodSig, Env) ->
+  clj_utils:error_when( not clj_rt:'vector?'(MethodSig)
+                      , [ <<"Method signature should be a vector, had: ">>
+                        , clj_rt:type(MethodSig)
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  Name  = clj_rt:first(MethodSig),
+
+  clj_utils:error_when( not clj_rt:'symbol?'(Name)
+                      , [ <<"Method name should be a symbol, had: ">>
+                        , clj_rt:type(Name)
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  Arity = clj_rt:second(MethodSig),
+
+  clj_utils:error_when( not clj_rt:'number?'(Arity)
+                      , [ <<"Method name should be a number, had: ">>
+                        , clj_rt:type(Arity)
+                        ]
+                      , clj_env:location(Env)
+                      ),
+
+  ok.
 
 %%------------------------------------------------------------------------------
 %% Parse extend-type
