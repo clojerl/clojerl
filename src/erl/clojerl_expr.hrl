@@ -334,14 +334,14 @@
                               , form       => any()
                               , tag        => expr()
                               , clauses    => [expr()]
-                              , 'after'    => after_expr()
+                              , 'after'    => expr()
                               }.
 
 -type after_expr()        :: #{ op         => 'after'
                               , env        => clj_env:env()
                               , form       => any()
                               , tag        => expr()
-                              , timeout    => timeout()
+                              , timeout    => expr()
                               , body       => expr()
                               }.
 
@@ -397,4 +397,6 @@
               | set_expr()
               | map_expr()
               | receive_expr()
-              | after_expr().
+              | after_expr()
+              | erl_alias_expr()
+              | on_load_expr().
