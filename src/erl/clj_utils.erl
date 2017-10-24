@@ -152,7 +152,7 @@ check_erl_fun(Expr) ->
                      ).
 
 -spec parse_erl_fun('clojerl.Symbol':type()) ->
-  {binary(), binary(), integer() | ?NIL}.
+  {binary() | ?NIL, binary(), integer() | ?NIL}.
 parse_erl_fun(Symbol) ->
   NsName        = 'clojerl.Symbol':namespace(Symbol),
   {Name, Arity} = erl_fun_arity('clojerl.Symbol':name(Symbol)),

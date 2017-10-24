@@ -1,3 +1,5 @@
+-include("clojerl_int.hrl").
+
 -type loop_type()      :: fn | var | loop | function.
 -type loop_id()        :: 'clojerl.Symbol':type().
 
@@ -259,7 +261,7 @@
 -type erl_fun_expr()      :: #{ op        => erl_fun
                               , env       => clj_env:env()
                               , form      => any()
-                              , tag       => expr()
+                              , tag       => ?NO_TAG
                               , module    => module()
                               , function  => atom()
                               , arity     => arity()
