@@ -38,8 +38,7 @@ From the REPL it's possible to start evaluating Clojure expressions:
     -------------------------
     clojure.core/inc
     ([x])
-      Returns a number one greater than num. Does not auto-promote
-      longs, will throw on overflow. See also: inc'
+      Returns a number one greater than num.'
     nil
     clje.user=>
 
