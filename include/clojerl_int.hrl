@@ -1,3 +1,5 @@
+-ifndef(NIL_TYPE).
+
 %% nil
 -define(NIL_TYPE, 'clojerl.Nil').
 
@@ -34,3 +36,5 @@
 %% Chunk size
 
 -define(CHUNK_SIZE, 32).
+
+-endif.

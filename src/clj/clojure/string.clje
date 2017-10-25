@@ -39,9 +39,9 @@ Design notes for clojure.string:
   {:added "1.2"}
   [^clojerl.IStringable s]
   (-> (.str s)
-      unicode/characters_to_list.1
-      lists/reverse.1
-      erlang/list_to_binary.1))
+      unicode/characters_to_list
+      lists/reverse
+      erlang/list_to_binary))
 
 (defn ^clojerl.String re-quote-replacement
   "Given a replacement string that you wish to be a literal
@@ -49,7 +49,7 @@ Design notes for clojure.string:
    necessary escaping of special characters in the replacement."
   {:added "1.5"}
   [^clojerl.IStringable replacement]
-  (erlang.util.Regex/quote.e (.str replacement)))
+  (erlang.util.Regex/quote (when replacement (str replacement))))
 
 (defn- replace-by
   [^clojerl.IStringable s re f]
@@ -176,7 +176,7 @@ Design notes for clojure.string:
   ([coll]
    (apply str coll))
   ([separator coll]
-   (clojerl.String/join.e (clj_rt/to_list.e coll) separator)))
+   (.join ^clojerl.String (clj_rt/to_list coll) separator)))
 
 (defn ^clojerl.String upper-case
   "Converts string to all upper-case."
@@ -283,7 +283,7 @@ Design notes for clojure.string:
       (loop [index (int 0)]
         (if (= len index)
           true
-          (if (= :whitespace (clj_utils/char_type.e (binary/at.e s index)))
+          (if (= :whitespace (clj_utils/char_type (binary/at s index)))
             (recur (inc index))
             false))))
     true))

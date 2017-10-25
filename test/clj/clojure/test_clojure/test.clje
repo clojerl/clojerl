@@ -60,12 +60,12 @@
   (is (= 1 (throw "Exception")) "Should error"))
 
 (deftest can-test-method-call
-  (is (clojerl.String/starts_with.e "abc" "a") "Should pass")
-  (is (clojerl.String/starts_with.e "abc" "d") "Should fail"))
+  (is (clojerl.String/starts_with "abc" "a") "Should pass")
+  (is (clojerl.String/starts_with "abc" "d") "Should fail"))
 
 (deftest can-test-anonymous-fn
-  (is (#(clojerl.String/starts_with.e % "a") "abc") "Should pass")
-  (is (#(clojerl.String/starts_with.e % "d") "abc") "Should fail"))
+  (is (#(clojerl.String/starts_with % "a") "abc") "Should pass")
+  (is (#(clojerl.String/starts_with % "d") "abc") "Should fail"))
 
 (deftest can-test-regexps
   (is (re-matches #"^ab.*$" "abbabba") "Should pass")

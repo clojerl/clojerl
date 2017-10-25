@@ -3,13 +3,13 @@
 (def loop
   (fn* [state]
     (receive*
-     x {:when (erlang/=:=.e x :inc)}
+     x {:when (erlang/=:= x :inc)}
      (-> state inc loop)
 
-     x {:when (erlang/=:=.e x :dec)}
+     x {:when (erlang/=:= x :dec)}
      (-> state dec loop)
 
-     x {:when (erlang/=:=.e x :print)}
+     x {:when (erlang/=:= x :print)}
      (loop (doto state prn))
 
      _
@@ -17,14 +17,14 @@
 
 (def spawn
   (fn* [f & args]
-       (erlang/spawn.e :clj_rt :apply (clj_rt/to_list.e [f args]))))
+       (erlang/spawn :clj_rt :apply #erl(f args))))
 
 (let [x (spawn loop 42)]
-  (erlang/send.e x :inc)
-  (erlang/send.e x :inc)
-  (erlang/send.e x :inc)
-  (erlang/send.e x :print)
-  (erlang/send.e x :dec)
-  (erlang/send.e x :dec)
-  (erlang/send.e x :dec)
-  (erlang/send.e x :print))
+  (erlang/send x :inc)
+  (erlang/send x :inc)
+  (erlang/send x :inc)
+  (erlang/send x :print)
+  (erlang/send x :dec)
+  (erlang/send x :dec)
+  (erlang/send x :dec)
+  (erlang/send x :print))

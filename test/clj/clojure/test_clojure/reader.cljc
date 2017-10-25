@@ -54,7 +54,7 @@
 
 (defn temp-file
   [prefix suffix]
-  (erlang.io.File/make_temp.e prefix suffix))
+  (erlang.io.File/make_temp prefix suffix))
 
 (defn read-from
   [source file form]
@@ -62,12 +62,12 @@
     (read-string form)
     (do
       (spit file form)
-      (load-file (erlang.io.File/path.e file)))))
+      (load-file (erlang.io.File/path file)))))
 
 (defn code-units
   [s]
   (and (instance? clojerl.String s)
-       (unicode/characters_to_list.e s)))
+       (unicode/characters_to_list s)))
 
 (deftest Strings
   (is (= "abcde" (str \a \b \c \d \e)))

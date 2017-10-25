@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
+-include("clojerl_expr.hrl").
 
 -dialyzer([ {nowarn_function, throw/2}
           , {nowarn_function, throw_when/2}
@@ -18,6 +19,8 @@
         , char_type/2
         , parse_number/1
         , parse_symbol/1
+        , check_erl_fun/1
+        , parse_erl_fun/1
         , desugar_meta/1
 
         , compare/2
@@ -121,6 +124,54 @@ verify_symbol_name({_, Name} = Result) ->
   case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoDoubleSlash]) of
     true -> Result;
     false -> ?NIL
+  end.
+
+-spec check_erl_fun(erl_fun_expr()) -> ok.
+check_erl_fun(Expr) ->
+  #{ op       := erl_fun
+   , env      := Env
+   , form     := Symbol
+   , module   := Module
+   , function := Function
+   , arity    := Arity
+   } = Expr,
+
+  IsSymbol         = clj_rt:'symbol?'(Symbol),
+  FunctionExported = erlang:function_exported(Module, Function, Arity),
+  NoWarnErlFun     = clj_compiler:no_warn_symbol_as_erl_fun(Env),
+  clj_utils:warn_when( IsSymbol
+                       andalso not FunctionExported
+                       andalso not NoWarnErlFun
+                     , [ <<"'">>, Symbol, <<"'">>
+                       , <<" will be considered an Erlang function,">>
+                       , <<" but we couldn't find it at compile-time.">>
+                       , <<" Either make sure the module is loaded or use">>
+                       , <<" '#erl ">>, Symbol, <<"' to remove this warning.">>
+                       ]
+                     , clj_env:location(Env)
+                     ).
+
+-spec parse_erl_fun('clojerl.Symbol':type()) ->
+  {binary() | ?NIL, binary(), integer() | ?NIL}.
+parse_erl_fun(Symbol) ->
+  NsName        = 'clojerl.Symbol':namespace(Symbol),
+  {Name, Arity} = erl_fun_arity('clojerl.Symbol':name(Symbol)),
+  {NsName, Name, Arity}.
+
+-spec erl_fun_arity(binary()) -> {binary(), ?NIL | integer()}.
+erl_fun_arity(Name) ->
+  case binary:split(Name, <<".">>, [global]) of
+    [_] -> {Name, ?NIL};
+    Parts ->
+      Last = lists:last(Parts),
+      case re:run(Last, <<"\\d+">>, [{capture, none}]) of
+        nomatch ->
+          {Name, ?NIL};
+        _ ->
+          NameParts = 'clojerl.String':join(lists:droplast(Parts), <<".">>),
+          Arity = binary_to_integer(Last),
+          {iolist_to_binary(NameParts), Arity}
+      end
   end.
 
 -spec char_type(non_neg_integer()) -> char_type().

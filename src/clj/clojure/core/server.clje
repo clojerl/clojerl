@@ -57,10 +57,10 @@
     (catch _ disconnect)
     (finally
       (swap! servers update-in [name :sessions] dissoc client-id)
-      (gen_tcp/close.e conn))))
+      (gen_tcp/close conn))))
 
 (defmacro in-process [& body]
-  `(erlang/spawn.e :clj_rt :apply #erl((fn* [] ~@body) #erl())))
+  `(erlang/spawn :clj_rt :apply #erl((fn* [] ~@body) #erl())))
 
 (defn* lift-result
   ([#erl[:ok res]] res)
@@ -72,38 +72,38 @@
    (getaddr "localhost"))
   ([address]
    (-> address
-       erlang/binary_to_list.1
-       (inet/getaddr.e :inet)
+       erlang/binary_to_list
+       (inet/getaddr :inet)
        lift-result)))
 
 (defn listen [address port]
-  (lift-result (gen_tcp/listen.e port #erl(:binary #erl[:ip address] #erl[:active false]))))
+  (lift-result (gen_tcp/listen port #erl(:binary #erl[:ip address] #erl[:active false]))))
 
 (defn accept-socket [socket]
-  (lift-result (gen_tcp/accept.e socket)))
+  (lift-result (gen_tcp/accept socket)))
 
 (deftype SocketWriter [conn]
   erlang.io.IWriter
   (write [this data]
-    (lift-result (gen_tcp/send.e conn data)))
+    (lift-result (gen_tcp/send conn data)))
   (write [this format values]
-    (let [data (->> values (io_lib/format.e format) erlang/iolist_to_binary.1)]
-      (lift-result (gen_tcp/send.e conn data)))))
+    (let [data (->> values (io_lib/format format) (erlang/iolist_to_binary.1))]
+      (lift-result (gen_tcp/send conn data)))))
 
 (deftype SocketReader [conn]
   erlang.io.IReader
   (read [this]
-    (lift-result (gen_tcp/recv.e conn 1)))
+    (lift-result (gen_tcp/recv conn 1)))
   (read [this length]
-    (lift-result (gen_tcp/recv.e conn length :infinity)))
+    (lift-result (gen_tcp/recv conn length :infinity)))
   (read_line [this]
     (loop [line ""]
-      (let [char (lift-result (gen_tcp/recv.e conn 1))]
+      (let [char (lift-result (gen_tcp/recv conn 1))]
         (if (= char "\n")
           line
           (recur (str line char))))))
   (skip [this length]
-    (let [skipped (lift-result (gen_tcp/recv.e conn length))]
+    (let [skipped (lift-result (gen_tcp/recv conn length))]
       (count skipped))))
 
 (defn start-server
@@ -130,7 +130,7 @@
       (println "Clojure Server" name)
       (try
         (loop [client-counter 1]
-          (when (erlang/port_info.e socket)
+          (when (erlang/port_info socket)
             (try
               (let [conn (accept-socket socket)
                     in (new PushbackReader (new SocketReader conn))
@@ -155,7 +155,7 @@
    (let [server-socket (get-in @servers [name :socket])]
      (when server-socket
        (swap! servers dissoc name)
-       (gen_tcp/close.e server-socket)
+       (gen_tcp/close server-socket)
        true))))
 
 (defn stop-servers

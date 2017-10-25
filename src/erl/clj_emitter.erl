@@ -467,15 +467,22 @@ ast(#{op := erl_fun} = Expr, State) ->
                       , clj_env:location(Env)
                       ),
 
+  clj_utils:check_erl_fun(Expr),
+
   Ann  = ann_from(Env),
-  Ast  = call_mfa( erlang
-                 , make_fun
-                 , [ cerl:ann_c_atom(Ann, Module)
-                   , cerl:ann_c_atom(Ann, Function)
-                   , cerl:ann_c_int(Ann, Arity)
-                   ]
-                 , Ann
-                 ),
+  Ast  = case Module of
+           ?NIL ->
+             cerl:ann_c_fname(Ann, Function, Arity);
+           _ ->
+             call_mfa( erlang
+                     , make_fun
+                     , [ cerl:ann_c_atom(Ann, Module)
+                       , cerl:ann_c_atom(Ann, Function)
+                       , cerl:ann_c_int(Ann, Arity)
+                       ]
+                     , Ann
+                     )
+         end,
 
   push_ast(Ast, State);
 ast(#{op := invoke} = Expr, State) ->
@@ -503,8 +510,13 @@ ast(#{op := invoke} = Expr, State) ->
      , function := Function
      , env      := EnvErlFun
      } ->
+      clj_utils:check_erl_fun(FExpr),
+
       AnnErlFun = ann_from(EnvErlFun),
-      Ast = call_mfa(Module, Function, Args, AnnErlFun),
+      Ast       = case Module of
+                    ?NIL -> call_fa(Function, Args, AnnErlFun);
+                    _    -> call_mfa(Module, Function, Args, AnnErlFun)
+                  end,
 
       push_ast(Ast, State);
     %% Resolve Target Type

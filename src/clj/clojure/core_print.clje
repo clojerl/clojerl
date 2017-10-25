@@ -130,8 +130,8 @@
 
 (defmethod print-method erlang.List [o, ^IWriter w]
   (print-meta o w)
-  (if (io_lib/printable_unicode_list.e o)
-    (.write w (str "#erl\"" (unicode/characters_to_binary.e o) "\""))
+  (if (io_lib/printable_unicode_list o)
+    (.write w (str "#erl\"" (unicode/characters_to_binary o) "\""))
     (print-sequential "#erl(" pr-on " " ")" o w)))
 
 (defmethod print-method clojerl.Cons [o, ^IWriter w]
@@ -166,13 +166,13 @@
 
 (defmethod print-method clojerl.String [^clojerl.String s, ^IWriter w]
   (if (or *print-dup* *print-readably*)
-    (let [printable? (clojerl.String/is_printable.e s)]
+    (let [printable? (.is_printable s)]
       (.write w (if printable? \" "#bin["))
       (if printable?
         (let [chars (map #(or (char-escape-string %) %) s)
               s     (apply str chars)]
           (.write w s))
-        (->> (erlang/binary_to_list.e s)
+        (->> (erlang/binary_to_list s)
              (interpose " ")
              (apply str)
              (.write w)))

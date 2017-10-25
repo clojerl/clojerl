@@ -18,9 +18,9 @@
 (ns clojure.test-helper
   (:use clojure.test))
 
-(def nl (-> (io_lib/nl.e) erlang/list_to_binary.1))
+(def nl (-> (io_lib/nl) erlang/list_to_binary))
 
-(defn platform-newlines [s] (binary/replace.e s "\n" nl))
+(defn platform-newlines [s] (binary/replace s "\n" nl))
 
 (defn temp-ns
   "Create and return a temporary ns, using clojure.core + uses"

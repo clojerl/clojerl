@@ -7,7 +7,7 @@
                (subs path (count root))
                path)
         ns-name (-> path
-                    filename/rootname.e
+                    filename/rootname
                     (str/replace #"/" ".")
                     (str/replace #"_" "-"))
         ns-symbol (symbol ns-name)]
@@ -17,11 +17,11 @@
 
 (defn -main [& [test-dir root]]
   (when test-dir
-    (let [paths (if-not (filelib/is_dir.e test-dir)
+    (let [paths (if-not (filelib/is_dir test-dir)
                   [test-dir]
-                  (->> (file/list_dir.e test-dir)
+                  (->> (file/list_dir test-dir)
                        second
-                       (map #(filename/join.e test-dir %))
+                       (map #(filename/join test-dir %))
                        (filter (complement filelib/is_dir.1))))
           ns-symbols (->> paths
                           (map (partial path->symbol root))
