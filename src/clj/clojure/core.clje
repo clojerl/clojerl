@@ -806,8 +806,7 @@
      false)))
 
 (defn inc
-  "Returns a number one greater than num. Does not auto-promote
-  longs, will throw on overflow."
+  "Returns a number one greater than num."
   {:added "1.2"}
   [x] (erlang/+ x 1))
 
@@ -836,8 +835,7 @@
   (reduce1 conj '() coll))
 
 (defn +
-  "Returns the sum of nums. (+) returns 0. Does not auto-promote
-  longs, will throw on overflow."
+  "Returns the sum of nums. (+) returns 0."
   {:added "1.2"}
   ([] 0)
   ([x] x)
@@ -846,8 +844,7 @@
    (reduce1 erlang/+.2 (+ x y) more)))
 
 (defn *
-  "Returns the product of nums. (*) returns 1. Does not auto-promote
-  longs, will throw on overflow."
+  "Returns the product of nums. (*) returns 1."
   {:added "1.2"}
   ([] 1)
   ([x] x)
@@ -866,8 +863,7 @@
 
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
-  the ys from x and returns the result. Does not auto-promote
-  longs, will throw on overflow."
+  the ys from x and returns the result."
   {:added "1.2"}
   ([x] (erlang/- x))
   ([x y] (erlang/- x y))
@@ -943,8 +939,7 @@
    (reduce1 min (min x y) more)))
 
 (defn dec
-  "Returns a number one less than num. Does not auto-promote
-  longs, will throw on overflow."
+  "Returns a number one less than num."
   {:added "1.2"}
   [x] (erlang/- x 1))
 
@@ -2894,20 +2889,8 @@
     x
     (throw "Not a number")))
 
-(defn long
-  "Coerce to long"
-  {:added "1.0"}
-  [x]
-  (erlang/trunc x))
-
 (defn float
   "Coerce to float"
-  {:added "1.0"}
-  [x]
-  (erlang/float x))
-
-(defn double
-  "Coerce to double"
   {:added "1.0"}
   [x]
   (erlang/float x))
@@ -4151,8 +4134,7 @@
    consistent with =, different from .hashCode.
    See http://clojure.org/data_structures#hash for full algorithms."
   {:added "1.6"}
-  ^long
-  [^long hash-basis ^long count]
+  [hash-basis count]
   (throw "unimplemented hash")
   #_(clojure.lang.Murmur3/mixCollHash hash-basis count))
 
@@ -4161,7 +4143,6 @@
    collection implementing Iterable.
    See http://clojure.org/data_structures#hash for full algorithms."
   {:added "1.6"}
-  ^long
   [coll]
   (clj_murmur3/ordered coll))
 
@@ -4172,7 +4153,6 @@
      (hash-ordered-coll [k v]).
    See http://clojure.org/data_structures#hash for full algorithms."
   {:added "1.6"}
-  ^long
   [coll]
   (clj_murmur3/unordered coll))
 
@@ -5698,7 +5678,7 @@
   partitions with fewer than n items at the end.  Returns a stateful
   transducer when no collection is provided."
   {:added "1.2"}
-  #_([^long n]
+  #_([n]
    (fn [rf]
      (let [a (java.util.ArrayList. n)]
        (fn

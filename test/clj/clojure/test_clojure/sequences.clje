@@ -32,57 +32,19 @@
         avec (into [] arange)
         alist (into () arange)
         obj-array (into-tuple arange)
-        ;; int-array (into-array Integer/TYPE (map #(Integer. (int %)) arange))
-        ;; long-array (into-array Long/TYPE arange)
-        ;; float-array (into-array Float/TYPE arange)
-        ;; char-array (into-array Character/TYPE (map char arange))
-        ;; double-array (into-array Double/TYPE arange)
-        ;; byte-array (into-array Byte/TYPE (map byte arange))
-        ;; int-vec (into (vector-of :int) arange)
-        ;; long-vec (into (vector-of :long) arange)
-        ;; float-vec (into (vector-of :float) arange)
-        ;; char-vec (into (vector-of :char) (map char arange))
-        ;; double-vec (into (vector-of :double) arange)
-        ;; byte-vec (into (vector-of :byte) (map byte arange))
         all-true (into-tuple (repeat 10 true))]
     (is (== 4950
            (reduce + arange)
            (reduce + avec)
            (.reduce ^IReduce avec +)
            (reduce + alist)
-           (reduce + obj-array)
-           ;; (reduce + int-array)
-           ;; (reduce + long-array)
-           ;; (reduce + float-array)
-           ;; (reduce int+ char-array)
-           ;; (reduce + double-array)
-           ;; (reduce int+ byte-array)
-           ;; (reduce + int-vec)
-           ;; (reduce + long-vec)
-           ;; (reduce + float-vec)
-           ;; (reduce int+ char-vec)
-           ;; (reduce + double-vec)
-           ;; (reduce int+ byte-vec)
-           ))
+           (reduce + obj-array)))
     (is (== 4951
            (reduce + 1 arange)
            (reduce + 1 avec)
            (.reduce ^IReduce avec + 1)
            (reduce + 1 alist)
-           (reduce + 1 obj-array)
-           ;; (reduce + 1 int-array)
-           ;; (reduce + 1 long-array)
-           ;; (reduce + 1 float-array)
-           ;; (reduce int+ 1 char-array)
-           ;; (reduce + 1 double-array)
-           ;; (reduce int+ 1 byte-array)
-           ;; (reduce + 1 int-vec)
-           ;; (reduce + 1 long-vec)
-           ;; (reduce + 1 float-vec)
-           ;; (reduce int+ 1 char-vec)
-           ;; (reduce + 1 double-vec)
-           ;; (reduce int+ 1 byte-vec)
-           ))
+           (reduce + 1 obj-array)))
     (is (= true
            (reduce #(and %1 %2) all-true)
            (reduce #(and %1 %2) true all-true)))))
@@ -996,13 +958,6 @@
       {} {:a 1 :b 2}
       #{} #{1 2} ))
 
-#_(defspec longrange-equals-range 100
-  (prop/for-all [start gen/int
-                 end gen/int
-                 step gen/s-pos-int]
-                (= (clojure.lang.Range/create start end step)
-                   (clojure.lang.LongRange/create start end step))))
-
 (deftest test-range
   (are [x y] (= x y)
       (take 100 (range)) (range 100)
@@ -1052,7 +1007,6 @@
 
       (range 0.5 8 1.2) '(0.5 1.7 2.9 4.1 5.3 6.5 7.7)
       (range 0.5 -4 -2) '(0.5 -1.5 -3.5)
-      ;; (take 3 (range Long/MAX_VALUE Double/POSITIVE_INFINITY)) '(9223372036854775807 9223372036854775808N 9223372036854775809N)
 
       (reduce + (take 100 (range))) 4950
       (reduce + 0 (take 100 (range))) 4950
@@ -1070,33 +1024,6 @@
       1 (clojerl.Range. arg1)
       2 (clojerl.Range. arg1 arg2)
       3 (clojerl.Range. arg1 arg2 arg3))))
-
-#_(deftest test-longrange-corners
-  (let [lmax Long/MAX_VALUE
-        lmax-1 (- Long/MAX_VALUE 1)
-        lmax-2 (- Long/MAX_VALUE 2)
-        lmax-31 (- Long/MAX_VALUE 31)
-        lmax-32 (- Long/MAX_VALUE 32)
-        lmax-33 (- Long/MAX_VALUE 33)
-        lmin Long/MIN_VALUE
-        lmin+1 (+ Long/MIN_VALUE 1)
-        lmin+2 (+ Long/MIN_VALUE 2)
-        lmin+31 (+ Long/MIN_VALUE 31)
-        lmin+32 (+ Long/MIN_VALUE 32)
-        lmin+33 (+ Long/MIN_VALUE 33)]
-    (doseq [range-args [ [lmax-2 lmax]
-                         [lmax-33 lmax]
-                         [lmax-33 lmax-31]
-                         [lmin+2 lmin -1]
-                         [lmin+33 lmin -1]
-                         [lmin+33 lmin+31 -1]
-                         [lmin lmax lmax]
-                         [lmax lmin lmin]
-                         [-1 lmax lmax]
-                         [1 lmin lmin]]]
-    (is (= (apply unlimited-range-create range-args)
-           (apply range range-args))
-        (apply str "from (range " (concat (interpose " " range-args) ")"))))))
 
 (deftest test-empty?
   (are [x] (empty? x)
@@ -1319,24 +1246,6 @@
   (is (= (count (shuffle [1 2 3 4])) 4))
   (let [shuffled-seq (shuffle [1 2 3 4])]
     (is (every? #{1 2 3 4} shuffled-seq))))
-
-#_(deftest test-ArrayIter
-  (are [arr expected]
-    (let [iter (clojure.lang.ArrayIter/createFromObject arr)]
-      (loop [accum []]
-        (if (.hasNext iter)
-          (recur (conj accum (.next iter)))
-          (is (= expected accum)))))
-    nil []
-    (object-array ["a" "b" "c"]) ["a" "b" "c"]
-    (boolean-array [false true false]) [false true false]
-    (byte-array [1 2]) [(byte 1) (byte 2)]
-    (short-array [1 2]) [1 2]
-    (int-array [1 2]) [1 2]
-    (long-array [1 2]) [1 2]
-    (float-array [2.0 -2.5]) [2.0 -2.5]
-    (double-array [1.2 -3.5]) [1.2 -3.5]
-    (char-array [\H \i]) [\H \i]))
 
 (deftest CLJ-1633
   (is (= ((fn [& args] (apply (fn [a & b] (apply list b)) args)) 1 2 3) '(2 3))))

@@ -5,7 +5,7 @@
     https://github.com/pjstadig/clojure-line-numbers/blob/master/src/clojure_line_numbers/core.clj"
   (:import clojerl.Map))
 
-(defrecord Thing [field ^long primitive])
+(defrecord Thing [field primitive])
 
 (defn instance-field
   "I throw an exception in an instance field form."
@@ -21,7 +21,7 @@
 
 (defn instance-field-unboxed
   "I throw an exception in an instance field form."
-  ^long []
+  []
   (.primitive
    ^Thing (identity nil)) nil)
 
@@ -64,7 +64,7 @@
 
 (defn instance-method-unboxed
   "I throw an exception in an instance method form."
-  ^long []
+  []
   (.count
    ^Map (identity nil)) nil)
 
@@ -79,12 +79,6 @@
   []
   (String/copyValueOf
    (identity nil)))
-
-#_(defn static-method-unboxed
-  "I throw an exception in a static method form."
-  ^long []
-  (Long/parseLong
-   ^String (identity nil)))
 
 (defn invoke
   "I throw an exception in an invoke form."
