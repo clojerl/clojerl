@@ -55,7 +55,7 @@
 (deftest non-dynamic-warnings
   (testing "no warning for **"
     (is (empty? (with-err-print-writer
-                  (eval-in-temp-ns (defn ** ([a b] (math/pow (double a) (double b)))))))))
+                  (eval-in-temp-ns (defn ** ([a b] (math/pow (float a) (float b)))))))))
   (testing "warning for *hello*"
     (is (not (empty? (with-err-print-writer
                        (eval-in-temp-ns (def *hello* "hi"))))))))

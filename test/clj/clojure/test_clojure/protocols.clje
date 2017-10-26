@@ -500,12 +500,12 @@
            3 (.-__a t)
            4 (.-___b t)))))
 
-(defrecord RecordToTestLongHint [^long a])
-(defrecord RecordToTestByteHint [^byte a])
-(defrecord RecordToTestBoolHint [^boolean a])
+(defrecord RecordToTestLongHint [a])
+(defrecord RecordToTestByteHint [a])
+(defrecord RecordToTestBoolHint [a])
 (defrecord RecordToTestCovariantHint [^clojerl.String a]) ;; same for arrays also
-(deftype TypeToTestLongHint [^long a])
-(deftype TypeToTestByteHint [^byte a])
+(deftype TypeToTestLongHint [a])
+(deftype TypeToTestByteHint [a])
 
 (deftest hinting-test
   (testing "that primitive hinting requiring no coercion works as expected"
@@ -514,7 +514,7 @@
     (is (= (RecordToTestLongHint. 42) (clojure.test-clojure.protocols.RecordToTestLongHint/create {:a 42})))
     (is (= (RecordToTestLongHint. 42) (map->RecordToTestLongHint {:a 42})))
     (is (= (RecordToTestLongHint. 42) (->RecordToTestLongHint 42)))
-    (is (= (.-a (TypeToTestLongHint. 42)) (.-a (->TypeToTestLongHint (long 42))))))
+    (is (= (.-a (TypeToTestLongHint. 42)) (.-a (->TypeToTestLongHint (int 42))))))
   (testing "that primitive hinting requiring coercion works as expected"
     (is (= (RecordToTestByteHint. 42) (clojure.test-clojure.protocols.RecordToTestByteHint/create {:a (byte 42)})))
     (is (= (RecordToTestByteHint. 42) (map->RecordToTestByteHint {:a (byte 42)})))

@@ -44,18 +44,6 @@
         (:macro m) true
         (:name m) 'when )))
 
-;; NA: there are no static constants in Erlang only functions
-#_(deftest test-embedded-constants
-  (testing "Embedded constants"
-    (is (eval `(= Boolean/TYPE ~Boolean/TYPE)))
-    (is (eval `(= Byte/TYPE ~Byte/TYPE)))
-    (is (eval `(= Character/TYPE ~Character/TYPE)))
-    (is (eval `(= Double/TYPE ~Double/TYPE)))
-    (is (eval `(= Float/TYPE ~Float/TYPE)))
-    (is (eval `(= Integer/TYPE ~Integer/TYPE)))
-    (is (eval `(= Long/TYPE ~Long/TYPE)))
-    (is (eval `(= Short/TYPE ~Short/TYPE)))))
-
 (deftest test-compiler-resolution
   (testing "resolve nonexistent class create should return nil (assembla #262)"
     (is (nil? (resolve 'NonExistentClass.)))))
@@ -112,17 +100,10 @@
                            (recur (dec x))))
                        3)))))))
 
-;; NA: there are no 'primitive' types in Erlang
-;; disabled until build box can call java from mvn
-#_(deftest test-numeric-dispatch
-  (is (= "(int, int)" (TestDispatch/someMethod (int 1) (int 1))))
-  (is (= "(int, long)" (TestDispatch/someMethod (int 1) (long 1))))
-  (is (= "(long, long)" (TestDispatch/someMethod (long 1) (long 1)))))
-
 (deftest test-CLJ-671-regression
   (testing "that the presence of hints does not cause the compiler to infinitely loop"
     (letfn [(gcd [x y]
-              (loop [x (long x) y (long y)]
+              (loop [x (int x) y (int y)]
                 (if (== y 0)
                   x
                   (recur y ^clojerl.Integer (rem x y)))))]
@@ -213,9 +194,7 @@
               (file/delete f))
             (file/delete tmp)))))
     (finally
-      (doseq [f (file/list_dir ".")
-              :when (re-find #"dummy.clj" (str f))]
-        (file/delete f)))))
+      (file/delete "dummy.clj"))))
 
 (deftest CLJ-1184-do-in-non-list-test
   (testing "do in a vector throws an exception"
@@ -268,14 +247,6 @@
     (is (try (load-string "(.submit (java.util.concurrent.Executors/newCachedThreadPool) ^Runnable #())")
              (catch :error e nil)))))
 
-;; NA: there are no 'primitive' types in Erlang
-#_(defn ^{:tag 'long} hinted-primfn [^long x] x)
-#_(defn unhinted-primfn [^long x] x)
-#_(deftest CLJ-1533-primitive-functions-lose-tag
-  (should-not-reflect #(erlang/abs (clojure.test-clojure.compilation/hinted-primfn 1)))
-  (should-not-reflect #(erlang/abs ^clojerl.Integer (clojure.test-clojure.compilation/unhinted-primfn 1))))
-
-
 (defrecord Y [a])
 ;; #clojure.test_clojure.compilation.Y[1]
 (defrecord Y [b])
@@ -308,10 +279,10 @@
   ;; (is (fails-on-line-number?  74 line/static-method))
   ;; (is (fails-on-line-number?  80 line/static-method-reflected))
   ;; (is (fails-on-line-number?  86 line/static-method-unboxed))
-  (is (fails-on-line-number?  92 line/invoke))
-  (is (fails-on-line-number? 101 line/threading))
-  (is (fails-on-line-number? 112 line/keyword-invoke))
-  (is (fails-on-line-number? 119 line/invoke-cast)))
+  (is (fails-on-line-number?  86 line/invoke))
+  (is (fails-on-line-number?  95 line/threading))
+  (is (fails-on-line-number? 106 line/keyword-invoke))
+  (is (fails-on-line-number? 113 line/invoke-cast)))
 
 (deftest CLJ-979
   (is (= clojure.test-clojure.compilation.examples.X

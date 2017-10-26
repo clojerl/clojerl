@@ -80,11 +80,11 @@
     (testing "when defining var whose value is calculated with a primitive fn."
       (testing "This case fails without a fix for CLJ-852"
         (is (eval-in-temp-ns
-             (defn foo ^long [^long x] x)
+             (defn foo [ x] x)
              (def x (inc (foo 10))))))
       (testing "This case should pass even without a fix for CLJ-852"
         (is (eval-in-temp-ns
-             (defn foo ^long [^long x] x)
+             (defn foo [x] x)
              (def x (foo (inc 10)))))))))
 
  (deftest fns-preserve-metadata-on-maps
@@ -212,7 +212,7 @@
     (testing "CLJ-850 is fixed when this case passes."
       (is (= "foo"
              (eval-in-temp-ns
-              (defn f ^clojerl.String [^clojerl.String s ^long i] s)
+              (defn f ^clojerl.String [^clojerl.String s i] s)
               (f "foo" 1)))))
     (testing "These cases should pass, even without a fix for CLJ-850."
       (is (= "foo"
@@ -221,9 +221,9 @@
               (f "foo"))))
       (is (= 1
              (eval-in-temp-ns
-              (defn f ^long [^clojerl.String s ^long i] i)
+              (defn f [^clojerl.String s i] i)
               (f "foo" 1))))
       (is (= 1
              (eval-in-temp-ns
-              (defn f ^long [^long i] i)
+              (defn f [i] i)
               (f 1)))))))

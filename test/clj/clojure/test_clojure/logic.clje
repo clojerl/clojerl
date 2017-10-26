@@ -38,9 +38,7 @@
       (byte 0)
       (short 0)
       (int 0)
-      (long 0)
       (float 0)
-      (double 0)
 
       ""
       #""
@@ -57,9 +55,7 @@
       (byte 2)
       (short 2)
       (int 2)
-      (long 2)
       (float 2)
-      (double 2)
 
       \a
       "abc"
