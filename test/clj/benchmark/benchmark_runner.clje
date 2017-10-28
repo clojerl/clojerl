@@ -1,5 +1,4 @@
-(ns benchmark.benchmark-runner
-  (:refer-clojure :exclude [println]))
+(ns benchmark.benchmark-runner)
 
 (defrecord Foo [bar baz])
 
