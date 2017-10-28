@@ -1,4 +1,4 @@
-(ns examples.run-tests
+(ns clojure.test-clojure.run-tests
   (:require [clojure.string :as str]
             [clojure.test :as test]))
 

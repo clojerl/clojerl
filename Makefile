@@ -33,7 +33,7 @@ test-ct: clean
 	${V} ${REBAR3} as test do ct, cover, cover_result
 
 test-clj:
-	${V} ${CLOJURE_MAIN} -m examples.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}/
+	${V} ${CLOJURE_MAIN} -m clojure.test-clojure.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}/
 
 dialyzer: clean
 	${V} NO_CLOJURE=1 ${REBAR3} dialyzer
