@@ -1,6 +1,6 @@
-(ns examples.run-tests
+(ns clojure.test-clojure.run-tests
   (:require [clojure.string :as str]
-            clojure.test))
+            [clojure.test :as test]))
 
 (defn- path->symbol [root path]
   (let [path (if root
@@ -27,5 +27,7 @@
                           (map (partial path->symbol root))
                           (filter (comp not ignore-nss))
                           doall)
-          _ (doseq [ns-symbol ns-symbols] (require [ns-symbol :verbose true]))]
-      (apply clojure.test/run-tests ns-symbols))))
+          _ (doseq [ns-symbol ns-symbols] (require [ns-symbol :verbose true]))
+          {:keys [error fail] :as result} (apply test/run-tests ns-symbols)]
+      (when (or (pos? error) (pos? fail))
+        (erlang/halt 1)))))
