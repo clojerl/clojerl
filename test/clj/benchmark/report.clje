@@ -1,4 +1,5 @@
 (ns benchmark.report
+  (:refer-clojure :exclude [compare])
   (:require [clojure.string :as str]
             [clojure.pprint :as pp]))
 
