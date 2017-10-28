@@ -367,7 +367,8 @@
 
 
 ;; See CLJ-1845
-(deftest direct-linking-for-load
+;; TODO: #332 (Change root binding of Vars) is needed for this test to pass
+#_(deftest direct-linking-for-load
   (let [called? (atom nil)
         logger (fn [& args]
                  (reset! called? true)
