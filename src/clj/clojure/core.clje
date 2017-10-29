@@ -2186,18 +2186,20 @@
   number-of-colls arguments"
   {:added "1.0"}
   ([coll]
-     (if (seq? coll) coll
-         (or (seq coll) ())))
-  #_ (([xform coll]
-       (or (clojure.lang.RT/chunkIteratorSeq
-            (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
-           ()))
-      ([xform coll & colls]
-       (or (clojure.lang.RT/chunkIteratorSeq
-            (clojure.lang.TransformerIterator/createMulti
-             xform
-             (map #(clojure.lang.RT/iter %) (cons coll colls))))
-           ()))))
+   (if (seq? coll) coll
+       (or (seq coll) ())))
+  ([xform coll]
+   (throw "unimplemented transducers")
+   #_(or (clojure.lang.RT/chunkIteratorSeq
+          (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
+         ()))
+  ([xform coll & colls]
+   (throw "unimplemented transducers")
+   #_(or (clojure.lang.RT/chunkIteratorSeq
+          (clojure.lang.TransformerIterator/createMulti
+           xform
+           (map #(clojure.lang.RT/iter %) (cons coll colls))))
+         ())))
 
 (defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
@@ -4588,8 +4590,7 @@
   (clj_rt/set! #'*loaded-libs*
                    (reduce1 conj
                             *loaded-libs*
-                            ;; TODO: should be a sorted-set
-                            (binding [*loaded-libs* (hash-set)]
+                            (binding [*loaded-libs* (sorted-set)]
                               (load-one lib need-ns require)
                               *loaded-libs*))))
 
@@ -6067,8 +6068,7 @@
               (if (= prior input)
                 result
                 (rf result input))))))))
-  ;; TODO: this expression is generating invalid AST
-  #_([coll] (sequence (dedupe) coll)))
+  ([coll] (sequence (dedupe) coll)))
 
 (defn random-sample
   "Returns items from coll with random probability of prob (0.0 -
@@ -6084,11 +6084,9 @@
   ;; (iterator [_]
   ;;   (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
 
-  ;; TODO: this expression is generating invalid AST
-  ;; clojerl.IReduce
-  ;; (reduce [this f init]
-  ;;   ;; NB (completing f) isolates completion of inner rf from outer rf
-  ;;   (transduce xform (completing f) init coll))
+  clojerl.IReduce
+  (reduce [this f] (transduce xform (completing f) coll))
+  (reduce [this f init] (transduce xform (completing f) init coll))
 
   clojerl.ISequential)
 
