@@ -6,6 +6,8 @@
 -export([ default/0
         , context/1
         , location/1
+        , time/1
+        , time/3
 
         , push_expr/2
         , pop_expr/1
@@ -48,6 +50,17 @@ context(Env) -> get(context, expr, Env).
 
 -spec location(env()) -> ?NIL | clj_reader:location().
 location(Env) -> get(location, Env).
+
+-spec time(env()) -> map().
+time(Env) ->
+  get(times, #{}, Env).
+
+-spec time(any(), number(), env()) -> env().
+time(Key, Delta, Env) ->
+  Times0 = get(times, #{}, Env),
+  T      = maps:get(Key, Times0, 0),
+  Times1 = Times0#{Key => T + Delta},
+  put(times, Times1, Env).
 
 -spec push_expr(expr(), env()) -> env().
 push_expr(Expr, Env = #{exprs := Exprs}) ->
