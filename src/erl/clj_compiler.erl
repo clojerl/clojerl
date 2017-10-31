@@ -199,8 +199,12 @@ run_monitored(Fun) ->
 -spec do_compile(binary(), options(), clj_env:env()) -> no_return().
 do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
-  CljFlags = maps:get(clj_flags, Opts),
-  RdrOpts  = maps:get(reader_opts, Opts, #{}),
+
+  #{ clj_flags   := CljFlags
+   , reader_opts := RdrOpts
+   , time        := Time
+   } = Opts,
+
   File     = maps:get(file, RdrOpts, ?NIL),
   Mapping  = #{ clj_flags     => CljFlags
               , compiler_opts => Opts
@@ -209,37 +213,21 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
               },
   Env1     = clj_env:push(Mapping, Env0),
 
-  EmitEval = case Opts0 of
-               #{time := true} ->
-                 fun() ->
-                     clj_utils:time( "Read, Analyze & Emit"
-                                   , fun clj_reader:read_fold/4
-                                   , [ fun analyze_emit_eval/2
-                                     , Src
-                                     , RdrOpts
-                                     , Env1
-                                     ]
-                                   )
-                 end;
-               _ ->
-                 fun () ->
-                     clj_reader:read_fold( fun analyze_emit_eval/2
-                                         , Src
-                                         , RdrOpts
-                                         , Env1
-                                         )
-                 end
-             end,
+  AnnEmitEval = case Time of
+                  true  -> fun timed_analyze_emit_eval/2;
+                  false -> fun analyze_emit_eval/2
+                end,
 
   CompileFun =
     fun() ->
         try
-          State1 = EmitEval(),
+          Env2 = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Time, Env1),
+          %% Maybe report time
+          Time andalso report_time(Env2),
           %% Compile all modules
           lists:foreach(compile_module_fun(Opts), clj_module:all_modules()),
-          {shutdown, State1}
-        catch
-          Kind:Error ->
+          {shutdown, Env2}
+        catch Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
         end
     end,
@@ -285,6 +273,31 @@ check_flag(Flag, Env) ->
     ?NIL ->
       false
   end.
+
+-spec report_time(clj_env:env()) -> ok.
+report_time(Env) ->
+  Times = clj_env:time(Env),
+  [ io:format("~s: ~p ms~n", [K, erlang:trunc(V / 1000)])
+    || {K, V} <- maps:to_list(Times)
+  ],
+  ok.
+
+-spec timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
+timed_analyze_emit_eval(Form, Env) ->
+  check_top_level_do(fun do_timed_analyze_emit_eval/2, Form, Env).
+
+-spec do_timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
+do_timed_analyze_emit_eval(Form, Env0) ->
+  {TimeAnn, Env1} = timer:tc(clj_analyzer, analyze, [Form, Env0]),
+  Env2 = clj_env:time("Analyzer", TimeAnn, Env1),
+
+  {TimeEmit, {Exprs, Env3}} = timer:tc(clj_emitter, emit, [Env2]),
+  Env4 = clj_env:time("Emitter", TimeEmit, Env3),
+
+  {TimeEval, Value} = timer:tc(fun() -> eval_expressions(Exprs) end),
+  Env5 = clj_env:time("Eval", TimeEval, Env4),
+
+  clj_env:update(eval, Value, Env5).
 
 -spec analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
 analyze_emit_eval(Form, Env) ->
@@ -345,19 +358,17 @@ eval_expressions(Expressions) ->
   eval_expressions(Expressions, true).
 
 -spec eval_expressions([cerl:cerl()], boolean()) -> [any()].
-eval_expressions(Expressions, ReplaceCalls) ->
+eval_expressions(Expressions, true) ->
   CurrentNs     = 'clojerl.Namespace':current(),
   CurrentNsSym  = 'clojerl.Namespace':name(CurrentNs),
   CurrentNsBin  = 'clojerl.Symbol':str(CurrentNsSym),
   CurrentNsAtom = binary_to_existing_atom(CurrentNsBin, utf8),
-  ReplacedExprs = case ReplaceCalls of
-                    true  -> [ clj_module:replace_calls(Expr, CurrentNsAtom)
-                               || Expr <- Expressions
-                             ];
-                    false -> Expressions
-                  end,
-
-  {ModuleName, EvalModule} = eval_module(ReplacedExprs),
+  ReplacedExprs = [ clj_module:replace_calls(Expr, CurrentNsAtom)
+                    || Expr <- Expressions
+                  ],
+  eval_expressions(ReplacedExprs, false);
+eval_expressions(Expressions, false) ->
+  {ModuleName, EvalModule} = eval_module(Expressions),
   %% io:format("===== Eval Module ====~n~s~n", [core_pp:format(EvalModule)]),
   Opts = [clint, from_core, return_errors, return_warnings],
   case compile:noenv_forms(EvalModule, Opts) of

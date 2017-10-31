@@ -338,7 +338,7 @@ time(Label, Fun) when is_function(Fun) ->
 -spec time(string(), function(), list()) -> ok.
 time(Label, Fun, Args) ->
   {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
-  io:format("~s: ~p ms~n", [Label, T / 1000]),
+  io:format("~s: ~p ms~n", [Label, erlang:trunc(T / 1000)]),
   V.
 
 -spec store_binary(module(), binary()) -> ok.

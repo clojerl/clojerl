@@ -4,6 +4,7 @@
 -include("clojerl_int.hrl").
 
 -export([ read_fold/4
+        , read_fold/5
         , read/1, read/2
         , location_meta/1
         , remove_location/1
@@ -55,29 +56,46 @@
 
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
-read_fold(Fun, Src, Opts0, Env) ->
+read_fold(Fun, Src, Opts, Env) ->
+  read_fold(Fun, Src, Opts, false, Env).
+
+-spec read_fold(read_fold_fun(), binary(), opts(), boolean(), clj_env:env()) ->
+  clj_env:env().
+read_fold(Fun, Src, Opts0, Time, Env) ->
   %% Since we want to consume all of the source, we don't want to
   %% throw when eof is reached.
-  Opts  = Opts0#{?OPT_EOF => ok},
-  State = new_state(Src, Env, Opts),
-  read_fold_loop(Fun, State).
+  Opts    = Opts0#{?OPT_EOF => ok},
+  State   = new_state(Src, Env, Opts),
+  ReadFun = case Time of
+              true  -> fun time_read_one_fold/1;
+              false -> fun read_one_fold/1
+            end,
+  read_fold_loop(Fun, ReadFun, State).
 
--spec read_fold_loop(read_fold_fun(), state()) -> clj_env:env().
-read_fold_loop(Fun, State) ->
-  NewState = try
-               read_one(State)
-             catch
-               throw:{eof, ok, StateTmp} -> StateTmp
-             end,
-  case NewState of
+-spec time_read_one_fold(state()) -> state().
+time_read_one_fold(State0) ->
+  {Delta, State1} = timer:tc(fun () -> read_one_fold(State0) end),
+  #{env := Env0} = State1,
+  Env1 = clj_env:time("Reader", Delta, Env0),
+  State1#{env => Env1}.
+
+-spec read_one_fold(state()) -> state().
+read_one_fold(State) ->
+  try read_one(State)
+  catch throw:{eof, ok, State_} -> State_
+  end.
+
+-spec read_fold_loop(read_fold_fun(), fun(), state()) -> clj_env:env().
+read_fold_loop(Fun, ReadFun, State0) ->
+  case ReadFun(State0) of
     %% Only finish when there is no more source to consume
-    #{src := <<>>, forms := [], env := Env} ->
-      Env;
-    NewState = #{forms := []} ->
-      read_fold_loop(Fun, NewState);
-    NewState = #{forms := [Form], env := Env} ->
-      NewEnv = Fun(Form, Env),
-      read_fold_loop(Fun, NewState#{env => NewEnv, forms => []})
+    #{src := <<>>, forms := [], env := Env0} ->
+      Env0;
+    State1 = #{forms := []} ->
+      read_fold_loop(Fun, ReadFun, State1);
+    State1 = #{forms := [Form], env := Env0} ->
+      Env1 = Fun(Form, Env0),
+      read_fold_loop(Fun, ReadFun, State1#{env => Env1, forms => []})
   end.
 
 -spec location_meta(any()) -> location() | ?NIL.
