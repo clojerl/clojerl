@@ -239,10 +239,14 @@ analyze_seq(List, Env0) ->
   %% Keep def_name when parsing a fn* or if we need to keep expanding.
   Env2 = case KeepDef of
            true  -> Env1;
-           false -> clj_env:put(def_name, ?NIL, Env1)
+           false -> clear_def_name(Env1)
          end,
   Env3 = Fun(ExpandedList, Env2),
   clj_env:pop(Env3).
+
+-spec clear_def_name(clj_env:env()) -> clj_env:env().
+clear_def_name(Env) ->
+  clj_env:put(def_name, ?NIL, Env).
 
 -spec dispatch_analyze_seq(boolean(), any()) -> {fun(), boolean()}.
 dispatch_analyze_seq(true = _DoneExpanding, Op) ->
@@ -2230,7 +2234,7 @@ wrapping_meta(#{form := Form, tag := TagExpr} = Expr, Env) ->
 -spec analyze_vector('clojerl.Vector':type(), clj_env:env()) -> clj_env:env().
 analyze_vector(Vector, Env0) ->
   Count   = clj_rt:count(Vector),
-  Env1    = clj_env:push(#{context => expr}, Env0),
+  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
   Items   = clj_rt:to_list(Vector),
   Env2    = analyze_forms(Items, Env1),
   {ItemsExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2254,7 +2258,7 @@ analyze_map(Map, Env0) ->
   Vals  = clj_rt:to_list('clojerl.Map':vals(Map)),
 
   Count = clj_rt:count(Map),
-  Env1  = clj_env:push(#{context => expr}, Env0),
+  Env1  = clj_env:push(#{context => expr}, clear_def_name(Env0)),
 
   Env2  = analyze_forms(Keys, Env1),
   {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2281,7 +2285,7 @@ analyze_erl_map(Map, Env0) ->
   Vals  = maps:values(Map),
 
   Count = maps:size(Map),
-  Env1  = clj_env:push(#{context => expr}, Env0),
+  Env1  = clj_env:push(#{context => expr}, clear_def_name(Env0)),
 
   Env2 = analyze_forms(Keys, Env1),
   {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2305,7 +2309,7 @@ analyze_erl_map(Map, Env0) ->
 
 -spec analyze_set('clojerl.Set':type(), clj_env:env()) -> clj_env:env().
 analyze_set(Set, Env0) ->
-  Env1    = clj_env:push(#{context => expr}, Env0),
+  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
   Items   = clj_rt:to_list(Set),
   Env2    = analyze_forms(Items, Env1),
 
@@ -2328,7 +2332,7 @@ analyze_set(Set, Env0) ->
 -spec analyze_tuple('erlang.Tuple':type(), clj_env:env()) ->
   clj_env:env().
 analyze_tuple(Tuple, Env0) ->
-  Env1    = clj_env:push(#{context => expr}, Env0),
+  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
   Items   = erlang:tuple_to_list(Tuple),
   Env2    = analyze_forms(Items, Env1),
 
