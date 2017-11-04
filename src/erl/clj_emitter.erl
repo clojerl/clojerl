@@ -121,15 +121,15 @@ ast(#{op := def} = Expr, State) ->
         InitAst = case cerl:is_literal(InitAst0) of
                      true  -> InitAst0;
                      false ->
-                      InitAst00 = clj_compiler:eval_expressions([InitAst0]),
-                      clj_utils:error_when( not cerl:is_literal_term(InitAst00)
+                      Init = clj_compiler:eval_expressions([InitAst0]),
+                      clj_utils:error_when( not cerl:is_literal_term(Init)
                                           , [ <<"Init value for ">>, Var
                                             , <<" is not a literal: ">>
-                                            , InitAst00
+                                            , Init
                                             ]
                                           , clj_env:location(Env)
                                           ),
-                      cerl:abstract(InitAst00)
+                      cerl:abstract(Init)
                   end,
         {InitAst, StateTemp}
     end,
@@ -882,10 +882,7 @@ ast(#{op := recur} = Expr, State) ->
             NameAst = cerl:ann_c_var(Ann, LoopIdAtom),
             ArgsAst = list_ast(Args),
             call_mfa('clojerl.IFn', apply, [NameAst, ArgsAst], Ann);
-          loop ->
-            NameAst = cerl:ann_c_fname(Ann, LoopIdAtom, length(Args)),
-            cerl:ann_c_apply([local | Ann], NameAst, Args);
-          LoopType when LoopType =:= var orelse LoopType =:= function ->
+          _LoopType -> %% fn_method | loop | var
             NameAst = cerl:ann_c_fname(Ann, LoopIdAtom, length(Args)),
             cerl:ann_c_apply([local | Ann], NameAst, Args)
         end,

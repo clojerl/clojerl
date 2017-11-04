@@ -1,6 +1,6 @@
 -include("clojerl_int.hrl").
 
--type loop_type()      :: fn | var | loop | function.
+-type loop_type()      :: fn | fn_method | var | loop.
 -type loop_id()        :: 'clojerl.Symbol':type().
 
 -type constant_expr()  :: #{ op   => constant
