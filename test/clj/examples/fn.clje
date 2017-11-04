@@ -257,3 +257,14 @@
     (f 5)))
 
 (clojure.core/prn (recur-fn))
+
+;; [#453] Check that not all fn forms are bound to the var
+
+(def foo
+  (let [y (fn [x]
+            (if (neg? x) :fin (recur (dec x))))]
+    (y 10)))
+
+;; [#453] `for` generates an internal loop, the def fails without the fix
+
+(def x (into {} (for [x (range 10)] [x (inc x)])))

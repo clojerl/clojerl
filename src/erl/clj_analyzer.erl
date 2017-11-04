@@ -233,22 +233,31 @@ analyze_seq(List, Env0) ->
                       , clj_env:location(Env1)
                       ),
 
-  ExpandedList = macroexpand_1(List, Env1),
-  Fun  = case clj_rt:equiv(List, ExpandedList) of
-           true ->
-             Default = fun analyze_invoke/2,
-             case clj_rt:'symbol?'(Op) of
-               true  -> maps:get( 'clojerl.Symbol':str(Op)
-                                , special_forms()
-                                , Default
-                                );
-               false -> Default
-             end;
-           false ->
-             fun analyze_form/2
+  ExpandedList   = macroexpand_1(List, Env1),
+  DoneExpanding  = clj_rt:equiv(List, ExpandedList),
+  {Fun, KeepDef} = dispatch_analyze_seq(DoneExpanding, Op),
+  %% Keep def_name when parsing a fn* or if we need to keep expanding.
+  Env2 = case KeepDef of
+           true  -> Env1;
+           false -> clj_env:put(def_name, ?NIL, Env1)
          end,
-  Env2 = Fun(ExpandedList, Env1),
-  clj_env:pop(Env2).
+  Env3 = Fun(ExpandedList, Env2),
+  clj_env:pop(Env3).
+
+-spec dispatch_analyze_seq(boolean(), any()) -> {fun(), boolean()}.
+dispatch_analyze_seq(true = _DoneExpanding, Op) ->
+  Default = fun analyze_invoke/2,
+  case clj_rt:'symbol?'(Op) of
+    true  ->
+      OpStr = 'clojerl.Symbol':str(Op),
+      { maps:get(OpStr, special_forms(), Default)
+      , OpStr =:= <<"fn*">>
+      };
+    false ->
+      {Default, false}
+  end;
+dispatch_analyze_seq(false = _DoneExpanding, _Op) ->
+  {fun analyze_form/2, true}.
 
 %%------------------------------------------------------------------------------
 %% Parse quote
