@@ -123,11 +123,11 @@
 
 #_(deftest derivation-world-bridges-to-java-inheritance
   (let [h (derive (make-hierarchy) java.util.Map ::map)]
-    (testing "a Java class can be isa? a tag"
+    (testing "an Erlang type can be isa? a tag"
       (is (isa? h java.util.Map ::map)))
-    (testing "if a Java class isa? a tag, so are its subclasses..."
+    (testing "if an Erlang type isa? a tag, so are its subtypes..."
       (is (isa? h java.util.HashMap ::map)))
-    (testing "...but not its superclasses!"
+    (testing "...but not its supertypes!"
       (is (not (isa? h java.util.Collection ::map))))))
 
 #_(deftest global-hierarchy-test
@@ -179,7 +179,7 @@
     ;; Example from the multimethod docs.
     (derive java.util.Map ::collection)
     (derive java.util.Collection ::collection)
-    (defmulti foo class)
+    (defmulti foo type)
     (defmethod foo ::collection [c] :a-collection)
     (defmethod foo String [s] :a-string)
     (is (= :a-collection (foo [])))

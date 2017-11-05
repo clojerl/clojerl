@@ -20,7 +20,6 @@
 ; http://clojure.org/compilation
 
 ; compile
-; gen-class, gen-interface
 
 
 (deftest test-compiler-metadata
@@ -45,8 +44,8 @@
         (:name m) 'when )))
 
 (deftest test-compiler-resolution
-  (testing "resolve nonexistent class create should return nil (assembla #262)"
-    (is (nil? (resolve 'NonExistentClass.)))))
+  (testing "resolve nonexistent type create should return nil (assembla #262)"
+    (is (nil? (resolve 'NonExistentType.)))))
 
 (deftest test-no-recur-across-try
   (testing "don't recur to function from inside try"
@@ -241,7 +240,7 @@
 
 ;; NA
 #_(deftest test-fnexpr-type-hint
-  (testing "CLJ-1378: FnExpr should be allowed to override its reported class with a type hint."
+  (testing "CLJ-1378: FnExpr should be allowed to override its reported type with a type hint."
     (is (thrown? :error
                  (load-string "(.submit (java.util.concurrent.Executors/newCachedThreadPool) #())")))
     (is (try (load-string "(.submit (java.util.concurrent.Executors/newCachedThreadPool) ^Runnable #())")
@@ -251,7 +250,7 @@
 ;; #clojure.test_clojure.compilation.Y[1]
 (defrecord Y [b])
 
-(binding [*compile-path* "ebin/test-classes"]
+(binding [*compile-path* "ebin/test-types"]
   (compile 'clojure.test-clojure.compilation.examples))
 
 (defn fails-on-line-number? [expected function]
@@ -286,11 +285,11 @@
 
 (deftest CLJ-979
   (is (= clojure.test-clojure.compilation.examples.X
-         (class (clojure.test-clojure.compilation.examples/->X))))
+         (type (clojure.test-clojure.compilation.examples/->X))))
   (is (.-b (clojure.test-clojure.compilation.Y. 1)))
   (is (= clojure.test-clojure.compilation.examples.T
-         (class (clojure.test-clojure.compilation.examples.T.))
-         (class (clojure.test-clojure.compilation.examples/->T)))))
+         (type (clojure.test-clojure.compilation.examples.T.))
+         (type (clojure.test-clojure.compilation.examples/->T)))))
 
 ;; N/A: this test will succeed in Erlang since function call in f
 ;;      will for the :clojure.test-clojure.compilation.load-ns module

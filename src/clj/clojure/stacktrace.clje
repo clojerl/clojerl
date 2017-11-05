@@ -54,14 +54,14 @@
   "Prints a Clojure-oriented view of one element in a stack trace."
   {:added "1.1"}
   [e]
-  (let [class  (module e)
-	method (function e)
-        file   (filename e)
-        line   (line-num e)]
-    (let [match (re-matches #"^([A-Za-z0-9_.-]+)\$(\w+)__\d+$" (str class))]
-      (if (and match (= "invoke" method))
+  (let [mod  (module e)
+	fun  (function e)
+        file (filename e)
+        line (line-num e)]
+    (let [match (re-matches #"^([A-Za-z0-9_.-]+)\$(\w+)__\d+$" (str mod))]
+      (if (and match (= "invoke" fun))
 	(apply printf "~s/~s" (rest match))
-	(printf "~s/~s" class method)))
+	(printf "~s/~s" mod fun)))
     (printf " (~s:~p)" (or file "") line)))
 
 (defn print-stack-trace

@@ -161,7 +161,7 @@
 
 (deftest test-empty
   (are [x y] (and (= (empty x) y)
-                  #_(= (class (empty x)) (class y)))
+                  #_(= (type (empty x)) (type y)))
       nil nil
 
       () ()
@@ -229,7 +229,7 @@
 
   ; non-empty coll/seq => identity
   (are [x] (and (= (not-empty x) x)
-                (= (class (not-empty x)) (class x)))
+                (= (type (not-empty x)) (type x)))
       '(1 2)
       [1 2]
       {:a 1}

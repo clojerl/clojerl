@@ -19,7 +19,7 @@
   [a b]
   (if (= a b) [nil nil a] [a b nil]))
 
-;; for big things a sparse vector class would be better
+;; for big things a sparse vector type would be better
 (defn- vectorize
   "Convert an associative-by-numeric-index collection into
    an equivalent vector, with nil for any missing keys"

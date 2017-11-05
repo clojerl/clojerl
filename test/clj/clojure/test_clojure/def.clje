@@ -62,7 +62,7 @@
 
 (deftest dynamic-redefinition
   ;; too many contextual things for this kind of caching to work...
-  (testing "classes are never cached, even if their bodies are the same"
+  (testing "types are never cached, even if their bodies are the same"
     (is (= :b
           (eval
             '(do

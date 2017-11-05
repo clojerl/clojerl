@@ -2839,10 +2839,10 @@
   (reduce1 conj to from))
 
 (defmacro import
-  "import-list => (package-symbol class-name-symbols*)
+  "import-list => (ns-symbol type-name-symbols*)
 
-  For each name in class-name-symbols, adds a mapping from name to the
-  class named by package.name to the current namespace. Use :import in the ns
+  For each name in type-name-symbols, adds a mapping from name to the
+  type named by package.name to the current namespace. Use :import in the ns
   macro in preference to calling this directly."
   {:added "1.0"}
   [& import-symbols-or-lists]
@@ -2870,17 +2870,12 @@
   [& items]
   (into-tuple items))
 
-(defn class
-  "Returns the Class of x"
-  {:added "1.0"}
-  ^clojerl.Keyword [x]
-  (if (nil? x) x (clj_rt/type x)))
-
 (defn type
-  "Returns the :type metadata of x, or its Class if none"
+  "Returns x's erlang.Type"
   {:added "1.0"}
   [x]
-  (or (get (meta x) :type) (class x)))
+  (when-not (nil? x)
+    (clj_rt/type x)))
 
 (defn num
   "Coerce to Number"
@@ -2945,9 +2940,8 @@
 
 (defmulti print-method (fn [x writer]
                          (let [t (get (meta x) :type)]
-                           (if (keyword? t) t (class x)))))
-
-(defmulti print-dup (fn [x writer] (class x)))
+                           (if (keyword? t) t (type x)))))
+(defmulti print-dup (fn [x writer] (type x)))
 
 (defn pr-on
   {:private true}
@@ -3410,9 +3404,9 @@
        (finally (clojerl.Var/pop_bindings)))))
 
 (defn ns-resolve
-  "Returns the var or Class to which a symbol will be resolved in the
+  "Returns the var or erlang.Type to which a symbol will be resolved in the
   namespace (unless found in the environment), else nil.  Note that
-  if the symbol is fully qualified, the var/Class to which it resolves
+  if the symbol is fully qualified, the var/Type to which it resolves
   need not be present in the namespace."
   {:added "1.0"}
   ([ns sym]
@@ -3804,7 +3798,7 @@
 
 (import clojerl.ExceptionInfo clojerl.IError)
 (defn ex-info
-  "Create an instance of ExceptionInfo, a RuntimeException subclass
+  "Create an instance of ExceptionInfo, which implements IError
    that carries a map of additional data."
   {:added "1.4"}
   ([msg map]
@@ -4109,15 +4103,11 @@
   ([f] (lazy-seq (cons (f) (repeatedly f))))
   ([n f] (take n (repeatedly f))))
 
-(defn add-classpath
-  "DEPRECATED
-
-  Adds the url (String or URL object) to the classpath per
-  URLClassLoader.addURL"
+(defn add-codepath
+  "Adds the path String to the codepath through code/add_patha.1"
   {:added "1.0"
    :deprecated "1.1"}
   [url]
-  (println "WARNING: add-classpath is deprecated")
   (code/add_patha (erlang/binary_to_list url)))
 
 (defn hash
@@ -4233,6 +4223,12 @@
      (send-off agt fill)
      (drain))))
 
+(defn type?
+  "Returns true if x is an instance of erlang.Type"
+  {:added "1.0"
+   :static true}
+  [x] (instance? erlang.Type x))
+
 (defn alter-var-root
   "Atomically alters the root binding of var v by applying f to its
   current value plus any args"
@@ -4313,7 +4309,7 @@
   "Establishes a parent/child relationship between parent and
   tag. Parent must be a namespace-qualified symbol or keyword and
   child can be either a namespace-qualified symbol or keyword or a
-  class. h must be a hierarchy obtained from make-hierarchy, if not
+  type. h must be a hierarchy obtained from make-hierarchy, if not
   supplied defaults to, and modifies, the global hierarchy."
   {:added "1.0"}
   ([tag parent]
@@ -4399,31 +4395,16 @@
   [fmt & args]
   (print (apply format fmt args)))
 
-(declare gen-class)
-
 (defmacro with-loading-context [& body]
-  `(do ~@body)
-  #_`((fn loading# []
-        (. clojure.lang.Var (pushThreadBindings {clojure.lang.Compiler/LOADER
-                                                 (.getClassLoader (.getClass ^Object loading#))}))
-        (try
-         ~@body
-         (finally
-          (. clojure.lang.Var (popThreadBindings)))))))
+  `(do ~@body))
 
 (defmacro ns
   "Sets *ns* to the namespace named by name (unevaluated), creating it
   if needed.  references can be zero or more of: (:refer-clojure ...)
-  (:require ...) (:use ...) (:import ...) (:load ...) (:gen-class)
-  with the syntax of refer-clojure/require/use/import/load/gen-class
-  respectively, except the arguments are unevaluated and need not be
-  quoted. (:gen-class ...), when supplied, defaults to :name
-  corresponding to the ns name, :main true, :impl-ns same as ns, and
-  :init-impl-ns true. All options of gen-class are
-  supported. The :gen-class directive is ignored when not
-  compiling. If :gen-class is not supplied, when compiled only an
-  nsname__init.class will be generated. If :refer-clojure is not used, a
-  default (refer 'clojure.core) is used.  Use of ns is preferred to
+  (:require ...) (:use ...) (:import ...) (:load ...) with the syntax of
+  refer-clojure/require/use/import/load respectively, except the arguments
+  are unevaluated and need not be quoted. If :refer-clojure is not used,
+  a default (refer 'clojure.core) is used.  Use of ns is preferred to
   individual calls to in-ns/require/use/import:
 
   (ns foo.bar
@@ -4453,20 +4434,11 @@
         name (if metadata
                (vary-meta name merge metadata)
                name)
-        gen-class-clause (first (filter #(= :gen-class (first %)) references))
-        gen-class-call
-          (when gen-class-clause
-            (list* `gen-class
-                   :name (binary/replace (str name) "-" "_")
-                   :impl-ns name
-                   :main true (next gen-class-clause)))
-        references (remove #(= :gen-class (first %)) references)
         ;ns-effect (clojure.core/in-ns name)
         name-metadata (meta name)]
     `(do
        (clojure.core/in-ns '~name)
        (with-loading-context
-         ;; ~@(when gen-class-call (list gen-class-call))
          ~@(when (and (not= name 'clojure.core)
                       (not-any? #(= :refer-clojure (first %)) references))
              `((clojure.core/refer 'clojure.core)))
@@ -4668,8 +4640,7 @@
   "Detects and rejects non-trivial cyclic load dependencies. The
   exception message shows the dependency chain with the cycle
   highlighted. Ignores the trivial case of a file attempting to load
-  itself because that can occur when a gen-class'd class loads its
-  implementation."
+  itself."
   [path]
   (when (some #{path} (rest *pending-paths*))
     (let [pending (map #(if (= % path) (str "[ " % " ]") %)
@@ -4688,10 +4659,10 @@
 
   Libs
 
-  A 'lib' is a named set of resources in classpath whose contents define a
+  A 'lib' is a named set of resources in codepath whose contents define a
   library of Clojure code. Lib names are symbols and each lib is associated
   with a Clojure namespace and a Erlang module that share its name. A lib's
-  name also locates its root directory within classpath using Erlang's
+  name also locates its root directory within codepath using Erlang's
   module name to code-path-relative path mapping. All resources in a lib
   should be contained in the directory structure under its root directory.
   All definitions a lib makes should be in its associated namespace.
@@ -4699,7 +4670,7 @@
   'require loads a lib by loading its root resource. The root resource path
   is derived from the lib name in the following manner:
   Consider a lib named by the symbol 'x.y.z; it has the root directory
-  <classpath>/x/y/, and its root resource is <classpath>/x/y/z.clj. The root
+  <codepath>/x/y/, and its root resource is <codepath>/x/y/z.clj. The root
   resource should contain code to create the lib's namespace (usually by using
   the ns macro) and load any additional lib resources.
 
@@ -4780,10 +4751,10 @@
 
 (defn compile
   "Compiles the namespace named by the symbol lib into a set of
-  classfiles. The source for the lib must be in a proper
-  classpath-relative directory. The output files will go into the
+  beam files. The source for the lib must be in a proper
+  codepath-relative directory. The output files will go into the
   directory specified by *compile-path*, and that directory too must
-  be in the classpath."
+  be in the codepath."
   {:added "1.0"}
   [lib]
   (binding [*compile-files* true]
@@ -5058,8 +5029,8 @@
   {:added "1.0"})
 
 (add-doc-and-meta *compile-path*
-  "Specifies the directory where 'compile' will write out .class
-  files. This directory must be in the classpath for 'compile' to
+  "Specifies the directory where 'compile' will write out .beam
+  files. This directory must be in the codepath for 'compile' to
   work.
 
   Defaults to \"ebin\""
@@ -5244,7 +5215,6 @@
 
 ;; (load "core_proxy")
 (load "core_print")
-;; (load "genclass")
 (load "core_deftype")
 ;; (load "gvec")
 (load "instant")
@@ -6153,7 +6123,7 @@
   "Map from reader tag symbols to data reader Vars.
 
   When Clojure starts, it searches for files named 'data_readers.clj'
-  at the root of the classpath. Each such file must contain a literal
+  at the root of the codepath. Each such file must contain a literal
   map of symbols, like this:
 
       {foo/bar my.project.foo/bar

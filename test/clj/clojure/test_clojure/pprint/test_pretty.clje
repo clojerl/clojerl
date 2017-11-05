@@ -208,7 +208,7 @@ It is implemented with a number of custom enlive templates.\"
                                get-pretty-writer fresh-line)]
         [clojure.data.json :only (pprint-json)]
         [autodoc.collect-info :only (contrib-info)]
-        [autodoc.params :only (params expand-classpath)])
+        [autodoc.params :only (params expand-codepath)])
   (:use clojure.set clojure.java.io clojure.data clojure.java.browse
         clojure.inspector clojure.zip clojure.stacktrace))")
 

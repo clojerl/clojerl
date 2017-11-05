@@ -57,7 +57,7 @@
   (deref [_] fields)
   erlang.io.IWriter
   (write [this x]
-    (condp = (class x)
+    (condp = (type x)
       clojerl.String
       (let [^clojerl.String s x
             nl (.last_index_of s "\n")]

@@ -67,7 +67,7 @@
   "Do not use this directly - use defrecord"
   {:added "1.2"}
   [tagname cname fields interfaces methods opts]
-  (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
+  (let [typename (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
         interfaces (vec interfaces)
         interface-set (set (map resolve interfaces))
         methodname-set (set (map first methods))
@@ -75,7 +75,7 @@
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
         fields (conj fields '__meta '__extmap)
-        type-hash (hash classname)]
+        type-hash (hash typename)]
     (let [gs (gensym)
           irecord (fn [[i m]]
                     [(conj i 'clojerl.IRecord)
@@ -88,7 +88,7 @@
                  [(conj i 'clojerl.IMeta)
                   (conj m
                         `(~'meta [this#] ~'__meta)
-                        `(~'with_meta [this# ~gs] (new ~classname ~@(replace {'__meta gs} fields))))])
+                        `(~'with_meta [this# ~gs] (new ~typename ~@(replace {'__meta gs} fields))))])
           ilookup (fn [[i m]]
                     [(conj i 'clojerl.ILookup)
                      (conj m
@@ -103,15 +103,15 @@
                         'clojerl.IAssociative 'clojerl.ISeqable 'clojerl.IMap)
                   (conj m
                         `(~'count [this#] (+ ~(count base-fields) (count ~'__extmap)))
-                        `(~'empty [this#] (throw (str "Can't create empty: " ~(str classname))))
+                        `(~'empty [this#] (throw (str "Can't create empty: " ~(str typename))))
                         `(~'cons [this# e#] ((var imap-cons) this# e#))
                         `(~'equiv [this# ~gs]
                           (boolean
                            (or (identical? this# ~gs)
-                               (when (identical? (class this#) (class ~gs))
-                                 (let [~gs ~(with-meta gs {:tag classname})]
-                                   (and  ~@(map (fn [fld] `(= ~fld (~ (symbol (str classname) (str "-" fld)) ~gs))) base-fields)
-                                         (= ~'__extmap (~(symbol (str classname) "-__extmap") ~gs))))))))
+                               (when (identical? (type this#) (type ~gs))
+                                 (let [~gs ~(with-meta gs {:tag typename})]
+                                   (and  ~@(map (fn [fld] `(= ~fld (~ (symbol (str typename) (str "-" fld)) ~gs))) base-fields)
+                                         (= ~'__extmap (~(symbol (str typename) "-__extmap") ~gs))))))))
                         `(~'contains_key [this# k#] (not (identical? this# (get this# k# this#))))
                         `(~'entry_at [this# k#] (let [v# (get this# k# this#)]
                                                   (when-not (identical? this# v#)
@@ -119,9 +119,9 @@
                         `(~'assoc [this# k# ~gs]
                           (condp identical? k#
                             ~@(mapcat (fn [fld]
-                                        [(keyword fld) (list* `new classname (replace {fld gs} fields))])
+                                        [(keyword fld) (list* `new typename (replace {fld gs} fields))])
                                       base-fields)
-                            (new ~classname ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
+                            (new ~typename ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
                         `(~'seq [this#] (seq (concat [~@(map #(vector (keyword %) %) base-fields)]
                                                      ~'__extmap)))
                         `(~'to_list [this#]
@@ -132,18 +132,18 @@
                         `(~'vals [this#] (map second (seq this#)))
                         `(~'without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
                                                  (dissoc (with-meta (into {} this#) ~'__meta) k#)
-                                                 (new ~classname ~@(remove #{'__extmap} fields)
+                                                 (new ~typename ~@(remove #{'__extmap} fields)
                                                       (not-empty (dissoc ~'__extmap k#))))))])
           istr (fn [[i m]]
                  [(conj i 'clojerl.IStringable)
                   (conj m
                         `(~'str [this#]
                           (str "#"
-                               ~(str classname)
+                               ~(str typename)
                                (merge (array-map ~@(mapcat (juxt keyword identity) base-fields))
                                       ~'__extmap))))])]
       (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap istr)]
-        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~(conj hinted-fields '__meta '__extmap)
+        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~typename ~(conj hinted-fields '__meta '__extmap)
            :implements ~(vec i)
            ~@(mapcat identity opts)
            ~@m)))))
@@ -156,25 +156,25 @@
   ctor pulling the extra args out of the & overage parameter.  Finally, the
   arity is constrained to the number of expected fields and an ArityException
   will be thrown at runtime if the actual arg count does not match."
-  [nom classname fields]
+  [nom typename fields]
   (let [fn-name (symbol (str '-> nom))
         [field-args over] (split-at 20 fields)
         field-count (count fields)
         arg-count (count field-args)
         over-count (count over)
-        docstring (str "Positional factory function for class " classname ".")]
+        docstring (str "Positional factory function for type " typename ".")]
     `(defn ~fn-name
        ~docstring
-       {:tag ~classname}
+       {:tag ~typename}
        [~@field-args ~@(if (seq over) '[& overage] [])]
        ~(if (seq over)
           `(if (= (count ~'overage) ~over-count)
-             (new ~classname
+             (new ~typename
                   ~@field-args
                   ~@(for [i (range 0 (count over))]
                       (list `nth 'overage i)))
              (throw (str "Arity exception: " (+ ~arg-count (count ~'overage)) " " (name '~fn-name))))
-          `(new ~classname ~@field-args)))))
+          `(new ~typename ~@field-args)))))
 
 (defn- validate-fields
   ""
@@ -196,7 +196,7 @@
   Options are expressed as sequential keywords and arguments (in any order).
 
   Supported options:
-  :load-ns - if true, importing the record class will cause the
+  :load-ns - if true, importing the record type will cause the
              namespace in which the record was defined to be loaded.
              Defaults to false.
 
@@ -206,12 +206,12 @@
   protocol-or-interface-or-Object
   (methodName [args*] body)*
 
-  Dynamically generates compiled bytecode for class with the given
+  Dynamically generates compiled bytecode for type with the given
   name, in a package with the same name as the current namespace, the
   given fields, and, optionally, methods for protocols and/or
   interfaces.
 
-  The class will have the (immutable) fields named by
+  The type will have the (immutable) fields named by
   fields, which can have type hints. Protocols/interfaces and methods
   are optional. The only methods that can be supplied are those
   declared in the protocols/interfaces.  Note that method bodies are
@@ -236,18 +236,18 @@
   automatically and can not be substituted.
 
   In the method bodies, the (unqualified) name can be used to name the
-  class (for calls to new, instance? etc).
+  type (for calls to new, instance? etc).
 
-  The class will have implementations of several (clojure.lang)
+  The type will have implementations of several (clojure.lang)
   interfaces generated automatically: IObj (metadata support) and
   IPersistentMap, and all of their superinterfaces.
 
   In addition, defrecord will define type-and-value-based =,
   and will define clojerl.IHash/hash.
 
-  When AOT compiling, generates compiled bytecode for a class with the
+  When AOT compiling, generates compiled bytecode for a type with the
   given name (a symbol), prepends the current ns as the package, and
-  writes the .class file to the *compile-path* directory.
+  writes the .beam file to the *compile-path* directory.
 
   Two constructors will be defined, one taking the designated fields
   followed by a metadata map (nil for none) and an extension field
@@ -267,20 +267,20 @@
   (let [gname name
         [interfaces methods opts] (parse-opts+specs opts+specs)
         ns-part (namespace-munge *ns*)
-        classname (symbol (str ns-part "." gname))
+        typename (symbol (str ns-part "." gname))
         hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))]
     `(let []
        (declare ~(symbol (str  '-> gname)))
        (declare ~(symbol (str 'map-> gname)))
        ~(emit-defrecord name gname (vec hinted-fields) (vec interfaces) methods opts)
-       (import ~classname)
-       ~(build-positional-factory gname classname fields)
+       (import ~typename)
+       ~(build-positional-factory gname typename fields)
        (defn ~(symbol (str 'map-> gname))
-         ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
-         ([m#] (~(symbol (str classname) "create")
+         ~(str "Factory function for type " typename ", taking a map of keywords to field values.")
+         ([m#] (~(symbol (str typename) "create")
                 (if (map? m#) m# (into {} m#)))))
-       '~classname)))
+       '~typename)))
 
 (defn record?
   "Returns true if x is a record"
@@ -293,11 +293,11 @@
   "Do not use this directly - use deftype"
   [tagname cname fields interfaces methods opts]
   (let [current-ns (ns-name *ns*)
-        classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
+        typename (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
         interfaces (conj interfaces 'clojerl.IType)
         ;; Dummy method for clojerl.IType
         methods (conj methods '(_ [_]))]
-    `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname ~fields
+    `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~typename ~fields
        :implements ~interfaces
        ~@(mapcat identity opts)
        ~@methods)))
@@ -306,18 +306,18 @@
   "(deftype name [fields*]  options* specs*)
   Options are expressed as sequential keywords and arguments (in any order).
   Supported options:
-  :load-ns - if true, importing the record class will cause the
+  :load-ns - if true, importing the record type will cause the
              namespace in which the record was defined to be loaded.
              Defaults to false.
   Each spec consists of a protocol or interface name followed by zero
   or more method bodies:
   protocol-or-interface-or-Object
   (methodName [args*] body)*
-  Dynamically generates compiled bytecode for class with the given
+  Dynamically generates compiled bytecode for type with the given
   name, in a package with the same name as the current namespace, the
   given fields, and, optionally, methods for protocols and/or
   interfaces.
-  The class will have the (by default, immutable) fields named by
+  The type will have the (by default, immutable) fields named by
   fields, which can have type hints. Protocols/interfaces and methods
   are optional. The only methods that can be supplied are those
   declared in the protocols/interfaces.  Note that method bodies are
@@ -345,10 +345,10 @@
   head should *not* pass the target object, it will be supplied
   automatically and can not be substituted.
   In the method bodies, the (unqualified) name can be used to name the
-  class (for calls to new, instance? etc).
-  When AOT compiling, generates compiled bytecode for a class with the
+  type (for calls to new, instance? etc).
+  When AOT compiling, generates compiled bytecode for a type with the
   given name (a symbol), prepends the current ns as the package, and
-  writes the .class file to the *compile-path* directory.
+  writes the .beam file to the *compile-path* directory.
   One constructor will be defined, taking the designated fields.  Note
   that the field names __meta and __extmap are currently reserved and
   should not be used when defining your own types.
@@ -362,16 +362,16 @@
   (let [gname name
         [interfaces methods opts] (parse-opts+specs opts+specs)
         ns-part (namespace-munge *ns*)
-        classname (symbol (str ns-part "." gname))
+        typename (symbol (str ns-part "." gname))
         hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))
         [field-args over] (split-at 20 fields)]
     `(let []
        ~(emit-deftype* name gname (vec hinted-fields) (vec interfaces) methods opts)
-       (import ~classname)
-       ~(build-positional-factory gname classname fields)
+       (import ~typename)
+       ~(build-positional-factory gname typename fields)
        ;; Types are not reified so we just return the symbol.
-       '~classname)))
+       '~typename)))
 
 ;;;;;;;;;;;;;;;;;;;;;;; protocols ;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -471,8 +471,8 @@
   functions dispatch on the type of their first argument, which is
   required and corresponds to the implicit target object (i.e.
   'this'). defprotocol is dynamic, has no special compile-time
-  effect, and defines no new types or classes. Implementations of
-  the protocol methods can be provided using extend.
+  effect, and defines no new types. Implementations of the protocol
+  methods can be provided using extend.
 
   defprotocol will automatically generate a corresponding interface,
   with the same name as the protocol, i.e. given a protocol:
@@ -521,7 +521,7 @@
 (defmacro extend-type
   "Extend a type to a series of protocols. Useful when you are
   supplying the definitions explicitly inline.  Propagates the
-  class as a type hint on the first argument of all fns.
+  type as a type hint on the first argument of all fns.
 
   type-sym may be
 
@@ -562,9 +562,6 @@
     BType
       (foo [x] ...)
       (bar [x y] ...)
-    AClass
-      (foo [x] ...)
-      (bar [x y] ...)
     nil
       (foo [x] ...)
       (bar [x y] ...))
@@ -576,9 +573,6 @@
      (foo [x] ...)
      (bar [x y] ...))
    (clojure.core/extend-type BType Protocol
-     (foo [x] ...)
-     (bar [x y] ...))
-   (clojure.core/extend-type AClass Protocol
      (foo [x] ...)
      (bar [x y] ...))
    (clojure.core/extend-type nil Protocol

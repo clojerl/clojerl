@@ -30,7 +30,7 @@
 (declare get-miser-width)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Macros to simplify dealing with types and classes. These are
+;;; Macros to simplify dealing with types. These are
 ;;; really utilities, but I'm experimenting with them here.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
