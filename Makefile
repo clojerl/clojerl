@@ -3,6 +3,7 @@
 REBAR3    := rebar3
 RLWRAP    := $(shell type rlwrap &> /dev/null && echo rlwrap || echo)
 V         := @
+EXAMPLE   ?= *
 
 EBIN      ?= ${CURDIR}/ebin
 ifndef NO_CLOJURE
@@ -25,7 +26,7 @@ compile:
 	${V} ${REBAR3} compile
 
 compile-examples: compile
-	${V} ${CLOJERLC} test/clj/examples/*.clje
+	${V} ${CLOJERLC} test/clj/examples/${EXAMPLE}.clje
 
 test: test-ct
 

@@ -442,8 +442,11 @@ is_loaded(Name) ->
 %% @private
 -spec build_fake_fun(atom(), integer(), clj_module()) -> function().
 build_fake_fun(Function, Arity, Module) ->
-  ?DEBUG({build_fake_fun, Module#module.name, Function, Arity}),
-  {_, FunctionAst} = clj_utils:ets_get(Module#module.funs, {Function, Arity}),
+  FunctionAst = case clj_utils:ets_get(Module#module.funs, {Function, Arity}) of
+                  {_, FunctionAst_} -> FunctionAst_;
+                  undefined ->
+                    throw({not_found, Module#module.name, Function, Arity})
+                end,
 
   {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),
   Int = erlang:unique_integer([positive]),

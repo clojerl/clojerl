@@ -28,7 +28,7 @@
 %% -define(CLJ_DEBUG, true).
 
 -ifdef(CLJ_DEBUG).
--define(DEBUG(Term), erlang:display(Term)).
+-define(DEBUG(Term), io:format("~p~n", [Term])).
 -else.
 -define(DEBUG(Term), ok).
 -endif.

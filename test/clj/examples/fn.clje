@@ -257,3 +257,79 @@
     (f 5)))
 
 (clojure.core/prn (recur-fn))
+
+(def ^{:macro true} should-throw
+  (fn* [_&form _&env & body]
+       `(try
+          (eval '~(cons 'do body))
+          (throw :error)
+          (catch ~'_ e#
+            (when (= e# :error)
+              (throw "Error not generated"))))))
+
+;; [#453] Check that not all fn forms are bound to the var
+
+(def recur-in-let
+  (let [y (fn [x]
+            (if (neg? x) :fin (recur (dec x))))]
+    (y 10)))
+
+;; [#453] `for` generates an internal loop, the def fails without the fix
+
+(def def-using-for
+  (into {} (for [x (range 10)] [x (inc x)])))
+
+;; [#453] fn inside a vector
+
+(def def-vector-with-fn
+  [((fn [x]
+      (if (neg? x) :fin (recur (dec x))))
+    10)])
+
+;; [#453] fn inside a map
+
+(def def-map-with-fn-1
+  {:foo ((fn [x]
+           (if (neg? x) :fin (recur (dec x))))
+         10)})
+
+(should-throw
+ (def def-map-with-fn-2
+   {:foo (fn [x]
+           (if (neg? x) :fin (recur (dec x))))}))
+
+;; [#453] fn inside an Erlang map
+
+(def def-erl-map-with-fn-1
+  #erl{:foo ((fn [x]
+               (if (neg? x) :fin (recur (dec x))))
+             10)})
+
+(should-throw
+ (def def-erl-map-with-fn-2
+     #erl{:foo (fn [x]
+                 (if (neg? x) :fin (recur (dec x))))}))
+
+;; [#453] fn inside a set
+
+(def def-set-with-fn-1
+  #{:foo ((fn [x]
+            (if (neg? x) :fin (recur (dec x))))
+          10)})
+
+(should-throw
+ (def def-set-with-fn-2
+   #{:foo (fn [x]
+            (if (neg? x) :fin (recur (dec x))))}))
+
+;; [#453] fn inside a tuple
+
+(def def-tuple-with-fn-1
+  #erl[:foo ((fn [x]
+               (if (neg? x) :fin (recur (dec x))))
+             10)])
+
+(should-throw
+ (def def-tuple-with-fn-2
+   #erl[:foo (fn [x]
+               (if (neg? x) :fin (recur (dec x))))]))

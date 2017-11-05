@@ -172,8 +172,7 @@ analyze_form(Form, Env) ->
   IsType    = clj_rt:'type?'(Form),
   IsVector  = clj_rt:'vector?'(Form),
   IsMap     = clj_rt:'map?'(Form),
-  IsMapType = ?IS_TYPE(Form),
-  IsErlMap  = is_map(Form),
+  IsErlMap  = is_map(Form) andalso not ?IS_TYPE(Form),
   IsSet     = clj_rt:'set?'(Form),
   IsVar     = clj_rt:'var?'(Form),
   IsTuple   = erlang:is_tuple(Form),
@@ -183,27 +182,17 @@ analyze_form(Form, Env) ->
         true  -> analyze_const(Form, Env);
         false -> analyze_seq(Form, Env)
       end;
-    IsSymbol ->
-      analyze_symbol(Form, Env);
-    IsRecord ->
-      analyze_const(Form, Env);
-    IsType ->
-      analyze_const(Form, Env);
-    IsVector ->
-      analyze_vector(Form, Env);
-    IsErlMap andalso not IsMapType ->
-      analyze_erl_map(Form, Env);
-    IsMap ->
-      analyze_map(Form, Env);
-    IsSet ->
-      analyze_set(Form, Env);
-    IsTuple ->
-      analyze_tuple(Form, Env);
-    IsVar ->
-      %% The var's metadata should already have been analyzed
-      analyze_const(Form, _CheckWrappingMeta = false, Env);
-    true ->
-      analyze_const(Form, Env)
+    IsSymbol -> analyze_symbol(Form, Env);
+    IsRecord -> analyze_const(Form, Env);
+    IsType   -> analyze_const(Form, Env);
+    IsVector -> analyze_vector(Form, Env);
+    IsErlMap -> analyze_erl_map(Form, Env);
+    IsMap    -> analyze_map(Form, Env);
+    IsSet    -> analyze_set(Form, Env);
+    IsTuple  -> analyze_tuple(Form, Env);
+    %% The var's metadata should already have been analyzed
+    IsVar    -> analyze_const(Form, _CheckWrappingMeta = false, Env);
+    true     -> analyze_const(Form, Env)
   end.
 
 %%------------------------------------------------------------------------------
@@ -244,23 +233,35 @@ analyze_seq(List, Env0) ->
                       , clj_env:location(Env1)
                       ),
 
-  ExpandedList = macroexpand_1(List, Env1),
-  Env2 = case clj_rt:equiv(List, ExpandedList) of
-           true ->
-             AnaInvoke = fun analyze_invoke/2,
-             Fun = case clj_rt:'symbol?'(Op) of
-                     true ->
-                       maps:get( 'clojerl.Symbol':str(Op)
-                               , special_forms()
-                               , AnaInvoke);
-                     false ->
-                       AnaInvoke
-                   end,
-             Fun(List, Env1);
-           false ->
-             analyze_form(ExpandedList, Env1)
+  ExpandedList   = macroexpand_1(List, Env1),
+  DoneExpanding  = clj_rt:equiv(List, ExpandedList),
+  {Fun, KeepDef} = dispatch_analyze_seq(DoneExpanding, Op),
+  %% Keep def_name when parsing a fn* or if we need to keep expanding.
+  Env2 = case KeepDef of
+           true  -> Env1;
+           false -> clear_def_name(Env1)
          end,
-  clj_env:pop(Env2).
+  Env3 = Fun(ExpandedList, Env2),
+  clj_env:pop(Env3).
+
+-spec clear_def_name(clj_env:env()) -> clj_env:env().
+clear_def_name(Env) ->
+  clj_env:put(def_name, ?NIL, Env).
+
+-spec dispatch_analyze_seq(boolean(), any()) -> {fun(), boolean()}.
+dispatch_analyze_seq(true = _DoneExpanding, Op) ->
+  Default = fun analyze_invoke/2,
+  case clj_rt:'symbol?'(Op) of
+    true  ->
+      OpStr = 'clojerl.Symbol':str(Op),
+      { maps:get(OpStr, special_forms(), Default)
+      , OpStr =:= <<"fn*">>
+      };
+    false ->
+      {Default, false}
+  end;
+dispatch_analyze_seq(false = _DoneExpanding, _Op) ->
+  {fun analyze_form/2, true}.
 
 %%------------------------------------------------------------------------------
 %% Parse quote
@@ -340,7 +341,7 @@ parse_fn(List, Env) ->
              clj_env:put_local(NameSym, LocalExpr, Env0);
            DefVar  ->
              'clojerl.Namespace':update_var(DefVar),
-             %% Register a local mapping the symbol fn to the var
+             %% Register a local that maps the symbol fn to the var
              {VarExpr, Env0Tmp} = var_expr(DefVar, DefNameSym, Env0),
              clj_env:put_local(NameSym, VarExpr, Env0Tmp)
          end,
@@ -351,9 +352,9 @@ parse_fn(List, Env) ->
 
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
-  {LoopType, LoopId} = case clj_env:get(def_name, Env) of
-                         ?NIL -> {fn, NameSym};
-                         _    -> {var, DefNameSym}
+  {LoopType, LoopId} = case IsDef of
+                         true  -> {var, DefNameSym};
+                         false -> {fn, NameSym}
                        end,
 
   %% Remove def_name so that inner fn* are not influenced by it.
@@ -1138,8 +1139,8 @@ parse_def(List, Env) ->
   Count = clj_rt:count(List),
   Init  = case Docstring of
             ?NIL when Count =:= 3 -> clj_rt:third(List);
-            _ when Count =:= 4 -> clj_rt:fourth(List);
-            _ -> ?UNBOUND
+            _    when Count =:= 4 -> clj_rt:fourth(List);
+            _                     -> ?UNBOUND
           end,
 
   ExprEnv  = clj_env:push(#{def_name => VarSymbol, context => expr}, Env),
@@ -1417,7 +1418,7 @@ analyze_deftype_method(Form, Env) ->
                       ),
 
   {MethodExpr, Env1} = clj_env:pop_expr(analyze_fn_method( clj_rt:rest(Form)
-                                                         , function
+                                                         , fn_method
                                                          , MethodName
                                                          , true
                                                          , Env
@@ -2233,7 +2234,7 @@ wrapping_meta(#{form := Form, tag := TagExpr} = Expr, Env) ->
 -spec analyze_vector('clojerl.Vector':type(), clj_env:env()) -> clj_env:env().
 analyze_vector(Vector, Env0) ->
   Count   = clj_rt:count(Vector),
-  Env1    = clj_env:push(#{context => expr}, Env0),
+  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
   Items   = clj_rt:to_list(Vector),
   Env2    = analyze_forms(Items, Env1),
   {ItemsExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2257,7 +2258,7 @@ analyze_map(Map, Env0) ->
   Vals  = clj_rt:to_list('clojerl.Map':vals(Map)),
 
   Count = clj_rt:count(Map),
-  Env1  = clj_env:push(#{context => expr}, Env0),
+  Env1  = clj_env:push(#{context => expr}, clear_def_name(Env0)),
 
   Env2  = analyze_forms(Keys, Env1),
   {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2284,7 +2285,7 @@ analyze_erl_map(Map, Env0) ->
   Vals  = maps:values(Map),
 
   Count = maps:size(Map),
-  Env1  = clj_env:push(#{context => expr}, Env0),
+  Env1  = clj_env:push(#{context => expr}, clear_def_name(Env0)),
 
   Env2 = analyze_forms(Keys, Env1),
   {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2308,7 +2309,7 @@ analyze_erl_map(Map, Env0) ->
 
 -spec analyze_set('clojerl.Set':type(), clj_env:env()) -> clj_env:env().
 analyze_set(Set, Env0) ->
-  Env1    = clj_env:push(#{context => expr}, Env0),
+  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
   Items   = clj_rt:to_list(Set),
   Env2    = analyze_forms(Items, Env1),
 
@@ -2331,7 +2332,7 @@ analyze_set(Set, Env0) ->
 -spec analyze_tuple('erlang.Tuple':type(), clj_env:env()) ->
   clj_env:env().
 analyze_tuple(Tuple, Env0) ->
-  Env1    = clj_env:push(#{context => expr}, Env0),
+  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
   Items   = erlang:tuple_to_list(Tuple),
   Env2    = analyze_forms(Items, Env1),
 
