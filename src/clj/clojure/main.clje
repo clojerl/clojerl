@@ -17,7 +17,7 @@
 
 ;;;;;;;;;;;;;;;;;;; redundantly copied from clojure.repl to avoid dep ;;;;;;;;;;;;;;
 (defn demunge
-  "Given a string representation of a fn class,
+  "Given a string representation of a fn type,
   as in a stack trace element, returns a readable version."
   {:added "1.3"}
   [fn-name]
@@ -273,7 +273,7 @@ by default when a new command-line REPL is started."} repl-requires
 
 (defn load-script
   "Loads Clojure source from a file or resource given its path. Paths
-  beginning with @ or @/ are considered relative to classpath."
+  beginning with @ or @/ are considered relative to codepath."
   [^clojerl.String path]
   (clj_compiler/compile_file path))
 
@@ -394,7 +394,7 @@ by default when a new command-line REPL is started."} repl-requires
   suppresses the usual repl greeting message: \"Clojure ~(clojure-version)\".
 
   Paths may be absolute or relative in the filesystem or relative to
-  classpath. Classpath-relative paths have prefix of @ or @/"
+  codepath. Codepath-relative paths have prefix of @ or @/"
   [& args]
   (try
    (if args

@@ -15,10 +15,9 @@
 
 (def ^:private special-doc-map
   '{. {:url "erlang_interop#dot"
-       :forms [(.instanceMember instance args*)
-               (.instanceMember Classname args*)
-               (Classname/staticMethod args*)
-               Classname/staticField]
+       :forms [(.instance_member instance args*)
+               (.instance_member Typename args*)
+               (Typename/function_name args*)]
        :doc "The instance member form works for both fields and methods.
   They all expand into calls to the dot operator at macroexpansion time."}
     def {:forms [(def symbol doc-string? init?)]
@@ -40,10 +39,10 @@
     monitor-exit {:forms [(monitor-exit x)]
                   :doc "Synchronization primitive that should be avoided
   in user code. Use the 'locking' macro."}
-    new {:forms [(Classname. args*) (new Classname args*)]
+    new {:forms [(Typename. args*) (new Typename args*)]
          :url "erlang_interop#new"
          :doc "The args, if any, are evaluated from left to right, and
-  passed to the constructor of the class named by Classname. The
+  passed to the constructor of the type named by Typename. The
   constructed object is returned."}
     quote {:forms [(quote form)]
            :doc "Yields the unevaluated form."}
@@ -53,14 +52,14 @@
   Execution then jumps back to the recursion point, a loop or fn method."}
     set! {:forms[(set! var-symbol expr)
                  (set! (. instance-expr instanceFieldName-symbol) expr)
-                 (set! (. Classname-symbol staticFieldName-symbol) expr)]
+                 (set! (. Typename-symbol staticFieldName-symbol) expr)]
           :url "vars#set"
           :doc "Used to set thread-local-bound vars."}
     throw {:forms [(throw expr)]
            :doc "The expr is evaluated and thrown, therefore it should
   yield an instance of some derivee of Throwable."}
     try {:forms [(try expr* catch-clause* finally-clause?)]
-         :doc "catch-clause => (catch classname name expr*)
+         :doc "catch-clause => (catch typename name expr*)
   finally-clause => (finally expr*)
 
   Catches and handles exceptions."}
@@ -160,7 +159,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 (defn source-fn
   "Returns a string of the source code for the given symbol, if it can
   find it.  This requires that the symbol resolve to a Var defined in
-  a namespace for which the .clj is in the classpath.  Returns nil if
+  a namespace for which the .clj is in the codepath.  Returns nil if
   it can't find the source.  For most REPL usage, 'source' is more
   convenient.
 
@@ -183,7 +182,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 (defmacro source
   "Prints the source code for the given symbol, if it can find it.
   This requires that the symbol resolve to a Var defined in a
-  namespace for which the .clj is in the classpath.
+  namespace for which the .clj is in the codepath.
 
   Example: (source filter)"
   [n]
@@ -216,7 +215,7 @@ str-or-pattern."
      (println v#)))
 
 (defn demunge
-  "Given a string representation of a fn class,
+  "Given a string representation of a fn type,
   as in a stack trace element, returns a readable version."
   {:added "1.3"}
   [fn-name]

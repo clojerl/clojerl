@@ -1054,7 +1054,7 @@ string, or one character longer."
 
   erlang.io.IWriter
   (write [_ x]
-   (condp = (class x)
+   (condp = (type x)
      String
      (let [^String s x]
        (.write ^erlang.io.IWriter writer
@@ -1076,7 +1076,7 @@ string, or one character longer."
 
   erlang.io.IWriter
   (write [_ x]
-   (condp = (class x)
+   (condp = (type x)
      String
      (let [^String s x]
        (.write ^erlang.io.IWriter writer
@@ -1687,7 +1687,7 @@ of parameters as well."
                         (instance? (second (second %2)) val)))
              (format-error (str "Parameter " (name (first %2))
                                 " has bad type in directive \"" (:directive def) "\": "
-                                (class val))
+                                (type val))
                            (second %1))) )
         params (:params def)))
 

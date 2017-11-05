@@ -40,11 +40,11 @@
 ;; this is how I wish clojure.test/thrown? worked...
 ;; Does body throw expected exception, anywhere in the .getCause chain?
 (defmethod assert-expr 'fails-with-cause?
-  [msg [_ exception-class msg-re & body :as form]]
+  [msg [_ exception-type msg-re & body :as form]]
   `(try
    ~@body
    (report {:type :fail, :message ~msg, :expected '~form, :actual nil})
-   (catch ~exception-class t#
+   (catch ~exception-type t#
      (if (re-find ~msg-re t#)
        (report {:type :pass, :message ~msg,
                 :expected '~form, :actual t#})

@@ -457,7 +457,7 @@
         s3 "#inst \"2010-11-12T13:14:15.123456789123\""]
     #_(binding [*data-readers* {'inst read-instant-timestamp}]
       (testing "read-instant-timestamp produces java.sql.Timestamp"
-        (is (= java.sql.Timestamp (class (read-string s)))))
+        (is (= java.sql.Timestamp (type (read-string s)))))
       (testing "java.sql.Timestamp preserves nanoseconds"
         (is (= 123456789 (-> s read-string .getNanos)))
         (is (= 123456789 (-> s read-string pr-str read-string .getNanos)))

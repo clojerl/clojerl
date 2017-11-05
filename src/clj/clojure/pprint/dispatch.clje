@@ -496,7 +496,7 @@
   (pprint
    '(defn- -write
       ([this x]
-         (condp = (class x)
+         (condp = (type x)
            String
            (let [s0 (write-initial-lines this x)
                  s (.replace #"\s+$" s "")

@@ -460,7 +460,7 @@
     (is (thrown? :error (read-string "(let [s \"en\"] #clojerl.String[(str 'en)])")))
     (is (thrown? :error (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals{(keyword \"a\") 42}"))))
 
-  (testing "that ctors can have whitespace after class name but before {"
+  (testing "that ctors can have whitespace after type name but before {"
     (is (= (RecordToTestLiterals. 42)
            (read-string "#clojure.test-clojure.protocols.RecordToTestLiterals   {:a 42}"))))
 
