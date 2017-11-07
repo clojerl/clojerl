@@ -38,7 +38,7 @@ From the REPL it's possible to start evaluating Clojure expressions:
     -------------------------
     clojure.core/inc
     ([x])
-      Returns a number one greater than num.'
+      Returns a number one greater than num.
     nil
     clje.user=>
 
