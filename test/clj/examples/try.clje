@@ -38,3 +38,8 @@
   (erlang/exit :exit)
   (catch _ e
     (prn e)))
+
+(try
+  (erlang/exit :foo)
+  (catch t e
+    (prn t e)))
