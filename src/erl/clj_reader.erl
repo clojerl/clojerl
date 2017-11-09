@@ -198,7 +198,7 @@ read_one(#{src := <<>>, opts := Opts} = State) ->
     {ok, NewState} ->
       read_one(NewState);
     eof when Eof =:= ?EOFTHROW ->
-      clj_utils:error(<<"EOF">>, location(State));
+      ?ERROR(<<"EOF">>, location(State));
     eof ->
       throw({eof, Eof, State})
   end;
@@ -278,18 +278,18 @@ read_string(#{src := <<>>} = State) ->
       read_string(NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      clj_utils:error( [ <<"Started reading at (">>
-                       , Line, <<":">>, Col
-                       , <<") but found EOF while reading string">>
-                       ]
-                     , location(State)
-                     )
+      ?ERROR( [ <<"Started reading at (">>
+              , Line, <<":">>, Col
+              , <<") but found EOF while reading string">>
+              ]
+            , location(State)
+            )
   end.
 
 -spec escape_char(state()) -> {binary(), state()}.
 escape_char(State = #{src := <<>>}) ->
   case check_reader(State) of
-    eof -> clj_utils:error(<<"EOF while escaping char">>, location(State));
+    eof -> ?ERROR(<<"EOF while escaping char">>, location(State));
     {ok, NewState} -> escape_char(NewState)
   end;
 escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
@@ -306,28 +306,28 @@ escape_char(State = #{src := <<Char/utf8, _/binary>>}) ->
       %% Hexa unicode
       State1   = consume_char(State),
       NextChar = peek_src(State1),
-      clj_utils:error_when( NextChar =/= eof
-                            andalso not is_char_valid(NextChar, 16)
-                          , [ <<"Invalid unicode escape: \\u">>
-                            , NextChar =/= eof andalso <<NextChar/utf8>>
-                            ]
-                          , location(State1)
-                          ),
+      ?ERROR_WHEN( NextChar =/= eof
+                   andalso not is_char_valid(NextChar, 16)
+                 , [ <<"Invalid unicode escape: \\u">>
+                   , NextChar =/= eof andalso <<NextChar/utf8>>
+                   ]
+                 , location(State1)
+                 ),
       {CodePoint, State2} = unicode_char(State1, 16, 4, true),
       {unicode:characters_to_binary([CodePoint], utf8), State2};
     _ when CharType == number ->
       %% Octal unicode
       {CodePoint, State1} = unicode_char(State, 8, 3, false),
-      clj_utils:error_when( CodePoint > 8#377
-                          , <<"Octal escape sequence must be in "
-                              "range [0, 377]">>
-                          , location(State1)
-                          ),
+      ?ERROR_WHEN( CodePoint > 8#377
+                 , <<"Octal escape sequence must be in "
+                     "range [0, 377]">>
+                 , location(State1)
+                 ),
       {unicode:characters_to_binary([CodePoint], utf8), State1};
     _ ->
-      clj_utils:error( <<"Unsupported escape character: \\", Char>>
-                     , location(State)
-                     )
+      ?ERROR( <<"Unsupported escape character: \\", Char>>
+            , location(State)
+            )
   end.
 
 -spec unicode_char(state(), integer(), integer(), Exact :: boolean()) ->
@@ -339,12 +339,12 @@ unicode_char(State, Base, Length, IsExact) ->
            false -> Length
          end,
 
-  clj_utils:error_when( Size =/= Length
-                      , [ <<"Invalid character length: ">>, Size
-                        , <<", should be: ">>, Length
-                        ]
-                      , location(State)
-                      ),
+  ?ERROR_WHEN( Size =/= Length
+             , [ <<"Invalid character length: ">>, Size
+               , <<", should be: ">>, Length
+               ]
+             , location(State)
+             ),
   Invalid      = fun(C) -> not is_char_valid(C, Base) end,
   Chars        = unicode:characters_to_list(Number),
   InvalidChars = lists:filter(Invalid, Chars),
@@ -352,16 +352,16 @@ unicode_char(State, Base, Length, IsExact) ->
                    [] -> ?NIL;
                    [C | _] -> <<C/utf8>>
                  end,
-  clj_utils:error_when( InvalidChars =/= []
-                      , [ <<"Invalid digit: ">>, InvalidChar]
-                      , location(State)
-                      ),
+  ?ERROR_WHEN( InvalidChars =/= []
+             , [ <<"Invalid digit: ">>, InvalidChar]
+             , location(State)
+             ),
 
   NumberInt = binary_to_integer(Number, Base),
-  clj_utils:error_when(  16#D800 =< NumberInt andalso NumberInt =< 16#DFFF
-                      , [ <<"Invalid UTF-8 character number: \\u">>, Number]
-                      , location(State)
-                      ),
+  ?ERROR_WHEN(  16#D800 =< NumberInt andalso NumberInt =< 16#DFFF
+             , [ <<"Invalid UTF-8 character number: \\u">>, Number]
+             , location(State)
+             ),
 
   {NumberInt, State1}.
 
@@ -390,9 +390,7 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
               {<<Ch/utf8, _/binary>> = Namespace, Name} when Ch =/= $: ->
                 clj_rt:keyword(Namespace, Name);
               _ ->
-                clj_utils:error( <<"Invalid token: :", Token/binary>>
-                               , location(State)
-                               )
+                ?ERROR(<<"Invalid token: :", Token/binary>>, location(State))
             end,
   push_form(Keyword, State).
 
@@ -412,9 +410,7 @@ read_symbol(State) ->
              {Ns, Name} ->
                clj_rt:symbol(Ns, Name);
              ?NIL ->
-               clj_utils:error( <<"Invalid token: ", Token/binary>>
-                              , location(State)
-                              )
+               ?ERROR(<<"Invalid token: ", Token/binary>>, location(State))
            end,
 
   push_form(Symbol, State1).
@@ -481,7 +477,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
 
     push_form(NewFormWithMeta, NewState)
   catch error:Reason ->
-      clj_utils:error(Reason, location(NewState))
+      ?ERROR(Reason, location(NewState))
   after
     erlang:erase(gensym_env)
   end.
@@ -754,9 +750,9 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
                                    ),
       State2#{forms => [Map | Forms]};
     _ ->
-      clj_utils:error( <<"Map literal must contain an even number of forms">>
-                     , location(State2)
-                     )
+      ?ERROR( <<"Map literal must contain an even number of forms">>
+            , location(State2)
+            )
   end.
 
 %%------------------------------------------------------------------------------
@@ -765,7 +761,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
 
 -spec read_unmatched_delim(state()) -> no_return().
 read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
-  clj_utils:error(<<"Umatched delimiter ", Delim/utf8>>, location(State)).
+  ?ERROR(<<"Umatched delimiter ", Delim/utf8>>, location(State)).
 
 %%------------------------------------------------------------------------------
 %% Character
@@ -775,9 +771,9 @@ read_unmatched_delim(#{src := <<Delim/utf8, _/binary>>} = State) ->
 read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
   State    = consume_char(State0),
   NextChar = case peek_src(State) of
-               eof -> clj_utils:error( <<"EOF while reading character">>
-                                     , location(State)
-                                     );
+               eof -> ?ERROR( <<"EOF while reading character">>
+                            , location(State)
+                            );
                NextCh  -> NextCh
              end,
   {Token, State1} =
@@ -796,19 +792,19 @@ read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
       <<"return">> -> $\r;
       <<"u", RestToken/binary>> ->
         TokenLength = 'clojerl.String':count(RestToken),
-        clj_utils:error_when( TokenLength =/= 4
-                            , [ <<"Invalid unicode character: \\u">>
-                              , RestToken
-                              ]
-                            , location(State1)
-                            ),
+        ?ERROR_WHEN( TokenLength =/= 4
+                   , [ <<"Invalid unicode character: \\u">>
+                     , RestToken
+                     ]
+                   , location(State1)
+                   ),
         {Ch, _} = unicode_char(State1#{src => RestToken}, 16, 4, true),
         Ch;
       <<"o", RestToken/binary>> ->
         read_octal_char(State1#{src => RestToken});
-      Ch -> clj_utils:error( <<"Unsupported character: \\", Ch/binary>>
-                           , location(State)
-                           )
+      Ch -> ?ERROR( <<"Unsupported character: \\", Ch/binary>>
+                  , location(State)
+                  )
     end,
 
   CharBin = unicode:characters_to_binary([Char]),
@@ -818,16 +814,16 @@ read_char(#{src := <<"\\"/utf8, _/binary>>} = State0) ->
 read_octal_char(#{src := RestToken} = State) when size(RestToken) > 3 ->
   Size    = size(RestToken),
   SizeBin = integer_to_binary(Size),
-  clj_utils:error( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
-                 , location(State)
-                 );
+  ?ERROR( <<"Invalid octal escape sequence length: ", SizeBin/binary>>
+        , location(State)
+        );
 read_octal_char(#{src := RestToken} = State) ->
   Size = size(RestToken),
   case unicode_char(State, 8, Size, true) of
     {Ch, _} when Ch > 8#377 ->
-      clj_utils:error( <<"Octal escape sequence must be in range [0, 377]">>
-                     , location(State)
-                     );
+      ?ERROR( <<"Octal escape sequence must be in range [0, 377]">>
+            , location(State)
+            );
     {Ch, _} -> Ch
   end.
 
@@ -850,10 +846,10 @@ read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
           push_form(ArgSym, consume_chars(1, State1));
         {register_arg_n, State1} ->
           {N, State2} = read_pop_one(State1),
-          clj_utils:error_when( not is_integer(N)
-                              , <<"Arg literal must be %, %& or %integer">>
-                              , location(State1)
-                              ),
+          ?ERROR_WHEN( not is_integer(N)
+                     , <<"Arg literal must be %, %& or %integer">>
+                     , location(State1)
+                     ),
           ArgSym = register_arg(N, ArgEnv),
           push_form(ArgSym, State2)
       end
@@ -910,7 +906,7 @@ read_dispatch(#{src := <<"#">>} = State) ->
     {ok, NewState = #{src := NewSrc}}  ->
       read_dispatch(NewState#{src := <<"#", NewSrc/binary>>});
     eof ->
-      clj_utils:error(<<"EOF while reading dispatch">>, location(State))
+      ?ERROR(<<"EOF while reading dispatch">>, location(State))
   end;
 read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
   <<Ch/utf8, _/binary>> = Src,
@@ -925,7 +921,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
-    $< -> clj_utils:error(<<"Unreadable form">>, location(State));
+    $< -> ?ERROR(<<"Unreadable form">>, location(State));
     _  -> read_tagged(consume_char(State))
   end.
 
@@ -944,10 +940,10 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  clj_utils:error_when(erlang:get(arg_env) =/= undefined
-                      , <<"Nested #()s are not allowed">>
-                      , location(State)
-                      ),
+  ?ERROR_WHEN(erlang:get(arg_env) =/= undefined
+             , <<"Nested #()s are not allowed">>
+             , location(State)
+             ),
 
   {{Form, NewState}, ArgEnv} =
     try
@@ -1031,7 +1027,7 @@ read_regex(#{src := <<>>} = State) ->
     {ok, NewState}  ->
       read_regex(NewState);
     eof ->
-      clj_utils:error(<<"EOF while reading regex">>, location(State))
+      ?ERROR(<<"EOF while reading regex">>, location(State))
   end.
 
 %%------------------------------------------------------------------------------
@@ -1054,14 +1050,14 @@ read_cond(#{src := <<>>} = State) ->
     {ok, NewState} ->
       read_cond(NewState);
     eof ->
-      clj_utils:error(<<"EOF while reading cond">>, location(State))
+      ?ERROR(<<"EOF while reading cond">>, location(State))
   end;
 read_cond(#{opts := Opts} = State0) ->
   ReadCondOpt = maps:get(?OPT_READ_COND, Opts, ?NIL),
-  clj_utils:error_when(not lists:member(ReadCondOpt, [allow, preserve])
-                      , <<"Conditional read not allowed">>
-                      , location(State0)
-                      ),
+  ?ERROR_WHEN(not lists:member(ReadCondOpt, [allow, preserve])
+             , <<"Conditional read not allowed">>
+             , location(State0)
+             ),
 
   {_, State} = consume(State0, [whitespace]),
   IsSplicing = peek_src(State) =:= $@,
@@ -1073,10 +1069,10 @@ read_cond(#{opts := Opts} = State0) ->
 
   {_, State2} = consume(State1, [whitespace]),
 
-  clj_utils:error_when( peek_src(State2) =/= $(
-                      , <<"read-cond body must be a list">>
-                      , location(State1)
-                      ),
+  ?ERROR_WHEN( peek_src(State2) =/= $(
+             , <<"read-cond body must be a list">>
+             , location(State1)
+             ),
 
   OldSupressRead = case erlang:get(supress_read) of
                      undefined -> false;
@@ -1109,19 +1105,19 @@ read_cond_delimited(IsSplicing, State) ->
     {nomatch,  State1} ->
       read_cond_delimited(IsSplicing, State1);
     {match, Form, State1} when IsSplicing ->
-      clj_utils:error_when( not clj_rt:'sequential?'(Form)
-                          , <<"Spliced form list in "
-                              "read-cond-splicing must "
-                              "extend clojerl.ISequential">>
-                          , location(State1)
-                          ),
+      ?ERROR_WHEN( not clj_rt:'sequential?'(Form)
+                 , <<"Spliced form list in "
+                     "read-cond-splicing must "
+                     "extend clojerl.ISequential">>
+                 , location(State1)
+                 ),
 
       ReadDelim  = clj_rt:boolean(scope_get(read_delim, State)),
-      clj_utils:error_when( IsSplicing andalso not ReadDelim
-                          , <<"Reader conditional splicing "
-                              "not allowed at the top level">>
-                          , location(State)
-                          ),
+      ?ERROR_WHEN( IsSplicing andalso not ReadDelim
+                 , <<"Reader conditional splicing "
+                     "not allowed at the top level">>
+                 , location(State)
+                 ),
 
       State2 = read_until($), fun read_skip_suppress/1, State1),
       Items = lists:reverse(clj_rt:to_list(Form)),
@@ -1139,15 +1135,15 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
     %% Change the return_on value so that we only read until the next
     %% ')' char.
     {Feature, State1} = read_pop_one(State#{return_on => $)}),
-    clj_utils:error_when( not clj_rt:'keyword?'(Feature)
-                        , <<"Feature should be a keyword">>
-                        , location(State)
-                        ),
+    ?ERROR_WHEN( not clj_rt:'keyword?'(Feature)
+               , <<"Feature should be a keyword">>
+               , location(State)
+               ),
 
-    clj_utils:error_when( lists:member(Feature, ?RESERVED_FEATURES)
-                        , [<<"Feature name ">>, Feature, <<" is reserved.">>]
-                        , location(State)
-                        ),
+    ?ERROR_WHEN( lists:member(Feature, ?RESERVED_FEATURES)
+               , [<<"Feature name ">>, Feature, <<" is reserved.">>]
+               , location(State)
+               ),
 
     try
       case
@@ -1163,9 +1159,9 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
       end
     catch
       throw:{return_on, State3} ->
-        clj_utils:error( <<"read-cond requires an even number of forms">>
-                       , location(State3)
-                       )
+        ?ERROR( <<"read-cond requires an even number of forms">>
+              , location(State3)
+              )
     end
   catch
     throw:{return_on, State4} ->
@@ -1194,10 +1190,10 @@ read_skip_suppress(State) ->
 read_tagged(State) ->
   {Symbol, State1} = read_pop_one(State),
 
-  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
-                      , <<"Reader tag must be a symbol">>
-                      , location(State)
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+             , <<"Reader tag must be a symbol">>
+             , location(State)
+             ),
 
   SupressRead = erlang:get(supress_read),
   {Form, State2} = read_pop_one(State1),
@@ -1253,22 +1249,22 @@ erlang_literal(Form, State) ->
                    ]
                end,
         clj_rt:list([ErlFunSym | Args]);
-      true     -> clj_utils:error( [ <<"Can only have list, map, tuple ">>
-                                   , <<"or Erlang string literals, had: ">>
-                                   , clj_rt:type(Form)
-                                   ]
-                                 , location(State)
-                                 )
+      true     -> ?ERROR( [ <<"Can only have list, map, tuple ">>
+                          , <<"or Erlang string literals, had: ">>
+                          , clj_rt:type(Form)
+                          ]
+                        , location(State)
+                        )
     end,
 
   push_form(Value, State).
 
 -spec erlang_binary(any(), state()) -> state().
 erlang_binary(Form, State) ->
-  clj_utils:error_when( not clj_rt:'vector?'(Form)
-                      , <<"Binary expressions should be enclosed by a vector">>
-                      , location(State)
-                      ),
+  ?ERROR_WHEN( not clj_rt:'vector?'(Form)
+             , <<"Binary expressions should be enclosed by a vector">>
+             , location(State)
+             ),
 
   ErlBinarySym = clj_rt:symbol(<<"erl-binary*">>),
   List         = clj_rt:list([ErlBinarySym | clj_rt:to_list(Form)]),
@@ -1286,26 +1282,26 @@ read_record(Symbol, Form, State) ->
                                           , <<"*read-eval*">>
                                           ),
 
-  clj_utils:error_when( not clj_rt:boolean('clojerl.Var':deref(ReadEvalVar))
-                      , <<"Record construction syntax can only be used "
-                          "when *read-eval* == true">>
-                      , location(State)
-                      ),
+  ?ERROR_WHEN( not clj_rt:boolean('clojerl.Var':deref(ReadEvalVar))
+             , <<"Record construction syntax can only be used "
+                 "when *read-eval* == true">>
+             , location(State)
+             ),
 
-  clj_utils:error_when( not clj_rt:'vector?'(Form)
-                        andalso not clj_rt:'map?'(Form)
-                      , [ <<"Unreadable constructor form starting with \"#">>
-                        , Symbol
-                        , <<"\"">>
-                        ]
-                      , location(State)
-                      ),
+  ?ERROR_WHEN( not clj_rt:'vector?'(Form)
+               andalso not clj_rt:'map?'(Form)
+             , [ <<"Unreadable constructor form starting with \"#">>
+               , Symbol
+               , <<"\"">>
+               ]
+             , location(State)
+             ),
 
   Type = try erlang:binary_to_existing_atom('clojerl.Symbol':str(Symbol), utf8)
          catch throw:badarg ->
-             clj_utils:error( [Symbol, <<" is not loaded or doesn't exist">>]
-                            , location(State)
-                            )
+             ?ERROR( [Symbol, <<" is not loaded or doesn't exist">>]
+                   , location(State)
+                   )
          end,
 
   Record =
@@ -1314,13 +1310,13 @@ read_record(Symbol, Form, State) ->
         ArgCount = clj_rt:count(Form),
         Exported = erlang:function_exported(Type, ?CONSTRUCTOR, ArgCount),
 
-        clj_utils:error_when( not Exported
-                          , [ <<"Unexpected number of constructor ">>
-                            , <<"arguments to ">>, Symbol
-                            , <<": got ">>, ArgCount
-                            ]
-                            , location(State)
-                            ),
+        ?ERROR_WHEN( not Exported
+                   , [ <<"Unexpected number of constructor ">>
+                     , <<"arguments to ">>, Symbol
+                     , <<": got ">>, ArgCount
+                     ]
+                   , location(State)
+                   ),
 
         erlang:apply(Type, ?CONSTRUCTOR, clj_rt:to_list(Form));
       false ->
@@ -1328,13 +1324,13 @@ read_record(Symbol, Form, State) ->
         NotKwFun    = fun(X) -> not clj_rt:'keyword?'(X) end,
         NonKeywords = lists:filter(NotKwFun, Keys),
 
-        clj_utils:error_when( NonKeywords =/= []
-                            , [ <<"Unreadable defrecord form: key must ">>
+        ?ERROR_WHEN( NonKeywords =/= []
+                   , [ <<"Unreadable defrecord form: key must ">>
                               , <<"be of type clojerl.Keyword, got ">>
-                              , clj_rt:first(NonKeywords)
-                              ]
-                            , location(State)
-                            ),
+                     , clj_rt:first(NonKeywords)
+                     ]
+                   , location(State)
+                   ),
 
         erlang:apply(Type, create, [Form])
       end,
@@ -1373,10 +1369,10 @@ read_tagged(Symbol, Form, Location, State) ->
       false -> {true, 'clojerl.Var':deref(DefaultReaderFunVar)}
     end,
 
-  clj_utils:error_when( Reader2 =:= ?NIL
-                      , [<<"No reader function for tag ">>, Symbol]
-                      , Location
-                      ),
+  ?ERROR_WHEN( Reader2 =:= ?NIL
+             , [<<"No reader function for tag ">>, Symbol]
+             , Location
+             ),
 
   ReadForm = case IsDefault of
                true  -> clj_rt:apply(Reader2, [Symbol, Form]);
@@ -1501,14 +1497,14 @@ read_until(Delim, ReadFun, #{src := <<>>} = State) ->
       read_until(Delim, ReadFun, NewState);
     eof ->
       {Line, Col} = scope_get(loc_started, State),
-      clj_utils:error( [ <<"Started reading at (">>
-                       , Line, <<":">>, Col
-                       , <<") but found EOF while expecting '">>
-                       , <<Delim/utf8>>
-                       , <<"'">>
-                       ]
-                     , location(State)
-                     )
+      ?ERROR( [ <<"Started reading at (">>
+              , Line, <<":">>, Col
+              , <<") but found EOF while expecting '">>
+              , <<Delim/utf8>>
+              , <<"'">>
+              ]
+            , location(State)
+            )
   end;
 read_until(Delim, ReadFun, State) ->
   State1 = scope_put(read_delim, true, State#{return_on => Delim}),

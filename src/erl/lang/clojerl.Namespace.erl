@@ -1,6 +1,7 @@
 -module('clojerl.Namespace').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behaviour(gen_server).
 -behavior('clojerl.IHash').
@@ -56,9 +57,9 @@
 
 -spec ?CONSTRUCTOR('clojerl.Symbol':type()) -> type().
 ?CONSTRUCTOR(Name) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Name)
-                      , <<"Namespace name must be a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Name)
+             , <<"Namespace name must be a symbol">>
+             ),
 
   Opts = [set, protected, {keypos, 1}],
   Id   = clj_rt:name(Name),
@@ -139,9 +140,7 @@ find_mapping(#{?TYPE := ?M} = DefaultNs, Symbol) ->
 -spec resolve_ns(type(), 'clojerl.Symbol':type()) ->
   type() | ?NIL.
 resolve_ns(#{?TYPE := ?M} = DefaultNs, Symbol) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
-                      , <<"Argument must be a symbol">>
-                      ),
+  ?ERROR_WHEN(not clj_rt:'symbol?'(Symbol), <<"Argument must be a symbol">>),
 
   case clj_rt:namespace(Symbol) of
     ?NIL  -> DefaultNs;
@@ -155,9 +154,7 @@ resolve_ns(#{?TYPE := ?M} = DefaultNs, Symbol) ->
 
 -spec find_or_create('clojerl.Symbol':type()) -> type().
 find_or_create(Name) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Name)
-                      , <<"Argument must be a symbol">>
-                      ),
+  ?ERROR_WHEN(not clj_rt:'symbol?'(Name), <<"Argument must be a symbol">>),
   Ns = case find(Name) of
          ?NIL -> gen_server:call(?MODULE, {new, Name});
          X -> X
@@ -166,9 +163,7 @@ find_or_create(Name) ->
 
 -spec remove('clojerl.Symbol':type()) -> boolean().
 remove(Name) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Name)
-                      , <<"Argument must be a symbol">>
-                      ),
+  ?ERROR_WHEN(not clj_rt:'symbol?'(Name), <<"Argument must be a symbol">>),
   gen_server:call(?MODULE, {remove, Name}).
 
 -spec name(type()) -> 'clojerl.Symbol':type().
@@ -176,13 +171,11 @@ name(#{?TYPE := ?M, name := Name}) -> Name.
 
 -spec intern(type(), 'clojerl.Symbol':type()) -> type().
 intern(#{?TYPE := ?M, name := NsName} = Ns, Symbol) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
-                      , <<"Argument must be a symbol">>
-                      ),
+  ?ERROR_WHEN(not clj_rt:'symbol?'(Symbol), <<"Argument must be a symbol">>),
 
-  clj_utils:error_when( clj_rt:namespace(Symbol) =/= ?NIL
-                      , <<"Can't intern namespace-qualified symbol">>
-                      ),
+  ?ERROR_WHEN( clj_rt:namespace(Symbol) =/= ?NIL
+             , <<"Can't intern namespace-qualified symbol">>
+             ),
 
 
   SymName = clj_rt:name(Symbol),
@@ -199,9 +192,9 @@ update_var(Var) ->
 
 -spec update_var(type(), 'clojerl.Var':type()) -> type().
 update_var(#{?TYPE := ?M} = Ns, Var) ->
-  clj_utils:error_when( not clj_rt:'var?'(Var)
-                      , <<"Argument must be a var">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'var?'(Var)
+             , <<"Argument must be a var">>
+             ),
 
   gen_server:call(?MODULE, {update_var, Ns, Var}).
 
@@ -216,13 +209,13 @@ get_aliases(#{?TYPE := ?M, aliases := Aliases}) ->
 -spec refer(type(), 'clojerl.Symbol':type(), 'clojerl.Var':type()) ->
   type().
 refer(#{?TYPE := ?M} = Ns, Sym, Var) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Sym)
-                      , <<"Name for refer var is not a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Sym)
+             , <<"Name for refer var is not a symbol">>
+             ),
 
-  clj_utils:error_when( clj_rt:namespace(Sym) =/= ?NIL
-                      , <<"Can't refer namespace-qualified symbol">>
-                      ),
+  ?ERROR_WHEN( clj_rt:namespace(Sym) =/= ?NIL
+             , <<"Can't refer namespace-qualified symbol">>
+             ),
 
   check_if_override(Ns, Sym, mapping(Ns, Sym), Var),
 
@@ -235,10 +228,10 @@ import_type(TypeName) ->
 -spec import_type(binary(), boolean()) -> type().
 import_type(TypeName, CheckLoaded) ->
   Module = binary_to_atom(TypeName, utf8),
-  clj_utils:error_when( CheckLoaded
-                        andalso {module, Module} =/= code:ensure_loaded(Module)
-                      , [ <<"Type ">>, TypeName, <<" could not be loaded. ">>]
-                      ),
+  ?ERROR_WHEN( CheckLoaded
+               andalso {module, Module} =/= code:ensure_loaded(Module)
+             , [ <<"Type ">>, TypeName, <<" could not be loaded. ">>]
+             ),
 
   SymName = lists:last(binary:split(TypeName, <<".">>, [global])),
   Sym     = clj_rt:symbol(SymName),
@@ -246,20 +239,20 @@ import_type(TypeName, CheckLoaded) ->
   Ns      = current(),
   Exists  = mapping(Ns, Sym),
 
-  clj_utils:warn_when( Exists =/= ?NIL
-                       andalso not clj_rt:equiv(Exists, Type)
-                     , [ Sym , <<" already refers to: ">> , Exists
-                       , <<" in namespace: ">> , name(Ns)
-                       ]
-                     ),
+  ?WARN_WHEN( Exists =/= ?NIL
+              andalso not clj_rt:equiv(Exists, Type)
+            , [ Sym , <<" already refers to: ">> , Exists
+              , <<" in namespace: ">> , name(Ns)
+              ]
+            ),
 
   gen_server:call(?MODULE, {intern, Ns, Sym, Type}).
 
 -spec unmap(type(), 'clojerl.Symbol':type()) -> type().
 unmap(#{?TYPE := ?M} = Ns, Sym) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Sym)
-                      , <<"Name for refer var is not a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Sym)
+             , <<"Name for refer var is not a symbol">>
+             ),
 
   gen_server:call(?MODULE, {unmap, Ns, Sym}).
 
@@ -269,9 +262,9 @@ add_alias( #{?TYPE := ?M, name := NsName} = Ns
          , AliasSym
          , #{?TYPE := ?M} = AliasedNs
          ) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(AliasSym)
-                      , <<"Name for refer var is not a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(AliasSym)
+             , <<"Name for refer var is not a symbol">>
+             ),
 
   case clj_module:in_context() of
     false -> ok;
@@ -285,18 +278,18 @@ add_alias( #{?TYPE := ?M, name := NsName} = Ns
 -spec remove_alias(type(), 'clojerl.Symbol':type()) ->
   type().
 remove_alias(#{?TYPE := ?M} = Ns, AliasSym) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(AliasSym)
-                      , <<"Name for refer var is not a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(AliasSym)
+             , <<"Name for refer var is not a symbol">>
+             ),
 
   gen_server:call(?MODULE, {remove_alias, Ns, AliasSym}).
 
 -spec mapping(type(), 'clojerl.Symbol':type()) ->
   'clojerl.Var':type() | ?NIL.
 mapping(#{?TYPE := ?M, mappings := Mappings}, Symbol) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
-                      , <<"Argument must be a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+             , <<"Argument must be a symbol">>
+             ),
 
   case clj_utils:ets_get(Mappings, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
@@ -306,9 +299,9 @@ mapping(#{?TYPE := ?M, mappings := Mappings}, Symbol) ->
 -spec alias(type(), 'clojerl.Symbol':type()) ->
   'clojerl.Symbol':type() | ?NIL.
 alias(#{?TYPE := ?M, aliases := Aliases}, Symbol) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Symbol)
-                      , <<"Argument must be a symbol">>
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+             , <<"Argument must be a symbol">>
+             ),
 
   case clj_utils:ets_get(Aliases, clj_rt:str(Symbol)) of
     {_, Var} -> Var;
@@ -420,11 +413,9 @@ check_if_override(Ns, Sym, Old, New) ->
   Message  = [Sym, <<" already refers to: ">>, Old, <<" in namespace: ">>, Ns],
   Warn     = OldVarNs =/= NsName andalso NewVarNs =/= <<"clojure.core">>,
 
-  clj_utils:error_when( Warn andalso OldVarNs =/= <<"clojure.core">>
-                      , Message
-                      ),
+  ?ERROR_WHEN(Warn andalso OldVarNs =/= <<"clojure.core">>, Message),
 
-  clj_utils:warn_when(Warn, [<<"WARNING: ">>, Message]).
+  ?WARN_WHEN(Warn, [<<"WARNING: ">>, Message]).
 
 -spec load('clojerl.Symbol':type()) -> type() | ?NIL.
 load(Name) ->

@@ -71,14 +71,14 @@ resolve_impl_cache(Protocol, Function, Type, Arity) ->
                   Fun
               end,
 
-      clj_utils:error_when( Value =:= undefined
-                          , [ <<"No implementation of method: '">>
-                            , atom_to_binary(Function, utf8)
-                            , <<"' of protocol: ">>
-                            , atom_to_binary(Protocol, utf8)
-                            , <<" found for type: ">>
-                            , atom_to_binary(Type, utf8)
-                            ]),
+      ?ERROR_WHEN( Value =:= undefined
+                 , [ <<"No implementation of method: '">>
+                   , atom_to_binary(Function, utf8)
+                   , <<"' of protocol: ">>
+                   , atom_to_binary(Protocol, utf8)
+                   , <<" found for type: ">>
+                   , atom_to_binary(Type, utf8)
+                   ]),
 
       erlang:put(Key, {ok, Value}),
       Value;

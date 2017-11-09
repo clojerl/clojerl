@@ -4,15 +4,6 @@
 -include("clojerl_int.hrl").
 -include("clojerl_expr.hrl").
 
--dialyzer([ {nowarn_function, throw/2}
-          , {nowarn_function, throw_when/2}
-          , {nowarn_function, throw_when/3}
-          , {nowarn_function, error/1}
-          , {nowarn_function, error/2}
-          , {nowarn_function, error_when/2}
-          , {nowarn_function, error_when/3}
-          ]).
-
 -compile({no_auto_import, [throw/1, error/1]}).
 
 -export([ char_type/1
@@ -25,16 +16,7 @@
 
         , compare/2
 
-        , throw/1
-        , throw/2
-        , throw_when/2
-        , throw_when/3
-        , error/1
-        , error/2
-        , error_when/2
-        , error_when/3
-        , warn_when/2
-        , warn_when/3
+        , format_error/2
 
         , group_by/2
         , nth/2
@@ -86,9 +68,9 @@ parse_number(Number) ->
              ?NIL -> ?NIL
            end,
 
-  error_when( Result =:= ?NIL
-            , <<"Invalid number format [", Number/binary, "]">>
-            ),
+  ?ERROR_WHEN( Result =:= ?NIL
+             , <<"Invalid number format [", Number/binary, "]">>
+             ),
 
   Result.
 
@@ -139,17 +121,17 @@ check_erl_fun(Expr) ->
   IsSymbol         = clj_rt:'symbol?'(Symbol),
   FunctionExported = erlang:function_exported(Module, Function, Arity),
   NoWarnErlFun     = clj_compiler:no_warn_symbol_as_erl_fun(Env),
-  clj_utils:warn_when( IsSymbol
-                       andalso not FunctionExported
-                       andalso not NoWarnErlFun
-                     , [ <<"'">>, Symbol, <<"'">>
-                       , <<" will be considered an Erlang function,">>
-                       , <<" but we couldn't find it at compile-time.">>
-                       , <<" Either make sure the module is loaded or use">>
-                       , <<" '#erl ">>, Symbol, <<"' to remove this warning.">>
-                       ]
-                     , clj_env:location(Env)
-                     ).
+  ?WARN_WHEN( IsSymbol
+              andalso not FunctionExported
+              andalso not NoWarnErlFun
+            , [ <<"'">>, Symbol, <<"'">>
+              , <<" will be considered an Erlang function,">>
+              , <<" but we couldn't find it at compile-time.">>
+              , <<" Either make sure the module is loaded or use">>
+              , <<" '#erl ">>, Symbol, <<"' to remove this warning.">>
+              ]
+            , clj_env:location(Env)
+            ).
 
 -spec parse_erl_fun('clojerl.Symbol':type()) ->
   {binary() | ?NIL, binary(), integer() | ?NIL}.
@@ -222,7 +204,7 @@ desugar_meta(Meta) ->
       Tag = clj_rt:keyword(<<"tag">>),
       clj_rt:hash_map([Tag, Meta]);
     _ ->
-      throw(<<"Metadata must be Symbol, Keyword, String or Map">>)
+      ?THROW(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
 
 -spec compare(any(), any()) -> integer().
@@ -233,80 +215,15 @@ compare(X, Y) ->
     X >  Y -> 1
   end.
 
--spec throw(any()) -> no_return().
-throw(Reason) ->
-  throw(Reason, ?NIL).
-
--spec throw(any(), ?NIL | clj_reader:location()) -> no_return().
-throw(List, Location) ->
-  throw_when(true, List, Location).
-
--spec throw_when(true,  any()) -> no_return();
-                (false, any()) -> ok.
-throw_when(Throw, Reason) ->
-  throw_when(Throw, Reason, ?NIL).
-
--spec throw_when(true,  any(), clj_reader:location() | ?NIL) -> no_return();
-                (false, any(), clj_reader:location() | ?NIL) -> ok.
-throw_when(false, _, _) ->
-  ok;
-throw_when(true, List, Location) when is_list(List) ->
+-spec format_error(any(), clj_reader:location() | ?NIL) -> binary().
+format_error(List, Location) when is_list(List) ->
   Reason = error_msg_to_binary(List),
-  throw_when(true, Reason, Location);
-throw_when(true, Reason, Location) when is_binary(Reason) ->
+  format_error(Reason, Location);
+format_error(Reason, Location) when is_binary(Reason) ->
   LocationBin = location_to_binary(Location),
-  erlang:throw(<<LocationBin/binary, Reason/binary>>);
-throw_when(true, Reason, Location) ->
-  erlang:throw({Location, Reason}).
-
--spec error(any()) -> no_return().
-error(List) ->
-  error_when(true, List, ?NIL).
-
--spec error(any(), clj_reader:location() | ?NIL) -> no_return().
-error(List, Location) ->
-  error_when(true, List, Location).
-
--spec error_when(true,  any()) -> no_return();
-                (false, any()) -> ok.
-error_when(Throw, Reason) ->
-  error_when(Throw, Reason, ?NIL).
-
--spec error_when(true,  any(), clj_reader:location() | ?NIL) -> no_return();
-                (false, any(), clj_reader:location() | ?NIL) -> ok.
-error_when(false, _, _) ->
-  ok;
-error_when(true, List, Location) when is_list(List) ->
-  Reason = error_msg_to_binary(List),
-  error_when(true, Reason, Location);
-error_when(true, Reason, Location) when is_binary(Reason) ->
-  LocationBin = location_to_binary(Location),
-  erlang:error(<<LocationBin/binary, Reason/binary>>);
-error_when(true, Reason, Location) ->
-  erlang:error({Location, Reason}).
-
--spec warn_when(boolean(), any()) -> ok.
-warn_when(Warn, Reason) ->
-  warn_when(Warn, Reason, ?NIL).
-
--spec warn_when(boolean(), any(), clj_reader:location() | ?NIL) -> ok.
-warn_when(false, _, _) ->
-  ok;
-warn_when(true, List, Location) when is_list(List) ->
-  Reason = error_msg_to_binary(List),
-  warn_when(true, Reason, Location);
-warn_when(true, Reason, Location) when is_binary(Reason) ->
-  LocationBin = location_to_binary(Location),
-  'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , <<LocationBin/binary, Reason/binary, "\n">>
-                           ),
-  ok;
-warn_when(true, Reason, Location) ->
-  'erlang.io.IWriter':write( 'clojure.core':'*err*__val'()
-                           , <<"~p~n">>
-                           , [{Location, Reason}]
-                           ),
-  ok.
+  <<LocationBin/binary, Reason/binary>>;
+format_error(Reason, Location) ->
+  iolist_to_binary(io_lib:format("~p", [{Location, Reason}])).
 
 -spec error_msg_to_binary(any()) -> binary().
 error_msg_to_binary(Message) when is_binary(Message) ->
@@ -363,9 +280,9 @@ code_from_binary(Name) when is_atom(Name) ->
       case code:get_object_code(Name) of
         {Name, Binary, _} -> core_from_binary(Binary);
         _ ->
-          error([ <<"Could not load object code for namespace: ">>
-                , atom_to_binary(Name, utf8)
-                ])
+          ?ERROR([ <<"Could not load object code for namespace: ">>
+                 , atom_to_binary(Name, utf8)
+                 ])
       end
   end.
 
@@ -476,7 +393,7 @@ number_type(Number) ->
 nth(Index, List) ->
   case Index =< length(List) of
     true  -> lists:nth(Index, List);
-    false -> error(<<"Index out of bounds">>)
+    false -> ?ERROR(<<"Index out of bounds">>)
   end.
 
 nth(Index, List, Default) ->

@@ -161,10 +161,10 @@
         ]).
 
 ns(Form, _Env, Name, _References) ->
-  clj_utils:error_when( not clj_rt:'symbol?'(Name)
-                      , <<"First argument to ns must be a symbol">>
-                      , clj_reader:location_meta(Form)
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Name)
+             , <<"First argument to ns must be a symbol">>
+             , clj_reader:location_meta(Form)
+             ),
 
   InNsSym = clj_rt:symbol(<<"clojure.core">>, <<"in-ns">>),
   QuoteSym = clj_rt:symbol(<<"quote">>),
@@ -182,10 +182,10 @@ ns__val() ->
 'in-ns'(MaybeQuotedName) ->
   Name  = 'maybe-unquote'(MaybeQuotedName),
 
-  clj_utils:error_when( not clj_rt:'symbol?'(Name)
-                      , <<"First argument to in-ns must be a symbol">>
-                      , clj_reader:location_meta(Name)
-                      ),
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Name)
+             , <<"First argument to in-ns must be a symbol">>
+             , clj_reader:location_meta(Name)
+             ),
 
   'clojerl.Namespace':find_or_create(Name),
   ?NIL.

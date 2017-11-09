@@ -79,12 +79,12 @@ load(ScriptBase, FailIfNotFound) ->
     _ ->
       case resolve_file(ScriptBase, [<<".clje">>, <<".cljc">>]) of
         ?NIL ->
-          clj_utils:error_when( FailIfNotFound
-                              , [ <<"Could not locate ">>, NsBin1
-                                , <<".beam or ">>, ScriptBase
-                                , <<" on code path.">>
-                                ]
-                              );
+          ?ERROR_WHEN( FailIfNotFound
+                     , [ <<"Could not locate ">>, NsBin1
+                       , <<".beam or ">>, ScriptBase
+                       , <<" on code path.">>
+                       ]
+                     );
         FullFilePath -> clj_compiler:compile_file(FullFilePath)
       end
   end,
@@ -109,7 +109,7 @@ resolve_file(Path, Exts) ->
   case length(Found) of
     0 -> ?NIL;
     1 -> first(Found);
-    _ -> clj_utils:error([<<"Found more than one ">>, Path])
+    _ -> ?ERROR([<<"Found more than one ">>, Path])
   end.
 
 -spec count(any()) -> integer().
@@ -143,12 +143,12 @@ nth_from(Coll, N) ->
     'clojerl.String' ->
       case N < 'clojerl.String':count(Coll) of
         true  -> 'clojerl.String':char_at(Coll, N);
-        false -> clj_utils:error(<<"Index out of bounds">>)
+        false -> ?ERROR(<<"Index out of bounds">>)
       end;
     _ ->
       case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
         true  -> clj_utils:nth(N + 1, to_list(Coll));
-        false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+        false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
       end
   end.
 
@@ -164,7 +164,7 @@ nth_from(Coll, N, NotFound) ->
     _ ->
       case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
         true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
-        false -> clj_utils:error([<<"Can't apply nth to type ">>, Type])
+        false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
       end
   end.
 
@@ -406,7 +406,7 @@ with_meta(X, Meta) ->
   if
     IsAssociative -> 'clojerl.IAssociative':contains_key(Coll, Key);
     IsSet -> 'clojerl.ISet':contains(Coll, Key);
-    true  -> clj_utils:error(["contains? not supported on type: ", type(Coll)])
+    true  -> ?ERROR(["contains? not supported on type: ", type(Coll)])
   end.
 
 -spec get(any(), any()) -> any().
@@ -589,11 +589,11 @@ vector(Items) ->
 -spec subvec('clojerl.Vector':type(), integer(), integer()) ->
   'clojerl.Vector':type().
 subvec(Vector, Start, End) ->
-  clj_utils:error_when(End < Start
-                       orelse Start < 0
-                       orelse End > count(Vector),
-                       ["Index out of bounds"]
-                      ),
+  ?ERROR_WHEN(End < Start
+              orelse Start < 0
+              orelse End > count(Vector),
+              ["Index out of bounds"]
+             ),
   case Start of
     End -> vector([]);
     _   -> 'clojerl.Vector':subvec(Vector, Start, End)
