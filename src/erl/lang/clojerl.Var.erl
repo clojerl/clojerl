@@ -1,6 +1,7 @@
 -module('clojerl.Var').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IEquiv').
@@ -177,14 +178,14 @@ dynamic_binding(Var, Value) ->
 -spec find('clojerl.Symbol':type()) -> type() | ?NIL.
 find(QualifiedSymbol) ->
   NsName = clj_rt:namespace(QualifiedSymbol),
-  clj_utils:error_when( NsName =:= ?NIL
-                      , <<"Symbol must be namespace-qualified">>
-                      ),
+  ?ERROR_WHEN( NsName =:= ?NIL
+             , <<"Symbol must be namespace-qualified">>
+             ),
 
   Ns = 'clojerl.Namespace':find(clj_rt:symbol(NsName)),
-  clj_utils:error_when( Ns =:= ?NIL
-                      , [<<"No such namespace: ">>, NsName]
-                      ),
+  ?ERROR_WHEN( Ns =:= ?NIL
+             , [<<"No such namespace: ">>, NsName]
+             ),
 
   'clojerl.Namespace':find_var(Ns, QualifiedSymbol).
 

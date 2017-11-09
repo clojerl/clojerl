@@ -37,4 +37,44 @@
 
 -define(CHUNK_SIZE, 32).
 
+%% Errors and warnings
+
+-define(THROW(Msg), ?THROW(Msg, ?NIL)).
+-define(THROW(Msg, Loc), erlang:throw(clj_utils:format_error(Msg, Loc))).
+
+-define(THROW_WHEN(Pred, Msg), ?THROW_WHEN(Pred, Msg, ?NIL)).
+-define( THROW_WHEN(Pred, Msg, Loc)
+       , case Pred of
+           true  -> ?THROW(Msg, Loc);
+           false -> ok
+         end
+       ).
+
+-define(ERROR(Msg), ?ERROR(Msg, ?NIL)).
+-define(ERROR(Msg, Loc), erlang:error(clj_utils:format_error(Msg, Loc))).
+
+-define(ERROR_WHEN(Pred, Msg), ?ERROR_WHEN(Pred, Msg, ?NIL)).
+-define( ERROR_WHEN(Pred, Msg, Loc)
+       , case Pred of
+           true  -> ?ERROR(Msg, Loc);
+           false -> ok
+         end
+       ).
+
+-define(WARN(Msg), ?WARN(Msg, ?NIL)).
+-define( WARN(Msg, Loc)
+       , 'erlang.io.IWriter':write(
+           'clojure.core':'*err*__val'(),
+           <<(clj_utils:format_error(Msg, Loc))/binary, "\n">>
+          )
+       ).
+
+-define(WARN_WHEN(Pred, Msg), ?WARN_WHEN(Pred, Msg, ?NIL)).
+-define( WARN_WHEN(Pred, Msg, Loc)
+       , case Pred of
+           true  -> ?WARN(Msg, Loc);
+           false -> ok
+         end
+       ).
+
 -endif.

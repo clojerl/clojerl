@@ -3,6 +3,7 @@
 -compile({no_auto_import, [{apply, 2}]}).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IAssociative').
 -behavior('clojerl.ICounted').
@@ -72,7 +73,7 @@ create_with_check(KeyValues) ->
   term().
 check_duplicate_keys(K, {key, Keys}) ->
   lists:member(K, Keys)
-    andalso clj_utils:error([<<"Duplicate key: ">>, K]),
+    andalso ?ERROR([<<"Duplicate key: ">>, K]),
   {value, [K | Keys]};
 check_duplicate_keys(_, {value, Keys}) ->
   {key, Keys}.

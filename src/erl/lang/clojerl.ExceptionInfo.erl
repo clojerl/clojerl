@@ -1,6 +1,7 @@
 -module('clojerl.ExceptionInfo').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IError').
@@ -30,9 +31,9 @@
 
 -spec ?CONSTRUCTOR(binary(), any(), any()) -> type().
 ?CONSTRUCTOR(Message, Data, Cause) when is_binary(Message) ->
-  clj_utils:error_when( Data =:= ?NIL
-                      , <<"Additional data must be non-nil.">>
-                      ),
+  ?ERROR_WHEN( Data =:= ?NIL
+             , <<"Additional data must be non-nil.">>
+             ),
   #{?TYPE    => ?M
    , message => Message
    , data    => Data

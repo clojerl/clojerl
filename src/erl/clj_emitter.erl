@@ -122,13 +122,13 @@ ast(#{op := def} = Expr, State) ->
                      true  -> InitAst0;
                      false ->
                       Init = clj_compiler:eval_expressions([InitAst0]),
-                      clj_utils:error_when( not cerl:is_literal_term(Init)
-                                          , [ <<"Init value for ">>, Var
-                                            , <<" is not a literal: ">>
-                                            , Init
-                                            ]
-                                          , clj_env:location(Env)
-                                          ),
+                      ?ERROR_WHEN( not cerl:is_literal_term(Init)
+                                 , [ <<"Init value for ">>, Var
+                                   , <<" is not a literal: ">>
+                                   , Init
+                                   ]
+                                 , clj_env:location(Env)
+                                 ),
                       cerl:abstract(Init)
                   end,
         {InitAst, StateTemp}
@@ -457,15 +457,15 @@ ast(#{op := erl_fun} = Expr, State) ->
    , env      := Env
    } = Expr,
 
-  clj_utils:error_when( Arity == ?NIL
-                      , [ <<"Can't use an erlang function as a value without ">>
-                        , <<"specifying its arity: ">>
-                        , atom_to_binary(Module, utf8)
-                        , <<"/">>
-                        , atom_to_binary(Function, utf8)
-                        ]
-                      , clj_env:location(Env)
-                      ),
+  ?ERROR_WHEN( Arity == ?NIL
+             , [ <<"Can't use an erlang function as a value without ">>
+               , <<"specifying its arity: ">>
+               , atom_to_binary(Module, utf8)
+               , <<"/">>
+               , atom_to_binary(Function, utf8)
+               ]
+             , clj_env:location(Env)
+             ),
 
   clj_utils:check_erl_fun(Expr),
 
