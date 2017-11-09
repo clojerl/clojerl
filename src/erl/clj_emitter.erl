@@ -973,26 +973,20 @@ ast(#{op := 'try'} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% catch
 %%------------------------------------------------------------------------------
-ast(#{op := 'catch'} = Expr, State) ->
+ast(#{op := 'catch'} = Expr, State0) ->
   ?DEBUG('catch'),
-  #{ class := ErrType
+  #{ class := ErrTypeExpr
    , local := PatternExpr
    , body  := BodyExpr
    , guard := GuardExpr
    , env   := Env
    } = Expr,
 
-  Ann               = ann_from(Env),
-  ClassAst          = case ErrType of
-                        ErrType when is_atom(ErrType) ->
-                          cerl:ann_c_atom(Ann, ErrType);
-                        ErrType -> % If it's not an atom it's a symbol
-                          ErrTypeBin = 'clojerl.Symbol':name(ErrType),
-                          cerl:ann_c_var(Ann, binary_to_atom(ErrTypeBin, utf8))
-                      end,
-  {PatternAst0, State1} = pop_ast(ast(PatternExpr, State)),
-  {Guard0, State2}      = pop_ast(ast(GuardExpr, State1)),
-  {Body, State3}        = pop_ast(ast(BodyExpr, State2)),
+  Ann                   = ann_from(Env),
+  {ClassAst, State1}    = pop_ast(ast(ErrTypeExpr, State0)),
+  {PatternAst0, State2} = pop_ast(ast(PatternExpr, State1)),
+  {Guard0, State3}      = pop_ast(ast(GuardExpr, State2)),
+  {Body, State4}        = pop_ast(ast(BodyExpr, State3)),
 
   {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
   VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
@@ -1000,7 +994,7 @@ ast(#{op := 'catch'} = Expr, State) ->
 
   Ast    = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
 
-  push_ast(Ast, State3);
+  push_ast(Ast, State4);
 %%------------------------------------------------------------------------------
 %% receive
 %%------------------------------------------------------------------------------

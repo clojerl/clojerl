@@ -881,7 +881,9 @@ throw(_Config) ->
    , local := #{ op      := binding
                , pattern := #{name := ErrName2_1}
                }
-   , class := error
+   , class := #{ op      := binding
+               , pattern := #{op := constant}
+               }
    , body  := #{op := do}
    , guard := #{op := constant, form := true}
    } = Catch2_1,
@@ -890,7 +892,9 @@ throw(_Config) ->
    , local := #{ op      := binding
                , pattern := #{name := ErrName2_2}
                }
-   , class := throw
+   , class := #{ op      := binding
+               , pattern := #{op := constant}
+               }
    , body  := #{op := do}
    , guard := #{op := constant, form := true}
    } = Catch2_2,
@@ -908,7 +912,9 @@ throw(_Config) ->
    , local := #{ op      := binding
                , pattern := #{name := ErrName3_1}
                }
-   , class := error
+   , class := #{ op      := binding
+               , pattern := #{op := constant}
+               }
    , body  := #{op := do}
    } = Catch3_1,
 
@@ -929,7 +935,11 @@ throw(_Config) ->
    , local := #{ op      := binding
                , pattern := #{name := ErrName4_1}
                }
-   , class := exit
+   , class := #{ op      := binding
+               , pattern := #{ op   := constant
+                             , form := exit
+                             }
+               }
    , body  := #{op := do}
    } = Catch4_1,
 
@@ -945,7 +955,11 @@ throw(_Config) ->
    , local := #{ op      := binding
                , pattern := #{name := ErrName5_1}
                }
-   , class := UnderscoreSym
+   , class := #{ op      := binding
+               , pattern := #{ op   := local
+                             , form := UnderscoreSym
+                             }
+               }
    , body  := #{op := do}
    } = Catch5_1,
 
@@ -962,10 +976,18 @@ throw(_Config) ->
    , guard := #{op := constant, form := false}
    } = Catch6_1,
 
-  ct:comment("try, catch with invalid value"),
-  ok = try analyze_one(<<"(try 1 (catch bla e e))">>), error
-       catch _:_ -> ok
-       end,
+  ct:comment("try, catch with a binding for the error type"),
+  #{ op      := 'try'
+   , catches := [Catch7_1]
+   , finally := ?NIL
+   } = analyze_one(<<"(try 1 (catch bla e e))">>),
+
+  #{ op    := 'catch'
+   , local := #{op := binding}
+   , class := #{ op      := binding
+               , pattern := #{op := local}
+               }
+   } = Catch7_1,
 
   {comments, ""}.
 
