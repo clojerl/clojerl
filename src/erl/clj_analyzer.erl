@@ -1876,21 +1876,14 @@ parse_catch(List, Env0) ->
 
   Env1 = clj_env:push(#{in_try => false, pattern_locals => []}, Env0),
 
-  {ErrTypeExpr, Env2} = clj_env:pop_expr(parse_pattern(ErrType, Env1)),
-  TypeLocal = #{ op      => binding
-               , env     => Env0
-               , form    => ErrType
-               , pattern => ErrTypeExpr
-               , tag     => type_tag(ErrTypeExpr)
-               },
-
-  {ErrNameExpr, Env3} = clj_env:pop_expr(parse_pattern(ErrName, Env2)),
-  NameLocal = #{ op      => binding
-               , env     => Env0
-               , form    => ErrName
-               , pattern => ErrNameExpr
-               , tag     => type_tag(ErrNameExpr)
-               },
+  {TypeExpr, Env2}    = parse_catch_type(ErrType, Env1),
+  {ErrNameExpr, Env3} = parse_catch_var(TypeExpr, ErrName, Env2),
+  NameExpr = #{ op      => binding
+              , env     => Env0
+              , form    => ErrName
+              , pattern => ErrNameExpr
+              , tag     => type_tag(ErrNameExpr)
+              },
 
   LocalExprs = clj_env:get(pattern_locals, [], Env3),
   Env4      = clj_env:put_locals(LocalExprs, clj_env:add_locals_scope(Env3)),
@@ -1903,14 +1896,66 @@ parse_catch(List, Env0) ->
                , env   => Env0
                , form  => List
                , tag   => type_tag(BodyExpr)
-               , class => TypeLocal
-               , local => NameLocal
+               , class => TypeExpr
+               , local => NameExpr
                , guard => GuardExpr
                , body  => BodyExpr
                },
 
   Env7 = clj_env:pop(clj_env:remove_locals_scope(Env6)),
   clj_env:push_expr(CatchExpr, Env7).
+
+-spec parse_catch_type(atom() | 'clojerl.Symbol':type(), clj_env:env()) ->
+  {expr(), clj_env:env()}.
+parse_catch_type(ErrType, Env0) ->
+  case clj_rt:'symbol?'(ErrType) andalso resolve(ErrType, Env0) of
+    {{type, Type}, Env1} ->
+      IError = 'erlang.Type':?CONSTRUCTOR('clojerl.IError'),
+      ?ERROR_WHEN( not clj_rt:'satisfies?'(IError, Type)
+                 , [<<"Type ">>, Type, <<" does not implement ">>, IError]
+                 , clj_env:location(Env0)
+                 ),
+      {type_expr(Type, ErrType, Env1), Env1};
+    _ ->
+      {ErrTypeExpr, Env1} = clj_env:pop_expr(parse_pattern(ErrType, Env0)),
+      TypeLocal = #{ op      => binding
+                   , env     => Env0
+                   , form    => ErrType
+                   , tag     => type_tag(ErrTypeExpr)
+                   , pattern => ErrTypeExpr
+                   },
+      {TypeLocal, Env1}
+  end.
+
+-spec parse_catch_var(expr(), any(), clj_env:env()) ->
+  {expr(), clj_env:env()}.
+parse_catch_var(#{op := binding}, ErrName, Env) ->
+  clj_env:pop_expr(parse_pattern(ErrName, Env));
+parse_catch_var(#{op := type, type := Type}, ErrName, Env0) ->
+  ?ERROR_WHEN( not is_valid_bind_symbol(ErrName)
+             , [ <<"Expected valid binding symbol "
+                   "when error type is specified, got: ">>
+               , ErrName
+               ]
+             , clj_env:location(Env0)
+             ),
+
+  {VariableExpr, Env1} = clj_env:pop_expr(parse_pattern(ErrName, Env0)),
+
+  TypeModule           = 'erlang.Type':module(Type),
+  MapExpr              = #{?TYPE => TypeModule},
+  {PatternExpr0, Env2} = clj_env:pop_expr(analyze_erl_map(MapExpr, Env1)),
+  PatternExpr1         = PatternExpr0#{pattern => true},
+
+  AliasExpr            = #{ op       => erl_alias
+                          , env      => Env0
+                          , form     => ErrName
+                          , tag      => type_tag(ErrName)
+                          , variable => VariableExpr
+                          , pattern  => PatternExpr1
+                          },
+
+  {AliasExpr, Env2}.
 
 -spec is_valid_error_type(any()) -> boolean().
 is_valid_error_type(error) -> true;
@@ -2697,7 +2742,7 @@ parse_erlang_alias(List, Env0) ->
              ),
 
   ?ERROR_WHEN( length(Args) =/= 2
-             , [ <<"Expected only 2 arguments for erl-match*, got:">>
+             , [ <<"Expected only 2 arguments for erl-alias*, got: ">>
                , length(Args)
                ]
              , clj_env:location(Env0)
@@ -2706,7 +2751,8 @@ parse_erlang_alias(List, Env0) ->
   [Variable, Pattern]  = Args,
 
   ?ERROR_WHEN( not is_valid_bind_symbol(Variable)
-             , [ <<"First argument should be a valid binding symbol:">>
+             , [ <<"First argument to erl-alias* "
+                   "should be a valid binding symbol, got: ">>
                , Variable
                ]
              , clj_env:location(Env0)

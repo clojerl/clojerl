@@ -24,6 +24,8 @@
      (finally
        (prn :finally)))
 
+;; Accept any error type with _
+
 (try
   (erlang/error :error)
   (catch _ e
@@ -39,7 +41,25 @@
   (catch _ e
     (prn e)))
 
+;; Use binding for error type
+
 (try
   (erlang/exit :foo)
   (catch t e
     (prn t e)))
+
+;; Use type name for error type
+
+(try
+  (erlang/exit :foo)
+  (catch clojerl.ExceptionInfo e
+    (throw :bad-stuff))
+  (catch :exit e
+    (prn e)))
+
+(try
+  (throw (ex-info "hello" {:some :info}))
+  (catch clojerl.ExceptionInfo e
+    (prn e))
+  (catch :throw e
+    (throw :bad-stuff)))
