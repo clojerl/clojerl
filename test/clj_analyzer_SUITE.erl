@@ -989,6 +989,22 @@ throw(_Config) ->
                }
    } = Catch7_1,
 
+  ct:comment("try, catch using type"),
+  #{ op      := 'try'
+   , catches := [Catch8_1]
+   , finally := ?NIL
+   } = analyze_one(<<"(try 1 (catch clojerl.ExceptionInfo e e))">>),
+
+  #{ op    := 'catch'
+   , local := #{op := binding}
+   , class := #{op := type}
+   } = Catch8_1,
+
+  ct:comment("try, catch using type that doesn't implement IError"),
+  ok = try analyze_one(<<"(try 1 (catch clojerl.String e e))">>), error
+       catch _:_ -> ok
+       end,
+
   {comments, ""}.
 
 -spec var(config()) -> result().
