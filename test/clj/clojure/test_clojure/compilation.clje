@@ -80,7 +80,7 @@
   (testing "allow loop/recur fully inside catch"
     (is (= 3 (eval '(try
                       (throw "something")
-                      (catch :throw e
+                      (catch :error e
                         (loop [x 0]
                           (if (< x 3) (recur (inc x)) x))))))))
   (testing "allow loop/recur fully inside finally"

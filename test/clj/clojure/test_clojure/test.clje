@@ -43,7 +43,7 @@
 (deftest can-test-thrown
   (is (thrown? :error (/ 1 0)) "Should pass")
   ;; No exception is thrown:
-  (is (thrown? :throw (+ 1 1)) "Should fail")
+  (is (thrown? :error (+ 1 1)) "Should fail")
   ;; Wrong type of exception is thrown:
   (is (thrown? :error (throw :some-error)) "Should error"))
 
@@ -52,7 +52,7 @@
   ;; Wrong message string:
   (is (thrown-with-msg? :error #"Something else" (/ 1 0)) "Should fail")
   ;; No exception is thrown:
-  (is (thrown? :throw (+ 1 1)) "Should fail")
+  (is (thrown? :error (+ 1 1)) "Should fail")
   ;; Wrong type of exception is thrown:
   (is (thrown-with-msg? :error #"Divide by zero" (/ 1 0)) "Should error"))
 

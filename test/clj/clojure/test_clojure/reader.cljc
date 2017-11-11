@@ -514,9 +514,9 @@
     (binding [*default-data-reader-fn* throw-on-unknown]
       (testing "Unknown tag with custom throw-on-unknown"
         (are [err msg form] (thrown-with-msg? err msg (read-string form))
-          :throw #"No data reader function for tag foo" "#foo [1 2]"
-          :throw #"No data reader function for tag bar/foo" "#bar/foo [1 2]"
-          :throw #"No data reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]")))
+          :error #"No data reader function for tag foo" "#foo [1 2]"
+          :error #"No data reader function for tag bar/foo" "#bar/foo [1 2]"
+          :error #"No data reader function for tag bar.baz/foo" "#bar.baz/foo [1 2]")))
 
     (testing "Unknown tag out-of-the-box behavior (like Clojure 1.4)"
       (are [err msg form] (thrown-with-msg? err msg (read-string form))

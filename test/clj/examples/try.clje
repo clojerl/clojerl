@@ -7,19 +7,19 @@
        (prn [:error error])))
 
 (try (throw :hello)
-     (catch :error error
-       (prn error))
-     (catch :exit error
-       (prn error))
      (catch :throw error
+       (throw #erl[:not-catched error]))
+     (catch :exit error
+       (throw #erl[:not-catched error]))
+     (catch :error error
        (prn [:throw error])))
 
 (try (throw :hello-before-finally)
-     (catch :error error
-       (prn error))
-     (catch :exit error
-       (prn error))
      (catch :throw error
+       (throw #erl[:not-catched error]))
+     (catch :exit error
+       (throw #erl[:not-catched error]))
+     (catch :error error
        (prn [:throw error]))
      (finally
        (prn :finally)))
@@ -27,12 +27,12 @@
 ;; Accept any error type with _
 
 (try
-  (erlang/error :error)
+  (throw :throw)
   (catch _ e
     (prn e)))
 
 (try
-  (throw :throw)
+  (erlang/throw :error)
   (catch _ e
     (prn e)))
 
@@ -61,5 +61,5 @@
   (throw (ex-info "hello" {:some :info}))
   (catch clojerl.ExceptionInfo e
     (prn e))
-  (catch :throw e
+  (catch :error e
     (throw :bad-stuff)))

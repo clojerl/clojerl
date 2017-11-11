@@ -4489,7 +4489,7 @@
   [pred fmt & args]
   (when pred
     (let [message   (apply format fmt (map str args))
-          raw-trace (try (throw :ex) (catch :throw ex (erlang/get_stacktrace)))
+          raw-trace (try (throw :ex) (catch :error ex (erlang/get_stacktrace)))
           ;;boring?   #(not= (.getMethodName %) "doInvoke")
           ;;trace (into-array (drop 2 (drop-while boring? raw-trace)))
           ]
@@ -4592,7 +4592,7 @@
       (if load
         (try
           (load lib need-ns require)
-          (catch :throw e
+          (catch :error e
             (when undefined-on-entry
               (remove-ns lib))
             (throw e)))
