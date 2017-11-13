@@ -70,7 +70,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm
 (defn- format-error [message offset]
   (let [full-message (str message \newline *format-str* \newline
                            (apply str (repeat offset \space)) "^" \newline)]
-    (throw full-message)))
+    (throw (clojerl.Error. full-message))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Argument navigators manage the argument list
@@ -93,7 +93,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm
   (let [ rst (:rest navigator) ]
     (if rst
       [(first rst) (->arg-navigator (:seq navigator ) (next rst) (inc (:pos navigator)))]
-      (throw "Not enough arguments for format definition"))))
+      (throw (clojerl.Error. "Not enough arguments for format definition")))))
 
 (defn- next-arg-or-nil [navigator]
   (let [rst (:rest navigator)]
@@ -875,7 +875,7 @@ string, or one character longer."
            last-pos (num -1)]
       (if (and (not max-count) (= (:pos args) last-pos) (> count 1))
         ;; TODO get the offset in here and call format exception
-        (throw "%{ construct not consuming any arguments: Infinite loop!"))
+        (throw (clojerl.Error. "%{ construct not consuming any arguments: Infinite loop!")))
       (if (or (and (empty? (:rest args))
                    (or (not (:colon (:right-params params))) (> count 0)))
               (and max-count (>= count max-count)))
@@ -921,7 +921,7 @@ string, or one character longer."
            last-pos (num -1)]
       (if (and (not max-count) (= (:pos navigator) last-pos) (> count 1))
         ;; TODO get the offset in here and call format exception
-        (throw "%@{ construct not consuming any arguments: Infinite loop!"))
+        (throw (clojerl.Error. "%@{ construct not consuming any arguments: Infinite loop!")))
       (if (or (and (empty? (:rest navigator))
                    (or (not (:colon (:right-params params))) (> count 0)))
               (and max-count (>= count max-count)))

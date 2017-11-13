@@ -17,6 +17,7 @@
         , compare/2
 
         , format_error/2
+        , error_str/2
 
         , group_by/2
         , nth/2
@@ -224,6 +225,11 @@ format_error(Reason, Location) when is_binary(Reason) ->
   <<LocationBin/binary, Reason/binary>>;
 format_error(Reason, Location) ->
   iolist_to_binary(io_lib:format("~p", [{Location, Reason}])).
+
+-spec error_str(module(), binary()) -> binary().
+error_str(Module, Message) ->
+  ModuleBin = atom_to_binary(Module, utf8),
+  <<ModuleBin/binary, ": ", Message/binary>>.
 
 -spec error_msg_to_binary(any()) -> binary().
 error_msg_to_binary(Message) when is_binary(Message) ->

@@ -104,7 +104,7 @@ Design notes for clojure.string:
                              (instance? erlang.io.StringWriter replacement))
                        (replace match s (str replacement) opts)
                        (replace-by s match replacement))
-      :else (throw (str "Invalid match arg: " match)))))
+      :else (throw (clojerl.BadArgumentError. (str "Invalid match arg: " match))))))
 
 (defn- replace-first-by
   [^clojerl.String s re f]
@@ -167,7 +167,7 @@ Design notes for clojure.string:
               (instance? erlang.io.StringWriter replacement))
         (replace match s (str replacement) opts)
         (replace-first-by s match replacement))
-      :else (throw (str "Invalid match arg: " match)))))
+      :else (throw (clojerl.BadArgumentError. (str "Invalid match arg: " match))))))
 
 (defn ^clojerl.String join
   "Returns a string of all elements in coll, as returned by (seq coll),

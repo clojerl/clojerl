@@ -15,7 +15,7 @@
 
 (defmacro ^:private fail
   [msg]
-  `(throw ~msg))
+  `(throw (clojerl.Error. ~msg)))
 
 (defmacro ^:private verify
   ([test msg] `(when-not ~test (fail ~msg)))

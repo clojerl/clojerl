@@ -51,7 +51,11 @@
        ).
 
 -define(ERROR(Msg), ?ERROR(Msg, ?NIL)).
--define(ERROR(Msg, Loc), erlang:error(clj_utils:format_error(Msg, Loc))).
+-define( ERROR(Msg, Loc)
+       , erlang:error(
+           'clojerl.Error':?CONSTRUCTOR(clj_utils:format_error(Msg, Loc))
+          )
+       ).
 
 -define(ERROR_WHEN(Pred, Msg), ?ERROR_WHEN(Pred, Msg, ?NIL)).
 -define( ERROR_WHEN(Pred, Msg, Loc)

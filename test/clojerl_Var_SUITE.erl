@@ -272,8 +272,9 @@ find(_Config) ->
   ?NIL = 'clojerl.Var':find(FooQualifiedSym),
 
   ok = try 'clojerl.Var':find(clj_rt:gensym()), error
-       catch error:Message1 ->
-           match = re:run( Message1
+       catch error:Error1 ->
+           Msg1 = clj_rt:str(Error1),
+           match = re:run( Msg1
                          , <<"Symbol must be namespace-qualified">>
                          , [{capture, none}]
                          ),
@@ -282,8 +283,9 @@ find(_Config) ->
 
   FooBarQualifiedSym = clj_rt:symbol(<<"foo">>, <<"bar">>),
   ok = try 'clojerl.Var':find(FooBarQualifiedSym), error
-       catch error:Message2 ->
-           match = re:run( Message2
+       catch error:Error2 ->
+           Msg2 = clj_rt:str(Error2),
+           match = re:run( Msg2
                          , <<"No such namespace: foo">>
                          , [{capture, none}]
                          ),

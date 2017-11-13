@@ -142,9 +142,9 @@
 (extend-type nil
   IOFactory
   (make-reader [x opts]
-    (throw (str "Cannot open <" (pr-str x) "> as a Reader.")))
+    (throw (clojerl.BadArgumentError. (str "Cannot open <" (pr-str x) "> as a Reader."))))
   (make-writer [x opts]
-    (throw (str "Cannot open <" (pr-str x) "> as a Writer."))))
+    (throw (clojerl.BadArgumentError. (str "Cannot open <" (pr-str x) "> as a Writer.")))))
 
 (defmulti
   ^{:doc "Internal helper for copy"
@@ -186,7 +186,7 @@
   (let [^erlang.io.File f (as-file x)
         path (.path f)]
     (if (= :absolute (filename/pathtype path))
-      (throw (str f " is not a relative path"))
+      (throw (clojerl.BadArgumentError. (str f " is not a relative path")))
       path)))
 
 (defn ^File file
@@ -213,7 +213,7 @@
   [f & [silently]]
   (or (.delete ^erlang.io.File (as-file f))
       silently
-      (throw (str "Couldn't delete " f))))
+      (throw (clojerl.IOError. (str "Couldn't delete " f)))))
 
 (defn make-parents
   "Given the same arg(s) as for file, creates all parent directories of

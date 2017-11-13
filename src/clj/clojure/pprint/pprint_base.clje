@@ -285,8 +285,8 @@ clojure.pprint.dispatch.clj."
 
 (defn- check-enumerated-arg [arg choices]
   (if-not (choices arg)
-          (throw
-           (str "Bad argument: " arg ". It must be one of " choices))))
+    (throw (clojerl.BadArgumentError.
+            (str "Bad argument: " arg ". It must be one of " choices)))))
 
 (defn- level-exceeded []
   (and *print-level* (>= *current-level* *print-level*)))
@@ -360,7 +360,7 @@ THIS FUNCTION IS NOT YET IMPLEMENTED."
   {:added "1.2"}
   [kind colnum colinc]
   (check-enumerated-arg kind #{:line :section :line-relative :section-relative})
-  (throw "pprint-tab is not yet implemented"))
+  (throw (clojerl.Error. "pprint-tab is not yet implemented")))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

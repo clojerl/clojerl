@@ -115,27 +115,35 @@ constants(_Config) ->
 def(_Config) ->
   ct:comment("Few arguments"),
   ok = try analyze_one(<<"(def)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Too few arguments to def">> ->
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Too few arguments to def">> = Msg1,
            ok
        end,
 
   ct:comment("Many arguments"),
   ok = try analyze_one(<<"(def x \"doc\" 1 2)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Too many arguments to def">> ->
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           <<?NO_SOURCE, ":1:1: Too many arguments to def">> = Msg2,
            ok
        end,
 
   ct:comment("Not a symbol"),
   ok = try analyze_one(<<"(def :x \"doc\" 1)">>)
-       catch _:<<?NO_SOURCE, ":1:1: First argument to def must be a symbol">> ->
+       catch error:Error3 ->
+           Msg3 = 'clojerl.IError':message(Error3),
+           <<?NO_SOURCE, ":1:1: First argument to def must be a symbol">> = Msg3,
            ok
        end,
 
   ct:comment("Qualified var that doesn't exist"),
   ok = try analyze_one(<<"(def x/y)">>)
        catch
-         _:<<?NO_SOURCE, ":1:1: Can't refer to "
-             "qualified var that doesn't exist: x/y">> ->
+         _:Error4 ->
+           Msg4 = 'clojerl.IError':message(Error4),
+           <<?NO_SOURCE, ":1:1: Can't refer to "
+             "qualified var that doesn't exist: x/y">> = Msg4,
            ok
        end,
 
@@ -222,9 +230,9 @@ quote(_Config) ->
 
   ct:comment("More than one arg to quote"),
   ok = try analyze_all(<<"(quote 1 2 3)">>)
-       catch _:Reason ->
-           <<?NO_SOURCE, ":1:1: Wrong number "
-             "of args to quote, had: 3">> = Reason,
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Wrong number of args to quote, had: 3">> = Msg1,
            ok
        end,
 
@@ -377,23 +385,27 @@ fn(_Config) ->
 
   ct:comment("fn with two variadic methods"),
   ok = try analyze_one(<<"(fn* ([a b & _] b) ([x & z] x z))">>), error
-       catch _:Reason ->
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
            <<?NO_SOURCE, ":1:1: Can't have more than"
-             " 1 variadic overload">> = Reason,
+             " 1 variadic overload">> = Msg1,
            ok
        end,
 
   ct:comment("fn with fixed arity with more args than variadic"),
   ok = try analyze_one(<<"(fn* ([a b c] a) ([x & z] x z))">>), error
-       catch _:Reason2 ->
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
            <<?NO_SOURCE, ":1:1: Can't have fixed arity overload "
-             "with more params than variadic overload">> = Reason2,
+             "with more params than variadic overload">> = Msg2,
            ok
        end,
+
   ok = try analyze_one(<<"(fn* ([a b] a) ([x & z] x z))">>), error
-       catch _:Reason3 ->
+       catch error:Error3 ->
+           Msg3 = 'clojerl.IError':message(Error3),
            <<?NO_SOURCE, ":1:1: Can't have fixed arity overload "
-             "with more params than variadic overload">> = Reason3,
+             "with more params than variadic overload">> = Msg3,
            ok
        end,
 
@@ -407,8 +419,10 @@ fn(_Config) ->
 
   ct:comment("binding in fn should not leak out of fn* scope"),
   ok = try analyze_all(<<"(fn* ([zz y] zz y)) zz">>), error
-       catch _:<<?NO_SOURCE, ":?:?: Unable to resolve symbol"
-                 " 'zz' in this context">> ->
+       catch error:Error4 ->
+           Msg4 = 'clojerl.IError':message(Error4),
+           <<?NO_SOURCE, ":?:?: Unable to resolve symbol"
+             " 'zz' in this context">> = Msg4,
            ok
        end,
 
@@ -458,13 +472,15 @@ do(_Config) ->
 'if'(_Config) ->
   ct:comment("if with no args"),
   ok = try analyze_one(<<"(if)">>), error
-       catch _:Reason ->
-           <<?NO_SOURCE, ":1:1: Wrong number of args to if, had: 0">> = Reason,
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Wrong number of args to if, had: 0">> = Msg1,
            ok
        end,
   ok = try analyze_one(<<"(if true)">>), error
-       catch _:Reason2 ->
-           <<?NO_SOURCE, ":1:1: Wrong number of args to if, had: 1">> = Reason2,
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           <<?NO_SOURCE, ":1:1: Wrong number of args to if, had: 1">> = Msg2,
            ok
        end,
 
@@ -606,24 +622,28 @@ do(_Config) ->
 
   ct:comment("let with bindings shuold throw unresolved for z symbol"),
   ok = try analyze_one(<<"(let* [x 1 y 2] z)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Unable to resolve "
-                 "symbol 'z' in this context">> ->
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Unable to resolve "
+                 "symbol 'z' in this context">> = Msg1,
            ok
        end,
 
   ct:comment("let with no binding vector"),
   ok = try analyze_one(<<"(let*)">>)
-       catch _:Reason2 ->
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
            <<?NO_SOURCE, ":1:1: let* requires a vector for its bindings, "
-             "had: clojerl.Nil">> = Reason2,
+             "had: clojerl.Nil">> = Msg2,
            ok
        end,
 
   ct:comment("let with odd number of forms in binding vector"),
   ok = try analyze_one(<<"(let* [x 2 y])">>)
-       catch _:Reason3 ->
+       catch _:Error3 ->
+           Msg3 = 'clojerl.IError':message(Error3),
            <<?NO_SOURCE, ":1:1: let* requires an even number of "
-             "forms in binding vector, had: 3">> = Reason3,
+             "forms in binding vector, had: 3">> = Msg3,
            ok
        end,
 
@@ -720,15 +740,18 @@ loop(_Config) ->
 invoke(_Config) ->
   ct:comment("Can't call nil"),
   ok = try analyze_one(<<"(nil)">>)
-       catch _:Reason ->
-           <<?NO_SOURCE, ":1:1: Can't call nil">> = Reason,
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Can't call nil">> = Msg1,
            ok
        end,
 
   ct:comment("Call undefined symbol"),
   ok = try analyze_one(<<"(bla)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Unable to resolve "
-                 "symbol 'bla' in this context">> ->
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           <<?NO_SOURCE, ":1:1: Unable to resolve "
+             "symbol 'bla' in this context">> = Msg2,
            ok
        end,
 
@@ -765,8 +788,10 @@ invoke(_Config) ->
 symbol(_Config) ->
   ct:comment("Unresolved symbol"),
   ok = try analyze_one(<<"hello-world">>), error
-       catch _:<<?NO_SOURCE, ":?:?: Unable to resolve symbol "
-                 "'hello-world' in this context">> ->
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":?:?: Unable to resolve symbol "
+             "'hello-world' in this context">> = Msg1,
            ok
        end,
 
@@ -828,17 +853,23 @@ throw(_Config) ->
 
   ct:comment("Throw with any other amount of arguments fails"),
   ok = try analyze_one(<<"(throw)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 0">> ->
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 0">> = Msg1,
            ok
        end,
 
   ok = try analyze_one(<<"(throw :a :b)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 2">> ->
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           <<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 2">> = Msg2,
            ok
        end,
 
   ok = try analyze_one(<<"(throw :a :b :c :d)">>)
-       catch _:<<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 4">> ->
+       catch error:Error3 ->
+           Msg3 = 'clojerl.IError':message(Error3),
+           <<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 4">> = Msg3,
            ok
        end,
 
@@ -1252,15 +1283,17 @@ dot(_Config) ->
 
   ct:comment("Require at least 3 forms"),
   ok = try analyze_one(<<"(. a)">>), error
-       catch _:Message ->
-           {match, _} = re:run(Message, "Malformed member expression"),
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           {match, _} = re:run(Msg1, "Malformed member expression"),
            ok
        end,
 
   ct:comment("Require only 3 args when the third is a list"),
   ok = try analyze_one(<<"(. clojerl.String (foo) bar)">>), error
-       catch _:Message2 ->
-           {match, _} = re:run(Message2, "expected single list"),
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           {match, _} = re:run(Msg2, "expected single list"),
            ok
        end,
 
@@ -1308,15 +1341,17 @@ dot(_Config) ->
 
   ct:comment("No forms allowed after 'after'"),
   ok = try analyze_one(<<"(receive* (after 0 1) 1)">>), error
-       catch _:Message ->
-           {match, _} = re:run(Message, "Only one after"),
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           {match, _} = re:run(Msg1, "Only one after"),
            ok
        end,
 
   ct:comment("Uneven number of forms for clauses"),
   ok = try analyze_one(<<"(receive* 1 :one 2 (after 0 1))">>), error
-       catch _:Message2 ->
-           {match, _} = re:run(Message2, "Expected an even number"),
+       catch _:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           {match, _} = re:run(Msg2, "Expected an even number"),
            ok
        end,
 

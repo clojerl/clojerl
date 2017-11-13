@@ -206,7 +206,8 @@
        (if kvs
          (if (next kvs)
            (recur ret (first kvs) (second kvs) (nnext kvs))
-           (throw "assoc expects even number of arguments after map/vector, found odd number"))
+           (throw (clojerl.BadArgumentError.
+                   "assoc expects even number of arguments after map/vector, found odd number")))
          ret)))))
 
 ;;;;;;;;;;;;;;;;; metadata ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -280,7 +281,7 @@
   (fn* [fn-sym &form &env name fdecl]
        (if (symbol? name)
          nil
-         (throw "First argument to defn must be a symbol"))
+         (throw (clojerl.BadArgumentError. "First argument to defn must be a symbol")))
        (let [m     (if (string? (first fdecl))
                      {:doc (first fdecl)}
                      {})
@@ -542,7 +543,7 @@
     (list 'if (first clauses)
           (if (next clauses)
             (second clauses)
-            (throw "cond requires an even number of forms"))
+            (throw (clojerl.BadArgumentError. "cond requires an even number of forms")))
           (cons 'clojure.core/cond (nnext clauses)))))
 
 (defn keyword
@@ -1048,7 +1049,7 @@
   {:added "1.0"}
    [n] (if (integer? n)
         (zero? (bit-and n 1))
-        (throw (str "Argument must be an integer: " n))))
+        (throw (clojerl.BadArgumentError. (str "Argument must be an integer: " n)))))
 
 (defn odd?
   "Returns true if n is odd, throws an exception if n is not an integer"
@@ -1264,9 +1265,10 @@
   [options & valid-keys]
   (when (seq (apply disj (apply hash-set (keys options)) valid-keys))
     (throw
+     (clojerl.BadArgumentError.
       (apply str "Only these options are valid: "
              (first valid-keys)
-             (map #(str ", " %) (rest valid-keys))))))
+             (map #(str ", " %) (rest valid-keys)))))))
 
 ;;multimethods
 (def global-hierarchy)
@@ -1318,7 +1320,7 @@
                       (conj (meta mm-name) m)
                       m)]
     (when (= (count options) 1)
-      (throw "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))
+      (throw (clojerl.Error. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")))
     (let [options   (apply hash-map options)
           default   (get options :default :default)
           hierarchy (get options :hierarchy #'global-hierarchy)]
@@ -1331,9 +1333,9 @@
              (let [val# (apply ~dispatch-fn args#)
                    f#   (clojerl.MultiFn/get_method ~mm-name val# ~default ~hierarchy)]
                (when (nil? f#)
-                 (throw (str "No multimethod defined for dispatch value " val#
-                             " in " '~mm-name
-                             )))
+                 (throw
+                  (clojerl.Error. (str "No multimethod defined for dispatch value " val#
+                                       " in " '~mm-name))))
                (apply f# args#))))))))
 
 (defmacro defmethod
@@ -1392,7 +1394,8 @@
 (defmacro ^{:private true} assert-args
   [& pairs]
   `(do (when-not ~(first pairs)
-         (throw (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form)))))
+         (throw (clojerl.BadArgumentError.
+                 (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form))))))
      ~(let [more (nnext pairs)]
         (when more
           (list* `assert-args more)))))
@@ -1886,7 +1889,7 @@
   ([ref]
    (if (satisfies? clojerl.IDeref ref)
      (clj_rt/deref ref)
-     (throw (str "unimplemented deref for type " (clj_rt/type ref)))
+     (throw (clojerl.Error. (str "unimplemented deref for type " (clj_rt/type ref))))
      #_(deref-future ref)))
   ([ref timeout-ms timeout-val]
    (throw "unimplemented timeout for deref")
@@ -2884,7 +2887,7 @@
   [x]
   (if (erlang/is_number x)
     x
-    (throw "Not a number")))
+    (throw (clojerl.BadArgumentError. "Not a number"))))
 
 (defn float
   "Coerce to float"
@@ -3084,7 +3087,7 @@
                                 (with-open ~(subvec bindings 2) ~@body)
                                 (finally
                                   (erlang.io.Closeable/close ~(bindings 0)))))
-    :else (throw "with-open only allows Symbols in bindings")))
+    :else (throw (clojerl.BadArgumentError. "with-open only allows Symbols in bindings"))))
 
 (defmacro doto
   "Evaluates x then calls all of the methods and functions with the
@@ -3217,7 +3220,7 @@
   [x]
   (if-not (symbol? x)
     x
-    (or (find-ns x) (throw (str "No namespace: " x " found")))))
+    (or (find-ns x) (throw (clojerl.Error. (str "No namespace: " x " found"))))))
 
 (defn ns-name
   "Returns the name of the namespace, a symbol."
@@ -3284,7 +3287,7 @@
   clashes. Use :use in the ns macro in preference to calling this directly."
   {:added "1.0"}
   [ns-sym & filters]
-  (let [ns (or (find-ns ns-sym) (throw (str "No namespace: " ns-sym)))
+  (let [ns (or (find-ns ns-sym) (throw (clojerl.Error. (str "No namespace: " ns-sym))))
         fs (apply hash-map filters)
         nspublics (ns-publics ns)
         rename (or (:rename fs) {})
@@ -3293,7 +3296,7 @@
                 (map symbol (keys nspublics))
                 (or (:refer fs) (:only fs) (map symbol (keys nspublics))))]
     (when (and to-do (not (satisfies? clojerl.ISequential to-do)))
-      (throw ":only/:refer value must be a sequential collection of symbols"))
+      (throw (clojerl.Error. ":only/:refer value must be a sequential collection of symbols")))
     ;; keys in maps are strings to avoid be able to use the underlying map
     ;; implementation. We convert all to-do's to strings since some filters
     ;; could contains symbols
@@ -3301,9 +3304,9 @@
       (when-not (exclude sym)
         (let [v   (nspublics (name sym))]
           (when-not v
-            (throw (if (get (ns-interns ns) (name sym))
-                     (str sym " is not public")
-                     (str sym " does not exist"))))
+            (throw (clojerl.IllegalAccessError. (if (get (ns-interns ns) (name sym))
+                                                  (str sym " is not public")
+                                                  (str sym " does not exist")))))
           (.refer *ns* (or (rename sym) sym) v))))))
 
 (defn ns-refers
@@ -3452,7 +3455,7 @@
                                                     true)
                                (= firstb :as) (pb ret (second bs) gvec-orig)
                                :else (if seen-rest?
-                                       (throw "Unsupported binding form, only :as can follow & parameter")
+                                       (throw (clojerl.Error. "Unsupported binding form, only :as can follow & parameter"))
                                        (recur (if (zero? n)
                                                 (pb (-> ret
                                                         (conj gvec)
@@ -3503,7 +3506,7 @@
                  (symbol? b) (-> bvec (conj b) (conj v))
                  (vector? b) (pvec bvec b v)
                  (map? b) (pmap bvec b v)
-                 :else (throw (str "Unsupported binding form: " b)))))
+                 :else (throw (clojerl.Error. (str "Unsupported binding form: " b))))))
         process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
     (if (every? symbol? (map first bents))
       bindings
@@ -3558,23 +3561,25 @@
                (if (seq? (first sigs))
                  sigs
                  ;; Assume single arity syntax
-                 (throw (if (seq sigs)
-                          (str "Parameter declaration "
-                               (first sigs)
-                               " should be a vector")
-                          (str "Parameter declaration missing")))))
+                 (throw (clojerl.BadArgumentError.
+                         (if (seq sigs)
+                           (str "Parameter declaration "
+                                (first sigs)
+                                " should be a vector")
+                           (str "Parameter declaration missing"))))))
         psig (fn* [sig]
                   ;; Ensure correct type before destructuring sig
                   (when (not (seq? sig))
-                    (throw (str "Invalid signature \"" sig
-                                "\" should be a list")))
+                    (throw (clojerl.BadArgumentError. (str "Invalid signature \"" sig
+                                                           "\" should be a list"))))
                   (let [[params & body] sig
                         _ (when (not (vector? params))
-                            (throw (if (seq? (first sigs))
-                                     (str "Parameter declaration " params
-                                          " should be a vector")
-                                     (str "Invalid signature \"" sig
-                                          "\" should be a list"))))
+                            (throw (clojerl.BadArgumentError.
+                                    (if (seq? (first sigs))
+                                      (str "Parameter declaration " params
+                                           " should be a vector")
+                                      (str "Invalid signature \"" sig
+                                           "\" should be a list")))))
                         conds (when (and (next body) (map? (first body)))
                                 (first body))
                         body (if conds (next body) body)
@@ -3674,7 +3679,7 @@
                                 (conj (pop groups) (conj (peek groups) [k v]))
                                 (conj groups [k v])))
                             [] (partition 2 seq-exprs)))
-        err (fn [& msg] (throw (apply str msg)))
+        err (fn [& msg] (throw (clojerl.BadArgumentError. (apply str msg))))
         emit-bind (fn emit-bind [[[bind expr & mod-pairs]
                                   & [[_ next-expr] :as next-groups]]]
                     (let [giter (gensym "iter__")
@@ -3838,11 +3843,11 @@
   ([x]
    (when *assert*
      `(when-not ~x
-        (throw (str "Assert failed: " (pr-str '~x))))))
+        (throw (clojerl.AssertionError. (str "Assert failed: " (pr-str '~x)))))))
   ([x message]
    (when *assert*
      `(when-not ~x
-        (throw (str "Assert failed: " ~message "\n" (pr-str '~x)))))))
+        (throw (clojerl.AssertionError. (str "Assert failed: " ~message "\n" (pr-str '~x))))))))
 
 (defn test
   "test [v] finds fn at key :test in var metadata and calls it,
@@ -3984,7 +3989,7 @@
         (if (== (count matches) 1)
           (first matches)
           matches)))
-    (throw "re-matches must match against a string.")))
+    (throw (clojerl.BadArgumentError. "re-matches must match against a string."))))
 
 (defn max-key
   "Returns the x for which (k x), a number, is greatest."
@@ -4234,7 +4239,7 @@
   current value plus any args"
   {:added "1.0"}
   [v f & args]
-  (throw "unsupported alter-var-root"))
+  (throw (clojerl.Error. "unsupported alter-var-root")))
 
 (defn bound?
   "Returns true if all of the vars provided as arguments have any bound value, root or thread-local.
@@ -4333,9 +4338,9 @@
      (or
       (when-not (contains? (tp tag) parent)
         (when (contains? (ta tag) parent)
-          (throw (print-str tag "already has" parent "as ancestor")))
+          (throw (clojerl.Error. (print-str tag "already has" parent "as ancestor"))))
         (when (contains? (ta parent) tag)
-          (throw (print-str "Cyclic derivation:" parent "has" tag "as ancestor")))
+          (throw (clojerl.Error. (print-str "Cyclic derivation:" parent "has" tag "as ancestor"))))
         {:parents (assoc (:parents h) tag (conj (get tp tag #{}) parent))
          :ancestors (tf (:ancestors h) tag td parent ta)
          :descendants (tf (:descendants h) parent ta tag td)})
@@ -4988,7 +4993,7 @@
                      (split-at (if (= :>> (second args)) 3 2) args)
                      n (count clause)]
                  (cond
-                   (= 0 n) `(throw (str "No matching clause: " ~expr))
+                   (= 0 n) `(throw (clojerl.BadArgumentError. (str "No matching clause: " ~expr)))
                    (= 1 n) a
                    (= 2 n) `(if (~pred ~a ~expr)
                               ~b
@@ -5869,22 +5874,25 @@
 (defn- ^{:dynamic true} assert-valid-fdecl
   "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
   [fdecl]
-  (when (empty? fdecl) (throw "Parameter declaration missing"))
+  (when (empty? fdecl)
+    (throw (clojerl.BadArgumentError. "Parameter declaration missing")))
   (let [argdecls (map
                    #(if (seq? %)
                       (first %)
-                      (throw (if (seq? (first fdecl))
-                               (str "Invalid signature \""
-                                    %
-                                    "\" should be a list")
-                               (str "Parameter declaration \""
-                                    %
-                                    "\" should be a vector"))))
+                      (throw (clojerl.BadArgumentError.
+                              (if (seq? (first fdecl))
+                                (str "Invalid signature \""
+                                     %
+                                     "\" should be a list")
+                                (str "Parameter declaration \""
+                                     %
+                                     "\" should be a vector")))))
                    fdecl)
         bad-args (seq (remove #(vector? %) argdecls))]
     (when bad-args
-      (throw (str "Parameter declaration \"" (first bad-args)
-                  "\" should be a vector")))))
+      (throw (clojerl.BadArgumentError.
+              (str "Parameter declaration \"" (first bad-args)
+                   "\" should be a vector"))))))
 
 (defn with-redefs-fn
   "Temporarily redefines Vars during a call to func.  Each val of

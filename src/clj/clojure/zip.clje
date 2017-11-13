@@ -78,7 +78,7 @@
   [loc]
     (if (branch? loc)
       ((:zip/children (meta loc)) (node loc))
-      (throw "called children on a leaf node")))
+      (throw (clojerl.Error. "called children on a leaf node"))))
 
 (defn make-node
   "Returns a new branch node, given an existing node and new
@@ -187,7 +187,7 @@
   [loc item]
     (let [[node {l :l :as path}] loc]
       (if (nil? path)
-        (throw "Insert at top")
+        (throw (clojerl.Error. "Insert at top"))
         (with-meta [node (assoc path :l (conj l item) :changed? true)] (meta loc)))))
 
 (defn insert-right
@@ -197,7 +197,7 @@
   [loc item]
     (let [[node {r :r :as path}] loc]
       (if (nil? path)
-        (throw "Insert at top")
+        (throw (clojerl.Error. "Insert at top"))
         (with-meta [node (assoc path :r (cons item r) :changed? true)] (meta loc)))))
 
 (defn replace
@@ -268,7 +268,7 @@
   [loc]
     (let [[node {l :l, ppath :ppath, pnodes :pnodes, rs :r, :as path}] loc]
       (if (nil? path)
-        (throw "Remove at top")
+        (throw (clojerl.Error. "Remove at top"))
         (if (pos? (count l))
           (loop [loc (with-meta [(peek l) (assoc path :l (pop l) :changed? true)] (meta loc))]
             (if-let [child (and (branch? loc) (down loc))]
