@@ -793,7 +793,11 @@ fn(ReadFun) ->
 
   ct:comment("Nested #()"),
   ok = try ReadFun(<<"#(do #(%))">>)
-       catch _:<<?NO_SOURCE, ":1:7: Nested #()s are not allowed">> -> ok end,
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:7: Nested #()s are not allowed">> = Msg1,
+           ok
+       end,
 
   {comments, ""}.
 
@@ -838,8 +842,10 @@ arg(ReadFun, ReadAllFun) ->
 
   ct:comment("Invalid char after %"),
   ok = try ReadFun(<<"%a">>)
-       catch _:<<?NO_SOURCE, ":1:2: Arg literal must be %, %& or %integer">> ->
-         ok
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:2: Arg literal must be %, %& or %integer">> = Msg1,
+           ok
        end,
 
   erlang:erase(arg_env),
@@ -898,7 +904,10 @@ unreadable_form(Config) when is_list(Config) ->
 unreadable_form(ReadFun) ->
   ct:comment("Read unreadable"),
   ok = try ReadFun(<<"#<1>">>)
-       catch _:<<?NO_SOURCE, ":1:1: Unreadable form">> -> ok
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:1: Unreadable form">> = Msg1,
+           ok
        end,
 
   {comments, ""}.
@@ -994,48 +1003,70 @@ discard(ReadFun, ReadAllFun) ->
 
   ct:comment("EOF while reading cond"),
   ok = try ReadFun2(<<"#?">>, AllowOpts)
-       catch _:<<?NO_SOURCE, ":1:3: EOF while reading cond">> -> ok
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:3: EOF while reading cond">> = Msg1,
+           ok
        end,
 
   ct:comment("Reader conditional not allowed"),
   ok = try ReadFun(<<"#?(:clj :whatever :clr :whateverrrr)">>)
-       catch _:<<?NO_SOURCE, ":1:3: Conditional read not allowed">> -> ok
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           <<?NO_SOURCE, ":1:3: Conditional read not allowed">> = Msg2,
+           ok
        end,
 
   ct:comment("No list"),
   ok = try ReadFun2(<<"#?:clj">>, AllowOpts)
-       catch _:<<?NO_SOURCE, ":1:3: read-cond body must be a list">> -> ok
+       catch error:Error3 ->
+           Msg3 = 'clojerl.IError':message(Error3),
+           <<?NO_SOURCE, ":1:3: read-cond body must be a list">> = Msg3,
+           ok
        end,
 
   ct:comment("EOF: no feature matched"),
   ok = try ReadFun2(<<"#?(:clj :whatever :clr :whateverrrr)">>, AllowOpts)
-       catch _:<<?NO_SOURCE, ":1:37: EOF">> -> ok
+       catch error:Error4 ->
+           Msg4 = 'clojerl.IError':message(Error4),
+           <<?NO_SOURCE, ":1:37: EOF">> = Msg4,
+           ok
        end,
 
   ct:comment("Uneven number of forms"),
   ok = try ReadFun2(<<"#?(:one :two :three)">>, AllowOpts)
-       catch
-         _:<<?NO_SOURCE, ":1:21: read-cond requires an "
-             "even number of forms">> ->
+       catch error:Error5 ->
+           Msg5 = 'clojerl.IError':message(Error5),
+           <<?NO_SOURCE, ":1:21: read-cond requires an "
+             "even number of forms">> = Msg5,
            ok
        end,
 
   ct:comment("Splice at the top level"),
   ok = try ReadFun2(<<"#?@(:clje [:two])">>, AllowOpts)
-       catch _:<<?NO_SOURCE, ":1:5: Reader conditional splicing not allowed "
-                 "at the top level">> -> ok
+       catch error:Error6 ->
+           Msg6 = 'clojerl.IError':message(Error6),
+           <<?NO_SOURCE, ":1:5: Reader conditional splicing not allowed "
+             "at the top level">> = Msg6,
+           ok
        end,
 
   ct:comment("Splice in list but not sequential"),
   ok = try ReadFun2(<<"[#?@(:clr :a :cljs :b) :c :d]">>,
                            AllowClrFeatureOpts)
-       catch _:<<?NO_SOURCE, ":1:13: Spliced form list in read-cond-splicing "
-                  "must extend clojerl.ISequential">> -> ok
+       catch error:Error7 ->
+           Msg7 = 'clojerl.IError':message(Error7),
+           <<?NO_SOURCE, ":1:13: Spliced form list in read-cond-splicing "
+             "must extend clojerl.ISequential">> = Msg7,
+           ok
        end,
 
   ct:comment("Feature is not a keyword"),
   ok = try ReadFun2(<<"#?(1 2) :hello">>, AllowOpts)
-       catch _:<<?NO_SOURCE, ":1:4: Feature should be a keyword">> -> ok
+       catch error:Error8 ->
+           Msg8 = 'clojerl.IError':message(Error8),
+           <<?NO_SOURCE, ":1:4: Feature should be a keyword">> = Msg8,
+           ok
        end,
 
   {comments, ""}.
@@ -1192,11 +1223,19 @@ tagged(ReadFun) ->
 
   ct:comment("Don't provide a symbol"),
   ok = try ReadFun(<<"#1">>), error
-       catch _:<<?NO_SOURCE, ":1:2: Reader tag must be a symbol">> -> ok end,
+       catch error:Error1 ->
+           Msg1 = 'clojerl.IError':message(Error1),
+           <<?NO_SOURCE, ":1:2: Reader tag must be a symbol">> = Msg1,
+           ok
+       end,
 
   ct:comment("Provide a missing reader"),
   ok = try ReadFun(<<"#bla 1">>), error
-       catch _:<<?NO_SOURCE, ":1:2: No reader function for tag bla">> -> ok end,
+       catch error:Error2 ->
+           Msg2 = 'clojerl.IError':message(Error2),
+           <<?NO_SOURCE, ":1:2: No reader function for tag bla">> = Msg2,
+           ok
+       end,
 
   {comments, ""}.
 

@@ -41,7 +41,7 @@
 
 (try
   (throw #erl[:invalid :hello])
-  (catch :throw #erl[x reason]
+  (catch :error #erl[x reason]
     (let* [:invalid x :hello reason])))
 
 ;; receive*

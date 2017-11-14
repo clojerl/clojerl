@@ -63,9 +63,10 @@ fields(_Config) ->
   cause       = 'clojerl.ExceptionInfo':cause(ExInfo2),
 
   ok = try 'clojerl.ExceptionInfo':?CONSTRUCTOR(<<"hello">>, ?NIL), error
-       catch error:Reason ->
+       catch error:Error ->
+           Msg        = clj_rt:str(Error),
            Regex      = "Additional data must be non-nil",
-           {match, _} = re:run(Reason, Regex),
+           {match, _} = re:run(Msg, Regex),
            ok
        end,
 

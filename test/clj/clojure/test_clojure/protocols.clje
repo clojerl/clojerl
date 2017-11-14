@@ -95,11 +95,11 @@
     (is (= ["bar" "baz" "baz" "foo" "with-quux"] (method-names :clojure.test-clojure.protocols.examples))))
   (testing "error conditions checked when defining protocols"
     (is (thrown-with-msg?
-         :throw
+         :error
          #"Definition of function m in protocol badprotdef must take at least one arg."
          (eval '(defprotocol badprotdef (m [])))))
     (is (thrown-with-msg?
-         :throw
+         :error
          #"Function m in protocol badprotdef was redefined. Specify all arities in single definition."
          (eval '(defprotocol badprotdef (m [this arg]) (m [this arg1 arg2]))))))
   (testing "you can redefine a protocol with different methods"
@@ -393,8 +393,8 @@
          (TypeToTestHugeFactories.  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)
          (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))))
   (testing "that the generated factory checks arity constraints"
-    (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25)))
-    (is (thrown? :throw (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
+    (is (thrown? :error (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25)))
+    (is (thrown? :error (->TypeToTestHugeFactories 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
 
 (deftest test-ctor-literals
   (testing "that constructor literals work for deftypes too"

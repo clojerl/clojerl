@@ -899,7 +899,7 @@ ast(#{op := throw} = Expr, State) ->
   {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
 
   Ann  = ann_from(Env),
-  Ast  = call_mfa(erlang, throw, [Exception], Ann),
+  Ast  = call_mfa(erlang, error, [Exception], Ann),
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% try
@@ -983,7 +983,12 @@ ast(#{op := 'catch'} = Expr, State0) ->
    } = Expr,
 
   Ann                   = ann_from(Env),
-  {ClassAst, State1}    = pop_ast(ast(ErrTypeExpr, State0)),
+  {ClassAst, State1}    = case maps:get(op, ErrTypeExpr) of
+                            binding -> pop_ast(ast(ErrTypeExpr, State0));
+                            type    ->
+                              ErrorTypeAst = cerl:ann_abstract(Ann, error),
+                              {ErrorTypeAst, State0}
+                          end,
   {PatternAst0, State2} = pop_ast(ast(PatternExpr, State1)),
   {Guard0, State3}      = pop_ast(ast(GuardExpr, State2)),
   {Body, State4}        = pop_ast(ast(BodyExpr, State3)),
@@ -992,8 +997,7 @@ ast(#{op := 'catch'} = Expr, State0) ->
   VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
   Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
 
-  Ast    = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
-
+  Ast      = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
   push_ast(Ast, State4);
 %%------------------------------------------------------------------------------
 %% receive

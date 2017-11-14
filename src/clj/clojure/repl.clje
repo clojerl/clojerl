@@ -175,7 +175,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
           (let [read-opts  (if (.ends_with filepath "cljc")
                              {:read-cond :allow} {})]
             (if (= :unknown *read-eval*)
-              (throw "Unable to read source while *read-eval* is :unknown.")
+              (throw (clojerl.Error. "Unable to read source while *read-eval* is :unknown."))
               (read read-opts (PushbackReaderStringWriter. pbr text)))
             (str text)))))))
 

@@ -112,7 +112,7 @@ beginning of aseq"
   (cond
     (number? c) c
     (and (string? c) (== (.length ^clojerl.String c) 1)) (first (unicode/characters_to_list c :utf8))
-    :else (throw "Argument to char-code must be a single-char string or a number")))
+    :else (throw (clojerl.BadArgumentError. "Argument to char-code must be a single-char string or a number"))))
 
 (defn- print-char [c]
   (.write ^erlang.io.IWriter *out*

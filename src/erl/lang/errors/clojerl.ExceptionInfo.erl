@@ -30,11 +30,11 @@
   ?CONSTRUCTOR(Message, Data, ?NIL).
 
 -spec ?CONSTRUCTOR(binary(), any(), any()) -> type().
+?CONSTRUCTOR(_Message, ?NIL, _Cause) ->
+  ErrorMessage = <<"Additional data must be non-nil.">>,
+  erlang:error('clojerl.BadArgumentError':?CONSTRUCTOR(ErrorMessage));
 ?CONSTRUCTOR(Message, Data, Cause) when is_binary(Message) ->
-  ?ERROR_WHEN( Data =:= ?NIL
-             , <<"Additional data must be non-nil.">>
-             ),
-  #{?TYPE    => ?M
+  #{ ?TYPE   => ?M
    , message => Message
    , data    => Data
    , cause   => Cause
@@ -74,6 +74,5 @@ hash(#{?TYPE := ?M, data := Data}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M, message := Msg, data := Data}) ->
-  TypeBin = erlang:atom_to_binary(?MODULE, utf8),
   DataBin = clj_rt:str(Data),
-  <<TypeBin/binary, ": ", Msg/binary, " ", DataBin/binary>>.
+  clj_utils:error_str(?M, <<Msg/binary, " ", DataBin/binary>>).

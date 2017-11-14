@@ -45,7 +45,7 @@
    ~@body
    (report {:type :fail, :message ~msg, :expected '~form, :actual nil})
    (catch ~exception-type t#
-     (if (re-find ~msg-re t#)
+     (if (re-find ~msg-re (str t#))
        (report {:type :pass, :message ~msg,
                 :expected '~form, :actual t#})
        (report {:type :fail, :message ~msg,

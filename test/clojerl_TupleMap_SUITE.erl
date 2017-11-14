@@ -52,8 +52,9 @@ new(_Config) ->
   Map3   = 'clojerl.TupleMap':create_with_check(Items1),
 
   ok = try 'clojerl.TupleMap':create_with_check([a, 1, b, 2, a, 2]), error
-       catch _:Reason ->
-           {match, _} = re:run(Reason, "Duplicate key"),
+       catch error:Error ->
+           Msg = clj_rt:str(Error),
+           {match, _} = re:run(Msg, "Duplicate key"),
            ok
        end,
 
