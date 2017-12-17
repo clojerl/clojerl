@@ -62,13 +62,14 @@ ast(#{op := binding} = Expr, State) ->
   ?DEBUG(binding),
   #{pattern := PatternExpr} = Expr,
   ast(PatternExpr, State);
-ast(#{op := local} = Expr, State) ->
+ast(#{op := local} = Expr, State0) ->
   ?DEBUG(local),
   #{env := Env} = Expr,
-  NameBin = get_lexical_rename(Expr, State),
-  Ast     = cerl:ann_c_var(ann_from(Env), binary_to_atom(NameBin, utf8)),
+  {NameBin, State1} = get_lexical_rename(Expr, State0),
+  NameAtom          = binary_to_atom(NameBin, utf8),
+  Ast               = cerl:ann_c_var(ann_from(Env), NameAtom),
 
-  push_ast(Ast, State);
+  push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
 %% do
 %%------------------------------------------------------------------------------
@@ -760,7 +761,7 @@ ast(#{op := 'if'} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% case
 %%------------------------------------------------------------------------------
-ast(#{op := 'case'} = Expr, State) ->
+ast(#{op := 'case'} = Expr, State0) ->
   ?DEBUG('case'),
   #{ test    := TestExpr
    , clauses := ClausesExprs
@@ -768,24 +769,25 @@ ast(#{op := 'case'} = Expr, State) ->
    , env     := Env
    } = Expr,
 
-  {TestAst, State1} = pop_ast(ast(TestExpr, State)),
+  State1 = add_lexical_renames_scope(State0),
 
-  State2 = lists:foldl(fun clause/2, State1, ClausesExprs),
-  {ClausesAsts0, State3} = pop_ast(State2, length(ClausesExprs), false),
+  {TestAst, State2} = pop_ast(ast(TestExpr, State1)),
+  State3 = lists:foldl(fun clause/2, State2, ClausesExprs),
+  {ClausesAsts0, State4} = pop_ast(State3, length(ClausesExprs), false),
 
-  {ClausesAsts1, State4} =
+  {ClausesAsts1, State5} =
     case DefaultExpr of
-      ?NIL -> {ClausesAsts0, State3};
+      ?NIL -> {ClausesAsts0, State4};
       _ ->
         EnvDefault    = maps:get(env, DefaultExpr),
         AnnDefault    = ann_from(EnvDefault),
         DefaultVarAst = new_c_var(AnnDefault),
-        {DefaultAst, State3_1} = pop_ast(ast(DefaultExpr, State3)),
+        {DefaultAst, State4_1} = pop_ast(ast(DefaultExpr, State4)),
         DefaultClause = cerl:ann_c_clause( AnnDefault
                                          , [DefaultVarAst]
                                          , DefaultAst
                                          ),
-        {[DefaultClause | ClausesAsts0], State3_1}
+        {[DefaultClause | ClausesAsts0], State4_1}
     end,
 
   Ann = ann_from(Env),
@@ -793,8 +795,9 @@ ast(#{op := 'case'} = Expr, State) ->
   ClausesAsts3 = lists:reverse(ClausesAsts2),
 
   CaseAst = cerl:ann_c_case(ann_from(Env), TestAst, ClausesAsts3),
+  State6  = remove_lexical_renames_scope(State5),
 
-  push_ast(CaseAst, State4);
+  push_ast(CaseAst, State6);
 %%------------------------------------------------------------------------------
 %% let
 %%------------------------------------------------------------------------------
@@ -808,7 +811,6 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
   Ann = ann_from(Env),
 
   State1 = add_lexical_renames_scope(State0),
-  State2 = lists:foldl(fun put_lexical_rename/2, State1, BindingsExprs),
 
   MatchAstFun =
     fun (BindingExpr, {Bindings, StateAcc}) ->
@@ -820,8 +822,8 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
         {[Binding | Bindings], StateAcc2}
     end,
 
-  {Bindings, State3} = lists:foldl(MatchAstFun, {[], State2}, BindingsExprs),
-  {Body, State4}     = pop_ast(ast(BodyExpr, State3)),
+  {Bindings, State2} = lists:foldl(MatchAstFun, {[], State1}, BindingsExprs),
+  {Body, State3}     = pop_ast(ast(BodyExpr, State2)),
 
   FoldFun =
     fun
@@ -855,9 +857,9 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             lists:foldl(FoldFun, LetRecAst, Bindings)
         end,
 
-  State5 = remove_lexical_renames_scope(State4),
+  State4 = remove_lexical_renames_scope(State3),
 
-  push_ast(Ast, State5);
+  push_ast(Ast, State4);
 %%------------------------------------------------------------------------------
 %% recur
 %%------------------------------------------------------------------------------
@@ -983,22 +985,24 @@ ast(#{op := 'catch'} = Expr, State0) ->
    } = Expr,
 
   Ann                   = ann_from(Env),
-  {ClassAst, State1}    = case maps:get(op, ErrTypeExpr) of
-                            binding -> pop_ast(ast(ErrTypeExpr, State0));
+  State1                = add_lexical_renames_scope(State0),
+  {ClassAst, State2}    = case maps:get(op, ErrTypeExpr) of
+                            binding -> pop_ast(ast(ErrTypeExpr, State1));
                             type    ->
                               ErrorTypeAst = cerl:ann_abstract(Ann, error),
-                              {ErrorTypeAst, State0}
+                              {ErrorTypeAst, State1}
                           end,
-  {PatternAst0, State2} = pop_ast(ast(PatternExpr, State1)),
-  {Guard0, State3}      = pop_ast(ast(GuardExpr, State2)),
-  {Body, State4}        = pop_ast(ast(BodyExpr, State3)),
+  {PatternAst0, State3} = pop_ast(ast(PatternExpr, State2)),
+  {Guard0, State4}      = pop_ast(ast(GuardExpr, State3)),
+  {Body, State5}        = pop_ast(ast(BodyExpr, State4)),
 
   {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
   VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
   Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
-
   Ast      = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
-  push_ast(Ast, State4);
+
+  State6   = remove_lexical_renames_scope(State5),
+  push_ast(Ast, State6);
 %%------------------------------------------------------------------------------
 %% receive
 %%------------------------------------------------------------------------------
@@ -1353,8 +1357,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
   %% Get this value this way since it might not be there
   IsVariadic = maps:get('variadic?', MethodExpr, false),
 
-  State00 = add_lexical_renames_scope(State0),
-  State = lists:foldl(fun put_lexical_rename/2, State00, ParamsExprs),
+  State = add_lexical_renames_scope(State0),
 
   {Args, State1} = pop_ast( lists:foldl(fun ast/2, State, ParamsExprs)
                           , length(ParamsExprs)
@@ -1548,12 +1551,11 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 %% is always registered in the lexical scope, the analyzer makes sure
 %% this happens.
 %% @end
--spec get_lexical_rename(local_expr(), state()) -> binary().
-get_lexical_rename(LocalExpr, State) ->
-  #{lexical_renames := Renames} = State,
+-spec get_lexical_rename(local_expr(), state()) -> {binary(), state()}.
+get_lexical_rename(LocalExpr, State0) ->
+  #{lexical_renames := Renames} = State0,
   IsUnderscore = maps:get(underscore, LocalExpr, false),
   HasShadow    = shadow_depth(LocalExpr) > 0,
-
   RenameSym    = if
                    IsUnderscore ->
                      Code = underscore_hash(LocalExpr),
@@ -1566,12 +1568,15 @@ get_lexical_rename(LocalExpr, State) ->
                  end,
 
   case RenameSym of
-    ?NIL      -> <<"">>;
-    RenameSym -> 'clojerl.Symbol':str(RenameSym)
+    ?NIL ->
+      State1 = put_lexical_rename(LocalExpr, State0),
+      get_lexical_rename(LocalExpr, State1);
+    RenameSym ->
+      {'clojerl.Symbol':str(RenameSym), State0}
   end.
 
--spec put_lexical_rename(binding_expr(), state()) -> state().
-put_lexical_rename(#{pattern := #{underscore := true} = LocalExpr}, State) ->
+-spec put_lexical_rename(local_expr(), state()) -> state().
+put_lexical_rename(#{underscore := true} = LocalExpr, State) ->
   #{lexical_renames := Renames} = State,
 
   Code       = underscore_hash(LocalExpr),
@@ -1581,7 +1586,7 @@ put_lexical_rename(#{pattern := #{underscore := true} = LocalExpr}, State) ->
   State#{lexical_renames => NewRenames};
 put_lexical_rename(#{shadow := ?NIL}, State) ->
   State;
-put_lexical_rename(#{pattern := #{name := Name} = LocalExpr}, State) ->
+put_lexical_rename(#{name := Name} = LocalExpr, State) ->
   #{lexical_renames := Renames} = State,
 
   Code       = hash_scope(LocalExpr),
