@@ -1307,11 +1307,14 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
 
   AnnPattern  = ann_from(EnvPattern),
 
-  {Pattern, StateAcc1} = pop_ast(ast(PatternExpr, StateAcc)),
-  {Guard, StateAcc2}   = pop_ast(ast(GuardExpr, StateAcc1)),
-  {Body, StateAcc3}    = pop_ast(ast(BodyExpr, StateAcc2)),
+  {PatternAst0, StateAcc1}   = pop_ast(ast(PatternExpr, StateAcc)),
+  {GuardAst0, StateAcc2}     = pop_ast(ast(GuardExpr, StateAcc1)),
+  {BodyAst0, StateAcc3}      = pop_ast(ast(BodyExpr, StateAcc2)),
 
-  ClauseAst = cerl:ann_c_clause(AnnPattern, [Pattern], Guard, Body),
+  {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
+  GuardAst1 = clj_emitter_pattern:fold_guards(GuardAst0, PatGuards),
+
+  ClauseAst = cerl:ann_c_clause(AnnPattern, [PatternAst1], GuardAst1, BodyAst0),
   push_ast(ClauseAst, StateAcc3).
 
 %% ----- Functions -------
@@ -1542,7 +1545,7 @@ remove_lexical_renames_scope(State = #{lexical_renames := Renames}) ->
 %% @doc Finds and returns the name of the lexical rename.
 %%
 %% This function always returns something valid because the LocalExpr
-%% is always registered in the lexixal scope, the analyzer makes sure
+%% is always registered in the lexical scope, the analyzer makes sure
 %% this happens.
 %% @end
 -spec get_lexical_rename(local_expr(), state()) -> binary().
