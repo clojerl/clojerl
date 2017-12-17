@@ -1599,12 +1599,12 @@ underscore_hash(#{underscore := true} = LocalExpr) ->
   %% Keep only some fields to avoid calculating a hash of a deeply nested value
   erlang:phash2(maps:with([id, name, op], LocalExpr)).
 
--spec hash_scope(local_expr()) -> binary().
+-spec hash_scope(local_expr()) -> integer().
 hash_scope(LocalExpr) ->
   Depth = shadow_depth(LocalExpr),
   #{name := Name} = LocalExpr,
   NameBin = 'clojerl.Symbol':name(Name),
-  term_to_binary({NameBin, Depth}).
+  erlang:phash2({NameBin, Depth}).
 
 -spec shadow_depth(local_expr()) -> non_neg_integer().
 shadow_depth(LocalExpr = #{shadow := _}) ->
