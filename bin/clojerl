@@ -1,19 +1,28 @@
 #!/usr/bin/env sh
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-  echo "Usage: `basename $0` [options] [.clje file] [data]
+  echo "Usage: `basename $0` [compile-opt*] [init-opt*] [main-opt] [arg*]
 
-  -h, --help            Print this help
+  -h, --help            Print this help message and exit
   -v                    Prints version and exits
+  -c, --compile         Compile files
 
-  --compile             Compile files
-  -pa PATH              Adds PATH to the beginning of the code path
-  -pz PATH              Adds PATH to the end of the code path
-  -o PATH               Specify output directory for compiled files
-  -t, --time            Print the time spent on compiling
-  -vv, --verbose        Verbose compiling
+  compile-opt:
+   -pa PATH              Adds PATH to the beginning of the code path
+   -pz PATH              Adds PATH to the end of the code path
+   -o PATH               Specify output directory for compiled files
+   -t, --time            Print the time spent on compiling
+   -vv, --verbose        Verbose compiling
+   FILES                 List of .clje files
 
-  --clojure.main ARGS   Run clojure.main/main with the provided ARGS,
-                        this should be the last option when used." >&2
+  init-opt:
+   -i, --init path     Load a file or resource
+   -e, --eval string   Eval exprs in string; print non-nil values
+
+  main-opt:
+   -m, --main ns-name  Call the -main function from namespace w/args
+   -r, --repl          Run a repl
+   path                Run a script from a file or resource
+   -                   Run a script from standard input" >&2
   exit 0
 fi
 
