@@ -1,7 +1,7 @@
 .SILENT:
 
 REBAR3    := rebar3
-RLWRAP    := $(shell type rlwrap &> /dev/null && echo rlwrap || echo)
+RLWRAP    := $(shell type -p rlwrap &> /dev/null && echo rlwrap || echo)
 V         := @
 EXAMPLE   ?= *
 
