@@ -34,7 +34,7 @@ test-ct: clean
 	${V} ${REBAR3} as test do ct, cover, cover_result
 
 test-clj:
-	${V} ${CLOJURE_MAIN} -m clojure.test-clojure.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}/
+	${V} ${CLOJERL} -m clojure.test-clojure.run-tests ${CLJ_TEST}/clojure/test_clojure/ ${CLJ_TEST}/
 
 dialyzer: clean
 	${V} NO_CLOJURE=1 ${REBAR3} dialyzer
@@ -51,7 +51,7 @@ clean:
 ci: test dialyzer
 
 repl: compile
-	${V} ${RLWRAP} ${CLOJURE_MAIN} -r
+	${V} ${RLWRAP} ${CLOJERL} -r
 
 # ------------------------------------------------------------------------------
 # Clojure compilation
@@ -70,7 +70,6 @@ CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE}, ${CLJ_ALL_FILES})
 
 CLOJERL      := bin/clojerl -pa ${CLJ_SRC} -pa ${CLJ_TEST} -pa ${EBIN}
 CLOJERLC     := ${CLOJERL} --compile -o ${EBIN}
-CLOJURE_MAIN := ${CLOJERL} --clojure.main
 
 # Maps clj to target beam or ns: path/to/ns/some_file${EXT} -> ns.some-file[.ext]
 define clj_to
@@ -81,8 +80,8 @@ clojure: clojure.core $(call clj_to,${CLJ_FILES},)
 
 benchmark: all
 	${V} cp ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
-	${V} (time ${CLOJURE_MAIN} -m benchmark.benchmark-runner) 2>&1 | tee ${CLJ_TEST}/benchmark/result.txt
-	${V} ${CLOJURE_MAIN} -m benchmark.report ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
+	${V} (time ${CLOJERL} -m benchmark.benchmark-runner) 2>&1 | tee ${CLJ_TEST}/benchmark/result.txt
+	${V} ${CLOJERL} -m benchmark.report ${CLJ_TEST}/benchmark/result.txt ${CLJ_TEST}/benchmark/result.prev.txt
 
 # This target is special since it is built from two sources erl and clj
 ${EBIN}/clojure.core.beam: ${BOOT_SRC}/clojure.core.erl ${CLJ_SRC}/clojure/core${EXT}
