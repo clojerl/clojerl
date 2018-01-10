@@ -2,13 +2,13 @@
 
 -export([start/0]).
 
--type options() :: #{ compile_path      => string()
-                    , compile           => boolean()
-                    , compile_opts      => clj_compiler:options()
-                    , files             => [string()]
-                    , clojure_main      => boolean()
-                    , clojure_main_args => [string()]
-                    , version           => boolean()
+-type options() :: #{ compile       => boolean()
+                    , compile_path  => string()
+                    , compile_opts  => clj_compiler:options()
+                    , files         => [string()]
+                    , main          => boolean()
+                    , main_args     => [string()]
+                    , version       => boolean()
                     }.
 
 -spec start() -> no_return().
@@ -22,12 +22,15 @@ start() ->
 
 -spec default_options() -> options().
 default_options() ->
-  #{ compile_path => "ebin"
-   , compile      => false
-   , files        => []
+  #{ compile      => false
+   , compile_path => "ebin"
    , compile_opts => #{ time    => false
                       , verbose => false
                       }
+   , files        => []
+   , main         => false
+   , main_args    => []
+   , version      => false
    }.
 
 -spec parse_args([string()]) -> options().
@@ -41,7 +44,8 @@ parse_args(["-v" | Rest], Opts) ->
   parse_args(Rest, Opts#{version => true});
 parse_args(["-o", CompilePath | Rest], Opts) ->
   parse_args(Rest, Opts#{compile_path => CompilePath});
-parse_args(["--compile" | Rest], Opts) ->
+parse_args([Compile | Rest], Opts)
+  when Compile =:= "-c"; Compile =:= "--compile" ->
   parse_args(Rest, Opts#{compile => true});
 parse_args([TimeOpt | Rest], #{compile_opts := CompileOpts} = Opts)
   when TimeOpt =:= "-t"; TimeOpt =:= "--time" ->
@@ -49,16 +53,12 @@ parse_args([TimeOpt | Rest], #{compile_opts := CompileOpts} = Opts)
 parse_args([VerboseOpt | Rest], #{compile_opts := CompileOpts} = Opts)
   when VerboseOpt =:= "-vv"; VerboseOpt =:= "--verbose" ->
   parse_args(Rest, Opts#{compile_opts := CompileOpts#{verbose := true}});
-parse_args(["--clojure.main" | Args], Opts0) ->
-  Opts1   = Opts0#{ clojure_main      => true
-                  , clojure_main_args => Args
-                  },
-  parse_args([], Opts1);
 parse_args([File | Rest], Opts = #{files := Files, compile := true}) ->
   parse_args(Rest, Opts#{files => [File | Files]});
-parse_args([Unknown | _], _Opts) ->
-  io:format("Unknown argument: ~s", [Unknown]),
-  erlang:halt(0).
+parse_args([Arg | Rest], Opts = #{main_args := MainArgs}) ->
+  parse_args(Rest, Opts#{ main      => true
+                        , main_args => [Arg | MainArgs]
+                        }).
 
 -spec run_commands(options()) -> ok.
 run_commands(#{version := true}) ->
@@ -89,9 +89,9 @@ run_commands(#{ compile      := true
     ok = 'clojerl.Var':pop_bindings()
   end,
   run_commands(Opts#{compile := false});
-run_commands(#{clojure_main := true, clojure_main_args := Args} = Opts) ->
-  ArgsBin = [erlang:list_to_binary(Arg) || Arg <- Args],
+run_commands(#{main := true, main_args := Args} = Opts) ->
+  ArgsBin = [erlang:list_to_binary(Arg) || Arg <- lists:reverse(Args)],
   'clojure.main':main(ArgsBin),
-  run_commands(Opts#{clojure_main := false});
+  run_commands(Opts#{main := false});
 run_commands(_) ->
   ok.

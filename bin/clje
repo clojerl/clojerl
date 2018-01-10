@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+if type -p rlwrap >/dev/null 2>&1; then
+  rlwrap -r -q '\"' -b "(){}[],^%3@\";:'" clojerl "$@"
+else
+  echo "Please install rlwrap for command editing or use \"clojerl\" instead."
+fi
