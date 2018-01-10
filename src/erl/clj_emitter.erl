@@ -540,7 +540,7 @@ ast(#{op := invoke} = Expr, State) ->
       Ast = cerl:ann_c_let( Ann
                           , [FVarAst]
                           , ResolveAst
-                          , cerl:ann_c_apply(Ann, FVarAst, Args)
+                          , cerl:ann_c_apply([local | Ann], FVarAst, Args)
                           ),
 
       push_ast(Ast, State);

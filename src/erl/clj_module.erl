@@ -19,6 +19,7 @@
 
         , fake_fun/3
         , replace_calls/2
+        , replace_calls/3
 
         , add_mappings/2
         , add_alias/3
@@ -158,12 +159,20 @@ fake_fun(ModuleName, Function, Arity) ->
       end
   end.
 
+-spec replace_calls( cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}
+                   , module()
+                   ) ->
+  cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
+replace_calls(Ast, CurrentModule) ->
+  replace_calls(Ast, CurrentModule, undefined).
+
 %% @doc Processes a function's ast and modifies all calls to functions
 %%      in the function's own module for a call to the fun returned by
 %%      clj_module:fake_fun/3.
 %% @end
 -spec replace_calls( cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}
                    , module()
+                   , {atom(), arity()} | undefined
                    ) ->
   cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
 replace_calls( #c_call{ module = ModuleAst
@@ -172,6 +181,7 @@ replace_calls( #c_call{ module = ModuleAst
                       , anno   = Ann
                       }
              , CurrentModule
+             , FA
              ) ->
   %% Only replace the call if the module is loaded. If it is not, then the
   %% replacement is happening for the evaluation of an expression where the
@@ -181,30 +191,32 @@ replace_calls( #c_call{ module = ModuleAst
     true  ->
       fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts);
     false ->
-      ArgsAsts1 = replace_calls(ArgsAsts, CurrentModule),
+      ArgsAsts1 = replace_calls(ArgsAsts, CurrentModule, FA),
       cerl:ann_c_call(Ann, ModuleAst, FunctionAst, ArgsAsts1)
   end;
 %% Detect non-remote calls done to other functions in the module, so we
 %% can replace them with fake_funs when necessary.
-replace_calls(#c_apply{ op   = #c_var{name = {_, _}} = FNameAst
-                      , args = ArgsAsts
-                      , anno = Ann
-                      }
-             , Module) ->
-  case lists:member(local, Ann) of
+replace_calls( #c_apply{ op   = #c_var{name = {_, _} = FA0} = FNameAst
+                       , args = ArgsAsts
+                       , anno = Ann
+                       }
+             , Module
+             , FA1
+             ) ->
+  case FA0 =:= FA1 orelse lists:member(local, Ann) of
     true ->
-      ArgsAsts1 = replace_calls(ArgsAsts, Module),
+      ArgsAsts1 = replace_calls(ArgsAsts, Module, FA1),
       cerl:ann_c_apply(Ann, FNameAst, ArgsAsts1);
     false ->
       ModuleAst   = cerl:ann_c_atom(Ann, Module),
       FunctionAst = cerl:ann_c_atom(Ann, cerl:fname_id(FNameAst)),
       fake_fun_call(Ann, Module, ModuleAst, FunctionAst, ArgsAsts)
   end;
-replace_calls(Ast, Module) when is_tuple(Ast) ->
-  list_to_tuple(replace_calls(tuple_to_list(Ast), Module));
-replace_calls(Asts, Module) when is_list(Asts) ->
-  [replace_calls(Item, Module) || Item <- Asts];
-replace_calls(Ast, _) ->
+replace_calls(Ast, Module, FA) when is_tuple(Ast) ->
+  list_to_tuple(replace_calls(tuple_to_list(Ast), Module, FA));
+replace_calls(Asts, Module, FA) when is_list(Asts) ->
+  [replace_calls(Item, Module, FA) || Item <- Asts];
+replace_calls(Ast, _Module, _FA) ->
   Ast.
 
 -spec fake_fun_call( [term()]
@@ -448,7 +460,10 @@ build_fake_fun(Function, Arity, Module) ->
                     throw({not_found, Module#module.name, Function, Arity})
                 end,
 
-  {FName, _} = Fun = replace_calls(FunctionAst, Module#module.name),
+  {FName, _} = Fun = replace_calls( FunctionAst
+                                  , Module#module.name
+                                  , {Function, Arity}
+                                  ),
   Int = erlang:unique_integer([positive]),
   FakeModuleName = list_to_atom("fake_module_" ++ integer_to_list(Int)),
 
