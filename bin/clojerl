@@ -63,5 +63,10 @@ do
     shift # past argument or value
 done
 
+# When no arguments are provided just start the REPL
+if [ -z "$EXTRA_ARGS" ]; then
+   EXTRA_ARGS="-r";
+fi
+
 export ERL_LIBS="$CLJE_ROOT/_build/default/lib:$ERL_LIBS"
 exec erl $ERL_ARGS -extra $EXTRA_ARGS
