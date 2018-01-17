@@ -2,7 +2,7 @@
 -define(NIL, undefined).
 
 %% Type
--define(TYPE, '7ype').
+-define(TYPE, '__type__').
 -define(M, ?MODULE).
 -define(CONSTRUCTOR, '__new__').
 -define(UNBOUND, '__unbound__').
