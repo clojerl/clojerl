@@ -81,17 +81,26 @@ run_commands(#{ compile      := true
     ok = 'clojerl.Var':push_bindings(Bindings),
     [clj_compiler:compile_file(F, CompileOpts) || F <- FilesBin]
   catch Type:Reason ->
-      io:format( "[~p] ~s~n~p"
-               , [Type, clj_rt:str(Reason), erlang:get_stacktrace()]
-               ),
-      erlang:halt(1)
+      handle_error(Type, Reason)
   after
     ok = 'clojerl.Var':pop_bindings()
   end,
   run_commands(Opts#{compile := false});
 run_commands(#{main := true, main_args := Args} = Opts) ->
   ArgsBin = [erlang:list_to_binary(Arg) || Arg <- lists:reverse(Args)],
-  'clojure.main':main(ArgsBin),
+  try
+    'clojure.main':main(ArgsBin)
+  catch Type:Reason ->
+      handle_error(Type, Reason)
+  end,
   run_commands(Opts#{main := false});
 run_commands(_) ->
   ok.
+
+-spec handle_error(atom(), any()) -> no_return().
+handle_error(Type, Reason) ->
+  Stacktrace = erlang:get_stacktrace(),
+  io:format( "[~s] ~s~n~s"
+           , [Type, clj_rt:str(Reason), clj_utils:stacktrace(Stacktrace)]
+           ),
+  erlang:halt(1).
