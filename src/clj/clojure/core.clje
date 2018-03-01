@@ -3940,10 +3940,10 @@
   options."
   {:added "1.0"}
   [^erlang.util.Regex re s & opts]
-  (let [opts (clj_rt/to_list opts)
-        res  (.run re s opts)]
-    (when (and (tuple? res) (= (first res) :match))
-      (vec (second res)))))
+  (let* [opts (clj_rt/to_list opts)]
+    (case* (.run re s opts)
+      #erl[:match match] (vec match)
+      _ nil)))
 
 (defn re-pattern
   "Returns a compiled Erlang regular expression unless s is already a
