@@ -100,9 +100,24 @@ do_reset(AtomId, Initial, New) ->
     not_set -> do_reset(AtomId, Initial, New)
   end.
 
+-ifdef(ETS_CAS).
+-spec do_compare_and_set(binary(), any(), any()) -> {ok, any()} | not_set.
+do_compare_and_set(AtomId, Old, New) ->
+  Replace = [{{AtomId, Old}, [], [{const, {AtomId, New}}]}],
+  case ets:select_replace(?MODULE, Replace) of
+    1 ->
+      {ok, New};
+    0 ->
+      case ets:insert_new(?MODULE, {AtomId, New}) of
+        true  -> {ok, New};
+        false -> not_set
+      end
+  end.
+-else.
 -spec do_compare_and_set(binary(), any(), any()) -> {ok, any()} | not_set.
 do_compare_and_set(AtomId, Old, New) ->
   gen_server:call(?MODULE, {compare_and_set, AtomId, Old, New}).
+-endif.
 
 -spec current(binary(), any()) -> any().
 current(AtomId, Initial) ->
@@ -145,9 +160,13 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-  ets:new(?MODULE, [named_table, set, protected, {keypos, 1}]),
+  ets:new(?MODULE, [named_table, set, public, {keypos, 1}]),
   {ok, ?NIL}.
 
+-ifdef(ETS_CAS).
+handle_call(_Msg, _From, State) ->
+  {reply, ok, State}.
+-else.
 handle_call({compare_and_set, AtomId, Old, New}, _From, State) ->
   Reply = case clj_utils:ets_get(?MODULE, AtomId) of
             {AtomId, Current} when Current =/= Old ->
@@ -158,6 +177,7 @@ handle_call({compare_and_set, AtomId, Old, New}, _From, State) ->
               {ok, New}
           end,
   {reply, Reply, State}.
+-endif.
 
 handle_cast(_Msg, State) ->
   {noreply, State}.
