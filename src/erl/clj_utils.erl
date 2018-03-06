@@ -509,18 +509,23 @@ stacktrace(Stacktrace) ->
 
 -spec stacktrace([tuple()], [{indent, integer()}]) -> iolist().
 stacktrace(Stacktrace, Options) ->
-    Indent = lists:duplicate(proplists:get_value(indent, Options), <<" ">>),
-    stacktrace_pretty(Indent, Stacktrace).
+  Indent = lists:duplicate(proplists:get_value(indent, Options), <<" ">>),
+  stacktrace_pretty(Indent, Stacktrace).
 
 -spec stacktrace_pretty(iolist(), [tuple()]) -> iolist().
 stacktrace_pretty(_Indent, []) ->
-    [];
+  [];
 stacktrace_pretty(Indent, [Entry|Stacktrace]) ->
-    {Mod, Func, Arity, [{file, File}, {line, Line}]} = Entry,
-    Output = [ Indent
-             , atom_to_list(Mod), <<"/">>, atom_to_list(Func)
-             , <<".">>, integer_to_binary(Arity)
-             , <<" (">>, File, <<":">>, integer_to_binary(Line), <<")">>
-             , io_lib:nl()
-             ],
-    [Output | stacktrace_pretty(Indent, Stacktrace)].
+  {Mod, Func, Arity, Attrs} = Entry,
+  File = proplists:get_value(file, Attrs, "?"),
+  Line = case proplists:get_value(line, Attrs, undefined) of
+           undefined -> "?";
+           LineInt   -> integer_to_binary(LineInt)
+         end,
+  Output = [ Indent
+           , atom_to_list(Mod), <<"/">>, atom_to_list(Func)
+           , <<".">>, integer_to_binary(Arity)
+           , <<" (">>, File, <<":">>, Line, <<")">>
+           , io_lib:nl()
+           ],
+  [Output | stacktrace_pretty(Indent, Stacktrace)].
