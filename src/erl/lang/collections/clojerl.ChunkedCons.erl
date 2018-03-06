@@ -3,8 +3,10 @@
 -include("clojerl.hrl").
 
 -behavior('clojerl.ICounted').
+-behavior('clojerl.IColl').
 -behavior('clojerl.IChunkedSeq').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
@@ -24,6 +26,7 @@
         , chunked_next/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -59,13 +62,19 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.ICounted
+
 count(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
   'clojerl.TupleChunk':count(Chunk) + clj_rt:count(More).
+
+%% clojerl.IColl
 
 cons(#{?TYPE := ?M} = ChunkedCons, X) ->
   clj_rt:cons(X, ChunkedCons).
 
 empty(_) -> [].
+
+%% clojerl.IChunkedSeq
 
 chunked_first(#{?TYPE := ?M, chunk := Chunk}) ->
   Chunk.
@@ -75,6 +84,8 @@ chunked_next(#{?TYPE := ?M} = ChunkedCons) ->
 
 chunked_more(#{?TYPE := ?M, more := ?NIL}) -> [];
 chunked_more(#{?TYPE := ?M, more := More}) -> More.
+
+%% clojerl.IEquiv
 
 equiv( #{?TYPE := ?M, chunk := ChunkX, more := MoreX}
      , #{?TYPE := ?M, chunk := ChunkY, more := MoreY}
@@ -86,13 +97,28 @@ equiv(#{?TYPE := ?M} = ChunkedCons, Y) ->
     false -> false
   end.
 
+%% clojerl.IErl
+
+'->erl'(#{?TYPE := ?M} = X, Recursive) ->
+  List = to_list(X),
+  case Recursive of
+    true  -> [clj_rt:'->erl'(Item, true) || Item <- List];
+    false -> List
+  end.
+
+%% clojerl.IHash
+
 hash(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
   clj_murmur3:ordered({Chunk, More}).
+
+%% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
 with_meta(#{?TYPE := ?M} = List, Metadata) ->
   List#{meta => Metadata}.
+
+%% clojerl.IReduce
 
 reduce(#{?TYPE := ?M} = ChunkedCons, F) ->
   case to_list(ChunkedCons) of
@@ -111,6 +137,8 @@ do_reduce(F, Acc, [Chunk | Items]) ->
   end;
 do_reduce(_F, Acc, []) ->
   Acc.
+
+%% clojerl.ISeq
 
 first(#{?TYPE := ?M, chunk := Chunk}) ->
   'clojerl.TupleChunk':nth(Chunk, 0).
@@ -133,7 +161,11 @@ more(#{?TYPE := ?M, chunk := Chunk0, more := More} = ChunkedCons) ->
       chunked_more(ChunkedCons)
   end.
 
+%% clojerl.ISequential
+
 '_'(_) -> ?NIL.
+
+%% clojerl.ISeqable
 
 seq(#{?TYPE := ?M} = Cons) -> Cons.
 
@@ -143,6 +175,8 @@ to_list(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
   Indexes = lists:seq(Count - 1, 0, -1),
   Cons    = fun(I, Acc) -> ['clojerl.TupleChunk':nth(Chunk, I) | Acc] end,
   lists:foldl(Cons, Tail, Indexes).
+
+%% clojerl.IStringable
 
 str(#{?TYPE := ?M} = ChunkedCons) ->
   List = clj_rt:list(to_list(ChunkedCons)),

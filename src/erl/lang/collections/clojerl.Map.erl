@@ -8,6 +8,7 @@
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
@@ -16,7 +17,7 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/1, to_erl_map/1]).
+-export([?CONSTRUCTOR/1]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -26,6 +27,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([apply/2]).
 -export([hash/1]).
 -export([ get/2
@@ -62,13 +64,6 @@
    };
 ?CONSTRUCTOR(KeyValues) ->
   ?CONSTRUCTOR(clj_rt:to_list(KeyValues)).
-
--spec to_erl_map(type()) -> map().
-to_erl_map(#{?TYPE := ?M, keys := Keys, vals := Vals}) ->
-  ErlMapFun = fun({Hash, Key}, MapAcc) ->
-                  MapAcc#{Key => maps:get(Hash, Vals)}
-              end,
-  lists:foldl(ErlMapFun, #{}, maps:to_list(Keys)).
 
 %% @private
 -spec build_key_values(list(), list()) -> [{any(), any()}].
@@ -137,6 +132,20 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
+
+%% clojerl.IErl
+
+'->erl'(#{?TYPE := ?M, keys := Keys, vals := Vals}, Recursive) ->
+  ErlMapFun = fun
+                ({Hash, Key0}, MapAcc) when Recursive ->
+                  Val0 = maps:get(Hash, Vals),
+                  Key1 = clj_rt:'->erl'(Key0, Recursive),
+                  Val1 = clj_rt:'->erl'(Val0, Recursive),
+                  MapAcc#{Key1 => Val1};
+                ({Hash, Key0}, MapAcc) ->
+                  MapAcc#{Key0 => maps:get(Hash, Vals)}
+              end,
+  lists:foldl(ErlMapFun, #{}, maps:to_list(Keys)).
 
 %% clojerl.IFn
 

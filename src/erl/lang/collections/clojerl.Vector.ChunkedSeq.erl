@@ -7,6 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IChunkedSeq').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISeq').
@@ -25,6 +26,7 @@
         , chunked_more/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -57,13 +59,19 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.ICounted
+
 count(#{?TYPE := ?M, array := Array, index := Index}) ->
   array:size(Array) - Index.
+
+%% clojerl.IColl
 
 cons(#{?TYPE := ?M} = ChunkedSeq, X) ->
   'clojerl.Cons':?CONSTRUCTOR(X, ChunkedSeq).
 
 empty(_) -> clj_rt:list([]).
+
+%% clojerl.IChunkedSeq
 
 chunked_first(#{?TYPE := ?M, array := Array, index := Index}) ->
   End  = lists:min([array:size(Array), Index + ?CHUNK_SIZE]),
@@ -83,6 +91,8 @@ chunked_more(#{?TYPE := ?M} = ChunkedSeq) ->
     Seq  -> Seq
   end.
 
+%% clojerl.IEquiv
+
 equiv( #{?TYPE := ?M, array := X}
      , #{?TYPE := ?M, array := Y}
      ) ->
@@ -99,13 +109,28 @@ equiv(#{?TYPE := ?M, array := X}, Y) ->
     false -> false
   end.
 
+%% clojerl.IErl
+
+'->erl'(#{?TYPE := ?M} = X, Recursive) ->
+  List = to_list(X),
+  case Recursive of
+    true  -> [clj_rt:'->erl'(Item, true) || Item <- List];
+    false -> List
+  end.
+
+%% clojerl.IHash
+
 hash(#{?TYPE := ?M, array := Array}) ->
   clj_murmur3:ordered(array:to_list(Array)).
+
+%% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
 with_meta(#{?TYPE := ?M} = ChunkedSeq, Meta) ->
   ChunkedSeq#{meta => Meta}.
+
+%% clojerl.ISeq
 
 first(#{?TYPE := ?M, array := Array, index := Index}) ->
   array:get(Index, Array).
@@ -122,7 +147,11 @@ more(#{?TYPE := ?M} = ChunkedSeq) ->
     Seq  -> Seq
   end.
 
+%% clojerl.ISequential
+
 '_'(_) -> ?NIL.
+
+%% clojerl.ISeqable
 
 seq(#{?TYPE := ?M, array := Array, index := Index}  = ChunkedSeq) ->
   case Index < array:size(Array) of
@@ -132,6 +161,8 @@ seq(#{?TYPE := ?M, array := Array, index := Index}  = ChunkedSeq) ->
 
 to_list(#{?TYPE := ?M, array := Array, index := Index}) ->
   [array:get(I, Array) || I <- lists:seq(Index, array:size(Array) - 1)].
+
+%% clojerl.IStringable
 
 str(#{?TYPE := ?M} = ChunkedSeq) ->
   List = clj_rt:list(to_list(ChunkedSeq)),

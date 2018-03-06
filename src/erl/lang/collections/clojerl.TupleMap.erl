@@ -9,6 +9,7 @@
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
@@ -20,7 +21,6 @@
 -export([ ?CONSTRUCTOR/1
         , create_with_assoc/1
         , create_with_check/1
-        , to_erl_map/1
         ]).
 
 -export([ contains_key/2
@@ -32,6 +32,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([apply/2]).
 -export([hash/1]).
 -export([ get/2
@@ -109,17 +110,6 @@ replace_key_value(Key, Value, [{K, V} | KeyValues]) ->
 build_from_proplist({Key, Value}, Acc) ->
   [Key, Value | Acc].
 
--spec to_erl_map(type()) -> map().
-to_erl_map(#{?TYPE := ?M, tuple := TupleMap}) ->
-  ErlMapFun = fun
-                (Key, {none, MapAcc}) ->
-                  {{Key}, MapAcc};
-                (Value, {{Key}, MapAcc}) ->
-                  {none, MapAcc#{Key => Value}}
-              end,
-  {_, Map} = lists:foldl(ErlMapFun, {none, #{}}, tuple_to_list(TupleMap)),
-  Map.
-
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
@@ -191,6 +181,23 @@ equiv(#{?TYPE := ?M, tuple := TupleMap}, Y) ->
         andalso Fun(tuple_to_list(TupleMap));
     false -> false
   end.
+
+%% clojerl.IErl
+
+-spec '->erl'(type(), boolean()) -> map().
+'->erl'(#{?TYPE := ?M, tuple := TupleMap}, Recursive) ->
+  ErlMapFun = fun
+                (Key, {none, MapAcc}) ->
+                  {{Key}, MapAcc};
+                (Val0, {{Key0}, MapAcc}) when Recursive ->
+                  Key1 = clj_rt:'->erl'(Key0, Recursive),
+                  Val1 = clj_rt:'->erl'(Val0, Recursive),
+                  {none, MapAcc#{Key1 => Val1}};
+                (Val0, {{Key0}, MapAcc}) ->
+                  {none, MapAcc#{Key0 => Val0}}
+              end,
+  {_, Map} = lists:foldl(ErlMapFun, {none, #{}}, tuple_to_list(TupleMap)),
+  Map.
 
 %% clojerl.IFn
 
