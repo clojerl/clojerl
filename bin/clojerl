@@ -57,7 +57,7 @@ do
             shift # past argument
             ;;
         *)
-            EXTRA_ARGS="$EXTRA_ARGS $1"
+            break;
             ;;
     esac
     shift # past argument or value
@@ -69,4 +69,4 @@ if [ -z "$EXTRA_ARGS" ]; then
 fi
 
 export ERL_LIBS="$CLJE_ROOT/_build/default/lib:$ERL_LIBS"
-exec erl $ERL_ARGS -extra $EXTRA_ARGS
+exec erl $ERL_ARGS -extra "$@"
