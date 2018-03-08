@@ -2859,6 +2859,16 @@
                                (into1 v (map #(str p "." %) cs)))))
                          [] specs)))))
 
+(defn ->erl
+  "Returns the Erlang representation of x when it implements clojerl.IErl,
+  otherwise returns x unchanged. When x is a collection the conversion can
+  be applied recursively, which is the default behavior."
+  {:added "1.0"}
+  ([x]
+   (->erl x true))
+  ([x recursive?]
+   (clj_rt/->erl x recursive?)))
+
 (defn into-tuple
   "Returns a tuple with components set to the values in aseq."
   {:added "1.0"}
@@ -3037,7 +3047,7 @@
          stream))
   ([opts stream]
    (clj_reader/read ""
-                    (clojerl.Map/to_erl_map (assoc opts :io-reader stream)))))
+                    (->erl (assoc opts :io-reader stream)))))
 
 (defn read-line
   "Reads the next line from stream that is the current value of *in* ."
@@ -3055,7 +3065,7 @@
   For data structure interop use clojure.edn/read-string"
   {:added "1.0"}
   ([s] (clj_reader/read s))
-  ([opts s] (clj_reader/read s (clojerl.Map/to_erl_map opts))))
+  ([opts s] (clj_reader/read s (->erl opts))))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
@@ -5222,6 +5232,7 @@
 (load "core_print")
 (load "core_deftype")
 ;; (load "gvec")
+(load "core/protocols")
 (load "instant")
 (load "uuid")
 
@@ -5240,13 +5251,6 @@
             @nval
             (recur nval (next coll))))
         val))))
-
-(defprotocol IKVReduce
-  "Protocol for concrete associative types that can reduce themselves
-   via a function of key and val faster than first/next recursion over map
-   entries. Called by clojure.core/reduce-kv, and has same
-   semantics (just different arg order)."
-  (kv-reduce [amap f init]))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -5268,7 +5272,7 @@
      (clojerl.IReduce/reduce coll f val)
      (seq-reduce f val coll))))
 
-(extend-protocol IKVReduce
+(extend-protocol clojure.core.protocols/IKVReduce
   nil
   (kv-reduce
     [_ f init]
@@ -5289,7 +5293,7 @@
   where the keys will be the ordinals."
   {:added "1.4"}
   ([f init coll]
-     (kv-reduce coll f init)))
+   (clojure.core.protocols/kv-reduce coll f init)))
 
 (defn completing
   "Takes a reducing function f of 2 args and returns a fn suitable for

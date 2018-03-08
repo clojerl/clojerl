@@ -22,6 +22,7 @@
         , stack/1
         , reduce/1
         , associative/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -271,6 +272,18 @@ associative(_Config) ->
   false = clj_rt:'contains?'(EmptyVector, 1),
   false = clj_rt:'contains?'(OneVector, 1),
   false = clj_rt:'contains?'(TwoVector, 2),
+
+  {comments, ""}.
+
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
+  Vector1   = clj_rt:vector([1, 2, 3]),
+  {1, 2, 3} = clj_rt:'->erl'(Vector1, false),
+  {1, 2, 3} = clj_rt:'->erl'(Vector1, true),
+
+  Vector2        = clj_rt:vector([1, Vector1]),
+  {1, Vector1}   = clj_rt:'->erl'(Vector2, false),
+  {1, {1, 2, 3}} = clj_rt:'->erl'(Vector2, true),
 
   {comments, ""}.
 

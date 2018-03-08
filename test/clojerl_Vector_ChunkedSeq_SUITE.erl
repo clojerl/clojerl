@@ -16,6 +16,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -145,6 +146,20 @@ cons(_Config) ->
   Cons = clj_rt:conj(ChunkedSeq1, -1),
   65   = clj_rt:count(Cons),
   true = clj_rt:equiv(Cons, lists:seq(-1, 63)),
+
+  {comments, ""}.
+
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
+  Tuple1      = list_to_tuple(lists:seq(0, 63)),
+  ChunkedSeq1 = chunked_seq(64),
+  Tuple1      = clj_rt:'->erl'(ChunkedSeq1, false),
+  Tuple1      = clj_rt:'->erl'(ChunkedSeq1, true),
+
+  Array            = array:from_list([1, ChunkedSeq1]),
+  ChunkedSeq2      = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0),
+  {1, ChunkedSeq1} = clj_rt:'->erl'(ChunkedSeq2, false),
+  {1, Tuple1}      = clj_rt:'->erl'(ChunkedSeq2, true),
 
   {comments, ""}.
 

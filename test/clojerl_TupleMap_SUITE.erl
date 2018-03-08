@@ -17,6 +17,7 @@
         , hash/1
         , cons/1
         , associative/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -205,7 +206,6 @@ cons(_Config) ->
   {comments, ""}.
 
 -spec associative(config()) -> result().
-
 associative(_Config) ->
   EmptyMap = tuple_map([]),
   false    = clj_rt:'contains?'(EmptyMap, 1),
@@ -245,6 +245,24 @@ associative(_Config) ->
 
   {comments, ""}.
 
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
+  Value     = #{1 => 2},
+
+  Map1     = tuple_map([1, 2]),
+  Value    = clj_rt:'->erl'(Map1, false),
+  Value    = clj_rt:'->erl'(Map1, true),
+
+  Map2     = tuple_map([Map1, Map1]),
+
+  Map2Erl1 = clj_rt:'->erl'(Map2, false),
+  Map1     = maps:get(Map1, Map2Erl1),
+
+  Map2Erl2 = clj_rt:'->erl'(Map2, true),
+  Value    = maps:get(#{1 => 2}, Map2Erl2),
+
+  {comments, ""}.
+
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   NotEmptyMap = tuple_map([a, b, 2, 3]),
@@ -261,7 +279,7 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
-  #{a := b, 2 := 3} = 'clojerl.TupleMap':to_erl_map(NotEmptyMap),
+  #{a := b, 2 := 3} = 'clojerl.TupleMap':'->erl'(NotEmptyMap, false),
 
   {comments, ""}.
 

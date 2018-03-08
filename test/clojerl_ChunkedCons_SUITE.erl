@@ -18,6 +18,7 @@
         , equiv/1
         , cons/1
         , reduce/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -171,6 +172,18 @@ reduce(_Config) ->
             end,
   Reduced = 'clojerl.IReduce':reduce(ChunkedCons2, PlusMaxFun),
   10 = clj_rt:deref(Reduced),
+
+  {comments, ""}.
+
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
+  ChunkedCons1 = chunked_cons({1, 2, 3}, ?NIL),
+  [1, 2, 3] = clj_rt:'->erl'(ChunkedCons1, false),
+  [1, 2, 3] = clj_rt:'->erl'(ChunkedCons1, true),
+
+  ChunkedCons2         = chunked_cons({1, 2, ChunkedCons1}, ?NIL),
+  [1, 2, ChunkedCons1] = clj_rt:'->erl'(ChunkedCons2, false),
+  [1, 2, [1, 2, 3]]    = clj_rt:'->erl'(ChunkedCons2, true),
 
   {comments, ""}.
 

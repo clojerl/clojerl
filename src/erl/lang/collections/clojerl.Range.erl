@@ -7,6 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IChunkedSeq').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
@@ -26,6 +27,7 @@
         , chunked_next/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -67,13 +69,19 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.ICounted
+
 count(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   (End - Start + Step) div Step - 1.
+
+%% clojerl.IColl
 
 cons(#{?TYPE := ?M} = Range, X) ->
   'clojerl.Cons':?CONSTRUCTOR(X, Range).
 
 empty(_) -> [].
+
+%% clojerl.IChunkedSeq
 
 chunked_first(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   End1    = Start0 + ?CHUNK_SIZE * Step0,
@@ -95,6 +103,8 @@ chunked_more(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   Start1 = Start0 + ?CHUNK_SIZE * Step0,
   ?CONSTRUCTOR(Start1, End0, Step0).
 
+%% clojerl.IEquiv
+
 equiv( #{?TYPE := ?M, start := Start, 'end' := End, step := Step}
      , #{?TYPE := ?M, start := Start, 'end' := End, step := Step}
      ) ->
@@ -105,13 +115,25 @@ equiv(#{?TYPE := ?M} = X, Y) ->
     false -> false
   end.
 
+%% clojerl.IErl
+
+'->erl'(#{?TYPE := ?M} = X, _Recursive) ->
+  %% A range will always have numbers, which must not implement IErl
+  to_list(X).
+
+%% clojerl.IHash
+
 hash(#{?TYPE := ?M} = X) ->
   clj_murmur3:ordered(to_list(X)).
+
+%% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
 with_meta(#{?TYPE := ?M} = Range, Metadata) ->
   Range#{meta => Metadata}.
+
+%% clojerl.IReduce
 
 reduce(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}, F) ->
   do_reduce(F, Start, Start + Step, End, Step).
@@ -130,6 +152,8 @@ do_reduce(F, Acc, Start, End, Step) ->
     false -> do_reduce(F, Val, Start + Step, End, Step)
   end.
 
+%% clojerl.ISeq
+
 first(#{?TYPE := ?M, start := Start}) -> Start.
 
 next(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) when
@@ -146,12 +170,18 @@ more(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) when
 more(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   ?CONSTRUCTOR(Start + Step, End, Step).
 
+%% clojerl.ISequential
+
 '_'(_) -> ?NIL.
+
+%% clojerl.ISeq
 
 seq(#{?TYPE := ?M} = Seq) -> Seq.
 
 to_list(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
   to_list(Start, End, Step).
+
+%% clojerl.IStringable
 
 str(#{?TYPE := ?M} = Range) ->
   clj_rt:print(Range).

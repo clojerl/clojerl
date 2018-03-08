@@ -42,6 +42,7 @@
         , compare_fun/2
         , shuffle/1
         , hash/1
+        , '->erl'/2
         ]).
 
 -spec type(any()) -> 'erlang.Type':type().
@@ -661,3 +662,11 @@ shuffle(Seq) ->
 -spec hash(any()) -> integer().
 hash(?NIL) -> 0;
 hash(X)    -> 'clojerl.IHash':hash(X).
+
+-spec '->erl'(any(), boolean()) -> any().
+'->erl'(?NIL, _)      -> ?NIL;
+'->erl'(X, Recursive) ->
+  case clj_protocol:'satisfies?'('clojerl.IErl', type_module(X)) of
+    true  -> 'clojerl.IErl':'->erl'(X, Recursive);
+    false -> X
+  end.

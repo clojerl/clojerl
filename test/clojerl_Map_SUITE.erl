@@ -17,6 +17,7 @@
         , hash/1
         , cons/1
         , associative/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -208,6 +209,23 @@ associative(_Config) ->
 
   {comments, ""}.
 
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
+  EmptyMap = clj_rt:hash_map([]),
+  #{} = clj_rt:'->erl'(EmptyMap, false),
+  #{} = clj_rt:'->erl'(EmptyMap, true),
+
+  Map1     = clj_rt:hash_map([EmptyMap, EmptyMap]),
+
+  Map1Erl1 = clj_rt:'->erl'(Map1, false),
+  EmptyMap = maps:get(EmptyMap, Map1Erl1),
+
+  Map1Erl2 = clj_rt:'->erl'(Map1, true),
+  Value    = maps:get(#{}, Map1Erl2),
+  Value    = #{},
+
+  {comments, ""}.
+
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   NotEmptyMap = clj_rt:hash_map([a, b, 2, 3]),
@@ -224,6 +242,6 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
-  #{a := b, 2 := 3} = 'clojerl.Map':to_erl_map(NotEmptyMap),
+  #{a := b, 2 := 3} = 'clojerl.Map':'->erl'(NotEmptyMap, false),
 
   {comments, ""}.

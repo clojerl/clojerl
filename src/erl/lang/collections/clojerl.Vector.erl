@@ -7,6 +7,7 @@
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
@@ -28,6 +29,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([apply/2]).
 -export([hash/1]).
 -export([ get/2
@@ -89,13 +91,19 @@ assoc(#{?TYPE := ?M, array := Array} = Vector, Index, Value) ->
     false -> error(<<"Index out of bounds">>)
   end.
 
+%% clojerl.ICounted
+
 count(#{?TYPE := ?M, array := Array}) -> array:size(Array).
+
+%% clojerl.IColl
 
 cons(#{?TYPE := ?M, array := Array} = Vector, X) ->
   NewArray = array:set(array:size(Array), X, Array),
   Vector#{array => NewArray}.
 
 empty(_) -> ?CONSTRUCTOR([]).
+
+%% clojerl.IEquiv
 
 equiv( #{?TYPE := ?M, array := X}
      , #{?TYPE := ?M, array := Y}
@@ -113,11 +121,25 @@ equiv(#{?TYPE := ?M, array := X}, Y) ->
     false -> false
   end.
 
+%% clojerl.IErl
+
+'->erl'(#{?TYPE := ?M} = X, Recursive) ->
+  List0 = to_list(X),
+  List1 = case Recursive of
+            true  -> [clj_rt:'->erl'(Item, true) || Item <- List0];
+            false -> List0
+          end,
+  list_to_tuple(List1).
+
+%% clojerl.IFn
+
 apply(#{?TYPE := ?M, array := Array}, [Index]) ->
   array:get(Index, Array);
 apply(#{?TYPE := ?M}, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
+
+%% clojerl.IHash
 
 hash(#{?TYPE := ?M, array := Array}) ->
   clj_murmur3:ordered(array:to_list(Array)).
@@ -169,6 +191,8 @@ do_reduce(_F, Acc, _Index, _Size, _Array) ->
 
 '_'(_) -> ?NIL.
 
+%% clojerl.IIndexed
+
 nth(#{?TYPE := ?M, array := Array}, N) ->
   case N < array:size(Array) of
     true  -> array:get(N, Array);
@@ -180,6 +204,8 @@ nth(#{?TYPE := ?M, array := Array}, N, NotFound) ->
     true  -> array:get(N, Array);
     false -> NotFound
   end.
+
+%% clojerl.IStack
 
 peek(#{?TYPE := ?M, array := Array}) ->
   case array:size(Array) of
@@ -195,6 +221,8 @@ pop(#{?TYPE := ?M, array := Array} = Vector) ->
       Vector#{array => NewArray}
   end.
 
+%% clojerl.ISeqable
+
 seq(#{?TYPE := ?M, array := Array}) ->
   case array:size(Array) of
     0 -> ?NIL;
@@ -204,6 +232,8 @@ seq(#{?TYPE := ?M, array := Array}) ->
 
 to_list(#{?TYPE := ?M, array := Array}) ->
   array:to_list(Array).
+
+%% clojerl.IStringable
 
 str(#{?TYPE := ?M} = Vector) ->
   clj_rt:print(Vector).

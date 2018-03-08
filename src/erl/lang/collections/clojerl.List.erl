@@ -5,6 +5,7 @@
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IErl').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
@@ -21,6 +22,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
+-export(['->erl'/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -58,7 +60,11 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.ICounted
+
 count(#{?TYPE := ?M, items := Items}) -> length(Items).
+
+%% clojerl.IColl
 
 cons(#{?TYPE := ?M, items := []} = List, X) ->
   List#{items => [X]};
@@ -66,6 +72,8 @@ cons(#{?TYPE := ?M, items := Items} = List, X) ->
   List#{items => [X | Items]}.
 
 empty(_) -> ?CONSTRUCTOR([]).
+
+%% clojerl.IEquiv
 
 equiv( #{?TYPE := ?M, items := X}
      , #{?TYPE := ?M, items := Y}
@@ -77,13 +85,28 @@ equiv(#{?TYPE := ?M, items := X}, Y) ->
     false -> false
   end.
 
+%% clojerl.IErl
+
+'->erl'(#{?TYPE := ?M} = X, Recursive) ->
+  List = to_list(X),
+  case Recursive of
+    true  -> [clj_rt:'->erl'(Item, true) || Item <- List];
+    false -> List
+  end.
+
+%% clojerl.IHash
+
 hash(#{?TYPE := ?M, items := X}) ->
   clj_murmur3:ordered(X).
+
+%% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
 with_meta(#{?TYPE := ?M} = List, Metadata) ->
   List#{meta => Metadata}.
+
+%% clojerl.IReduce
 
 reduce(#{?TYPE := ?M, items := []}, F) ->
   clj_rt:apply(F, []);
@@ -102,6 +125,8 @@ do_reduce(F, Acc, [First | Items]) ->
 do_reduce(_F, Acc, []) ->
   Acc.
 
+%% clojerl.ISeq
+
 first(#{?TYPE := ?M, items := []}) -> ?NIL;
 first(#{?TYPE := ?M, items := [First | _]}) -> First.
 
@@ -114,7 +139,11 @@ more(#{?TYPE := ?M, items := []}) -> ?NIL;
 more(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
 
+%% clojerl.ISequential
+
 '_'(_) -> ?NIL.
+
+%% clojerl.IStack
 
 peek(#{?TYPE := ?M, items := Items}) ->
   'erlang.List':peek(Items).
@@ -124,10 +153,14 @@ pop(#{?TYPE := ?M, items := []} = List) ->
 pop(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
 
+%% clojerl.ISeq
+
 seq(#{?TYPE := ?M, items := []}) -> ?NIL;
 seq(#{?TYPE := ?M, items := Seq}) -> Seq.
 
 to_list(#{?TYPE := ?M, items := Items}) -> Items.
+
+%% clojerl.IStringable
 
 str(#{?TYPE := ?M, items := []}) ->
   <<"()">>;
