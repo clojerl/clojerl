@@ -7,8 +7,8 @@
 
 -type type() :: any().
 
--callback '->erl'(type(), boolean()) -> binary().
+-callback '->erl'(type(), boolean()) -> any().
 
--spec '->erl'(type(), boolean()) -> binary().
+-spec '->erl'(type(), boolean()) -> any().
 '->erl'(X, Recursive) ->
   clj_protocol:resolve(?MODULE, '->erl', X, Recursive).
