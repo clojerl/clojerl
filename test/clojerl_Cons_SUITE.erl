@@ -17,6 +17,7 @@
         , equiv/1
         , cons/1
         , reduce/1
+        , '->erl'/1
         , complete_coverage/1
         ]).
 
@@ -156,6 +157,18 @@ reduce(_Config) ->
             end,
   Reduced = 'clojerl.IReduce':reduce(TenCons, PlusMaxFun),
   10 = clj_rt:deref(Reduced),
+
+  {comments, ""}.
+
+-spec '->erl'(config()) -> result().
+'->erl'(_Config) ->
+  Cons1     = range(1, 3),
+  [1, 2, 3] = clj_rt:'->erl'(Cons1, false),
+  [1, 2, 3] = clj_rt:'->erl'(Cons1, true),
+
+  Cons2          = clj_rt:cons(1, clj_rt:cons(Cons1, ?NIL)),
+  [1, Cons1]     = clj_rt:'->erl'(Cons2, false),
+  [1, [1, 2, 3]] = clj_rt:'->erl'(Cons2, true),
 
   {comments, ""}.
 

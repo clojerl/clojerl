@@ -17,6 +17,7 @@
         , equiv/1
         , cons/1
         , reduce/1
+        , '->erl'/1
         , complete_coverage/1
         ]).
 
@@ -180,6 +181,18 @@ reduce(_Config) ->
             end,
   Reduced = 'clojerl.IReduce':reduce(TenLazySeq, PlusMaxFun),
   10 = clj_rt:deref(Reduced),
+
+  {comments, ""}.
+
+-spec '->erl'(config()) -> result().
+'->erl'(_Config) ->
+  LazySeq1  = range(1, 3),
+  [1, 2, 3] = clj_rt:'->erl'(LazySeq1, false),
+  [1, 2, 3] = clj_rt:'->erl'(LazySeq1, true),
+
+  LazySeq2       = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> [1, LazySeq1] end),
+  [1, LazySeq1]  = clj_rt:'->erl'(LazySeq2, false),
+  [1, [1, 2, 3]] = clj_rt:'->erl'(LazySeq2, true),
 
   {comments, ""}.
 

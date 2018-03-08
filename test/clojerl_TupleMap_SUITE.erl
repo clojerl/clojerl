@@ -17,6 +17,7 @@
         , hash/1
         , cons/1
         , associative/1
+        , '->erl'/1
         , complete_coverage/1
         ]).
 
@@ -205,7 +206,6 @@ cons(_Config) ->
   {comments, ""}.
 
 -spec associative(config()) -> result().
-
 associative(_Config) ->
   EmptyMap = tuple_map([]),
   false    = clj_rt:'contains?'(EmptyMap, 1),
@@ -242,6 +242,24 @@ associative(_Config) ->
   LimitMap      = tuple_map(lists:seq(1, 16 * 2)),
   PastLimitMap  = clj_rt:assoc(LimitMap, 33, 34),
   'clojerl.Map' = clj_rt:type_module(PastLimitMap),
+
+  {comments, ""}.
+
+-spec '->erl'(config()) -> result().
+'->erl'(_Config) ->
+  Value     = #{1 => 2},
+
+  Map1     = tuple_map([1, 2]),
+  Value    = clj_rt:'->erl'(Map1, false),
+  Value    = clj_rt:'->erl'(Map1, true),
+
+  Map2     = tuple_map([Map1, Map1]),
+
+  Map2Erl1 = clj_rt:'->erl'(Map2, false),
+  Map1     = maps:get(Map1, Map2Erl1),
+
+  Map2Erl2 = clj_rt:'->erl'(Map2, true),
+  Value    = maps:get(#{1 => 2}, Map2Erl2),
 
   {comments, ""}.
 

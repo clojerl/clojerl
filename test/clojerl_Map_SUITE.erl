@@ -17,6 +17,7 @@
         , hash/1
         , cons/1
         , associative/1
+        , '->erl'/1
         , complete_coverage/1
         ]).
 
@@ -205,6 +206,23 @@ associative(_Config) ->
   ct:comment("The new key with different metadata doesn't replace the old one"),
   HelloMap2 = clj_rt:assoc(HelloMap, HelloSym2, a),
   HelloSym1 = clj_rt:first(clj_rt:find(HelloMap2, HelloSym2)),
+
+  {comments, ""}.
+
+-spec '->erl'(config()) -> result().
+'->erl'(_Config) ->
+  EmptyMap = clj_rt:hash_map([]),
+  #{} = clj_rt:'->erl'(EmptyMap, false),
+  #{} = clj_rt:'->erl'(EmptyMap, true),
+
+  Map1     = clj_rt:hash_map([EmptyMap, EmptyMap]),
+
+  Map1Erl1 = clj_rt:'->erl'(Map1, false),
+  EmptyMap = maps:get(EmptyMap, Map1Erl1),
+
+  Map1Erl2 = clj_rt:'->erl'(Map1, true),
+  Value    = maps:get(#{}, Map1Erl2),
+  Value    = #{},
 
   {comments, ""}.
 

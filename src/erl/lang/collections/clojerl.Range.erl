@@ -117,12 +117,9 @@ equiv(#{?TYPE := ?M} = X, Y) ->
 
 %% clojerl.IErl
 
-'->erl'(#{?TYPE := ?M} = X, Recursive) ->
-  List = to_list(X),
-  case Recursive of
-    true  -> [clj_rt:'->erl'(Item, true) || Item <- List];
-    false -> List
-  end.
+'->erl'(#{?TYPE := ?M} = X, _Recursive) ->
+  %% A range will always have numbers, which must not implement IErl
+  to_list(X).
 
 %% clojerl.IHash
 
