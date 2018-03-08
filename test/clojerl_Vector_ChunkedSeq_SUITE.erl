@@ -151,18 +151,15 @@ cons(_Config) ->
 
 -spec '->erl'(config()) -> result().
 '->erl'(_Config) ->
+  Tuple1      = list_to_tuple(lists:seq(0, 63)),
   ChunkedSeq1 = chunked_seq(64),
-  Result1     = clj_rt:'->erl'(ChunkedSeq1, false),
-  [0, 1 | _]  = Result1,
-  64          = length(Result1),
-  Result2     = clj_rt:'->erl'(ChunkedSeq1, true),
-  [0, 1 | _]  = Result2,
-  64          = length(Result1),
+  Tuple1      = clj_rt:'->erl'(ChunkedSeq1, false),
+  Tuple1      = clj_rt:'->erl'(ChunkedSeq1, true),
 
   Array            = array:from_list([1, ChunkedSeq1]),
   ChunkedSeq2      = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0),
-  [1, ChunkedSeq1] = clj_rt:'->erl'(ChunkedSeq2, false),
-  [1, [0, 1 | _]]  = clj_rt:'->erl'(ChunkedSeq2, true),
+  {1, ChunkedSeq1} = clj_rt:'->erl'(ChunkedSeq2, false),
+  {1, Tuple1}      = clj_rt:'->erl'(ChunkedSeq2, true),
 
   {comments, ""}.
 

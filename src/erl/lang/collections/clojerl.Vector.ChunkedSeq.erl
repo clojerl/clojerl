@@ -112,11 +112,12 @@ equiv(#{?TYPE := ?M, array := X}, Y) ->
 %% clojerl.IErl
 
 '->erl'(#{?TYPE := ?M} = X, Recursive) ->
-  List = to_list(X),
-  case Recursive of
-    true  -> [clj_rt:'->erl'(Item, true) || Item <- List];
-    false -> List
-  end.
+  List0 = to_list(X),
+  List1 = case Recursive of
+            true  -> [clj_rt:'->erl'(Item, true) || Item <- List0];
+            false -> List0
+          end,
+  list_to_tuple(List1).
 
 %% clojerl.IHash
 

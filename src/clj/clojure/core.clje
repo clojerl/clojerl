@@ -2859,6 +2859,14 @@
                                (into1 v (map #(str p "." %) cs)))))
                          [] specs)))))
 
+(defn ->erl
+  "Returns a tuple with components set to the values in aseq."
+  {:added "1.0"}
+  ([x]
+   (clj_rt/->erl x))
+  ([x recursive?]
+   (clj_rt/->erl x recursive?)))
+
 (defn into-tuple
   "Returns a tuple with components set to the values in aseq."
   {:added "1.0"}
