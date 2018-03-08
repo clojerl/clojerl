@@ -17,7 +17,7 @@
         , equiv/1
         , cons/1
         , reduce/1
-        , '->erl'/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -184,8 +184,8 @@ reduce(_Config) ->
 
   {comments, ""}.
 
--spec '->erl'(config()) -> result().
-'->erl'(_Config) ->
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
   LazySeq1  = range(1, 3),
   [1, 2, 3] = clj_rt:'->erl'(LazySeq1, false),
   [1, 2, 3] = clj_rt:'->erl'(LazySeq1, true),

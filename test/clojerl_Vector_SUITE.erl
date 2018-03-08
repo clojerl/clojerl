@@ -22,7 +22,7 @@
         , stack/1
         , reduce/1
         , associative/1
-        , '->erl'/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -275,8 +275,8 @@ associative(_Config) ->
 
   {comments, ""}.
 
--spec '->erl'(config()) -> result().
-'->erl'(_Config) ->
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
   Vector1   = clj_rt:vector([1, 2, 3]),
   {1, 2, 3} = clj_rt:'->erl'(Vector1, false),
   {1, 2, 3} = clj_rt:'->erl'(Vector1, true),

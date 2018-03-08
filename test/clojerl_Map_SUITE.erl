@@ -17,7 +17,7 @@
         , hash/1
         , cons/1
         , associative/1
-        , '->erl'/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -209,8 +209,8 @@ associative(_Config) ->
 
   {comments, ""}.
 
--spec '->erl'(config()) -> result().
-'->erl'(_Config) ->
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
   EmptyMap = clj_rt:hash_map([]),
   #{} = clj_rt:'->erl'(EmptyMap, false),
   #{} = clj_rt:'->erl'(EmptyMap, true),

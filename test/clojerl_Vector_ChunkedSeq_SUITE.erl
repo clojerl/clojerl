@@ -16,7 +16,7 @@
         , seq/1
         , equiv/1
         , cons/1
-        , '->erl'/1
+        , to_erl/1
         , complete_coverage/1
         ]).
 
@@ -149,8 +149,8 @@ cons(_Config) ->
 
   {comments, ""}.
 
--spec '->erl'(config()) -> result().
-'->erl'(_Config) ->
+-spec to_erl(config()) -> result().
+to_erl(_Config) ->
   Tuple1      = list_to_tuple(lists:seq(0, 63)),
   ChunkedSeq1 = chunked_seq(64),
   Tuple1      = clj_rt:'->erl'(ChunkedSeq1, false),
