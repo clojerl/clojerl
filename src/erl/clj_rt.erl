@@ -42,7 +42,7 @@
         , compare_fun/2
         , shuffle/1
         , hash/1
-        , '->erl'/1, '->erl'/2
+        , '->erl'/2
         ]).
 
 -spec type(any()) -> 'erlang.Type':type().
@@ -662,9 +662,6 @@ shuffle(Seq) ->
 -spec hash(any()) -> integer().
 hash(?NIL) -> 0;
 hash(X)    -> 'clojerl.IHash':hash(X).
-
--spec '->erl'(any()) -> any().
-'->erl'(X) -> '->erl'(X, false).
 
 -spec '->erl'(any(), boolean()) -> any().
 '->erl'(?NIL, _)      -> ?NIL;

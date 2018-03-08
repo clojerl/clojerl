@@ -2860,10 +2860,12 @@
                          [] specs)))))
 
 (defn ->erl
-  "Returns a tuple with components set to the values in aseq."
+  "Returns the Erlang representation of x when it implements clojerl.IErl,
+  otherwise returns x unchanged. When x is a collection the conversion can
+  be applied recursively, which is the default behavior."
   {:added "1.0"}
   ([x]
-   (clj_rt/->erl x))
+   (->erl x true))
   ([x recursive?]
    (clj_rt/->erl x recursive?)))
 
@@ -3045,7 +3047,7 @@
          stream))
   ([opts stream]
    (clj_reader/read ""
-                    (clj_rt/->erl (assoc opts :io-reader stream)))))
+                    (->erl (assoc opts :io-reader stream)))))
 
 (defn read-line
   "Reads the next line from stream that is the current value of *in* ."
@@ -3063,7 +3065,7 @@
   For data structure interop use clojure.edn/read-string"
   {:added "1.0"}
   ([s] (clj_reader/read s))
-  ([opts s] (clj_reader/read s (clj_rt/->erl opts))))
+  ([opts s] (clj_reader/read s (->erl opts))))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
