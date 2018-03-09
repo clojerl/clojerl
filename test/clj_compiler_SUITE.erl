@@ -105,8 +105,9 @@ eval(_Config) ->
 
   ct:comment("Define a var"),
   DefList = clj_reader:read(<<"(def hello :world)">>),
-  {Var, _} = clj_compiler:eval(DefList),
-  Var = find_var(<<"test.clj_compiler">>, <<"hello">>),
+  {Var0, _} = clj_compiler:eval(DefList),
+  Var1 = find_var(<<"test.clj_compiler">>, <<"hello">>),
+  true = clj_rt:equiv(Var0, Var1),
 
   check_var_value(<<"test.clj_compiler">>, <<"hello">>, world),
 

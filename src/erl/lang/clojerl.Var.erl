@@ -24,6 +24,7 @@
         , module/1
         , val_function/1
         , process_args/3
+        , mark_fake_fun/1
         ]).
 
 -export([ push_bindings/1
@@ -55,6 +56,7 @@
                  , name_atom => atom()
                  , val_atom  => atom()
                  , meta      => ?NIL | any()
+                 , fake_fun  => boolean()
                  }.
 
 -spec ?CONSTRUCTOR(binary(), binary()) -> type().
@@ -66,6 +68,7 @@
    , name_atom => binary_to_atom(Name, utf8)
    , val_atom  => binary_to_atom(<<Name/binary, "__val">>, utf8)
    , meta      => ?NIL
+   , fake_fun  => false
    }.
 
 -spec is_dynamic(type()) -> boolean().
@@ -113,6 +116,10 @@ function(#{?TYPE := ?M, name_atom := NameAtom}) ->
 -spec val_function(type()) -> atom().
 val_function(#{?TYPE := ?M, val_atom := ValAtom}) ->
   ValAtom.
+
+-spec mark_fake_fun(type()) -> type().
+mark_fake_fun(#{?TYPE := ?M} = Var) ->
+  Var#{fake_fun => true}.
 
 -spec push_bindings('clojerl.IMap':type()) -> ok.
 push_bindings(BindingsMap) ->
@@ -213,9 +220,9 @@ deref(#{ ?TYPE    := ?M
        , name     := Name
        , ns_atom  := Module
        , val_atom := FunctionVal
-       }) ->
+       } = Var) ->
   %% HACK
-  Fun         = clj_module:fake_fun(Module, FunctionVal, 0),
+  Fun = resolve_fun(Var, Module, FunctionVal, 0),
 
   try
     %% Make the call in case the module is not loaded and handle the case
@@ -249,8 +256,7 @@ with_meta(#{?TYPE := ?M} = Var, Metadata) ->
 
 apply(#{?TYPE := ?M, ns_atom := Module, name_atom := Function} = Var, Args0) ->
   {Arity, Args1} = process_args(Var, Args0, fun clj_rt:seq/1),
-  %% HACK
-  Fun            = clj_module:fake_fun(Module, Function, Arity),
+  Fun            = resolve_fun(Var, Module, Function, Arity),
 
   erlang:apply(Fun, Args1).
 
@@ -298,3 +304,13 @@ bounded_length(Rest, N, Max, Acc) ->
   First = TypeModule:first(Rest),
   Rest1 = TypeModule:next(Rest),
   bounded_length(Rest1, N + 1, Max, [First | Acc]).
+
+%%------------------------------------------------------------------------------
+%% Helper functions
+%%------------------------------------------------------------------------------
+
+-spec resolve_fun(type(), module(), atom(), arity()) -> fun().
+resolve_fun(#{fake_fun := true}, Module, Function, Arity) ->
+  clj_module:fake_fun(Module, Function, Arity);
+resolve_fun(_, Module, Function, Arity) ->
+  fun Module:Function/Arity.
