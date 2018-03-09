@@ -86,6 +86,9 @@ compile_file(File, Opts) when is_binary(File) ->
 -spec compile_file(file:filename_all(), options(), clj_env:env()) ->
   clj_env:env().
 compile_file(File, Opts0, Env) when is_binary(File) ->
+  ?ERROR_WHEN( not filelib:is_regular(File)
+             , [<<"File '">>, File, <<"' does not exist">>]
+             ),
   case file:read_file(File) of
     {ok, Src} ->
       Opts       = maps:merge(default_options(), Opts0),
@@ -102,7 +105,7 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
                    end,
       CompileFun(Src, Opts1, Env);
     Error ->
-      throw(Error)
+      error(Error)
   end.
 
 -spec reader_opts(binary()) -> map().
