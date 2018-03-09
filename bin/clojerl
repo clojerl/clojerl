@@ -41,7 +41,6 @@ CLJE_BINDIR=$(dirname "$SELF")
 CLJE_ROOT=$(dirname "$CLJE_BINDIR")
 
 ERL_ARGS="$ERL_ARGS -s clojerl_cli start +pc unicode -noshell"
-EXTRA_ARGS=""
 
 while [ "$#" -gt 0 ]
 do
@@ -64,9 +63,10 @@ do
 done
 
 # When no arguments are provided just start the REPL
-if [ -z "$EXTRA_ARGS" ]; then
-   EXTRA_ARGS="-r";
+MAYBE_START_REPL=""
+if [ 0 -eq $# ]; then
+   MAYBE_START_REPL="-r";
 fi
 
 export ERL_LIBS="$CLJE_ROOT/_build/default/lib:$ERL_LIBS"
-exec erl $ERL_ARGS -extra "$@"
+exec erl $ERL_ARGS -extra $MAYBE_START_REPL "$@"
