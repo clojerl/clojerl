@@ -515,8 +515,12 @@ stacktrace(Stacktrace, Options) ->
 -spec stacktrace_pretty(iolist(), [tuple()]) -> iolist().
 stacktrace_pretty(_Indent, []) ->
   [];
-stacktrace_pretty(Indent, [Entry|Stacktrace]) ->
-  {Mod, Func, Arity, Attrs} = Entry,
+stacktrace_pretty(Indent, [Entry | Stacktrace]) ->
+  {Mod, Func, ArityOrArgs, Attrs} = Entry,
+  Arity = case is_integer(ArityOrArgs) of
+            true  -> ArityOrArgs;
+            false -> length(ArityOrArgs)
+          end,
   File = proplists:get_value(file, Attrs, "?"),
   Line = case proplists:get_value(line, Attrs, undefined) of
            undefined -> "?";
