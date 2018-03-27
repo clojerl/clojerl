@@ -4531,10 +4531,7 @@
   "Returns the root directory path for a lib"
   {:tag clojerl.String}
   [lib]
-  (str "/"
-       (-> (name lib)
-           (binary/replace "." "/" #erl(:global))
-           (binary/replace "-" "_" #erl(:global)))))
+  (str "/" (clj_utils/ns_to_resource (name lib))))
 
 (defn- index-of [s x]
   (let [matches (binary/matches s x)]
