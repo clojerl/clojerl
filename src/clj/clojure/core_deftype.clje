@@ -422,7 +422,7 @@
             keyword? (recur (assoc opts (first sigs) (second sigs)) (nnext sigs))
             [opts sigs]))
         sigs (when sigs
-               (reduce1 (fn [m s]
+               (reduce (fn [m s]
                           (let [name-meta (meta (first s))
                                 mname (with-meta (first s) nil)
                                 [arglists doc]
