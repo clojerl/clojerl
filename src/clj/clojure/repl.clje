@@ -129,11 +129,11 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 
 (defn- find-file-in-code-path [filename]
   (->> (code/get_path)
-       (map #(filename/join (clj_rt/to_list [% "**" filename])))
-       (map erlang/binary_to_list.1)
-       (mapcat filelib/wildcard.1)
+       (mapcat #(list %
+                      (filename/join #erl(% ".." "src"))
+                      (filename/join #erl(% ".." "src" "clj"))))
+       (map #(filename/join % filename))
        (filter filelib/is_regular.1)
-       (map erlang/list_to_binary.1)
        first))
 
 ;; NOTE: this was originally a proxy writing to sw
@@ -156,6 +156,18 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
       (.delete sw (dec len) len))
     (.unread pbr ch)))
 
+(defn- source-path
+  [v]
+  (let [m    (meta v)
+        file (:file m)
+        ns   (:ns m)]
+    (if (and ns file)
+      (let [ns-path  (clj_utils/ns_to_resource (name ns))
+            dir      (filename/dirname ns-path)
+            filename (filename/basename file)]
+        (filename/join dir filename))
+      file)))
+
 (defn source-fn
   "Returns a string of the source code for the given symbol, if it can
   find it.  This requires that the symbol resolve to a Var defined in
@@ -166,7 +178,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
   Example: (source-fn 'filter)"
   [x]
   (when-let [v (resolve x)]
-    (when-let [filepath (:file (meta v))]
+    (when-let [filepath (source-path v)]
       (when-let [^clojerl.String filepath (find-file-in-code-path filepath)]
         (with-open [rdr  (erlang.io.File/open filepath)
                     pbr  (erlang.io.PushbackReader. rdr)

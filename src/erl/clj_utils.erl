@@ -42,6 +42,9 @@
 
         , stacktrace/1
         , stacktrace/2
+
+        , resource_to_ns/1
+        , ns_to_resource/1
         ]).
 
 -define(CORE_CHUNK, "Core").
@@ -478,6 +481,16 @@ ets_get(Table, Id) ->
 ets_save(Table, Value) ->
   true = ets:insert(Table, Value),
   Value.
+
+-spec resource_to_ns(binary()) -> binary().
+resource_to_ns(Resource) ->
+  Ns = binary:replace(Resource, <<"/">>, <<".">>, [global]),
+  binary:replace(Ns, <<"_">>, <<"-">>, [global]).
+
+-spec ns_to_resource(binary()) -> binary().
+ns_to_resource(NsName) ->
+  Resource = binary:replace(NsName, <<".">>, <<"/">>, [global]),
+  binary:replace(Resource, <<"-">>, <<"_">>, [global]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% The MIT License (MIT)
