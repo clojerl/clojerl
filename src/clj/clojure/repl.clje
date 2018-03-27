@@ -133,8 +133,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
        (map erlang/binary_to_list.1)
        (mapcat filelib/wildcard.1)
        (filter filelib/is_regular.1)
-       first
-       erlang/list_to_binary.1))
+       (map erlang/list_to_binary.1)
+       first))
 
 ;; NOTE: this was originally a proxy writing to sw
 (deftype PushbackReaderStringWriter [pbr sw]
