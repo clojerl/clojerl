@@ -738,23 +738,29 @@ ast(#{op := 'if'} = Expr, State) ->
   {TestAst, State1} = pop_ast(ast(TestExpr, State)),
 
   %% Then
-  False      = cerl:ann_c_atom(Ann, false),
-  Nil        = cerl:ann_c_atom(Ann, ?NIL),
-  ThenVar    = new_c_var(Ann),
-  ThenGuard  = call_mfa( erlang
-                           , 'and'
-                           , [ call_mfa(erlang, '=/=', [ThenVar, False], Ann)
-                             , call_mfa(erlang, '=/=', [ThenVar, Nil], Ann)
-                             ]
-                           , Ann
-                           ),
   {ThenAst, State2} = pop_ast(ast(ThenExpr, State1)),
-  ThenClause = cerl:ann_c_clause(Ann, [ThenVar], ThenGuard, ThenAst),
+
+  TestVar           = new_c_var(Ann),
+  Nil               = cerl:ann_c_atom(Ann, ?NIL),
+  False             = cerl:ann_c_atom(Ann, false),
+
+  NilGuard          = call_mfa(erlang, '=/=', [TestVar, Nil], Ann),
+  FalseGuard        = call_mfa(erlang, '=/=', [TestVar, False], Ann),
+
+  TrueClause        = cerl:ann_c_clause(Ann, [], NilGuard, FalseGuard),
+  FalseClause       = cerl:ann_c_clause(Ann, [], False),
+
+  ThenGuardAst      = cerl:ann_c_case( Ann
+                                     , cerl:ann_c_values(Ann, [])
+                                     , [TrueClause, FalseClause]
+                                     ),
+
+  ThenClause        = cerl:ann_c_clause(Ann, [TestVar], ThenGuardAst, ThenAst),
 
   %% Else
-  ElseVar    = new_c_var(Ann),
+  ElseVar           = new_c_var(Ann),
   {ElseAst, State3} = pop_ast(ast(ElseExpr, State2)),
-  ElseClause = cerl:ann_c_clause(Ann, [ElseVar], ElseAst),
+  ElseClause        = cerl:ann_c_clause(Ann, [ElseVar], ElseAst),
 
   Ast = cerl:ann_c_case(Ann, TestAst, [ThenClause, ElseClause]),
   push_ast(Ast, State3);
