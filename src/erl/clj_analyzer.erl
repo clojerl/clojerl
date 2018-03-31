@@ -283,7 +283,7 @@ maybe_inline(Op, List, Env0) ->
       Fun(List, Env1);
     InlineExpr ->
       ?DEBUG({inlining, List}),
-      Fun   = eval_inline(InlineExpr),
+      Fun   = inline_fun(Var, InlineExpr),
       Form0 = clj_rt:apply(Fun, Rest),
       Form1 = keep_tag(List, Form0),
       Form2 = keep_location_meta(Form1, List),
@@ -305,6 +305,22 @@ is_inline(Meta, Arity) ->
       end;
     _ ->
       Inline
+  end.
+
+%% Keep a cached version of the inline function to avoid having to eval
+%% all the time.
+%% NOTE: We use the process dictionary since the process will die once
+%% it's done compiling the file.
+-spec inline_fun('clojerl.Var':type(), any()) -> any().
+inline_fun(Var, InlineExpr) ->
+  Key = {inline_fun, 'clojerl.Var':str(Var)},
+  case get(Key) of
+    ?NIL ->
+      Fun = eval_inline(InlineExpr),
+      put(Key, Fun),
+      Fun;
+    Fun ->
+      Fun
   end.
 
 -spec eval_inline(any()) -> any().
