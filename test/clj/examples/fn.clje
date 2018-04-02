@@ -270,7 +270,7 @@
 ;; [#453] Check that not all fn forms are bound to the var
 
 (def recur-in-let
-  (let [y (fn [x]
+  (let [y (fn* [x]
             (if (neg? x) :fin (recur (dec x))))]
     (y 10)))
 
@@ -282,54 +282,59 @@
 ;; [#453] fn inside a vector
 
 (def def-vector-with-fn
-  [((fn [x]
+  [((fn* [x]
       (if (neg? x) :fin (recur (dec x))))
     10)])
 
 ;; [#453] fn inside a map
 
 (def def-map-with-fn-1
-  {:foo ((fn [x]
+  {:foo ((fn* [x]
            (if (neg? x) :fin (recur (dec x))))
          10)})
 
 (should-throw
  (def def-map-with-fn-2
-   {:foo (fn [x]
+   {:foo (fn* [x]
            (if (neg? x) :fin (recur (dec x))))}))
 
 ;; [#453] fn inside an Erlang map
 
 (def def-erl-map-with-fn-1
-  #erl{:foo ((fn [x]
+  #erl{:foo ((fn* [x]
                (if (neg? x) :fin (recur (dec x))))
              10)})
 
 (should-throw
  (def def-erl-map-with-fn-2
-     #erl{:foo (fn [x]
+     #erl{:foo (fn* [x]
                  (if (neg? x) :fin (recur (dec x))))}))
 
 ;; [#453] fn inside a set
 
 (def def-set-with-fn-1
-  #{:foo ((fn [x]
+  #{:foo ((fn* [x]
             (if (neg? x) :fin (recur (dec x))))
           10)})
 
 (should-throw
  (def def-set-with-fn-2
-   #{:foo (fn [x]
+   #{:foo (fn* [x]
             (if (neg? x) :fin (recur (dec x))))}))
 
 ;; [#453] fn inside a tuple
 
 (def def-tuple-with-fn-1
-  #erl[:foo ((fn [x]
+  #erl[:foo ((fn* [x]
                (if (neg? x) :fin (recur (dec x))))
              10)])
 
 (should-throw
  (def def-tuple-with-fn-2
-   #erl[:foo (fn [x]
+   #erl[:foo (fn* [x]
                (if (neg? x) :fin (recur (dec x))))]))
+
+;; [#490] `args` shouldn't get a new binding inside fn
+
+(let* [args :foo]
+  ((fn [y] (clojure.core/assert (erlang/=:= args :foo))) 1))

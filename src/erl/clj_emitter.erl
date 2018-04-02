@@ -1485,7 +1485,7 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
         StateAcc1 = lists:foldl(fun method_to_case_clause/2, StateAcc, Methods),
         {ClausesAsts, StateAcc2} = pop_ast(StateAcc1, length(Methods)),
 
-        ArgsVar  = cerl:ann_c_var(Ann, args),
+        ArgsVar  = new_c_var(Ann),
         CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts),
         LetAst   = cerl:ann_c_let( Ann
                                  , VarsAsts
