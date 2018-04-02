@@ -334,7 +334,7 @@
    #erl[:foo (fn* [x]
                (if (neg? x) :fin (recur (dec x))))]))
 
-;; [#490] args gets a bindings
+;; [#490] `args` shouldn't get a new binding inside fn
 
 (let* [args :foo]
   ((fn [y] (clojure.core/assert (erlang/=:= args :foo))) 1))
