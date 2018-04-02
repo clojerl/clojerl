@@ -10,6 +10,7 @@
 -behavior('clojerl.IErl').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
+-behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.ISeqable').
@@ -30,6 +31,9 @@
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
+        ]).
+-export([ reduce/2
+        , reduce/3
         ]).
 -export([ first/1
         , next/1
@@ -130,6 +134,36 @@ meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
 with_meta(#{?TYPE := ?M} = ChunkedSeq, Meta) ->
   ChunkedSeq#{meta => Meta}.
+
+%% clojerl.IReduce
+
+reduce(#{?TYPE := ?M} = ChunkedSeq, F) ->
+  case seq(ChunkedSeq) of
+    ?NIL ->
+      clj_rt:apply(F, []);
+    #{?TYPE := ?M} ->
+      First = first(ChunkedSeq),
+      Next  = next(ChunkedSeq),
+      reduce(Next, F, First)
+  end.
+
+reduce(#{?TYPE := ?M} = ChunkedSeq, F, Init) ->
+  case seq(ChunkedSeq) of
+    ?NIL           -> Init;
+    #{?TYPE := ?M} -> do_reduce(ChunkedSeq, F, Init)
+  end.
+
+do_reduce(ChunkedSeq, F, Init) ->
+  ChunkFirst = chunked_first(ChunkedSeq),
+  Val        = 'clojerl.TupleChunk':reduce(ChunkFirst, F, Init),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false ->
+      case chunked_next(ChunkedSeq) of
+        ?NIL        -> Val;
+        ChunkedNext -> reduce(ChunkedNext, F, Val)
+      end
+  end.
 
 %% clojerl.ISeq
 

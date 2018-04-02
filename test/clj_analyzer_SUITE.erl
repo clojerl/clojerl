@@ -133,7 +133,9 @@ def(_Config) ->
   ok = try analyze_one(<<"(def :x \"doc\" 1)">>)
        catch error:Error3 ->
            Msg3 = 'clojerl.IError':message(Error3),
-           <<?NO_SOURCE, ":1:1: First argument to def must be a symbol">> = Msg3,
+           <<?NO_SOURCE,
+             ":1:1: First argument to"
+             " def must be a symbol">> = Msg3,
            ok
        end,
 

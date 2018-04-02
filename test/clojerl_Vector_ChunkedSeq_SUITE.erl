@@ -16,6 +16,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , reduce/1
         , to_erl/1
         , complete_coverage/1
         ]).
@@ -146,6 +147,31 @@ cons(_Config) ->
   Cons = clj_rt:conj(ChunkedSeq1, -1),
   65   = clj_rt:count(Cons),
   true = clj_rt:equiv(Cons, lists:seq(-1, 63)),
+
+  {comments, ""}.
+
+-spec reduce(config()) -> result().
+reduce(_Config) ->
+  PlusFun     = fun
+                  ([]) -> 0;
+                  ([X, Y]) -> X + Y
+                end,
+
+  ChunkedSeq1 = chunked_seq(64),
+  2016        = 'clojerl.IReduce':reduce(ChunkedSeq1, PlusFun),
+
+  ChunkedSeq2 = chunked_seq(33),
+  528         = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusFun),
+  529         = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusFun, 1),
+
+  PlusMaxFun = fun
+                 ([]) -> 0;
+                 ([X, Y]) when X < 10 -> X + Y;
+                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+            end,
+
+  Reduced = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusMaxFun),
+  10 = clj_rt:deref(Reduced),
 
   {comments, ""}.
 

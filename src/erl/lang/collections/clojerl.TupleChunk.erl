@@ -78,8 +78,7 @@ reduce(#{?TYPE := ?M, tuple := Tuple, offset := Offset, size := Size}, Fun) ->
             false ->
               []
           end,
-  Apply = fun(Item, Acc) -> clj_rt:apply(Fun, [Acc, Item]) end,
-  lists:foldl(Apply, Init, Items).
+  do_reduce(Fun, Init, Items).
 
 reduce(#{ ?TYPE  := ?M
         , tuple  := Tuple
@@ -93,8 +92,16 @@ reduce(#{ ?TYPE  := ?M
   Items    = [ erlang:element(Index, Tuple)
                || Index <- lists:seq(Offset + 1, Size)
              ],
-  ApplyFun = fun(Item, Acc) -> clj_rt:apply(Fun, [Acc, Item]) end,
-  lists:foldl(ApplyFun, Init, Items).
+  do_reduce(Fun, Init, Items).
+
+do_reduce(_Fun, Acc, []) ->
+  Acc;
+do_reduce(Fun, Acc, [Item | Items]) ->
+  Val = clj_rt:apply(Fun, [Acc, Item]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> Val;
+    false -> do_reduce(Fun, Val, Items)
+  end.
 
 nth(#{?TYPE := ?M} = TupleChunk, N) ->
   nth(TupleChunk, N, ?NIL).
