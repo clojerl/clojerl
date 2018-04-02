@@ -28,9 +28,16 @@
 %% -define(CLJ_DEBUG, true).
 
 -ifdef(CLJ_DEBUG).
--define(DEBUG(Term), io:format("~p~n", [Term])).
+-define(DEBUG(Term), io:format("~s~n~n", [clj_rt:str(Term)])).
+-define( DEBUG_WHEN(Pred, Term)
+       , case Pred of
+           true  -> ?DEBUG(Term);
+           false -> ok
+         end
+       ).
 -else.
 -define(DEBUG(Term), ok).
+-define(DEBUG_WHEN(Pred, Term), ok).
 -endif.
 
 %% Chunk size

@@ -226,42 +226,108 @@ analyze_seq(List, Env0) ->
               Location -> #{location => Location}
             end,
   Env1    = clj_env:push(Mapping, Env0),
+  Env2    = case macroexpand_1(List, Env1) of
+              List         -> do_analyze_seq(List, Env1);
+              ExpandedList -> analyze_form(ExpandedList, Env1)
+            end,
+
+  clj_env:pop(Env2).
+
+-spec clear_def_var(clj_env:env()) -> clj_env:env().
+clear_def_var(Env) ->
+  clj_env:put(def_var, ?NIL, Env).
+
+%% [#453] Keep def_var when parsing a fn*
+-spec maybe_clear_def_var(binary(), clj_env:env()) -> clj_env:env().
+maybe_clear_def_var(OpStr, Env0) ->
+  case OpStr =:= <<"fn*">> of
+    true  -> Env0;
+    false -> clear_def_var(Env0)
+  end.
+
+-spec do_analyze_seq(boolean(), any()) -> clj_env:env().
+do_analyze_seq(List, Env0) ->
   Op      = clj_rt:first(List),
 
   ?ERROR_WHEN( Op =:= ?NIL
              , <<"Can't call nil">>
-             , clj_env:location(Env1)
+             , clj_env:location(Env0)
              ),
 
-  ExpandedList   = macroexpand_1(List, Env1),
-  DoneExpanding  = clj_rt:equiv(List, ExpandedList),
-  {Fun, KeepDef} = dispatch_analyze_seq(DoneExpanding, Op),
-  %% Keep def_name when parsing a fn* or if we need to keep expanding.
-  Env2 = case KeepDef of
-           true  -> Env1;
-           false -> clear_def_name(Env1)
-         end,
-  Env3 = Fun(ExpandedList, Env2),
-  clj_env:pop(Env3).
-
--spec clear_def_name(clj_env:env()) -> clj_env:env().
-clear_def_name(Env) ->
-  clj_env:put(def_name, ?NIL, Env).
-
--spec dispatch_analyze_seq(boolean(), any()) -> {fun(), boolean()}.
-dispatch_analyze_seq(true = _DoneExpanding, Op) ->
-  Default = fun analyze_invoke/2,
-  case clj_rt:'symbol?'(Op) of
+  case clj_rt:'symbol?'(Op) orelse clj_rt:'var?'(Op) of
     true  ->
-      OpStr = 'clojerl.Symbol':str(Op),
-      { maps:get(OpStr, special_forms(), Default)
-      , OpStr =:= <<"fn*">>
-      };
+      maybe_inline(Op, List, Env0);
     false ->
-      {Default, false}
-  end;
-dispatch_analyze_seq(false = _DoneExpanding, _Op) ->
-  {fun analyze_form/2, true}.
+      analyze_invoke(List, Env0)
+  end.
+
+-spec maybe_inline('clojerl.Symbol':type(), any(), clj_env:env()) ->
+  clj_env:env().
+maybe_inline(Op, List, Env0) ->
+  Var   = case clj_rt:'var?'(Op) of
+            true  -> Op;
+            false -> lookup_var(Op, false)
+          end,
+  Meta  = case Var of
+            ?NIL -> ?NIL;
+            Var  -> clj_rt:meta(Var)
+          end,
+  Rest  = clj_rt:next(List),
+  Arity = clj_rt:count(Rest),
+  case is_inline(Meta, Arity) of
+    ?NIL ->
+      OpStr   = 'clojerl.Symbol':str(Op),
+      Env1    = maybe_clear_def_var(OpStr, Env0),
+      Default = fun analyze_invoke/2,
+      Fun     = maps:get(OpStr, special_forms(), Default),
+      Fun(List, Env1);
+    InlineExpr ->
+      ?DEBUG({inlining, List}),
+      Fun   = inline_fun(Var, InlineExpr),
+      Form0 = clj_rt:apply(Fun, Rest),
+      Form1 = keep_tag(List, Form0),
+      Form2 = keep_location_meta(Form1, List),
+      analyze_form(Form2, Env0)
+  end.
+
+-spec is_inline(any(), integer()) -> ?NIL | 'clojerl.List':type().
+is_inline(Meta, Arity) ->
+  Inline = clj_rt:get(Meta, inline),
+  InlineArities = clj_rt:get(Meta, 'inline-arities'),
+  case Inline of
+    ?NIL ->
+      ?NIL;
+    Inline when InlineArities =/= ?NIL ->
+      Result = clj_rt:apply(InlineArities, [Arity]),
+      case clj_rt:boolean(Result) of
+        true  -> Inline;
+        false -> ?NIL
+      end;
+    _ ->
+      Inline
+  end.
+
+%% Keep a cached version of the inline function to avoid having to eval
+%% all the time.
+%% NOTE: We use the process dictionary since the process will die once
+%% it's done compiling the file.
+-spec inline_fun('clojerl.Var':type(), any()) -> any().
+inline_fun(Var, InlineExpr) ->
+  Key = {inline_fun, 'clojerl.Var':str(Var)},
+  case get(Key) of
+    ?NIL ->
+      Fun = eval_inline(InlineExpr),
+      put(Key, Fun),
+      Fun;
+    Fun ->
+      Fun
+  end.
+
+-spec eval_inline(any()) -> any().
+eval_inline(Expr) ->
+  Env1           = analyze_form(Expr, clj_env:default()),
+  {Exprs, _Env2} = clj_emitter:emit(Env1),
+  clj_compiler:eval_expressions(Exprs, true).
 
 %%------------------------------------------------------------------------------
 %% Parse quote
@@ -322,19 +388,12 @@ parse_fn(List, Env) ->
                    },
 
   %% If there is a def var we add it to the local scope
-  DefNameSym  = clj_env:get(def_name, Env),
-  IsDef       = DefNameSym =/= ?NIL,
-  DefVar      =
-    case IsDef of
-      true  ->
-        DefVarNs    = 'clojerl.Namespace':current(),
-        DefVarNsSym = 'clojerl.Namespace':name(DefVarNs),
-        'clojerl.Var':?CONSTRUCTOR( 'clojerl.Symbol':name(DefVarNsSym)
-                                  , 'clojerl.Symbol':name(DefNameSym)
-                                  );
-      false -> ?NIL
-    end,
-
+  DefVar      = clj_env:get(def_var, Env),
+  IsDef       = DefVar =/= ?NIL,
+  DefNameSym  = case IsDef of
+                  true  -> clj_rt:symbol('clojerl.Var':name(DefVar));
+                  false -> ?NIL
+                end,
   %% If it is a def we register the var, otherwise register the local.
   Env1 = case DefVar of
            ?NIL ->
@@ -357,8 +416,8 @@ parse_fn(List, Env) ->
                          false -> {fn, NameSym}
                        end,
 
-  %% Remove def_name so that inner fn* are not influenced by it.
-  Env1Bis = clj_env:push(#{def_name => ?NIL}, Env1),
+  %% Remove def_var so that inner fn* are not influenced by it.
+  Env1Bis = clj_env:push(#{def_var => ?NIL}, Env1),
 
   %% If it is a def analyze methods' args but not the body,
   %% we just want arity information first.
@@ -417,12 +476,14 @@ parse_fn(List, Env) ->
   {MethodsExprs1, Env4} =
     case IsDef of
       true  ->
-        VarMeta = #{ 'variadic?'     => IsVariadic
-                   , max_fixed_arity => MaxFixedArity
-                   , variadic_arity  => VariadicArity
-                   , 'fn?'           => true
-                   },
-        DefVar1 = clj_rt:with_meta(DefVar, VarMeta),
+        VarMeta0 = #{ 'variadic?'     => IsVariadic
+                    , max_fixed_arity => MaxFixedArity
+                    , variadic_arity  => VariadicArity
+                    , 'fn?'           => true
+                    },
+        VarMeta1 = clj_rt:merge([clj_rt:meta(DefVar), VarMeta0]),
+        DefVar1  = clj_rt:with_meta(DefVar, VarMeta1),
+
         'clojerl.Namespace':update_var(DefVar1),
 
         analyze_fn_methods(MethodsList, LoopType, LoopId, IsOnce, true, Env2);
@@ -1120,8 +1181,8 @@ parse_def(List, Env) ->
                                            ]
                                  }
                               ]),
-  Var          = clj_rt:with_meta(Var0, VarMeta),
-  IsDynamic    = 'clojerl.Var':is_dynamic(Var),
+  Var1         = 'clojerl.Var':with_meta(Var0, VarMeta),
+  IsDynamic    = 'clojerl.Var':is_dynamic(Var1),
 
   NoWarnDynamic = clj_compiler:no_warn_dynamic_var_name(Env),
   ?WARN_WHEN( not NoWarnDynamic
@@ -1135,7 +1196,8 @@ parse_def(List, Env) ->
             , clj_env:location(Env)
             ),
 
-  'clojerl.Namespace':update_var(Var),
+  'clojerl.Namespace':update_var(Var1),
+
   Count = clj_rt:count(List),
   Init  = case Docstring of
             ?NIL when Count =:= 3 -> clj_rt:third(List);
@@ -1143,13 +1205,15 @@ parse_def(List, Env) ->
             _                     -> ?UNBOUND
           end,
 
-  ExprEnv  = clj_env:push(#{def_name => VarSymbol, context => expr}, Env),
+  %% Use Var for def_var that doesn't contain `arglists`, since the value
+  %% for `arglists` will be a quoted list until it is evaluated, and this
+  %% will make signature_tag/4 fail.
+  ExprEnv  = clj_env:push(#{def_var => Var0, context => expr}, Env),
   {InitExpr, Env1} = clj_env:pop_expr(analyze_form(Init, ExprEnv)),
 
-  Var1     = var_fn_info(Var, InitExpr),
-  VarMeta1 = process_var_meta(Var1, Env),
-  Var2     = 'clojerl.Var':with_meta(Var1, VarMeta1),
-  'clojerl.Namespace':update_var(Var2),
+  Var2     = var_fn_info(Var1, InitExpr),
+  Var3     = eval_var_meta(Var2, Env),
+  'clojerl.Namespace':update_var(Var3),
 
   {TagExpr, Env2} = fetch_type_tag(VarSymbol, Env1),
 
@@ -1157,38 +1221,46 @@ parse_def(List, Env) ->
              , env     => Env
              , form    => List
              , name    => VarSymbol
-             , var     => Var2
+             , var     => Var3
              , init    => InitExpr
              , dynamic => IsDynamic
              , tag     => TagExpr
              },
 
-  Env3 = clj_env:pop(Env2),
-  clj_env:push_expr(DefExpr, Env3).
+  clj_env:push_expr(DefExpr, clj_env:pop(Env2)).
 
-process_var_meta(Var, Env) ->
-  Env1           = analyze_form(clj_rt:meta(Var), Env),
+-spec eval_var_meta('clojerl.Var':type(), clj_env:env()) -> any().
+eval_var_meta(Var, Env) ->
+  VarMeta0       = 'clojerl.Var':meta(Var),
+  Env1           = analyze_form(VarMeta0, Env),
   {Exprs, _Env2} = clj_emitter:emit(Env1),
-  VarMeta = clj_compiler:eval_expressions(Exprs, false),
+  VarMeta1       = clj_compiler:eval_expressions(Exprs, true),
 
-  ?ERROR_WHEN( not cerl:is_literal_term(VarMeta)
+  assert_only_literals(Var, VarMeta1, Env),
+
+  'clojerl.Var':with_meta(Var, VarMeta1).
+
+-spec assert_only_literals('clojerl.Var':type(), any(), clj_env:env()) -> any().
+assert_only_literals(Var, Value, Env) ->
+  ?ERROR_WHEN( not cerl:is_literal_term(Value)
              , [ <<"Metadata for var ">>
                , Var
                , <<" can only contains literals">>
                ]
              , clj_env:location(Env)
-             ),
+             ).
 
-  VarMeta.
-
--spec var_fn_info('clojerl.Var':type(), expr()) -> 'clojerl.Var':type().
+-spec var_fn_info('clojerl.Var':type(), expr()) ->
+  'clojerl.Var':type().
 var_fn_info(Var, #{op := fn} = Expr) ->
   %% Add information about the associated function
   %% to the var's metadata.
+  %% All information should be literal values.
   RemoveKeys = [op, env, methods, form, once, local, tag],
   ExprInfo   = maps:without(RemoveKeys, Expr),
   VarMeta    = clj_rt:meta(Var),
   VarMeta1   = clj_rt:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
+
   clj_rt:with_meta(Var, VarMeta1);
 var_fn_info(Var, _) ->
   Var.
@@ -2281,7 +2353,7 @@ wrapping_meta(#{form := Form, tag := TagExpr} = Expr, Env) ->
 -spec analyze_vector('clojerl.Vector':type(), clj_env:env()) -> clj_env:env().
 analyze_vector(Vector, Env0) ->
   Count   = clj_rt:count(Vector),
-  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
+  Env1    = clj_env:push(#{context => expr}, clear_def_var(Env0)),
   Items   = clj_rt:to_list(Vector),
   Env2    = analyze_forms(Items, Env1),
   {ItemsExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2305,7 +2377,7 @@ analyze_map(Map, Env0) ->
   Vals  = clj_rt:to_list('clojerl.Map':vals(Map)),
 
   Count = clj_rt:count(Map),
-  Env1  = clj_env:push(#{context => expr}, clear_def_name(Env0)),
+  Env1  = clj_env:push(#{context => expr}, clear_def_var(Env0)),
 
   Env2  = analyze_forms(Keys, Env1),
   {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2332,7 +2404,7 @@ analyze_erl_map(Map, Env0) ->
   Vals  = maps:values(Map),
 
   Count = maps:size(Map),
-  Env1  = clj_env:push(#{context => expr}, clear_def_name(Env0)),
+  Env1  = clj_env:push(#{context => expr}, clear_def_var(Env0)),
 
   Env2 = analyze_forms(Keys, Env1),
   {KeysExpr, Env3} = clj_env:last_exprs(Count, Env2),
@@ -2356,7 +2428,7 @@ analyze_erl_map(Map, Env0) ->
 
 -spec analyze_set('clojerl.Set':type(), clj_env:env()) -> clj_env:env().
 analyze_set(Set, Env0) ->
-  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
+  Env1    = clj_env:push(#{context => expr}, clear_def_var(Env0)),
   Items   = clj_rt:to_list(Set),
   Env2    = analyze_forms(Items, Env1),
 
@@ -2379,7 +2451,7 @@ analyze_set(Set, Env0) ->
 -spec analyze_tuple('erlang.Tuple':type(), clj_env:env()) ->
   clj_env:env().
 analyze_tuple(Tuple, Env0) ->
-  Env1    = clj_env:push(#{context => expr}, clear_def_name(Env0)),
+  Env1    = clj_env:push(#{context => expr}, clear_def_var(Env0)),
   Items   = erlang:tuple_to_list(Tuple),
   Env2    = analyze_forms(Items, Env1),
 

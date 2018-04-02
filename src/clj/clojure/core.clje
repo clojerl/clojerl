@@ -411,6 +411,7 @@
 (defn nil?
   "Returns true if x is nil, false otherwise."
   {:tag clojerl.Boolean
+   :inline '(fn* [x] (list 'erlang/=:= x nil))
    :added "1.0"}
   [x] (erlang/=:= x nil))
 
@@ -706,7 +707,9 @@
 
 (defn identical?
   "Tests if 2 arguments are the same object"
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(erlang/=:= ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x y] (erlang/=:= x y)))
 
 ;equiv-based
@@ -715,7 +718,9 @@
   numbers and collections in a type-independent manner.  Clojure's immutable data
   structures define equals() (and thus =) as a value, not an identity,
   comparison."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(clj_rt/equiv ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x] true)
   ([x y] (clj_rt/equiv x y))
   ([x y & more]
@@ -770,18 +775,21 @@
 ;;;;;;;;;;;;;;;;;;; sequence fns  ;;;;;;;;;;;;;;;;;;;;;;;
 (defn zero?
   "Returns true if num is zero, else false"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/== ~x 0))
+   :added "1.0"}
   [x] (erlang/== x 0))
 
 (defn count
   "Returns the number of items in the collection. (count nil) returns
   0. Also works on strings, arrays, and Erlang lists, tuples and maps"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(clj_rt/count ~x))
+   :added "1.0"}
   [coll] (clj_rt/count coll))
 
 (defn int
   "Coerce to int"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/trunc ~x))
+   :added "1.0"}
   [x] (erlang/trunc x))
 
 (defn nth
@@ -789,14 +797,18 @@
   bounds, nth throws an exception unless not-found is supplied.  nth
   also works for strings, Erlang tuples, and lists, and, in O(n) time,
   for sequences."
-  {:added "1.0"}
+  {:inline '(fn*  [c i & nf] `(clj_rt/nth ~c ~i ~@nf))
+   :inline-arities #{2 3}
+   :added "1.0"}
   ([coll index] (clj_rt/nth coll index))
   ([coll index not-found] (clj_rt/nth coll index not-found)))
 
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(erlang/< ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x] true)
   ([x y] (erlang/< x y))
   ([x y & more]
@@ -808,7 +820,8 @@
 
 (defn inc
   "Returns a number one greater than num."
-  {:added "1.2"}
+  {:inline '(fn* [x] `(erlang/+ ~x 1))
+   :added "1.2"}
   [x] (erlang/+ x 1))
 
 ;; reduce is defined again later after InternalReduce loads
@@ -835,9 +848,26 @@
   [coll]
   (reduce1 conj '() coll))
 
+;;math stuff
+(defn ^:private nary-inline
+  [op]
+  `(fn*
+     ([x#] (list '~op x#))
+     ([x# y#] (list '~op x# y#))
+     ([x# y# ~'& more#]
+      (#'clojure.core/reduce1
+       (fn [a# b#] (list '~op a# b#))
+       (list '~op x# y#)
+       more#))))
+
+(defn ^:private >1? [n] (erlang/> n 1))
+(defn ^:private >0? [n] (erlang/> n 0))
+
 (defn +
   "Returns the sum of nums. (+) returns 0."
-  {:added "1.2"}
+  {:inline (nary-inline 'erlang/+)
+   :inline-arities >1?
+   :added "1.2"}
   ([] 0)
   ([x] x)
   ([x y] (erlang/+ x y))
@@ -846,7 +876,9 @@
 
 (defn *
   "Returns the product of nums. (*) returns 1."
-  {:added "1.2"}
+  {:inline (nary-inline 'erlang/*)
+   :inline-arities >1?
+   :added "1.2"}
   ([] 1)
   ([x] x)
   ([x y] (erlang/* x y))
@@ -856,7 +888,9 @@
 (defn /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
-  {:added "1.0"}
+  {:inline (nary-inline 'erlang//)
+   :inline-arities >0?
+   :added "1.0"}
   ([x] (/ 1 x))
   ([x y] (erlang// x y))
   ([x y & more]
@@ -865,7 +899,9 @@
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
-  {:added "1.2"}
+  {:inline (nary-inline 'erlang/-)
+   :inline-arities >0?
+   :added "1.2"}
   ([x] (erlang/- x))
   ([x y] (erlang/- x y))
   ([x y & more]
@@ -874,7 +910,9 @@
 (defn <=
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(erlang/=< ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x] true)
   ([x y] (erlang/=< x y))
   ([x y & more]
@@ -887,7 +925,9 @@
 (defn >
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(erlang/> ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x] true)
   ([x y] (erlang/> x y))
   ([x y & more]
@@ -900,7 +940,9 @@
 (defn >=
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(erlang/>= ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x] true)
   ([x y] (erlang/>= x y))
   ([x y & more]
@@ -913,7 +955,9 @@
 (defn ==
   "Returns non-nil if nums all have the equivalent
   value (type-independent), otherwise false"
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(erlang/== ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
   ([x] true)
   ([x y] (erlang/== x y))
   ([x y & more]
@@ -925,7 +969,9 @@
 
 (defn max
   "Returns the greatest of the nums."
-  {:added "1.0"}
+  {:inline (nary-inline 'erlang/max)
+   :inline-arities >1?
+   :added "1.0"}
   ([x] x)
   ([x y] (if (< x y) y x))
   ([x y & more]
@@ -933,7 +979,9 @@
 
 (defn min
   "Returns the least of the nums."
-  {:added "1.0"}
+  {:inline (nary-inline 'erlang/min)
+   :inline-arities >1?
+   :added "1.0"}
   ([x] x)
   ([x y] (if (> x y) y x))
   ([x y & more]
@@ -941,28 +989,33 @@
 
 (defn dec
   "Returns a number one less than num."
-  {:added "1.2"}
+  {:inline '(fn* [x] `(erlang/- ~x 1))
+   :added "1.2"}
   [x] (erlang/- x 1))
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/> ~x 0))
+   :added "1.0"}
   [x] (> x 0))
 
 (defn neg?
   "Returns true if num is less than zero, else false"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/< ~x 0))
+   :added "1.0"}
   [x] (< x 0))
 
 (defn quot
   "quot[ient] of dividing numerator by denominator."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(clj_utils/quotient ~x ~y))
+   :added "1.0"}
   [num div]
   (clj_utils/quotient num div))
 
 (defn rem
   "remainder of dividing numerator by denominator."
-  {:added "1.0"}
+  {:inline '(fn* [x y] `(clj_utils/rem ~x ~y))
+   :added "1.0"}
   [num div]
   (clj_utils/rem num div))
 
@@ -970,34 +1023,43 @@
 
 (defn bit-not
   "Bitwise complement"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/bnot ~x))
+   :added "1.0"}
   [x] (erlang/bnot x))
 
 
 (defn bit-and
   "Bitwise and"
-   {:added "1.0"}
+  {:inline (nary-inline 'erlang/band)
+   :inline-arities >1?
+   :added "1.0"}
    ([x y] (erlang/band x y))
    ([x y & more]
       (reduce1 bit-and (bit-and x y) more)))
 
 (defn bit-or
   "Bitwise or"
-  {:added "1.0"}
+  {:inline (nary-inline 'erlang/bor)
+   :inline-arities >1?
+   :added "1.0"}
   ([x y] (erlang/bor x y))
   ([x y & more]
     (reduce1 bit-or (bit-or x y) more)))
 
 (defn bit-xor
   "Bitwise exclusive or"
-  {:added "1.0"}
+  {:inline (nary-inline 'erlang/bxor)
+   :inline-arities >1?
+   :added "1.0"}
   ([x y] (erlang/bxor x y))
   ([x y & more]
     (reduce1 bit-xor (bit-xor x y) more)))
 
 (defn bit-and-not
   "Bitwise and with complement"
-  {:added "1.0"}
+  {:inline (nary-inline 'clj_utils/bnand)
+   :inline-arities >1?
+   :added "1.0"}
   ([x y] (bit-not (bit-and x y)))
   ([x y & more]
     (reduce1 bit-and-not (bit-and-not x y) more)))
@@ -1030,17 +1092,20 @@
 
 (defn bit-shift-left
   "Bitwise shift left"
-  {:added "1.0"}
+  {:inline '(fn* [x n] `(erlang/bsl ~x ~n))
+   :added "1.0"}
   [x n] (erlang/bsl x n))
 
 (defn bit-shift-right
   "Bitwise shift right"
-  {:added "1.0"}
+  {:inline '(fn* [x n] `(erlang/bsr ~x ~n))
+   :added "1.0"}
   [x n] (erlang/bsr x n))
 
 (defn integer?
   "Returns true if n is an integer"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/is_integer ~x))
+   :added "1.0"}
   [n]
   (erlang/is_integer n))
 
@@ -1116,7 +1181,9 @@
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
-  {:added "1.0"}
+  {:inline '(fn* [m k & nf] `(clj_rt/get ~m ~k ~@nf))
+   :inline-arities #{2 3}
+   :added "1.0"}
   ([map key]
    (clj_rt/get map key))
   ([map key not-found]
@@ -2370,7 +2437,9 @@
 
 (defn reduced?
   "Returns true if x is the result of a call to reduced"
-  {:added "1.5"}
+  {:inline '(fn* [x] `(clojerl.Reduced/is_reduced ~x))
+   :inline-arities #{1}
+   :added "1.5"}
   [x]
   (clojerl.Reduced/is_reduced x))
 
@@ -2893,6 +2962,10 @@
 (defn num
   "Coerce to Number"
   {:tag clojerl.Integer
+   :inline '(fn* [x]
+              `(if (erlang/is_number ~x)
+                 ~x
+                 (throw (clojerl.BadArgumentError. "Not a number"))))
    :added "1.0"}
   [x]
   (if (erlang/is_number x)
@@ -2901,36 +2974,42 @@
 
 (defn float
   "Coerce to float"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/float ~x))
+   :added "1.0"}
   [x]
   (erlang/float x))
 
 (defn short
   "Coerce to short"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(clj_rt/short ~x))
+   :added "1.0"}
   [x]
   (clj_rt/short x))
 
 (defn byte
   "Coerce to byte"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(clj_rt/byte ~x))
+   :added "1.0"}
   [x]
   (clj_rt/byte x))
 
 (defn char
   "Coerce to char"
-  {:added "1.1"}
+  {:inline '(fn* [x] `(clj_rt/char ~x))
+   :added "1.1"}
   [x]
   (clj_rt/char x))
 
 (defn boolean
   "Coerce to boolean"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(clj_rt/boolean ~x))
+   :added "1.0"}
   [x] (clj_rt/boolean x))
 
 (defn number?
   "Returns true if x is a Number"
-  {:added "1.0"}
+  {:inline '(fn* [x] `(erlang/is_number ~x))
+   :added "1.0"}
   [x]
   (erlang/is_number x))
 
@@ -4185,6 +4264,19 @@
   ([sep coll]
    (drop 1 (interleave (repeat sep) coll))))
 
+(defmacro definline
+  "Experimental - like defmacro, except defines a named function whose
+  body is the expansion, calls to which may be expanded inline as if
+  it were a macro. Cannot be used with variadic (&) args."
+  {:added "1.0"}
+  [name & decl]
+  (let [[pre-args [args expr]] (split-with (comp not vector?) decl)
+        [pre-args [metadata]]  (split-with (comp not map?) pre-args)
+        metadata               (assoc metadata :inline `'(fn ~name ~args ~expr))]
+    `(defn ~name ~@pre-args ~metadata
+       ~args
+       ~(apply (eval (list `fn args expr)) args))))
+
 (defn empty
   "Returns an empty collection of the same category as coll, or nil"
   {:added "1.0"}
@@ -4240,8 +4332,7 @@
 
 (defn type?
   "Returns true if x is an instance of erlang.Type"
-  {:added "1.0"
-   :static true}
+  {:added "1.0"}
   [x] (instance? erlang.Type x))
 
 (defn alter-var-root
@@ -5758,8 +5849,7 @@
   this means false return values will be included.  f must be free of
   side-effects.  Returns a stateful transducer when no collection is
   provided."
-  {:added "1.2"
-   :static true}
+  {:added "1.2"}
   ([f]
    #_(fn [rf]
      (let [iv (volatile! -1)]

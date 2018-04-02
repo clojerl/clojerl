@@ -36,6 +36,7 @@
         , floor/1
         , ceil/1
         , signum/1
+        , bnand/2
 
         , ets_get/2
         , ets_save/2
@@ -469,6 +470,9 @@ ceil(X) ->
 -spec signum(number()) -> number().
 signum(X) when X < 0 -> -1;
 signum(X) when X >= 0 -> 1.
+
+-spec bnand(number(), number()) -> number().
+bnand(X, Y) -> bnot(X band Y).
 
 -spec ets_get(atom() | ets:tid(), term()) -> term().
 ets_get(Table, Id) ->

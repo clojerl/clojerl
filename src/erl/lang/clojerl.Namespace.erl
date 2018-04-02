@@ -170,18 +170,19 @@ remove(Name) ->
 name(#{?TYPE := ?M, name := Name}) -> Name.
 
 -spec intern(type(), 'clojerl.Symbol':type()) -> type().
-intern(#{?TYPE := ?M, name := NsName} = Ns, Symbol) ->
+intern(#{?TYPE := ?M, name := NsNameSym} = Ns, Symbol) ->
   ?ERROR_WHEN(not clj_rt:'symbol?'(Symbol), <<"Argument must be a symbol">>),
 
   ?ERROR_WHEN( clj_rt:namespace(Symbol) =/= ?NIL
              , <<"Can't intern namespace-qualified symbol">>
              ),
 
+  NsStr   = 'clojerl.Symbol':name(NsNameSym),
+  NameStr = 'clojerl.Symbol':name(Symbol),
+  Var     = 'clojerl.Var':?CONSTRUCTOR(NsStr, NameStr),
+  OldVar  = mapping(Ns, Symbol),
 
-  SymName = clj_rt:name(Symbol),
-  Var     = 'clojerl.Var':?CONSTRUCTOR(clj_rt:name(NsName), SymName),
-
-  check_if_override(Ns, Symbol, mapping(Ns, Symbol), Var),
+  check_if_override(Ns, Symbol, OldVar, Var),
 
   gen_server:call(?MODULE, {intern, Ns, Symbol, Var}).
 
