@@ -1181,7 +1181,6 @@ parse_def(List, Env) ->
                                            ]
                                  }
                               ]),
-  %% Evaluate the var's metadata before analyzing it's initial expression
   Var1         = 'clojerl.Var':with_meta(Var0, VarMeta),
   IsDynamic    = 'clojerl.Var':is_dynamic(Var1),
 
@@ -1206,8 +1205,9 @@ parse_def(List, Env) ->
             _                     -> ?UNBOUND
           end,
 
-  %% Use Var for def_var that doesn't contain arglists, since its value
-  %% will be quoted until it is evaluated, and signature_tag/4 will fail.
+  %% Use Var for def_var that doesn't contain `arglists`, since the value
+  %% for `arglists` will be a quoted list until it is evaluated, and this
+  %% will make signature_tag/4 fail.
   ExprEnv  = clj_env:push(#{def_var => Var0, context => expr}, Env),
   {InitExpr, Env1} = clj_env:pop_expr(analyze_form(Init, ExprEnv)),
 
