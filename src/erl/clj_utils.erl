@@ -276,7 +276,7 @@ add_core_to_binary(BeamBinary, CoreModule) ->
   CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
   CoreAbstractChunk   = {?CORE_CHUNK, CoreAbstract},
   {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
-  {ok, NewBeamBinary} = beam_lib:build_module(OldChunks ++ [CoreAbstractChunk]),
+  {ok, NewBeamBinary} = beam_lib:build_module([CoreAbstractChunk | OldChunks]),
   NewBeamBinary.
 
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
