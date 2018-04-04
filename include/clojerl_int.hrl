@@ -21,6 +21,12 @@
 
 -define(EOFTHROW, eofthrow).
 
+-define(INT_PATTERN,
+        "^([-+]?)"
+        "(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|"
+        "([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?$").
+-define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
+
 %% Show this as a file when none is available
 -define(NO_SOURCE, "NO_SOURCE_FILE").
 

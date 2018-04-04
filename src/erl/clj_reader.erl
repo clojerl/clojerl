@@ -50,6 +50,8 @@
                   , return_on     => char() | ?NIL
                     %% Used when reading a string
                   , current       => binary() | ?NIL
+                    %% Compiled regexes for numbers
+                  , number_types  => [{clj_utils:number_type(), re:mp()}]
                   }.
 
 -type read_fold_fun() :: fun((any(), any()) -> any()).
@@ -166,6 +168,8 @@ platform_features(Opts) ->
 %% @private
 -spec new_state(binary(), clj_env:env(), opts()) -> state().
 new_state(Src, Env, Opts) ->
+  {ok, IntRegex}   = re:compile(?INT_PATTERN),
+  {ok, FloatRegex} = re:compile(?FLOAT_PATTERN),
   #{ src           => Src
    , opts          => platform_features(Opts)
    , forms         => []
@@ -175,6 +179,7 @@ new_state(Src, Env, Opts) ->
    , bindings      => clj_scope:new()
    , return_on     => ?NIL
    , current       => ?NIL
+   , number_types  => [{int, IntRegex}, {float, FloatRegex}]
    }.
 
 %% @doc Makes sure a single form is read unless we reach
@@ -234,7 +239,8 @@ read_one(#{src := <<First/utf8, Rest/binary>>} = State) ->
 -spec read_number(state()) -> state().
 read_number(State) ->
   {Current, State1} = consume(State, [number, symbol]),
-  Number = clj_utils:parse_number(Current),
+  Types  = maps:get(number_types, State),
+  Number = clj_utils:parse_number(Current, Types),
   push_form(Number, State1).
 
 %%------------------------------------------------------------------------------
