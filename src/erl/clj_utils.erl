@@ -337,16 +337,16 @@ maybe_sys_pre_expand(Code) ->
 -spec parse_int([string()]) -> integer() | ?NIL.
 parse_int(Groups) ->
   case int_properties(Groups) of
-    {zero, _Arbitrary, _Negate} ->
+    {zero, _Negate} ->
       0;
-    {{Base, Value}, _Arbitrary, Negate} ->
+    {{Base, Value}, Negate} ->
       list_to_integer(Value, Base) * Negate;
     _ ->
       ?NIL
   end.
 
 -spec int_properties([string()]) ->
-  {zero | ?NIL | {integer(), string()}, integer(), -1 | 1}.
+  {zero | ?NIL | {integer(), string()}, -1 | 1}.
 int_properties(Groups) ->
   Result = case Groups of
              [_, X | _] when X =/= "" -> zero;
@@ -360,9 +360,8 @@ int_properties(Groups) ->
                ?NIL
            end,
 
-  Arbitrary = nth(8, Groups, "") =/= "",
-  Negate    = hd(Groups) =/= "",
-  {Result, Arbitrary, case Negate of true -> -1; false -> 1 end}.
+  Negate = hd(Groups) =/= "",
+  {Result, case Negate of true -> -1; false -> 1 end}.
 
 -spec parse_float([string()]) -> float().
 parse_float(Groups) ->
