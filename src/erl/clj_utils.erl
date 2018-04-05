@@ -8,7 +8,7 @@
 
 -export([ char_type/1
         , char_type/2
-        , parse_number/1
+        , parse_number/2
         , parse_symbol/1
         , check_erl_fun/1
         , parse_erl_fun/1
@@ -50,12 +50,6 @@
 
 -define(CORE_CHUNK, "Core").
 
--define(INT_PATTERN,
-        "^([-+]?)"
-        "(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|"
-        "([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?$").
--define(FLOAT_PATTERN, "^(([-+]?[0-9]+)(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$").
-
 -type char_type() :: whitespace | number | string
                    | keyword | comment | quote
                    | deref | meta | syntax_quote
@@ -64,15 +58,17 @@
                    | unmatched_delim | char
                    | arg | dispatch | symbol.
 
+-type number_type() :: int | float.
+
 %%------------------------------------------------------------------------------
 %% Exported functions
 %%------------------------------------------------------------------------------
 
--spec parse_number(binary()) -> integer() | float().
-parse_number(Number) ->
-  Result = case number_type(Number) of
-             int       -> parse_int(Number);
-             float     -> parse_float(Number);
+-spec parse_number(binary(), [{number_type(), re:mp()}]) -> number().
+parse_number(Number, Types) ->
+  Result = case number_type(Number, Types) of
+             {int, Groups}   -> parse_int(Groups);
+             {float, Groups} -> parse_float(Groups);
              ?NIL -> ?NIL
            end,
 
@@ -280,7 +276,7 @@ add_core_to_binary(BeamBinary, CoreModule) ->
   CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
   CoreAbstractChunk   = {?CORE_CHUNK, CoreAbstract},
   {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
-  {ok, NewBeamBinary} = beam_lib:build_module(OldChunks ++ [CoreAbstractChunk]),
+  {ok, NewBeamBinary} = beam_lib:build_module([CoreAbstractChunk | OldChunks]),
   NewBeamBinary.
 
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
@@ -338,68 +334,66 @@ maybe_sys_pre_expand(Code) ->
 
 %% @doc Valid integers can be either in decimal, octal, hexadecimal or any
 %%      base specified (e.g. `2R010` is binary for `2`).
--spec parse_int(binary()) -> integer() | ?NIL.
-parse_int(IntBin) ->
-  {match, [_ | Groups]} = re:run(IntBin, ?INT_PATTERN, [{capture, all, list}]),
+-spec parse_int([string()]) -> integer() | ?NIL.
+parse_int(Groups) ->
   case int_properties(Groups) of
-    {zero, _Arbitrary, _Negate} ->
+    {zero, _Negate} ->
       0;
-    {{Base, Value}, _Arbitrary, Negate} ->
+    {{Base, Value}, Negate} ->
       list_to_integer(Value, Base) * Negate;
     _ ->
       ?NIL
   end.
 
 -spec int_properties([string()]) ->
-  {zero | ?NIL | {integer(), string()}, integer(), -1 | 1}.
+  {zero | ?NIL | {integer(), string()}, -1 | 1}.
 int_properties(Groups) ->
-  Props = lists:map(fun(X) -> X =/= "" end, Groups),
-  Result =
-    case Props of
-      [_, true | _] -> zero;
-      [_, _, true | _]-> {10, nth(3, Groups)};
-      [_, _, _, true | _]-> {16, nth(4, Groups)};
-      [_, _, _, _, true | _]-> {8, nth(5, Groups)};
-      [_, _, _, _, _, _, true | _]->
-        Base = list_to_integer(lists:nth(6, Groups)),
-        {Base, lists:nth(7, Groups)};
-      _ ->
-        ?NIL
-    end,
+  Result = case Groups of
+             [_, X | _] when X =/= "" -> zero;
+             [_, _, X | _] when X =/= "" -> {10, X};
+             [_, _, _, X | _] when X =/= "" -> {16, X};
+             [_, _, _, _, X | _] when X =/= "" -> {8, X};
+             [_, _, _, _, _, Y, X | _] when X =/= "" ->
+               Base = list_to_integer(Y),
+               {Base, X};
+             _ ->
+               ?NIL
+           end,
 
-  Arbitrary = nth(8, Props, false),
-  Negate = nth(1, Props),
-  {Result, Arbitrary, case Negate of true -> -1; false -> 1 end}.
+  Negate = hd(Groups) =/= "",
+  {Result, case Negate of true -> -1; false -> 1 end}.
 
--spec parse_float(binary()) -> float().
-parse_float(FloatBin) ->
-  {match, [_ | Groups]} =
-    re:run(FloatBin, ?FLOAT_PATTERN, [{capture, all, list}]),
-
+-spec parse_float([string()]) -> float().
+parse_float(Groups) ->
   %% When there is no decimal part we add it so we can use
   %% list_to_float/1.
-  FloatStr = case nth(3, Groups, "") of
-               ""  -> nth(2, Groups) ++ ".0" ++ nth(4, Groups, "");
-               "." -> nth(2, Groups) ++ ".0" ++ nth(4, Groups, "");
-               _   -> nth(1, Groups)
+  FloatStr = case Groups of
+               [_, G2, ""  | Rest] -> [G2, ".0", nth(1, Rest, "")];
+               [_, G2, "." | Rest] -> [G2, ".0", nth(1, Rest, "")];
+               [G1         | _   ] -> G1
              end,
+  FloatBin = iolist_to_binary(FloatStr),
+  binary_to_float(FloatBin).
 
-  list_to_float(FloatStr).
+-spec number_type(binary(), [{number_type(), re:mp()}]) ->
+  {number_type(), [string()]} | ?NIL.
+number_type(Number, Types) ->
+  do_number_type(Number, Types, ?NIL).
 
-number_type(Number) ->
-  Regex = #{ int   => ?INT_PATTERN
-           , float => ?FLOAT_PATTERN
-           },
-  Fun = fun(Type, RE, Acc) ->
-            case re:run(Number, RE) of
-              nomatch -> Acc;
-              _ -> [Type | Acc]
-            end
-        end,
-  case maps:fold(Fun, [], Regex) of
-    [] -> ?NIL;
-    [T | _] -> T
-  end.
+-spec do_number_type( binary()
+                    , [{number_type(), re:mp()}]
+                    , number_type() | ?NIL
+                    ) ->
+  {number_type(), [string()]} | ?NIL.
+do_number_type(_Number, [], Result) ->
+  Result;
+do_number_type(Number, [{Type, RE} | Rest], ?NIL) ->
+  case re:run(Number, RE, [{capture, all, list}]) of
+    nomatch -> do_number_type(Number, Rest, ?NIL);
+    {match, [_ | Groups]} -> {Type, Groups}
+  end;
+do_number_type(_, _, Result) ->
+  Result.
 
 %% @doc Like lists:nth/2 but returns nil if `Index` is
 %%      larger than the amount of elements in `List`.

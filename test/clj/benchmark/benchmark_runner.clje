@@ -2,6 +2,28 @@
 
 (defrecord Foo [bar baz])
 
+(def strings
+  (into [] (take 10 (iterate (fn [s] (str s "string")) "string"))))
+
+(def big-str-data
+  (pr-str {:nils (repeat 10 nil)
+           :bools (concat (repeat 5 false) (repeat 5 true))
+           :ints (range 10000 10100)
+           :floats (map #(float (/ % 7)) (range 0 100))
+           :keywords (map keyword strings)
+           :symbols (map symbol strings)
+           :strings strings}))
+
+(defn ints-seq
+  ([n] (ints-seq 0 n))
+  ([i n]
+   (when (< i n)
+     (lazy-seq
+      (cons i (ints-seq (inc i) n))))))
+
+(defmulti simple-multi identity)
+(defmethod simple-multi :foo [x] x)
+
 (defn -main [& args]
   (simple-benchmark [x 1] (identity x) 1000000)
 
@@ -129,18 +151,6 @@
   (println)
 
   (println ";;; reader")
-  (def strings
-    (into [] (take 10 (iterate (fn [s] (str s "string")) "string"))))
-
-  (def big-str-data
-    (pr-str {:nils (repeat 10 nil)
-             :bools (concat (repeat 5 false) (repeat 5 true))
-             :ints (range 10000 10100)
-             :floats (map #(float (/ % 7)) (range 0 100))
-             :keywords (map keyword strings)
-             :symbols (map symbol strings)
-             :strings strings}))
-
   (simple-benchmark [s "{:foo [1 2 3]}"] (read-string s) 1000)
   (simple-benchmark [s big-str-data] (read-string s) 1000)
   (println)
@@ -148,13 +158,6 @@
   (println ";;; range")
   (simple-benchmark [r (range 1000000)] (last r) 1)
   (println)
-
-  (defn ints-seq
-    ([n] (ints-seq 0 n))
-    ([i n]
-     (when (< i n)
-       (lazy-seq
-        (cons i (ints-seq (inc i) n))))))
 
   (let [r (ints-seq 1000000)]
     (println ";;; lazy-seq")
@@ -184,8 +187,6 @@
   (println "\n")
 
   (println ";; multimethods")
-  (defmulti simple-multi identity)
-  (defmethod simple-multi :foo [x] x)
   (simple-benchmark [] (simple-multi :foo) 1000000)
   (println "\n")
 
