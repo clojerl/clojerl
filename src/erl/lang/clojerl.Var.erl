@@ -48,18 +48,23 @@
         ]).
 -export([str/1]).
 
--type type() :: #{ ?TYPE => ?M
-                 , ns    => binary()
-                 , name  => binary()
-                 , meta  => ?NIL | any()
+-type type() :: #{ ?TYPE     => ?M
+                 , ns        => binary()
+                 , ns_atom   => atom()
+                 , name      => binary()
+                 , name_atom => atom()
+                 , meta      => ?NIL | any()
                  }.
 
 -spec ?CONSTRUCTOR(binary(), binary()) -> type().
 ?CONSTRUCTOR(Ns, Name) ->
-  #{ ?TYPE => ?M
-   , ns    => Ns
-   , name  => Name
-   , meta  => ?NIL
+  #{ ?TYPE     => ?M
+   , ns        => Ns
+   , name      => Name
+   , ns_atom   => binary_to_atom(Ns, utf8)
+   , name_atom => binary_to_atom(Name, utf8)
+   , val_atom  => binary_to_atom(<<Name/binary, "__val">>, utf8)
+   , meta      => ?NIL
    }.
 
 -spec is_dynamic(type()) -> boolean().
@@ -97,16 +102,16 @@ has_root(#{?TYPE := ?M}) ->
 get(Var) -> deref(Var).
 
 -spec module(type()) -> atom().
-module(#{?TYPE := ?M, ns := Ns}) ->
-  binary_to_atom(Ns, utf8).
+module(#{?TYPE := ?M, ns_atom := NsAtom}) ->
+  NsAtom.
 
 -spec function(type()) -> atom().
-function(#{?TYPE := ?M, name := Name}) ->
-  binary_to_atom(Name, utf8).
+function(#{?TYPE := ?M, name_atom := NameAtom}) ->
+  NameAtom.
 
 -spec val_function(type()) -> atom().
-val_function(#{?TYPE := ?M, name := Name}) ->
-  binary_to_atom(<<Name/binary, "__val">>, utf8).
+val_function(#{?TYPE := ?M, val_atom := ValAtom}) ->
+  ValAtom.
 
 -spec push_bindings('clojerl.IMap':type()) -> ok.
 push_bindings(BindingsMap) ->

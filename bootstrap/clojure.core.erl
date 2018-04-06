@@ -5,128 +5,185 @@
 
 -clojure(true).
 
--mappings(#{ <<"ns">>    => #{ ?TYPE => 'clojerl.Var'
-                             , ns    => <<"clojure.core">>
-                             , name  => <<"ns">>
-                             , meta  => #{ macro           => true
-                                         , 'variadic?'     => true
-                                         , max_fixed_arity => ?NIL
-                                         , variadic_arity  => 3
-                                         }
+-mappings(#{ <<"ns">>    => #{ ?TYPE     => 'clojerl.Var'
+                             , ns        => <<"clojure.core">>
+                             , name      => <<"ns">>
+                             , ns_atom   => 'clojure.core'
+                             , name_atom => 'ns'
+                             , val_atom  => 'ns__val'
+                             , meta      => #{ macro           => true
+                                             , 'variadic?'     => true
+                                             , max_fixed_arity => ?NIL
+                                             , variadic_arity  => 3
+                                             }
                              }
-           , <<"in-ns">> => #{ ?TYPE => 'clojerl.Var'
-                             , ns    => <<"clojure.core">>
-                             , name  => <<"in-ns">>
-                             , meta  => #{ 'variadic?'     => false
-                                         , max_fixed_arity => 1
-                                         , variadic_arity  => ?NIL
-                                         }
+           , <<"in-ns">> => #{ ?TYPE     => 'clojerl.Var'
+                             , ns        => <<"clojure.core">>
+                             , name      => <<"in-ns">>
+                             , ns_atom   => 'clojure.core'
+                             , name_atom => 'in-ns'
+                             , val_atom  => 'in-ns__val'
+                             , meta      => #{ 'variadic?'     => false
+                                             , max_fixed_arity => 1
+                                             , variadic_arity  => ?NIL
+                                             }
                              }
-           , <<"*ns*">>  => #{ ?TYPE => 'clojerl.Var'
-                             , ns    => <<"clojure.core">>
-                             , name  => <<"*ns*">>
-                             , meta  => #{ dynamic => true
-                                         , tag => #{ ?TYPE => 'erlang.Type'
-                                                   , name  => 'clojerl.Namespace'
-                                                   }
-                                         }
+           , <<"*ns*">>  => #{ ?TYPE     => 'clojerl.Var'
+                             , ns        => <<"clojure.core">>
+                             , name      => <<"*ns*">>
+                             , ns_atom   => 'clojure.core'
+                             , name_atom => '*ns*'
+                             , val_atom  => '*ns*__val'
+                             , meta      => #{ dynamic => true
+                                             , tag => #{ ?TYPE => 'erlang.Type'
+                                                       , name  => 'clojerl.Namespace'
+                                                       }
+                                             }
                              }
 
            , <<"*compile-path*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*compile-path*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*compile-path*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*compile-path*'
+                , val_atom  => '*compile-path*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"*compile-files*">>  =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*compile-files*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*compile-files*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*compile-files*'
+                , val_atom  => '*compile-files*__val'
+                , meta      => #{dynamic => true}
                 }
 
            , <<"*assert*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*assert*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*assert*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*assert*'
+                , val_atom  => '*assert*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"*read-eval*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*read-eval*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*read-eval*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*read-eval*'
+                , val_atom  => '*read-eval*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"*command-line-args*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*command-line-args*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*command-line-args*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*command-line-args*'
+                , val_atom  => '*command-line-args*__val'
+                , meta      => #{dynamic => true}
                 }
 
-           , <<"*out*">> => #{ ?TYPE => 'clojerl.Var'
-                             , ns    => <<"clojure.core">>
-                             , name  => <<"*out*">>
-                             , meta  => #{dynamic => true}
+           , <<"*out*">> => #{ ?TYPE     => 'clojerl.Var'
+                             , ns        => <<"clojure.core">>
+                             , name      => <<"*out*">>
+                             , ns_atom   => 'clojure.core'
+                             , name_atom => '*out*'
+                             , val_atom  => '*out*__val'
+                             , meta      => #{dynamic => true}
                              }
-           , <<"*in*">>  => #{ ?TYPE => 'clojerl.Var'
-                             , ns    => <<"clojure.core">>
-                             , name  => <<"*in*">>
-                             , meta  => #{dynamic => true}
+           , <<"*in*">>  => #{ ?TYPE     => 'clojerl.Var'
+                             , ns        => <<"clojure.core">>
+                             , name      => <<"*in*">>
+                             , ns_atom   => 'clojure.core'
+                             , name_atom => '*in*'
+                             , val_atom  => '*in*__val'
+                             , meta      => #{dynamic => true}
                              }
-           , <<"*err*">> => #{ ?TYPE => 'clojerl.Var'
-                             , ns    => <<"clojure.core">>
-                             , name  => <<"*err*">>
-                             , meta  => #{dynamic => true}
+           , <<"*err*">> => #{ ?TYPE     => 'clojerl.Var'
+                             , ns        => <<"clojure.core">>
+                             , name      => <<"*err*">>
+                             , ns_atom   => 'clojure.core'
+                             , name_atom => '*err*'
+                             , val_atom  => '*in*__val'
+                             , meta      => #{dynamic => true}
                              }
 
            , <<"print-initialized">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"print-initialized">>
-                , meta  => #{dynamic => true, private => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"print-initialized">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => 'print-initialized'
+                , val_atom  => 'print-initialized__val'
+                , meta      => #{dynamic => true, private => true}
                 }
            , <<"*print-dup*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*print-dup*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*print-dup*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*print-dup*'
+                , val_atom  => '*print-dup*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"*flush-on-newline*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*flush-on-newline*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*flush-on-newline*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*flush-on-newline*'
+                , val_atom  => '*flush-on-newline*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"*print-readably*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*print-readably*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*print-readably*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*print-readably*'
+                , val_atom  => '*print-readably*__val'
+                , meta      => #{dynamic => true}
                 }
             , <<"*data-readers*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*data-readers*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*data-readers*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*data-readers*'
+                , val_atom  => '*data-readers*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"default-data-readers">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"default-data-readers">>
-                , meta  => ?NIL
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"default-data-readers">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => 'default-data-readers'
+                , val_atom  => 'default-data-readers__val'
+                , meta      => ?NIL
                 }
            , <<"*default-data-reader-fn*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*default-data-reader-fn*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*default-data-reader-fn*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*default-data-reader-fn*'
+                , val_atom  => '*default-data-reader*__val'
+                , meta      => #{dynamic => true}
                 }
            , <<"*warn-on-infer*">> =>
-               #{ ?TYPE => 'clojerl.Var'
-                , ns    => <<"clojure.core">>
-                , name  => <<"*warn-on-infer*">>
-                , meta  => #{dynamic => true}
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*warn-on-infer*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*warn-on-infer*'
+                , val_atom  => '*warn-on-infer*__val'
+                , meta      => #{dynamic => true}
                 }
            }).
 
