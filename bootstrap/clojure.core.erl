@@ -173,7 +173,7 @@
                 , name      => <<"*default-data-reader-fn*">>
                 , ns_atom   => 'clojure.core'
                 , name_atom => '*default-data-reader-fn*'
-                , val_atom  => '*default-data-reader*__val'
+                , val_atom  => '*default-data-reader-fn*__val'
                 , meta      => #{dynamic => true}
                 }
            , <<"*warn-on-infer*">> =>
