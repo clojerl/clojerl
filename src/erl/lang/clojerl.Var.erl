@@ -50,9 +50,10 @@
 
 -type type() :: #{ ?TYPE     => ?M
                  , ns        => binary()
-                 , ns_atom   => atom()
                  , name      => binary()
+                 , ns_atom   => atom()
                  , name_atom => atom()
+                 , val_atom  => atom()
                  , meta      => ?NIL | any()
                  }.
 
