@@ -208,9 +208,12 @@ namespace(#{?TYPE := ?M, ns := Ns}) ->
 str(#{?TYPE := ?M, ns := Ns, name := Name}) ->
   <<"#'", Ns/binary, "/", Name/binary>>.
 
-deref(#{?TYPE := ?M, ns := Ns, name := Name} = Var) ->
-  Module      = module(Var),
-  FunctionVal = val_function(Var),
+deref(#{ ?TYPE    := ?M
+       , ns       := Ns
+       , name     := Name
+       , ns_atom  := Module
+       , val_atom := FunctionVal
+       }) ->
   %% HACK
   Fun         = clj_module:fake_fun(Module, FunctionVal, 0),
 
@@ -244,9 +247,7 @@ meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 with_meta(#{?TYPE := ?M} = Var, Metadata) ->
   Var#{meta => Metadata}.
 
-apply(#{?TYPE := ?M} = Var, Args0) ->
-  Module         = module(Var),
-  Function       = function(Var),
+apply(#{?TYPE := ?M, ns_atom := Module, name_atom := Function} = Var, Args0) ->
   {Arity, Args1} = process_args(Var, Args0, fun clj_rt:seq/1),
   %% HACK
   Fun            = clj_module:fake_fun(Module, Function, Arity),
