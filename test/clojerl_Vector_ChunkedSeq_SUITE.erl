@@ -173,6 +173,12 @@ reduce(_Config) ->
   Reduced = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusMaxFun),
   10 = clj_rt:deref(Reduced),
 
+  Array           = array:from_list(lists:seq(0, 32)),
+  EmptyChunkedSeq = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 33),
+
+  0 = 'clojerl.IReduce':reduce(EmptyChunkedSeq, PlusFun, 0),
+  0 = 'clojerl.IReduce':reduce(EmptyChunkedSeq, PlusFun),
+
   {comments, ""}.
 
 -spec to_erl(config()) -> result().

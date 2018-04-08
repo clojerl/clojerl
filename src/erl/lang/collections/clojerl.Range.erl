@@ -86,8 +86,8 @@ empty(_) -> [].
 chunked_first(#{?TYPE := ?M, start := Start0, 'end' := End0, step := Step0}) ->
   End1    = Start0 + ?CHUNK_SIZE * Step0,
   End2    = case Step0 >= 0 of
-              true  -> lists:min([End0, End1]);
-              false -> lists:max([End0, End1])
+              true  -> erlang:min(End0, End1);
+              false -> erlang:max(End0, End1)
             end,
   Numbers = to_list(Start0, End2, Step0),
   Tuple   = list_to_tuple(Numbers),

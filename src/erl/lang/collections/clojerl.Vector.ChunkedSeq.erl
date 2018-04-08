@@ -47,6 +47,7 @@
 
 -type type() :: #{ ?TYPE => ?M
                  , array => array:array()
+                 , size  => non_neg_integer()
                  , index => non_neg_integer()
                  , meta  => ?NIL | any()
                  }.
@@ -55,6 +56,7 @@
 ?CONSTRUCTOR(Array, Index) ->
   #{ ?TYPE => ?M
    , array => Array
+   , size  => array:size(Array)
    , index => Index
    , meta  => ?NIL
    }.
@@ -65,8 +67,8 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, array := Array, index := Index}) ->
-  array:size(Array) - Index.
+count(#{?TYPE := ?M, size := Size, index := Index}) ->
+  Size - Index.
 
 %% clojerl.IColl
 
@@ -77,14 +79,14 @@ empty(_) -> clj_rt:list([]).
 
 %% clojerl.IChunkedSeq
 
-chunked_first(#{?TYPE := ?M, array := Array, index := Index}) ->
-  End  = lists:min([array:size(Array), Index + ?CHUNK_SIZE]),
+chunked_first(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
+  End  = erlang:min(Size, Index + ?CHUNK_SIZE),
   List = [array:get(I, Array) || I <- lists:seq(Index, End - 1)],
   'clojerl.TupleChunk':?CONSTRUCTOR(list_to_tuple(List)).
 
-chunked_next(#{?TYPE := ?M, array := Array, index := Index}) ->
-  End = lists:min([array:size(Array), Index + ?CHUNK_SIZE]),
-  case End < array:size(Array) of
+chunked_next(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
+  End = erlang:min(Size, Index + ?CHUNK_SIZE),
+  case End < Size of
     true  -> ?CONSTRUCTOR(Array, Index + ?CHUNK_SIZE);
     false -> ?NIL
   end.
@@ -97,10 +99,10 @@ chunked_more(#{?TYPE := ?M} = ChunkedSeq) ->
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, array := X}
-     , #{?TYPE := ?M, array := Y}
+equiv( #{?TYPE := ?M, array := X, size := SizeX}
+     , #{?TYPE := ?M, array := Y, size := SizeY}
      ) ->
-  case array:size(X) =:= array:size(Y) of
+  case SizeX =:= SizeY of
     true ->
       X1 = array:to_list(X),
       Y1 = array:to_list(Y),
@@ -170,8 +172,8 @@ do_reduce(ChunkedSeq, F, Init) ->
 first(#{?TYPE := ?M, array := Array, index := Index}) ->
   array:get(Index, Array).
 
-next(#{?TYPE := ?M, array := Array, index := Index}) ->
-  case Index + 1 < array:size(Array) of
+next(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
+  case Index + 1 < Size of
     true  -> ?CONSTRUCTOR(Array, Index + 1);
     false -> ?NIL
   end.
@@ -188,14 +190,17 @@ more(#{?TYPE := ?M} = ChunkedSeq) ->
 
 %% clojerl.ISeqable
 
-seq(#{?TYPE := ?M, array := Array, index := Index}  = ChunkedSeq) ->
-  case Index < array:size(Array) of
+seq(#{ ?TYPE := ?M
+     , size  := Size
+     , index := Index
+     } = ChunkedSeq) ->
+  case Index < Size of
     true  -> ChunkedSeq;
     false -> ?NIL
   end.
 
-to_list(#{?TYPE := ?M, array := Array, index := Index}) ->
-  [array:get(I, Array) || I <- lists:seq(Index, array:size(Array) - 1)].
+to_list(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
+  [array:get(I, Array) || I <- lists:seq(Index, Size - 1)].
 
 %% clojerl.IStringable
 
