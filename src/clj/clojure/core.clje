@@ -5407,9 +5407,9 @@
   ([xform f coll] (transduce xform f (f) coll))
   ([xform f init coll]
      (let [f (xform f)
-           ret (if (instance? clojerl.IReduce coll)
+           ret (if (satisfies? clojerl.IReduce coll)
                  (clojerl.IReduce/reduce coll f init)
-                 (seq-reduce coll f init))]
+                 (seq-reduce f init coll))]
        (f ret))))
 
 (defn into
