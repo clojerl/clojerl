@@ -109,7 +109,7 @@
                              , name      => <<"*err*">>
                              , ns_atom   => 'clojure.core'
                              , name_atom => '*err*'
-                             , val_atom  => '*in*__val'
+                             , val_atom  => '*err*__val'
                              , meta      => #{dynamic => true}
                              }
 
