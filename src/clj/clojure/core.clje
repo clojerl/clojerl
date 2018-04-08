@@ -2805,7 +2805,7 @@
                                                ~recform)]))
                      (let [seq- (gensym "seq_")
                            chunk- (with-meta (gensym "chunk_")
-                                             {} #_{:tag 'clojure.lang.IChunk})
+                                             {:tag clojerl.IChunk})
                            count- (gensym "count_")
                            i- (gensym "i_")
                            recform `(recur (next ~seq-) nil 0 0)
@@ -4150,7 +4150,7 @@
   (throw "unsupported refs")
   #_`(sync nil ~@exprs))
 
-#_ (
+#_(
     (defn mk-bound-fn
       {:private true}
       [sc test key]

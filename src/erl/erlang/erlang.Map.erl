@@ -149,12 +149,9 @@ str(Map) when is_map(Map) ->
   clj_rt:print(Map).
 
 seq(Map) when is_map(Map) ->
-  FoldFun = fun(K, V, List) ->
-                [clj_rt:vector([K, V]) | List]
-            end,
-  case maps:fold(FoldFun, [], Map) of
+case maps:to_list(Map) of
     [] -> ?NIL;
-    X -> X
+    X  -> X
   end.
 
 to_list(Map) ->
