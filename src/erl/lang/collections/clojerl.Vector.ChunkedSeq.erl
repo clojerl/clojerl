@@ -80,12 +80,12 @@ empty(_) -> clj_rt:list([]).
 %% clojerl.IChunkedSeq
 
 chunked_first(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
-  End  = lists:min([Size, Index + ?CHUNK_SIZE]),
+  End  = erlang:min(Size, Index + ?CHUNK_SIZE),
   List = [array:get(I, Array) || I <- lists:seq(Index, End - 1)],
   'clojerl.TupleChunk':?CONSTRUCTOR(list_to_tuple(List)).
 
 chunked_next(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
-  End = lists:min([Size, Index + ?CHUNK_SIZE]),
+  End = erlang:min(Size, Index + ?CHUNK_SIZE),
   case End < Size of
     true  -> ?CONSTRUCTOR(Array, Index + ?CHUNK_SIZE);
     false -> ?NIL
