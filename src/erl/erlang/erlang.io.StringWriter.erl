@@ -2,10 +2,10 @@
 
 -include("clojerl.hrl").
 
--behaviour('clojerl.ICounted').
--behaviour('clojerl.IStringable').
--behaviour('erlang.io.Closeable').
--behaviour('erlang.io.IWriter').
+-behavior('clojerl.ICounted').
+-behavior('clojerl.IStringable').
+-behavior('erlang.io.Closeable').
+-behavior('erlang.io.IWriter').
 
 -export([?CONSTRUCTOR/0, ?CONSTRUCTOR/1]).
 -export([ init/1

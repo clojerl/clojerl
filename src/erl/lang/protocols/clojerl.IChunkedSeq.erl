@@ -1,24 +1,53 @@
 -module('clojerl.IChunkedSeq').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([chunked_first/1, chunked_next/1, chunked_more/1]).
+-export(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1, '__satisfies?__'/1]).
 
--type type() :: any().
+-callback 'chunked_first'(any()) -> any().
+-callback 'chunked_next'(any()) -> any().
+-callback 'chunked_more'(any()) -> any().
 
--callback chunked_first(IChunkedSeq :: type()) -> any().
--callback chunked_next(IChunkedSeq :: type()) -> type().
--callback chunked_more(IChunkedSeq :: type()) -> type().
+'chunked_first'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'chunked_first'(Seq);
+    'clojerl.Range' ->
+      'clojerl.Range':'chunked_first'(Seq);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'chunked_first'(Seq);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'chunked_first', Seq)
+  end.
 
--spec chunked_first(type()) -> any().
-chunked_first(Seq) ->
-  clj_protocol:resolve(?MODULE, chunked_first, Seq).
+'chunked_next'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'chunked_next'(Seq);
+    'clojerl.Range' ->
+      'clojerl.Range':'chunked_next'(Seq);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'chunked_next'(Seq);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'chunked_next', Seq)
+  end.
 
--spec chunked_next(type()) -> type().
-chunked_next(Seq) ->
-  clj_protocol:resolve(?MODULE, chunked_next, Seq).
+'chunked_more'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'chunked_more'(Seq);
+    'clojerl.Range' ->
+      'clojerl.Range':'chunked_more'(Seq);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'chunked_more'(Seq);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'chunked_more', Seq)
+  end.
 
--spec chunked_more(type()) -> type().
-chunked_more(Seq) ->
-  clj_protocol:resolve(?MODULE, chunked_more, Seq).
+?SATISFIES('clojerl.ChunkedCons') -> true;
+?SATISFIES('clojerl.Range') -> true;
+?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
+?SATISFIES(_) -> false.

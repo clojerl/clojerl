@@ -1,14 +1,21 @@
 -module('clojerl.IChunk').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([drop_first/1]).
+-export(['drop_first'/1, '__satisfies?__'/1]).
 
--type type() :: any().
+-callback 'drop_first'(any()) -> any().
 
--callback drop_first(Chunk :: type()) -> type().
+'drop_first'(Chunk) ->
+  case clj_rt:type_module(Chunk) of
+    'clojerl.TupleChunk' ->
+      'clojerl.TupleChunk':'drop_first'(Chunk);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'drop_first', Chunk)
+  end.
 
--spec drop_first(type()) -> type().
-drop_first(Chunk) ->
-  clj_protocol:resolve(?MODULE, drop_first, Chunk).
+?SATISFIES('clojerl.TupleChunk') -> true;
+?SATISFIES(_) -> false.

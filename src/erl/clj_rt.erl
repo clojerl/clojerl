@@ -121,7 +121,7 @@ nth(?NIL, _) -> ?NIL;
 nth([], _) -> ?NIL;
 nth(Coll, N) ->
   Type = type_module(Coll),
-  case clj_protocol:'satisfies?'('clojerl.IIndexed', Type) of
+  case 'clojerl.IIndexed':?SATISFIES(Type) of
     true  -> 'clojerl.IIndexed':nth(Coll, N);
     false -> nth_from(Coll, N)
   end.
@@ -131,7 +131,7 @@ nth(?NIL, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
   Type = type_module(Coll),
-  case clj_protocol:'satisfies?'('clojerl.IIndexed', Type) of
+  case 'clojerl.IIndexed':?SATISFIES(Type) of
     true  -> 'clojerl.IIndexed':nth(Coll, N, NotFound);
     false -> nth_from(Coll, N, NotFound)
   end.
@@ -146,7 +146,7 @@ nth_from(Coll, N) ->
         false -> ?ERROR(<<"Index out of bounds">>)
       end;
     _ ->
-      case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
+      case 'clojerl.ISequential':?SATISFIES(Type) of
         true  -> clj_utils:nth(N + 1, to_list(Coll));
         false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
       end
@@ -162,7 +162,7 @@ nth_from(Coll, N, NotFound) ->
         false -> NotFound
       end;
     _ ->
-      case clj_protocol:'satisfies?'('clojerl.ISequential', Type) of
+      case 'clojerl.ISequential':?SATISFIES(Type) of
         true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
         false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
       end
@@ -196,8 +196,8 @@ to_list(Seqable) ->
 -spec equiv(any(), any()) -> boolean().
 equiv(X, Y) ->
   case
-    clj_protocol:'satisfies?'('clojerl.IEquiv', type_module(X))
-    andalso clj_protocol:'satisfies?'('clojerl.IEquiv', type_module(Y))
+    'clojerl.IEquiv':?SATISFIES(type_module(X))
+    andalso 'clojerl.IEquiv':?SATISFIES(type_module(Y))
   of
     true  -> 'clojerl.IEquiv':equiv(X, Y);
     false -> X == Y
@@ -298,27 +298,27 @@ keyword(Namespace, Name) ->
 
 -spec 'satisfies?'('erlang.Type':type(), 'erlang.Type':type()) -> boolean().
 'satisfies?'(Protocol, Type) when is_atom(Protocol) andalso is_atom(Type) ->
-  clj_protocol:'satisfies?'(Protocol, Type);
+  Protocol:?SATISFIES(Type);
 'satisfies?'(Protocol, Type) ->
   ProtocolModule = 'erlang.Type':module(Protocol),
   TypeModule     = 'erlang.Type':module(Type),
-  clj_protocol:'satisfies?'(ProtocolModule, TypeModule).
+  ProtocolModule:?SATISFIES(TypeModule).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.IColl', type_module(X)).
+  'clojerl.IColl':?SATISFIES(type_module(X)).
 
 -spec 'sequential?'(any()) -> boolean().
 'sequential?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.ISequential', type_module(X)).
+  'clojerl.ISequential':?SATISFIES(type_module(X)).
 
 -spec 'associative?'(any()) -> boolean().
 'associative?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.IAssociative', type_module(X)).
+  'clojerl.IAssociative':?SATISFIES(type_module(X)).
 
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.ISeq', type_module(X)).
+  'clojerl.ISeq':?SATISFIES(type_module(X)).
 
 -spec 'list?'(any()) -> boolean().
 'list?'(X) ->
@@ -330,19 +330,19 @@ keyword(Namespace, Name) ->
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.IMap', type_module(X)).
+  'clojerl.IMap':?SATISFIES(type_module(X)).
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.ISet', type_module(X)).
+  'clojerl.ISet':?SATISFIES(type_module(X)).
 
 -spec 'record?'(any()) -> boolean().
 'record?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.IRecord', type_module(X)).
+  'clojerl.IRecord':?SATISFIES(type_module(X)).
 
 -spec 'type?'(any()) -> boolean().
 'type?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.IType', type_module(X)).
+  'clojerl.IType':?SATISFIES(type_module(X)).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
@@ -394,7 +394,7 @@ with_meta(X, Meta) ->
 
 -spec 'meta?'(any()) -> any().
 'meta?'(X) ->
-  clj_protocol:'satisfies?'('clojerl.IMeta', type_module(X)).
+  'clojerl.IMeta':?SATISFIES(type_module(X)).
 
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(?NIL, _) ->
@@ -665,7 +665,7 @@ hash(X)    -> 'clojerl.IHash':hash(X).
 -spec '->erl'(any(), boolean()) -> any().
 '->erl'(?NIL, _)      -> ?NIL;
 '->erl'(X, Recursive) ->
-  case clj_protocol:'satisfies?'('clojerl.IErl', type_module(X)) of
+  case 'clojerl.IErl':?SATISFIES(type_module(X)) of
     true  -> 'clojerl.IErl':'->erl'(X, Recursive);
     false -> X
   end.

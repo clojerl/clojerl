@@ -9,6 +9,9 @@
 %% default type for protocol
 -define(DEFAULT_TYPE, 'clojerl.Default').
 
+%% Name for the satisfies? function in protocols
+-define(SATISFIES, '__satisfies?__').
+
 %% Reader constants
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).

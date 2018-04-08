@@ -1,24 +1,81 @@
 -module('clojerl.ISeq').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([first/1, next/1, more/1]).
+-export(['first'/1, 'next'/1, 'more'/1, '__satisfies?__'/1]).
 
--type type() :: any().
+-callback 'first'(any()) -> any().
+-callback 'next'(any()) -> any().
+-callback 'more'(any()) -> any().
 
--callback first(ISeq :: type()) -> any().
--callback next(ISeq :: type()) -> type().
--callback more(ISeq :: type()) -> type().
+'first'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    'erlang.List' ->
+      'erlang.List':'first'(Seq);
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'first'(Seq);
+    'clojerl.Cons' ->
+      'clojerl.Cons':'first'(Seq);
+    'clojerl.LazySeq' ->
+      'clojerl.LazySeq':'first'(Seq);
+    'clojerl.List' ->
+      'clojerl.List':'first'(Seq);
+    'clojerl.Range' ->
+      'clojerl.Range':'first'(Seq);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'first'(Seq);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'first', Seq)
+  end.
 
--spec first(type()) -> any().
-first(Seq) ->
-  clj_protocol:resolve(?MODULE, first, Seq).
+'next'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    'erlang.List' ->
+      'erlang.List':'next'(Seq);
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'next'(Seq);
+    'clojerl.Cons' ->
+      'clojerl.Cons':'next'(Seq);
+    'clojerl.LazySeq' ->
+      'clojerl.LazySeq':'next'(Seq);
+    'clojerl.List' ->
+      'clojerl.List':'next'(Seq);
+    'clojerl.Range' ->
+      'clojerl.Range':'next'(Seq);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'next'(Seq);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'next', Seq)
+  end.
 
--spec next(type()) -> type().
-next(Seq) ->
-  clj_protocol:resolve(?MODULE, next, Seq).
+'more'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    'erlang.List' ->
+      'erlang.List':'more'(Seq);
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'more'(Seq);
+    'clojerl.Cons' ->
+      'clojerl.Cons':'more'(Seq);
+    'clojerl.LazySeq' ->
+      'clojerl.LazySeq':'more'(Seq);
+    'clojerl.List' ->
+      'clojerl.List':'more'(Seq);
+    'clojerl.Range' ->
+      'clojerl.Range':'more'(Seq);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'more'(Seq);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'more', Seq)
+  end.
 
--spec more(type()) -> type().
-more(Seq) ->
-  clj_protocol:resolve(?MODULE, more, Seq).
+?SATISFIES('erlang.List') -> true;
+?SATISFIES('clojerl.ChunkedCons') -> true;
+?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.LazySeq') -> true;
+?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Range') -> true;
+?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
+?SATISFIES(_) -> false.

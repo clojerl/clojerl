@@ -2,10 +2,10 @@
 
 -include("clojerl.hrl").
 
--behaviour('erlang.io.Closeable').
--behaviour('clojerl.IStringable').
--behaviour('erlang.io.IReader').
--behaviour('erlang.io.IPushbackReader').
+-behavior('erlang.io.Closeable').
+-behavior('clojerl.IStringable').
+-behavior('erlang.io.IReader').
+-behavior('erlang.io.IPushbackReader').
 
 -export([?CONSTRUCTOR/1, at_line_start/1]).
 -export([ start_link/1

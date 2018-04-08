@@ -1,19 +1,40 @@
 -module('clojerl.IIndexed').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([nth/2, nth/3]).
+-export(['nth'/2, 'nth'/3, '__satisfies?__'/1]).
 
--type type() :: any().
+-callback 'nth'(any(), any()) -> any().
+-callback 'nth'(any(), any(), any()) -> any().
 
--callback nth(A :: type(), K :: any()) -> any().
--callback nth(A :: type(), K :: any(), NotFound :: any()) -> any().
+'nth'(Coll, N) ->
+  case clj_rt:type_module(Coll) of
+    'erlang.Tuple' ->
+      'erlang.Tuple':'nth'(Coll, N);
+    'clojerl.TupleChunk' ->
+      'clojerl.TupleChunk':'nth'(Coll, N);
+    'clojerl.Vector' ->
+      'clojerl.Vector':'nth'(Coll, N);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'nth', Coll, N)
+  end.
 
--spec nth(type(), integer()) -> any().
-nth(Coll, N) ->
-  clj_protocol:resolve(?MODULE, nth, Coll, N).
+'nth'(Coll, N, NotFound) ->
+  case clj_rt:type_module(Coll) of
+    'erlang.Tuple' ->
+      'erlang.Tuple':'nth'(Coll, N, NotFound);
+    'clojerl.TupleChunk' ->
+      'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
+    'clojerl.Vector' ->
+      'clojerl.Vector':'nth'(Coll, N, NotFound);
+    _ ->
+      clj_protocol:resolve(?MODULE, 'nth', Coll, N, NotFound)
+  end.
 
--spec nth(type(), integer(), any()) -> any().
-nth(Coll, N, NotFound) ->
-  clj_protocol:resolve(?MODULE, nth, Coll, N, NotFound).
+?SATISFIES('erlang.Tuple') -> true;
+?SATISFIES('clojerl.TupleChunk') -> true;
+?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES(_) -> false.

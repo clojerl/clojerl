@@ -1,7 +1,7 @@
 -module('erlang.Port').
 
--behaviour('clojerl.IStringable').
--behaviour('clojerl.IHash').
+-behavior('clojerl.IStringable').
+-behavior('clojerl.IHash').
 
 -export([str/1]).
 -export([hash/1]).

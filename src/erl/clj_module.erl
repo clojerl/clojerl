@@ -2,7 +2,7 @@
 
 -behavior(gen_server).
 
--compile({no_auto_import, [get/1]}).
+-compile({no_auto_import, [get/1, delete_module/1]}).
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
@@ -26,6 +26,7 @@
         , add_attributes/2
         , add_exports/2
         , add_functions/2
+        , get_functions/1
         , remove_all_functions/1
         , add_on_load/2
 
@@ -318,6 +319,14 @@ remove_all_functions(Module) ->
   true = ets:delete_all_objects(Module#module.exports),
   Module.
 
+-spec get_functions(module() | clj_module()) ->
+  [{cerl:cerl(), cerl:cerl()}].
+get_functions(?NIL) -> error(badarg);
+get_functions(ModuleName) when is_atom(ModuleName)  ->
+  get_functions(clj_utils:ets_get(?MODULE, ModuleName));
+get_functions(Module) ->
+  ets:tab2list(Module#module.funs).
+
 -spec add_on_load(cerl:cerl(), module() | clj_module()) ->
   clj_module().
 add_on_load(_, ?NIL) -> error(badarg);
@@ -399,7 +408,7 @@ handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
   {reply, Modules, State}.
 
 handle_cast({remove, Pid, ModuleName}, #{loaded_modules := TabId} = State) ->
-  true = ets:delete(?MODULE, ModuleName),
+  delete_module(ModuleName),
   case clj_utils:ets_get(TabId, Pid) of
     {Pid, Modules} ->
       NewModules = [M || M <- Modules, M#module.name =/= ModuleName],
@@ -420,6 +429,23 @@ code_change(_Msg, _From, State) ->
 %%------------------------------------------------------------------------------
 %% Helper Functions
 %%------------------------------------------------------------------------------
+
+-spec delete_module(module()) -> ok.
+delete_module(ModuleName) ->
+  case clj_utils:ets_get(?MODULE, ModuleName) of
+    ?NIL -> ok;
+    Module ->
+      ets:delete(Module#module.mappings),
+      ets:delete(Module#module.aliases),
+      ets:delete(Module#module.funs),
+      ets:delete(Module#module.fake_funs),
+      ets:delete(Module#module.fake_modules),
+      ets:delete(Module#module.exports),
+      ets:delete(Module#module.on_load),
+      ets:delete(Module#module.attrs)
+  end,
+  true = ets:delete(?MODULE, ModuleName),
+  ok.
 
 %% @private
 -spec cleanup() -> ok.

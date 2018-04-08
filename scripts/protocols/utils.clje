@@ -1,0 +1,14 @@
+(ns protocols.utils
+  (:require [clojure.string :as str]))
+
+(defn who-implements [proto-name]
+  (let [cmd (str "grep -rl \"-behavior('"
+                 (name proto-name)
+                 "'\" src/erl | xargs -ifoo basename foo .erl")
+        split #(str/split % #"\n")]
+    (->> cmd
+        erlang/binary_to_list
+        os/cmd
+        erlang/list_to_binary
+        split
+        (filter seq))))

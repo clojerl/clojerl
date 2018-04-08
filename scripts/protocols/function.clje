@@ -1,0 +1,161 @@
+(ns protocols.function
+  (:require [protocols.utils :as utils]))
+
+(def clojure-protocols
+  '{clojerl.IAssociative   [contains_key  [Assoc Key]
+                            entry_at      [Assoc Key]
+                            assoc         [Assoc Key Value]]
+    clojerl.IChunk         [drop_first    [Chunk]]
+    clojerl.IChunkedSeq    [chunked_first [Seq]
+                            chunked_next  [Seq]
+                            chunked_more  [Seq]]
+    clojerl.IColl          [cons          [Coll, Item]
+                            empty         [Coll]]
+    clojerl.ICounted       [count         [Seq]]
+    clojerl.IDeref         [deref         [Ref]]
+    clojerl.IEquiv         [equiv         [X Y]]
+    clojerl.IErl           [->erl         [X Recursive]]
+    clojerl.IError         [message       [Error]]
+    clojerl.IExceptionInfo [data          [ExInfo]
+                            cause         [ExInfo]]
+    clojerl.IFn            [apply         [Fn Args]]
+    clojerl.IHash          [hash          [X]]
+    clojerl.IIndexed       [nth           [Coll N]
+                            nth           [Coll N NotFound]]
+    clojerl.ILookup        [get           [X Key]
+                            get           [X Key NotFound]]
+    clojerl.IMap           [keys          [Map]
+                            vals          [Map]
+                            without       [Map Key]]
+    clojerl.IMeta          [meta          [X]
+                            with_meta     [X Meta]]
+    clojerl.INamed         [name          [X]
+                            namespace     [X]]
+    clojerl.IRecord        [_             [_]]
+    clojerl.IReduce        [reduce        [Coll Fun]
+                            reduce        [Coll Fun Init]]
+    clojerl.IReversible    [rseq          [Seq]]
+    clojerl.ISeq           [first         [Seq]
+                            next          [Seq]
+                            more          [Seq]]
+    clojerl.ISeqable       [seq           [X]
+                            to_list       [X]]
+    clojerl.ISequential    [_             [_]]
+    clojerl.ISet           [disjoin       [Coll Item]
+                            contains      [Coll Item]
+                            get           [Coll Item]]
+    clojerl.ISorted        [_             [_]]
+    clojerl.IStack         [peek          [Stack]
+                            pop           [Stack]]
+    clojerl.IStringable    [str           [X]]
+    clojerl.IType          [_             [_]]
+    })
+
+(def erlang-protocols
+  '{erlang.io.IWriter         [write     [Writer Str]
+                               write     [Writer Format Value]]
+    erlang.io.IReader         [read      [Reader]
+                               read      [Reader Length]
+                               read_line [Reader]
+                               skip      [Reader N]]
+    erlang.io.IPushbackReader [unread [Reader Ch]]
+    })
+
+(defn underscore?
+  [x]
+  (= x '_))
+
+(defn proto-function-head
+  [f args]
+  (let [args-str (apply str (interpose ", " args))]
+    (str "'" f "'(" args-str ") ->\n"
+         "  case clj_rt:type_module(" (first args) ") of\n")))
+
+(defn proto-function-tail
+  [f args]
+  (let [args-str (apply str (interpose ", " args))]
+    (str "    _ ->\n"
+         "      clj_protocol:resolve(?MODULE, '" f "', " args-str ")\n"
+         "  end.\n\n")))
+
+(defn proto-function-clause
+  [f args m]
+  (let [args-str (apply str (interpose ", " args))]
+    (str "    '" m "' ->\n"
+         "      '" m "':'" f "'(" args-str ");\n")))
+
+(defn proto-function
+  [proto-name f args types]
+  (when-not (underscore? f)
+    (str
+     (proto-function-head f args)
+     (->> types
+          (map (partial proto-function-clause f args))
+          (apply str))
+     (proto-function-tail f args))))
+
+(defn proto-functions
+  [proto-name fns types]
+  (->> fns
+       (partition 2)
+       (map (fn [[f args]]
+              (proto-function proto-name f args types)))
+       (apply str)))
+
+(defn satisfies?-function
+  [types]
+  (str (->> types
+            (map #(str "?SATISFIES('" % "') -> true;\n"))
+            (apply str))
+       "?SATISFIES(_) -> false.\n"))
+
+(defn exports
+  [fns]
+  (->> (into fns '[__satisfies?__ [Type]])
+       (partition 2)
+       (keep (fn [[f args]]
+               (when-not (underscore? f)
+                 (str "'" f "'/" (count args)))))
+       (interpose ", ")
+       (apply str)))
+
+(defn callbacks
+  [fns]
+  (->> fns
+       (partition 2)
+       (map (fn [[f args]]
+              (str "-callback '" f "'("
+                   (apply str
+                          (interpose ", " (repeat (count args) "any()")))
+                   ") -> any().\n")))
+       (apply str)))
+
+(defn module
+  [proto-name fns]
+  (let [types (utils/who-implements proto-name)]
+    (str "-module('" proto-name "').\n\n"
+         "-include(\"clojerl_int.hrl\").\n\n"
+         "-clojure(true).\n"
+         "-protocol(true).\n\n"
+         "-export([" (exports fns) "]).\n\n"
+         (callbacks fns)
+         "\n"
+         (proto-functions proto-name fns types)
+         (satisfies?-function types))))
+
+(defn write-module
+  [content path proto-name]
+  (spit (str path proto-name ".erl") content))
+
+(defn write-protocols
+  [path protocols]
+  (doseq [[proto-name fns] protocols]
+    (-> proto-name
+        (module fns)
+        ;; println
+        (write-module path proto-name)
+        )))
+
+(defn -main []
+  (write-protocols "src/erl/lang/protocols/" clojure-protocols)
+  (write-protocols "src/erl/erlang/" erlang-protocols))

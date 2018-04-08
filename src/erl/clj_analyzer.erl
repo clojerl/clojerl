@@ -1352,7 +1352,9 @@ parse_import(Form, Env) ->
 
   TypeName = clj_rt:second(Form),
   ?ERROR_WHEN( not is_binary(TypeName)
-             , <<"Argument to import* must be a string">>
+             , [ <<"Argument to import* must be a string, got: ">>
+               , TypeName
+               ]
              , clj_env:location(Env)
              ),
 
@@ -1398,7 +1400,7 @@ parse_deftype(Form, Env0) ->
   , TypeSym
   , Fields
   , _ % :implements
-  , Interfaces
+  , Protocols
   | OptsAndMethods
   ] = clj_rt:to_list(Form),
 
@@ -1441,10 +1443,12 @@ parse_deftype(Form, Env0) ->
   Env5 = lists:foldl(fun analyze_deftype_method/2, Env4, Methods),
   {MethodsExprs, Env6} = clj_env:last_exprs(length(Methods), Env5),
 
-  IntfsList   = clj_rt:to_list(Interfaces),
-  {InterfacesExprs, Env7} = clj_env:last_exprs( length(IntfsList)
-                                              , analyze_forms(IntfsList, Env6)
-                                              ),
+  ProtocolsList = clj_rt:to_list(Protocols),
+  {ProtocolsExprs, Env7} = clj_env:last_exprs( length(ProtocolsList)
+                                             , analyze_forms( ProtocolsList
+                                                            , Env6
+                                                            )
+                                             ),
 
   DeftypeExpr = #{ op        => deftype
                  , env       => Env0
@@ -1453,7 +1457,7 @@ parse_deftype(Form, Env0) ->
                  , name      => Name
                  , type      => Type
                  , fields    => FieldsExprs
-                 , protocols => InterfacesExprs
+                 , protocols => ProtocolsExprs
                  , methods   => MethodsExprs
                  , opts      => Opts
                  },

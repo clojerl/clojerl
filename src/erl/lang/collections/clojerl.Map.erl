@@ -3,6 +3,7 @@
 -compile({no_auto_import, [{apply, 2}]}).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IAssociative').
 -behavior('clojerl.ICounted').
@@ -174,8 +175,10 @@ cons(#{?TYPE := ?M} = Map, X) ->
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->
-      throw(<<"Can't conj something that is not a key/value pair or "
-              "another map to a map.">>)
+      ?ERROR([ <<"Can't conj something that is not a key/value pair or "
+               "another map to a map, got: ">>
+             , X
+             ])
   end.
 
 empty(_) -> ?CONSTRUCTOR([]).
