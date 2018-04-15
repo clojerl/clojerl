@@ -360,13 +360,15 @@ ast(#{op := defprotocol} = Expr, State) ->
   Ann    = ann_from(Env),
 
   ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:abstract([true])},
-  Functions    = [protocol_function(Sig, Module, Ann) || Sig <- MethodsSigs],
+  Functions0   = [protocol_function(Sig, Module, Ann) || Sig <- MethodsSigs],
+  Satifies     = satisfies_function(Ann),
+  Functions1   = [Satifies | Functions0],
   Exports      = [ {cerl:fname_id(FName), cerl:fname_arity(FName)}
-                   || {FName, _} <- Functions
+                   || {FName, _} <- Functions1
                  ],
-  Satifies     = satisfies_function([], Ann),
+
   clj_module:add_attributes([ProtocolAttr], Module),
-  clj_module:add_functions([Satifies | Functions], Module),
+  clj_module:add_functions(Functions1, Module),
   clj_module:add_exports(Exports, Module),
 
   Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
@@ -385,32 +387,40 @@ ast(#{op := extend_type} = Expr, State) ->
    , env   := Env
    } = Expr,
 
+  TypeBin    = 'erlang.Type':str(Type),
+  TypeModule = 'erlang.Type':module(Type),
+
   EmitProtocolFun =
     fun(#{type := ProtoType} = Proto, StateAcc) ->
-        ProtoBin = 'erlang.Type':str(ProtoType),
-        TypeBin  = 'erlang.Type':str(Type),
-        Module   = clj_protocol:impl_module(ProtoBin, TypeBin),
+        ProtoBin    = 'erlang.Type':str(ProtoType),
+        ProtoModule = 'erlang.Type':module(ProtoType),
 
-        clj_module:ensure_loaded(file_from(Env), Module),
+        ImplModule  = clj_protocol:impl_module(ProtoBin, TypeBin),
+
+        clj_module:ensure_loaded(file_from(Env), ImplModule),
 
         MethodsExprs = maps:get(Proto, Impls),
 
         %% Functions
-        StateAcc1 = lists:foldl(fun ast/2, StateAcc, MethodsExprs),
+        StateAcc1  = lists:foldl(fun ast/2, StateAcc, MethodsExprs),
         {FunctionsAsts, StateAcc2} = pop_ast(StateAcc1, length(MethodsExprs)),
 
         %% Exports
-        Exports = lists:map(fun function_signature/1, FunctionsAsts),
+        Exports    = lists:map(fun function_signature/1, FunctionsAsts),
 
-        clj_module:remove_all_functions(Module),
-        clj_module:add_exports(Exports, Module),
-        clj_module:add_functions(FunctionsAsts, Module),
+        clj_module:remove_all_functions(ImplModule),
+        clj_module:add_exports(Exports, ImplModule),
+        clj_module:add_functions(FunctionsAsts, ImplModule),
 
-        Opts   = clj_env:get(compiler_opts, default_compiler_options(), Env),
-        Module = clj_compiler:compile_module( clj_module:get_module(Module)
-                                            , Opts
-                                            ),
-        ok     = clj_module:remove(Module),
+        Opts       = clj_env:get( compiler_opts
+                                , default_compiler_options()
+                                , Env
+                                ),
+        ImplModule =
+          clj_compiler:compile_module(clj_module:get_module(ImplModule), Opts),
+        ok         = clj_module:remove(ImplModule),
+
+        protocol_add_type(TypeModule, ImplModule, ProtoModule, Opts),
 
         StateAcc2
     end,
@@ -1319,17 +1329,12 @@ protocol_function(Sig, Module, Ann) ->
   , cerl:ann_c_fun(Ann, Vars, Body)
   }.
 
--spec satisfies_function([module()], any()) ->
+-spec satisfies_function(any()) ->
   {cerl:c_fname(), cerl:c_fun()}.
-satisfies_function(Types, Ann) ->
+satisfies_function(Ann) ->
   Arg         = new_c_var(Ann),
-  True        = cerl:abstract(true),
-  TypeClauses = [ cerl:ann_c_clause(Ann, [cerl:abstract(Type)], True)
-                  || Type <- Types
-                ],
   FalseClause = cerl:ann_c_clause(Ann, [new_c_var(Ann)], cerl:abstract(false)),
-  AllClauses  = lists:reverse([FalseClause | TypeClauses]),
-  Body        = cerl:ann_c_case(Ann, Arg, AllClauses),
+  Body        = cerl:ann_c_case(Ann, Arg, [FalseClause]),
 
   { cerl:c_fname(?SATISFIES, 1)
   , cerl:ann_c_fun(Ann, [Arg], Body)
@@ -1337,36 +1342,55 @@ satisfies_function(Types, Ann) ->
 
 -spec protocol_add_type(module(), module(), map()) -> ok.
 protocol_add_type(TypeModule, ProtocolModule, Opts) ->
+  protocol_add_type(TypeModule, TypeModule, ProtocolModule, Opts).
+
+-spec protocol_add_type(module(), module(), module(), map()) -> ok.
+protocol_add_type(TypeModule, ImplModule, ProtocolModule, Opts) ->
   clj_module:ensure_loaded(<<"">>, ProtocolModule),
   Functions0 = clj_module:get_functions(ProtocolModule),
-  Functions1 = [protocol_function_add_type(F, TypeModule) || F <- Functions0],
+  Functions1 = [ protocol_function_add_type(F, TypeModule, ImplModule)
+                 || F <- Functions0
+               ],
   clj_module:add_functions(Functions1, ProtocolModule),
 
-  Module = clj_compiler:compile_module(clj_module:get_module(ProtocolModule), Opts),
+  Module = clj_compiler:compile_module( clj_module:get_module(ProtocolModule)
+                                      , Opts
+                                      ),
   ok     = clj_module:remove(Module),
   ok.
 
--spec protocol_function_add_type(module(), module()) -> cerl:c_fun().
-protocol_function_add_type({{Name, _}, X}, _Module)
+-spec protocol_function_add_type( { {atom(), arity()}
+                                  , {cerl:c_fname(), cerl:c_fun()}
+                                  }
+                                , module()
+                                , module()
+                                ) -> {cerl:c_fname(), cerl:c_fun()}.
+protocol_function_add_type({{Name, _}, X}, _TypeModule, _ImplModule)
   when Name =:= module_info;
        Name =:= behavior_info;
        Name =:= behaviour_info ->
   X;
-protocol_function_add_type({{?SATISFIES, 1}, {FName, Fun0}}, Module) ->
+protocol_function_add_type( {{?SATISFIES, 1}, {FName, Fun0}}
+                          , TypeModule
+                          , _ImplModule
+                          ) ->
   Vars0    = cerl:fun_vars(Fun0),
   Body0    = cerl:fun_body(Fun0),
 
   Arg0     = cerl:case_arg(Body0),
   Clauses0 = cerl:case_clauses(Body0),
 
-  Clause   = cerl:c_clause([cerl:abstract(Module)], cerl:abstract(true)),
+  Clause   = cerl:c_clause([cerl:abstract(TypeModule)], cerl:abstract(true)),
   Clauses1 = [Clause | Clauses0],
 
   Body1    = cerl:update_c_case(Body0, Arg0, Clauses1),
   Fun1     = cerl:update_c_fun(Fun0, Vars0, Body1),
 
   {FName, Fun1};
-protocol_function_add_type({{Name, _}, {FName, Fun0}}, Module) ->
+protocol_function_add_type({{Name, _}, {FName, Fun0}}
+                          , TypeModule
+                          , ImplModule
+                          ) ->
   %% Top level case
   FunVars0           = cerl:fun_vars(Fun0),
   FunBody0           = cerl:fun_body(Fun0),
@@ -1383,7 +1407,8 @@ protocol_function_add_type({{Name, _}, {FName, Fun0}}, Module) ->
              %% Add the clause for the type module.
              FunBodyClauseBody1 = case_add_type( Name
                                                , FunVars0
-                                               , Module
+                                               , TypeModule
+                                               , ImplModule
                                                , FunBodyClauseBody0
                                                ),
              %% Rebuild function body
@@ -1401,7 +1426,8 @@ protocol_function_add_type({{Name, _}, {FName, Fun0}}, Module) ->
            false ->
              FunBody1 = case_add_type( Name
                                      , FunVars0
-                                     , Module
+                                     , TypeModule
+                                     , ImplModule
                                      , FunBody0
                                      ),
              cerl:update_c_fun(Fun0, FunVars0, FunBody1)
@@ -1409,14 +1435,18 @@ protocol_function_add_type({{Name, _}, {FName, Fun0}}, Module) ->
 
   {FName, Fun1}.
 
--spec case_add_type(cerl:c_case(), module(), atom(), [cerl:c_var()]) ->
-  cerl:c_case().
-case_add_type(Name, Vars, Module, Case) ->
+-spec case_add_type( atom()
+                   , [cerl:c_var()]
+                   , module()
+                   , module()
+                   , cerl:c_case()
+                   ) -> cerl:c_case().
+case_add_type(Name, Vars, TypeModule, ImplModule, Case) ->
   Arg      = cerl:case_arg(Case),
   Clauses  = cerl:case_clauses(Case),
 
-  Clause   = cerl:c_clause( [cerl:abstract(Module)]
-                          , call_mfa(Module, Name, Vars, [])
+  Clause   = cerl:c_clause( [cerl:abstract(TypeModule)]
+                          , call_mfa(ImplModule, Name, Vars, [])
                           ),
   cerl:update_c_case(Case, Arg, [Clause | Clauses]).
 

@@ -320,7 +320,7 @@ remove_all_functions(Module) ->
   Module.
 
 -spec get_functions(module() | clj_module()) ->
-  [{cerl:cerl(), cerl:cerl()}].
+  [{function_id(), {cerl:c_fname(), cerl:c_fun()}}].
 get_functions(?NIL) -> error(badarg);
 get_functions(ModuleName) when is_atom(ModuleName)  ->
   get_functions(clj_utils:ets_get(?MODULE, ModuleName));
