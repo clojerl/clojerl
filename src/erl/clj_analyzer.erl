@@ -1,5 +1,7 @@
 -module(clj_analyzer).
 
+-dialyzer({nowarn_function, analyze_form/2}).
+
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
 -include("clojerl_expr.hrl").
