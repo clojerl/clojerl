@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['data'/1, 'cause'/1, '__satisfies?__'/1]).
+-export(['data'/1, 'cause'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'data'(any()) -> any().
 -callback 'cause'(any()) -> any().

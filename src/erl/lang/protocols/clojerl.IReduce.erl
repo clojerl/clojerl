@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['reduce'/2, 'reduce'/3, '__satisfies?__'/1]).
+-export(['reduce'/2, 'reduce'/3]).
+-export([?SATISFIES/1]).
 
 -callback 'reduce'(any(), any()) -> any().
 -callback 'reduce'(any(), any(), any()) -> any().

@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['count'/1, '__satisfies?__'/1]).
+-export(['count'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'count'(any()) -> any().
 

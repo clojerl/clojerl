@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['meta'/1, 'with_meta'/2, '__satisfies?__'/1]).
+-export(['meta'/1, 'with_meta'/2]).
+-export([?SATISFIES/1]).
 
 -callback 'meta'(any()) -> any().
 -callback 'with_meta'(any(), any()) -> any().

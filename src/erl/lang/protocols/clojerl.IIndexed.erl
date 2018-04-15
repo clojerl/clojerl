@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['nth'/2, 'nth'/3, '__satisfies?__'/1]).
+-export(['nth'/2, 'nth'/3]).
+-export([?SATISFIES/1]).
 
 -callback 'nth'(any(), any()) -> any().
 -callback 'nth'(any(), any(), any()) -> any().

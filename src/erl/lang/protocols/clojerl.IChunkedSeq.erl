@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1, '__satisfies?__'/1]).
+-export(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'chunked_first'(any()) -> any().
 -callback 'chunked_next'(any()) -> any().

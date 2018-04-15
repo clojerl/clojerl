@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['->erl'/2, '__satisfies?__'/1]).
+-export(['->erl'/2]).
+-export([?SATISFIES/1]).
 
 -callback '->erl'(any(), any()) -> any().
 

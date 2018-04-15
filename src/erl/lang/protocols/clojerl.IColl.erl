@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['cons'/2, 'empty'/1, '__satisfies?__'/1]).
+-export(['cons'/2, 'empty'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'cons'(any(), any()) -> any().
 -callback 'empty'(any()) -> any().

@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['read'/1, 'read'/2, 'read_line'/1, 'skip'/2, '__satisfies?__'/1]).
+-export(['read'/1, 'read'/2, 'read_line'/1, 'skip'/2]).
+-export([?SATISFIES/1]).
 
 -callback 'read'(any()) -> any().
 -callback 'read'(any(), any()) -> any().

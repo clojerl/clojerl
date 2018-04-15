@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['drop_first'/1, '__satisfies?__'/1]).
+-export(['drop_first'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'drop_first'(any()) -> any().
 

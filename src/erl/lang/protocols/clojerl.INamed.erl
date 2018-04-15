@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['name'/1, 'namespace'/1, '__satisfies?__'/1]).
+-export(['name'/1, 'namespace'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'name'(any()) -> any().
 -callback 'namespace'(any()) -> any().

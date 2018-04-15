@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['equiv'/2, '__satisfies?__'/1]).
+-export(['equiv'/2]).
+-export([?SATISFIES/1]).
 
 -callback 'equiv'(any(), any()) -> any().
 

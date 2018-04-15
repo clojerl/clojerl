@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['peek'/1, 'pop'/1, '__satisfies?__'/1]).
+-export(['peek'/1, 'pop'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'peek'(any()) -> any().
 -callback 'pop'(any()) -> any().

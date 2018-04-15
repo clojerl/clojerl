@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['write'/2, 'write'/3, '__satisfies?__'/1]).
+-export(['write'/2, 'write'/3]).
+-export([?SATISFIES/1]).
 
 -callback 'write'(any(), any()) -> any().
 -callback 'write'(any(), any(), any()) -> any().

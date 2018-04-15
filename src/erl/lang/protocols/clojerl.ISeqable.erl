@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['seq'/1, 'to_list'/1, '__satisfies?__'/1]).
+-export(['seq'/1, 'to_list'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'seq'(any()) -> any().
 -callback 'to_list'(any()) -> any().

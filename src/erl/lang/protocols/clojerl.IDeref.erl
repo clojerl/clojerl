@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['deref'/1, '__satisfies?__'/1]).
+-export(['deref'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'deref'(any()) -> any().
 

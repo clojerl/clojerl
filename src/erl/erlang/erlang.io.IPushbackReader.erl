@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['unread'/2, '__satisfies?__'/1]).
+-export(['unread'/2]).
+-export([?SATISFIES/1]).
 
 -callback 'unread'(any(), any()) -> any().
 

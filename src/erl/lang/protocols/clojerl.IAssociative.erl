@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['contains_key'/2, 'entry_at'/2, 'assoc'/3, '__satisfies?__'/1]).
+-export(['contains_key'/2, 'entry_at'/2, 'assoc'/3]).
+-export([?SATISFIES/1]).
 
 -callback 'contains_key'(any(), any()) -> any().
 -callback 'entry_at'(any(), any()) -> any().

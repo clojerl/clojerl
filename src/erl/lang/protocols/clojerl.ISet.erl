@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['disjoin'/2, 'contains'/2, 'get'/2, '__satisfies?__'/1]).
+-export(['disjoin'/2, 'contains'/2, 'get'/2]).
+-export([?SATISFIES/1]).
 
 -callback 'disjoin'(any(), any()) -> any().
 -callback 'contains'(any(), any()) -> any().

@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['first'/1, 'next'/1, 'more'/1, '__satisfies?__'/1]).
+-export(['first'/1, 'next'/1, 'more'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'first'(any()) -> any().
 -callback 'next'(any()) -> any().

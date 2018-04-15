@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['rseq'/1, '__satisfies?__'/1]).
+-export(['rseq'/1]).
+-export([?SATISFIES/1]).
 
 -callback 'rseq'(any()) -> any().
 

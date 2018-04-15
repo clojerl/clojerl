@@ -5,7 +5,8 @@
 -clojure(true).
 -protocol(true).
 
--export(['keys'/1, 'vals'/1, 'without'/2, '__satisfies?__'/1]).
+-export(['keys'/1, 'vals'/1, 'without'/2]).
+-export([?SATISFIES/1]).
 
 -callback 'keys'(any()) -> any().
 -callback 'vals'(any()) -> any().

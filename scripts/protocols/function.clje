@@ -111,7 +111,7 @@
 
 (defn exports
   [fns]
-  (->> (into fns '[__satisfies?__ [Type]])
+  (->> fns
        (partition 2)
        (keep (fn [[f args]]
                (when-not (underscore? f)
@@ -137,7 +137,10 @@
          "-include(\"clojerl_int.hrl\").\n\n"
          "-clojure(true).\n"
          "-protocol(true).\n\n"
-         "-export([" (exports fns) "]).\n\n"
+         (let [ex (exports fns)]
+           (when-not (empty? ex)
+             (str "-export([" ex "]).\n")))
+         "-export([?SATISFIES/1]).\n\n"
          (callbacks fns)
          "\n"
          (proto-functions proto-name fns types)
