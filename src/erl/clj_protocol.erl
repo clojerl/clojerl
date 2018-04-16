@@ -35,7 +35,7 @@ impl_module(ProtocolBin, TypeBin)
     {ok, Value} -> Value
   end.
 
--spec not_implemented(module(), atom(), module()) -> ok.
+-spec not_implemented(module(), atom(), module()) -> no_return().
 not_implemented(Protocol, Function, Type) ->
   ?ERROR( [ <<"No implementation of method: '">>
           , atom_to_binary(Function, utf8)

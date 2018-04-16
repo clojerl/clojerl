@@ -10,6 +10,7 @@
 
 -callback 'rseq'(any()) -> any().
 
+-spec 'rseq'(any()) -> no_return().
 'rseq'(Seq) ->
   case clj_rt:type_module(Seq) of
     Type ->
