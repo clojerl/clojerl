@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behavior('erlang.io.Closeable').
+-behavior('erlang.io.ICloseable').
 -behavior('clojerl.IStringable').
 -behavior('erlang.io.IReader').
 

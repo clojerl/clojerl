@@ -58,7 +58,8 @@
                                read      [Reader Length]
                                read_line [Reader]
                                skip      [Reader N]]
-    erlang.io.IPushbackReader [unread [Reader Ch]]
+    erlang.io.IPushbackReader [unread    [Reader Ch]]
+    erlang.io.ICloseable      [close     [X]]
     })
 
 (defn underscore?

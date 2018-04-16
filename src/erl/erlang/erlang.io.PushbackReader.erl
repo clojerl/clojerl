@@ -2,7 +2,7 @@
 
 -include("clojerl.hrl").
 
--behavior('erlang.io.Closeable').
+-behavior('erlang.io.ICloseable').
 -behavior('clojerl.IStringable').
 -behavior('erlang.io.IReader').
 -behavior('erlang.io.IPushbackReader').
@@ -131,7 +131,7 @@ loop(State) ->
       ?MODULE:loop(State2);
     {From, Ref, close} ->
       #{reader := Reader} = State,
-      Result = try 'erlang.io.Closeable':close(Reader)
+      Result = try 'erlang.io.ICloseable':close(Reader)
                catch error:Error -> {error, Error}
                end,
       From ! {Ref, Result};

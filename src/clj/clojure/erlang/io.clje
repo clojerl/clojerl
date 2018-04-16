@@ -13,7 +13,7 @@
     (:require clojure.string)
     (:import
      (erlang.io IReader IWriter File
-                StringReader Closeable)))
+                StringReader ICloseable)))
 
 (defprotocol ^{:added "1.2"} Coercions
   "Coerce between various 'resource-namish' things."

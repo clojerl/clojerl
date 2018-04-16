@@ -1049,8 +1049,8 @@ string, or one character longer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (deftype DowncaseWriter [writer]
-  erlang.io.Closeable
-  (close [_] (.close ^erlang.io.Closeable writer))
+  erlang.io.ICloseable
+  (close [_] (.close ^erlang.io.ICloseable writer))
 
   erlang.io.IWriter
   (write [_ x]
@@ -1071,8 +1071,8 @@ string, or one character longer."
   (DowncaseWriter. writer))
 
 (deftype UpcaseWriter [writer]
-  erlang.io.Closeable
-  (close [_] (.close ^erlang.io.Closeable writer))
+  erlang.io.ICloseable
+  (close [_] (.close ^erlang.io.ICloseable writer))
 
   erlang.io.IWriter
   (write [_ x]
@@ -1116,8 +1116,8 @@ string, or one character longer."
              s)))))
 
 (deftype CapitalizeWordWriter [writer last-was-whitespace?]
-  erlang.io.Closeable
-  (close [_] (.close ^erlang.io.Closeable writer))
+  erlang.io.ICloseable
+  (close [_] (.close ^erlang.io.ICloseable writer))
 
   erlang.io.IWriter
   (write [_ x]
@@ -1142,8 +1142,8 @@ string, or one character longer."
     (CapitalizeWordWriter. writer last-was-whitespace?)))
 
 (deftype InitCapWriter [writer capped]
-  erlang.io.Closeable
-  (close [_] (.close ^erlang.io.Closeable writer))
+  erlang.io.ICloseable
+  (close [_] (.close ^erlang.io.ICloseable writer))
 
   erlang.io.IWriter
   (write [_ x]

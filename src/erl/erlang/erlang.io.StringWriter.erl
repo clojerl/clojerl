@@ -4,7 +4,7 @@
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IStringable').
--behavior('erlang.io.Closeable').
+-behavior('erlang.io.ICloseable').
 -behavior('erlang.io.IWriter').
 
 -export([?CONSTRUCTOR/0, ?CONSTRUCTOR/1]).
