@@ -416,8 +416,8 @@ ast(#{op := extend_type} = Expr, State) ->
                                 , default_compiler_options()
                                 , Env
                                 ),
-        ImplModule =
-          clj_compiler:compile_module(clj_module:get_module(ImplModule), Opts),
+        Module     = clj_module:get_module(ImplModule),
+        ImplModule = clj_compiler:compile_module(Module, Opts),
         ok         = clj_module:remove(ImplModule),
 
         protocol_add_type(TypeModule, ImplModule, ProtoModule, Opts),
@@ -1442,6 +1442,17 @@ protocol_function_add_type({{Name, _}, {FName, Fun0}}
                    , module()
                    , cerl:c_case()
                    ) -> cerl:c_case().
+case_add_type(Name, Vars, ?DEFAULT_TYPE, ImplModule, Case) ->
+  Arg      = cerl:case_arg(Case),
+  Clauses0 = cerl:case_clauses(Case),
+
+  %% Add catch all clause
+  Clause   = cerl:c_clause( [new_c_var([])]
+                          , call_mfa(ImplModule, Name, Vars, [])
+                          ),
+  ButLast  = lists:droplast(Clauses0),
+  Clauses1 = ButLast ++ [Clause],
+  cerl:update_c_case(Case, Arg, Clauses1);
 case_add_type(Name, Vars, TypeModule, ImplModule, Case) ->
   Arg      = cerl:case_arg(Case),
   Clauses  = cerl:case_clauses(Case),

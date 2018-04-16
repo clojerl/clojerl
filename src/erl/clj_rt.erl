@@ -172,7 +172,7 @@ nth_from(Coll, N, NotFound) ->
 'empty?'(?NIL) -> true;
 'empty?'(Seq)  -> 'clojerl.ISeqable':seq(Seq) == ?NIL.
 
--spec empty(any()) -> integer().
+-spec empty(any()) -> any().
 empty(Coll) ->
   'clojerl.IColl':empty(Coll).
 
