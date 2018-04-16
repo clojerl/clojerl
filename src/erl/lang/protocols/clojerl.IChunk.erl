@@ -14,8 +14,8 @@
   case clj_rt:type_module(Chunk) of
     'clojerl.TupleChunk' ->
       'clojerl.TupleChunk':'drop_first'(Chunk);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'drop_first', Chunk)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'drop_first', Type)
   end.
 
 ?SATISFIES('clojerl.TupleChunk') -> true;

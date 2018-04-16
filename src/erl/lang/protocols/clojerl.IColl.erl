@@ -19,6 +19,8 @@
       'erlang.Map':'cons'(Coll, Item);
     'clojerl.ChunkedCons' ->
       'clojerl.ChunkedCons':'cons'(Coll, Item);
+    'clojerl.Cons' ->
+      'clojerl.Cons':'cons'(Coll, Item);
     'clojerl.LazySeq' ->
       'clojerl.LazySeq':'cons'(Coll, Item);
     'clojerl.List' ->
@@ -39,8 +41,8 @@
       'clojerl.Vector.ChunkedSeq':'cons'(Coll, Item);
     'clojerl.Vector' ->
       'clojerl.Vector':'cons'(Coll, Item);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'cons', Coll, Item)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'cons', Type)
   end.
 
 'empty'(Coll) ->
@@ -51,6 +53,8 @@
       'erlang.Map':'empty'(Coll);
     'clojerl.ChunkedCons' ->
       'clojerl.ChunkedCons':'empty'(Coll);
+    'clojerl.Cons' ->
+      'clojerl.Cons':'empty'(Coll);
     'clojerl.LazySeq' ->
       'clojerl.LazySeq':'empty'(Coll);
     'clojerl.List' ->
@@ -71,13 +75,14 @@
       'clojerl.Vector.ChunkedSeq':'empty'(Coll);
     'clojerl.Vector' ->
       'clojerl.Vector':'empty'(Coll);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'empty', Coll)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'empty', Type)
   end.
 
 ?SATISFIES('erlang.List') -> true;
 ?SATISFIES('erlang.Map') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;
+?SATISFIES('clojerl.Cons') -> true;
 ?SATISFIES('clojerl.LazySeq') -> true;
 ?SATISFIES('clojerl.List') -> true;
 ?SATISFIES('clojerl.Map') -> true;

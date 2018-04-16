@@ -21,8 +21,10 @@
       'erlang.io.PushbackReader':'read'(Reader);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'read'(Reader);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'read', Reader)
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'read'(Reader);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'read', Type)
   end.
 
 'read'(Reader, Length) ->
@@ -33,8 +35,10 @@
       'erlang.io.PushbackReader':'read'(Reader, Length);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'read'(Reader, Length);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'read', Reader, Length)
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'read'(Reader, Length);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'read', Type)
   end.
 
 'read_line'(Reader) ->
@@ -45,8 +49,10 @@
       'erlang.io.PushbackReader':'read_line'(Reader);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'read_line'(Reader);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'read_line', Reader)
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'read_line'(Reader);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'read_line', Type)
   end.
 
 'skip'(Reader, N) ->
@@ -57,11 +63,14 @@
       'erlang.io.PushbackReader':'skip'(Reader, N);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'skip'(Reader, N);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'skip', Reader, N)
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'skip'(Reader, N);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'skip', Type)
   end.
 
 ?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('erlang.io.PushbackReader') -> true;
 ?SATISFIES('erlang.io.StringReader') -> true;
+?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES(_) -> false.

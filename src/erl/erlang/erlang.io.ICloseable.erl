@@ -20,8 +20,8 @@
       'erlang.io.StringReader':'close'(X);
     'erlang.io.StringWriter' ->
       'erlang.io.StringWriter':'close'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'close', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'close', Type)
   end.
 
 ?SATISFIES('erlang.io.File') -> true;

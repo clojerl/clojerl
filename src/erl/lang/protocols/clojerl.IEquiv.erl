@@ -70,8 +70,8 @@
       'clojerl.IllegalAccessError':'equiv'(X, Y);
     'clojerl.IOError' ->
       'clojerl.IOError':'equiv'(X, Y);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'equiv', X, Y)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'equiv', Type)
   end.
 
 ?SATISFIES('erlang.List') -> true;

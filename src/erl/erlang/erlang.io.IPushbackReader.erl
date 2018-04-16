@@ -14,8 +14,8 @@
   case clj_rt:type_module(Reader) of
     'erlang.io.PushbackReader' ->
       'erlang.io.PushbackReader':'unread'(Reader, Ch);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'unread', Reader, Ch)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'unread', Type)
   end.
 
 ?SATISFIES('erlang.io.PushbackReader') -> true;

@@ -22,8 +22,8 @@
       'clojerl.SortedMap':'keys'(Map);
     'clojerl.TupleMap' ->
       'clojerl.TupleMap':'keys'(Map);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'keys', Map)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Type)
   end.
 
 'vals'(Map) ->
@@ -36,8 +36,8 @@
       'clojerl.SortedMap':'vals'(Map);
     'clojerl.TupleMap' ->
       'clojerl.TupleMap':'vals'(Map);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'vals', Map)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Type)
   end.
 
 'without'(Map, Key) ->
@@ -50,8 +50,8 @@
       'clojerl.SortedMap':'without'(Map, Key);
     'clojerl.TupleMap' ->
       'clojerl.TupleMap':'without'(Map, Key);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'without', Map, Key)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'without', Type)
   end.
 
 ?SATISFIES('erlang.Map') -> true;

@@ -27,8 +27,8 @@
       'clojerl.TupleMap':'get'(X, Key);
     'clojerl.Vector' ->
       'clojerl.Vector':'get'(X, Key);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'get', X, Key)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'get', Type)
   end.
 
 'get'(X, Key, NotFound) ->
@@ -47,8 +47,8 @@
       'clojerl.TupleMap':'get'(X, Key, NotFound);
     'clojerl.Vector' ->
       'clojerl.Vector':'get'(X, Key, NotFound);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'get', X, Key, NotFound)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'get', Type)
   end.
 
 ?SATISFIES('erlang.Map') -> true;

@@ -12,8 +12,8 @@
 
 'rseq'(Seq) ->
   case clj_rt:type_module(Seq) of
-    _ ->
-      clj_protocol:resolve(?MODULE, 'rseq', Seq)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'rseq', Type)
   end.
 
 ?SATISFIES(_) -> false.

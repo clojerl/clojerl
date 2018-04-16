@@ -50,8 +50,8 @@
       'clojerl.Vector.ChunkedSeq':'count'(Seq);
     'clojerl.Vector' ->
       'clojerl.Vector':'count'(Seq);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'count', Seq)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'count', Type)
   end.
 
 ?SATISFIES('erlang.io.StringWriter') -> true;

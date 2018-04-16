@@ -15,16 +15,16 @@
   case clj_rt:type_module(ExInfo) of
     'clojerl.ExceptionInfo' ->
       'clojerl.ExceptionInfo':'data'(ExInfo);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'data', ExInfo)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'data', Type)
   end.
 
 'cause'(ExInfo) ->
   case clj_rt:type_module(ExInfo) of
     'clojerl.ExceptionInfo' ->
       'clojerl.ExceptionInfo':'cause'(ExInfo);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'cause', ExInfo)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'cause', Type)
   end.
 
 ?SATISFIES('clojerl.ExceptionInfo') -> true;

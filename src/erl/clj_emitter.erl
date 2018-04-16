@@ -1314,15 +1314,16 @@ protocol_function(Sig, Module, Ann) ->
   Arity          = clj_rt:second(Sig),
   Method         = to_atom(MethodSym),
   Vars           = [new_c_var(Ann) || _ <- lists:seq(1, Arity)],
+  TypeVar        = new_c_var(Ann),
   Args           = [ cerl:c_atom(Module)
                    , cerl:c_atom(Method)
-                   | Vars
+                   , TypeVar
                    ],
 
   FirstVar       = hd(Vars),
   TypeCall       = call_mfa(clj_rt, type_module, [FirstVar], Ann),
-  CatchAllBody   = call_mfa(clj_protocol, resolve, Args, Ann),
-  CatchAllClause = cerl:ann_c_clause(Ann, [new_c_var(Ann)], CatchAllBody),
+  CatchAllBody   = call_mfa(clj_protocol, not_implemented, Args, Ann),
+  CatchAllClause = cerl:ann_c_clause(Ann, [TypeVar], CatchAllBody),
   Body           = cerl:ann_c_case(Ann, TypeCall, [CatchAllClause]),
 
   { cerl:c_fname(Method, Arity)

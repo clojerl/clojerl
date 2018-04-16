@@ -1,7 +1,8 @@
 (ns protocols.function
-  (:require [protocols.utils :as utils]))
+  (:require [protocols.utils :as utils]
+            [clojure.string :as str]))
 
-(def clojure-protocols
+(def protocols
   '{clojerl.IAssociative   [contains_key  [Assoc Key]
                             entry_at      [Assoc Key]
                             assoc         [Assoc Key Value]]
@@ -49,10 +50,9 @@
                             pop           [Stack]]
     clojerl.IStringable    [str           [X]]
     clojerl.IType          [_             [_]]
-    })
 
-(def erlang-protocols
-  '{erlang.io.IWriter         [write     [Writer Str]
+    ;; Erlang IO protocols
+    erlang.io.IWriter         [write     [Writer Str]
                                write     [Writer Format Value]]
     erlang.io.IReader         [read      [Reader]
                                read      [Reader Length]
@@ -75,8 +75,8 @@
 (defn proto-function-tail
   [f args]
   (let [args-str (apply str (interpose ", " args))]
-    (str "    _ ->\n"
-         "      clj_protocol:resolve(?MODULE, '" f "', " args-str ")\n"
+    (str "    Type ->\n"
+         "      clj_protocol:not_implemented(?MODULE, '" f "', Type)\n"
          "  end.\n\n")))
 
 (defn proto-function-clause
@@ -148,18 +148,21 @@
          (satisfies?-function types))))
 
 (defn write-module
-  [content path proto-name]
-  (spit (str path proto-name ".erl") content))
+  [content proto-name]
+  (let [path (if (str/starts-with? (str proto-name) "clojerl.")
+               "src/erl/lang/protocols/"
+               "src/erl/erlang/")]
+    (println "Writing" (str path proto-name ".erl"))
+    (spit (str path proto-name ".erl") content)))
 
 (defn write-protocols
-  [path protocols]
+  [protocols]
   (doseq [[proto-name fns] protocols]
     (-> proto-name
         (module fns)
         ;; println
-        (write-module path proto-name)
+        (write-module proto-name)
         )))
 
 (defn -main []
-  (write-protocols "src/erl/lang/protocols/" clojure-protocols)
-  (write-protocols "src/erl/erlang/" erlang-protocols))
+  (write-protocols protocols))

@@ -18,8 +18,8 @@
       'clojerl.Reduced':'deref'(Ref);
     'clojerl.Var' ->
       'clojerl.Var':'deref'(Ref);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'deref', Ref)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'deref', Type)
   end.
 
 ?SATISFIES('clojerl.Atom') -> true;

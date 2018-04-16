@@ -18,8 +18,8 @@
       'clojerl.Set':'disjoin'(Coll, Item);
     'clojerl.SortedSet' ->
       'clojerl.SortedSet':'disjoin'(Coll, Item);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'disjoin', Coll, Item)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'disjoin', Type)
   end.
 
 'contains'(Coll, Item) ->
@@ -28,8 +28,8 @@
       'clojerl.Set':'contains'(Coll, Item);
     'clojerl.SortedSet' ->
       'clojerl.SortedSet':'contains'(Coll, Item);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'contains', Coll, Item)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'contains', Type)
   end.
 
 'get'(Coll, Item) ->
@@ -38,8 +38,8 @@
       'clojerl.Set':'get'(Coll, Item);
     'clojerl.SortedSet' ->
       'clojerl.SortedSet':'get'(Coll, Item);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'get', Coll, Item)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'get', Type)
   end.
 
 ?SATISFIES('clojerl.Set') -> true;

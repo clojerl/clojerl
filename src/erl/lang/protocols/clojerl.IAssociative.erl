@@ -24,8 +24,8 @@
       'clojerl.TupleMap':'contains_key'(Assoc, Key);
     'clojerl.Vector' ->
       'clojerl.Vector':'contains_key'(Assoc, Key);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'contains_key', Assoc, Key)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'contains_key', Type)
   end.
 
 'entry_at'(Assoc, Key) ->
@@ -40,8 +40,8 @@
       'clojerl.TupleMap':'entry_at'(Assoc, Key);
     'clojerl.Vector' ->
       'clojerl.Vector':'entry_at'(Assoc, Key);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'entry_at', Assoc, Key)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'entry_at', Type)
   end.
 
 'assoc'(Assoc, Key, Value) ->
@@ -56,8 +56,8 @@
       'clojerl.TupleMap':'assoc'(Assoc, Key, Value);
     'clojerl.Vector' ->
       'clojerl.Vector':'assoc'(Assoc, Key, Value);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'assoc', Assoc, Key, Value)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'assoc', Type)
   end.
 
 ?SATISFIES('erlang.Map') -> true;

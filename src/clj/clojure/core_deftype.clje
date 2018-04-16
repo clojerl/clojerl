@@ -404,13 +404,11 @@
                      (str "function " v))))))))
 
 (defn- emit-protocol-function
-  [iname {name :name arglists :arglists :as sig}]
-  `(defn ~(with-meta name (assoc sig :protocol (list 'quote iname)))
+  [iname {fname :name arglists :arglists :as sig}]
+  `(defn ~(with-meta fname (assoc sig :protocol (list 'quote iname)))
      ~@(map (fn [args]
               `(~args
-                (clj_protocol/resolve ~(keyword iname)
-                                      ~(keyword name)
-                                      ~@args)))
+                ((~'erl-fun* ~(keyword iname) ~(keyword fname)) ~@args)))
             arglists)))
 
 (defn- emit-protocol [name opts+sigs]

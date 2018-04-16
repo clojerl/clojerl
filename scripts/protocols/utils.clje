@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]))
 
 (defn who-implements [proto-name]
-  (let [cmd (str "grep -rl \"-behavior('"
+  (let [cmd (str "grep -rl \"-behaviou\\?r('"
                  (name proto-name)
                  "'\" src/erl | xargs -ifoo basename foo .erl")
         split #(str/split % #"\n")]

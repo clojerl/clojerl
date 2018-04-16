@@ -19,8 +19,8 @@
       'clojerl.List':'peek'(Stack);
     'clojerl.Vector' ->
       'clojerl.Vector':'peek'(Stack);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'peek', Stack)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Type)
   end.
 
 'pop'(Stack) ->
@@ -31,8 +31,8 @@
       'clojerl.List':'pop'(Stack);
     'clojerl.Vector' ->
       'clojerl.Vector':'pop'(Stack);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'pop', Stack)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Type)
   end.
 
 ?SATISFIES('erlang.List') -> true;

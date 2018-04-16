@@ -26,8 +26,8 @@
       'clojerl.IllegalAccessError':'message'(Error);
     'clojerl.IOError' ->
       'clojerl.IOError':'message'(Error);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'message', Error)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'message', Type)
   end.
 
 ?SATISFIES('clojerl.ArityError') -> true;

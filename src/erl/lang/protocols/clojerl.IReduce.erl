@@ -31,8 +31,8 @@
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun);
     'clojerl.Vector' ->
       'clojerl.Vector':'reduce'(Coll, Fun);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'reduce', Coll, Fun)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Type)
   end.
 
 'reduce'(Coll, Fun, Init) ->
@@ -55,8 +55,8 @@
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun, Init);
     'clojerl.Vector' ->
       'clojerl.Vector':'reduce'(Coll, Fun, Init);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'reduce', Coll, Fun, Init)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Type)
   end.
 
 ?SATISFIES('erlang.List') -> true;

@@ -19,8 +19,8 @@
       'clojerl.Symbol':'name'(X);
     'clojerl.Var' ->
       'clojerl.Var':'name'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'name', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'name', Type)
   end.
 
 'namespace'(X) ->
@@ -31,8 +31,8 @@
       'clojerl.Symbol':'namespace'(X);
     'clojerl.Var' ->
       'clojerl.Var':'namespace'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'namespace', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', Type)
   end.
 
 ?SATISFIES('clojerl.Keyword') -> true;

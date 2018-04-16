@@ -17,8 +17,10 @@
       'erlang.io.File':'write'(Writer, Str);
     'erlang.io.StringWriter' ->
       'erlang.io.StringWriter':'write'(Writer, Str);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'write', Writer, Str)
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'write'(Writer, Str);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'write', Type)
   end.
 
 'write'(Writer, Format, Value) ->
@@ -27,10 +29,13 @@
       'erlang.io.File':'write'(Writer, Format, Value);
     'erlang.io.StringWriter' ->
       'erlang.io.StringWriter':'write'(Writer, Format, Value);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'write', Writer, Format, Value)
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'write'(Writer, Format, Value);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'write', Type)
   end.
 
 ?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('erlang.io.StringWriter') -> true;
+?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES(_) -> false.

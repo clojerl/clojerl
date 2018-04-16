@@ -30,8 +30,8 @@
       'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
     'clojerl.Vector' ->
       'clojerl.Vector':'->erl'(X, Recursive);
-    _ ->
-      clj_protocol:resolve(?MODULE, '->erl', X, Recursive)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, '->erl', Type)
   end.
 
 ?SATISFIES('clojerl.ChunkedCons') -> true;

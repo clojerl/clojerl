@@ -98,8 +98,8 @@
       'clojerl.IllegalAccessError':'hash'(X);
     'clojerl.IOError' ->
       'clojerl.IOError':'hash'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'hash', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'hash', Type)
   end.
 
 ?SATISFIES('erlang.Fn') -> true;

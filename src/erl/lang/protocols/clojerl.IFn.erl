@@ -34,8 +34,8 @@
       'clojerl.TupleMap':'apply'(Fn, Args);
     'clojerl.Vector' ->
       'clojerl.Vector':'apply'(Fn, Args);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'apply', Fn, Args)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'apply', Type)
   end.
 
 ?SATISFIES('erlang.Fn') -> true;

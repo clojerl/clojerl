@@ -28,8 +28,8 @@
       'clojerl.Range':'first'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'first'(Seq);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'first', Seq)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'first', Type)
   end.
 
 'next'(Seq) ->
@@ -48,8 +48,8 @@
       'clojerl.Range':'next'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'next'(Seq);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'next', Seq)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'next', Type)
   end.
 
 'more'(Seq) ->
@@ -68,8 +68,8 @@
       'clojerl.Range':'more'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'more'(Seq);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'more', Seq)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'more', Type)
   end.
 
 ?SATISFIES('erlang.List') -> true;

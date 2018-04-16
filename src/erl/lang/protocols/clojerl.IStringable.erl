@@ -104,8 +104,8 @@
       'clojerl.IllegalAccessError':'str'(X);
     'clojerl.IOError' ->
       'clojerl.IOError':'str'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'str', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'str', Type)
   end.
 
 ?SATISFIES('erlang.Fn') -> true;

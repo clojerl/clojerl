@@ -19,8 +19,8 @@
       'clojerl.TupleChunk':'nth'(Coll, N);
     'clojerl.Vector' ->
       'clojerl.Vector':'nth'(Coll, N);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'nth', Coll, N)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Type)
   end.
 
 'nth'(Coll, N, NotFound) ->
@@ -31,8 +31,8 @@
       'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
     'clojerl.Vector' ->
       'clojerl.Vector':'nth'(Coll, N, NotFound);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'nth', Coll, N, NotFound)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Type)
   end.
 
 ?SATISFIES('erlang.Tuple') -> true;

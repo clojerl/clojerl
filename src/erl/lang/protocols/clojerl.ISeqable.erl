@@ -47,8 +47,8 @@
       'clojerl.Vector.ChunkedSeq':'seq'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'seq'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'seq', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'seq', Type)
   end.
 
 'to_list'(X) ->
@@ -87,8 +87,8 @@
       'clojerl.Vector.ChunkedSeq':'to_list'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'to_list'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'to_list', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'to_list', Type)
   end.
 
 ?SATISFIES('erlang.List') -> true;

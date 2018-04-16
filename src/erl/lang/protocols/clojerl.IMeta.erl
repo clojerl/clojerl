@@ -43,8 +43,8 @@
       'clojerl.Vector.ChunkedSeq':'meta'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'meta'(X);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'meta', X)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'meta', Type)
   end.
 
 'with_meta'(X, Meta) ->
@@ -79,8 +79,8 @@
       'clojerl.Vector.ChunkedSeq':'with_meta'(X, Meta);
     'clojerl.Vector' ->
       'clojerl.Vector':'with_meta'(X, Meta);
-    _ ->
-      clj_protocol:resolve(?MODULE, 'with_meta', X, Meta)
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'with_meta', Type)
   end.
 
 ?SATISFIES('clojerl.Atom') -> true;
