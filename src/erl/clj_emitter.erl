@@ -1455,12 +1455,27 @@ case_add_type(Name, Vars, ?DEFAULT_TYPE, ImplModule, Case) ->
   cerl:update_c_case(Case, Arg, Clauses1);
 case_add_type(Name, Vars, TypeModule, ImplModule, Case) ->
   Arg      = cerl:case_arg(Case),
-  Clauses  = cerl:case_clauses(Case),
+  Clauses0 = cerl:case_clauses(Case),
+
+  FoldFun  = fun(Item, ClausesAcc) ->
+                 [TypeAst] = cerl:clause_pats(Item),
+                 case
+                   cerl:is_c_var(TypeAst)
+                   orelse ( cerl:is_literal(TypeAst)
+                            andalso cerl:concrete(TypeAst) =/= TypeModule
+                          )
+                 of
+                   true  -> [Item | ClausesAcc];
+                   false -> ClausesAcc
+                 end
+             end,
+  Clauses1 = lists:foldl(FoldFun, [], Clauses0),
 
   Clause   = cerl:c_clause( [cerl:abstract(TypeModule)]
                           , call_mfa(ImplModule, Name, Vars, [])
                           ),
-  cerl:update_c_case(Case, Arg, [Clause | Clauses]).
+
+  cerl:update_c_case(Case, Arg, [Clause | lists:reverse(Clauses1)]).
 
 %% ----- Case and receive Clauses -------
 
