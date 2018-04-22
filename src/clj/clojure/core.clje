@@ -5139,6 +5139,14 @@
   Defaults to \"ebin\""
   {:added "1.0"})
 
+(add-doc-and-meta *compile-protocol-path*
+  "Specifies the directory where 'compile' will write out .beam
+  files for protocols. This directory must be in the codepath for
+  'compile' to work.
+
+  Defaults to *compile-path*"
+  {:added "1.0"})
+
 (add-doc-and-meta *compile-files*
   "Set to true when compiling files, false otherwise."
   {:added "1.0"})

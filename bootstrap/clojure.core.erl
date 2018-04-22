@@ -50,6 +50,15 @@
                 , val_atom  => '*compile-path*__val'
                 , meta      => #{dynamic => true}
                 }
+           , <<"*compile-protocols-path*">> =>
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*compile-protocols-path*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*compile-protocols-path*'
+                , val_atom  => '*compile-protocols-path*__val'
+                , meta      => #{dynamic => true}
+                }
            , <<"*compile-files*">>  =>
                #{ ?TYPE     => 'clojerl.Var'
                 , ns        => <<"clojure.core">>
@@ -195,6 +204,7 @@
         , 'in-ns__val'/0
         , '*ns*__val'/0
         , '*compile-path*__val'/0
+        , '*compile-protocols-path*__val'/0
         , '*compile-files*__val'/0
 
         , '*assert*__val'/0
@@ -265,6 +275,9 @@ ns__val() ->
 
 '*compile-path*__val'() ->
   var_value(<<"#'clojure.core/*compile-path*">>, ?NIL).
+
+'*compile-protocols-path*__val'() ->
+  var_value(<<"#'clojure.core/*compile-protocols-path*">>, ?NIL).
 
 '*compile-files*__val'() ->
   var_value(<<"#'clojure.core/*compile-files*">>, false).

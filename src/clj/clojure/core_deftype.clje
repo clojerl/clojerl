@@ -304,19 +304,25 @@
 
 (defmacro deftype
   "(deftype name [fields*]  options* specs*)
+
   Options are expressed as sequential keywords and arguments (in any order).
+
   Supported options:
   :load-ns - if true, importing the record type will cause the
              namespace in which the record was defined to be loaded.
              Defaults to false.
+
   Each spec consists of a protocol or interface name followed by zero
   or more method bodies:
+
   protocol-or-interface-or-Object
   (methodName [args*] body)*
+
   Dynamically generates compiled bytecode for type with the given
   name, in a package with the same name as the current namespace, the
   given fields, and, optionally, methods for protocols and/or
   interfaces.
+
   The type will have the (by default, immutable) fields named by
   fields, which can have type hints. Protocols/interfaces and methods
   are optional. The only methods that can be supplied are those
@@ -331,11 +337,15 @@
   itself. They are for experts only - if the semantics and
   implications of :volatile-mutable or :unsynchronized-mutable are not
   immediately apparent to you, you should not be using them.
+
   Method definitions take the form:
+
   (methodname [args*] body)
+
   The argument and return types can be hinted on the arg and
   methodname symbols. If not supplied, they will be inferred, so type
   hints should be reserved for disambiguation.
+
   Methods should be supplied for all methods of the desired
   protocol(s) and interface(s). You can also define overrides for
   methods of Object. Note that a parameter must be supplied to
@@ -344,14 +354,18 @@
   interface declarations. Note also that recur calls to the method
   head should *not* pass the target object, it will be supplied
   automatically and can not be substituted.
+
   In the method bodies, the (unqualified) name can be used to name the
   type (for calls to new, instance? etc).
+
   When AOT compiling, generates compiled bytecode for a type with the
   given name (a symbol), prepends the current ns as the package, and
   writes the .beam file to the *compile-path* directory.
+
   One constructor will be defined, taking the designated fields.  Note
   that the field names __meta and __extmap are currently reserved and
   should not be used when defining your own types.
+
   Given (deftype TypeName ...), a factory function called ->TypeName
   will be defined, taking positional parameters for the fields"
   {:added "1.2"

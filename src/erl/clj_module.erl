@@ -352,8 +352,8 @@ is_clojure(Name) ->
       Value
   end.
 
--spec is_protocol(module()) -> boolean().
-is_protocol(Name) ->
+-spec is_protocol(module() | cerl:c_module()) -> boolean().
+is_protocol(Name) when is_atom(Name) ->
   Key = {?MODULE, is_protocol, Name},
   case clj_cache:get(Key) of
     undefined ->
@@ -363,7 +363,11 @@ is_protocol(Name) ->
       IsProtocol;
     {ok, Value} ->
       Value
-  end.
+  end;
+is_protocol(CoreModule) ->
+  AllAttrs       = cerl:module_attrs(CoreModule),
+  {_, Extracted} = extract_attrs(AllAttrs, [clojure, protocol]),
+  maps:size(Extracted) == 2.
 
 %%------------------------------------------------------------------------------
 %% gen_server callbacks
