@@ -452,7 +452,7 @@ output_beam(Name, IsProtocol, BeamBinary) ->
   ok           = file:write_file(BeamPath, BeamBinary),
   binary_to_list(BeamPath).
 
--spec compile_path(boolean()) -> binary().
+-spec compile_path(boolean()) -> binary() | ?NIL.
 compile_path(true) ->
   case 'clojure.core':'*compile-protocols-path*__val'() of
     ?NIL ->
