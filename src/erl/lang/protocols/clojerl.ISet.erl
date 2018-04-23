@@ -1,24 +1,47 @@
 -module('clojerl.ISet').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([disjoin/2, contains/2, get/2]).
+-export(['disjoin'/2, 'contains'/2, 'get'/2]).
+-export([?SATISFIES/1]).
 
--type type() :: any().
+-callback 'disjoin'(any(), any()) -> any().
+-callback 'contains'(any(), any()) -> any().
+-callback 'get'(any(), any()) -> any().
 
--callback disjoin(type(), any()) -> type().
--callback contains(type(), any()) -> boolean().
--callback get(type(), any()) -> any().
+'disjoin'(Coll, Item) ->
+  case clj_rt:type_module(Coll) of
+    'clojerl.Set' ->
+      'clojerl.Set':'disjoin'(Coll, Item);
+    'clojerl.SortedSet' ->
+      'clojerl.SortedSet':'disjoin'(Coll, Item);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'disjoin', Type)
+  end.
 
--spec disjoin(type(), any()) -> type().
-disjoin(Coll, Item) ->
-  clj_protocol:resolve(?MODULE, disjoin, Coll, Item).
+'contains'(Coll, Item) ->
+  case clj_rt:type_module(Coll) of
+    'clojerl.Set' ->
+      'clojerl.Set':'contains'(Coll, Item);
+    'clojerl.SortedSet' ->
+      'clojerl.SortedSet':'contains'(Coll, Item);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'contains', Type)
+  end.
 
--spec contains(type(), any()) -> type().
-contains(Coll, Item) ->
-  clj_protocol:resolve(?MODULE, contains, Coll, Item).
+'get'(Coll, Item) ->
+  case clj_rt:type_module(Coll) of
+    'clojerl.Set' ->
+      'clojerl.Set':'get'(Coll, Item);
+    'clojerl.SortedSet' ->
+      'clojerl.SortedSet':'get'(Coll, Item);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'get', Type)
+  end.
 
--spec get(type(), any()) -> any().
-get(Coll, Item) ->
-  clj_protocol:resolve(?MODULE, get, Coll, Item).
+?SATISFIES('clojerl.Set') -> true;
+?SATISFIES('clojerl.SortedSet') -> true;
+?SATISFIES(_) -> false.

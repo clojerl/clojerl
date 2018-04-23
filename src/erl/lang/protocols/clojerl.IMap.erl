@@ -1,24 +1,61 @@
 -module('clojerl.IMap').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([keys/1, vals/1, without/2]).
+-export(['keys'/1, 'vals'/1, 'without'/2]).
+-export([?SATISFIES/1]).
 
--type type() :: any().
+-callback 'keys'(any()) -> any().
+-callback 'vals'(any()) -> any().
+-callback 'without'(any(), any()) -> any().
 
--callback keys(IMap :: type()) -> list().
--callback vals(IMap :: type()) -> list().
--callback without(IMap :: type(), Key :: any()) -> type().
+'keys'(Map) ->
+  case clj_rt:type_module(Map) of
+    'erlang.Map' ->
+      'erlang.Map':'keys'(Map);
+    'clojerl.Map' ->
+      'clojerl.Map':'keys'(Map);
+    'clojerl.SortedMap' ->
+      'clojerl.SortedMap':'keys'(Map);
+    'clojerl.TupleMap' ->
+      'clojerl.TupleMap':'keys'(Map);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Type)
+  end.
 
--spec keys(type()) -> list().
-keys(Map) ->
-  clj_protocol:resolve(?MODULE, keys, Map).
+'vals'(Map) ->
+  case clj_rt:type_module(Map) of
+    'erlang.Map' ->
+      'erlang.Map':'vals'(Map);
+    'clojerl.Map' ->
+      'clojerl.Map':'vals'(Map);
+    'clojerl.SortedMap' ->
+      'clojerl.SortedMap':'vals'(Map);
+    'clojerl.TupleMap' ->
+      'clojerl.TupleMap':'vals'(Map);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Type)
+  end.
 
--spec vals(type()) -> list().
-vals(Map) ->
-  clj_protocol:resolve(?MODULE, vals, Map).
+'without'(Map, Key) ->
+  case clj_rt:type_module(Map) of
+    'erlang.Map' ->
+      'erlang.Map':'without'(Map, Key);
+    'clojerl.Map' ->
+      'clojerl.Map':'without'(Map, Key);
+    'clojerl.SortedMap' ->
+      'clojerl.SortedMap':'without'(Map, Key);
+    'clojerl.TupleMap' ->
+      'clojerl.TupleMap':'without'(Map, Key);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'without', Type)
+  end.
 
--spec without(type(), any()) -> type().
-without(Map, Key) ->
-  clj_protocol:resolve(?MODULE, without, Map, Key).
+?SATISFIES('erlang.Map') -> true;
+?SATISFIES('clojerl.Map') -> true;
+?SATISFIES('clojerl.SortedMap') -> true;
+?SATISFIES('clojerl.TupleMap') -> true;
+?SATISFIES(_) -> false.

@@ -1,19 +1,31 @@
 -module('clojerl.IExceptionInfo').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([data/1, cause/1]).
+-export(['data'/1, 'cause'/1]).
+-export([?SATISFIES/1]).
 
--type type() :: any().
+-callback 'data'(any()) -> any().
+-callback 'cause'(any()) -> any().
 
--callback data(A :: type()) -> any().
--callback cause(A :: type()) -> any().
+'data'(ExInfo) ->
+  case clj_rt:type_module(ExInfo) of
+    'clojerl.ExceptionInfo' ->
+      'clojerl.ExceptionInfo':'data'(ExInfo);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'data', Type)
+  end.
 
--spec data(type()) -> any().
-data(ExInfo) ->
-  clj_protocol:resolve(?MODULE, data, ExInfo).
+'cause'(ExInfo) ->
+  case clj_rt:type_module(ExInfo) of
+    'clojerl.ExceptionInfo' ->
+      'clojerl.ExceptionInfo':'cause'(ExInfo);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'cause', Type)
+  end.
 
--spec cause(type()) -> any().
-cause(ExInfo) ->
-  clj_protocol:resolve(?MODULE, cause, ExInfo).
+?SATISFIES('clojerl.ExceptionInfo') -> true;
+?SATISFIES(_) -> false.

@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.IColl').
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IErl').

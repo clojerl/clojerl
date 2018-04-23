@@ -42,7 +42,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.PushbackReader \\d+\\.\\d+\\.\\d+>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   {comments, ""}.
 
@@ -61,7 +61,7 @@ read(_Config) ->
   <<"yeah">>  = 'erlang.io.IReader':read(Reader, 10),
   eof         = 'erlang.io.IReader':read(Reader),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   {comments, ""}.
 
@@ -80,7 +80,7 @@ read_line(_Config) ->
 
   eof = 'erlang.io.IReader':read_line(Reader),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   {comments, ""}.
 
@@ -98,7 +98,7 @@ skip(_Config) ->
   eof          = 'erlang.io.IReader':read_line(Reader),
   eof          = 'erlang.io.IReader':skip(Reader, 1),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   {comments, ""}.
 
@@ -119,7 +119,7 @@ unread(_Config) ->
        catch _:_ -> ok
        end,
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   {comments, ""}.
 
@@ -136,7 +136,7 @@ at_line_start(_Config) ->
   true         = 'erlang.io.PushbackReader':at_line_start(Reader),
   eof          = 'erlang.io.IReader':read(Reader),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   ct:comment("At line start fails"),
   FakePid = spawn_link(fun fake_loop/0),
@@ -152,9 +152,9 @@ close(_Config) ->
   File   = 'erlang.io.File':open(<<"tmp">>),
   Reader = 'erlang.io.PushbackReader':?CONSTRUCTOR(File),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
-  ok = try ?NIL = 'erlang.io.Closeable':close(Reader), error
+  ok = try ?NIL = 'erlang.io.ICloseable':close(Reader), error
        catch _:_ -> ok
        end,
 
@@ -173,10 +173,10 @@ complete_coverage(_Config) ->
   {error, request} = io:request(Pid, {io_request, self(), ref, unexpected}),
 
   ct:comment("Generate error when the underlying reader is closed"),
-  ?NIL       = 'erlang.io.Closeable':close(File),
+  ?NIL       = 'erlang.io.ICloseable':close(File),
   {error, _} = 'erlang.io.IReader':skip(Reader, 1),
 
-  ?NIL = 'erlang.io.Closeable':close(Reader),
+  ?NIL = 'erlang.io.ICloseable':close(Reader),
 
   ct:comment("Generate error when closing a PushbackReader that wraps a file"),
   File1   = 'erlang.io.File':open(<<"tmp">>),
@@ -184,7 +184,7 @@ complete_coverage(_Config) ->
   meck:new(file, [passthrough, unstick]),
   try
     meck:expect(file, close, fun(_) -> {error, fake} end),
-    ok = try 'erlang.io.Closeable':close(Reader1), error
+    ok = try 'erlang.io.ICloseable':close(Reader1), error
          catch _:_ -> ok
          end
   after

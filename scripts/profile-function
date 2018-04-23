@@ -1,0 +1,86 @@
+#!/bin/bash
+
+set -e
+
+################################################################################
+# Profile a function
+################################################################################
+
+################################################################################
+# Usage
+################################################################################
+SCRIPT="$(basename $0)"
+
+function usage {
+  echo "Usage:"
+  echo ""
+  echo "    $SCRIPT [-h] -m MODULE -f FUNCTION [ARG1 ARG2 ... ARGN]"
+  echo ""
+  echo "Where:"
+  echo ""
+  echo "    -h                   Print usage and exit"
+  echo "    -m MODULE            Module"
+  echo "    -f FUNCTION          Function"
+  echo "    [ARG1 ARG2 ... ARGN] Arguments (optional)"
+  echo ""
+  echo "Examples:"
+  echo ""
+  echo "    profile-function -m erlang -f self"
+  echo "    profile-function -m io -f format '\"foo\"' '[]'"
+}
+
+################################################################################
+# Input
+################################################################################
+# Parse Input
+while getopts ":m:f:h" opt; do
+  case $opt in
+    m)  MODULE="$OPTARG" ;;
+    f)  FUNCTION="$OPTARG" ;;
+    h)  usage; exit 1 ;;
+    \?) echo "Invalid option -$OPTARG" >&2 ;;
+    :)  echo "Option -$OPTARG requires an argument." >&2; exit 1 ;;
+  esac
+done
+shift $(expr $OPTIND - 1)
+
+# Mandatory Arguments
+if [ -z $MODULE ]; then
+  echo "Missing option: -m MODULE"
+  exit 1
+fi
+if [ -z $FUNCTION ]; then
+  echo "Missing option: -f FUNCTION"
+  exit 1
+fi
+
+################################################################################
+# Main
+################################################################################
+
+# Fetch dev deps and compile
+rebar3 as dev do compile
+
+# Generate args
+ARGS=$(echo "$@" | tr ' ' ,)
+
+
+TRACE_FILE="$MODULE-$FUNCTION.out"
+TRACE_FILE_SORTED="$TRACE_FILE.sorted"
+SVG_FILE="$TRACE_FILE_SORTED.svg"
+
+echo "Running eflame for $MODULE:$FUNCTION($ARGS)"
+
+PID=$(erl -sname eflame-expr -pa _build/*/lib/*/ebin -pa ebin -s clojerl -noshell \
+          -eval "erlang:apply('$MODULE', '$FUNCTION', [$ARGS]), \
+                 eflame:apply(normal_with_children, \"$TRACE_FILE\", '$MODULE', '$FUNCTION', [$ARGS]), \
+                 io:format(\"~p~n\", [self()]), \
+                 erlang:halt(0)." | tail -n 1)
+
+echo "PID: $PID"
+
+cat $TRACE_FILE | sort | grep -v "$PID" > "$TRACE_FILE_SORTED"
+
+_build/dev/lib/eflame/stack_to_flame.sh < $TRACE_FILE_SORTED > $SVG_FILE
+
+open -a "Google Chrome" $SVG_FILE

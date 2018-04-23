@@ -1,14 +1,20 @@
 -module('clojerl.IReversible').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([rseq/1]).
+-export(['rseq'/1]).
+-export([?SATISFIES/1]).
 
--type type() :: any().
+-callback 'rseq'(any()) -> any().
 
--callback rseq(any()) -> type().
+-spec 'rseq'(any()) -> no_return().
+'rseq'(Seq) ->
+  case clj_rt:type_module(Seq) of
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'rseq', Type)
+  end.
 
--spec rseq(type()) -> type().
-rseq(Chunk) ->
-  clj_protocol:resolve(?MODULE, rseq, Chunk).
+?SATISFIES(_) -> false.

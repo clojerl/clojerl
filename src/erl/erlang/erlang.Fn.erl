@@ -4,7 +4,7 @@
 
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
--behaviour('clojerl.IStringable').
+-behavior('clojerl.IStringable').
 
 -export([ apply/2
         , hash/1

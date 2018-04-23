@@ -1,14 +1,40 @@
 -module('clojerl.IError').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([message/1]).
+-export(['message'/1]).
+-export([?SATISFIES/1]).
 
--type type() :: any().
+-callback 'message'(any()) -> any().
 
--callback message(A :: type()) -> binary().
+'message'(Error) ->
+  case clj_rt:type_module(Error) of
+    'clojerl.ArityError' ->
+      'clojerl.ArityError':'message'(Error);
+    'clojerl.AssertionError' ->
+      'clojerl.AssertionError':'message'(Error);
+    'clojerl.BadArgumentError' ->
+      'clojerl.BadArgumentError':'message'(Error);
+    'clojerl.Error' ->
+      'clojerl.Error':'message'(Error);
+    'clojerl.ExceptionInfo' ->
+      'clojerl.ExceptionInfo':'message'(Error);
+    'clojerl.IllegalAccessError' ->
+      'clojerl.IllegalAccessError':'message'(Error);
+    'clojerl.IOError' ->
+      'clojerl.IOError':'message'(Error);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'message', Type)
+  end.
 
--spec message(type()) -> binary().
-message(Error) ->
-  clj_protocol:resolve(?MODULE, message, Error).
+?SATISFIES('clojerl.ArityError') -> true;
+?SATISFIES('clojerl.AssertionError') -> true;
+?SATISFIES('clojerl.BadArgumentError') -> true;
+?SATISFIES('clojerl.Error') -> true;
+?SATISFIES('clojerl.ExceptionInfo') -> true;
+?SATISFIES('clojerl.IllegalAccessError') -> true;
+?SATISFIES('clojerl.IOError') -> true;
+?SATISFIES(_) -> false.

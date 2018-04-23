@@ -1,19 +1,41 @@
 -module('clojerl.INamed').
 
--include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -clojure(true).
 -protocol(true).
 
--export([name/1, namespace/1]).
+-export(['name'/1, 'namespace'/1]).
+-export([?SATISFIES/1]).
 
--callback name(any()) -> binary().
--callback namespace(any()) -> binary().
+-callback 'name'(any()) -> any().
+-callback 'namespace'(any()) -> any().
 
--spec name(any()) -> binary() | ?NIL.
-name(X) ->
-  clj_protocol:resolve(?MODULE, name, X).
+'name'(X) ->
+  case clj_rt:type_module(X) of
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'name'(X);
+    'clojerl.Symbol' ->
+      'clojerl.Symbol':'name'(X);
+    'clojerl.Var' ->
+      'clojerl.Var':'name'(X);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'name', Type)
+  end.
 
--spec namespace(any()) -> binary() | ?NIL.
-namespace(X) ->
-  clj_protocol:resolve(?MODULE, namespace, X).
+'namespace'(X) ->
+  case clj_rt:type_module(X) of
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'namespace'(X);
+    'clojerl.Symbol' ->
+      'clojerl.Symbol':'namespace'(X);
+    'clojerl.Var' ->
+      'clojerl.Var':'namespace'(X);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', Type)
+  end.
+
+?SATISFIES('clojerl.Keyword') -> true;
+?SATISFIES('clojerl.Symbol') -> true;
+?SATISFIES('clojerl.Var') -> true;
+?SATISFIES(_) -> false.

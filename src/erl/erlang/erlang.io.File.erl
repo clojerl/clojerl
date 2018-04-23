@@ -2,10 +2,10 @@
 
 -include("clojerl.hrl").
 
--behaviour('erlang.io.Closeable').
--behaviour('erlang.io.IReader').
--behaviour('erlang.io.IWriter').
--behaviour('clojerl.IStringable').
+-behavior('erlang.io.ICloseable').
+-behavior('erlang.io.IReader').
+-behavior('erlang.io.IWriter').
+-behavior('clojerl.IStringable').
 
 -export([open/1, open/2, path/1]).
 -export([make_temp/2]).

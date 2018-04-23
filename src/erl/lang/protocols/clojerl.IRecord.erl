@@ -1,8 +1,12 @@
 -module('clojerl.IRecord').
 
--include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -clojure(true).
 -protocol(true).
 
--callback '_'(any()) -> ?NIL.
+-export([?SATISFIES/1]).
+
+-callback '_'(any()) -> any().
+
+?SATISFIES(_) -> false.

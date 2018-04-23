@@ -1,29 +1,76 @@
 -module('erlang.io.IReader').
 
--export([read/1, read/2, read_line/1, skip/2]).
+-include("clojerl_int.hrl").
 
--type type() :: any().
+-clojure(true).
+-protocol(true).
 
--callback read(A :: type()) -> binary() | eof.
+-export(['read'/1, 'read'/2, 'read_line'/1, 'skip'/2]).
+-export([?SATISFIES/1]).
 
--callback read(A :: type(), L :: integer()) -> binary() | eof.
+-callback 'read'(any()) -> any().
+-callback 'read'(any(), any()) -> any().
+-callback 'read_line'(any()) -> any().
+-callback 'skip'(any(), any()) -> any().
 
--callback read_line(A :: type()) -> binary() | eof.
+'read'(Reader) ->
+  case clj_rt:type_module(Reader) of
+    'erlang.io.File' ->
+      'erlang.io.File':'read'(Reader);
+    'erlang.io.PushbackReader' ->
+      'erlang.io.PushbackReader':'read'(Reader);
+    'erlang.io.StringReader' ->
+      'erlang.io.StringReader':'read'(Reader);
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'read'(Reader);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'read', Type)
+  end.
 
--callback skip(A :: type(), L :: integer()) -> integer() | eof.
+'read'(Reader, Length) ->
+  case clj_rt:type_module(Reader) of
+    'erlang.io.File' ->
+      'erlang.io.File':'read'(Reader, Length);
+    'erlang.io.PushbackReader' ->
+      'erlang.io.PushbackReader':'read'(Reader, Length);
+    'erlang.io.StringReader' ->
+      'erlang.io.StringReader':'read'(Reader, Length);
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'read'(Reader, Length);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'read', Type)
+  end.
 
--spec read(type()) -> binary() | eof.
-read(Reader) ->
-  clj_protocol:resolve(?MODULE, read, Reader).
+'read_line'(Reader) ->
+  case clj_rt:type_module(Reader) of
+    'erlang.io.File' ->
+      'erlang.io.File':'read_line'(Reader);
+    'erlang.io.PushbackReader' ->
+      'erlang.io.PushbackReader':'read_line'(Reader);
+    'erlang.io.StringReader' ->
+      'erlang.io.StringReader':'read_line'(Reader);
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'read_line'(Reader);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'read_line', Type)
+  end.
 
--spec read(type(), integer()) -> binary() | eof.
-read(Reader, Length) ->
-  clj_protocol:resolve(?MODULE, read, Reader, Length).
+'skip'(Reader, N) ->
+  case clj_rt:type_module(Reader) of
+    'erlang.io.File' ->
+      'erlang.io.File':'skip'(Reader, N);
+    'erlang.io.PushbackReader' ->
+      'erlang.io.PushbackReader':'skip'(Reader, N);
+    'erlang.io.StringReader' ->
+      'erlang.io.StringReader':'skip'(Reader, N);
+    'clojerl.Keyword' ->
+      'clojerl.Keyword':'skip'(Reader, N);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'skip', Type)
+  end.
 
--spec read_line(type()) -> binary() | eof.
-read_line(Reader) ->
-  clj_protocol:resolve(?MODULE, read_line, Reader).
-
--spec skip(type(), integer()) -> integer() | eof.
-skip(Reader, N) ->
-  clj_protocol:resolve(?MODULE, skip, Reader, N).
+?SATISFIES('erlang.io.File') -> true;
+?SATISFIES('erlang.io.PushbackReader') -> true;
+?SATISFIES('erlang.io.StringReader') -> true;
+?SATISFIES('clojerl.Keyword') -> true;
+?SATISFIES(_) -> false.

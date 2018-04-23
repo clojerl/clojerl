@@ -2,10 +2,10 @@
 
 -include("clojerl.hrl").
 
--behaviour('erlang.io.Closeable').
--behaviour('clojerl.IStringable').
--behaviour('erlang.io.IReader').
--behaviour('erlang.io.IPushbackReader').
+-behavior('erlang.io.ICloseable').
+-behavior('clojerl.IStringable').
+-behavior('erlang.io.IReader').
+-behavior('erlang.io.IPushbackReader').
 
 -export([?CONSTRUCTOR/1, at_line_start/1]).
 -export([ start_link/1
@@ -131,7 +131,7 @@ loop(State) ->
       ?MODULE:loop(State2);
     {From, Ref, close} ->
       #{reader := Reader} = State,
-      Result = try 'erlang.io.Closeable':close(Reader)
+      Result = try 'erlang.io.ICloseable':close(Reader)
                catch error:Error -> {error, Error}
                end,
       From ! {Ref, Result};

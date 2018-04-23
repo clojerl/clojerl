@@ -3175,7 +3175,7 @@
                               (try
                                 (with-open ~(subvec bindings 2) ~@body)
                                 (finally
-                                  (erlang.io.Closeable/close ~(bindings 0)))))
+                                  (erlang.io.ICloseable/close ~(bindings 0)))))
     :else (throw (clojerl.BadArgumentError. "with-open only allows Symbols in bindings"))))
 
 (defmacro doto
@@ -5137,6 +5137,14 @@
   work.
 
   Defaults to \"ebin\""
+  {:added "1.0"})
+
+(add-doc-and-meta *compile-protocol-path*
+  "Specifies the directory where 'compile' will write out .beam
+  files for protocols. This directory must be in the codepath for
+  'compile' to work.
+
+  Defaults to *compile-path*"
   {:added "1.0"})
 
 (add-doc-and-meta *compile-files*

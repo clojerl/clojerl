@@ -1,19 +1,41 @@
 -module('clojerl.IStack').
 
+-include("clojerl_int.hrl").
+
 -clojure(true).
 -protocol(true).
 
--export([peek/1, pop/1]).
+-export(['peek'/1, 'pop'/1]).
+-export([?SATISFIES/1]).
 
--type type() :: any().
+-callback 'peek'(any()) -> any().
+-callback 'pop'(any()) -> any().
 
--callback peek(Stack :: type()) -> any().
--callback pop(Stack :: type()) -> any().
+'peek'(Stack) ->
+  case clj_rt:type_module(Stack) of
+    'erlang.List' ->
+      'erlang.List':'peek'(Stack);
+    'clojerl.List' ->
+      'clojerl.List':'peek'(Stack);
+    'clojerl.Vector' ->
+      'clojerl.Vector':'peek'(Stack);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Type)
+  end.
 
--spec peek(type()) -> any().
-peek(Stack) ->
-  clj_protocol:resolve(?MODULE, peek, Stack).
+'pop'(Stack) ->
+  case clj_rt:type_module(Stack) of
+    'erlang.List' ->
+      'erlang.List':'pop'(Stack);
+    'clojerl.List' ->
+      'clojerl.List':'pop'(Stack);
+    'clojerl.Vector' ->
+      'clojerl.Vector':'pop'(Stack);
+    Type ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Type)
+  end.
 
--spec pop(type()) -> any().
-pop(Stack) ->
-  clj_protocol:resolve(?MODULE, pop, Stack).
+?SATISFIES('erlang.List') -> true;
+?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES(_) -> false.

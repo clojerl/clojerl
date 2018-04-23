@@ -6,8 +6,8 @@
 -behavior('clojerl.IHash').
 -behavior('clojerl.INamed').
 -behavior('clojerl.IStringable').
--behaviour('erlang.io.IWriter').
--behaviour('erlang.io.IReader').
+-behavior('erlang.io.IWriter').
+-behavior('erlang.io.IReader').
 
 -export([ ?CONSTRUCTOR/1
         , ?CONSTRUCTOR/2

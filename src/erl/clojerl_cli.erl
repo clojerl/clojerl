@@ -68,14 +68,15 @@ run_commands(#{version := true}) ->
   erlang:halt(0);
 run_commands(#{ compile      := true
               , files        := Files
-              , compile_path := CompilePath
+              , compile_path := Path
               , compile_opts := CompileOpts
               } = Opts) ->
 
-  CompilePathBin = list_to_binary(CompilePath),
-  Bindings       = #{ <<"#'clojure.core/*compile-path*">>  => CompilePathBin
-                    , <<"#'clojure.core/*compile-files*">> => true
-                    },
+  PathBin  = list_to_binary(Path),
+  Bindings = #{ <<"#'clojure.core/*compile-files*">>          => true
+              , <<"#'clojure.core/*compile-path*">>           => PathBin
+              , <<"#'clojure.core/*compile-protocols-path*">> => PathBin
+              },
   FilesBin       = [list_to_binary(F) || F <- Files],
   try
     ok = 'clojerl.Var':push_bindings(Bindings),

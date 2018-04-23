@@ -39,7 +39,7 @@ str(_Config) ->
   Regex = <<"#<erlang.io.File tmp>">>,
   match = re:run(Str, Regex, [{capture, none}]),
 
-  ?NIL = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.ICloseable':close(File),
 
   {comments, ""}.
 
@@ -57,7 +57,7 @@ read(_Config) ->
   <<"How are you?\r\n">> = 'erlang.io.IReader':read(File, 14),
   eof     = 'erlang.io.IReader':read(File),
 
-  ?NIL = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.ICloseable':close(File),
 
   {comments, ""}.
 
@@ -69,7 +69,7 @@ read_line(_Config) ->
   <<"How are you?\n">> = 'erlang.io.IReader':read_line(File),
   eof                    = 'erlang.io.IReader':read_line(File),
 
-  ?NIL = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.ICloseable':close(File),
 
   {comments, ""}.
 
@@ -85,7 +85,7 @@ write(_Config) ->
 
   File = 'erlang.io.IWriter':write(File, <<"~s!">>, [<<" Yeah">>]),
 
-  ?NIL = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.ICloseable':close(File),
 
   {ok, <<"hello world! Yeah!">>} = file:read_file(<<"tmp-write">>),
 
@@ -97,10 +97,10 @@ write(_Config) ->
 close(_Config) ->
   ct:comment("Open an existing file and close it"),
   File = 'erlang.io.File':open(<<"tmp">>),
-  ?NIL = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.ICloseable':close(File),
 
   ct:comment("Closing it again shouldn't be a problem"),
-  ?NIL = 'erlang.io.Closeable':close(File),
+  ?NIL = 'erlang.io.ICloseable':close(File),
 
   {comments, ""}.
 
@@ -127,7 +127,7 @@ complete_coverage(_Config) ->
   meck:new(file, [passthrough, unstick]),
   try
     meck:expect(file, close, fun(_) -> {error, fake} end),
-    ok = try 'erlang.io.Closeable':close(File), error
+    ok = try 'erlang.io.ICloseable':close(File), error
          catch _:_ -> ok
          end
   after

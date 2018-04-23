@@ -345,9 +345,9 @@ compile_module(Module, Opts) ->
   %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam, _Warnings} ->
-      Name     = cerl:atom_val(cerl:module_name(Module)),
-      BeamCore = clj_utils:add_core_to_binary(Beam, Module),
-      BeamPath = maybe_output_beam(Name, BeamCore, Opts),
+      Name       = cerl:atom_val(cerl:module_name(Module)),
+      BeamCore   = clj_utils:add_core_to_binary(Beam, Module),
+      BeamPath   = maybe_output_beam(Name, Module, BeamCore, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam),
       Name;
     {error, Errors, Warnings} ->
@@ -427,28 +427,42 @@ maybe_output_core(Module, #{output_core := Path}) when is_binary(Path) ->
 maybe_output_core(_, _) ->
   ok.
 
--spec maybe_output_beam(atom(), binary(), options()) -> string().
-maybe_output_beam(_Name, _BeamBinary, #{fake := true}) ->
+-spec maybe_output_beam(atom(), cerl:c_module(), binary(), options()) -> string().
+maybe_output_beam(_Name, _Module, _BeamBinary, #{fake := true}) ->
   ?NO_SOURCE;
-maybe_output_beam(Name, BeamBinary, _Opts) ->
+maybe_output_beam(Name, Module, BeamBinary, _Opts) ->
   CompileFiles = 'clojure.core':'*compile-files*__val'(),
   case CompileFiles of
     true  ->
-      output_beam(Name, BeamBinary);
+      IsProtocol = clj_module:is_protocol(Module),
+      output_beam(Name, IsProtocol, BeamBinary);
     false ->
       clj_utils:store_binary(Name, BeamBinary),
       ?NO_SOURCE
   end.
 
--spec output_beam(atom(), binary()) -> string().
-output_beam(Name, BeamBinary) ->
-  CompilePath  = 'clojure.core':'*compile-path*__val'(),
+-spec output_beam(atom(), boolean(), binary()) -> string().
+output_beam(Name, IsProtocol, BeamBinary) ->
+  CompilePath  = compile_path(IsProtocol),
+  ?ERROR_WHEN(CompilePath =:= ?NIL, <<"*compile-path* not set">>),
   ok           = ensure_path(CompilePath),
   NameBin      = atom_to_binary(Name, utf8),
   BeamFilename = <<NameBin/binary, ".beam">>,
   BeamPath     = filename:join([CompilePath, BeamFilename]),
   ok           = file:write_file(BeamPath, BeamBinary),
   binary_to_list(BeamPath).
+
+-spec compile_path(boolean()) -> binary() | ?NIL.
+compile_path(true) ->
+  case 'clojure.core':'*compile-protocols-path*__val'() of
+    ?NIL ->
+      ?WARN(<<"*compile-protocols-path* not set, using *compile-path*">>),
+      'clojure.core':'*compile-path*__val'();
+    Path ->
+      Path
+  end;
+compile_path(false) ->
+  'clojure.core':'*compile-path*__val'().
 
 -spec ensure_path(binary()) -> ok.
 ensure_path(Path) when is_binary(Path) ->
