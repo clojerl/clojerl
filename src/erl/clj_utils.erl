@@ -253,15 +253,15 @@ group_by(GroupBy, List) ->
   ReverseValue = fun(_, V) -> lists:reverse(V) end,
   maps:map(ReverseValue, Map).
 
--spec time(function()) -> ok.
+-spec time(function()) -> any().
 time(Fun) when is_function(Fun) ->
   time("Time", Fun).
 
--spec time(string(), function()) -> ok.
+-spec time(string(), function()) -> any().
 time(Label, Fun) when is_function(Fun) ->
   time(Label, Fun, []).
 
--spec time(string(), function(), list()) -> ok.
+-spec time(string(), function(), list()) -> any().
 time(Label, Fun, Args) ->
   {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
   io:format("~s: ~p ms~n", [Label, erlang:trunc(T / 1000)]),

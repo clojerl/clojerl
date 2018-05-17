@@ -1,3 +1,6 @@
+# Don't try to apply built-in rules
+.SUFFIXES:
+# Show less verbose output
 .SILENT:
 
 REBAR3    := rebar3
@@ -46,7 +49,6 @@ clean:
 	${V} ${REBAR3} clean
 	${V} rm -rf _build rebar.lock
 	${V} rm -rf ${EBIN}
-	${V} rm -rf priv/*.so c_src/*.o
 
 ci: test dialyzer
 
@@ -68,8 +70,8 @@ CLJ_EXCLUDE    := ${EXCLUDE_CORE} ${EXCLUDE_PPRINT}
 CLJ_ALL_FILES  := $(shell find ${CLJ_SRC} -type f -name "*${EXT}")
 CLJ_FILES      := $(filter-out ${CLJ_EXCLUDE}, ${CLJ_ALL_FILES})
 
-CLOJERL      := bin/clojerl -pa ${CLJ_SRC} -pa ${CLJ_TEST} -pa ${EBIN}
-CLOJERLC     := ${CLOJERL} --compile -o ${EBIN}
+CLOJERL        := bin/clojerl -pa ${CLJ_SRC} -pa ${CLJ_TEST} -pa ${EBIN}
+CLOJERLC       := ${CLOJERL} --compile -o ${EBIN}
 
 # Maps clj to target beam or ns: path/to/ns/some_file${EXT} -> ns.some-file[.ext]
 define clj_to

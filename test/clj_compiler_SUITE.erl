@@ -12,7 +12,6 @@
 
 -export([ compile/1
         , compile_file/1
-        , compile_files/1
         , eval/1
         , def_var_compiled_ns/1
         ]).
@@ -28,8 +27,9 @@ end_per_suite(Config) -> Config.
 
 -spec init_per_testcase(_, config()) -> config().
 init_per_testcase(_, Config) ->
-  Bindings = #{ <<"#'clojure.core/*compile-files*">> => true
-              , <<"#'clojure.core/*compile-path*">> => <<"ebin">>
+  Bindings = #{ <<"#'clojure.core/*compile-files*">>          => true
+              , <<"#'clojure.core/*compile-path*">>           => <<"ebin">>
+              , <<"#'clojure.core/*compile-protocols-path*">> => <<"ebin">>
               },
   ok       = 'clojerl.Var':push_bindings(Bindings),
   Config.
@@ -74,10 +74,6 @@ compile_file(_Config) ->
   ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
        catch _:_ -> ok end,
 
-  {comments, ""}.
-
--spec compile_files(config()) -> result().
-compile_files(_Config) ->
   Opts     = #{verbose => true, time => true},
   SrcPath  = clj_test_utils:relative_path(<<"src/clj">>),
   TestPath = clj_test_utils:relative_path(<<"test/clj">>),
@@ -87,7 +83,7 @@ compile_files(_Config) ->
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath  = <<TestPath/binary, "/examples/simple.clje">>,
   Simple2Path = <<TestPath/binary, "/examples/simple_2.clje">>,
-  _ = clj_compiler:compile_files([SimplePath, Simple2Path], Opts),
+  [clj_compiler:compile_file(F, Opts) || F <- [SimplePath, Simple2Path]],
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
@@ -96,7 +92,7 @@ compile_files(_Config) ->
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
   ErrorPath = clj_test_utils:relative_path(<<"test/clj/examples/error.clje">>),
   FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],
-  _Env2 = clj_compiler:compile_files(FilesBin2, Opts),
+  [clj_compiler:compile_file(F, Opts) || F <- FilesBin2],
 
   {comments, ""}.
 
