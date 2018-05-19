@@ -142,16 +142,27 @@ alias(_Config) ->
 
 -spec refer(config()) -> result().
 refer(_Config) ->
-  NsSym   = clj_rt:symbol(<<"foo">>),
+  Ns1Sym  = clj_rt:symbol(<<"foo">>),
   NameSym = clj_rt:symbol(<<"bar">>),
-  Ns      = 'clojerl.Namespace':find_or_create(NsSym),
-  Ns      = 'clojerl.Namespace':intern(Ns, NameSym),
+  Ns1     = 'clojerl.Namespace':find_or_create(Ns1Sym),
+  Ns1     = 'clojerl.Namespace':intern(Ns1, NameSym),
 
   Var0    = 'clojerl.Namespace':find_var(NameSym),
 
   Var1    = clj_rt:with_meta(Var0, #{foo => bar}),
-  Ns      = 'clojerl.Namespace':refer(Ns, NameSym, Var1),
+  Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var1),
   Var1    = 'clojerl.Namespace':find_var(NameSym),
+
+  ct:comment("Referring the same var form another ns with the same symbol"),
+  Ns2Sym  = clj_rt:symbol(<<"baz">>),
+  Ns2     = 'clojerl.Namespace':find_or_create(Ns2Sym),
+  Ns2     = 'clojerl.Namespace':intern(Ns2, NameSym),
+
+  Var2    = 'clojerl.Namespace':find_var(Ns2, NameSym),
+
+  Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var2),
+  %% This should be fine, even though Var2 is from a different ns
+  Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var2),
 
   {comment, ""}.
 
