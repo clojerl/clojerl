@@ -180,9 +180,8 @@ intern(#{?TYPE := ?M, name := NsNameSym} = Ns, Symbol) ->
   NsStr   = 'clojerl.Symbol':name(NsNameSym),
   NameStr = 'clojerl.Symbol':name(Symbol),
   Var     = 'clojerl.Var':?CONSTRUCTOR(NsStr, NameStr),
-  OldVar  = mapping(Ns, Symbol),
 
-  check_if_override(Ns, Symbol, OldVar, Var),
+  check_if_override(Ns, Symbol, mapping(Ns, Symbol), Var),
 
   gen_server:call(?MODULE, {intern, Ns, Symbol, Var}).
 
@@ -412,7 +411,11 @@ check_if_override(Ns, Sym, Old, New) ->
   NewVarNs = 'clojerl.Var':namespace(New),
 
   Message  = [Sym, <<" already refers to: ">>, Old, <<" in namespace: ">>, Ns],
-  Warn     = OldVarNs =/= NsName andalso NewVarNs =/= <<"clojure.core">>,
+
+  Warn     = not ( clj_rt:equiv(OldVarNs, NewVarNs)
+                   orelse OldVarNs =:= NsName
+                   orelse NewVarNs =:= <<"clojure.core">>
+                 ),
 
   ?ERROR_WHEN(Warn andalso OldVarNs =/= <<"clojure.core">>, Message),
 
