@@ -5,9 +5,7 @@
 
 -dialyzer(no_return).
 
--export([ compile_files/1
-        , compile_files/2
-        , compile_file/1
+-export([ compile_file/1
         , compile_file/2
         , compile/1
         , compile/2
@@ -38,6 +36,9 @@
                     , fake        => boolean()    %% Fake modules being compiled
                     }.
 
+-type compiled_modules() :: [file:filename_all()].
+-type return_type()      :: compiled_modules | env.
+
 -export_type([options/0]).
 
 %%------------------------------------------------------------------------------
@@ -61,31 +62,20 @@ default_options() ->
    , fake        => false
    }.
 
--spec compile_files([file:filename_all()]) -> clj_env:env().
-compile_files(Files) when is_list(Files) ->
-  compile_files(Files, default_options()).
-
--spec compile_files([file:filename_all()], options()) -> clj_env:env().
-compile_files(Files, Opts) when is_list(Files) ->
-  compile_files(Files, Opts, clj_env:default()).
-
--spec compile_files([file:filename_all()], options(), clj_env:env()) ->
-  clj_env:env().
-compile_files(Files, Opts, Env0) when is_list(Files) ->
-  Fun = fun(File, EnvAcc) -> compile_file(File, Opts, EnvAcc) end,
-  lists:foldl(Fun, Env0, Files).
-
--spec compile_file(file:filename_all()) -> clj_env:env().
+-spec compile_file(file:filename_all()) -> compiled_modules().
 compile_file(File) when is_binary(File) ->
   compile_file(File, default_options()).
 
--spec compile_file(file:filename_all(), options()) -> clj_env:env().
+-spec compile_file(file:filename_all(), options()) -> compiled_modules().
 compile_file(File, Opts) when is_binary(File) ->
-  compile_file(File, Opts, clj_env:default()).
+  compile_file(File, Opts, clj_env:default(), compiled_modules).
 
--spec compile_file(file:filename_all(), options(), clj_env:env()) ->
-  clj_env:env().
-compile_file(File, Opts0, Env) when is_binary(File) ->
+-spec compile_file( file:filename_all()
+                  , options()
+                  , clj_env:env()
+                  , return_type()
+                  ) -> compiled_modules() | clj_env:env().
+compile_file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
   ?ERROR_WHEN( not filelib:is_regular(File)
              , [<<"File '">>, File, <<"' does not exist">>]
              ),
@@ -103,7 +93,11 @@ compile_file(File, Opts0, Env) when is_binary(File) ->
                      #{time := true} -> fun timed_compile/3;
                      _               -> fun compile/3
                    end,
-      CompileFun(Src, Opts1, Env);
+      Env1 = CompileFun(Src, Opts1, Env0),
+      case ReturnType of
+        compiled_modules -> clj_env:get(compiled_modules, Env1);
+        env -> Env1
+      end;
     Error ->
       error(Error)
   end.
@@ -130,10 +124,11 @@ load_string(Path) ->
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->
-  Env = compile_file(Path),
+  Env = compile_file(Path, default_options(), clj_env:default(), env),
   clj_env:get(eval, Env).
 
--spec timed_compile(binary(), options(), clj_env:env()) -> ok.
+-spec timed_compile(binary(), options(), clj_env:env()) ->
+  compiled_modules().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
   clj_utils:time("Total", fun compile/3, [Src, Opts, Env]).
 
@@ -224,12 +219,14 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   CompileFun =
     fun() ->
         try
-          Env2 = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Time, Env1),
+          Env2  = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Time, Env1),
           %% Maybe report time
           Time andalso report_time(Env2),
           %% Compile all modules
-          lists:foreach(compile_module_fun(Opts), clj_module:all_modules()),
-          {shutdown, Env2}
+          Fun   = compile_module_fun(Opts),
+          Beams = [Fun(M) || M <- clj_module:all_modules()],
+          Env3  = clj_env:put(compiled_modules, Beams, Env2),
+          {shutdown, Env3}
         catch Kind:Error ->
             {Kind, Error, erlang:get_stacktrace()}
         end
@@ -335,7 +332,7 @@ compile_module_fun(#{time := true} = Opts) ->
 compile_module_fun(Opts) ->
   fun(Forms) -> compile_module(Forms, Opts) end.
 
--spec compile_module(cerl:c_module(), options()) -> atom().
+-spec compile_module(cerl:c_module(), options()) -> binary().
 compile_module(Module, Opts) ->
   ok       = maybe_output_core(Module, Opts),
   ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
@@ -345,11 +342,11 @@ compile_module(Module, Opts) ->
   %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam, _Warnings} ->
-      Name       = cerl:atom_val(cerl:module_name(Module)),
-      BeamCore   = clj_utils:add_core_to_binary(Beam, Module),
-      BeamPath   = maybe_output_beam(Name, Module, BeamCore, Opts),
+      Name           = cerl:atom_val(cerl:module_name(Module)),
+      BeamCore       = clj_utils:add_core_to_binary(Beam, Module),
+      BeamPath       = maybe_output_beam(Name, Module, BeamCore, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam),
-      Name;
+      list_to_binary(BeamPath);
     {error, Errors, Warnings} ->
       error({Errors, Warnings})
   end.
@@ -427,7 +424,8 @@ maybe_output_core(Module, #{output_core := Path}) when is_binary(Path) ->
 maybe_output_core(_, _) ->
   ok.
 
--spec maybe_output_beam(atom(), cerl:c_module(), binary(), options()) -> string().
+-spec maybe_output_beam(module(), cerl:c_module(), binary(), options()) ->
+  string().
 maybe_output_beam(_Name, _Module, _BeamBinary, #{fake := true}) ->
   ?NO_SOURCE;
 maybe_output_beam(Name, Module, BeamBinary, _Opts) ->
@@ -441,7 +439,7 @@ maybe_output_beam(Name, Module, BeamBinary, _Opts) ->
       ?NO_SOURCE
   end.
 
--spec output_beam(atom(), boolean(), binary()) -> string().
+-spec output_beam(module(), boolean(), binary()) -> string().
 output_beam(Name, IsProtocol, BeamBinary) ->
   CompilePath  = compile_path(IsProtocol),
   ?ERROR_WHEN(CompilePath =:= ?NIL, <<"*compile-path* not set">>),

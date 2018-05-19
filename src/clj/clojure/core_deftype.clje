@@ -389,11 +389,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;; protocols ;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- protocol?
-  [maybe-p]
-  (and (clj_module/is_clojure maybe-p)
-       (clj_module/is_protocol maybe-p)))
-
 (defn extends?
   "Returns true if atype extends protocol"
   {:added "1.2"}
