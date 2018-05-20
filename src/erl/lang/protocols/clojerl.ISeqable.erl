@@ -47,6 +47,8 @@
       'clojerl.Vector.ChunkedSeq':'seq'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'seq'(X);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'seq'(X);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'seq', Type)
   end.
@@ -87,6 +89,8 @@
       'clojerl.Vector.ChunkedSeq':'to_list'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'to_list'(X);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'to_list'(X);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'to_list', Type)
   end.
@@ -108,4 +112,5 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES(_) -> false.

@@ -30,6 +30,8 @@
       'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
     'clojerl.Vector' ->
       'clojerl.Vector':'->erl'(X, Recursive);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'->erl'(X, Recursive);
     Type ->
       clj_protocol:not_implemented(?MODULE, '->erl', Type)
   end.
@@ -43,4 +45,5 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES(_) -> false.

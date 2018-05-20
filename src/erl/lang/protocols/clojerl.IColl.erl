@@ -41,6 +41,8 @@
       'clojerl.Vector.ChunkedSeq':'cons'(Coll, Item);
     'clojerl.Vector' ->
       'clojerl.Vector':'cons'(Coll, Item);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'cons'(Coll, Item);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'cons', Type)
   end.
@@ -75,6 +77,8 @@
       'clojerl.Vector.ChunkedSeq':'empty'(Coll);
     'clojerl.Vector' ->
       'clojerl.Vector':'empty'(Coll);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'empty'(Coll);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'empty', Type)
   end.
@@ -93,4 +97,5 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES(_) -> false.

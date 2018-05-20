@@ -305,4 +305,7 @@ complete_coverage(_Config) ->
   ?NIL = clj_rt:get(NotEmptyVector, 4),
   bla = clj_rt:get(NotEmptyVector, 43, bla),
 
+  RSeq = 'clojerl.Vector':rseq(NotEmptyVector),
+  3    = clj_rt:first(RSeq),
+
   {comments, ""}.

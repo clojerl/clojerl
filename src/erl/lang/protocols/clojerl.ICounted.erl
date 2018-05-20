@@ -50,6 +50,8 @@
       'clojerl.Vector.ChunkedSeq':'count'(Seq);
     'clojerl.Vector' ->
       'clojerl.Vector':'count'(Seq);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'count'(Seq);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'count', Type)
   end.
@@ -73,4 +75,5 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES(_) -> false.

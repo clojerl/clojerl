@@ -13,6 +13,7 @@
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
+-behavior('clojerl.IReversible').
 -behavior('clojerl.IIndexed').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.IStack').
@@ -38,6 +39,7 @@
 -export([ meta/1
         , with_meta/2
         ]).
+-export([rseq/1]).
 -export([ reduce/2
         , reduce/3
         ]).
@@ -186,6 +188,11 @@ do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
   end;
 do_reduce(_F, Acc, _Index, _Size, _Array) ->
   Acc.
+
+%% clojerl.IReduce
+
+rseq(#{?TYPE := ?M, array := Array}) ->
+  'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, array:size(Array) - 1).
 
 %% clojerl.ISequential
 
