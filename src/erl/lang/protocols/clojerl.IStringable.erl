@@ -90,6 +90,8 @@
       'clojerl.Vector.ChunkedSeq':'str'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'str'(X);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'str'(X);
     'clojerl.ArityError' ->
       'clojerl.ArityError':'str'(X);
     'clojerl.AssertionError' ->
@@ -147,6 +149,7 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES('clojerl.ArityError') -> true;
 ?SATISFIES('clojerl.AssertionError') -> true;
 ?SATISFIES('clojerl.BadArgumentError') -> true;

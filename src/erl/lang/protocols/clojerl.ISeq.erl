@@ -28,6 +28,8 @@
       'clojerl.Range':'first'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'first'(Seq);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'first'(Seq);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'first', Type)
   end.
@@ -48,6 +50,8 @@
       'clojerl.Range':'next'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'next'(Seq);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'next'(Seq);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'next', Type)
   end.
@@ -68,6 +72,8 @@
       'clojerl.Range':'more'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'more'(Seq);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'more'(Seq);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'more', Type)
   end.
@@ -79,4 +85,5 @@
 ?SATISFIES('clojerl.List') -> true;
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES(_) -> false.

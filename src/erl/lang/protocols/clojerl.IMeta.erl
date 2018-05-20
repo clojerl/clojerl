@@ -43,6 +43,8 @@
       'clojerl.Vector.ChunkedSeq':'meta'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'meta'(X);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'meta'(X);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'meta', Type)
   end.
@@ -79,6 +81,8 @@
       'clojerl.Vector.ChunkedSeq':'with_meta'(X, Meta);
     'clojerl.Vector' ->
       'clojerl.Vector':'with_meta'(X, Meta);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'with_meta'(X, Meta);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', Type)
   end.
@@ -98,4 +102,5 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES(_) -> false.

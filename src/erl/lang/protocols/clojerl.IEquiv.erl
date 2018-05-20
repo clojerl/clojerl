@@ -56,6 +56,8 @@
       'clojerl.Vector.ChunkedSeq':'equiv'(X, Y);
     'clojerl.Vector' ->
       'clojerl.Vector':'equiv'(X, Y);
+    'clojerl.Vector.RSeq' ->
+      'clojerl.Vector.RSeq':'equiv'(X, Y);
     'clojerl.ArityError' ->
       'clojerl.ArityError':'equiv'(X, Y);
     'clojerl.AssertionError' ->
@@ -96,6 +98,7 @@
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Vector.RSeq') -> true;
 ?SATISFIES('clojerl.ArityError') -> true;
 ?SATISFIES('clojerl.AssertionError') -> true;
 ?SATISFIES('clojerl.BadArgumentError') -> true;
