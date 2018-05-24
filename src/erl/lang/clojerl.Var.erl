@@ -255,28 +255,25 @@ apply(#{?TYPE := ?M, ns_atom := Module, name_atom := Function} = Var, Args0) ->
   erlang:apply(Fun, Args1).
 
 -spec process_args(type(), [any()], function()) -> {arity(), [any()]}.
-process_args(#{?TYPE := ?M} = Var, Args, RestFun) ->
-  Meta = case meta(Var) of
-           ?NIL -> #{};
-           M -> M
-         end,
-  case maps:get('variadic?', Meta, false) of
-    false ->
-      Args1 = clj_rt:to_list(Args),
-      {length(Args1), Args1};
+process_args( #{?TYPE := ?M, meta := #{'variadic?' := true} = Meta}
+            , Args
+            , RestFun
+            ) ->
+  #{ max_fixed_arity := MaxFixedArity
+   , variadic_arity  := VariadicArity
+   } = Meta,
+  {Length, Args1, Rest} = bounded_length(Args, VariadicArity),
+  if
+    MaxFixedArity =:= ?NIL
+    orelse Rest =/= ?NIL
+    orelse (MaxFixedArity < Length andalso Length >= VariadicArity)->
+      {Length + 1, Args1 ++ [RestFun(Rest)]};
     true ->
-      MaxFixedArity = maps:get(max_fixed_arity, Meta),
-      VariadicArity = maps:get(variadic_arity, Meta),
-      {Length, Args1, Rest} = bounded_length(Args, VariadicArity),
-      if
-        MaxFixedArity =:= ?NIL
-        orelse Rest =/= ?NIL
-        orelse (MaxFixedArity < Length andalso Length >= VariadicArity)->
-          {Length + 1, Args1 ++ [RestFun(Rest)]};
-        true ->
-          {Length, Args1}
-      end
-  end.
+      {Length, Args1}
+  end;
+process_args(#{?TYPE := ?M}, Args, _RestFun) ->
+  Args1 = clj_rt:to_list(Args),
+  {length(Args1), Args1}.
 
 bounded_length(Args, Max) when is_list(Args) ->
   Length = length(Args),
