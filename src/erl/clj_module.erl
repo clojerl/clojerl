@@ -176,6 +176,8 @@ replace_calls(Ast, CurrentModule) ->
                    , {atom(), arity()} | undefined
                    ) ->
   cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
+replace_calls(#{?TYPE := 'clojerl.Var'} = Var0, _, _) ->
+  'clojerl.Var':mark_fake_fun(Var0);
 replace_calls( #c_call{ module = ModuleAst
                       , name   = FunctionAst
                       , args   = ArgsAsts

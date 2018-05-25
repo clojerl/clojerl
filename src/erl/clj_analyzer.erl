@@ -34,7 +34,7 @@ do_macroexpand_1(Form, Env) ->
   IsSymbol  = clj_rt:'symbol?'(Op),
   IsSpecial = is_special(Op),
   MacroVar  = case IsSymbol of
-                true -> lookup_var(Op, false);
+                true  -> lookup_var(Op, false);
                 false -> ?NIL
               end,
 
@@ -49,7 +49,8 @@ do_macroexpand_1(Form, Env) ->
                                                  , clj_rt:rest(Form)
                                                  )
                                     ),
-                  'clojerl.IFn':apply(MacroVar, Args);
+                  MacroVar1 = 'clojerl.Var':mark_fake_fun(MacroVar),
+                  'clojerl.IFn':apply(MacroVar1, Args);
                 false ->
                   case IsSymbol andalso not IsSpecial of
                     true  -> maybe_macroexpand_symbol(Form, Op);
@@ -1231,7 +1232,8 @@ parse_def(List, Env) ->
 
   clj_env:push_expr(DefExpr, clj_env:pop(Env2)).
 
--spec eval_var_meta('clojerl.Var':type(), clj_env:env()) -> any().
+-spec eval_var_meta('clojerl.Var':type(), clj_env:env()) ->
+  'clojerl.Var':type().
 eval_var_meta(Var, Env) ->
   VarMeta0       = 'clojerl.Var':meta(Var),
   Env1           = analyze_form(VarMeta0, Env),

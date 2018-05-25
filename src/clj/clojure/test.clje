@@ -417,7 +417,7 @@
   {:added "1.1"}
   [v]
   (try (var-get v)
-       (catch :error e
+       (catch _ e
          nil)))
 
 (defn function?
