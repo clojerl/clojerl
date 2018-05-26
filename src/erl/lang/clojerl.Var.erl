@@ -310,7 +310,7 @@ bounded_length(Rest, N, Max, Acc) ->
 %%------------------------------------------------------------------------------
 
 -spec resolve_fun(type(), module(), atom(), arity()) -> fun().
-resolve_fun(#{fake_fun := true}, Module, Function, Arity) ->
-  clj_module:fake_fun(Module, Function, Arity);
+resolve_fun(#{fake_fun := false}, Module, Function, Arity) ->
+  fun Module:Function/Arity;
 resolve_fun(_, Module, Function, Arity) ->
-  fun Module:Function/Arity.
+  clj_module:fake_fun(Module, Function, Arity).
