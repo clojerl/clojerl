@@ -360,7 +360,7 @@ int_properties(Groups) ->
                ?NIL
            end,
 
-  Negate = hd(Groups) =/= "",
+  Negate = hd(Groups) == "-",
   {Result, case Negate of true -> -1; false -> 1 end}.
 
 -spec parse_float([string()]) -> float().
