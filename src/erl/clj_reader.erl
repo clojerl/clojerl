@@ -385,19 +385,27 @@ is_char_valid(_, _) -> false.
 -spec read_keyword(state()) -> state().
 read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
-  Keyword = case clj_utils:parse_symbol(Token) of
-              {?NIL, <<":", Name/binary>>} ->
-                Ns    = 'clojerl.Namespace':current(),
-                NsSym = 'clojerl.Namespace':name(Ns),
-                Namespace = 'clojerl.Symbol':name(NsSym),
-                clj_rt:keyword(Namespace, Name);
-              {?NIL, Name} ->
-                clj_rt:keyword(Name);
-              {<<Ch/utf8, _/binary>> = Namespace, Name} when Ch =/= $: ->
-                clj_rt:keyword(Namespace, Name);
-              _ ->
-                ?ERROR(<<"Invalid token: :", Token/binary>>, location(State))
-            end,
+  Keyword =
+    case clj_utils:parse_symbol(Token) of
+      {?NIL, <<":", Name/binary>>} ->
+        Ns    = 'clojerl.Namespace':current(),
+        NsSym = 'clojerl.Namespace':name(Ns),
+        Namespace = 'clojerl.Symbol':name(NsSym),
+        clj_rt:keyword(Namespace, Name);
+      {?NIL, Name} ->
+        clj_rt:keyword(Name);
+      {<<":", Namespace/binary>>, Name} ->
+        AliasSym  = clj_rt:symbol(Namespace),
+        CurrentNs = 'clojerl.Namespace':current(),
+        case 'clojerl.Namespace':alias(CurrentNs, AliasSym) of
+          ?NIL -> ?ERROR(<<"Invalid token: :", Token/binary>>, location(State));
+          NsSym -> clj_rt:keyword(clj_rt:str(NsSym), Name)
+        end;
+      {Namespace, Name} ->
+        clj_rt:keyword(Namespace, Name);
+      _ ->
+        ?ERROR(<<"Invalid token: :", Token/binary>>, location(State))
+    end,
   push_form(Keyword, State).
 
 %%------------------------------------------------------------------------------

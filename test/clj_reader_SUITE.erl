@@ -160,13 +160,15 @@ keyword(Config) when is_list(Config) ->
   keyword(fun read/1),
   keyword(fun read_io/1);
 keyword(ReadFun) ->
-  SomeNsSymbol = clj_rt:symbol(<<"some-ns">>),
-  'clojerl.Namespace':find_or_create(SomeNsSymbol),
+  FooSym   = clj_rt:symbol(<<"foo">>),
+  FooNs    = 'clojerl.Namespace':find_or_create(FooSym),
+  SomeSym  = clj_rt:symbol(<<"some">>),
+  SomeNs   = 'clojerl.Namespace':find_or_create(SomeSym),
 
   Keyword1 = clj_rt:keyword(<<"hello-world">>),
   Keyword1 = ReadFun(<<":hello-world">>),
 
-  Keyword2 = clj_rt:keyword(<<"some-ns">>, <<"hello-world">>),
+  Keyword2 = clj_rt:keyword(<<"some">>, <<"hello-world">>),
   Keyword2 = ReadFun(<<"::hello-world">>),
 
   Keyword3 = clj_rt:keyword(<<"another-ns">>, <<"hello-world">>),
@@ -175,8 +177,13 @@ keyword(ReadFun) ->
   Keyword4 = clj_rt:keyword(<<"/">>),
   Keyword4 = ReadFun(<<":/">>),
 
-  Keyword5 = clj_rt:keyword(<<"some-ns">>, <<"/">>),
-  Keyword5 = ReadFun(<<":some-ns//">>),
+  Keyword5 = clj_rt:keyword(<<"some">>, <<"/">>),
+  Keyword5 = ReadFun(<<":some//">>),
+
+  FSym     = clj_rt:symbol(<<"f">>),
+  SomeNs   = 'clojerl.Namespace':add_alias(SomeNs, FSym, FooNs),
+  Keyword6 = clj_rt:keyword(<<"foo">>, <<"hello-world">>),
+  Keyword6 = ReadFun(<<"::f/hello-world">>),
 
   ct:comment("Error: triple colon :::"),
   ok = try ReadFun(<<":::hello-world">>)
