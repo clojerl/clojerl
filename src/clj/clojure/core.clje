@@ -411,7 +411,7 @@
 (defn nil?
   "Returns true if x is nil, false otherwise."
   {:tag clojerl.Boolean
-   :inline '(fn* [x] (list 'erlang/=:= x nil))
+   :inline '(fn* [x] (clojure.core/list 'erlang/=:= x nil))
    :added "1.0"}
   [x] (erlang/=:= x nil))
 
