@@ -1660,8 +1660,18 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
         StateAcc1 = lists:foldl(fun method_to_case_clause/2, StateAcc, Methods),
         {ClausesAsts, StateAcc2} = pop_ast(StateAcc1, length(Methods)),
 
+        %% Create the clause that will handle the cases when the arguments
+        %% provided are wrong or there is no match in the clauses
+        Error    = 'clojerl.ArityError':?CONSTRUCTOR(1, <<"anonymous fn">>),
+        ThrowErr = call_mfa(erlang, error, [cerl:abstract(Error)], Ann),
+        CatchAll = cerl:ann_c_clause( Ann
+                                    , [new_c_var(Ann)]
+                                    , cerl:abstract(true)
+                                    , ThrowErr
+                                    ),
+
         ArgsVar  = new_c_var(Ann),
-        CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts),
+        CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts ++ [CatchAll]),
         LetAst   = cerl:ann_c_let( Ann
                                  , VarsAsts
                                  , cerl:c_values(FNamesAsts)
