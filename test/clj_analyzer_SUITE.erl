@@ -423,8 +423,8 @@ fn(_Config) ->
   ok = try analyze_all(<<"(fn* ([zz y] zz y)) zz">>), error
        catch error:Error4 ->
            Msg4 = 'clojerl.IError':message(Error4),
-           <<?NO_SOURCE, ":?:?: Unable to resolve symbol"
-             " 'zz' in this context">> = Msg4,
+           <<?NO_SOURCE, ":?:?: Unable to resolve symbol:"
+             " zz in this context">> = Msg4,
            ok
        end,
 
@@ -627,7 +627,7 @@ do(_Config) ->
        catch error:Error1 ->
            Msg1 = 'clojerl.IError':message(Error1),
            <<?NO_SOURCE, ":1:1: Unable to resolve "
-                 "symbol 'z' in this context">> = Msg1,
+                 "symbol: z in this context">> = Msg1,
            ok
        end,
 
@@ -753,7 +753,7 @@ invoke(_Config) ->
        catch error:Error2 ->
            Msg2 = 'clojerl.IError':message(Error2),
            <<?NO_SOURCE, ":1:1: Unable to resolve "
-             "symbol 'bla' in this context">> = Msg2,
+             "symbol: bla in this context">> = Msg2,
            ok
        end,
 
@@ -792,8 +792,8 @@ symbol(_Config) ->
   ok = try analyze_one(<<"hello-world">>), error
        catch error:Error1 ->
            Msg1 = 'clojerl.IError':message(Error1),
-           <<?NO_SOURCE, ":?:?: Unable to resolve symbol "
-             "'hello-world' in this context">> = Msg1,
+           <<?NO_SOURCE, ":?:?: Unable to resolve symbol: "
+             "hello-world in this context">> = Msg1,
            ok
        end,
 
