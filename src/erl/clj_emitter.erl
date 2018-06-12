@@ -1650,7 +1650,9 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                ],
 
   FoldFun =
-    fun(#{op := fn} = FnExpr, StateAcc) ->
+    fun( {FNameAst, #{op := fn} = FnExpr}
+       , StateAcc
+       ) ->
         #{ methods := Methods
          , env     := Env
          } = FnExpr,
@@ -1662,13 +1664,20 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
 
         %% Create the clause that will handle the cases when the arguments
         %% provided are wrong or there is no match in the clauses
-        Error    = 'clojerl.ArityError':?CONSTRUCTOR(1, <<"anonymous fn">>),
-        ThrowErr = call_mfa(erlang, error, [cerl:abstract(Error)], Ann),
-        CatchAll = cerl:ann_c_clause( Ann
-                                    , [new_c_var(Ann)]
-                                    , cerl:abstract(true)
-                                    , ThrowErr
-                                    ),
+        CatchAllVar = new_c_var(Ann),
+        Length      = call_mfa(erlang, length, [CatchAllVar], Ann),
+        FName0      = cerl:fname_id(FNameAst),
+        FName1      = cerl:abstract(atom_to_binary(FName0, utf8)),
+        ErrorCtror  = call_mfa( 'clojerl.ArityError'
+                              , ?CONSTRUCTOR
+                              , [Length, FName1]
+                              , Ann),
+        ThrowErr    = call_mfa(erlang, error, [ErrorCtror], Ann),
+        CatchAll    = cerl:ann_c_clause( Ann
+                                       , [CatchAllVar]
+                                       , cerl:abstract(true)
+                                       , ThrowErr
+                                       ),
 
         ArgsVar  = new_c_var(Ann),
         CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts ++ [CatchAll]),
@@ -1679,14 +1688,14 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                                  ),
         FunAst   = cerl:ann_c_fun(Ann, [ArgsVar], LetAst),
 
-        push_ast(FunAst, StateAcc2)
+        push_ast({FNameAst, FunAst}, StateAcc2)
     end,
 
-  {FnsAsts, State2} = pop_ast( lists:foldl(FoldFun, State1, FnsExprs)
-                             , length(FnsExprs)
-                             ),
+  PairsExprs = lists:zip(FNamesAsts, FnsExprs),
 
-  {lists:zip(FNamesAsts, FnsAsts), State2}.
+  pop_ast( lists:foldl(FoldFun, State1, PairsExprs)
+         , length(PairsExprs)
+         ).
 
 %% ----- Binary literal -------
 
