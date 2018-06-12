@@ -933,6 +933,8 @@ discard(ReadFun, ReadAllFun) ->
 
   1 = ReadFun(<<"1 #_ :hello">>),
 
+  1 = ReadFun(<<"#_ #_ :hello :world 1">>),
+
   StrSym = clj_rt:symbol(<<"str">>),
   ByeKeyword = clj_rt:keyword(<<"bye">>),
   List = clj_rt:list([StrSym, ByeKeyword]),

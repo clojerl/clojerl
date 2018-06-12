@@ -1563,9 +1563,12 @@ wrapped_read(Symbol, State) ->
 
 -spec read_pop_one(state()) -> {any(), state()}.
 read_pop_one(State0) ->
-  State1 = read_one(State0),
-  #{forms := [Form | Forms]} = State1,
-  {Form, State1#{forms => Forms}}.
+  case read_one(State0) of
+    #{forms := [Form | Forms]} = State1 ->
+      {Form, State1#{forms => Forms}};
+    State1 ->
+      read_pop_one(State1)
+  end.
 
 -spec push_form(any(), state()) -> state().
 push_form(Form, #{forms := Forms} = State) ->
