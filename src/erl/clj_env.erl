@@ -19,6 +19,8 @@
         , get_local/2
         , put_local/3
         , put_locals/2
+        , save_locals_scope/1
+        , restore_locals_scope/1
 
         , get/2
         , get/3
@@ -30,19 +32,22 @@
 
 -type context() :: expr | return | statement.
 
--type env() :: #{ context    => context()
-                , exprs      => [expr()]
-                , locals     => clj_scope:scope()
-                , mapping    => clj_scope:scope()
+-type env() :: #{ context      => context()
+                , exprs        => [expr()]
+                , locals       => clj_scope:scope()
+                , saved_locals => clj_scope:scope() | ?NIL
+                , mapping      => clj_scope:scope()
                 }.
 
 -export_type([env/0]).
 
 -spec default() -> env().
 default() ->
-  #{ exprs      => []
-   , locals     => clj_scope:new()
-   , mapping    => clj_scope:new()
+  #{ context      => expr
+   , exprs        => []
+   , locals       => clj_scope:new()
+   , saved_locals => ?NIL
+   , mapping      => clj_scope:new()
    }.
 
 -spec context(env()) -> context().
@@ -87,6 +92,14 @@ add_locals_scope(Env = #{locals := ParentLocals}) ->
 -spec remove_locals_scope(env()) -> env().
 remove_locals_scope(Env = #{locals := Locals}) ->
   Env#{locals => clj_scope:parent(Locals)}.
+
+-spec save_locals_scope(env()) -> clj_scope:scope().
+save_locals_scope(#{locals := Locals} = Env) ->
+  Env#{locals := clj_scope:new(), saved_locals := Locals}.
+
+-spec restore_locals_scope(env()) -> env().
+restore_locals_scope(#{saved_locals := LocalsCache} = Env) ->
+  Env#{locals := LocalsCache, saved_locals := ?NIL}.
 
 -spec get_local('clojerl.Symbol':type(), env()) -> any().
 get_local(Sym, _Env = #{locals := Locals}) ->

@@ -170,7 +170,7 @@
   [ex]
   (let [tr (erlang/get_stacktrace)]
     (binding [*out* *err*]
-      (println "Error:" ex)
+      (println ex)
       (doall (map #(-> % stack-element-str println) tr)))))
 
 (def ^{:doc "A sequence of lib specs that are applied to `require`

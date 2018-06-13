@@ -1211,14 +1211,20 @@ parse_def(List, Env) ->
   %% Use Var for def_var that doesn't contain `arglists`, since the value
   %% for `arglists` will be a quoted list until it is evaluated, and this
   %% will make signature_tag/4 fail.
-  ExprEnv  = clj_env:push(#{def_var => Var0, context => expr}, Env),
-  {InitExpr, Env1} = clj_env:pop_expr(analyze_form(Init, ExprEnv)),
+  ExprEnv0 = clj_env:push( #{def_var => Var0, context => expr, in_def => true}
+                         , Env
+                         ),
+  %% Reset locals to avoid resolving symbol that are not bound in the def.
+  ExprEnv1 = clj_env:save_locals_scope(ExprEnv0),
+  {InitExpr, Env1} = clj_env:pop_expr(analyze_form(Init, ExprEnv1)),
 
   Var2     = var_fn_info(Var1, InitExpr),
-  Var3     = eval_var_meta(Var2, Env),
+  Var3     = eval_var_meta(Var2, Env1),
   'clojerl.Namespace':update_var(Var3),
 
-  {TagExpr, Env2} = fetch_type_tag(VarSymbol, Env1),
+  {TagExpr, Env2} = fetch_type_tag( VarSymbol
+                                  , clj_env:restore_locals_scope(Env1)
+                                  ),
 
   DefExpr = #{ op      => def
              , env     => Env
@@ -2168,8 +2174,9 @@ do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
 do_analyze_symbol(false = _InPattern, Symbol, Env0) ->
   case resolve(Symbol, Env0) of
     {?NIL, _} ->
-      ?ERROR([ <<"Unable to resolve symbol '">>, Symbol
-             , <<"' in this context">>
+      ?ERROR([ <<"Unable to resolve symbol: ">>, Symbol
+             , <<" in this context">>
+             , maybe_def_context_message(Env0)
              ]
             , clj_env:location(Env0)
             );
@@ -2182,6 +2189,13 @@ do_analyze_symbol(false = _InPattern, Symbol, Env0) ->
     {{type, Type}, Env1} ->
       TypeExpr = type_expr(Type, Symbol, Env1),
       {TypeExpr, Env1}
+  end.
+
+-spec maybe_def_context_message(clj_env:env()) -> binary().
+maybe_def_context_message(Env) ->
+  case clj_env:get(in_def, Env) of
+    true -> <<" (check usage of symbols bound outside def)">>;
+    _ -> <<"">>
   end.
 
 -spec is_underscore('clojerl.Symbol':type()) -> boolean().

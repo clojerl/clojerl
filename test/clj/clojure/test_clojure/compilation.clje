@@ -128,9 +128,9 @@
     (is (= 'clojerl.Integer (-> arglists second meta :tag)))))
 
 (deftest CLJ-1232-return-type-not-imported
-  (is (thrown-with-msg? :error #"Unable to resolve symbol 'ICloseable'"
+  (is (thrown-with-msg? :error #"Unable to resolve symbol: ICloseable"
                         (eval '(defn a ^ICloseable []))))
-  (is (thrown-with-msg? :error #"Unable to resolve symbol 'ICloseable'"
+  (is (thrown-with-msg? :error #"Unable to resolve symbol: ICloseable"
                         (eval '(defn a (^ICloseable []))))))
 
 (defn ^clojerl.String hinting-conflict ^erlang.util.Regex [])
