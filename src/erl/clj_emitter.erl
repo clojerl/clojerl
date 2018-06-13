@@ -1688,14 +1688,16 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                                  ),
         FunAst   = cerl:ann_c_fun(Ann, [ArgsVar], LetAst),
 
-        push_ast({FNameAst, FunAst}, StateAcc2)
+        push_ast(FunAst, StateAcc2)
     end,
 
   PairsExprs = lists:zip(FNamesAsts, FnsExprs),
 
-  pop_ast( lists:foldl(FoldFun, State1, PairsExprs)
-         , length(PairsExprs)
-         ).
+  {FunsAsts, State2} = pop_ast( lists:foldl(FoldFun, State1, PairsExprs)
+                              , length(PairsExprs)
+                              ),
+
+  {lists:zip(FNamesAsts, FunsAsts), State2}.
 
 %% ----- Binary literal -------
 
