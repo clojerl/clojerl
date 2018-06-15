@@ -13,6 +13,8 @@
 
 'get'(X, Key) ->
   case clj_rt:type_module(X) of
+    'erlang.List' ->
+      'erlang.List':'get'(X, Key);
     'erlang.Map' ->
       'erlang.Map':'get'(X, Key);
     'clojerl.reader.ReaderConditional' ->
@@ -33,6 +35,8 @@
 
 'get'(X, Key, NotFound) ->
   case clj_rt:type_module(X) of
+    'erlang.List' ->
+      'erlang.List':'get'(X, Key, NotFound);
     'erlang.Map' ->
       'erlang.Map':'get'(X, Key, NotFound);
     'clojerl.reader.ReaderConditional' ->
@@ -51,6 +55,7 @@
       clj_protocol:not_implemented(?MODULE, 'get', Type)
   end.
 
+?SATISFIES('erlang.List') -> true;
 ?SATISFIES('erlang.Map') -> true;
 ?SATISFIES('clojerl.reader.ReaderConditional') -> true;
 ?SATISFIES('clojerl.reader.TaggedLiteral') -> true;

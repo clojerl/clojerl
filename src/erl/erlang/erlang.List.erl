@@ -6,6 +6,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IHash').
+-behavior('clojerl.ILookup').
 -behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
@@ -19,6 +20,9 @@
         , empty/1
         ]).
 -export([hash/1]).
+-export([ get/2
+        , get/3
+        ]).
 -export([ reduce/2
         , reduce/3
         ]).
@@ -42,6 +46,15 @@
 count(Items) -> length(Items).
 
 hash(List) -> clj_murmur3:ordered(List).
+
+get(List, Key) ->
+  get(List, Key, ?NIL).
+
+get(List, Key, NotFound) ->
+  case lists:keyfind(Key, 1, List) of
+    {Key, Value} -> Value;
+    false -> NotFound
+  end.
 
 reduce([], F) ->
   clj_rt:apply(F, []);

@@ -12,6 +12,7 @@
         , count/1
         , str/1
         , is_sequential/1
+        , get/1
         , hash/1
         , seq/1
         , equiv/1
@@ -68,6 +69,22 @@ str(_Config) ->
 is_sequential(_Config) ->
   List = [1, 2, 3],
   true = clj_rt:'sequential?'(List),
+
+  {comments, ""}.
+
+-spec get(config()) -> result().
+get(_Config) ->
+  List = [{a, 1}, {b, 2}, {c, 3}],
+
+  1    = clj_rt:get(List, a),
+  2    = clj_rt:get(List, b),
+  3    = clj_rt:get(List, c),
+
+  ?NIL = clj_rt:get(List, d),
+  42   = clj_rt:get(List, d, 42),
+
+  ?NIL = clj_rt:get([], foo),
+  ?NIL = clj_rt:get([a, 1, ""], foo),
 
   {comments, ""}.
 
