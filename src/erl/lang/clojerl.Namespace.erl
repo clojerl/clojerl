@@ -98,8 +98,9 @@ hash(Ns = #{?TYPE := ?M}) ->
 meta(#{?TYPE := ?M, meta := Meta}) ->
   Meta.
 
-with_meta(#{?TYPE := ?M} = Ns, Meta) ->
-  Ns#{meta := Meta}.
+with_meta(#{?TYPE := ?M} = Ns0, Meta) ->
+  Ns1 = Ns0#{meta := Meta},
+  gen_server:call(?MODULE, {update, Ns1}).
 
 %% clojerl.IReference
 
@@ -107,11 +108,13 @@ alter_meta(#{?TYPE := ?M, id := _Id, meta := Meta0} = Ns0, F, Args0) ->
   Args1 = clj_rt:cons(Meta0, Args0),
   Meta1 = clj_rt:apply(F, Args1),
   Ns1   = Ns0#{meta := Meta1},
-  gen_server:call(?MODULE, {update, Ns1}).
+  Ns1   = gen_server:call(?MODULE, {update, Ns1}),
+  Meta1.
 
 reset_meta(#{?TYPE := ?M} = Ns0, Meta) ->
   Ns1 = Ns0#{meta := Meta},
-  gen_server:call(?MODULE, {update, Ns1}).
+  Ns1 = gen_server:call(?MODULE, {update, Ns1}),
+  Meta.
 
 %% clojerl.IStringable
 
