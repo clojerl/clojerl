@@ -35,6 +35,8 @@
     clojerl.IRecord        [_             [_]]
     clojerl.IReduce        [reduce        [Coll Fun]
                             reduce        [Coll Fun Init]]
+    clojerl.IReference     [alter_meta    [Ref Fun Args]
+                            reset_meta    [Ref Meta]]
     clojerl.IReversible    [rseq          [Seq]]
     clojerl.ISeq           [first         [Seq]
                             next          [Seq]

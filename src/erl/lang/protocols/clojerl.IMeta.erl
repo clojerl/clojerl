@@ -15,6 +15,8 @@
   case clj_rt:type_module(X) of
     'clojerl.Atom' ->
       'clojerl.Atom':'meta'(X);
+    'clojerl.Namespace' ->
+      'clojerl.Namespace':'meta'(X);
     'clojerl.Symbol' ->
       'clojerl.Symbol':'meta'(X);
     'clojerl.Var' ->
@@ -53,6 +55,8 @@
   case clj_rt:type_module(X) of
     'clojerl.Atom' ->
       'clojerl.Atom':'with_meta'(X, Meta);
+    'clojerl.Namespace' ->
+      'clojerl.Namespace':'with_meta'(X, Meta);
     'clojerl.Symbol' ->
       'clojerl.Symbol':'with_meta'(X, Meta);
     'clojerl.Var' ->
@@ -88,6 +92,7 @@
   end.
 
 ?SATISFIES('clojerl.Atom') -> true;
+?SATISFIES('clojerl.Namespace') -> true;
 ?SATISFIES('clojerl.Symbol') -> true;
 ?SATISFIES('clojerl.Var') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;

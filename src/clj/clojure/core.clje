@@ -2038,16 +2038,14 @@
 
   f must be free of side-effects"
   {:added "1.0"}
-  [iref f & args]
-  (throw "unimplemented var/ref/agent/atom")
-  #_(.alterMeta iref f args))
+  [^clojerl.IReference iref f & args]
+  (.alter_meta iref f args))
 
 (defn reset-meta!
   "Atomically resets the metadata for a namespace/var/ref/agent/atom"
   {:added "1.0"}
-  [iref metadata-map]
-  (throw "unimplemented var/ref/agent/atom")
-  #_(.resetMeta iref metadata-map))
+  [^clojerl.IReference iref metadata-map]
+  (.reset_meta iref metadata-map))
 
 (defn commute
   "Must be called in a transaction. Sets the in-transaction-value of
@@ -5322,8 +5320,7 @@
 ;; redefine reduce with internal-reduce
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
+(alter-meta! (find-ns 'clojure.core) assoc :doc "Fundamental library of the Clojure language")
 ;; (load "core_proxy")
 (load "core_print")
 (load "core_deftype")
