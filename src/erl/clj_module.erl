@@ -571,8 +571,15 @@ to_module(#module{} = Module) ->
 
   ClojureAttr  = {cerl:c_atom(clojure), cerl:abstract([true])},
 
+  NameSym      = clj_rt:symbol(atom_to_binary(Name, utf8)),
+  Meta         = case 'clojerl.Namespace':find(NameSym) of
+                   ?NIL -> ?NIL;
+                   Ns   -> 'clojerl.Namespace':meta(Ns)
+                 end,
+  MetaAttr     = {cerl:c_atom(meta), cerl:abstract([Meta])},
+
   Attrs        = [X || {X} <- ets:tab2list(AttrsTable)],
-  UniqueAttrs  = lists:usort([ClojureAttr | Attrs]),
+  UniqueAttrs  = lists:usort([ClojureAttr, MetaAttr | Attrs]),
 
   AllAttrs     = [FileAttr, MappingsAttr, AliasesAttr | UniqueAttrs],
 

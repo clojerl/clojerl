@@ -11,6 +11,7 @@
         ]).
 
 -export([ hash/1
+        , meta/1
         , str/1
         , current/1
         , intern/1
@@ -60,6 +61,40 @@ hash(_Config) ->
   false = Hash1 =:= Hash2,
 
   Hash2 = clj_rt:hash(Ns2),
+
+  {comment, ""}.
+
+-spec meta(config()) -> result().
+meta(_Config) ->
+  Meta1   = #{doc => <<"meta">>},
+  BazSym0 = clj_rt:symbol(<<"baz">>),
+  BazSym1 = clj_rt:with_meta(BazSym0, Meta1),
+
+  Ns1     = 'clojerl.Namespace':find_or_create(BazSym1),
+  Ns1     = 'clojerl.Namespace':find(BazSym1),
+
+  ct:comment("Metadata is there"),
+  Meta1   = clj_rt:meta(Ns1),
+
+  ct:comment("Assign new metadata"),
+  Meta2   = #{doc => <<"with">>},
+  Ns2     = clj_rt:with_meta(Ns1, Meta2),
+  Ns2     = 'clojerl.Namespace':find(BazSym1),
+  Meta2   = clj_rt:meta(Ns2),
+
+  ct:comment("Alter metadata with assoc"),
+  Meta3   = #{doc => <<"alter">>},
+  Assoc   = fun clj_rt:assoc/3,
+  Args    = [doc, <<"alter">>],
+  Meta3   = 'clojerl.Namespace':alter_meta(Ns2, Assoc, Args),
+  Ns3     = 'clojerl.Namespace':find(BazSym1),
+  Meta3   = clj_rt:meta(Ns3),
+
+  ct:comment("Reset metadata"),
+  Meta4   = #{doc => <<"reset">>},
+  Meta4   = 'clojerl.Namespace':reset_meta(Ns3, Meta4),
+  Ns4     = 'clojerl.Namespace':find(BazSym1),
+  Meta4   = clj_rt:meta(Ns4),
 
   {comment, ""}.
 

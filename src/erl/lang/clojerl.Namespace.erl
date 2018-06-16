@@ -5,9 +5,17 @@
 
 -behaviour(gen_server).
 -behavior('clojerl.IHash').
+-behavior('clojerl.IMeta').
+-behavior('clojerl.IReference').
 -behavior('clojerl.IStringable').
 
 -export([hash/1]).
+-export([ meta/1
+        , with_meta/2
+        ]).
+-export([ alter_meta/3
+        , reset_meta/2
+        ]).
 -export([str/1]).
 
 -export([ current/0
@@ -53,24 +61,28 @@
                  , name     => 'clojerl.Symbol':type()
                  , mappings => ets:tid()
                  , aliases  => ets:tid()
+                 , meta     => ?NIL | any()
                  }.
 
 -spec ?CONSTRUCTOR('clojerl.Symbol':type()) -> type().
 ?CONSTRUCTOR(Name) ->
+  ?CONSTRUCTOR(Name, 'clojerl.Symbol':meta(Name)).
+
+-spec ?CONSTRUCTOR('clojerl.Symbol':type(), any()) -> type().
+?CONSTRUCTOR(Name, Meta) ->
   ?ERROR_WHEN( not clj_rt:'symbol?'(Name)
              , <<"Namespace name must be a symbol">>
              ),
-
   Opts = [set, protected, {keypos, 1}],
-  Id   = clj_rt:name(Name),
-  Ns   = #{ ?TYPE    => ?M
-          , id       => Id
-          , name     => Name
-          , mappings => ets:new(mappings, Opts)
-          , aliases  => ets:new(aliases, Opts)
-          },
-  clj_utils:ets_save(?MODULE, {Id, Ns}),
-  Ns.
+  Id   = 'clojerl.Symbol':name(Name),
+
+  #{ ?TYPE    => ?M
+   , id       => Id
+   , name     => Name
+   , mappings => ets:new(mappings, Opts)
+   , aliases  => ets:new(aliases, Opts)
+   , meta     => Meta
+   }.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -80,6 +92,29 @@
 
 hash(Ns = #{?TYPE := ?M}) ->
   erlang:phash2(Ns).
+
+%% clojerl.IMeta
+
+meta(#{?TYPE := ?M, meta := Meta}) ->
+  Meta.
+
+with_meta(#{?TYPE := ?M} = Ns0, Meta) ->
+  Ns1 = Ns0#{meta := Meta},
+  gen_server:call(?MODULE, {update, Ns1}).
+
+%% clojerl.IReference
+
+alter_meta(#{?TYPE := ?M, id := _Id, meta := Meta0} = Ns0, F, Args0) ->
+  Args1 = clj_rt:cons(Meta0, Args0),
+  Meta1 = clj_rt:apply(F, Args1),
+  Ns1   = Ns0#{meta := Meta1},
+  Ns1   = gen_server:call(?MODULE, {update, Ns1}),
+  Meta1.
+
+reset_meta(#{?TYPE := ?M} = Ns0, Meta) ->
+  Ns1 = Ns0#{meta := Meta},
+  Ns1 = gen_server:call(?MODULE, {update, Ns1}),
+  Meta.
 
 %% clojerl.IStringable
 
@@ -320,7 +355,13 @@ init([]) ->
   {ok, ?NIL}.
 
 handle_call({new, Name}, _From, State) ->
-  {reply, ?CONSTRUCTOR(Name), State};
+  Ns = #{id := Id} = ?CONSTRUCTOR(Name),
+  clj_utils:ets_save(?MODULE, {Id, Ns}),
+  {reply, Ns, State};
+handle_call({update, Ns}, _From, State) ->
+  #{id := Id} = Ns,
+  clj_utils:ets_save(?MODULE, {Id, Ns}),
+  {reply, Ns, State};
 handle_call({load, Name}, _Form, State) ->
   Ns = case load(Name) of
          ?NIL ->
@@ -440,9 +481,10 @@ maybe_load_ns(Name, Module) ->
 -spec load_ns('clojerl.Symbol':type(), module()) -> type().
 load_ns(Name, Module) ->
   Attrs    = Module:module_info(attributes),
-  Mappings = fetch_attribute(mappings, Attrs),
-  Aliases  = fetch_attribute(aliases, Attrs),
-  Ns = ?CONSTRUCTOR(Name),
+  Mappings = fetch_attribute(mappings, #{}, Attrs),
+  Aliases  = fetch_attribute(aliases, #{}, Attrs),
+  Meta     = fetch_attribute(meta, ?NIL, Attrs),
+  Ns       = ?CONSTRUCTOR(Name, Meta),
   #{ ?TYPE    := ?M
    , mappings := MappingsId
    , aliases  := AliasesId
@@ -458,9 +500,9 @@ load_ns(Name, Module) ->
   maps:map(AliasesFun, Aliases),
   Ns.
 
--spec fetch_attribute(atom(), [any()]) -> map() | ?NIL.
-fetch_attribute(Name, Attributes) ->
+-spec fetch_attribute(atom(), any(), [any()]) -> any().
+fetch_attribute(Name, Default, Attributes) ->
   case lists:keyfind(Name, 1, Attributes) of
-    {Name, [Map]} -> Map;
-    false         -> #{}
+    {Name, [Value]} -> Value;
+    false           -> Default
   end.
