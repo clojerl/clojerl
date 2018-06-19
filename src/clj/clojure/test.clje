@@ -300,7 +300,7 @@
     (str
      ;; Uncomment to include namespace in failure report:
      ;;(ns-name (:ns (meta (first *testing-vars*)))) "/ "
-     (reverse (map #(name %) *testing-vars*))
+     (reverse (map #(:name (meta %)) *testing-vars*))
      " (" file ":" line ")")))
 
 (defn testing-contexts-str
