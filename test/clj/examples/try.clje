@@ -63,3 +63,13 @@
     (prn e))
   (catch :error e
     (throw :bad-stuff)))
+
+;; Provide stacktrace
+
+(try
+  (throw (ex-info "hello" {:some :info}) #erl())
+  (catch clojerl.ExceptionInfo e
+    (assert (= #erl() (erlang/get_stacktrace)))
+    (prn e))
+  (catch :error e
+    (throw :bad-stuff)))

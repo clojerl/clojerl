@@ -851,7 +851,15 @@ tuple(_Config) ->
 -spec throw(config()) -> result().
 throw(_Config) ->
   ct:comment("Throw with a single argument"),
-  #{op := throw} = analyze_one(<<"(throw 1)">>),
+  #{ op         := throw
+   , stacktrace := ?NIL
+   } = analyze_one(<<"(throw 1)">>),
+
+  ct:comment("Throw with two arguments"),
+  #{ op         := throw
+   , stacktrace := StacktraceExpr
+   } = analyze_one(<<"(throw 1 #erl())">>),
+  false = (?NIL =:= StacktraceExpr),
 
   ct:comment("Throw with any other amount of arguments fails"),
   ok = try analyze_one(<<"(throw)">>)
@@ -861,10 +869,10 @@ throw(_Config) ->
            ok
        end,
 
-  ok = try analyze_one(<<"(throw :a :b)">>)
+  ok = try analyze_one(<<"(throw :a :b :c)">>)
        catch error:Error2 ->
            Msg2 = 'clojerl.IError':message(Error2),
-           <<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 2">> = Msg2,
+           <<?NO_SOURCE, ":1:1: Wrong number of args to throw, had: 3">> = Msg2,
            ok
        end,
 
