@@ -4696,7 +4696,7 @@
           (catch :error e
             (when undefined-on-entry
               (remove-ns lib))
-            (throw e)))
+            (throw e (erlang/get_stacktrace))))
         (throw-if (and need-ns (not (find-ns lib)))
                   "namespace '~s' not found" lib))
       (when (and need-ns *loading-verbosely*)

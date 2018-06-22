@@ -1856,24 +1856,31 @@ type_tag_module(_) ->
 
 -spec parse_throw('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_throw(List, Env0) ->
-  Count = clj_rt:count(List),
-  ?ERROR_WHEN( Count =/= 2
+  Count      = clj_rt:count(List),
+  ?ERROR_WHEN( Count < 2 orelse Count > 3
              , [<<"Wrong number of args to throw, had: ">>, Count - 1]
              , clj_env:location(Env0)
              ),
 
-  Second   = clj_rt:second(List),
-  Env1     = clj_env:push(#{context => expr}, Env0),
-  {ExceptionExpr, Env2} = clj_env:pop_expr(analyze_form(Second, Env1)),
+  Exception  = clj_rt:second(List),
+  Env1       = clj_env:push(#{context => expr}, Env0),
 
-  ThrowExpr = #{ op        => throw
-               , env       => Env0
-               , form      => List
-               , tag       => type_tag(ExceptionExpr)
-               , exception => ExceptionExpr
+  {ExceptionExpr, Env2}  = clj_env:pop_expr(analyze_form(Exception, Env1)),
+  {StacktraceExpr, Env3} = case clj_rt:third(List) of
+                             ?NIL -> {?NIL, Env2};
+                             Stacktrace ->
+                               clj_env:pop_expr(analyze_form(Stacktrace, Env2))
+                           end,
+
+  ThrowExpr = #{ op         => throw
+               , env        => Env0
+               , form       => List
+               , tag        => type_tag(ExceptionExpr)
+               , exception  => ExceptionExpr
+               , stacktrace => StacktraceExpr
                },
 
-  clj_env:push_expr(ThrowExpr, clj_env:pop(Env2)).
+  clj_env:push_expr(ThrowExpr, clj_env:pop(Env3)).
 
 %%------------------------------------------------------------------------------
 %% Parse try

@@ -899,17 +899,28 @@ ast(#{op := recur} = Expr, State) ->
 %%------------------------------------------------------------------------------
 %% throw
 %%------------------------------------------------------------------------------
-ast(#{op := throw} = Expr, State) ->
+ast(#{op := throw} = Expr, State0) ->
   ?DEBUG(throw),
-  #{ exception := ExceptionExpr
-   , env       := Env
+  #{ exception  := ExceptionExpr
+   , stacktrace := StacktraceExpr
+   , env        := Env
    } = Expr,
 
-  {Exception, State1} = pop_ast(ast(ExceptionExpr, State)),
+  {Exception,  State1} = pop_ast(ast(ExceptionExpr, State0)),
+  {Stacktrace, State2} = case StacktraceExpr of
+                           ?NIL -> {?NIL, State1};
+                           _    -> pop_ast(ast(StacktraceExpr, State1))
+                         end,
 
   Ann  = ann_from(Env),
-  Ast  = call_mfa(erlang, error, [Exception], Ann),
-  push_ast(Ast, State1);
+  Ast  = case Stacktrace of
+           ?NIL -> call_mfa(erlang, error, [Exception], Ann);
+           _    ->
+             ErrorAtom = cerl:abstract(error),
+             Args = [ErrorAtom, Exception, Stacktrace],
+             call_mfa(erlang, raise, Args, Ann)
+         end,
+  push_ast(Ast, State2);
 %%------------------------------------------------------------------------------
 %% try
 %%------------------------------------------------------------------------------

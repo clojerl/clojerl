@@ -232,11 +232,12 @@
                               , function => atom()
                               }.
 
--type throw_expr()        :: #{ op        => throw
-                              , env       => clj_env:env()
-                              , form      => any()
-                              , tag       => expr()
-                              , exception => expr()
+-type throw_expr()        :: #{ op         => throw
+                              , env        => clj_env:env()
+                              , form       => any()
+                              , tag        => expr()
+                              , exception  => expr()
+                              , stacktrace => expr()
                               }.
 
 -type try_expr()          :: #{ op        => 'try'
