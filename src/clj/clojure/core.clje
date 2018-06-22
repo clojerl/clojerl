@@ -1398,7 +1398,7 @@
            (defn ~(with-meta mm-name m)
              [& args#]
              (let [val# (apply ~dispatch-fn args#)
-                   f#   (clojerl.MultiFn/get_method ~mm-name val# ~default ~hierarchy)]
+                   f#   (clojerl.MultiFn/get_method (var ~mm-name) val# ~default ~hierarchy)]
                (when (nil? f#)
                  (throw
                   (clojerl.Error. (str "No multimethod defined for dispatch value " val#
