@@ -192,7 +192,10 @@ do_reduce(_F, Acc, _Index, _Size, _Array) ->
 %% clojerl.IReduce
 
 rseq(#{?TYPE := ?M, array := Array}) ->
-  'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, array:size(Array) - 1).
+  case array:size(Array) of
+    0 -> ?NIL;
+    _ -> 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, array:size(Array) - 1)
+  end.
 
 %% clojerl.ISequential
 
