@@ -5,7 +5,7 @@
 -behavior('clojerl.IStringable').
 -behavior('clojerl.IHash').
 
--export([?CONSTRUCTOR/1, random/0]).
+-export([?CONSTRUCTOR/1, random/0, random/3]).
 
 -export([hash/1]).
 -export([str/1]).
@@ -25,7 +25,7 @@
 ?CONSTRUCTOR(UUID) when is_binary(UUID) ->
   case is_uuid(UUID) of
     false -> error(<<"Invalid UUID: ", UUID/binary>>);
-    true  -> #{?TYPE => ?M, uuid => UUID}
+    true  -> #{?TYPE => ?M, uuid => 'clojerl.String':to_lower(UUID)}
   end.
 
 -spec is_uuid(binary()) -> boolean().
@@ -36,6 +36,10 @@ is_uuid(MaybeUUID) ->
 random() ->
   <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> =
     crypto:strong_rand_bytes(16),
+  random(Rand1, Rand2, Rand3).
+
+-spec random(integer(), integer(), integer()) -> type().
+random(Rand1, Rand2, Rand3) ->
   UUIDBin = <<Rand1:48,
               0:1, 1:1, 0:1, 0:1,  % version 4 bits
               Rand2:12,
@@ -78,6 +82,6 @@ do_uuid_to_string(<<X:4, Rest/bits>>, Pos, Acc) ->
 int_to_binary_hex(X) when X >= 0 andalso X =< 9 ->
   integer_to_binary(X);
 int_to_binary_hex(X) when X >= 10 andalso X =< 15 ->
-  <<A/utf8>> = <<"A"/utf8>>,
+  <<A/utf8>> = <<"a"/utf8>>,
   Hex = (A + X - 10),
   <<Hex/utf8>>.

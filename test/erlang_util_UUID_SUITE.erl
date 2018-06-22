@@ -5,7 +5,7 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 
--export([str/1, hash/1]).
+-export([str/1, hash/1, random/1]).
 
 -spec all() -> [atom()].
 all() -> clj_test_utils:all(?MODULE).
@@ -37,10 +37,11 @@ hash(_Config) ->
 
 -spec str(config()) -> result().
 str(_Config) ->
-  UUIDStr = <<"01234567-ABCD-ABCD-ABCD-0123456789AB">>,
+  UUIDUpper = <<"01234567-ABCD-ABCD-ABCD-0123456789AB">>,
+  UUIDLower = <<"01234567-abcd-abcd-abcd-0123456789ab">>,
 
-  UUID    = 'erlang.util.UUID':?CONSTRUCTOR(UUIDStr),
-  UUIDStr = clj_rt:str(UUID),
+  UUID      = 'erlang.util.UUID':?CONSTRUCTOR(UUIDUpper),
+  UUIDLower = clj_rt:str(UUID),
 
   ct:comment("Invalid UUIDs"),
   ok = try
@@ -69,5 +70,20 @@ str(_Config) ->
        catch _:_ ->
            ok
        end,
+
+  {comments, ""}.
+
+-spec random(config()) -> result().
+random(_Config) ->
+  UUID1 = 'erlang.util.UUID':random(),
+  UUID2 = 'erlang.util.UUID':random(),
+
+  false = UUID1 =:= UUID2,
+
+  UUID3 = 'erlang.util.UUID':random(1, 1, 1),
+  UUID3 = 'erlang.util.UUID':random(1, 1, 1),
+
+  UUID4 = 'erlang.util.UUID':random(1, 1, 2),
+  false = UUID3 =:= UUID4,
 
   {comments, ""}.
