@@ -674,7 +674,6 @@ is_unquote_splicing(Form) ->
 is_literal(Form) ->
   clj_rt:'keyword?'(Form)
     orelse clj_rt:'number?'(Form)
-    orelse clj_rt:'char?'(Form)
     orelse clj_rt:'string?'(Form)
     orelse clj_rt:'nil?'(Form)
     orelse clj_rt:'boolean?'(Form)

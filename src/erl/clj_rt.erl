@@ -358,7 +358,8 @@ keyword(Namespace, Name) ->
     orelse type_module(X) == 'clojerl.Float'.
 
 -spec 'char?'(any()) -> boolean().
-'char?'(X) -> type_module(X) == 'clojerl.Integer'.
+'char?'(<<_/utf8>>) -> true;
+'char?'(_)          -> false.
 
 -spec 'string?'(any()) -> boolean().
 'string?'(X) -> type_module(X) == 'clojerl.String'.
