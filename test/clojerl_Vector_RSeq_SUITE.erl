@@ -89,7 +89,10 @@ seq(_Config) ->
   true      = clj_rt:'seq?'(EmptyList),
   0         = clj_rt:count(EmptyList),
 
-  EmptyRSeq = rseq(0),
+  RSeqOne   = rseq(1),
+  1         = clj_rt:count(RSeqOne),
+  EmptyRSeq = clj_rt:next(RSeqOne),
+  EmptyList = clj_rt:rest(RSeqOne),
   ?NIL      = clj_rt:first(EmptyRSeq),
 
   List1     = clj_rt:rest(clj_rt:rest(EmptyRSeq)),
@@ -152,10 +155,6 @@ complete_coverage(_Config) ->
 
   RSeqMeta  = clj_rt:with_meta(rseq(64), #{a => 1}),
   #{a := 1} = clj_rt:meta(RSeqMeta),
-
-  Array = array:from_list(lists:seq(0, 32)),
-  RSeq = 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, -1),
-  ?NIL = clj_rt:seq(RSeq),
 
   {comments, ""}.
 

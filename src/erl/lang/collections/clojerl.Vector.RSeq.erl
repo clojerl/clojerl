@@ -43,7 +43,7 @@
                  }.
 
 -spec ?CONSTRUCTOR(array:array(), integer()) -> type().
-?CONSTRUCTOR(Array, Index) ->
+?CONSTRUCTOR(Array, Index) when Index >= 0 ->
   #{ ?TYPE => ?M
    , array => Array
    , index => Index
@@ -56,8 +56,7 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, index := Index}) when Index >= 0 -> Index + 1;
-count(#{?TYPE := ?M}) -> 0.
+count(#{?TYPE := ?M, index := Index}) -> Index + 1.
 
 %% clojerl.IColl
 
@@ -71,7 +70,7 @@ empty(_) -> [].
 equiv( #{?TYPE := ?M, index := IndexX} = X
      , #{?TYPE := ?M, index := IndexY} = Y
      ) ->
-  case IndexX ==IndexY of
+  case IndexX == IndexY of
     true  -> 'erlang.List':equiv(to_list(X), to_list(Y));
     false -> false
   end;
@@ -104,7 +103,6 @@ with_meta(#{?TYPE := ?M} = X, Meta) ->
 
 %% clojerl.ISeq
 
-first(#{?TYPE := ?M, index := Index}) when Index < 0 -> ?NIL;
 first(#{?TYPE := ?M, index := Index, array := Array}) ->
   array:get(Index, Array).
 
@@ -112,8 +110,8 @@ next(#{?TYPE := ?M, index := Index}) when Index =< 0 -> ?NIL;
 next(#{?TYPE := ?M, index := Index} = X) ->
   X#{index => Index - 1}.
 
-more(#{?TYPE := ?M, index := Index}) when Index < 0 ->
-  'clojerl.List':?CONSTRUCTOR([]);
+more(#{?TYPE := ?M, index := Index}) when Index =< 0 ->
+  [];
 more(#{?TYPE := ?M, index := Index} = X) ->
   X#{index => Index - 1}.
 
@@ -123,7 +121,6 @@ more(#{?TYPE := ?M, index := Index} = X) ->
 
 %% clojerl.ISeqable
 
-seq(#{?TYPE := ?M, index := Index}) when Index < 0 -> ?NIL;
 seq(#{?TYPE := ?M} = X) -> X.
 
 to_list(#{?TYPE := ?M, array := Array, index := Index}) ->
