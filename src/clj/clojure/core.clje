@@ -164,8 +164,9 @@
     :doc "Return true if x is a Character"
     :added "1.0"}
   char? (fn char? [x]
-          (erlang/and (erlang/is_binary x)
-                      (erlang/=:= 1 (erlang/size x)))))
+          (case* x
+            #bin[[_ :type :utf8]] true
+            _ false)))
 
 (def
   ^{:arglists '([x])
