@@ -1,25 +1,12 @@
-%% Include ETS_CAS flag if OTP > 20.
-OTP     = erlang:system_info(otp_release).
-Config1 = case erlang:list_to_integer(OTP) >= 20 of
-            true  ->
-              ErlOpts0 = proplists:get_value(erl_opts, CONFIG),
-              ErlOpts1 = {erl_opts, [{d, 'ETS_CAS'} | ErlOpts0]},
-              lists:keyreplace(erl_opts, 1, CONFIG, ErlOpts1);
-            false ->
-              CONFIG
-          end.
-
 %% Conditionally compile clojure files.
-Config2 = case os:getenv("NO_CLOJURE") of
-            false ->
-              [ {post_hooks, [ {compile, "make clojure"}
-                             , {ct,      "make test-clj"}
-                             ]
-                }
-              | Config1
-              ];
-            _ ->
-              Config1
-          end.
-
-Config2.
+case os:getenv("NO_CLOJURE") of
+  false ->
+    [ {post_hooks, [ {compile, "make clojure"}
+                   , {ct,      "make test-clj"}
+                   ]
+      }
+      | CONFIG
+    ];
+  _ ->
+    CONFIG
+end.
