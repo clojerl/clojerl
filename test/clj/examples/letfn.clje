@@ -1,0 +1,9 @@
+(ns examples.letfn)
+
+(letfn [(f [x] 
+          (when (pos? x)
+            (g (dec x))))
+        (g [x]
+          (when (zero? x)
+            (f (dec x))))]
+  (f 42))
