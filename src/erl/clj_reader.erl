@@ -1048,10 +1048,12 @@ read_regex(#{src := <<>>} = State) ->
 %%------------------------------------------------------------------------------
 
 -spec read_discard(state()) -> state().
-read_discard(State) ->
-  {_, NewState} = read_pop_one(State),
+read_discard(#{forms := Forms, return_on := ReturnOn} = State0) ->
+  %% Remove forms and return_on to avoid discarding something unintentionally.
+  State1 = State0#{forms := [], return_on := ?NIL},
+  {_, State2} = read_pop_one(State1),
   %% Can't call read_one here because is might not be a top level form.
-  NewState.
+  State2#{forms := Forms, return_on := ReturnOn}.
 
 %%------------------------------------------------------------------------------
 %% #? cond
