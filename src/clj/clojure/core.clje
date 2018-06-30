@@ -5003,6 +5003,11 @@
    :added "1.0"}
  *e)
 
+(def ^:dynamic
+ ^{:doc "bound in a repl thread to the stacktrace of the most recent exception caught by the repl"
+   :added "1.0"}
+ *stacktrace)
+
 (defn trampoline
   "trampoline can be used to convert algorithms requiring mutual
   recursion without stack consumption. Calls f with supplied args, if

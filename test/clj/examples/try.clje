@@ -68,8 +68,8 @@
 
 (try
   (throw (ex-info "hello" {:some :info}) #erl())
-  (catch clojerl.ExceptionInfo e
-    (assert (= #erl() (erlang/get_stacktrace)))
+  (catch clojerl.ExceptionInfo e :stack st
+    (assert (= #erl() st))
     (prn e))
   (catch :error e
     (throw :bad-stuff)))
