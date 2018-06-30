@@ -24,8 +24,9 @@ start() ->
 default_options() ->
   #{ compile      => false
    , compile_path => "ebin"
-   , compile_opts => #{ time    => false
-                      , verbose => false
+   , compile_opts => #{ time        => false
+                      , verbose     => false
+                      , output_core => false
                       }
    , files        => []
    , main         => false
@@ -44,6 +45,11 @@ parse_args(["-v" | Rest], Opts) ->
   parse_args(Rest, Opts#{version => true});
 parse_args(["-o", CompilePath | Rest], Opts) ->
   parse_args(Rest, Opts#{compile_path => CompilePath});
+parse_args( ["--to-core", Core | Rest]
+          , #{compile_opts := CompileOpts0} = Opts
+          ) ->
+  CompileOpts1 = CompileOpts0#{output_core => list_to_binary(Core)},
+  parse_args(Rest, Opts#{compile_opts := CompileOpts1});
 parse_args([Compile | Rest], Opts)
   when Compile =:= "-c"; Compile =:= "--compile" ->
   parse_args(Rest, Opts#{compile => true});
