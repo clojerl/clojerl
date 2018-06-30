@@ -1143,7 +1143,7 @@ read_cond_delimited(IsSplicing, State) ->
   end.
 
 -spec match_feature(state()) ->
-  {match | nomatch, any(), state()} | {finished, state()}.
+  {match, any(), state()} | {nomatch | finished, state()}.
 match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
   Features = maps:get(?OPT_FEATURES, Opts, clj_rt:hash_set([])),
   try
