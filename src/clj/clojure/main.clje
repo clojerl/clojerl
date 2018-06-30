@@ -32,11 +32,10 @@
 
 (defn info [x k default]
   (let [info (nth x 3)]
-    (proplists/get_value k info default)))
+    (k info default)))
 
 (defn filename [x]
-  (erlang/list_to_binary (info x :file
-                               (erlang/binary_to_list "NO_SOURCE_FILE"))))
+  (erlang/iolist_to_binary (info x :file "NO_SOURCE_FILE")))
 
 (defn line-number [x]
   (info x :line "?"))

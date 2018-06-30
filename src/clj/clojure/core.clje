@@ -5574,7 +5574,7 @@
 
 (def ^:dynamic *clojure-version*
   (let [properties (second (application/get_all_key :clojerl))
-        vsn        (proplists/get_value :vsn properties)
+        vsn        (:vsn properties)
         version-string (erlang/list_to_binary vsn)
         [_ major minor incremental build ref]
         (re-matches
