@@ -996,11 +996,12 @@ ast(#{op := 'try'} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := 'catch'} = Expr, State0) ->
   ?DEBUG('catch'),
-  #{ class := ErrTypeExpr
-   , local := PatternExpr
-   , body  := BodyExpr
-   , guard := GuardExpr
-   , env   := Env
+  #{ class      := ErrTypeExpr
+   , local      := PatternExpr
+   , stacktrace := StackExpr
+   , body       := BodyExpr
+   , guard      := GuardExpr
+   , env        := Env
    } = Expr,
 
   Ann                   = ann_from(Env),
@@ -1011,17 +1012,22 @@ ast(#{op := 'catch'} = Expr, State0) ->
                               ErrorTypeAst = cerl:ann_abstract(Ann, error),
                               {ErrorTypeAst, State1}
                           end,
+  TempStackAst          = new_c_var(Ann),
   {PatternAst0, State3} = pop_ast(ast(PatternExpr, State2)),
-  {Guard0, State4}      = pop_ast(ast(GuardExpr, State3)),
-  {Body, State5}        = pop_ast(ast(BodyExpr, State4)),
+  {StackAst, State4}    = case StackExpr of
+                            ?NIL -> {?NIL, State3};
+                            _    -> pop_ast(ast(StackExpr, State3))
+                          end,
+  {Guard0, State5}      = pop_ast(ast(GuardExpr, State4)),
+  {Body, State6}        = catch_body(StackAst, TempStackAst, BodyExpr, State5),
 
   {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
-  VarsAsts = [ClassAst, PatternAst1, new_c_var(Ann)],
+  VarsAsts = [ClassAst, PatternAst1, TempStackAst],
   Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
   Ast      = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
 
-  State6   = remove_lexical_renames_scope(State5),
-  push_ast(Ast, State6);
+  State7   = remove_lexical_renames_scope(State6),
+  push_ast(Ast, State7);
 %%------------------------------------------------------------------------------
 %% receive
 %%------------------------------------------------------------------------------
@@ -1887,6 +1893,25 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
 c_map_pair_exact(K, V) ->
   Exact = cerl:c_atom(exact),
   cerl:ann_c_map_pair([], Exact, K, V).
+
+%% ----- catch -------
+
+-spec catch_body(ast(), ast(), expr(), state()) -> {ast(), state()}.
+catch_body(?NIL, _TempAst, BodyExpr, State0) ->
+  pop_ast(ast(BodyExpr, State0));
+catch_body(StackAst, TempAst, BodyExpr, State0) ->
+  {BodyAst, State1} = pop_ast(ast(BodyExpr, State0)),
+  GetStacktrace     = generate_stacktrace(TempAst),
+  LetAst            = cerl:c_let([StackAst], GetStacktrace, BodyAst),
+  {LetAst, State1}.
+
+-ifdef(FUN_STACKTRACE).
+generate_stacktrace(_TempAst) ->
+  call_mfa(erlang, get_stacktrace, [], []).
+-else.
+generate_stacktrace(TempAst) ->
+  cerl:c_primop(cerl:c_atom(build_stacktrace), [TempAst]).
+-endif.
 
 %% ----- Annotations -------
 

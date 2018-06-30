@@ -1036,15 +1036,30 @@ throw(_Config) ->
    , finally := ?NIL
    } = analyze_one(<<"(try 1 (catch clojerl.ExceptionInfo e e))">>),
 
-  #{ op    := 'catch'
-   , local := #{op := binding}
-   , class := #{op := type}
+  #{ op         := 'catch'
+   , local      := #{op := binding}
+   , class      := #{op := type}
+   , stacktrace := ?NIL
    } = Catch8_1,
 
   ct:comment("try, catch using type that doesn't implement IError"),
   ok = try analyze_one(<<"(try 1 (catch clojerl.String e e))">>), error
        catch _:_ -> ok
        end,
+
+  ct:comment("try, catch with stacktrace"),
+  #{ op      := 'try'
+   , catches := [Catch9_1]
+   , finally := ?NIL
+   } = analyze_one(<<"(try 1 (catch clojerl.ExceptionInfo e :stack st st))">>),
+
+  #{ op         := 'catch'
+   , local      := #{op := binding}
+   , class      := #{op := type}
+   , stacktrace := Stacktrace9
+   } = Catch9_1,
+
+  #{op := binding} = Stacktrace9,
 
   {comments, ""}.
 

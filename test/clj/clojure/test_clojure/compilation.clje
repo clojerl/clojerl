@@ -257,9 +257,8 @@
   (try
     (function)
     nil
-    (catch _ e
-      (let [st     (stack/get-stacktrace)
-            frames (filter #(re-find #"line_number_examples.clj" (stack/filename %))
+    (catch _ e :stack st
+      (let [frames (filter #(re-find #"line_number_examples.clj" (stack/filename %))
                            st)
             actual (when (not (empty? frames))
                      (stack/line-num (first frames)))]

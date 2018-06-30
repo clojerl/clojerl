@@ -1888,16 +1888,16 @@ parse_throw(List, Env0) ->
 
 -spec parse_try('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_try(List, Env) ->
-  CatchSymbol   = clj_rt:symbol(<<"catch">>),
-  FinallySymbol = clj_rt:symbol(<<"finally">>),
-  IsCatch       = fun(X) ->
-                      clj_rt:'seq?'(X) andalso
-                        clj_rt:equiv(clj_rt:first(X), CatchSymbol)
-                  end,
-  IsFinally     = fun(X) ->
-                      clj_rt:'seq?'(X) andalso
-                        clj_rt:equiv(clj_rt:first(X), FinallySymbol)
-                  end,
+  CatchSymbol     = clj_rt:symbol(<<"catch">>),
+  FinallySymbol   = clj_rt:symbol(<<"finally">>),
+  IsCatch         = fun(X) ->
+                        clj_rt:'seq?'(X) andalso
+                          clj_rt:equiv(clj_rt:first(X), CatchSymbol)
+                    end,
+  IsFinally       = fun(X) ->
+                        clj_rt:'seq?'(X) andalso
+                          clj_rt:equiv(clj_rt:first(X), FinallySymbol)
+                    end,
 
   IsNotCatchFinally = fun(X) -> not IsCatch(X) andalso not IsFinally(X) end,
 
@@ -1959,7 +1959,7 @@ parse_catch(List, Env0) ->
   [ _ %% catch
   , ErrType
   , ErrName
-  | GuardAndBody
+  | RestList
   ] = clj_rt:to_list(List),
 
   ?ERROR_WHEN( not is_valid_error_type(ErrType)
@@ -1969,8 +1969,9 @@ parse_catch(List, Env0) ->
 
   Env1 = clj_env:push(#{in_try => false, pattern_locals => []}, Env0),
 
-  {TypeExpr, Env2}    = parse_catch_type(ErrType, Env1),
+  {TypeExpr,    Env2} = parse_catch_type(ErrType, Env1),
   {ErrNameExpr, Env3} = parse_catch_var(TypeExpr, ErrName, Env2),
+  {StackExpr, GuardAndBody, Env4} = parse_catch_stack(RestList, Env3),
   NameExpr = #{ op      => binding
               , env     => Env0
               , form    => ErrName
@@ -1978,25 +1979,26 @@ parse_catch(List, Env0) ->
               , tag     => type_tag(ErrNameExpr)
               },
 
-  LocalExprs = clj_env:get(pattern_locals, [], Env3),
-  Env4      = clj_env:put_locals(LocalExprs, clj_env:add_locals_scope(Env3)),
+  LocalExprs = clj_env:get(pattern_locals, [], Env4),
+  Env5      = clj_env:put_locals(LocalExprs, clj_env:add_locals_scope(Env4)),
 
   {_, Guard, Body}  = check_guard(GuardAndBody),
-  {GuardExpr, Env5} = clj_env:pop_expr(analyze_form(Guard, Env4)),
-  {BodyExpr, Env6}  = clj_env:pop_expr(analyze_body(Body, Env5)),
+  {GuardExpr, Env6} = clj_env:pop_expr(analyze_form(Guard, Env5)),
+  {BodyExpr, Env7}  = clj_env:pop_expr(analyze_body(Body, Env6)),
 
-  CatchExpr = #{ op    => 'catch'
-               , env   => Env0
-               , form  => List
-               , tag   => type_tag(BodyExpr)
-               , class => TypeExpr
-               , local => NameExpr
-               , guard => GuardExpr
-               , body  => BodyExpr
+  CatchExpr = #{ op         => 'catch'
+               , env        => Env0
+               , form       => List
+               , tag        => type_tag(BodyExpr)
+               , class      => TypeExpr
+               , local      => NameExpr
+               , stacktrace => StackExpr
+               , guard      => GuardExpr
+               , body       => BodyExpr
                },
 
-  Env7 = clj_env:pop(clj_env:remove_locals_scope(Env6)),
-  clj_env:push_expr(CatchExpr, Env7).
+  Env8 = clj_env:pop(clj_env:remove_locals_scope(Env7)),
+  clj_env:push_expr(CatchExpr, Env8).
 
 -spec parse_catch_type(atom() | 'clojerl.Symbol':type(), clj_env:env()) ->
   {expr(), clj_env:env()}.
@@ -2049,6 +2051,20 @@ parse_catch_var(#{op := type, type := Type}, ErrName, Env0) ->
                           },
 
   {AliasExpr, Env2}.
+
+-spec parse_catch_stack([any()], clj_env:env()) ->
+  {expr() | ?NIL, [any()], clj_env:env()}.
+parse_catch_stack([stack, StackName | GuardAndBody], Env0) ->
+  {StackNameExpr, Env1} = clj_env:pop_expr(parse_pattern(StackName, Env0)),
+  StackExpr = #{ op      => binding
+               , env     => Env0
+               , form    => StackName
+               , pattern => StackNameExpr
+               , tag     => type_tag(StackNameExpr)
+               },
+  {StackExpr, GuardAndBody, Env1};
+parse_catch_stack(GuardAndBody, Env) ->
+  {?NIL, GuardAndBody, Env}.
 
 -spec is_valid_error_type(any()) -> boolean().
 is_valid_error_type(error) -> true;

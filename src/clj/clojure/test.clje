@@ -286,8 +286,8 @@
   now on :file and :line keys in the result map."
   {:added "1.1"
    :deprecated "1.2"}
-  [n]
-  (let [s (nth (stack/get-stacktrace) n)]
+  [st n]
+  (let [s (nth st n)]
     [(stack/filename s) (stack/line-num s)]))
 
 (defn testing-vars-str
@@ -334,12 +334,11 @@
 
 (defn- file-and-line
   {:deprecated "1.8"}
-  [exception depth]
-  (let [stacktrace (stack/get-stacktrace)]
-    (if (< depth (count stacktrace))
-      (let [s (nth stacktrace depth)]
-        {:file (stack/filename s) :line (stack/line-num s)})
-      {:file nil :line nil})))
+  [stacktrace exception depth]
+  (if (< depth (count stacktrace))
+    (let [s (nth stacktrace depth)]
+      {:file (stack/filename s) :line (stack/line-num s)})
+    {:file nil :line nil}))
 
 (defn- stacktrace-file-and-line
   [stacktrace]
@@ -362,8 +361,8 @@
                                                 (or (str/starts-with? cl-name "erlang")
                                                     (= cl-name "clojure.test")
                                                     (str/starts-with? cl-name "clojure.stacktrace")))
-                                             (stack/get-stacktrace true))) m)
-    :error (merge (stacktrace-file-and-line (stack/get-stacktrace)) m)
+                                             (stack/get-stacktrace))) m)
+    :error (merge (stacktrace-file-and-line (:stacktrace m)) m)
     m)))
 
 (defmethod report :default [m]
@@ -391,7 +390,7 @@
    (print "  actual: ")
    (let [actual (:actual m)]
      (prn actual)
-     (stack/print-stack-trace (stack/get-stacktrace) *stack-trace-depth*))))
+     (stack/print-stack-trace (:stacktrace m) *stack-trace-depth*))))
 
 (defmethod report :summary [m]
   (with-test-out
@@ -539,9 +538,10 @@
   {:added "1.1"}
   [msg form]
   `(try ~(assert-expr msg form)
-        (catch ~'_ t#
-          (do-report {:type :error, :message ~msg,
-                      :expected '~form, :actual t#}))))
+     (catch ~'_ t# :stack st#
+       (do-report {:type :error, :message ~msg,
+                   :expected '~form, :actual t#
+                   :stacktrace st#}))))
 
 
 

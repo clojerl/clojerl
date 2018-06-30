@@ -161,8 +161,8 @@
 
 (defn repl-exception
   "Returns the root cause of throwables"
-  []
-  (root-cause (erlang/get_stacktrace)))
+  [st]
+  (root-cause st))
 
 (defn repl-caught
   "Default :caught hook for repl"
