@@ -1,4 +1,6 @@
--ifndef(NIL_TYPE).
+-ifndef(CLOJERL_INTERNAL).
+
+-define(CLOJERL_INTERNAL, true).
 
 %% nil
 -define(NIL_TYPE, 'clojerl.Nil').
@@ -96,5 +98,11 @@
            false -> ok
          end
        ).
+
+-ifdef(FUN_STACKTRACE).
+-define(WITH_STACKTRACE(T, R, S), T:R -> S = erlang:get_stacktrace(),).
+-else.
+-define(WITH_STACKTRACE(T, R, S), T:R:S ->).
+-endif.
 
 -endif.

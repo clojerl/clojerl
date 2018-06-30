@@ -227,8 +227,8 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
           Beams = [Fun(M) || M <- clj_module:all_modules()],
           Env3  = clj_env:put(compiled_modules, Beams, Env2),
           {shutdown, Env3}
-        catch Kind:Error ->
-            {Kind, Error, erlang:get_stacktrace()}
+        catch ?WITH_STACKTRACE(Kind, Error, Stacktrace)
+            {Kind, Error, Stacktrace}
         end
     end,
 
@@ -255,9 +255,8 @@ do_eval(Form, Opts0, Env0) ->
             , clj_env:pop(Env2)
             }
           }
-        catch
-          Kind:Error ->
-            {Kind, Error, erlang:get_stacktrace()}
+        catch ?WITH_STACKTRACE(Kind, Error, Stacktrace)
+            {Kind, Error, Stacktrace}
         end
     end,
 

@@ -229,13 +229,13 @@ deref(#{ ?TYPE    := ?M
     %% when it doesn't even exist gracefully.
     Fun()
   catch
-    Type:undef ->
+    ?WITH_STACKTRACE(Type, undef, Stacktrace)
       case erlang:function_exported(Module, FunctionVal, 0) of
         false -> throw(<<"Could not dereference ",
                          Ns/binary, "/", Name/binary, ". "
                          "There is no Erlang function "
                          "to back it up.">>);
-        true  -> erlang:raise(Type, undef, erlang:get_stacktrace())
+        true  -> erlang:raise(Type, undef, Stacktrace)
       end
   end.
 

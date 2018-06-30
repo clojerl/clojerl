@@ -2,11 +2,12 @@ language: erlang
 otp_release:
   - 18.3
   - 19.3
-  - 20.0
+  - 20.3
+  - 21.0
 install:
   - wget https://s3.amazonaws.com/rebar3/rebar3
   - chmod +x rebar3
-  - export PATH=$PATH:$PWD
+  - export PATH=$PWD:$PATH
 script:
   - make ci
 notifications:

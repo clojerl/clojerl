@@ -249,14 +249,15 @@
                               , finally   => expr()
                               }.
 
--type catch_expr()        :: #{ op        => 'catch'
-                              , env       => clj_env:env()
-                              , form      => any()
-                              , tag       => expr()
-                              , class     => 'clojerl.Symbol':type()
-                              , local     => binding_expr()
-                              , guard     => expr()
-                              , body      => expr()
+-type catch_expr()        :: #{ op         => 'catch'
+                              , env        => clj_env:env()
+                              , form       => any()
+                              , tag        => expr()
+                              , class      => 'clojerl.Symbol':type()
+                              , local      => binding_expr()
+                              , stacktrace => binding_expr() | ?NIL
+                              , guard      => expr()
+                              , body       => expr()
                               }.
 
 -type erl_fun_expr()      :: #{ op        => erl_fun

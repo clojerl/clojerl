@@ -15,31 +15,20 @@
       :author "Stuart Sierra"}
   clojure.stacktrace)
 
-(defn root-cause
-  "Returns the last 'cause' Throwable in a chain of Throwables."
-  {:added "1.1"}
-  [tr]
-  (if-let [cause (first tr)]
-    (recur cause)
-    tr))
-
 (defn get-stacktrace
-  ([] (get-stacktrace false))
-  ([from-process]
-   (let [st (erlang/get_stacktrace)]
-     (if-not (or (empty? st) from-process)
-       st
-       (-> (erlang/self)
-           (erlang/process_info :current_stacktrace)
-           second)))))
+  ([] (get-stacktrace (erlang/self)))
+  ([pid]
+   (-> pid
+       (erlang/process_info :current_stacktrace)
+       second
+       rest)))
 
 (defn info [x k default]
   (let [info (nth x 3)]
-    (proplists/get_value k info default)))
+    (k info default)))
 
 (defn filename [x]
-  (erlang/list_to_binary (info x :file
-                                 (erlang/binary_to_list "NO_SOURCE_FILE"))))
+  (erlang/iolist_to_binary (info x :file "NO_SOURCE_FILE")))
 
 (defn line-num [x]
   (info x :line "?"))
@@ -69,7 +58,6 @@
   Prints a maximum of n stack frames (default: unlimited).
   Does not print chained exceptions (causes)."
   {:added "1.1"}
-  ([] (print-stack-trace (get-stacktrace) nil))
   ([st] (print-stack-trace st nil))
   ([st n]
    (newline)
@@ -90,4 +78,4 @@
   most recent exception."
   {:added "1.1"}
   []
-  (print-stack-trace (root-cause *e) 8))
+  (print-stack-trace *stacktrace 8))
