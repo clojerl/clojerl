@@ -7,7 +7,7 @@ otp_release:
 install:
   - wget https://s3.amazonaws.com/rebar3/rebar3
   - chmod +x rebar3
-  - export PATH=$PATH:$PWD
+  - export PATH=$PWD:$PATH
 script:
   - make ci
 notifications:
