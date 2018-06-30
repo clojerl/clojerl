@@ -109,6 +109,9 @@ run_commands(_) ->
 -spec handle_error(atom(), any(), list()) -> no_return().
 handle_error(Type, Reason, Stacktrace) ->
   io:format( "[~s] ~s~n~s"
-           , [Type, clj_rt:str(Reason), clj_utils:stacktrace(Stacktrace)]
+           , [ Type
+             , clj_rt:str(Reason)
+             , clj_utils:format_stacktrace(Stacktrace)
+             ]
            ),
   erlang:halt(1).

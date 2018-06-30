@@ -41,8 +41,8 @@
         , ets_get/2
         , ets_save/2
 
-        , stacktrace/1
-        , stacktrace/2
+        , format_stacktrace/1
+        , format_stacktrace/2
 
         , resource_to_ns/1
         , ns_to_resource/1
@@ -514,12 +514,12 @@ ns_to_resource(NsName) ->
 %% SOFTWARE.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--spec stacktrace([tuple()]) -> iolist().
-stacktrace(Stacktrace) ->
-  stacktrace(Stacktrace, [{indent, 4}]).
+-spec format_stacktrace([tuple()]) -> iolist().
+format_stacktrace(Stacktrace) ->
+  format_stacktrace(Stacktrace, [{indent, 4}]).
 
--spec stacktrace([tuple()], [{indent, integer()}]) -> iolist().
-stacktrace(Stacktrace, Options) ->
+-spec format_stacktrace([tuple()], [{indent, integer()}]) -> iolist().
+format_stacktrace(Stacktrace, Options) ->
   Indent = lists:duplicate(proplists:get_value(indent, Options), <<" ">>),
   stacktrace_pretty(Indent, Stacktrace).
 
