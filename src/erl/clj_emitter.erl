@@ -572,14 +572,15 @@ ast(#{op := letfn} = Expr, State) ->
   FNamesAsts = [FNameAst || {FNameAst, _} <- DefsAsts],
   VarsAsts   = [cerl:c_var(cerl:fname_id(FNameAst)) || FNameAst <- FNamesAsts],
 
+  LetRecAst = cerl:ann_c_letrec(Ann, DefsAsts, cerl:c_values(FNamesAsts)),
+
   LetAst    = cerl:ann_c_let( Ann
                             , VarsAsts
-                            , cerl:c_values(FNamesAsts)
+                            , LetRecAst
                             , BodyAst
                             ),
-  LetRecAst = cerl:ann_c_letrec(Ann, DefsAsts, LetAst),
 
-  push_ast(LetRecAst, State2);
+  push_ast(LetAst, State2);
 %%------------------------------------------------------------------------------
 %% with-meta
 %%------------------------------------------------------------------------------

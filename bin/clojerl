@@ -12,6 +12,7 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
    -o PATH               Specify output directory for compiled files
    -t, --time            Print the time spent on compiling
    -vv, --verbose        Verbose compiling
+   --to-core FILE        Output the Core Erlang representation to FILE
    FILES                 List of .clje files
 
   init-opt:
