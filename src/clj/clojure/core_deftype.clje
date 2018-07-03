@@ -392,8 +392,8 @@
 (defn extends?
   "Returns true if atype extends protocol"
   {:added "1.2"}
-  [protocol atype]
-  (clj_rt/satisfies? protocol atype))
+  [^erlang.Type protocol atype]
+  (.extends? protocol atype))
 
 #_(defn extenders
   "Returns a collection of the types explicitly extending protocol"

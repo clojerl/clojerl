@@ -2005,8 +2005,9 @@ parse_catch(List, Env0) ->
 parse_catch_type(ErrType, Env0) ->
   case clj_rt:'symbol?'(ErrType) andalso resolve(ErrType, Env0) of
     {{type, Type}, Env1} ->
-      IError = 'erlang.Type':?CONSTRUCTOR('clojerl.IError'),
-      ?ERROR_WHEN( not clj_rt:'satisfies?'(IError, Type)
+      IError     = 'erlang.Type':?CONSTRUCTOR('clojerl.IError'),
+      TypeModule = 'erlang.Type':module(Type),
+      ?ERROR_WHEN( not 'clojerl.IError':?SATISFIES(TypeModule)
                  , [<<"Type ">>, Type, <<" does not implement ">>, IError]
                  , clj_env:location(Env0)
                  ),
