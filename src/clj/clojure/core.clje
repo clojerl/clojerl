@@ -126,14 +126,14 @@
     :doc "Returns true if x satisfies the protocol"
     :added "1.2"}
   satisfies? (fn satisfies? [^erlang.Type protocol x]
-               (clj_rt/satisfies? (.module protocol) (clj_rt/type_module x))))
+               (.satisfies? protocol x)))
 
 (def
   ^{:arglists '([atype x])
     :doc "Returns true if x's type is atype"
     :added "1.0"}
   instance? (fn instance? [^erlang.Type atype x]
-              (erlang/=:= (.module atype) (clj_rt/type_module x))))
+              (.instance? atype x)))
 
 (def
   ^{:arglists '([x])

@@ -17,7 +17,6 @@
         , name/1, namespace/1
         , symbol/1, symbol/2
         , keyword/1, keyword/2
-        , 'satisfies?'/2
         , 'coll?'/1, 'sequential?'/1, 'associative?'/1, 'seq?'/1
         , 'map?'/1, 'list?'/1, 'vector?'/1, 'set?'/1
         , 'record?'/1, 'type?'/1
@@ -295,14 +294,6 @@ keyword(Name) ->
 -spec keyword(binary(), binary()) -> 'clojerl.Keyword':type().
 keyword(Namespace, Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Namespace, Name).
-
--spec 'satisfies?'('erlang.Type':type(), 'erlang.Type':type()) -> boolean().
-'satisfies?'(Protocol, Type) when is_atom(Protocol) andalso is_atom(Type) ->
-  Protocol:?SATISFIES(Type);
-'satisfies?'(Protocol, Type) ->
-  ProtocolModule = 'erlang.Type':module(Protocol),
-  TypeModule     = 'erlang.Type':module(Type),
-  ProtocolModule:?SATISFIES(TypeModule).
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
