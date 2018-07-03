@@ -59,7 +59,7 @@ fi
 ################################################################################
 
 # Fetch dev deps and compile
-rebar3 as dev do compile
+rebar3 as dev do upgrade, compile
 
 # Generate args
 ARGS=$(echo "$@" | tr ' ' ,)
