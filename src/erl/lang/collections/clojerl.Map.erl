@@ -171,7 +171,8 @@ cons(#{?TYPE := ?M} = Map, X) ->
       assoc(Map, K, V);
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                assoc(Acc, clj_rt:first(KV), clj_rt:second(KV))
+                [K, V] = clj_rt:to_list(KV),
+                assoc(Acc, K, V)
             end,
       lists:foldl(Fun, Map, KVs);
     _ ->
