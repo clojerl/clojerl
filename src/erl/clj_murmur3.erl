@@ -41,7 +41,7 @@ do_murmur_ordered_coll([H | Hashes], Hash) ->
   do_murmur_ordered_coll(Hashes, ?UINT32(?UINT32(31 * Hash) + H)).
 
 murmur_unordered_coll(Hashes) ->
-  Hash = do_murmur_unordered_coll(Hashes, 1) ,
+  Hash = do_murmur_unordered_coll(Hashes, 0) ,
   murmur_mix_coll_hash(Hash, length(Hashes)).
 
 do_murmur_unordered_coll([], Hash) ->
