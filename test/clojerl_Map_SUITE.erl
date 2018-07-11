@@ -138,6 +138,17 @@ hash(_Config) ->
   true = Hash1 =/= Hash2,
   true = Hash2 =/= Hash3,
 
+  EmptyMap  = clj_rt:hash_map([]),
+  HashMap   = 'clojerl.IHash':hash(EmptyMap),
+
+  EmptyList = 'clojerl.List':?CONSTRUCTOR([]),
+  HashList  = 'clojerl.IHash':hash(EmptyList),
+  true      = HashMap =/= HashList,
+
+  EmptySet  = 'clojerl.Set':?CONSTRUCTOR([]),
+  HashSet   = 'clojerl.IHash':hash(EmptySet),
+  true      = HashMap =:= HashSet,
+
   {comments, ""}.
 
 -spec cons(config()) -> result().
