@@ -57,10 +57,9 @@
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  {Keys, Vals} = lists:foldl(fun build_mappings/2, {#{}, #{}}, KeyValuePairs),
+  Map = lists:foldl(fun build_mappings/2, #{}, KeyValuePairs),
   #{ ?TYPE => ?M
-   , keys  => Keys
-   , vals  => Vals
+   , map   => Map
    , meta  => ?NIL
    };
 ?CONSTRUCTOR(KeyValues) ->
@@ -75,9 +74,9 @@ build_key_values(KeyValues, [K, V | Items]) ->
 
 %% @private
 -spec build_mappings({any(), any()}, mappings()) -> mappings().
-build_mappings({K, V}, {Keys, Values}) ->
+build_mappings({K, _} = KV, Map) ->
   KHash = clj_rt:hash(K),
-  {Keys#{KHash => K}, Values#{KHash => V}}.
+  Map#{KHash => KV}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -85,39 +84,35 @@ build_mappings({K, V}, {Keys, Values}) ->
 
 %% clojerl.IAssociative
 
-contains_key(#{?TYPE := ?M, keys := Keys}, Key) ->
-  maps:is_key(clj_rt:hash(Key), Keys).
+contains_key(#{?TYPE := ?M, map := Map}, Key) ->
+  maps:is_key(clj_rt:hash(Key), Map).
 
-entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
+entry_at(#{?TYPE := ?M, map := Map}, Key) ->
   Hash = clj_rt:hash(Key),
-  case maps:is_key(Hash, Keys) of
+  case maps:is_key(Hash, Map) of
     true ->
-      KeyFound = maps:get(Hash, Keys),
-      Val      = maps:get(Hash, Vals),
+      {KeyFound, Val} = maps:get(Hash, Map),
       clj_rt:vector([KeyFound, Val]);
     false -> ?NIL
   end.
 
-assoc(#{?TYPE := ?M, keys := Keys, vals := Vals} = M, Key, Value) ->
+assoc(#{?TYPE := ?M, map := Map} = M, Key, Value) ->
   Hash = clj_rt:hash(Key),
-  Key1 = case maps:is_key(Hash, Keys) of
-           false -> Key;
-           true  -> maps:get(Hash, Keys)
-         end,
-  M#{keys => Keys#{Hash => Key1}, vals => Vals#{Hash => Value}}.
+  {Key1, _} = maps:get(Hash, Map, {Key, Value}),
+  M#{map => Map#{Hash => {Key1, Value}}}.
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, keys := Keys}) ->
-  maps:size(Keys).
+count(#{?TYPE := ?M, map := Map}) ->
+  maps:size(Map).
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, keys := KeysX, vals := ValsX}
-     , #{?TYPE := ?M, keys := KeysY, vals := ValsY}
+equiv( #{?TYPE := ?M, map := MapX}
+     , #{?TYPE := ?M, map := MapY}
      ) ->
-  'erlang.Map':equiv(KeysX, KeysY) andalso 'erlang.Map':equiv(ValsX, ValsY);
-equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
+  'erlang.Map':equiv(MapX, MapY);
+equiv(#{?TYPE := ?M, map := Map}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
       TypeModule   = clj_rt:type_module(Y),
@@ -126,55 +121,57 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
                               , clj_rt:to_list(TypeModule:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
-                maps:is_key(Hash, Keys) andalso
-                  clj_rt:equiv(maps:get(Hash, Vals), TypeModule:get(Y, Key))
+                maps:is_key(Hash, Map) andalso
+                  clj_rt:equiv( maps:get(Hash, Map)
+                              , {Key, TypeModule:get(Y, Key)}
+                              )
             end,
-      maps:size(Keys) =:= TypeModule:count(Y)
+      maps:size(Map) =:= TypeModule:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
 
 %% clojerl.IErl
 
-'->erl'(#{?TYPE := ?M, keys := Keys, vals := Vals}, Recursive) ->
+'->erl'(#{?TYPE := ?M, map := Map}, Recursive) ->
   ErlMapFun = fun
-                ({Hash, Key0}, MapAcc) when Recursive ->
-                  Val0 = maps:get(Hash, Vals),
+                ({Key0, Val0}, MapAcc) when Recursive ->
                   Key1 = clj_rt:'->erl'(Key0, Recursive),
                   Val1 = clj_rt:'->erl'(Val0, Recursive),
                   MapAcc#{Key1 => Val1};
-                ({Hash, Key0}, MapAcc) ->
-                  MapAcc#{Key0 => maps:get(Hash, Vals)}
+                ({Key0, Val0}, MapAcc) ->
+                  MapAcc#{Key0 => Val0}
               end,
-  lists:foldl(ErlMapFun, #{}, maps:to_list(Keys)).
+  lists:foldl(ErlMapFun, #{}, maps:values(Map)).
 
 %% clojerl.IFn
 
 apply(#{?TYPE := ?M} = M, [Key]) ->
   apply(M, [Key, ?NIL]);
-apply(#{?TYPE := ?M, vals := Vals}, [Key, NotFound]) ->
+apply(#{?TYPE := ?M, map := Map}, [Key, NotFound]) ->
   Hash = clj_rt:hash(Key),
-  maps:get(Hash, Vals, NotFound);
+  {_, Val} = maps:get(Hash, Map, {Key, NotFound}),
+  Val;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
 %% clojerl.IColl
 
-cons(#{?TYPE := ?M} = Map, ?NIL) ->
-  Map;
-cons(#{?TYPE := ?M} = Map, X) ->
+cons(#{?TYPE := ?M} = M, ?NIL) ->
+  M;
+cons(#{?TYPE := ?M} = M, X) ->
   IsVector = clj_rt:'vector?'(X),
   IsMap    = clj_rt:'map?'(X),
   case clj_rt:to_list(X) of
     [K, V] when IsVector ->
-      assoc(Map, K, V);
-    KVs when IsMap ->
+      assoc(M, K, V);
+    Map when IsMap ->
       Fun = fun(KV, Acc) ->
                 [K, V] = clj_rt:to_list(KV),
                 assoc(Acc, K, V)
             end,
-      lists:foldl(Fun, Map, KVs);
+      lists:foldl(Fun, M, Map);
     _ ->
       ?ERROR([ <<"Can't conj something that is not a key/value pair or "
                "another map to a map, got: ">>
@@ -194,30 +191,29 @@ hash(#{?TYPE := ?M} = Map) ->
 get(#{?TYPE := ?M} = Map, Key) ->
   get(Map, Key, ?NIL).
 
-get(#{?TYPE := ?M, vals := Vals}, Key, NotFound) ->
+get(#{?TYPE := ?M, map := Map}, Key, NotFound) ->
   Hash = clj_rt:hash(Key),
-  maps:get(Hash, Vals, NotFound).
+  {_, Val} = maps:get(Hash, Map, {Key, NotFound}),
+  Val.
 
 %% clojerl.IMap
 
-keys(#{?TYPE := ?M, keys := Keys}) ->
-  maps:values(Keys).
+keys(#{?TYPE := ?M, map := Map}) ->
+  [K || {K, _} <- maps:values(Map)].
 
-vals(#{?TYPE := ?M, vals := Vals}) ->
-  maps:values(Vals).
+vals(#{?TYPE := ?M, map := Map}) ->
+  [V || {_, V} <- maps:values(Map)].
 
-without(#{?TYPE := ?M, keys := Keys, vals := Vals} = M, Key) ->
+without(#{?TYPE := ?M, map := Map} = M, Key) ->
   Hash = clj_rt:hash(Key),
-  M#{ keys => maps:remove(Hash, Keys)
-    , vals => maps:remove(Hash, Vals)
-    }.
+  M#{map => maps:remove(Hash, Map)}.
 
 %% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
-with_meta(#{?TYPE := ?M} = Map, Metadata) ->
-  Map#{meta => Metadata}.
+with_meta(#{?TYPE := ?M} = M, Metadata) ->
+  M#{meta => Metadata}.
 
 %% clojerl.ISeqable
 
@@ -227,13 +223,13 @@ seq(#{?TYPE := ?M} = Map) ->
     X -> X
   end.
 
-to_list(#{?TYPE := ?M, keys := Keys, vals := Vals}) ->
-  FoldFun = fun(Hash, K, List) ->
-                [clj_rt:vector([K, maps:get(Hash, Vals)]) | List]
+to_list(#{?TYPE := ?M, map := Map}) ->
+  FoldFun = fun(_Hash, {K, V}, List) ->
+                ['clojerl.Vector':?CONSTRUCTOR([K, V]) | List]
             end,
-  maps:fold(FoldFun, [], Keys).
+  maps:fold(FoldFun, [], Map).
 
 %% clojerl.IStringable
 
-str(#{?TYPE := ?M} = Map) ->
-  clj_rt:print(Map).
+str(#{?TYPE := ?M} = M) ->
+  clj_rt:print(M).
