@@ -85,13 +85,44 @@ empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, set := X}
-     , #{?TYPE := ?M, set := Y}
+equiv( #{?TYPE := ?M, set := MapSetX} = SetX
+     , #{?TYPE := ?M, set := MapSetY} = SetY
      ) ->
-  %% TODO: this might not work when there are collisions
-  'erlang.Map':equiv(X, Y);
-equiv(#{?TYPE := ?M} = X, Y) ->
-  clj_rt:'set?'(Y) andalso clj_rt:hash(Y) =:= hash(X).
+  case count(SetX) == count(SetY) of
+    false -> false;
+    true  -> do_equiv_internal(maps:to_list(MapSetX), MapSetY)
+  end;
+equiv(#{?TYPE := ?M, set := MapSetX}, Y) ->
+  clj_rt:'set?'(Y) andalso do_equiv(maps:values(MapSetX), Y).
+
+do_equiv_internal([], _) ->
+  true;
+do_equiv_internal([{Hash, {V, _}} | Rest], MapSet) ->
+  case get_entry(MapSet, Hash, V) of
+    ?NIL -> false;
+    _    -> do_equiv_internal(Rest, MapSet)
+  end;
+do_equiv_internal([{Hash, Vs} | Rest], MapSet) ->
+  case do_equiv_internal_values(Vs, Hash, MapSet) of
+    false -> false;
+    _     -> do_equiv_internal(Rest, MapSet)
+  end.
+
+do_equiv_internal_values([], _Hash, _MapSet) ->
+  true;
+do_equiv_internal_values([{V, _} | Rest], Hash, MapSet) ->
+  case get_entry(MapSet, Hash, V) of
+    ?NIL -> false;
+    _    -> do_equiv_internal_values(Rest, Hash, MapSet)
+  end.
+
+do_equiv([], _) ->
+  true;
+do_equiv([{V, _} | Rest], Y) ->
+  case 'clojerl.ISet':contains(Y, V) of
+    false -> false;
+    true  -> do_equiv(Rest, Y)
+  end.
 
 %% clojerl.IFn
 
