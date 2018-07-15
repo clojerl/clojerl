@@ -14,6 +14,7 @@
         , seq/1
         , equiv/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , apply/1
         , disjoin/1
@@ -61,7 +62,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Set = clj_rt:hash_set([1, 2, 3, 4]),
-  <<"#{1 2 4 3}">> = clj_rt:str(Set),
+  <<"#{3 4 2 1}">> = clj_rt:str(Set),
 
   Set2 = clj_rt:hash_set([]),
   <<"#{}">> = clj_rt:str(Set2),
@@ -109,6 +110,31 @@ hash(_Config) ->
 
   true = Hash1 == Hash2,
   true = Hash2 =/= Hash3,
+
+  {comments, ""}.
+
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet = clj_rt:hash_set([]),
+  EmptyMap = clj_rt:hash_map([]),
+  HashSet1 = clj_rt:hash_set([EmptyMap, EmptySet]),
+
+  2        = clj_rt:count(HashSet1),
+  EmptyMap = clj_rt:get(HashSet1, EmptyMap),
+  EmptySet = clj_rt:get(HashSet1, EmptySet),
+
+  HashSet2 = clj_rt:disj(HashSet1, EmptyMap),
+  1        = clj_rt:count(HashSet2),
+  EmptySet = clj_rt:get(HashSet2, EmptySet),
+
+  HashSet3 = clj_rt:disj(HashSet1, EmptySet),
+  1        = clj_rt:count(HashSet3),
+  EmptyMap = clj_rt:get(HashSet3, EmptyMap),
+
+  HashSet4 = clj_rt:conj(HashSet3, EmptySet),
+  2        = clj_rt:count(HashSet4),
+  EmptyMap = clj_rt:get(HashSet4, EmptyMap),
+  EmptySet = clj_rt:get(HashSet4, EmptySet),
 
   {comments, ""}.
 

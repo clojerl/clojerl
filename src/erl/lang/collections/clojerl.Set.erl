@@ -32,6 +32,15 @@
         ]).
 -export([str/1]).
 
+-import( clj_hash_collision
+       , [ get_entry/3
+         , create_entry/4
+         , without_entry/3
+         ]
+       ).
+
+-type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
+
 -type type() :: #{ ?TYPE => ?M
                  , set   => map()
                  , meta  => ?NIL | any()
@@ -39,13 +48,18 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  KVs = lists:map(fun(X) -> {clj_rt:hash(X), X} end, Values),
   #{ ?TYPE => ?M
-   , set   => maps:from_list(KVs)
+   , set   => lists:foldl(fun build_mappings/2, #{}, Values)
    , meta  => ?NIL
    };
 ?CONSTRUCTOR(Values) ->
   ?CONSTRUCTOR(clj_rt:to_list(Values)).
+
+%% @private
+-spec build_mappings(any(), mappings()) -> mappings().
+build_mappings(Value, Map) ->
+  Hash = clj_rt:hash(Value),
+  Map#{Hash => create_entry(Map, Hash, Value, true)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -53,16 +67,19 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, set := MapSet}) -> maps:size(MapSet).
+count(#{?TYPE := ?M, set := MapSet}) ->
+  %% TODO: keep track of the count as a field
+  maps:fold(fun count_fold/3, 0, MapSet).
+
+count_fold(_, {_, _}, Count) -> Count + 1;
+count_fold(_, Vs, Count)    -> Count + length(Vs).
 
 %% clojerl.IColl
 
 cons(#{?TYPE := ?M, set := MapSet} = Set, X) ->
-  Hash = clj_rt:hash(X),
-  case maps:is_key(Hash, MapSet) of
-    true  -> Set;
-    false -> Set#{set => MapSet#{Hash => X}}
-  end.
+  Hash  = clj_rt:hash(X),
+  Entry = create_entry(MapSet, Hash, X, true),
+  Set#{set => MapSet#{Hash => Entry}}.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
@@ -71,6 +88,7 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv( #{?TYPE := ?M, set := X}
      , #{?TYPE := ?M, set := Y}
      ) ->
+  %% TODO: this might not work when there are collisions
   'erlang.Map':equiv(X, Y);
 equiv(#{?TYPE := ?M} = X, Y) ->
   clj_rt:'set?'(Y) andalso clj_rt:hash(Y) =:= hash(X).
@@ -79,7 +97,10 @@ equiv(#{?TYPE := ?M} = X, Y) ->
 
 apply(#{?TYPE := ?M, set := MapSet}, [Item]) ->
   Hash = clj_rt:hash(Item),
-  maps:get(Hash, MapSet, ?NIL);
+  case get_entry(MapSet, Hash, Item) of
+    ?NIL   -> ?NIL;
+    {V, _} -> V
+  end;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for set, got: ", CountBin/binary>>).
@@ -100,29 +121,34 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 
 disjoin(#{?TYPE := ?M, set := MapSet} = Set, Value) ->
   Hash = clj_rt:hash(Value),
-  Set#{set => maps:remove(Hash, MapSet)}.
+  Set#{set => without_entry(MapSet, Hash, Value)}.
 
 contains(#{?TYPE := ?M, set := MapSet}, Value) ->
   Hash = clj_rt:hash(Value),
-  maps:is_key(Hash, MapSet).
+  get_entry(MapSet, Hash, Value) /= ?NIL.
 
 get(#{?TYPE := ?M, set := MapSet}, Value) ->
   Hash = clj_rt:hash(Value),
-  case maps:is_key(Hash, MapSet) of
-    true  -> maps:get(Hash, MapSet);
-    false -> ?NIL
+  case get_entry(MapSet, Hash, Value) of
+    ?NIL   -> ?NIL;
+    {V, _} -> V
   end.
 
 %% clojerl.ISeqable
 
-seq(#{?TYPE := ?M, set := MapSet}) ->
+seq(#{?TYPE := ?M, set := MapSet} = Set) ->
   case maps:size(MapSet) of
     0 -> ?NIL;
-    _ -> maps:values(MapSet)
+    _ -> to_list(Set)
   end.
 
 to_list(#{?TYPE := ?M, set := MapSet}) ->
-  maps:values(MapSet).
+  maps:fold(fun to_list_fold/3, [], MapSet).
+
+to_list_fold(_Hash, {V, _}, List) ->
+  [V | List];
+to_list_fold(_Hash, Vs, List) ->
+  [V || {V, _} <- Vs] ++ List.
 
 %% clojerl.IStringable
 
