@@ -47,8 +47,15 @@
 -export(['_'/1]).
 -export([str/1]).
 
+-import( clj_hash_collision
+       , [ get_entry/3
+         , create_entry/4
+         , without_entry/3
+         ]
+       ).
+
 -type type() :: #{ ?TYPE => ?M
-                 , keys  => map()
+                 , keys  => #{integer() => {any(), true} | [{any(), true}]}
                  , vals  => any()
                  , meta  => ?NIL | any()
                  }.
@@ -85,7 +92,8 @@ build_key_values(KeyValues, [K, V | Items]) ->
 %% @private
 -spec fold_key_values({any(), any()}, map()) -> map().
 fold_key_values({K, _}, Map) ->
-  maps:put(clj_rt:hash(K), K, Map).
+  Hash = clj_rt:hash(K),
+  Map#{Hash => create_entry(Map, Hash, K, true)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -99,28 +107,28 @@ contains_key(#{?TYPE := ?M, keys := Keys}, Key) ->
 
 entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
   Hash = clj_rt:hash(Key),
-  case maps:is_key(Hash, Keys) of
-    true ->
-      FoundKey = maps:get(Hash, Keys),
+  case get_entry(Keys, Hash, Key) of
+    {FoundKey, true} ->
       Val = rbdict:fetch(FoundKey, Vals),
       clj_rt:vector([FoundKey, Val]);
-    false -> ?NIL
+    ?NIL -> ?NIL
   end.
 
-assoc(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key, Value) ->
-  Hash = clj_rt:hash(Key),
-  Vals = case maps:get(Hash, Keys, ?NIL) of
-           ?NIL -> Vals0;
-           K -> rbdict:erase(K, Vals0)
+assoc(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key0, Value) ->
+  Hash  = clj_rt:hash(Key0),
+  Entry = create_entry(Keys, Hash, Key0, true),
+  {Key1, Vals1} = case get_entry(Keys, Hash, Key0) of
+           ?NIL      -> {Key0, Vals0};
+           {K, true} -> {K, rbdict:erase(K, Vals0)}
          end,
-  M#{ keys => Keys#{Hash => Key}
-    , vals => rbdict:store(Key, Value, Vals)
+  M#{ keys => Keys#{Hash => Entry}
+    , vals => rbdict:store(Key1, Value, Vals1)
     }.
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, keys := Keys}) ->
-  maps:size(Keys).
+count(#{?TYPE := ?M, vals := Vals}) ->
+  rbdict:size(Vals).
 
 %% clojerl.IEquiv
 
@@ -138,7 +146,8 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
                               , 'erlang.List':to_list(TypeModule:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
-                maps:is_key(Hash, Keys) andalso
+                Entry = get_entry(Keys, Hash, Key),
+                Entry /= ?NIL andalso
                   clj_rt:equiv(rbdict:fetch(Key, Vals), TypeModule:get(Y, Key))
             end,
       maps:size(Keys) =:= TypeModule:count(Y)
@@ -168,7 +177,8 @@ cons(#{?TYPE := ?M} = M, X) ->
       assoc(M, K, V);
     KVs when IsMap ->
       Fun = fun(KV, Acc) ->
-                assoc(Acc, clj_rt:first(KV), clj_rt:second(KV))
+                [K, V] = clj_rt:to_list(KV),
+                assoc(Acc, K, V)
             end,
       lists:foldl(Fun, M, KVs);
     _ ->
@@ -192,27 +202,28 @@ get(#{?TYPE := ?M} = Map, Key) ->
 
 get(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key, NotFound) ->
   Hash = clj_rt:hash(Key),
-  case maps:is_key(Hash, Keys) of
-    true  -> rbdict:fetch(maps:get(Hash, Keys), Vals);
-    false -> NotFound
+  case get_entry(Keys, Hash, Key) of
+    ?NIL      -> NotFound;
+    {K, true} -> rbdict:fetch(K, Vals)
   end.
 
 %% clojerl.IMap
 
-keys(#{?TYPE := ?M, keys := Keys}) ->
-  maps:values(Keys).
+keys(#{?TYPE := ?M, vals := Vals}) ->
+  [K || {K, _} <- rbdict:to_list(Vals)].
 
 vals(#{?TYPE := ?M, vals := Vals}) ->
-  [Val || {_, Val} <- rbdict:to_list(Vals)].
+  [V || {_, V} <- rbdict:to_list(Vals)].
 
-without(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key) ->
-  Hash = clj_rt:hash(Key),
-  Vals = case maps:is_key(Hash, Keys) of
-           true  -> rbdict:erase(maps:get(Hash, Keys), Vals0);
-           false -> Vals0
+without(#{?TYPE := ?M, keys := Keys0, vals := Vals0} = M, Key) ->
+  Hash  = clj_rt:hash(Key),
+  Keys1 = without_entry(Keys0, Hash, Key),
+  Vals1 = case get_entry(Keys0, Hash, Key) of
+            ?NIL -> Vals0;
+            {K, true} -> rbdict:erase(K, Vals0)
          end,
-  M#{ keys => maps:remove(Hash, Keys)
-    , vals => Vals
+  M#{ keys => Keys1
+    , vals => Vals1
     }.
 
 %% clojerl.IMeta
