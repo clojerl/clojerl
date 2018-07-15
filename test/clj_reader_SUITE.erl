@@ -527,8 +527,8 @@ syntax_quote(ReadFun) ->
     ReadFun(<<"(clojure.core/apply"
               "  clojure.core/hash-set"
               "  (clojure.core/concat"
-              "    (clojure.core/list :world)"
-              "    (clojure.core/list 'clojure.core/hello)))">>),
+              "    (clojure.core/list 'clojure.core/hello)"
+              "    (clojure.core/list :world)))">>),
   true = clj_rt:equiv(clj_rt:first(SetWithMeta), WithMetaSym),
   true = clj_rt:equiv(clj_rt:second(SetWithMeta), SetWithMetaCheck),
 
