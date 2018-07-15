@@ -54,8 +54,10 @@ without_entry(Map, Hash, Key) ->
     ?NIL   -> Map;
     {_, _} -> maps:remove(Hash, Map);
     KVs0   ->
-      KVs1 = remove_entry(KVs0, Key, []),
-      Map#{Hash => KVs1}
+      case remove_entry(KVs0, Key, []) of
+        []   -> maps:remove(Hash, Map);
+        KVs1 -> Map#{Hash => KVs1}
+      end
   end.
 
 -spec remove_entry([{any(), any()}], integer(), any()) -> [{any(), any()}].
