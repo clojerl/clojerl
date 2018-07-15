@@ -164,7 +164,7 @@ hash_collision(_Config) ->
 
   HashMap2 = clj_rt:dissoc(HashMap1, EmptyMap),
   1   = clj_rt:count(HashMap2),
-  set = clj_rt:get(HashMap1, EmptySet),
+  set = clj_rt:get(HashMap2, EmptySet),
 
   HashMap3 = clj_rt:dissoc(HashMap1, EmptySet),
   1   = clj_rt:count(HashMap3),

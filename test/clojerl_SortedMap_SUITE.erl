@@ -153,7 +153,7 @@ hash_collision(_Config) ->
 
   SortedMap2 = clj_rt:dissoc(SortedMap1, EmptyMap),
   1   = clj_rt:count(SortedMap2),
-  set = clj_rt:get(SortedMap1, EmptySet),
+  set = clj_rt:get(SortedMap2, EmptySet),
 
   SortedMap3 = clj_rt:dissoc(SortedMap1, EmptySet),
   1   = clj_rt:count(SortedMap3),
