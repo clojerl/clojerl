@@ -53,10 +53,10 @@
          ]
        ).
 
--type mappings() :: {map(), map()}.
+-type mappings() :: #{integer() => {any(), any()} | [{any(), any()}]}.
 
 -type type() :: #{ ?TYPE => ?M
-                 , map   => #{integer() => {any(), any()} | [{any(), any()}]}
+                 , map   => mappings()
                  , meta  => ?NIL | any()
                  }.
 
