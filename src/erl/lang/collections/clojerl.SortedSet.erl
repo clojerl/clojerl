@@ -36,31 +36,44 @@
 -export(['_'/1]).
 -export([str/1]).
 
+-import( clj_hash_collision
+       , [ get_entry/3
+         , create_entry/4
+         , without_entry/3
+         ]
+       ).
+
+-type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
+
 -type type() :: #{ ?TYPE  => ?M
-                 , hashes => map()
+                 , hashes => mappings()
                  , dict   => any()
                  , meta   => ?NIL | any()
                  }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  Hashes = [{clj_rt:hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
   #{ ?TYPE  => ?M
-   , hashes => maps:from_list(Hashes)
+   , hashes => lists:foldl(fun build_mappings/2, #{}, Values)
    , dict   => rbdict:from_list(Vals)
    , meta   => ?NIL
    }.
 
 -spec ?CONSTRUCTOR(function(), list()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
-  Hashes = [{clj_rt:hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
   #{ ?TYPE  => ?M
-   , hashes => maps:from_list(Hashes)
+   , hashes => lists:foldl(fun build_mappings/2, #{}, Values)
    , dict   => rbdict:from_list(Compare, Vals)
    , meta   => ?NIL
    }.
+
+%% @private
+-spec build_mappings(any(), mappings()) -> mappings().
+build_mappings(Value, Map) ->
+  Hash = clj_rt:hash(Value),
+  Map#{Hash => create_entry(Map, Hash, Value, true)}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -68,17 +81,19 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, hashes := Hashes}) -> maps:size(Hashes).
+count(#{?TYPE := ?M, dict := Dict}) -> rbdict:size(Dict).
 
 %% clojerl.IColl
 
 cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, X) ->
   Hash = clj_rt:hash(X),
-  case maps:is_key(Hash, Hashes) of
-    true  -> S;
-    false -> S#{ hashes => Hashes#{Hash => X}
-               , dict   => rbdict:store(X, true, Dict)
-               }
+  case get_entry(Hashes, Hash, X) of
+    ?NIL ->
+      Entry = create_entry(Hashes, Hash, X, true),
+      S#{ hashes => Hashes#{Hash => Entry}
+        , dict   => rbdict:store(X, true, Dict)
+        };
+    _ -> S
   end.
 
 empty(#{?TYPE := ?M, dict := Vals}) ->
@@ -96,9 +111,9 @@ equiv(#{?TYPE := ?M} = X, Y) ->
 
 apply(#{?TYPE := ?M, hashes := Hashes}, [Item]) ->
   Hash = clj_rt:hash(Item),
-  case maps:is_key(Hash, Hashes) of
-    true  -> maps:get(Hash, Hashes);
-    false -> ?NIL
+  case get_entry(Hashes, Hash, Item) of
+    ?NIL   -> ?NIL;
+    {K, _} -> K
   end;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -106,8 +121,8 @@ apply(_, Args) ->
 
 %% clojerl.IHash
 
-hash(#{?TYPE := ?M, hashes := Hashes}) ->
-  clj_murmur3:unordered(maps:values(Hashes)).
+hash(#{?TYPE := ?M, dict := Dict}) ->
+  clj_murmur3:unordered(rbdict:fetch_keys(Dict)).
 
 %% clojerl.IMeta
 
@@ -118,25 +133,26 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 
 %% clojerl.ISet
 
-disjoin(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, Value) ->
+disjoin(#{?TYPE := ?M, hashes := Hashes0, dict := Dict} = S, Value) ->
   Hash = clj_rt:hash(Value),
-  case maps:is_key(Hash, Hashes) of
-    false -> S;
-    true  ->
-      S#{ hashes => maps:remove(Hash, Hashes)
-        , dict   => rbdict:erase(Value, Dict)
+  case get_entry(Hashes0, Hash, Value) of
+    ?NIL   -> S;
+    {V, _} ->
+      Hashes1 = without_entry(Hashes0, Hash, Value),
+      S#{ hashes => Hashes1
+        , dict   => rbdict:erase(V, Dict)
         }
   end.
 
 contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
   Hash = clj_rt:hash(Value),
-  maps:is_key(Hash, Hashes).
+  get_entry(Hashes, Hash, Value) /= ?NIL.
 
 get(#{?TYPE := ?M, hashes := Hashes}, Value) ->
   Hash = clj_rt:hash(Value),
-  case maps:is_key(Hash, Hashes) of
-    true  -> maps:get(Hash, Hashes);
-    false -> ?NIL
+  case get_entry(Hashes, Hash, Value) of
+    ?NIL   -> ?NIL;
+    {V, _} -> V
   end.
 
 %% clojerl.ISeqable
@@ -148,7 +164,7 @@ seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
   end.
 
 to_list(#{?TYPE := ?M, dict := Dict}) ->
-  [K || {K, _} <- rbdict:to_list(Dict)].
+  rbdict:fetch_keys(Dict).
 
 %% clojerl.ISorted
 

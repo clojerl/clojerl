@@ -14,6 +14,7 @@
         , seq/1
         , equiv/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , apply/1
         , disjoin/1
@@ -111,6 +112,32 @@ hash(_Config) ->
   true = Hash2 =/= Hash3,
 
   {comments, ""}.
+
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet   = clj_rt:hash_set([]),
+  EmptyMap   = clj_rt:hash_map([]),
+  SortedSet1 = sorted_set([EmptyMap, EmptySet]),
+
+  2        = clj_rt:count(SortedSet1),
+  EmptyMap = clj_rt:get(SortedSet1, EmptyMap),
+  EmptySet = clj_rt:get(SortedSet1, EmptySet),
+
+  SortedSet2 = clj_rt:disj(SortedSet1, EmptyMap),
+  1        = clj_rt:count(SortedSet2),
+  EmptySet = clj_rt:get(SortedSet2, EmptySet),
+
+  SortedSet3 = clj_rt:disj(SortedSet1, EmptySet),
+  1        = clj_rt:count(SortedSet3),
+  EmptyMap = clj_rt:get(SortedSet3, EmptyMap),
+
+  SortedSet4 = clj_rt:conj(SortedSet3, EmptySet),
+  2        = clj_rt:count(SortedSet4),
+  EmptyMap = clj_rt:get(SortedSet4, EmptyMap),
+  EmptySet = clj_rt:get(SortedSet4, EmptySet),
+
+  {comments, ""}.
+
 
 -spec cons(config()) -> result().
 cons(_Config) ->

@@ -54,8 +54,10 @@
          ]
        ).
 
+-type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
+
 -type type() :: #{ ?TYPE => ?M
-                 , keys  => #{integer() => {any(), true} | [{any(), true}]}
+                 , keys  => mappings()
                  , vals  => any()
                  , meta  => ?NIL | any()
                  }.
@@ -118,9 +120,9 @@ assoc(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key0, Value) ->
   Hash  = clj_rt:hash(Key0),
   Entry = create_entry(Keys, Hash, Key0, true),
   {Key1, Vals1} = case get_entry(Keys, Hash, Key0) of
-           ?NIL      -> {Key0, Vals0};
-           {K, true} -> {K, rbdict:erase(K, Vals0)}
-         end,
+                    ?NIL      -> {Key0, Vals0};
+                    {K, true} -> {K, rbdict:erase(K, Vals0)}
+                  end,
   M#{ keys => Keys#{Hash => Entry}
     , vals => rbdict:store(Key1, Value, Vals1)
     }.
@@ -203,8 +205,8 @@ get(#{?TYPE := ?M} = Map, Key) ->
 get(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key, NotFound) ->
   Hash = clj_rt:hash(Key),
   case get_entry(Keys, Hash, Key) of
-    ?NIL      -> NotFound;
-    {K, true} -> rbdict:fetch(K, Vals)
+    ?NIL   -> NotFound;
+    {K, _} -> rbdict:fetch(K, Vals)
   end.
 
 %% clojerl.IMap
