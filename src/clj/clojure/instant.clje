@@ -153,7 +153,34 @@ with invalid arguments."
                   offset-sign offset-hours offset-minutes)))
 
 ;;; ------------------------------------------------------------------------
+;;; reader integration
+
+(defn- construct-date
+  "Construct a datetime, which expresses the original instant as
+milliseconds since the epoch, UTC."
+  [years months days hours minutes seconds nanoseconds
+   offset-sign offset-hours offset-minutes]
+  (let [offset-secs (+ (* offset-sign offset-hours 60 60)
+                       (* offset-sign offset-minutes 60))
+        datetime #erl [#erl [years months days]
+                       #erl [hours minutes seconds]]
+        greg-seconds (calendar/datetime_to_gregorian_seconds datetime)]
+    (calendar/gregorian_seconds_to_datetime (- greg-seconds offset-secs))))
+
+(defn read-instant-date
+  "To read an instant as a java.util.Date, bind *data-readers* to a map with
+this var as the value for the 'inst key. The timezone offset will be used
+  to convert into UTC."
+  [date]
+  (new erlang.util.Date (parse-timestamp (validated construct-date) date)))
+
+;;; ------------------------------------------------------------------------
 ;;; print integration
+
+;;; We need to have these method implementations in clojure.core so they
+;;; can be loaded when clojure.core is loaded
+
+(in-ns 'clojure.core)
 
 (defn- print-date
   "Print a java.util.Date as RFC3339 timestamp, always in UTC.
@@ -177,25 +204,3 @@ with invalid arguments."
 (defmethod print-dup erlang.util.Date
   [^erlang.util.Date d, ^erlang.io.IWriter w]
   (print-date d w))
-
-;;; ------------------------------------------------------------------------
-;;; reader integration
-
-(defn- construct-date
-  "Construct a datetime, which expresses the original instant as
-milliseconds since the epoch, UTC."
-  [years months days hours minutes seconds nanoseconds
-   offset-sign offset-hours offset-minutes]
-  (let [offset-secs (+ (* offset-sign offset-hours 60 60)
-                       (* offset-sign offset-minutes 60))
-        datetime #erl [#erl [years months days]
-                       #erl [hours minutes seconds]]
-        greg-seconds (calendar/datetime_to_gregorian_seconds datetime)]
-    (calendar/gregorian_seconds_to_datetime (- greg-seconds offset-secs))))
-
-(defn read-instant-date
-  "To read an instant as a java.util.Date, bind *data-readers* to a map with
-this var as the value for the 'inst key. The timezone offset will be used
-  to convert into UTC."
-  [date]
-  (new erlang.util.Date (parse-timestamp (validated construct-date) date)))

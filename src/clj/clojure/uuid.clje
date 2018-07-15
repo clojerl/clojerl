@@ -12,6 +12,11 @@
   {:pre [(string? form)]}
   (new erlang.util.UUID form))
 
+;; We need to have these method implementations in clojure.core so they
+;; can be loaded when clojure.core is loaded
+
+(in-ns 'clojure.core)
+
 (defmethod print-method erlang.util.UUID [uuid ^erlang.io.IWriter w]
   (.write w (str "#uuid \"" (str uuid) "\"")))
 
