@@ -15,6 +15,7 @@
         , equiv/1
         , apply/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , associative/1
         , to_erl/1
@@ -148,6 +149,31 @@ hash(_Config) ->
   EmptySet  = 'clojerl.Set':?CONSTRUCTOR([]),
   HashSet   = 'clojerl.IHash':hash(EmptySet),
   true      = HashMap =:= HashSet,
+
+  {comments, ""}.
+
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet = clj_rt:hash_set([]),
+  EmptyMap = clj_rt:hash_map([]),
+  HashMap1 = clj_rt:hash_map([EmptyMap, map, EmptySet, set]),
+
+  2   = clj_rt:count(HashMap1),
+  map = clj_rt:get(HashMap1, EmptyMap),
+  set = clj_rt:get(HashMap1, EmptySet),
+
+  HashMap2 = clj_rt:dissoc(HashMap1, EmptyMap),
+  1   = clj_rt:count(HashMap2),
+  set = clj_rt:get(HashMap1, EmptySet),
+
+  HashMap3 = clj_rt:dissoc(HashMap1, EmptySet),
+  1   = clj_rt:count(HashMap3),
+  map = clj_rt:get(HashMap3, EmptyMap),
+
+  HashMap4 = clj_rt:assoc(HashMap3, EmptySet, set),
+  2   = clj_rt:count(HashMap4),
+  map = clj_rt:get(HashMap4, EmptyMap),
+  set = clj_rt:get(HashMap4, EmptySet),
 
   {comments, ""}.
 
