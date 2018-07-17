@@ -136,6 +136,10 @@ hash_collision(_Config) ->
   EmptyMap = clj_rt:get(SortedSet4, EmptyMap),
   EmptySet = clj_rt:get(SortedSet4, EmptySet),
 
+  SortedSet5 = sorted_set([EmptySet, EmptyMap]),
+  true       = clj_rt:equiv(SortedSet5, SortedSet1),
+  true       = clj_rt:equiv(SortedSet1, SortedSet5),
+
   {comments, ""}.
 
 

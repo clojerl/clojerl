@@ -164,6 +164,10 @@ hash_collision(_Config) ->
   map = clj_rt:get(SortedMap4, EmptyMap),
   set = clj_rt:get(SortedMap4, EmptySet),
 
+  SortedMap5 = sorted_map([EmptySet, set, EmptyMap, map]),
+  true       = clj_rt:equiv(SortedMap5, SortedMap1),
+  true       = clj_rt:equiv(SortedMap1, SortedMap5),
+
   {comments, ""}.
 
 -spec cons(config()) -> result().

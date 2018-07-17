@@ -116,10 +116,13 @@ count(#{?TYPE := ?M, map := Map}) ->
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, map := MapX}
-     , #{?TYPE := ?M, map := MapY}
+equiv( #{?TYPE := ?M, map := MapX} = X
+     , #{?TYPE := ?M, map := MapY} = Y
      ) ->
-  'erlang.Map':equiv(MapX, MapY);
+  case count(X) == count(Y) of
+    false -> false;
+    true  -> clj_hash_collision:equiv(MapX, MapY)
+  end;
 equiv(#{?TYPE := ?M, map := Map}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->

@@ -175,6 +175,10 @@ hash_collision(_Config) ->
   map = clj_rt:get(HashMap4, EmptyMap),
   set = clj_rt:get(HashMap4, EmptySet),
 
+  HashMap5 = clj_rt:hash_map([EmptySet, set, EmptyMap, map]),
+  true     = clj_rt:equiv(HashMap5, HashMap1),
+  true     = clj_rt:equiv(HashMap1, HashMap5),
+
   {comments, ""}.
 
 -spec cons(config()) -> result().

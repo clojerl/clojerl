@@ -5,23 +5,18 @@
 -export([ get_entry/3
         , create_entry/4
         , without_entry/3
+        , equiv/2
         ]).
 
--spec get_entry(map(), integer(), any()) -> ?NIL | {any(), any()}.
+-type entry()    :: {any(), any()} | [{any(), any()}].
+-type mappings() :: #{integer() => entry()}.
+
+-spec get_entry(mappings(), integer(), any()) -> ?NIL | {any(), any()}.
 get_entry(Map, Hash, Key) ->
   case maps:get(Hash, Map, ?NIL) of
     ?NIL -> ?NIL;
     {K, V} -> {K, V};
     KVs -> find_entry(KVs, Key)
-  end.
-
--spec find_entry([{any(), any()}], any()) -> ?NIL | {any(), any()}.
-find_entry([], _) ->
-  ?NIL;
-find_entry([{K, V} | Rest], Key) ->
-  case clj_rt:equiv(K, Key) of
-    true  -> {K, V};
-    false -> find_entry(Rest, Key)
   end.
 
 -spec create_entry(map(), integer(), any(), any()) ->
@@ -38,16 +33,6 @@ create_entry(Map, Hash, Key, Value) ->
       assoc_entry(KVs, Key, Value, [])
   end.
 
--spec assoc_entry([{any(), any()}], any(), any(), [{any(), any()}]) ->
-  [{any(), any()}].
-assoc_entry([], Key, Value, Acc) ->
-  [{Key, Value} | Acc];
-assoc_entry([{K, V} | Rest], Key, Value, Acc) ->
-  case clj_rt:equiv(K, Key) of
-    true  -> Acc ++ [{K, Value} | Rest];
-    false -> assoc_entry(Rest, Key, Value, [{K, V} | Acc])
-  end.
-
 -spec without_entry(map(), integer(), any()) -> map().
 without_entry(Map, Hash, Key) ->
   case maps:get(Hash, Map, ?NIL) of
@@ -60,6 +45,33 @@ without_entry(Map, Hash, Key) ->
       end
   end.
 
+-spec equiv(map(), map()) -> boolean().
+equiv(MapX, MapY) ->
+  do_equiv(maps:to_list(MapX), MapY).
+
+%%------------------------------------------------------------------------------
+%% Helper functions
+%%------------------------------------------------------------------------------
+
+-spec find_entry([{any(), any()}], any()) -> ?NIL | {any(), any()}.
+find_entry([], _) ->
+  ?NIL;
+find_entry([{K, V} | Rest], Key) ->
+  case clj_rt:equiv(K, Key) of
+    true  -> {K, V};
+    false -> find_entry(Rest, Key)
+  end.
+
+-spec assoc_entry([{any(), any()}], any(), any(), [{any(), any()}]) ->
+  [{any(), any()}].
+assoc_entry([], Key, Value, Acc) ->
+  [{Key, Value} | Acc];
+assoc_entry([{K, V} | Rest], Key, Value, Acc) ->
+  case clj_rt:equiv(K, Key) of
+    true  -> Acc ++ [{K, Value} | Rest];
+    false -> assoc_entry(Rest, Key, Value, [{K, V} | Acc])
+  end.
+
 -spec remove_entry([{any(), any()}], integer(), any()) -> [{any(), any()}].
 remove_entry([], _Key, Acc) ->
   Acc;
@@ -67,4 +79,27 @@ remove_entry([{K, V} | Rest], Key, Acc) ->
   case clj_rt:equiv(K, Key) of
     true  -> Acc ++ Rest;
     false -> remove_entry(Rest, Key, [{K, V} | Acc])
+  end.
+
+-spec do_equiv([entry()], mappings()) -> boolean().
+do_equiv([], _) ->
+  true;
+do_equiv([{Hash, {K, V}} | Rest], MapSet) ->
+  case get_entry(MapSet, Hash, K) of
+    ?NIL    -> false;
+    {_, V1} -> clj_rt:equiv(V, V1) andalso do_equiv(Rest, MapSet)
+  end;
+do_equiv([{Hash, KVs} | Rest], MapSet) ->
+  case do_equiv_values(KVs, Hash, MapSet) of
+    false -> false;
+    _     -> do_equiv(Rest, MapSet)
+  end.
+
+-spec do_equiv_values([entry()], integer(), mappings()) -> boolean().
+do_equiv_values([], _Hash, _MapSet) ->
+  true;
+do_equiv_values([{K, V} | Rest], Hash, MapSet) ->
+  case get_entry(MapSet, Hash, K) of
+    ?NIL    -> false;
+    {_, V1} -> clj_rt:equiv(V, V1) andalso do_equiv_values(Rest, Hash, MapSet)
   end.
