@@ -88,10 +88,7 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv( #{?TYPE := ?M, set := MapSetX} = SetX
      , #{?TYPE := ?M, set := MapSetY} = SetY
      ) ->
-  case count(SetX) == count(SetY) of
-    false -> false;
-    true  -> clj_hash_collision:equiv(MapSetX, MapSetY)
-  end;
+  count(SetX) == count(SetY) andalso clj_hash_collision:equiv(MapSetX, MapSetY);
 equiv(#{?TYPE := ?M, set := MapSetX}, Y) ->
   clj_rt:'set?'(Y) andalso do_equiv(maps:values(MapSetX), Y).
 

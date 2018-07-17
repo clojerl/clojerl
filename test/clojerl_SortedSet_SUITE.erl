@@ -87,9 +87,19 @@ equiv(_Config) ->
   Set2 = clj_rt:with_meta(sorted_set([3, 4, 1, 2]), #{b => 2}),
   true = clj_rt:equiv(Set1, Set2),
 
-  ct:comment("Check that sets with the same elements are not equivalent"),
-  Set3 = clj_rt:with_meta(sorted_set([5, 6, 3, 4]), #{c => 3}),
+  ct:comment("Check that sets with different elements are not equivalent"),
+  Set3  = clj_rt:with_meta(sorted_set([5, 6, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Set1, Set3),
+
+  ct:comment("Check that sets with less elements are not equivalent"),
+  Set4  = clj_rt:with_meta(sorted_set([1, 2, 3]), #{c => 3}),
+  false = clj_rt:equiv(Set1, Set4),
+
+  ct:comment("A clojerl.Set and a clojerl.SortedSet"),
+  HashSet1 = clj_rt:hash_set([1, 2, 3, 4]),
+  true     = clj_rt:equiv(Set1, HashSet1),
+  HashSet2 = clj_rt:hash_set([1, 2, 3]),
+  false    = clj_rt:equiv(Set1, HashSet2),
 
   ct:comment("A clojerl.Set and something else"),
   false = clj_rt:equiv(Set1, whatever),

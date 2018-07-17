@@ -119,10 +119,7 @@ count(#{?TYPE := ?M, map := Map}) ->
 equiv( #{?TYPE := ?M, map := MapX} = X
      , #{?TYPE := ?M, map := MapY} = Y
      ) ->
-  case count(X) == count(Y) of
-    false -> false;
-    true  -> clj_hash_collision:equiv(MapX, MapY)
-  end;
+  count(X) == count(Y) andalso clj_hash_collision:equiv(MapX, MapY);
 equiv(#{?TYPE := ?M, map := Map}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
@@ -158,7 +155,7 @@ equiv(#{?TYPE := ?M, map := Map}, Y) ->
                            || {K, V} <- KVs0
                          ],
                   maps:merge(MapAcc, maps:from_list(KVs1));
-                (_, KVs, MapAcc) when Recursive ->
+                (_, KVs, MapAcc) ->
                   maps:merge(MapAcc, maps:from_list(KVs))
               end,
   maps:fold(ErlMapFun, #{}, Map).

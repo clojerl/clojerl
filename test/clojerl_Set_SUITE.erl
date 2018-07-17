@@ -47,6 +47,9 @@ new(_Config) ->
   Set2 = clj_rt:hash_set([]),
   ?NIL = clj_rt:get(Set2, whatever),
 
+  Set3 = clj_rt:hash_set(clj_rt:cons(1, ?NIL)),
+  1    = clj_rt:count(Set3),
+
   {comments, ""}.
 
 -spec count(config()) -> result().
@@ -71,12 +74,15 @@ str(_Config) ->
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Set = clj_rt:hash_set([1, 2, 3, 4]),
-  [1, 2, 3, 4] = lists:sort(clj_rt:seq(Set)),
-  [1, 2, 3, 4] = lists:sort(clj_rt:to_list(Set)),
+  Set1 = clj_rt:hash_set([1, 2, 3, 4]),
+  [1, 2, 3, 4] = lists:sort(clj_rt:seq(Set1)),
+  [1, 2, 3, 4] = lists:sort(clj_rt:to_list(Set1)),
 
   Set2 = clj_rt:hash_set([]),
   ?NIL = clj_rt:seq(Set2),
+
+  Set3 = clj_rt:hash_set([#{}, Set2]),
+  [_, _] = clj_rt:to_list(Set3),
 
   {comments, ""}.
 
@@ -90,6 +96,16 @@ equiv(_Config) ->
   ct:comment("Check that sets with the same elements are not equivalent"),
   Set3 = clj_rt:with_meta(clj_rt:hash_set([5, 6, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Set1, Set3),
+
+  ct:comment("Check that sets with less elements are not equivalent"),
+  Set4  = clj_rt:with_meta(clj_rt:hash_set([1, 2, 3]), #{c => 3}),
+  false = clj_rt:equiv(Set1, Set4),
+
+  ct:comment("A clojerl.Set and a clojerl.SortedSet"),
+  OtherSet1 = 'clojerl.SortedSet':?CONSTRUCTOR([1, 2, 3, 4]),
+  true       = clj_rt:equiv(Set1, OtherSet1),
+  OtherSet2   = 'clojerl.SortedSet':?CONSTRUCTOR([1, 2, 3]),
+  false      = clj_rt:equiv(Set1, OtherSet2),
 
   ct:comment("A clojerl.Set and something else"),
   false = clj_rt:equiv(Set1, whatever),
