@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.ISeqable').
@@ -20,12 +21,14 @@
 -export([equiv/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export([ get/2
+        , get/3
+        ]).
 -export([ meta/1
         , with_meta/2
         ]).
 -export([ disjoin/2
         , contains/2
-        , get/2
         ]).
 -export([ seq/1
         , to_list/1
@@ -117,6 +120,18 @@ apply(_, Args) ->
 hash(#{?TYPE := ?M, set := MapSet}) ->
   clj_murmur3:unordered(maps:values(MapSet)).
 
+%% clojerl.ILookup
+
+get(#{?TYPE := ?M} = Set, Value) ->
+  get(Set, Value, ?NIL).
+
+get(#{?TYPE := ?M, set := MapSet}, Value, NotFound) ->
+  Hash = clj_rt:hash(Value),
+  case get_entry(MapSet, Hash, Value) of
+    ?NIL   -> NotFound;
+    {V, _} -> V
+  end.
+
 %% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
@@ -133,13 +148,6 @@ disjoin(#{?TYPE := ?M, set := MapSet} = Set, Value) ->
 contains(#{?TYPE := ?M, set := MapSet}, Value) ->
   Hash = clj_rt:hash(Value),
   get_entry(MapSet, Hash, Value) /= ?NIL.
-
-get(#{?TYPE := ?M, set := MapSet}, Value) ->
-  Hash = clj_rt:hash(Value),
-  case get_entry(MapSet, Hash, Value) of
-    ?NIL   -> ?NIL;
-    {V, _} -> V
-  end.
 
 %% clojerl.ISeqable
 

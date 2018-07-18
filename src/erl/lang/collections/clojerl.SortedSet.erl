@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.ISeqable').
@@ -23,12 +24,14 @@
 -export([equiv/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export([ get/2
+        , get/3
+        ]).
 -export([ meta/1
         , with_meta/2
         ]).
 -export([ disjoin/2
         , contains/2
-        , get/2
         ]).
 -export([ seq/1
         , to_list/1
@@ -133,6 +136,18 @@ apply(_, Args) ->
 hash(#{?TYPE := ?M, dict := Dict}) ->
   clj_murmur3:unordered(rbdict:fetch_keys(Dict)).
 
+%% clojerl.ILookup
+
+get(#{?TYPE := ?M} = Set, Value) ->
+  get(Set, Value, ?NIL).
+
+get(#{?TYPE := ?M, hashes := Hashes}, Value, NotFound) ->
+  Hash = clj_rt:hash(Value),
+  case get_entry(Hashes, Hash, Value) of
+    ?NIL   -> NotFound;
+    {V, _} -> V
+  end.
+
 %% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
@@ -156,13 +171,6 @@ disjoin(#{?TYPE := ?M, hashes := Hashes0, dict := Dict} = S, Value) ->
 contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
   Hash = clj_rt:hash(Value),
   get_entry(Hashes, Hash, Value) /= ?NIL.
-
-get(#{?TYPE := ?M, hashes := Hashes}, Value) ->
-  Hash = clj_rt:hash(Value),
-  case get_entry(Hashes, Hash, Value) of
-    ?NIL   -> ?NIL;
-    {V, _} -> V
-  end.
 
 %% clojerl.ISeqable
 
