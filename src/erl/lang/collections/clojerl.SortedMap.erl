@@ -141,11 +141,10 @@ count(#{?TYPE := ?M, count := Count}) -> Count.
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, vals := ValsX}
-     , #{?TYPE := ?M, vals := ValsY}
+equiv( #{?TYPE := ?M, vals := ValsX, count := Count}
+     , #{?TYPE := ?M, vals := ValsY, count := Count}
      ) ->
-  rbdict:size(ValsX) =:= rbdict:size(ValsY)
-    andalso 'erlang.List':equiv(rbdict:to_list(ValsX), rbdict:to_list(ValsY));
+  'erlang.List':equiv(rbdict:to_list(ValsX), rbdict:to_list(ValsY));
 equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->

@@ -87,10 +87,10 @@ empty(_) -> ?CONSTRUCTOR([]).
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, set := MapSetX} = SetX
-     , #{?TYPE := ?M, set := MapSetY} = SetY
+equiv( #{?TYPE := ?M, set := MapSetX, count := Count}
+     , #{?TYPE := ?M, set := MapSetY, count := Count}
      ) ->
-  count(SetX) == count(SetY) andalso clj_hash_collision:equiv(MapSetX, MapSetY);
+  clj_hash_collision:equiv(MapSetX, MapSetY);
 equiv(#{?TYPE := ?M, set := MapSetX}, Y) ->
   clj_rt:'set?'(Y) andalso do_equiv(maps:values(MapSetX), Y).
 

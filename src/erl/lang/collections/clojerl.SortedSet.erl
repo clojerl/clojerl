@@ -112,9 +112,10 @@ empty(#{?TYPE := ?M, dict := Vals}) ->
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, hashes := MapSetX} = X
-     , #{?TYPE := ?M, hashes := MapSetY} = Y) ->
-  count(X) == count(Y) andalso clj_hash_collision:equiv(MapSetX, MapSetY);
+equiv( #{?TYPE := ?M, hashes := MapSetX, count := Count}
+     , #{?TYPE := ?M, hashes := MapSetY, count := Count}
+     ) ->
+  clj_hash_collision:equiv(MapSetX, MapSetY);
 equiv(#{?TYPE := ?M, hashes := MapSetX}, Y) ->
   clj_rt:'set?'(Y) andalso do_equiv(maps:values(MapSetX), Y).
 
