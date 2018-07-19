@@ -65,22 +65,24 @@
 -spec ?CONSTRUCTOR([any()]) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  Keys   = lists:foldl(fun fold_key_values/2, #{}, KeyValuePairs),
+  {Count, Keys}   = lists:foldl(fun build_mappings/2, {0, #{}}, KeyValuePairs),
   Values = rbdict:from_list(KeyValuePairs),
   #{ ?TYPE => ?M
    , keys  => Keys
    , vals  => Values
+   , count => Count
    , meta  => ?NIL
    }.
 
 -spec ?CONSTRUCTOR(function(), [any()]) -> type().
 ?CONSTRUCTOR(Compare, KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  Keys   = lists:foldl(fun fold_key_values/2, #{}, KeyValuePairs),
+  {Count, Keys} = lists:foldl(fun build_mappings/2, {0, #{}}, KeyValuePairs),
   Values = rbdict:from_list(Compare, KeyValuePairs),
   #{ ?TYPE => ?M
    , keys  => Keys
    , vals  => Values
+   , count => Count
    , meta  => ?NIL
    }.
 
@@ -92,10 +94,11 @@ build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
 %% @private
--spec fold_key_values({any(), any()}, map()) -> map().
-fold_key_values({K, _}, Map) ->
+-spec build_mappings(any(), {integer(), mappings()}) -> {integer(), mappings()}.
+build_mappings({K, _}, {Count, Map}) ->
   Hash = clj_rt:hash(K),
-  Map#{Hash => create_entry(Map, Hash, K, true)}.
+  {Diff, Entry} = create_entry(Map, Hash, K, true),
+  {Count + Diff, Map#{Hash => Entry}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -116,21 +119,24 @@ entry_at(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key) ->
     ?NIL -> ?NIL
   end.
 
-assoc(#{?TYPE := ?M, keys := Keys, vals := Vals0} = M, Key0, Value) ->
+assoc( #{?TYPE := ?M, keys := Keys, vals := Vals0, count := Count} = M
+     , Key0
+     , Value
+     ) ->
   Hash  = clj_rt:hash(Key0),
-  Entry = create_entry(Keys, Hash, Key0, true),
+  {Diff, Entry} = create_entry(Keys, Hash, Key0, true),
   {Key1, Vals1} = case get_entry(Keys, Hash, Key0) of
                     ?NIL      -> {Key0, Vals0};
                     {K, true} -> {K, rbdict:erase(K, Vals0)}
                   end,
-  M#{ keys => Keys#{Hash => Entry}
-    , vals => rbdict:store(Key1, Value, Vals1)
+  M#{ keys  => Keys#{Hash => Entry}
+    , vals  => rbdict:store(Key1, Value, Vals1)
+    , count => Count + Diff
     }.
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, vals := Vals}) ->
-  rbdict:size(Vals).
+count(#{?TYPE := ?M, count := Count}) -> Count.
 
 %% clojerl.IEquiv
 
@@ -212,20 +218,23 @@ get(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key, NotFound) ->
 %% clojerl.IMap
 
 keys(#{?TYPE := ?M, vals := Vals}) ->
-  [K || {K, _} <- rbdict:to_list(Vals)].
+  rbdict:fetch_keys(Vals).
 
 vals(#{?TYPE := ?M, vals := Vals}) ->
   [V || {_, V} <- rbdict:to_list(Vals)].
 
-without(#{?TYPE := ?M, keys := Keys0, vals := Vals0} = M, Key) ->
+without( #{?TYPE := ?M, keys := Keys0, vals := Vals0, count := Count} = M
+       , Key
+       ) ->
   Hash  = clj_rt:hash(Key),
-  Keys1 = without_entry(Keys0, Hash, Key),
+  {Diff, Keys1} = without_entry(Keys0, Hash, Key),
   Vals1 = case get_entry(Keys0, Hash, Key) of
             ?NIL -> Vals0;
             {K, true} -> rbdict:erase(K, Vals0)
          end,
-  M#{ keys => Keys1
-    , vals => Vals1
+  M#{ keys  => Keys1
+    , vals  => Vals1
+    , count => Count + Diff
     }.
 
 %% clojerl.IMeta

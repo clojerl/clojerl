@@ -46,13 +46,16 @@
 
 -type type() :: #{ ?TYPE => ?M
                  , set   => map()
+                 , count => non_neg_integer()
                  , meta  => ?NIL | any()
                  }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
+  {Count, MapSet} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
   #{ ?TYPE => ?M
-   , set   => lists:foldl(fun build_mappings/2, #{}, Values)
+   , set   => MapSet
+   , count => Count
    , meta  => ?NIL
    };
 ?CONSTRUCTOR(Values) ->
@@ -60,9 +63,10 @@
 
 %% @private
 -spec build_mappings(any(), mappings()) -> mappings().
-build_mappings(Value, Map) ->
+build_mappings(Value, {Count, Map}) ->
   Hash = clj_rt:hash(Value),
-  Map#{Hash => create_entry(Map, Hash, Value, true)}.
+  {Diff, Entry} = create_entry(Map, Hash, Value, true),
+  {Count + Diff, Map#{Hash => Entry}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -70,19 +74,14 @@ build_mappings(Value, Map) ->
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, set := MapSet}) ->
-  %% TODO: keep track of the count as a field
-  maps:fold(fun count_fold/3, 0, MapSet).
-
-count_fold(_, {_, _}, Count) -> Count + 1;
-count_fold(_, Vs, Count)    -> Count + length(Vs).
+count(#{?TYPE := ?M, count := Count}) -> Count.
 
 %% clojerl.IColl
 
-cons(#{?TYPE := ?M, set := MapSet} = Set, X) ->
+cons(#{?TYPE := ?M, set := MapSet, count := Count} = Set, X) ->
   Hash  = clj_rt:hash(X),
-  Entry = create_entry(MapSet, Hash, X, true),
-  Set#{set => MapSet#{Hash => Entry}}.
+  {Diff, Entry} = create_entry(MapSet, Hash, X, true),
+  Set#{set := MapSet#{Hash => Entry}, count := Count + Diff}.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
@@ -141,9 +140,10 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 
 %% clojerl.ISet
 
-disjoin(#{?TYPE := ?M, set := MapSet} = Set, Value) ->
+disjoin(#{?TYPE := ?M, set := MapSet0, count := Count} = Set, Value) ->
   Hash = clj_rt:hash(Value),
-  Set#{set => without_entry(MapSet, Hash, Value)}.
+  {Diff, MapSet1} = without_entry(MapSet0, Hash, Value),
+  Set#{set => MapSet1, count => Count + Diff}.
 
 contains(#{?TYPE := ?M, set := MapSet}, Value) ->
   Hash = clj_rt:hash(Value),

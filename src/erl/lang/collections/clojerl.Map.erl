@@ -63,10 +63,11 @@
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  Map = lists:foldl(fun build_mappings/2, #{}, KeyValuePairs),
+  {Count, Map} = lists:foldl(fun build_mappings/2, {0, #{}}, KeyValuePairs),
   #{ ?TYPE => ?M
    , map   => Map
    , meta  => ?NIL
+   , count => Count
    };
 ?CONSTRUCTOR(KeyValues) ->
   ?CONSTRUCTOR(clj_rt:to_list(KeyValues)).
@@ -79,10 +80,11 @@ build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
 %% @private
--spec build_mappings({any(), any()}, mappings()) -> mappings().
-build_mappings({Key, Value}, Map) ->
+-spec build_mappings({any(), any()}, {integer(), mappings()}) -> mappings().
+build_mappings({Key, Value}, {Count, Map}) ->
   Hash = clj_rt:hash(Key),
-  Map#{Hash => create_entry(Map, Hash, Key, Value)}.
+  {Diff, Entry} = create_entry(Map, Hash, Key, Value),
+  {Count + Diff, Map#{Hash => Entry}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -100,27 +102,22 @@ entry_at(#{?TYPE := ?M, map := Map}, Key) ->
     {K, V} -> 'clojerl.Vector':?CONSTRUCTOR([K, V])
   end.
 
-assoc(#{?TYPE := ?M, map := Map} = M, Key, Value) ->
+assoc(#{?TYPE := ?M, map := Map, count := Count} = M, Key, Value) ->
   Hash = clj_rt:hash(Key),
-  Entry = create_entry(Map, Hash, Key, Value),
-  M#{map => Map#{Hash => Entry}}.
+  {Diff, Entry} = create_entry(Map, Hash, Key, Value),
+  M#{map => Map#{Hash => Entry}, count => Count + Diff}.
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, map := Map}) ->
-  F = fun
-        (_, {_, _}, Count) -> Count + 1;
-        (_, KVs, Count)    -> Count + length(KVs)
-      end,
-  maps:fold(F, 0, Map).
+count(#{?TYPE := ?M, count := Count}) -> Count.
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, map := MapX} = X
-     , #{?TYPE := ?M, map := MapY} = Y
+equiv( #{?TYPE := ?M, count := Count, map := MapX}
+     , #{?TYPE := ?M, count := Count, map := MapY}
      ) ->
-  count(X) == count(Y) andalso clj_hash_collision:equiv(MapX, MapY);
-equiv(#{?TYPE := ?M, map := Map}, Y) ->
+  clj_hash_collision:equiv(MapX, MapY);
+equiv(#{?TYPE := ?M, map := Map, count := Count}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
       TypeModule   = clj_rt:type_module(Y),
@@ -133,7 +130,7 @@ equiv(#{?TYPE := ?M, map := Map}, Y) ->
                 Entry /= ?NIL andalso
                   clj_rt:equiv(Entry, {Key, TypeModule:get(Y, Key)})
             end,
-      maps:size(Map) =:= TypeModule:count(Y)
+      Count =:= TypeModule:count(Y)
         andalso lists:all(Fun, KeyHashPairs);
     false -> false
   end.
@@ -234,9 +231,10 @@ vals_fold(_, {_, V}, Vals) ->
 vals_fold(_, KVs, Vals) ->
   [V || {_, V} <- KVs] ++ Vals.
 
-without(#{?TYPE := ?M, map := Map} = M, Key) ->
+without(#{?TYPE := ?M, map := Map0, count := Count} = M, Key) ->
   Hash = clj_rt:hash(Key),
-  M#{map => without_entry(Map, Hash, Key)}.
+  {Diff, Map1} = without_entry(Map0, Hash, Key),
+  M#{map => Map1, count => Count + Diff}.
 
 %% clojerl.IMeta
 

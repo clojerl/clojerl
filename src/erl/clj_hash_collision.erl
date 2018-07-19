@@ -20,28 +20,28 @@ get_entry(Map, Hash, Key) ->
   end.
 
 -spec create_entry(map(), integer(), any(), any()) ->
-  {any(), any()} | [{any(), any()}].
+  {0 | 1, {any(), any()} | [{any(), any()}]}.
 create_entry(Map, Hash, Key, Value) ->
   case maps:get(Hash, Map, ?NIL) of
-    ?NIL -> {Key, Value};
+    ?NIL -> {1, {Key, Value}};
     {K, V} ->
       case clj_rt:equiv(Key, K) of
-        true  -> {K, Value};
-        false -> [{K, V}, {Key, Value}]
+        true  -> {0, {K, Value}};
+        false -> {1, [{K, V}, {Key, Value}]}
       end;
     KVs ->
       assoc_entry(KVs, Key, Value, [])
   end.
 
--spec without_entry(map(), integer(), any()) -> map().
+-spec without_entry(map(), integer(), any()) -> {-1 | 0, map()}.
 without_entry(Map, Hash, Key) ->
   case maps:get(Hash, Map, ?NIL) of
-    ?NIL   -> Map;
-    {_, _} -> maps:remove(Hash, Map);
+    ?NIL   -> {0, Map};
+    {_, _} -> {-1, maps:remove(Hash, Map)};
     KVs0   ->
       case remove_entry(KVs0, Key, []) of
-        []   -> maps:remove(Hash, Map);
-        KVs1 -> Map#{Hash => KVs1}
+        {Diff, []}   -> {Diff, maps:remove(Hash, Map)};
+        {Diff, KVs1} -> {Diff, Map#{Hash => KVs1}}
       end
   end.
 
@@ -63,21 +63,22 @@ find_entry([{K, V} | Rest], Key) ->
   end.
 
 -spec assoc_entry([{any(), any()}], any(), any(), [{any(), any()}]) ->
-  [{any(), any()}].
+  {0 | 1, [{any(), any()}]}.
 assoc_entry([], Key, Value, Acc) ->
-  [{Key, Value} | Acc];
+  {1, [{Key, Value} | Acc]};
 assoc_entry([{K, V} | Rest], Key, Value, Acc) ->
   case clj_rt:equiv(K, Key) of
-    true  -> Acc ++ [{K, Value} | Rest];
+    true  -> {0, Acc ++ [{K, Value} | Rest]};
     false -> assoc_entry(Rest, Key, Value, [{K, V} | Acc])
   end.
 
--spec remove_entry([{any(), any()}], integer(), any()) -> [{any(), any()}].
+-spec remove_entry([{any(), any()}], integer(), any()) ->
+  {-1 | 0, [{any(), any()}]}.
 remove_entry([], _Key, Acc) ->
-  Acc;
+  {0, Acc};
 remove_entry([{K, V} | Rest], Key, Acc) ->
   case clj_rt:equiv(K, Key) of
-    true  -> Acc ++ Rest;
+    true  -> {-1, Acc ++ Rest};
     false -> remove_entry(Rest, Key, [{K, V} | Acc])
   end.
 

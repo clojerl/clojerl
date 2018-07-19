@@ -57,26 +57,31 @@
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
   Vals   = [{X, true} || X <- Values],
+  {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
   #{ ?TYPE  => ?M
-   , hashes => lists:foldl(fun build_mappings/2, #{}, Values)
+   , hashes => Hashes
    , dict   => rbdict:from_list(Vals)
+   , count  => Count
    , meta   => ?NIL
    }.
 
 -spec ?CONSTRUCTOR(function(), list()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
   Vals   = [{X, true} || X <- Values],
+  {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
   #{ ?TYPE  => ?M
-   , hashes => lists:foldl(fun build_mappings/2, #{}, Values)
+   , hashes => Hashes
    , dict   => rbdict:from_list(Compare, Vals)
+   , count  => Count
    , meta   => ?NIL
    }.
 
 %% @private
--spec build_mappings(any(), mappings()) -> mappings().
-build_mappings(Value, Map) ->
+-spec build_mappings(any(), {integer(), mappings()}) -> {integer(), mappings()}.
+build_mappings(Value, {Count, Map}) ->
   Hash = clj_rt:hash(Value),
-  Map#{Hash => create_entry(Map, Hash, Value, true)}.
+  {Diff, Entry} = create_entry(Map, Hash, Value, true),
+  {Count + Diff, Map#{Hash => Entry}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -84,17 +89,18 @@ build_mappings(Value, Map) ->
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, dict := Dict}) -> rbdict:size(Dict).
+count(#{?TYPE := ?M, count := Count}) -> Count.
 
 %% clojerl.IColl
 
-cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, X) ->
+cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict, count := Count} = S, X) ->
   Hash = clj_rt:hash(X),
   case get_entry(Hashes, Hash, X) of
     ?NIL ->
-      Entry = create_entry(Hashes, Hash, X, true),
+      {Diff, Entry} = create_entry(Hashes, Hash, X, true),
       S#{ hashes => Hashes#{Hash => Entry}
         , dict   => rbdict:store(X, true, Dict)
+        , count  => Count + Diff
         };
     _ -> S
   end.
@@ -157,14 +163,17 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 
 %% clojerl.ISet
 
-disjoin(#{?TYPE := ?M, hashes := Hashes0, dict := Dict} = S, Value) ->
+disjoin( #{?TYPE := ?M, hashes := Hashes0, dict := Dict, count := Count} = S
+       , Value
+       ) ->
   Hash = clj_rt:hash(Value),
   case get_entry(Hashes0, Hash, Value) of
     ?NIL   -> S;
     {V, _} ->
-      Hashes1 = without_entry(Hashes0, Hash, Value),
+      {Diff, Hashes1} = without_entry(Hashes0, Hash, Value),
       S#{ hashes => Hashes1
         , dict   => rbdict:erase(V, Dict)
+        , count  => Count + Diff
         }
   end.
 
