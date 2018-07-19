@@ -64,4 +64,8 @@ complete_coverage(_Config) ->
   Minutes = 'erlang.util.Date':minutes(Date),
   Seconds = 'erlang.util.Date':seconds(Date),
 
+  Epoch     = {{1970, 1, 1}, {0, 0, 0}},
+  EpochDate = 'erlang.util.Date':?CONSTRUCTOR(Epoch),
+  0         = 'erlang.util.Date':timestamp(EpochDate),
+
   {comments, ""}.
