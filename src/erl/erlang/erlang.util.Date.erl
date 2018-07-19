@@ -26,7 +26,13 @@
                  }.
 
 -spec ?CONSTRUCTOR(calendar:datetime()) -> type().
-?CONSTRUCTOR(Date) -> #{?TYPE => ?M, date => Date}.
+?CONSTRUCTOR(Timestamp) when is_integer(Timestamp) ->
+  Datetime = calendar:gregorian_seconds_to_datetime(?EPOCH + Timestamp),
+  ?CONSTRUCTOR(Datetime);
+?CONSTRUCTOR({{Y, MM, D}, {H, M, S}} = Date)
+  when is_integer(Y), is_integer(MM), is_integer(D),
+       is_integer(H), is_integer(M), is_integer(S) ->
+  #{?TYPE => ?M, date => Date}.
 
 -spec year(type()) -> integer().
 year(#{?TYPE := ?M, date := {{Y, _, _}, _}}) -> Y.
@@ -55,5 +61,5 @@ timestamp(#{?TYPE := ?M, date := DateTime}) ->
 
 hash(Date) -> erlang:phash2(Date).
 
-equiv( #{?TYPE := ?M, date := Date}, #{?TYPE := ?M, date := Date}) -> true;
+equiv(#{?TYPE := ?M, date := Date}, #{?TYPE := ?M, date := Date}) -> true;
 equiv(_ , _) -> false.

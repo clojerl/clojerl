@@ -5,9 +5,9 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 
--export([ equiv/1
+-export([ new/1
+        , equiv/1
         , hash/1
-        , complete_coverage/1
         ]).
 
 -spec all() -> [atom()].
@@ -22,6 +22,28 @@ end_per_suite(Config) -> Config.
 %%------------------------------------------------------------------------------
 %% Test Cases
 %%------------------------------------------------------------------------------
+
+-spec new(config()) -> result().
+new(_Config) ->
+  Now = erlang:localtime(),
+  {{Year, Month, Day}, {Hours, Minutes, Seconds}} = Now,
+  Date = 'erlang.util.Date':?CONSTRUCTOR(Now),
+
+  Year    = 'erlang.util.Date':year(Date),
+  Month   = 'erlang.util.Date':month(Date),
+  Day     = 'erlang.util.Date':day(Date),
+  Hours   = 'erlang.util.Date':hours(Date),
+  Minutes = 'erlang.util.Date':minutes(Date),
+  Seconds = 'erlang.util.Date':seconds(Date),
+
+  Epoch     = {{1970, 1, 1}, {0, 0, 0}},
+  EpochDate = 'erlang.util.Date':?CONSTRUCTOR(Epoch),
+  0         = 'erlang.util.Date':timestamp(EpochDate),
+
+  ct:comment("Provide a timestamp"),
+  EpochDate = 'erlang.util.Date':?CONSTRUCTOR(0),
+
+  {comments, ""}.
 
 -spec hash(config()) -> result().
 hash(_Config) ->
@@ -48,24 +70,5 @@ equiv(_Config) ->
 
   true  = 'clojerl.IEquiv':equiv(Date1, Date2),
   false = 'clojerl.IEquiv':equiv(Date1, Date3),
-
-  {comments, ""}.
-
--spec complete_coverage(config()) -> result().
-complete_coverage(_Config) ->
-  Now = erlang:localtime(),
-  {{Year, Month, Day}, {Hours, Minutes, Seconds}} = Now,
-  Date = 'erlang.util.Date':?CONSTRUCTOR(Now),
-
-  Year    = 'erlang.util.Date':year(Date),
-  Month   = 'erlang.util.Date':month(Date),
-  Day     = 'erlang.util.Date':day(Date),
-  Hours   = 'erlang.util.Date':hours(Date),
-  Minutes = 'erlang.util.Date':minutes(Date),
-  Seconds = 'erlang.util.Date':seconds(Date),
-
-  Epoch     = {{1970, 1, 1}, {0, 0, 0}},
-  EpochDate = 'erlang.util.Date':?CONSTRUCTOR(Epoch),
-  0         = 'erlang.util.Date':timestamp(EpochDate),
 
   {comments, ""}.
