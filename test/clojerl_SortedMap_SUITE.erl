@@ -15,6 +15,7 @@
         , equiv/1
         , apply/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , associative/1
         , complete_coverage/1
@@ -140,6 +141,35 @@ hash(_Config) ->
 
   {comments, ""}.
 
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet   = clj_rt:hash_set([]),
+  EmptyMap   = clj_rt:hash_map([]),
+  SortedMap1 = sorted_map([EmptyMap, map, EmptySet, set]),
+
+  2   = clj_rt:count(SortedMap1),
+  map = clj_rt:get(SortedMap1, EmptyMap),
+  set = clj_rt:get(SortedMap1, EmptySet),
+
+  SortedMap2 = clj_rt:dissoc(SortedMap1, EmptyMap),
+  1   = clj_rt:count(SortedMap2),
+  set = clj_rt:get(SortedMap2, EmptySet),
+
+  SortedMap3 = clj_rt:dissoc(SortedMap1, EmptySet),
+  1   = clj_rt:count(SortedMap3),
+  map = clj_rt:get(SortedMap3, EmptyMap),
+
+  SortedMap4 = clj_rt:assoc(SortedMap3, EmptySet, set),
+  2   = clj_rt:count(SortedMap4),
+  map = clj_rt:get(SortedMap4, EmptyMap),
+  set = clj_rt:get(SortedMap4, EmptySet),
+
+  SortedMap5 = sorted_map([EmptySet, set, EmptyMap, map]),
+  true       = clj_rt:equiv(SortedMap5, SortedMap1),
+  true       = clj_rt:equiv(SortedMap1, SortedMap5),
+
+  {comments, ""}.
+
 -spec cons(config()) -> result().
 cons(_Config) ->
   EmptyMap = sorted_map([]),
@@ -203,9 +233,9 @@ associative(_Config) ->
   true      = clj_rt:equiv(HelloPair, clj_rt:vector([HelloSym1, a])),
   true      = clj_rt:'contains?'(HelloMap, HelloSym2),
 
-  ct:comment("The new key with different metadata replaces the old one"),
+  ct:comment("The new key with different metadata doesn't replace the old one"),
   HelloMap2 = clj_rt:assoc(HelloMap, HelloSym2, a),
-  HelloSym2 = clj_rt:first(clj_rt:find(HelloMap2, HelloSym2)),
+  HelloSym1 = clj_rt:first(clj_rt:find(HelloMap2, HelloSym2)),
 
   {comments, ""}.
 

@@ -7,6 +7,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.ILookup').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.ISet').
 -behavior('clojerl.ISeqable').
@@ -23,12 +24,14 @@
 -export([equiv/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export([ get/2
+        , get/3
+        ]).
 -export([ meta/1
         , with_meta/2
         ]).
 -export([ disjoin/2
         , contains/2
-        , get/2
         ]).
 -export([ seq/1
         , to_list/1
@@ -36,31 +39,50 @@
 -export(['_'/1]).
 -export([str/1]).
 
+-import( clj_hash_collision
+       , [ get_entry/3
+         , create_entry/4
+         , without_entry/3
+         ]
+       ).
+
+-type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
+
 -type type() :: #{ ?TYPE  => ?M
-                 , hashes => map()
+                 , hashes => mappings()
                  , dict   => any()
+                 , count  => non_neg_integer()
                  , meta   => ?NIL | any()
                  }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  Hashes = [{clj_rt:hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
+  {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
   #{ ?TYPE  => ?M
-   , hashes => maps:from_list(Hashes)
+   , hashes => Hashes
    , dict   => rbdict:from_list(Vals)
+   , count  => Count
    , meta   => ?NIL
    }.
 
 -spec ?CONSTRUCTOR(function(), list()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
-  Hashes = [{clj_rt:hash(X), X} || X <- Values],
   Vals   = [{X, true} || X <- Values],
+  {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
   #{ ?TYPE  => ?M
-   , hashes => maps:from_list(Hashes)
+   , hashes => Hashes
    , dict   => rbdict:from_list(Compare, Vals)
+   , count  => Count
    , meta   => ?NIL
    }.
+
+%% @private
+-spec build_mappings(any(), {integer(), mappings()}) -> {integer(), mappings()}.
+build_mappings(Value, {Count, Map}) ->
+  Hash = clj_rt:hash(Value),
+  {Diff, Entry} = create_entry(Map, Hash, Value, true),
+  {Count + Diff, Map#{Hash => Entry}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -68,17 +90,20 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, hashes := Hashes}) -> maps:size(Hashes).
+count(#{?TYPE := ?M, count := Count}) -> Count.
 
 %% clojerl.IColl
 
-cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, X) ->
+cons(#{?TYPE := ?M, hashes := Hashes, dict := Dict, count := Count} = S, X) ->
   Hash = clj_rt:hash(X),
-  case maps:is_key(Hash, Hashes) of
-    true  -> S;
-    false -> S#{ hashes => Hashes#{Hash => X}
-               , dict   => rbdict:store(X, true, Dict)
-               }
+  case get_entry(Hashes, Hash, X) of
+    ?NIL ->
+      {Diff, Entry} = create_entry(Hashes, Hash, X, true),
+      S#{ hashes => Hashes#{Hash => Entry}
+        , dict   => rbdict:store(X, true, Dict)
+        , count  => Count + Diff
+        };
+    _ -> S
   end.
 
 empty(#{?TYPE := ?M, dict := Vals}) ->
@@ -87,18 +112,28 @@ empty(#{?TYPE := ?M, dict := Vals}) ->
 
 %% clojerl.IEquiv
 
-equiv(#{?TYPE := ?M} = X, #{?TYPE := ?M} = Y) ->
-  hash(X) =:= hash(Y);
-equiv(#{?TYPE := ?M} = X, Y) ->
-  clj_rt:'set?'(Y) andalso clj_rt:hash(Y) =:= hash(X).
+equiv( #{?TYPE := ?M, hashes := MapSetX, count := Count}
+     , #{?TYPE := ?M, hashes := MapSetY, count := Count}
+     ) ->
+  clj_hash_collision:equiv(MapSetX, MapSetY);
+equiv(#{?TYPE := ?M, hashes := MapSetX}, Y) ->
+  clj_rt:'set?'(Y) andalso do_equiv(maps:values(MapSetX), Y).
+
+do_equiv([], _) ->
+  true;
+do_equiv([{V, _} | Rest], Y) ->
+  case 'clojerl.ISet':contains(Y, V) of
+    false -> false;
+    true  -> do_equiv(Rest, Y)
+  end.
 
 %% clojerl.IFn
 
 apply(#{?TYPE := ?M, hashes := Hashes}, [Item]) ->
   Hash = clj_rt:hash(Item),
-  case maps:is_key(Hash, Hashes) of
-    true  -> maps:get(Hash, Hashes);
-    false -> ?NIL
+  case get_entry(Hashes, Hash, Item) of
+    ?NIL   -> ?NIL;
+    {K, _} -> K
   end;
 apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
@@ -106,8 +141,20 @@ apply(_, Args) ->
 
 %% clojerl.IHash
 
-hash(#{?TYPE := ?M, hashes := Hashes}) ->
-  clj_murmur3:unordered(maps:values(Hashes)).
+hash(#{?TYPE := ?M, dict := Dict}) ->
+  clj_murmur3:unordered(rbdict:fetch_keys(Dict)).
+
+%% clojerl.ILookup
+
+get(#{?TYPE := ?M} = Set, Value) ->
+  get(Set, Value, ?NIL).
+
+get(#{?TYPE := ?M, hashes := Hashes}, Value, NotFound) ->
+  Hash = clj_rt:hash(Value),
+  case get_entry(Hashes, Hash, Value) of
+    ?NIL   -> NotFound;
+    {V, _} -> V
+  end.
 
 %% clojerl.IMeta
 
@@ -118,26 +165,23 @@ with_meta(#{?TYPE := ?M} = Set, Metadata) ->
 
 %% clojerl.ISet
 
-disjoin(#{?TYPE := ?M, hashes := Hashes, dict := Dict} = S, Value) ->
+disjoin( #{?TYPE := ?M, hashes := Hashes0, dict := Dict, count := Count} = S
+       , Value
+       ) ->
   Hash = clj_rt:hash(Value),
-  case maps:is_key(Hash, Hashes) of
-    false -> S;
-    true  ->
-      S#{ hashes => maps:remove(Hash, Hashes)
-        , dict   => rbdict:erase(Value, Dict)
+  case get_entry(Hashes0, Hash, Value) of
+    ?NIL   -> S;
+    {V, _} ->
+      {Diff, Hashes1} = without_entry(Hashes0, Hash, Value),
+      S#{ hashes => Hashes1
+        , dict   => rbdict:erase(V, Dict)
+        , count  => Count + Diff
         }
   end.
 
 contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
   Hash = clj_rt:hash(Value),
-  maps:is_key(Hash, Hashes).
-
-get(#{?TYPE := ?M, hashes := Hashes}, Value) ->
-  Hash = clj_rt:hash(Value),
-  case maps:is_key(Hash, Hashes) of
-    true  -> maps:get(Hash, Hashes);
-    false -> ?NIL
-  end.
+  get_entry(Hashes, Hash, Value) /= ?NIL.
 
 %% clojerl.ISeqable
 
@@ -148,7 +192,7 @@ seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
   end.
 
 to_list(#{?TYPE := ?M, dict := Dict}) ->
-  [K || {K, _} <- rbdict:to_list(Dict)].
+  rbdict:fetch_keys(Dict).
 
 %% clojerl.ISorted
 

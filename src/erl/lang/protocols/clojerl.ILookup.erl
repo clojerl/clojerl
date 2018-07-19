@@ -23,8 +23,12 @@
       'clojerl.reader.TaggedLiteral':'get'(X, Key);
     'clojerl.Map' ->
       'clojerl.Map':'get'(X, Key);
+    'clojerl.Set' ->
+      'clojerl.Set':'get'(X, Key);
     'clojerl.SortedMap' ->
       'clojerl.SortedMap':'get'(X, Key);
+    'clojerl.SortedSet' ->
+      'clojerl.SortedSet':'get'(X, Key);
     'clojerl.TupleMap' ->
       'clojerl.TupleMap':'get'(X, Key);
     'clojerl.Vector' ->
@@ -45,8 +49,12 @@
       'clojerl.reader.TaggedLiteral':'get'(X, Key, NotFound);
     'clojerl.Map' ->
       'clojerl.Map':'get'(X, Key, NotFound);
+    'clojerl.Set' ->
+      'clojerl.Set':'get'(X, Key, NotFound);
     'clojerl.SortedMap' ->
       'clojerl.SortedMap':'get'(X, Key, NotFound);
+    'clojerl.SortedSet' ->
+      'clojerl.SortedSet':'get'(X, Key, NotFound);
     'clojerl.TupleMap' ->
       'clojerl.TupleMap':'get'(X, Key, NotFound);
     'clojerl.Vector' ->
@@ -60,7 +68,9 @@
 ?SATISFIES('clojerl.reader.ReaderConditional') -> true;
 ?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
 ?SATISFIES('clojerl.Map') -> true;
+?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.SortedMap') -> true;
+?SATISFIES('clojerl.SortedSet') -> true;
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES(_) -> false.

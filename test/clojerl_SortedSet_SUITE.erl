@@ -14,6 +14,7 @@
         , seq/1
         , equiv/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , apply/1
         , disjoin/1
@@ -86,9 +87,19 @@ equiv(_Config) ->
   Set2 = clj_rt:with_meta(sorted_set([3, 4, 1, 2]), #{b => 2}),
   true = clj_rt:equiv(Set1, Set2),
 
-  ct:comment("Check that sets with the same elements are not equivalent"),
-  Set3 = clj_rt:with_meta(sorted_set([5, 6, 3, 4]), #{c => 3}),
+  ct:comment("Check that sets with different elements are not equivalent"),
+  Set3  = clj_rt:with_meta(sorted_set([5, 6, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Set1, Set3),
+
+  ct:comment("Check that sets with less elements are not equivalent"),
+  Set4  = clj_rt:with_meta(sorted_set([1, 2, 3]), #{c => 3}),
+  false = clj_rt:equiv(Set1, Set4),
+
+  ct:comment("A clojerl.Set and a clojerl.SortedSet"),
+  HashSet1 = clj_rt:hash_set([1, 2, 3, 4]),
+  true     = clj_rt:equiv(Set1, HashSet1),
+  HashSet2 = clj_rt:hash_set([1, 2, 3]),
+  false    = clj_rt:equiv(Set1, HashSet2),
 
   ct:comment("A clojerl.Set and something else"),
   false = clj_rt:equiv(Set1, whatever),
@@ -111,6 +122,36 @@ hash(_Config) ->
   true = Hash2 =/= Hash3,
 
   {comments, ""}.
+
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet   = clj_rt:hash_set([]),
+  EmptyMap   = clj_rt:hash_map([]),
+  SortedSet1 = sorted_set([EmptyMap, EmptySet]),
+
+  2        = clj_rt:count(SortedSet1),
+  EmptyMap = clj_rt:get(SortedSet1, EmptyMap),
+  EmptySet = clj_rt:get(SortedSet1, EmptySet),
+
+  SortedSet2 = clj_rt:disj(SortedSet1, EmptyMap),
+  1        = clj_rt:count(SortedSet2),
+  EmptySet = clj_rt:get(SortedSet2, EmptySet),
+
+  SortedSet3 = clj_rt:disj(SortedSet1, EmptySet),
+  1        = clj_rt:count(SortedSet3),
+  EmptyMap = clj_rt:get(SortedSet3, EmptyMap),
+
+  SortedSet4 = clj_rt:conj(SortedSet3, EmptySet),
+  2        = clj_rt:count(SortedSet4),
+  EmptyMap = clj_rt:get(SortedSet4, EmptyMap),
+  EmptySet = clj_rt:get(SortedSet4, EmptySet),
+
+  SortedSet5 = sorted_set([EmptySet, EmptyMap]),
+  true       = clj_rt:equiv(SortedSet5, SortedSet1),
+  true       = clj_rt:equiv(SortedSet1, SortedSet5),
+
+  {comments, ""}.
+
 
 -spec cons(config()) -> result().
 cons(_Config) ->

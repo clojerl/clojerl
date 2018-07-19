@@ -74,6 +74,13 @@
            'clojerl.Error':?CONSTRUCTOR(clj_utils:format_error(Msg, Loc))
           )
        ).
+-define( ERROR(Msg, Loc, Stacktrace)
+       , erlang:raise(
+           error,
+           'clojerl.Error':?CONSTRUCTOR(clj_utils:format_error(Msg, Loc)),
+           Stacktrace
+          )
+       ).
 
 -define(ERROR_WHEN(Pred, Msg), ?ERROR_WHEN(Pred, Msg, ?NIL)).
 -define( ERROR_WHEN(Pred, Msg, Loc)

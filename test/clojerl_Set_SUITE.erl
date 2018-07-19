@@ -14,6 +14,7 @@
         , seq/1
         , equiv/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , apply/1
         , disjoin/1
@@ -46,6 +47,9 @@ new(_Config) ->
   Set2 = clj_rt:hash_set([]),
   ?NIL = clj_rt:get(Set2, whatever),
 
+  Set3 = clj_rt:hash_set(clj_rt:cons(1, ?NIL)),
+  1    = clj_rt:count(Set3),
+
   {comments, ""}.
 
 -spec count(config()) -> result().
@@ -61,7 +65,7 @@ count(_Config) ->
 -spec str(config()) -> result().
 str(_Config) ->
   Set = clj_rt:hash_set([1, 2, 3, 4]),
-  <<"#{1 2 4 3}">> = clj_rt:str(Set),
+  <<"#{3 4 2 1}">> = clj_rt:str(Set),
 
   Set2 = clj_rt:hash_set([]),
   <<"#{}">> = clj_rt:str(Set2),
@@ -70,12 +74,15 @@ str(_Config) ->
 
 -spec seq(config()) -> result().
 seq(_Config) ->
-  Set = clj_rt:hash_set([1, 2, 3, 4]),
-  [1, 2, 3, 4] = lists:sort(clj_rt:seq(Set)),
-  [1, 2, 3, 4] = lists:sort(clj_rt:to_list(Set)),
+  Set1 = clj_rt:hash_set([1, 2, 3, 4]),
+  [1, 2, 3, 4] = lists:sort(clj_rt:seq(Set1)),
+  [1, 2, 3, 4] = lists:sort(clj_rt:to_list(Set1)),
 
   Set2 = clj_rt:hash_set([]),
   ?NIL = clj_rt:seq(Set2),
+
+  Set3 = clj_rt:hash_set([#{}, Set2]),
+  [_, _] = clj_rt:to_list(Set3),
 
   {comments, ""}.
 
@@ -89,6 +96,16 @@ equiv(_Config) ->
   ct:comment("Check that sets with the same elements are not equivalent"),
   Set3 = clj_rt:with_meta(clj_rt:hash_set([5, 6, 3, 4]), #{c => 3}),
   false = clj_rt:equiv(Set1, Set3),
+
+  ct:comment("Check that sets with less elements are not equivalent"),
+  Set4  = clj_rt:with_meta(clj_rt:hash_set([1, 2, 3]), #{c => 3}),
+  false = clj_rt:equiv(Set1, Set4),
+
+  ct:comment("A clojerl.Set and a clojerl.SortedSet"),
+  OtherSet1 = 'clojerl.SortedSet':?CONSTRUCTOR([1, 2, 3, 4]),
+  true       = clj_rt:equiv(Set1, OtherSet1),
+  OtherSet2   = 'clojerl.SortedSet':?CONSTRUCTOR([1, 2, 3]),
+  false      = clj_rt:equiv(Set1, OtherSet2),
 
   ct:comment("A clojerl.Set and something else"),
   false = clj_rt:equiv(Set1, whatever),
@@ -109,6 +126,35 @@ hash(_Config) ->
 
   true = Hash1 == Hash2,
   true = Hash2 =/= Hash3,
+
+  {comments, ""}.
+
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet = clj_rt:hash_set([]),
+  EmptyMap = clj_rt:hash_map([]),
+  HashSet1 = clj_rt:hash_set([EmptyMap, EmptySet]),
+
+  2        = clj_rt:count(HashSet1),
+  EmptyMap = clj_rt:get(HashSet1, EmptyMap),
+  EmptySet = clj_rt:get(HashSet1, EmptySet),
+
+  HashSet2 = clj_rt:disj(HashSet1, EmptyMap),
+  1        = clj_rt:count(HashSet2),
+  EmptySet = clj_rt:get(HashSet2, EmptySet),
+
+  HashSet3 = clj_rt:disj(HashSet1, EmptySet),
+  1        = clj_rt:count(HashSet3),
+  EmptyMap = clj_rt:get(HashSet3, EmptyMap),
+
+  HashSet4 = clj_rt:conj(HashSet3, EmptySet),
+  2        = clj_rt:count(HashSet4),
+  EmptyMap = clj_rt:get(HashSet4, EmptyMap),
+  EmptySet = clj_rt:get(HashSet4, EmptySet),
+
+  HashSet5 = clj_rt:hash_set([EmptySet, EmptyMap]),
+  true     = clj_rt:equiv(HashSet5, HashSet1),
+  true     = clj_rt:equiv(HashSet1, HashSet5),
 
   {comments, ""}.
 

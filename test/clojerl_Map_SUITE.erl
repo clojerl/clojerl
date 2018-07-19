@@ -15,6 +15,7 @@
         , equiv/1
         , apply/1
         , hash/1
+        , hash_collision/1
         , cons/1
         , associative/1
         , to_erl/1
@@ -36,15 +37,23 @@ end_per_suite(Config) -> Config.
 
 -spec new(config()) -> result().
 new(_Config) ->
-  Map = clj_rt:hash_map([1, 2, 3, 4]),
-  2 = clj_rt:get(Map, 1),
-  4 = clj_rt:get(Map, 3),
+  Map1  = clj_rt:hash_map([1, 2, 3, 4]),
+  2    = clj_rt:get(Map1, 1),
+  4    = clj_rt:get(Map1, 3),
+  ?NIL = clj_rt:get(Map1, 5),
 
-  [1, 3] = lists:sort(clj_rt:keys(Map)),
-  [2, 4] = lists:sort(clj_rt:vals(Map)),
+  [1, 3] = lists:sort(clj_rt:keys(Map1)),
+  [2, 4] = lists:sort(clj_rt:vals(Map1)),
 
-  Map2 = clj_rt:hash_map([]),
-  ?NIL = clj_rt:seq(Map2),
+  EmptySet = clj_rt:hash_set([]),
+  EmptyMap = clj_rt:hash_map([]),
+  Map2     = clj_rt:hash_map([EmptyMap, map, EmptySet, set]),
+
+  [EmptyMap, EmptySet] = lists:sort(clj_rt:keys(Map2)),
+  [map, set]           = lists:sort(clj_rt:vals(Map2)),
+
+  Map3 = clj_rt:hash_map([]),
+  ?NIL = clj_rt:seq(Map3),
 
   {comments, ""}.
 
@@ -80,6 +89,13 @@ seq(_Config) ->
 
   MapList = clj_rt:to_list(Map),
   true = clj_rt:equiv([[1, 2], [3, 4]], lists:sort(MapList)),
+
+  EmptySet = clj_rt:hash_set([]),
+  EmptyMap = clj_rt:hash_map([]),
+  Map3     = clj_rt:hash_map([EmptyMap, map, EmptySet, set]),
+
+  MapList2 = clj_rt:to_list(Map3),
+  true = clj_rt:equiv([[EmptyMap, map], [EmptySet, set]], lists:sort(MapList2)),
 
   {comments, ""}.
 
@@ -148,6 +164,57 @@ hash(_Config) ->
   EmptySet  = 'clojerl.Set':?CONSTRUCTOR([]),
   HashSet   = 'clojerl.IHash':hash(EmptySet),
   true      = HashMap =:= HashSet,
+
+  {comments, ""}.
+
+-spec hash_collision(config()) -> result().
+hash_collision(_Config) ->
+  EmptySet = clj_rt:hash_set([]),
+  EmptyMap = clj_rt:hash_map([]),
+  HashMap1 = clj_rt:hash_map([EmptyMap, map, EmptySet, set]),
+
+  ct:comment("Resulting map has to different key-value pairs"),
+  2   = clj_rt:count(HashMap1),
+  map = clj_rt:get(HashMap1, EmptyMap),
+  set = clj_rt:get(HashMap1, EmptySet),
+
+  ct:comment("Removing a non-existing key doesn't change the map"),
+  HashMap1 = clj_rt:dissoc(HashMap1, foo),
+
+  ct:comment("Removing the empty map leaves the empty set"),
+  HashMap2 = clj_rt:dissoc(HashMap1, EmptyMap),
+  1   = clj_rt:count(HashMap2),
+  set = clj_rt:get(HashMap2, EmptySet),
+
+  ct:comment("Removing the empty set leaves the empty map"),
+  HashMap3 = clj_rt:dissoc(HashMap1, EmptySet),
+  1   = clj_rt:count(HashMap3),
+  map = clj_rt:get(HashMap3, EmptyMap),
+
+  ct:comment("Adding the empty set should result in the equiv original map"),
+  HashMap4 = clj_rt:assoc(HashMap3, EmptySet, set),
+  2    = clj_rt:count(HashMap4),
+  map  = clj_rt:get(HashMap4, EmptyMap),
+  set  = clj_rt:get(HashMap4, EmptySet),
+  true = clj_rt:equiv(HashMap4, HashMap1),
+  true = clj_rt:equiv(HashMap1, HashMap4),
+
+  ct:comment("A new map with same key-value pairs should be equiv"),
+  HashMap5 = clj_rt:hash_map([EmptySet, set, EmptyMap, map]),
+  true     = clj_rt:equiv(HashMap5, HashMap1),
+  true     = clj_rt:equiv(HashMap1, HashMap5),
+
+  ct:comment("The empty hash entry is removed from the internal representation"),
+  EmptyMap = clj_rt:dissoc(clj_rt:dissoc(HashMap1, EmptyMap), EmptySet),
+
+  ct:comment("Only the value for the key is replaced"),
+  HashMap6 = clj_rt:assoc(HashMap1, EmptySet, value),
+  value    = clj_rt:get(HashMap6, EmptySet),
+  map      = clj_rt:get(HashMap6, EmptyMap),
+
+  ct:comment("Map with different value for key should not be equiv"),
+  false = clj_rt:equiv(HashMap6, HashMap1),
+  false = clj_rt:equiv(HashMap1, HashMap6),
 
   {comments, ""}.
 
@@ -234,6 +301,17 @@ to_erl(_Config) ->
   Map1Erl2 = clj_rt:'->erl'(Map1, true),
   Value    = maps:get(#{}, Map1Erl2),
   Value    = #{},
+
+  EmptySet = clj_rt:hash_set([]),
+  Map2     = clj_rt:hash_map([EmptyMap, map, EmptySet, set]),
+
+  Map2Erl1 = clj_rt:'->erl'(Map2, false),
+  map      = maps:get(EmptyMap, Map2Erl1),
+  set      = maps:get(EmptySet, Map2Erl1),
+
+  Map2Erl2 = clj_rt:'->erl'(Map2, true),
+  map      = maps:get(#{}, Map2Erl2),
+  set      = maps:get(EmptySet, Map2Erl2),
 
   {comments, ""}.
 

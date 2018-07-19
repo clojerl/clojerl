@@ -490,8 +490,8 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
     NewFormWithMeta = add_meta(Form, QuotedForm),
 
     push_form(NewFormWithMeta, NewState)
-  catch error:Reason ->
-      ?ERROR(Reason, location(NewState))
+  catch ?WITH_STACKTRACE(error, Reason, Stack)
+      ?ERROR(Reason, location(NewState), Stack)
   after
     erlang:erase(gensym_env)
   end.
