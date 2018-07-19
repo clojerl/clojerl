@@ -43,6 +43,14 @@ new(_Config) ->
   ct:comment("Provide a timestamp"),
   EpochDate = 'erlang.util.Date':?CONSTRUCTOR(0),
 
+  ct:comment("Timestamps that map to before 0-1-1 are invalid"),
+  EpochSeconds = calendar:datetime_to_gregorian_seconds(Epoch),
+  MinDatetime  = 'erlang.util.Date':?CONSTRUCTOR(-EpochSeconds),
+  EpochSeconds = -'erlang.util.Date':timestamp(MinDatetime),
+  ok = try 'erlang.util.Date':?CONSTRUCTOR(-EpochSeconds-1)
+       catch _:_ -> ok
+       end,
+
   {comments, ""}.
 
 -spec hash(config()) -> result().

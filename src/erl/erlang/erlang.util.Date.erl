@@ -26,7 +26,7 @@
                  }.
 
 -spec ?CONSTRUCTOR(calendar:datetime()) -> type().
-?CONSTRUCTOR(Timestamp) when is_integer(Timestamp) ->
+?CONSTRUCTOR(Timestamp) when is_integer(Timestamp), -?EPOCH =< Timestamp ->
   Datetime = calendar:gregorian_seconds_to_datetime(?EPOCH + Timestamp),
   ?CONSTRUCTOR(Datetime);
 ?CONSTRUCTOR({{Y, MM, D}, {H, M, S}} = Date)
