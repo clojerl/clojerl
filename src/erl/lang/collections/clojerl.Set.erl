@@ -62,7 +62,7 @@
   ?CONSTRUCTOR(clj_rt:to_list(Values)).
 
 %% @private
--spec build_mappings(any(), mappings()) -> mappings().
+-spec build_mappings(any(), {integer(), mappings()}) -> {integer(), mappings()}.
 build_mappings(Value, {Count, Map}) ->
   Hash = clj_rt:hash(Value),
   {Diff, Entry} = create_entry(Map, Hash, Value, true),

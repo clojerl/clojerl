@@ -57,6 +57,7 @@
 
 -type type() :: #{ ?TYPE => ?M
                  , map   => mappings()
+                 , count => non_neg_integer()
                  , meta  => ?NIL | any()
                  }.
 
@@ -80,7 +81,8 @@ build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
 %% @private
--spec build_mappings({any(), any()}, {integer(), mappings()}) -> mappings().
+-spec build_mappings({any(), any()}, {integer(), mappings()}) ->
+  {integer(), mappings()}.
 build_mappings({Key, Value}, {Count, Map}) ->
   Hash = clj_rt:hash(Key),
   {Diff, Entry} = create_entry(Map, Hash, Key, Value),

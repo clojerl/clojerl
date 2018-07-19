@@ -51,6 +51,7 @@
 -type type() :: #{ ?TYPE  => ?M
                  , hashes => mappings()
                  , dict   => any()
+                 , count  => non_neg_integer()
                  , meta   => ?NIL | any()
                  }.
 
