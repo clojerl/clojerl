@@ -183,12 +183,12 @@ cons(#{?TYPE := ?M} = M, X) ->
   case clj_rt:to_list(X) of
     [K, V] when IsVector ->
       assoc(M, K, V);
-    Map when IsMap ->
+    KVs when IsMap ->
       Fun = fun(KV, Acc) ->
                 [K, V] = clj_rt:to_list(KV),
                 assoc(Acc, K, V)
             end,
-      lists:foldl(Fun, M, Map);
+      lists:foldl(Fun, M, KVs);
     _ ->
       ?ERROR([ <<"Can't conj something that is not a key/value pair or "
                "another map to a map, got: ">>
