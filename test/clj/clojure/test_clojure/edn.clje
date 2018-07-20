@@ -34,5 +34,5 @@
 (defspec types-that-should-not-roundtrip
   roundtrip
   [^{:tag cgen/non-ednable} o]
-  (when-not (instance? Throwable %)
+  (when-not (satisfies? clojerl.IError %)
     (throw (ex-info "edn/read should have thrown, see ex-data" {:printed o :read %}))))
