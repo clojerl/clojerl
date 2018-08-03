@@ -29,6 +29,7 @@
 
         , store_binary/2
         , add_core_to_binary/2
+        , add_compile_info_to_binary/2
         , code_from_binary/1
 
         , 'rem'/2
@@ -49,6 +50,7 @@
         ]).
 
 -define(CORE_CHUNK, "Core").
+-define(COMPILE_INFO_CHUNK, "CInf").
 
 -type char_type() :: whitespace | number | string
                    | keyword | comment | quote
@@ -275,8 +277,19 @@ store_binary(Name, Binary) ->
 add_core_to_binary(BeamBinary, CoreModule) ->
   CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
   CoreAbstractChunk   = {?CORE_CHUNK, CoreAbstract},
-  {ok, _, OldChunks}  = beam_lib:all_chunks(BeamBinary),
-  {ok, NewBeamBinary} = beam_lib:build_module([CoreAbstractChunk | OldChunks]),
+  {ok, _, OldChunks0} = beam_lib:all_chunks(BeamBinary),
+  OldChunks1          = proplists:delete(?CORE_CHUNK, OldChunks0),
+  {ok, NewBeamBinary} = beam_lib:build_module([CoreAbstractChunk | OldChunks1]),
+  NewBeamBinary.
+
+-spec add_compile_info_to_binary(binary(), any()) -> binary().
+add_compile_info_to_binary(BeamBinary, CompileInfo) ->
+  CompileInfoChunk    = { ?COMPILE_INFO_CHUNK
+                        , erlang:term_to_binary(CompileInfo)
+                        },
+  {ok, _, OldChunks0} = beam_lib:all_chunks(BeamBinary),
+  OldChunks1          = proplists:delete(?COMPILE_INFO_CHUNK, OldChunks0),
+  {ok, NewBeamBinary} = beam_lib:build_module([CompileInfoChunk | OldChunks1]),
   NewBeamBinary.
 
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.

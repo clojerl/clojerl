@@ -48,8 +48,6 @@
 -spec default_options() -> options().
 default_options() ->
   #{ erl_flags   => [ verbose
-                    %% , debug_info
-                    %% Don't use these except for improving generated code
                     , nowarn_unused_vars
                     , nowarn_shadow_vars
                     , nowarn_unused_record
@@ -340,11 +338,12 @@ compile_module(Module, Opts) ->
 
   %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   case compile:noenv_forms(Module, ErlFlags) of
-    {ok, _, Beam, _Warnings} ->
+    {ok, _, Beam0, _Warnings} ->
       Name           = cerl:atom_val(cerl:module_name(Module)),
-      BeamCore       = clj_utils:add_core_to_binary(Beam, Module),
-      BeamPath       = maybe_output_beam(Name, Module, BeamCore, Opts),
-      {module, Name} = code:load_binary(Name, BeamPath, Beam),
+      Beam1          = clj_utils:add_core_to_binary(Beam0, Module),
+      Beam2          = maybe_replace_compile_info(Beam1, Module),
+      BeamPath       = maybe_output_beam(Name, Module, Beam2, Opts),
+      {module, Name} = code:load_binary(Name, BeamPath, Beam2),
       list_to_binary(BeamPath);
     {error, Errors, Warnings} ->
       error({Errors, Warnings})
@@ -422,6 +421,37 @@ maybe_output_core(Module, #{output_core := Path}) when is_binary(Path) ->
   file:write_file(Path, Source);
 maybe_output_core(_, _) ->
   ok.
+
+%% Keep compile_info information for modules that were originally compiled
+%% as Erlang modules (e.g. protocol modules).
+%% This is to avoid rebar3 re-compiling the modules because it detects
+%% their `compile_info` options were changed.
+
+-spec maybe_replace_compile_info(binary(), cerl:c_module()) -> binary().
+maybe_replace_compile_info(Beam, Module) ->
+  Name = cerl:concrete(cerl:module_name(Module)),
+  code:ensure_loaded(Name),
+  case original_compile_info(Name) of
+    undefined   -> Beam;
+    CompileInfo -> clj_utils:add_compile_info_to_binary(Beam, CompileInfo)
+  end.
+
+-spec original_compile_info(module()) -> [any()] | undefined.
+original_compile_info(Name) ->
+  case code:which(Name) of
+    Filename when is_list(Filename) ->
+      compile_info(Filename);
+    _ -> undefined
+  end.
+
+-spec compile_info(list()) -> [any()] | undefined.
+compile_info(Target) ->
+  case beam_lib:chunks(Target, [compile_info]) of
+    {ok, {_mod, Chunks}} ->
+      proplists:get_value(compile_info, Chunks, []);
+    {error, beam_lib, _} ->
+      undefined
+  end.
 
 -spec maybe_output_beam(module(), cerl:c_module(), binary(), options()) ->
   string().
