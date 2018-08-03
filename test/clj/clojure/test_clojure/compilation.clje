@@ -250,8 +250,13 @@
 ;; #clojure.test_clojure.compilation.Y[1]
 (defrecord Y [b])
 
-(binding [*compile-path* "ebin/test-types"]
-  (compile 'clojure.test-clojure.compilation.examples))
+(let [output-path (-> #erl"REBAR_BUILD_DIR"
+                      (os/getenv #erl"_build/test/lib/clojerl")
+                      erlang/list_to_binary
+                      (str "/ebin"))]
+  (binding [*compile-path* output-path
+            *compile-protocols-path* output-path]
+    (compile 'clojure.test-clojure.compilation.examples)))
 
 (defn fails-on-line-number? [expected function]
   (try
