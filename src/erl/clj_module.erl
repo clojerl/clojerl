@@ -14,6 +14,7 @@
         , all_modules/0
         , get_module/1
         , ensure_loaded/2
+        , maybe_ensure_loaded/1
         , is_loaded/1
         , remove/1
 
@@ -118,10 +119,20 @@ get_module(ModuleName) when is_atom(ModuleName) ->
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(binary(), module()) -> ok.
 ensure_loaded(Source, Name) ->
-  case is_loaded(Name) of
-    true  -> ok;
-    false -> load(Source, Name), ok
+  case not is_loaded(Name) of
+    true  -> load(Source, Name), ok;
+    false -> ok
   end.
+
+%% @doc Ensures a module is loaded when in a compiling context
+%%
+%% This is used from in-ns so that namespaces without any vars
+%% definition still get registered when compiling.
+%% @end
+-spec maybe_ensure_loaded(module()) -> ok.
+maybe_ensure_loaded(Name) ->
+  in_context() andalso ensure_loaded(<<?NO_SOURCE>>, Name),
+  ok.
 
 %% @doc Remove the module from the loaded modules in clj_module.
 -spec remove(module()) -> ok.
