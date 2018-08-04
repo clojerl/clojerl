@@ -334,7 +334,7 @@
 
 (defn- file-and-line
   {:deprecated "1.8"}
-  [stacktrace exception depth]
+  [stacktrace depth]
   (if (< depth (count stacktrace))
     (let [s (nth stacktrace depth)]
       {:file (stack/filename s) :line (stack/line-num s)})

@@ -37,15 +37,15 @@
   (is (= 3 (+ 2 2)) "Should fail"))
 
 (deftest can-test-instance
-  (is (instance? :clojerl.Integer (+ 2 2)) "Should pass")
-  (is (instance? :clojerl.Float (+ 1 1)) "Should fail"))
+  (is (instance? clojerl.Integer (+ 2 2)) "Should pass")
+  (is (instance? clojerl.Float (+ 1 1)) "Should fail"))
 
 (deftest can-test-thrown
   (is (thrown? :error (/ 1 0)) "Should pass")
   ;; No exception is thrown:
   (is (thrown? :error (+ 1 1)) "Should fail")
   ;; Wrong type of exception is thrown:
-  (is (thrown? :error (throw :some-error)) "Should error"))
+  (is (thrown? clojerl.Error (throw :some-error)) "Should error"))
 
 (deftest can-test-thrown-with-msg
   (is (thrown-with-msg? :error #":badarith" (/ 1 0)) "Should pass")
@@ -54,18 +54,18 @@
   ;; No exception is thrown:
   (is (thrown? :error (+ 1 1)) "Should fail")
   ;; Wrong type of exception is thrown:
-  (is (thrown-with-msg? :error #"Divide by zero" (/ 1 0)) "Should error"))
+  (is (thrown-with-msg? clojerl.Error #"Divide by zero" (/ 1 0)) "Should error"))
 
 (deftest can-catch-unexpected-exceptions
   (is (= 1 (throw "Exception")) "Should error"))
 
 (deftest can-test-method-call
-  (is (clojerl.String/starts_with "abc" "a") "Should pass")
-  (is (clojerl.String/starts_with "abc" "d") "Should fail"))
+  (is (.starts_with "abc" "a") "Should pass")
+  (is (.starts_with "abc" "d") "Should fail"))
 
 (deftest can-test-anonymous-fn
-  (is (#(clojerl.String/starts_with % "a") "abc") "Should pass")
-  (is (#(clojerl.String/starts_with % "d") "abc") "Should fail"))
+  (is (#(.starts_with % "a") "abc") "Should pass")
+  (is (#(.starts_with % "d") "abc") "Should fail"))
 
 (deftest can-test-regexps
   (is (re-matches #"^ab.*$" "abbabba") "Should pass")
@@ -86,7 +86,7 @@
 (declare does-not-exist)
 
 (deftest can-test-unbound-symbol
-  (is (= nil does-not-exist) "Should error"))
+  (is (= nil does-not-exist) "Should fail"))
 
 (deftest can-test-unbound-function
   (is (does-not-exist) "Should error"))
