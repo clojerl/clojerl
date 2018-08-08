@@ -16,7 +16,7 @@ compile:
 	${V} ${REBAR3} compile
 
 test: clean
-	${V} ${REBAR3} as test do ct, clojerl test, cover -v
+	${V} ${REBAR3} as test do ct, clojerl test
 
 dialyzer: clean
 	${V} ${REBAR3} as dialyzer dialyzer
