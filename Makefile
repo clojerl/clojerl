@@ -15,9 +15,6 @@ all: compile
 compile:
 	${V} ${REBAR3} compile
 
-compile-examples: compile
-	${V} ${CLOJERLC} test/clj/examples/${EXAMPLE}.clje
-
 test: clean
 	${V} ${REBAR3} as test do ct, clojerl test, cover, cover_result
 
@@ -35,3 +32,20 @@ ci: test dialyzer
 
 repl: compile
 	${V} ${RLWRAP} ${CLOJERL} -r
+
+# ------------------------------------------------------------------------------
+# Clojure Benchmarks
+# ------------------------------------------------------------------------------
+
+SCRIPTS  := ${CURDIR}/scripts
+CLOJERL  := bin/clojerl -pa ${SCRIPTS}
+EBIN     := ebin
+CLOJERLC := ${CLOJERL} --compile -o ${EBIN}
+
+benchmark: all
+	${V} cp ${SCRIPTS}/benchmark/result.txt ${SCRIPTS}/benchmark/result.prev.txt
+	${V} (time ${CLOJERL} -m benchmark.benchmark-runner) 2>&1 | tee ${SCRIPTS}/benchmark/result.txt
+	${V} ${CLOJERL} -m benchmark.report ${SCRIPTS}/benchmark/result.txt ${SCRIPTS}/benchmark/result.prev.txt
+
+compile-examples: compile
+	${V} ${CLOJERLC} ${SCRIPTS}/examples/${EXAMPLE}.clje
