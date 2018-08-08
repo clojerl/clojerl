@@ -19,7 +19,7 @@ test: clean
 	${V} ${REBAR3} as test do ct, clojerl test, cover -v
 
 dialyzer: clean
-	${V} ${REBAR3} dialyzer
+	${V} ${REBAR3} as dialyzer dialyzer
 
 shell:
 	${V} ${REBAR3} as dev shell --sname clojerl-shell --setcookie clojerl
