@@ -253,7 +253,7 @@ ns__val() ->
              , <<"First argument to in-ns must be a symbol">>
              , clj_reader:location_meta(Name)
              ),
-
+  clj_module:maybe_ensure_loaded(clj_rt:keyword(Name)),
   'clojerl.Namespace':find_or_create(Name),
   ?NIL.
 

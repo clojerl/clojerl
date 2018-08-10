@@ -62,7 +62,7 @@ compile(_Config) ->
 -spec compile_file(config()) -> result().
 compile_file(_Config) ->
   Opts = #{verbose => true, time => true},
-  Dir  = <<"test/clj/examples">>,
+  Dir  = <<"scripts/examples">>,
   ct:comment("Compile a file and check a var's value by deref'ing it"),
   SimplePath = clj_test_utils:relative_path(<<Dir/binary, "/simple.clje">>),
   _Env = clj_compiler:compile_file(SimplePath, Opts),
@@ -76,7 +76,7 @@ compile_file(_Config) ->
 
   Opts     = #{verbose => true, time => true},
   SrcPath  = clj_test_utils:relative_path(<<"src/clj">>),
-  TestPath = clj_test_utils:relative_path(<<"test/clj">>),
+  TestPath = clj_test_utils:relative_path(<<"scripts">>),
   true     = code:add_path(binary_to_list(SrcPath)),
   true     = code:add_path(binary_to_list(TestPath)),
 
@@ -87,10 +87,10 @@ compile_file(_Config) ->
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
-  ct:comment("Compile all src/clj/examples/*.clj files succesfully"),
-  Wildcard2 = clj_test_utils:relative_path(<<"test/clj/examples/**/*.clje">>),
+  ct:comment("Compile all scripts/clj/examples/*.clj files succesfully"),
+  Wildcard2 = clj_test_utils:relative_path(<<"scripts/examples/**/*.clje">>),
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
-  ErrorPath = clj_test_utils:relative_path(<<"test/clj/examples/error.clje">>),
+  ErrorPath = clj_test_utils:relative_path(<<"scripts/examples/error.clje">>),
   FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],
   [clj_compiler:compile_file(F, Opts) || F <- FilesBin2],
 
