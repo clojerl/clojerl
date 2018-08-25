@@ -31,6 +31,7 @@
         , add_core_to_binary/2
         , add_compile_info_to_binary/2
         , code_from_binary/1
+        , core_chunk/0
 
         , 'rem'/2
         , quotient/2
@@ -329,6 +330,9 @@ core_from_binary(Binary) ->
     CoreModule ->
       erlang:binary_to_term(CoreModule)
   end.
+
+-spec core_chunk() -> string().
+core_chunk() -> ?CORE_CHUNK.
 
 %% Since OTP 20 there is no sys_pre_expand module.
 -spec maybe_sys_pre_expand(any()) -> {any(), [any()]}.
