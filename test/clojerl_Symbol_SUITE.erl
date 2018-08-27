@@ -94,6 +94,8 @@ name(_Config) ->
   <<"hello">> = clj_rt:namespace(HelloWorldSymbol),
   <<"world">> = clj_rt:name(HelloWorldSymbol),
 
+  HelloWorldSymbol = clj_rt:symbol(<<"hello/world">>),
+
   {comments, ""}.
 
 -spec str(config()) -> result().

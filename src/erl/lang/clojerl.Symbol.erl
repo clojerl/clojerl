@@ -29,8 +29,15 @@
                  }.
 
 -spec ?CONSTRUCTOR(binary()) -> type().
-?CONSTRUCTOR(Name) when is_binary(Name) ->
-  ?CONSTRUCTOR(?NIL, Name).
+?CONSTRUCTOR(<<"/">>)  ->
+  ?CONSTRUCTOR(?NIL, <<"/">>);
+?CONSTRUCTOR(Name0) when is_binary(Name0) ->
+  case binary:split(Name0, <<"/">>) of
+    [Namespace, Name1] ->
+      ?CONSTRUCTOR(Namespace, Name1);
+    _ ->
+      ?CONSTRUCTOR(?NIL, Name0)
+  end.
 
 -spec ?CONSTRUCTOR(binary() | ?NIL, binary()) -> type().
 ?CONSTRUCTOR(Namespace, Name)
