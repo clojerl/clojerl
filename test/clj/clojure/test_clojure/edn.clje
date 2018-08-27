@@ -11,8 +11,10 @@
 
 (ns clojure.test-clojure.edn
   (:require [clojure.test.generative :refer (defspec)]
+            [clojure.test.generative.runner :refer (run-suite get-tests)]
             [clojure.test-clojure.generators :as cgen]
-            [clojure.edn :as edn]))
+            [clojure.edn :as edn]
+            [clojure.test :refer (deftest is)]))
 
 (defn roundtrip
   "Print an object and read it back as edn. Returns rather than throws
@@ -36,3 +38,13 @@
   [^{:tag cgen/non-ednable} o]
   (when-not (satisfies? clojerl.IError %)
     (throw (ex-info "edn/read should have thrown, see ex-data" {:printed o :read %}))))
+
+;; (prn #'types-that-should-roundtrip)
+
+;; (prn (eval (symbol "clojure.test-clojure.edn/types-that-should-roundtrip")))
+
+(deftest edn-generative
+  (let [config {:msec 1000 :nthreads 1}
+        tests (mapcat get-tests [types-that-should-roundtrip
+                                 types-that-should-not-roundtrip])]
+    (is (= 0 (:failures (run-suite config tests))))))
