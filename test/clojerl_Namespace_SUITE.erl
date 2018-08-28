@@ -104,7 +104,7 @@ str(_Config) ->
   NsSym1  = clj_rt:symbol(NsName1),
   Ns1 = 'clojerl.Namespace':find_or_create(NsSym1),
 
-  <<"foo">> = clj_rt:str(Ns1),
+  <<"#<Namespace foo>">> = clj_rt:str(Ns1),
 
   {comment, ""}.
 

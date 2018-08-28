@@ -285,7 +285,9 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
         CurrentNs = 'clojerl.Namespace':current(),
         case 'clojerl.Namespace':alias(CurrentNs, AliasSym) of
           ?NIL -> ?ERROR(<<"Invalid token: :", Token/binary>>, location(State));
-          NsSym -> clj_rt:keyword(clj_rt:str(NsSym), Name)
+          Ns ->
+            NsSym = 'clojerl.Namespace':name(Ns),
+            clj_rt:keyword('clojerl.Symbol':name(NsSym), Name)
         end;
       {Namespace, Name} ->
         clj_rt:keyword(Namespace, Name);

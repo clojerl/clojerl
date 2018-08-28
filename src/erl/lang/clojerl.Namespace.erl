@@ -119,7 +119,8 @@ reset_meta(#{?TYPE := ?M} = Ns0, Meta) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M, name := Name}) ->
-  'clojerl.Symbol':name(Name).
+  NameBin = 'clojerl.Symbol':name(Name),
+  <<"#<Namespace ", NameBin/binary, ">">>.
 
 %%------------------------------------------------------------------------------
 %% Exported functions
