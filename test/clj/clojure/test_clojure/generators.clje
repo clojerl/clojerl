@@ -1,6 +1,6 @@
 (ns clojure.test-clojure.generators
   (:require [clojure.data.generators :as gen])
-  (:refer-clojure :exclude [namespace]))
+  (:refer-clojure :exclude [namespace delay]))
 
 (defn var-value-source
   "Generates a scalar suitable for an initial var value."
@@ -55,9 +55,10 @@
   (str [_] "#<Delay>"))
 
 (defmacro delay [& body]
-  `(do
-     (def f# (fn [] ~@body))
-     (Delay. (atom nil) f#)))
+  (let [f (gensym "f_")]
+    `(do
+       (def ~f (fn [] ~@body))
+       (Delay. (atom nil) ~f))))
 
 (def shared-generation
   (delay (generate-namespaces {:nses 5 :vars-per-ns 5 :records-per-ns 5})))
@@ -72,7 +73,7 @@
 
 (defn record
   []
-  (gen/rand-nth (:records shared-generation)))
+  (gen/rand-nth (:records @shared-generation)))
 
 (def keyword-pool
   (delay (gen/with-seed 42

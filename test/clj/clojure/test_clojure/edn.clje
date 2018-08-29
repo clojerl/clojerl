@@ -25,7 +25,7 @@
             *print-level* nil]
     (try
      (-> o pr-str edn/read-string)
-     (catch Throwable t t))))
+     (catch _ t t))))
 
 (defspec types-that-should-roundtrip
   roundtrip
@@ -39,12 +39,14 @@
   (when-not (satisfies? clojerl.IError %)
     (throw (ex-info "edn/read should have thrown, see ex-data" {:printed o :read %}))))
 
-;; (prn #'types-that-should-roundtrip)
-
-;; (prn (eval (symbol "clojure.test-clojure.edn/types-that-should-roundtrip")))
-
-(deftest edn-generative
+(defn run [t]
   (let [config {:msec 1000 :nthreads 1}
-        tests (mapcat get-tests [types-that-should-roundtrip
-                                 types-that-should-not-roundtrip])]
-    (is (= 0 (:failures (run-suite config tests))))))
+        tests (get-tests t)
+        result (run-suite config tests)]
+    result))
+
+(deftest should-roundtrip
+  (is (= 0 (:failures (run types-that-should-roundtrip)))))
+
+(deftest should-not-roundtrip
+  (is (= 0 (:failures (run types-that-should-not-roundtrip)))))

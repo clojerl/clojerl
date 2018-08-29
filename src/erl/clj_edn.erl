@@ -572,11 +572,12 @@ read_tagged(Symbol, Form, Location, #{opts := Opts} = State) ->
                   ?NIL -> clj_rt:get(DefaultDataReaders, Symbol);
                   true -> Reader0
                 end,
+
   { IsDefault
   , Reader2
   } = case Reader1 of
         ?NIL -> {true,  clj_rt:get(DefaultDataReaders, ?DEFAULT)};
-        true -> {false, Reader0}
+        _    -> {false, Reader1}
       end,
 
   ?ERROR_WHEN( Reader2 =:= ?NIL
