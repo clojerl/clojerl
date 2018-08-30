@@ -507,10 +507,13 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
   case Ch of
     $^ -> read_meta(consume_char(State)); %% deprecated
     ${ -> read_set(NewState);
-    %% $" -> read_regex(NewState);
     $_ -> read_discard(NewState);
     $< -> ?ERROR(<<"Unreadable form">>, location(State));
-    _  -> read_tagged(consume_char(State))
+    _  ->
+      case clj_utils:char_type(Ch, ?NIL) of
+        symbol -> read_tagged(consume_char(State));
+        _      -> ?ERROR(<<"No dispatch macro for: ", Ch/utf8>>, ?NIL)
+      end
   end.
 
 %%------------------------------------------------------------------------------
