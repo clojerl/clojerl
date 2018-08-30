@@ -453,7 +453,7 @@ boolean(false) -> false;
 boolean(_) -> true.
 
 -spec byte(number()) -> integer().
-byte(X) when is_number(X), 0 =< X, X =< 256 ->
+byte(X) when is_number(X), 0 =< X, X < 256 ->
   erlang:trunc(X).
 
 -spec char(integer()) -> binary().
