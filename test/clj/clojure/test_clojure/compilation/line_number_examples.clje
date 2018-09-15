@@ -96,7 +96,7 @@
       (identity)
       (identity)) nil)
 
-(defn keyword-invoke
+#_(defn keyword-invoke
   "I throw an exception in a keyword invoke."
   []
   (letfn [(get-map []

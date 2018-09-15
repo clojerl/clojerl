@@ -1,6 +1,7 @@
 -module('clojerl.Keyword').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
@@ -79,7 +80,7 @@ apply(Keyword, Args) ->
       clj_rt:get(Map, Keyword, NotFound);
     _ ->
       CountBin = integer_to_binary(length(Args)),
-      throw(<<"Wrong number of args for keyword, got: ", CountBin/binary>>)
+      ?ERROR(<<"Wrong number of args for keyword, got: ", CountBin/binary>>)
   end.
 
 %% clojerl.IHash
