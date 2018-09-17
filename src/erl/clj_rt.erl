@@ -404,12 +404,18 @@ with_meta(X, Meta) ->
 -spec get(any(), any()) -> any().
 get(?NIL, _Key) -> ?NIL;
 get(X, Key) ->
-  'clojerl.ILookup':get(X, Key).
+  case 'clojerl.ILookup':?SATISFIES(type_module(X)) of
+    true  -> 'clojerl.ILookup':get(X, Key);
+    false -> ?NIL
+  end.
 
 -spec get(any(), any(), any()) -> any().
 get(?NIL, _Key, NotFound) -> NotFound;
 get(X, Key, NotFound) ->
-  'clojerl.ILookup':get(X, Key, NotFound).
+  case 'clojerl.ILookup':?SATISFIES(type_module(X)) of
+    true  -> 'clojerl.ILookup':get(X, Key, NotFound);
+    false -> NotFound
+  end.
 
 -spec assoc('clojerl.IAssociative':type(), any(), any()) ->
   'clojerl.IAssociative':type().

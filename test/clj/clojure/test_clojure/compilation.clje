@@ -284,7 +284,7 @@
   ;; (is (fails-on-line-number?  86 line/static-method-unboxed))
   (is (fails-on-line-number?  86 line/invoke))
   (is (fails-on-line-number?  95 line/threading))
-  (is (fails-on-line-number? 106 line/keyword-invoke))
+  ;; (is (fails-on-line-number? 106 line/keyword-invoke))
   (is (fails-on-line-number? 113 line/invoke-cast)))
 
 (deftest CLJ-979
