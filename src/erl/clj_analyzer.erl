@@ -2013,6 +2013,15 @@ parse_catch_type(ErrType, Env0) ->
                  ),
       {type_expr(Type, ErrType, Env1), Env1};
     _ ->
+      ?WARN_WHEN( not is_atom(ErrType)
+                  andalso starts_with_uppercase(clj_rt:str(ErrType))
+                , [ <<"The symbol ">>, ErrType
+                  , <<" could not be resolved as a type. ">>
+                  , <<"If meant to be a binding symbol, start its name ">>
+                  , <<"with lower case to remove this warning">>
+                  ]
+                , clj_env:location(Env0)
+                ),
       {ErrTypeExpr, Env1} = clj_env:pop_expr(parse_pattern(ErrType, Env0)),
       TypeLocal = #{ op      => binding
                    , env     => Env0
@@ -2022,6 +2031,10 @@ parse_catch_type(ErrType, Env0) ->
                    },
       {TypeLocal, Env1}
   end.
+
+-spec starts_with_uppercase(binary()) -> boolean().
+starts_with_uppercase(<<First/utf8, _/binary>>) ->
+  $A =< First andalso First =< $Z.
 
 -spec parse_catch_var(expr(), any(), clj_env:env()) ->
   {expr(), clj_env:env()}.
