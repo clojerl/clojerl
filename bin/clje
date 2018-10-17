@@ -1,7 +1,20 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+readlink_f () {
+  cd "$(dirname "$1")" > /dev/null
+  filename="$(basename "$1")"
+  if [ -h "$filename" ]; then
+    readlink_f "$(readlink "$filename")"
+  else
+    echo "`pwd -P`/$filename"
+  fi
+}
+
+SELF=$(readlink_f "$0")
+CLJE_BINDIR=$(dirname "$SELF")
 
 if type -p rlwrap >/dev/null 2>&1; then
-  rlwrap -r -q '\"' -b "(){}[],^%3@\";:'" clojerl "$@"
+  rlwrap -r -q '\"' -b "(){}[],^%3@\";:'" $CLJE_BINDIR/clojerl "$@"
 else
   echo "Please install rlwrap for command editing or use \"clojerl\" instead."
 fi
