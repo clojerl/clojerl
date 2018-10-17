@@ -3,6 +3,7 @@
 # Show less verbose output
 .SILENT:
 
+SHELL     := /bin/bash
 REBAR3    := rebar3
 RLWRAP    := $(shell type -p rlwrap &> /dev/null && echo rlwrap || echo)
 V         := @
