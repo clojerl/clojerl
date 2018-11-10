@@ -1,7 +1,54 @@
 # Change Log
 
-## [0.3.0](https://github.com/clojerl/clojerl/tree/0.3.0) (2018-06-30)
+## [0.4.0](https://github.com/clojerl/clojerl/tree/0.4.0)
 
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.3.0...0.4.0)
+
+**Implemented enhancements:**
+
+- Use rebar3\_clojerl plugin to compile clojerl [\#563](https://github.com/clojerl/clojerl/issues/563)
+- Improve instance? and satisfies? performance [\#552](https://github.com/clojerl/clojerl/issues/552)
+- OTP 21.x compatible [\#545](https://github.com/clojerl/clojerl/issues/545)
+
+**Fixed bugs:**
+
+- defmethod can generate problematic var names [\#573](https://github.com/clojerl/clojerl/issues/573)
+- catch accepts any symbol as the exception type [\#571](https://github.com/clojerl/clojerl/issues/571)
+- Providing a value that doesn't implement IFn to a keyword shouldn't fail [\#570](https://github.com/clojerl/clojerl/issues/570)
+- symbol should parse name with slash [\#568](https://github.com/clojerl/clojerl/issues/568)
+- print-method implementation for UUIDs is not loaded correctly [\#558](https://github.com/clojerl/clojerl/issues/558)
+- Handle hash collisions in maps and sets [\#557](https://github.com/clojerl/clojerl/issues/557)
+- Hash for empty unordered and ordered collection is the same [\#555](https://github.com/clojerl/clojerl/issues/555)
+- Find a workaround to issue ERL-658 for letrec [\#547](https://github.com/clojerl/clojerl/issues/547)
+
+**Closed issues:**
+
+- Unable to \< make repl \>  [\#577](https://github.com/clojerl/clojerl/issues/577)
+- clojure.edn [\#550](https://github.com/clojerl/clojerl/issues/550)
+
+**Merged pull requests:**
+
+- \[Closes \#577\] make repl fails on ubuntu [\#578](https://github.com/clojerl/clojerl/pull/578) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#571\] Warn when symbol is not resolved as a type  [\#576](https://github.com/clojerl/clojerl/pull/576) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#570\] Return nil or default value for general get [\#575](https://github.com/clojerl/clojerl/pull/575) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#573\] Generate better names for defmethod implementation vars [\#574](https://github.com/clojerl/clojerl/pull/574) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#550\] Implements clojure.edn [\#572](https://github.com/clojerl/clojerl/pull/572) ([jfacorro](https://github.com/jfacorro))
+- \[Fix \#568\] Parse slash when name includes it [\#569](https://github.com/clojerl/clojerl/pull/569) ([jfacorro](https://github.com/jfacorro))
+- Update rebar3\_clojerl plugin [\#567](https://github.com/clojerl/clojerl/pull/567) ([jfacorro](https://github.com/jfacorro))
+- Return name for the Core chunk [\#566](https://github.com/clojerl/clojerl/pull/566) ([jfacorro](https://github.com/jfacorro))
+- Upgrade rebar3 plugin [\#565](https://github.com/clojerl/clojerl/pull/565) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#563\] Use rebar3 plugin [\#564](https://github.com/clojerl/clojerl/pull/564) ([jfacorro](https://github.com/jfacorro))
+- Timestamp to from date [\#561](https://github.com/clojerl/clojerl/pull/561) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#557\] Handle hash collisions [\#560](https://github.com/clojerl/clojerl/pull/560) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#558\] Move print-method impls for UUID and Date to clojure.core [\#559](https://github.com/clojerl/clojerl/pull/559) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#555\] Change the initial hash value for unordered collections [\#556](https://github.com/clojerl/clojerl/pull/556) ([jfacorro](https://github.com/jfacorro))
+- Small change in the implementation for cons in clojerl.Map [\#554](https://github.com/clojerl/clojerl/pull/554) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#552\] Avoid calling clj\_rt:type\[\_module\]/1 [\#553](https://github.com/clojerl/clojerl/pull/553) ([jfacorro](https://github.com/jfacorro))
+- Remove unused dev deps, update eflame with latest improvements [\#551](https://github.com/clojerl/clojerl/pull/551) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#545\] OTP 21 compatible [\#549](https://github.com/clojerl/clojerl/pull/549) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#547\] letrec workaround ERL-658 [\#548](https://github.com/clojerl/clojerl/pull/548) ([jfacorro](https://github.com/jfacorro))
+
+## [0.3.0](https://github.com/clojerl/clojerl/tree/0.3.0) (2018-06-30)
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.2.0...0.3.0)
 
 **Implemented enhancements:**
