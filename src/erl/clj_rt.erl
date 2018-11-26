@@ -482,8 +482,12 @@ print(X) ->
   case 'clojure.core':'print-initialized__val'() of
     true  ->
       StringWriter = 'erlang.io.StringWriter':?CONSTRUCTOR(),
-      'clojure.core':'pr-on'(X, StringWriter),
-      'erlang.io.StringWriter':str(StringWriter);
+      try
+        'clojure.core':'pr-on'(X, StringWriter),
+        'erlang.io.StringWriter':str(StringWriter)
+      after
+        'erlang.io.StringWriter':close(StringWriter)
+      end;
     false ->
       PrintReadably = boolean('clojure.core':'*print-readably*__val'()),
       Type          = type_module(X),
