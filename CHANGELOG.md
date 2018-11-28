@@ -1,7 +1,18 @@
 # Change Log
 
-## [0.4.0](https://github.com/clojerl/clojerl/tree/0.4.0)
+## [0.4.1](https://github.com/clojerl/clojerl/tree/0.4.1)
 
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.4.0...0.4.1)
+
+**Fixed bugs:**
+
+- Memory leak when using clj\_rt:print/1 [\#579](https://github.com/clojerl/clojerl/issues/579)
+
+**Merged pull requests:**
+
+- \[Fixes \#579\] Memory leak on clj\_rt:print/1 [\#580](https://github.com/clojerl/clojerl/pull/580) ([jfacorro](https://github.com/jfacorro))
+
+## [0.4.0](https://github.com/clojerl/clojerl/tree/0.4.0) (2018-11-10)
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.3.0...0.4.0)
 
 **Implemented enhancements:**
