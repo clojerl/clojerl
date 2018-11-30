@@ -124,6 +124,16 @@
 (defmethod print-dup clojerl.Var [o, ^IWriter w]
   (.write w (str "#=(var " (namespace o) "/" (name o) ")")))
 
+(defmethod print-dup clojerl.Namespace [^clojerl.Namespace n ^IWriter w]
+  (.write w "#=(find-ns ")
+  (print-dup (.name n) w)
+  (.write w ")"))
+
+(defmethod print-method clojerl.Namespace [^clojerl.Namespace n ^IWriter w]
+  (.write w "#<clojerl.Namespace ")
+  (.write w (.str n))
+  (.write w ">"))
+
 (defmethod print-method clojerl.List [o, ^IWriter w]
   (print-meta o w)
   (print-sequential "(" pr-on " " ")" o w))
