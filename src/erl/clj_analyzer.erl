@@ -409,8 +409,7 @@ parse_fn(List, Env) ->
          end,
 
   OpMeta      = clj_rt:meta(Op),
-  OnceKeyword = clj_rt:keyword(<<"once">>),
-  IsOnce      = clj_rt:boolean(clj_rt:get(OpMeta, OnceKeyword)),
+  IsOnce      = clj_rt:boolean(clj_rt:get(OpMeta, once)),
 
   %% If this is a var fn then the loop-id should be the function and not
   %% the variable for the named fun.
