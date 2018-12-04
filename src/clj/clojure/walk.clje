@@ -44,7 +44,7 @@ the sorting function."}
    (list? form) (outer (apply list (map inner form)))
    (and (vector? form) (= (count form) 2)) (outer (vec (map inner form)))
    (seq? form) (outer (doall (map inner form)))
-   (map? form)
+   (record? form)
      (outer (reduce (fn [r x] (conj r (inner x))) form form))
    (coll? form) (outer (into (empty form) (map inner form)))
    :else (outer form)))
