@@ -26,55 +26,27 @@
 
 ;; *** Types ***
 
-
-(deftest Coerced-BigDecimal
-  (doseq [v [(bigdec 3) (bigdec (inc (bigint Long/MAX_VALUE)))]]
-    (are [x] (true? x)
-     (instance? BigDecimal v)
-     (number? v)
-     (decimal? v)
-     (not (float? v)))))
-
-(deftest BigInteger-conversions
-  (doseq [coerce-fn [bigint biginteger]]
-    (doseq [v (map coerce-fn [ Long/MAX_VALUE
-                              13178456923875639284562345789M
-                              13178456923875639284562345789N
-                              Float/MAX_VALUE
-                              (- Float/MAX_VALUE)
-                              Double/MAX_VALUE
-                              (- Double/MAX_VALUE)
-                              (* 2 (bigdec Double/MAX_VALUE)) ])]
-      (are [x] (true? x)
-        (integer? v)
-        (number? v)
-        (not (decimal? v))
-        (not (float? v))))))
-
 (defn all-pairs-equal [equal-var vals]
   (doseq [val1 vals]
     (doseq [val2 vals]
       (is (equal-var val1 val2)
-          (str "Test that " val1 " (" (class val1) ") "
-               equal-var " " val2 " (" (class val2) ")")))))
+          (str "Test that " val1 " (" (type val1) ") "
+               equal-var " " val2 " (" (type val2) ")")))))
 
 (defn all-pairs-hash-consistent-with-= [vals]
   (doseq [val1 vals]
     (doseq [val2 vals]
       (when (= val1 val2)
         (is (= (hash val1) (hash val2))
-            (str "Test that (hash " val1 ") (" (class val1) ") "
-                 " = (hash " val2 ") (" (class val2) ")"))))))
+            (str "Test that (hash " val1 ") (" (type val1) ") "
+                 " = (hash " val2 ") (" (type val2) ")"))))))
 
 (deftest equality-tests
   ;; = only returns true for numbers that are in the same category,
   ;; where category is one of INTEGER, FLOATING, DECIMAL, RATIO.
-  (all-pairs-equal #'= [(byte 2) (short 2) (int 2) (long 2)
-                        (bigint 2) (biginteger 2)])
-  (all-pairs-equal #'= [(float 2.0) (double 2.0)])
-  (all-pairs-equal #'= [(float 0.0) (double 0.0) (float -0.0) (double -0.0)])
+  (all-pairs-equal #'= [(byte 2) (short 2) (int 2)])
+  (all-pairs-equal #'= [(float 0.0) (float -0.0)])
   (all-pairs-equal #'= [2.0M 2.00M])
-  (all-pairs-equal #'= [(float 1.5) (double 1.5)])
   (all-pairs-equal #'= [1.50M 1.500M])
   (all-pairs-equal #'= [0.0M 0.00M])
   (all-pairs-equal #'= [(/ 1 2) (/ 2 4)])
@@ -82,107 +54,18 @@
   ;; No BigIntegers or floats in following tests, because hash
   ;; consistency with = for them is out of scope for Clojure
   ;; (CLJ-1036).
-  (all-pairs-hash-consistent-with-= [(byte 2) (short 2) (int 2) (long 2)
-                                     (bigint 2)
-                                     (double 2.0) 2.0M 2.00M])
-  (all-pairs-hash-consistent-with-= [(/ 3 2) (double 1.5) 1.50M 1.500M])
-  (all-pairs-hash-consistent-with-= [(double -0.0) (double 0.0) -0.0M -0.00M 0.0M 0.00M (float -0.0) (float 0.0)])
+  (all-pairs-hash-consistent-with-= [(byte 2) (short 2) (int 2)])
+  (all-pairs-hash-consistent-with-= [(/ 3 2) 1.50M 1.500M])
+  (all-pairs-hash-consistent-with-= [-0.0M -0.00M 0.0M 0.00M (float -0.0) (float 0.0)])
 
   ;; == tests for numerical equality, returning true even for numbers
   ;; in different categories.
-  (all-pairs-equal #'== [(byte 0) (short 0) (int 0) (long 0)
-                         (bigint 0) (biginteger 0)
-                         (float -0.0) (double -0.0) -0.0M -0.00M
-                         (float 0.0) (double 0.0) 0.0M 0.00M])
-  (all-pairs-equal #'== [(byte 2) (short 2) (int 2) (long 2)
-                         (bigint 2) (biginteger 2)
-                         (float 2.0) (double 2.0) 2.0M 2.00M])
-  (all-pairs-equal #'== [(/ 3 2) (float 1.5) (double 1.5) 1.50M 1.500M]))
-
-(deftest unchecked-cast-num-obj
-  (do-template [prim-array cast]
-    (are [n]
-      (let [a (prim-array 1)]
-        (aset a 0 (cast n)))
-      (Byte. Byte/MAX_VALUE)
-      (Short. Short/MAX_VALUE)
-      (Integer. Integer/MAX_VALUE)
-      (Long. Long/MAX_VALUE)
-      (Float. Float/MAX_VALUE)
-      (Double. Double/MAX_VALUE))
-    byte-array
-    unchecked-byte
-    short-array
-    unchecked-short
-    char-array
-    unchecked-char
-    int-array
-    unchecked-int
-    long-array
-    unchecked-long
-    float-array
-    unchecked-float
-    double-array
-    unchecked-double))
-
-(deftest unchecked-cast-num-prim
-  (do-template [prim-array cast]
-    (are [n]
-      (let [a (prim-array 1)]
-        (aset a 0 (cast n)))
-      Byte/MAX_VALUE
-      Short/MAX_VALUE
-      Integer/MAX_VALUE
-      Long/MAX_VALUE
-      Float/MAX_VALUE
-      Double/MAX_VALUE)
-    byte-array
-    unchecked-byte
-    short-array
-    unchecked-short
-    char-array
-    unchecked-char
-    int-array
-    unchecked-int
-    long-array
-    unchecked-long
-    float-array
-    unchecked-float
-    double-array
-    unchecked-double))
-
-(deftest unchecked-cast-char
-  ; in keeping with the checked cast functions, char and Character can only be cast to int
-  (is (unchecked-int (char 0xFFFF)))
-  (is (let [c (char 0xFFFF)] (unchecked-int c)))) ; force primitive char
-
-(def expected-casts
-  [
-   [:input           [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  Integer/MAX_VALUE  Long/MAX_VALUE         Float/MAX_VALUE    Double/MAX_VALUE]]
-   [char             [:error        (char 0)    (char 1)    (char 127)      (char 32767)     :error             :error                 :error             :error]]
-   [unchecked-char   [(char 65535)  (char 0)    (char 1)    (char 127)      (char 32767)     (char 65535)       (char 65535)           (char 65535)       (char 65535)]]
-   [byte             [-1            0           1           Byte/MAX_VALUE  :error           :error             :error                 :error             :error]]
-   [unchecked-byte   [-1            0           1           Byte/MAX_VALUE  -1               -1                 -1                     -1                 -1]]
-   [short            [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  :error             :error                 :error             :error]]
-   [unchecked-short  [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  -1                 -1                     -1                 -1]]
-   [int              [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  Integer/MAX_VALUE  :error                 :error             :error]]
-   [unchecked-int    [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  Integer/MAX_VALUE  -1                     Integer/MAX_VALUE  Integer/MAX_VALUE]]
-   [long             [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  Integer/MAX_VALUE  Long/MAX_VALUE         :error             :error]]
-   [unchecked-long   [-1            0           1           Byte/MAX_VALUE  Short/MAX_VALUE  Integer/MAX_VALUE  Long/MAX_VALUE         Long/MAX_VALUE     Long/MAX_VALUE]]
-                                                                                             ;; 2.14748365E9 if when float/double conversion is avoided...
-   [float            [-1.0          0.0         1.0         127.0           32767.0          2.147483648E9      9.223372036854776E18   Float/MAX_VALUE    :error]]
-   [unchecked-float  [-1.0          0.0         1.0         127.0           32767.0          2.147483648E9      9.223372036854776E18   Float/MAX_VALUE    Float/POSITIVE_INFINITY]]
-   [double           [-1.0          0.0         1.0         127.0           32767.0          2.147483647E9      9.223372036854776E18   Float/MAX_VALUE    Double/MAX_VALUE]]
-   [unchecked-double [-1.0          0.0         1.0         127.0           32767.0          2.147483647E9      9.223372036854776E18   Float/MAX_VALUE    Double/MAX_VALUE]]])
-
-(deftest test-expected-casts
-  (let [[[_ inputs] & expectations] expected-casts]
-    (doseq [[f vals] expectations]
-      (let [wrapped (fn [x]
-                      (try
-                       (f x)
-                       (catch IllegalArgumentException e :error)))]
-        (is (= vals (map wrapped inputs)))))))
+  (all-pairs-equal #'== [(byte 0) (short 0) (int 0)
+                         (float -0.0) -0.0M -0.00M
+                         (float 0.0) 0.0M 0.00M])
+  (all-pairs-equal #'== [(byte 2) (short 2) (int 2)
+                         (float 2.0) 2.0M 2.00M])
+  (all-pairs-equal #'== [(/ 3 2) (float 1.5) 1.50M 1.500M]))
 
 ;; *** Functions ***
 
@@ -200,23 +83,18 @@
       (+ -1 +2 -3) -2
 
       (+ 1 -1) 0
-      (+ -1 1) 0
-
-      (+ 2/3) 2/3
-      (+ 2/3 1) 5/3
-      (+ 2/3 1/3) 1 )
+      (+ -1 1) 0 )
 
   (are [x y] (< (- x y) DELTA)
       (+ 1.2) 1.2
       (+ 1.1 2.4) 3.5
       (+ 1.1 2.2 3.3) 6.6 )
 
-  (is (> (+ Integer/MAX_VALUE 10) Integer/MAX_VALUE))  ; no overflow
-  (is (thrown? ClassCastException (+ "ab" "cd"))) )    ; no string concatenation
+  (is (thrown? :error (+ "ab" "cd"))) )    ; no string concatenation
 
 
 (deftest test-subtract
-  (is (thrown? IllegalArgumentException (-)))
+  (is (thrown? :error (-)))
   (are [x y] (= x y)
       (- 1) -1
       (- 1 2) -1
@@ -227,18 +105,12 @@
       (- 1 -2 -3) 6
 
       (- 1 1) 0
-      (- -1 -1) 0
-
-      (- 2/3) -2/3
-      (- 2/3 1) -1/3
-      (- 2/3 1/3) 1/3 )
+      (- -1 -1) 0 )
 
   (are [x y] (< (- x y) DELTA)
       (- 1.2) -1.2
       (- 2.2 1.1) 1.1
-      (- 6.6 2.2 1.1) 3.3 )
-
-  (is (< (- Integer/MIN_VALUE 10) Integer/MIN_VALUE)) )  ; no underflow
+      (- 6.6 2.2 1.1) 3.3 ) )
 
 
 (deftest test-multiply
@@ -250,47 +122,25 @@
 
       (* -2) -2
       (* 2 -3) -6
-      (* 2 -3 -1) 6
-
-      (* 1/2) 1/2
-      (* 1/2 1/3) 1/6
-      (* 1/2 1/3 -1/4) -1/24 )
+      (* 2 -3 -1) 6 )
 
   (are [x y] (< (- x y) DELTA)
       (* 1.2) 1.2
       (* 2.0 1.2) 2.4
-      (* 3.5 2.0 1.2) 8.4 )
-
-  (is (> (* 3 (int (/ Integer/MAX_VALUE 2.0))) Integer/MAX_VALUE)) )  ; no overflow
-
-(deftest test-multiply-longs-at-edge
-  (are [x] (= x 9223372036854775808N)
-       (*' -1 Long/MIN_VALUE)
-       (*' Long/MIN_VALUE -1)
-       (* -1N Long/MIN_VALUE)
-       (* Long/MIN_VALUE -1N)
-       (* -1 (bigint Long/MIN_VALUE))
-       (* (bigint Long/MIN_VALUE) -1))
-  (is (thrown? ArithmeticException (* Long/MIN_VALUE -1)))
-  (is (thrown? ArithmeticException (* -1 Long/MIN_VALUE))))
-
-(deftest test-ratios-simplify-to-ints-where-appropriate
-  (testing "negative denominator (assembla #275)"
-    (is (integer? (/ 1 -1/2)))
-    (is (integer? (/ 0 -1/2)))))
+      (* 3.5 2.0 1.2) 8.4 ) )
 
 (deftest test-divide
   (are [x y] (= x y)
       (/ 1) 1
-      (/ 2) 1/2
-      (/ 3 2) 3/2
+      (/ 2) 0.5
+      (/ 3 2) 1.5
       (/ 4 2) 2
       (/ 24 3 2) 4
       (/ 24 3 2 -1) -4
 
       (/ -1) -1
-      (/ -2) -1/2
-      (/ -3 -2) 3/2
+      (/ -2) -0.5
+      (/ -3 -2) 1.5
       (/ -4 -2) 2
       (/ -4 2) -2 )
 
@@ -298,18 +148,9 @@
       (/ 4.5 3) 1.5
       (/ 4.5 3.0 3.0) 0.5 )
 
-  (is (thrown? ArithmeticException (/ 0)))
-  (is (thrown? ArithmeticException (/ 2 0)))
-  (is (thrown? IllegalArgumentException (/))) )
-
-(deftest test-divide-bigint-at-edge
-  (are [x] (= x (-' Long/MIN_VALUE))
-       (/ Long/MIN_VALUE -1N)
-       (/ (bigint Long/MIN_VALUE) -1)
-       (/ (bigint Long/MIN_VALUE) -1N)
-       (quot Long/MIN_VALUE -1N)
-       (quot (bigint Long/MIN_VALUE) -1)
-       (quot (bigint Long/MIN_VALUE) -1N)))
+  (is (thrown? :error (/ 0)))
+  (is (thrown? :error (/ 2 0)))
+  (is (thrown? :error (/))) )
 
 ;; mod
 ;; http://en.wikipedia.org/wiki/Modulo_operation
@@ -328,18 +169,14 @@
 ;  (is (thrown? IllegalArgumentException (mod 3 2 1)))
 
   ; divide by zero
-  (is (thrown? ArithmeticException (mod 9 0)))
-  (is (thrown? ArithmeticException (mod 0 0)))
+  (is (thrown? :error (mod 9 0)))
+  (is (thrown? :error (mod 0 0)))
 
   (are [x y] (= x y)
     (mod 4 2) 0
     (mod 3 2) 1
     (mod 6 4) 2
     (mod 0 5) 0
-
-    (mod 2 1/2) 0
-    (mod 2/3 1/2) 1/6
-    (mod 1 2/3) 1/3
 
     (mod 4.0 2.0) 0.0
     (mod 4.5 2.0) 0.5
@@ -381,18 +218,14 @@
 ;  (is (thrown? IllegalArgumentException (rem 3 2 1)))
 
   ; divide by zero
-  (is (thrown? ArithmeticException (rem 9 0)))
-  (is (thrown? ArithmeticException (rem 0 0)))
+  (is (thrown? :error (rem 9 0)))
+  (is (thrown? :error (rem 0 0)))
 
   (are [x y] (= x y)
     (rem 4 2) 0
     (rem 3 2) 1
     (rem 6 4) 2
     (rem 0 5) 0
-
-    (rem 2 1/2) 0
-    (rem 2/3 1/2) 1/6
-    (rem 1 2/3) 1/3
 
     (rem 4.0 2.0) 0.0
     (rem 4.5 2.0) 0.5
@@ -428,18 +261,14 @@
 ;  (is (thrown? IllegalArgumentException (quot 3 2 1)))
 
   ; divide by zero
-  (is (thrown? ArithmeticException (quot 9 0)))
-  (is (thrown? ArithmeticException (quot 0 0)))
+  (is (thrown? :error (quot 9 0)))
+  (is (thrown? :error (quot 0 0)))
 
   (are [x y] (= x y)
     (quot 4 2) 2
     (quot 3 2) 1
     (quot 6 4) 1
     (quot 0 5) 0
-
-    (quot 2 1/2) 4
-    (quot 2/3 1/2) 1
-    (quot 1 2/3) 1
 
     (quot 4.0 2.0) 2.0
     (quot 4.5 2.0) 2.0
@@ -477,12 +306,7 @@
   (let [nums [[(byte 2) (byte 0) (byte -2)]
               [(short 3) (short 0) (short -3)]
               [(int 4) (int 0) (int -4)]
-              [(long 5) (long 0) (long -5)]
-              [(bigint 6) (bigint 0) (bigint -6)]
-              [(float 7) (float 0) (float -7)]
-              [(double 8) (double 0) (double -8)]
-              [(bigdec 9) (bigdec 0) (bigdec -9)]
-              [2/3 0 -2/3]]
+              [(float 7) (float 0) (float -7)]]
         pred-result [[pos?  [true false false]]
                      [zero? [false true false]]
                      [neg?  [false false true]]] ]
@@ -501,8 +325,7 @@
     (even? 0)
     (not (even? 5))
     (even? 8))
-  (is (thrown? IllegalArgumentException (even? 1/2)))
-  (is (thrown? IllegalArgumentException (even? (double 10)))))
+  (is (thrown? :error (even? (float 10)))))
 
 (deftest test-odd?
   (are [x] (true? x)
@@ -511,13 +334,12 @@
     (not (odd? 0))
     (odd? 5)
     (not (odd? 8)))
-  (is (thrown? IllegalArgumentException (odd? 1/2)))
-  (is (thrown? IllegalArgumentException (odd? (double 10)))))
+  (is (thrown? :error (odd? (float 10)))))
 
 (defn- expt
   "clojure.contrib.math/expt is a better and much faster impl, but this works.
 Math/pow overflows to Infinity."
-  [x n] (apply *' (replicate n x)))
+  [x n] (apply * (replicate n x)))
 
 (deftest test-bit-shift-left
   (are [x y] (= x y)
@@ -530,7 +352,7 @@ Math/pow overflows to Infinity."
        (expt 2 32) (bit-shift-left 1 32)
        (expt 2 16) (bit-shift-left 1 10000) ; truncated to least 6-bits, 16
        )
-  (is (thrown? IllegalArgumentException (bit-shift-left 1N 1))))
+  (is (thrown? :error (bit-shift-left 1N 1))))
 
 (deftest test-bit-shift-right
   (are [x y] (= x y)
@@ -540,27 +362,13 @@ Math/pow overflows to Infinity."
        2r000 (bit-shift-right 2r100 3)
        2r0001011 (bit-shift-right 2r00010111 1)
        2r0001011 (apply bit-shift-right [2r00010111 1])
-       0 (bit-shift-right 2r10 -1) ; truncated to least 6-bits, 63
+       ;; 0 (bit-shift-right 2r10 -1) ; truncated to least 6-bits, 63
        1 (bit-shift-right (expt 2 32) 32)
-       1 (bit-shift-right (expt 2 16) 10000) ; truncated to least 6-bits, 16
+       ;; 1 (bit-shift-right (expt 2 16) 10000) ; truncated to least 6-bits, 16
        -1 (bit-shift-right -2r10 1)
        )
-  (is (thrown? IllegalArgumentException (bit-shift-right 1N 1))))
-
-(deftest test-unsigned-bit-shift-right
-  (are [x y] (= x y)
-       2r0 (unsigned-bit-shift-right 2r1 1)
-       2r010 (unsigned-bit-shift-right 2r100 1)
-       2r001 (unsigned-bit-shift-right 2r100 2)
-       2r000 (unsigned-bit-shift-right 2r100 3)
-       2r0001011 (unsigned-bit-shift-right 2r00010111 1)
-       2r0001011 (apply unsigned-bit-shift-right [2r00010111 1])
-       0 (unsigned-bit-shift-right 2r10 -1) ; truncated to least 6-bits, 63
-       1 (unsigned-bit-shift-right (expt 2 32) 32)
-       1 (unsigned-bit-shift-right (expt 2 16) 10000) ; truncated to least 6-bits, 16
-       9223372036854775807 (unsigned-bit-shift-right -2r10 1)
-       )
-  (is (thrown? IllegalArgumentException (unsigned-bit-shift-right 1N 1))))
+  ;; (is (thrown? :error (bit-shift-right 1N 1)))
+  )
 
 (deftest test-bit-clear
   (is (= 2r1101 (bit-clear 2r1111 1)))
@@ -578,42 +386,22 @@ Math/pow overflows to Infinity."
   (is (true? (bit-test 2r1111 1)))
   (is (false? (bit-test 2r1101 1))))
 
-;; arrays
-(deftest test-array-types
-  (are [x y z] (= (Class/forName x) (class y) (class z))
-       "[Z" (boolean-array 1) (booleans (boolean-array 1 true))
-       "[B" (byte-array 1) (bytes (byte-array 1 (byte 1)))
-       "[C" (char-array 1) (chars (char-array 1 \a))
-       "[S" (short-array 1) (shorts (short-array 1 (short 1)))
-       "[F" (float-array 1) (floats (float-array 1 1))
-       "[D" (double-array 1) (doubles (double-array 1 1))
-       "[I" (int-array 1) (ints (int-array 1 1))
-       "[J" (long-array 1) (longs (long-array 1 1))))
-
-
-(deftest test-ratios
-  (is (== (denominator 1/2) 2))
-  (is (== (numerator 1/2) 1))
-  (is (= (bigint (/ 100000000000000000000 3)) 33333333333333333333))
-  (is (= (long 10000000000000000000/3) 3333333333333333333)))
-
 (deftest test-arbitrary-precision-subtract
   (are [x y] (= x y)
-       9223372036854775808N (-' 0 -9223372036854775808)
-       clojure.lang.BigInt  (class (-' 0 -9223372036854775808))
-       java.lang.Long       (class (-' 0 -9223372036854775807))))
+       9223372036854775808N (- 0 -9223372036854775808)
+       clojerl.Integer       (type (- 0 -9223372036854775807))))
 
 (deftest test-min-max
   (testing "min/max on different numbers of floats and doubles"
     (are [xmin xmax a]
-         (and (= (Float. xmin) (min (Float. a)))
-              (= (Float. xmax) (max (Float. a)))
+         (and (= (float xmin) (min (float a)))
+              (= (float xmax) (max (float a)))
               (= xmin (min a))
               (= xmax (max a)))
          0.0 0.0 0.0)
     (are [xmin xmax a b]
-         (and (= (Float. xmin) (min (Float. a) (Float. b)))
-              (= (Float. xmax) (max (Float. a) (Float. b)))
+         (and (= (float xmin) (min (float a) (float b)))
+              (= (float xmax) (max (float a) (float b)))
               (= xmin (min a b))
               (= xmax (max a b)))
          -1.0  0.0  0.0 -1.0
@@ -621,30 +409,31 @@ Math/pow overflows to Infinity."
          0.0  1.0  0.0  1.0
          0.0  1.0  1.0  0.0)
     (are [xmin xmax a b c]
-         (and (= (Float. xmin) (min (Float. a) (Float. b) (Float. c)))
-              (= (Float. xmax) (max (Float. a) (Float. b) (Float. c)))
+         (and (= (float xmin) (min (float a) (float b) (float c)))
+              (= (float xmax) (max (float a) (float b) (float c)))
               (= xmin (min a b c))
               (= xmax (max a b c)))
          -1.0  1.0  0.0  1.0 -1.0
          -1.0  1.0  0.0 -1.0  1.0
          -1.0  1.0 -1.0  1.0  0.0))
   (testing "min/max preserves type of winner"
-    (is (= java.lang.Long (class (max 10))))
-    (is (= java.lang.Long (class (max 1.0 10))))
-    (is (= java.lang.Long (class (max 10 1.0))))
-    (is (= java.lang.Long (class (max 10 1.0 2.0))))
-    (is (= java.lang.Long (class (max 1.0 10 2.0))))
-    (is (= java.lang.Long (class (max 1.0 2.0 10))))
-    (is (= java.lang.Double (class (max 1 2 10.0 3 4 5))))
-    (is (= java.lang.Long (class (min 10))))
-    (is (= java.lang.Long (class (min 1.0 -10))))
-    (is (= java.lang.Long (class (min -10 1.0))))
-    (is (= java.lang.Long (class (min -10 1.0 2.0))))
-    (is (= java.lang.Long (class (min 1.0 -10 2.0))))
-    (is (= java.lang.Long (class (min 1.0 2.0 -10))))
-    (is (= java.lang.Double (class (min 1 2 -10.0 3 4 5))))))
+    (is (= clojerl.Integer (type (max 10))))
+    (is (= clojerl.Integer (type (max 1.0 10))))
+    (is (= clojerl.Integer (type (max 10 1.0))))
+    (is (= clojerl.Integer (type (max 10 1.0 2.0))))
+    (is (= clojerl.Integer (type (max 1.0 10 2.0))))
+    (is (= clojerl.Integer (type (max 1.0 2.0 10))))
+    (is (= clojerl.Float (type (max 1 2 10.0 3 4 5))))
+    (is (= clojerl.Integer (type (min 10))))
+    (is (= clojerl.Integer (type (min 1.0 -10))))
+    (is (= clojerl.Integer (type (min -10 1.0))))
+    (is (= clojerl.Integer (type (min -10 1.0 2.0))))
+    (is (= clojerl.Integer (type (min 1.0 -10 2.0))))
+    (is (= clojerl.Integer (type (min 1.0 2.0 -10))))
+    (is (= clojerl.Float (type (min 1 2 -10.0 3 4 5))))))
 
-(deftest clj-868
+;; There is no :NaN in Erlang
+#_(deftest clj-868
   (testing "min/max: NaN is contagious"
     (letfn [(fnan? [^Float x] (Float/isNaN x))
             (dnan? [^double x] (Double/isNaN x))]
@@ -654,7 +443,7 @@ Math/pow overflows to Infinity."
                                   [ nan zero zero]
                                   [zero  nan zero]
                                   [zero zero  nan]))
-                fnan?  Float/NaN  (Float. 0.0)
+                fnan?  Float/NaN  (float 0.0)
                 dnan? Double/NaN          0.0)
            min
            max))))
@@ -663,159 +452,51 @@ Math/pow overflows to Infinity."
   "Distribution of integers biased towards the small, but
    including all longs."
   []
-  (gen/one-of #(gen/uniform -1 32) gen/byte gen/short gen/int gen/long))
+  (gen/one-of #(gen/uniform -1 32) gen/byte gen/int))
 
-(defn longable?
-  [n]
-  (try
-   (long n)
-   true
-   (catch Exception _)))
+#_((defspec integer-commutative-laws
+     (partial map identity)
+     [^{:tag 'clojure.test-clojure.numbers/integer} a
+      ^{:tag 'clojure.test-clojure.numbers/integer} b]
+     (assert (= (+ a b) (+ b a)))
+     (assert (= (* a b) (* b a))))
 
-(defspec integer-commutative-laws
-  (partial map identity)
-  [^{:tag `integer} a ^{:tag `integer} b]
-  (if (longable? (+' a b))
-    (assert (= (+ a b) (+ b a)
-               (+' a b) (+' b a)
-               (unchecked-add a b) (unchecked-add b a)))
-    (assert (= (+' a b) (+' b a))))
-  (if (longable? (*' a b))
-    (assert (= (* a b) (* b a)
-               (*' a b) (*' b a)
-               (unchecked-multiply a b) (unchecked-multiply b a)))
-    (assert (= (*' a b) (*' b a)))))
+   (defspec integer-associative-laws
+     (partial map identity)
+     [^{:tag 'clojure.test-clojure.numbers/integer} a
+      ^{:tag 'clojure.test-clojure.numbers/integer} b
+      ^{:tag 'clojure.test-clojure.numbers/integer} c]
+     (assert (= (+ (+ a b) c) (+ a (+ b c))))
+     (assert (= (* (* a b) c) (* a (* b c)))))
 
-(defspec integer-associative-laws
-  (partial map identity)
-  [^{:tag `integer} a ^{:tag `integer} b ^{:tag `integer} c]
-  (if (every? longable? [(+' a b) (+' b c) (+' a b c)])
-    (assert (= (+ (+ a b) c) (+ a (+ b c))
-               (+' (+' a b) c) (+' a (+' b c))
-               (unchecked-add (unchecked-add a b) c) (unchecked-add a (unchecked-add b c))))
-    (assert (= (+' (+' a b) c) (+' a (+' b c))
-               (+ (+ (bigint a) b) c) (+ a (+ (bigint b) c)))))
-  (if (every? longable? [(*' a b) (*' b c) (*' a b c)])
-    (assert (= (* (* a b) c) (* a (* b c))
-               (*' (*' a b) c) (*' a (*' b c))
-               (unchecked-multiply (unchecked-multiply a b) c) (unchecked-multiply a (unchecked-multiply b c))))
-    (assert (= (*' (*' a b) c) (*' a (*' b c))
-               (* (* (bigint a) b) c) (* a (* (bigint b) c))))))
+   (defspec integer-distributive-laws
+     (partial map identity)
+     [^{:tag 'clojure.test-clojure.numbers/integer} a
+      ^{:tag 'clojure.test-clojure.numbers/integer} b
+      ^{:tag 'clojure.test-clojure.numbers/integer} c]
+     (assert (= (* a (+ b c)) (+ (* a b) (* a c)))))
 
-(defspec integer-distributive-laws
-  (partial map identity)
-  [^{:tag `integer} a ^{:tag `integer} b ^{:tag `integer} c]
-  (if (every? longable? [(*' a (+' b c)) (+' (*' a b) (*' a c))
-                         (*' a b) (*' a c) (+' b c)])
-    (assert (= (* a (+ b c)) (+ (* a b) (* a c))
-               (*' a (+' b c)) (+' (*' a b) (*' a c))
-               (unchecked-multiply a (+' b c)) (+' (unchecked-multiply a b) (unchecked-multiply a c))))
-    (assert (= (*' a (+' b c)) (+' (*' a b) (*' a c))
-               (* a (+ (bigint b) c)) (+ (* (bigint a) b) (* (bigint a) c))))))
+   (defspec addition-undoes-subtraction
+     (partial map identity)
+     [^{:tag 'clojure.test-clojure.numbers/integer} a
+      ^{:tag 'clojure.test-clojure.numbers/integer} b]
+     (assert (= a
+                (-> a (- b) (+ b)))))
 
-(defspec addition-undoes-subtraction
-  (partial map identity)
-  [^{:tag `integer} a ^{:tag `integer} b]
-  (if (longable? (-' a b))
-    (assert (= a
-               (-> a (- b) (+ b))
-               (-> a (unchecked-subtract b) (unchecked-add b)))))
-  (assert (= a
-             (-> a (-' b) (+' b)))))
-
-(defspec quotient-and-remainder
-  (fn [a b] (sort [a b]))
-  [^{:tag `integer} a ^{:tag `integer} b]
-  (when-not (zero? (second %))
-    (let [[a d] %
-          q (quot a d)
-          r (rem a d)]
-      (assert (= a
-                 (+ (* q d) r)
-                 (unchecked-add (unchecked-multiply q d) r))))))
-
-(deftest unchecked-inc-overflow
-  (testing "max value overflows to min value"
-    (is (= Long/MIN_VALUE (unchecked-inc Long/MAX_VALUE)))
-    (is (= Long/MIN_VALUE (unchecked-inc (Long/valueOf Long/MAX_VALUE))))))
-
-(deftest unchecked-dec-overflow
-  (testing "min value overflows to max value"
-    (is (= Long/MAX_VALUE (unchecked-dec Long/MIN_VALUE)))
-    (is (= Long/MAX_VALUE (unchecked-dec (Long/valueOf Long/MIN_VALUE))))))
-
-(deftest unchecked-negate-overflow
-  (testing "negating min value overflows to min value itself"
-    (is (= Long/MIN_VALUE (unchecked-negate Long/MIN_VALUE)))
-    (is (= Long/MIN_VALUE (unchecked-negate (Long/valueOf Long/MIN_VALUE))))))
-
-(deftest unchecked-add-overflow
-  (testing "max value overflows to min value"
-    (is (= Long/MIN_VALUE (unchecked-add Long/MAX_VALUE 1)))
-    (is (= Long/MIN_VALUE (unchecked-add Long/MAX_VALUE (Long/valueOf 1))))
-    (is (= Long/MIN_VALUE (unchecked-add (Long/valueOf Long/MAX_VALUE) 1)))
-    (is (= Long/MIN_VALUE (unchecked-add (Long/valueOf Long/MAX_VALUE) (Long/valueOf 1)))))
-  (testing "adding min value to min value results in zero"
-    (is (= 0 (unchecked-add Long/MIN_VALUE Long/MIN_VALUE)))
-    (is (= 0 (unchecked-add Long/MIN_VALUE (Long/valueOf Long/MIN_VALUE))))
-    (is (= 0 (unchecked-add (Long/valueOf Long/MIN_VALUE) Long/MIN_VALUE)))
-    (is (= 0 (unchecked-add (Long/valueOf Long/MIN_VALUE) (Long/valueOf Long/MIN_VALUE))))))
-
-(deftest unchecked-subtract-overflow
-  (testing "min value overflows to max-value"
-    (is (= Long/MAX_VALUE (unchecked-subtract Long/MIN_VALUE 1)))
-    (is (= Long/MAX_VALUE (unchecked-subtract Long/MIN_VALUE (Long/valueOf 1))))
-    (is (= Long/MAX_VALUE (unchecked-subtract (Long/valueOf Long/MIN_VALUE) 1)))
-    (is (= Long/MAX_VALUE (unchecked-subtract (Long/valueOf Long/MIN_VALUE) (Long/valueOf 1)))))
-  (testing "negating min value overflows to min value itself"
-    (is (= Long/MIN_VALUE (unchecked-subtract 0 Long/MIN_VALUE)))
-    (is (= Long/MIN_VALUE (unchecked-subtract 0 (Long/valueOf Long/MIN_VALUE))))
-    (is (= Long/MIN_VALUE (unchecked-subtract (Long/valueOf 0) Long/MIN_VALUE)))
-    (is (= Long/MIN_VALUE (unchecked-subtract (Long/valueOf 0) (Long/valueOf Long/MIN_VALUE))))))
-
-(deftest unchecked-multiply-overflow
-  (testing "two times max value results in -2"
-    (is (= -2 (unchecked-multiply Long/MAX_VALUE 2)))
-    (is (= -2 (unchecked-multiply Long/MAX_VALUE (Long/valueOf 2))))
-    (is (= -2 (unchecked-multiply (Long/valueOf Long/MAX_VALUE) 2)))
-    (is (= -2 (unchecked-multiply (Long/valueOf Long/MAX_VALUE) (Long/valueOf 2)))))
-  (testing "two times min value results in 0"
-    (is (= 0 (unchecked-multiply Long/MIN_VALUE 2)))
-    (is (= 0 (unchecked-multiply Long/MIN_VALUE (Long/valueOf 2))))
-    (is (= 0 (unchecked-multiply (Long/valueOf Long/MIN_VALUE) 2)))
-    (is (= 0 (unchecked-multiply (Long/valueOf Long/MIN_VALUE) (Long/valueOf 2))))))
-
-(defmacro check-warn-on-box [warn? form]
-  `(do (binding [*unchecked-math* :warn-on-boxed]
-                (is (= ~warn?
-                       (boolean
-                         (re-find #"^Boxed math warning"
-                                  (helper/with-err-string-writer
-                                    (helper/eval-in-temp-ns ~form)))))))
-       (binding [*unchecked-math* true]
-                (is (false?
-                      (boolean
-                        (re-find #"^Boxed math warning"
-                                 (helper/with-err-string-writer
-                                   (helper/eval-in-temp-ns ~form)))))))
-       (binding [*unchecked-math* false]
-                (is (false?
-                      (boolean
-                        (re-find #"^Boxed math warning"
-                                 (helper/with-err-string-writer
-                                   (helper/eval-in-temp-ns ~form)))))))))
-
-(deftest warn-on-boxed
-  (check-warn-on-box true (#(inc %) 2))
-  (check-warn-on-box false (#(inc ^long %) 2))
-  (check-warn-on-box false (long-array 5))
-  (check-warn-on-box true (> (first (range 3)) 0))
-  (check-warn-on-box false (> ^long (first (range 3)) 0)))
-
+   (defspec quotient-and-remainder
+     (fn [a b] (sort [a b]))
+     [^{:tag 'clojure.test-clojure.numbers/integer} a
+      ^{:tag 'clojure.test-clojure.numbers/integer} b]
+     (when-not (zero? (second %))
+       (let [[a d] %
+             q (quot a d)
+             r (rem a d)]
+         (assert (= a
+                    (+ (* q d) r)))))))
 
 (deftest comparisons
-  (let [small-numbers [1 1.0 (Integer. 1) (Float. 1.0) 9/10 1N 1M]
-        big-numbers [10 10.0 (Integer. 10) (Float. 10.0) 99/10 10N 10N]]
+  (let [small-numbers [1 1.0 (int 1) (float 1.0) 1N 1M]
+        big-numbers [10 10.0 (int 10) (float 10.0) 10N 10N]]
     (doseq [small small-numbers big big-numbers]
       (is (< small big))
       (is (not (< big small)))
@@ -823,110 +504,33 @@ Math/pow overflows to Infinity."
       (is (< (int small) (int big)))
       (is (not (< (int big) (int small))))
       (is (not (< (int small) (int small))))
-      (is (< (double small) (double big)))
-      (is (not (< (double big) (double small))))
-      (is (not (< (double small) (double small))))
+      (is (< (float small) (float big)))
+      (is (not (< (float big) (float small))))
+      (is (not (< (float small) (float small))))
       (is (<= small big))
       (is (<= small small))
       (is (not (<= big small)))
       (is (<= (int small) (int big)))
       (is (<= (int small) (int small)))
       (is (not (<= (int big) (int small))))
-      (is (<= (double small) (double big)))
-      (is (<= (double small) (double small)))
-      (is (not (<= (double big) (double small))))
+      (is (<= (float small) (float big)))
+      (is (<= (float small) (float small)))
+      (is (not (<= (float big) (float small))))
       (is (> big small))
       (is (not (> small big)))
       (is (not (> small small)))
       (is (> (int big) (int small)))
       (is (not (> (int small) (int big))))
       (is (not (> (int small) (int small))))
-      (is (> (double big) (double small)))
-      (is (not (> (double small) (double big))))
-      (is (not (> (double small) (double small))))
+      (is (> (float big) (float small)))
+      (is (not (> (float small) (float big))))
+      (is (not (> (float small) (float small))))
       (is (>= big small))
       (is (>= small small))
       (is (not (>= small big)))
       (is (>= (int big) (int small)))
       (is (>= (int small) (int small)))
       (is (not (>= (int small) (int big))))
-      (is (>= (double big) (double small)))
-      (is (>= (double small) (double small)))
-      (is (not (>= (double small) (double big)))))))
-
-(deftest test-nan-comparison
-  (are [x y] (= x y)
-       (< 1000 Double/NaN) (< 1000 (Double. Double/NaN))
-       (<= 1000 Double/NaN) (<= 1000 (Double. Double/NaN))
-       (> 1000 Double/NaN) (> 1000 (Double. Double/NaN))
-       (>= 1000 Double/NaN) (>= 1000 (Double. Double/NaN))))
-
-(deftest test-nan-as-operand
-  (testing "All numeric operations with NaN as an operand produce NaN as a result"
-    (let [nan Double/NaN
-          onan (cast Object Double/NaN)]
-      (are [x] (Double/isNaN x)
-          (+ nan 1)
-          (+ nan 0)
-          (+ nan 0.0)
-          (+ 1 nan)
-          (+ 0 nan)
-          (+ 0.0 nan)
-          (+ nan nan)
-          (- nan 1)
-          (- nan 0)
-          (- nan 0.0)
-          (- 1 nan)
-          (- 0 nan)
-          (- 0.0 nan)
-          (- nan nan)
-          (* nan 1)
-          (* nan 0)
-          (* nan 0.0)
-          (* 1 nan)
-          (* 0 nan)
-          (* 0.0 nan)
-          (* nan nan)
-          (/ nan 1)
-          (/ nan 0)
-          (/ nan 0.0)
-          (/ 1 nan)
-          (/ 0 nan)
-          (/ 0.0 nan)
-          (/ nan nan)
-          (+ onan 1)
-          (+ onan 0)
-          (+ onan 0.0)
-          (+ 1 onan)
-          (+ 0 onan)
-          (+ 0.0 onan)
-          (+ onan onan)
-          (- onan 1)
-          (- onan 0)
-          (- onan 0.0)
-          (- 1 onan)
-          (- 0 onan)
-          (- 0.0 onan)
-          (- onan onan)
-          (* onan 1)
-          (* onan 0)
-          (* onan 0.0)
-          (* 1 onan)
-          (* 0 onan)
-          (* 0.0 onan)
-          (* onan onan)
-          (/ onan 1)
-          (/ onan 0)
-          (/ onan 0.0)
-          (/ 1 onan)
-          (/ 0 onan)
-          (/ 0.0 onan)
-          (/ onan onan)
-          (+ nan onan)
-          (+ onan nan)
-          (- nan onan)
-          (- onan nan)
-          (* nan onan)
-          (* onan nan)
-          (/ nan onan)
-          (/ onan nan) ))))
+      (is (>= (float big) (float small)))
+      (is (>= (float small) (float small)))
+      (is (not (>= (float small) (float big)))))))

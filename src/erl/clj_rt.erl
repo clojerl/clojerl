@@ -459,8 +459,11 @@ boolean(false) -> false;
 boolean(_) -> true.
 
 -spec byte(number()) -> integer().
-byte(X) when is_number(X), 0 =< X, X < 256 ->
-  erlang:trunc(X).
+byte(X) when is_number(X), -128 =< X, X < 127 ->
+  erlang:trunc(X);
+byte(X) ->
+  XStr = str(X),
+  ?ERROR(<<"Value out of range for byte: ", XStr/binary>>).
 
 -spec char(integer()) -> binary().
 char(X) when is_number(X) ->
@@ -470,8 +473,11 @@ char(X) when is_number(X) ->
   end.
 
 -spec short(number()) -> integer().
-short(X) when is_number(X), 0 =< X, X < 32768 ->
-  erlang:trunc(X).
+short(X) when is_number(X), -32768 =< X, X < 32768 ->
+  erlang:trunc(X);
+short(X) ->
+  XStr = str(X),
+  ?ERROR(<<"Value out of range for short: ", XStr/binary>>).
 
 -spec str(any()) -> binary().
 str(?NIL) -> <<"">>;
