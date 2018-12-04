@@ -4209,7 +4209,7 @@
 
   {:added "1.0"}
   [x]
-  (clojerl.IHash/hash x))
+  (clj_rt/hash x))
 
 (defn mix-collection-hash
   "Mix final collection hash for ordered or unordered collections.
