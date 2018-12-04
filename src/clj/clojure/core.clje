@@ -1088,17 +1088,16 @@
   "Test bit at index n"
   {:added "1.0"}
   [x n]
-  (erlang/== 0 (erlang/band x (erlang/bsl 1 n))))
-
+  (erlang/=/= 0 (erlang/band x (erlang/bsl 1 n))))
 
 (defn bit-shift-left
-  "Bitwise shift left"
+  "Bitwise shift left (same behaviour as erlang/bsl) "
   {:inline '(fn* [x n] `(erlang/bsl ~x ~n))
    :added "1.0"}
   [x n] (erlang/bsl x n))
 
 (defn bit-shift-right
-  "Bitwise shift right"
+  "Bitwise shift right (same behaviour as erlang/bsr)"
   {:inline '(fn* [x n] `(erlang/bsr ~x ~n))
    :added "1.0"}
   [x n] (erlang/bsr x n))

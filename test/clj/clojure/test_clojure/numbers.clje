@@ -348,11 +348,12 @@ Math/pow overflows to Infinity."
        2r1000 (bit-shift-left 2r1 3)
        2r00101110 (bit-shift-left 2r00010111 1)
        2r00101110 (apply bit-shift-left [2r00010111 1])
-       0 (bit-shift-left 2r10 -1) ; truncated to least 6-bits, 63
+       ;; 0 (bit-shift-left 2r10 -1) ; truncated to least 6-bits, 63
        (expt 2 32) (bit-shift-left 1 32)
-       (expt 2 16) (bit-shift-left 1 10000) ; truncated to least 6-bits, 16
+       ;; (expt 2 16) (bit-shift-left 1 10000) ; truncated to least 6-bits, 16
        )
-  (is (thrown? :error (bit-shift-left 1N 1))))
+  ;; (is (thrown? :error (bit-shift-left 1N 1)))
+  )
 
 (deftest test-bit-shift-right
   (are [x y] (= x y)
