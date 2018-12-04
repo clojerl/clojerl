@@ -719,9 +719,9 @@
       (do-report {:type :begin-test-var, :var v})
       (inc-report-counter :test)
       (try (t)
-           (catch _ e
+           (catch _ e :stack st
              (do-report {:type :error, :message "Uncaught exception, not in assertion."
-                         :expected nil, :actual e})))
+                         :expected nil, :actual e :stacktrace st})))
       (do-report {:type :end-test-var, :var v}))))
 
 (defn test-vars
