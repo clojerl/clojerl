@@ -5313,7 +5313,20 @@
   {:added "1.2"}
 
   [e & clauses]
-  `(case* ~e ~@clauses))
+  (let [default (if (odd? (count clauses))
+                  (last clauses)
+                  `(throw (clojerl.Error. (str "No matching clause: " ~e))))]
+    (if (> 2 (count clauses))
+      `(let [e# ~e] ~default)
+      (let [pairs (partition 2 clauses)
+            clauses (reduce (fn [acc [test expr]]
+                              (if (list? test)
+                                (apply conj acc
+                                       (apply concat (map #(list (hash %) expr ) test)))
+                                (conj acc (hash test) expr)))
+                            []
+                            pairs)]
+        `(case* (hash ~e) ~@clauses default# ~default)))))
 
 ;; redefine reduce with internal-reduce
 
