@@ -890,9 +890,9 @@
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
   {:inline (nary-inline 'erlang//)
-   :inline-arities >0?
+   :inline-arities >1?
    :added "1.0"}
-  ([x] (/ 1 x))
+  ([x] (erlang// 1 x))
   ([x y] (erlang// x y))
   ([x y & more]
    (reduce / (/ x y) more)))
