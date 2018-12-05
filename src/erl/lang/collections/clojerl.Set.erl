@@ -117,7 +117,8 @@ apply(_, Args) ->
 %% clojerl.IHash
 
 hash(#{?TYPE := ?M, set := MapSet}) ->
-  clj_murmur3:unordered(maps:values(MapSet)).
+  Vals = [V || {V, _} <- maps:values(MapSet)],
+  clj_murmur3:unordered(Vals).
 
 %% clojerl.ILookup
 
