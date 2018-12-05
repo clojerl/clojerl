@@ -17,7 +17,11 @@ get_entry(Map, Hash, Key) ->
     ?NIL -> ?NIL;
     {Key, V} -> {Key, V};
     KVs when is_list(KVs) -> find_entry(KVs, Key);
-    _ -> ?NIL
+    {K, V} ->
+      case clj_rt:equiv(Key, K) of
+        true -> {K, V};
+        false -> ?NIL
+      end
   end.
 
 -spec create_entry(map(), integer(), any(), any()) ->
