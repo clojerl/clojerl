@@ -78,7 +78,7 @@
 
 (def simple-case
   (fn* [x]
-       (case x
+       (case* x
          _ {:when (erlang/=:= x 1)}
          :one
 

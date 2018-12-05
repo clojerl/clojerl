@@ -13,14 +13,14 @@
   (erlang/display z))
 
 (defn case-match-ignore [x]
-  (case x
+  (case* x
     #erl[_ y _] y))
 
 ;; First and third don't have to be equal
 (let* [2 (case-match-ignore #erl[1 2 3])])
 
 (defn case-match [x]
-  (case x
+  (case* x
     #erl[a y a] y))
 
 ;; First and third don't have to be equal
