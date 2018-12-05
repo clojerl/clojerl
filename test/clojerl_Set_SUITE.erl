@@ -156,6 +156,10 @@ hash_collision(_Config) ->
   true     = clj_rt:equiv(HashSet5, HashSet1),
   true     = clj_rt:equiv(HashSet1, HashSet5),
 
+  ct:comment("Values with same hash don't get confused"),
+  CollisionSet = clj_rt:hash_set([14361]),
+  ?NIL = clj_rt:get(CollisionSet, 83734),
+
   {comments, ""}.
 
 -spec cons(config()) -> result().
