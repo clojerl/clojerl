@@ -2,6 +2,26 @@
 
 (defrecord Foo [bar baz])
 
+#?(:clj
+   (defmacro simple-benchmark
+     "Runs expr iterations times in the context of a let expression with
+  the given bindings, then prints out the bindings and the expr
+  followed by number of iterations and total time. The optional
+  argument print-fn, defaulting to println, sets function used to
+  print the result. expr's string representation will be produced
+  using pr-str in any case."
+     {:added "1.0"}
+     [bindings expr iterations & {:keys [print-fn] :or {print-fn 'println}}]
+     (let [bs-str   (pr-str bindings)
+           expr-str (pr-str expr)]
+       `(let ~bindings
+          (let [start#   (System/nanoTime)
+                ret#     (dotimes [_# ~iterations] ~expr)
+                end#     (System/nanoTime)
+                elapsed# (int (/ (- end# start#) 1000000))]
+            (~print-fn (str ~bs-str ", " ~expr-str ", "
+                            ~iterations " runs, " elapsed# " msecs")))))))
+
 (def strings
   (into [] (take 10 (iterate (fn [s] (str s "string")) "string"))))
 
@@ -32,19 +52,19 @@
   (println)
 
   (println ";;; instance?")
-  (simple-benchmark [coll []] (instance? clojerl.Vector coll) 1000000)
+  (simple-benchmark [coll []] (instance? #?(:clje clojerl.Vector :clj clojure.lang.PersistentVector) coll) 1000000)
   (println ";;; satisfies?")
-  (simple-benchmark [coll (list 1 2 3)] (satisfies? clojerl.ISeq coll) 1000000)
-  (simple-benchmark [coll [1 2 3]] (satisfies? clojerl.ISeq coll) 1000000)
+  (simple-benchmark [coll (list 1 2 3)] (#?(:clje satisfies? :clj instance?) #?(:clje clojerl.ISeq :clj clojure.lang.ISeq) coll) 1000000)
+  (simple-benchmark [coll [1 2 3]] (#?(:clje satisfies? :clj instance?) #?(:clje clojerl.ISeq :clj clojure.lang.ISeq) coll) 1000000)
   (println)
 
   (println ";;; tuple & string ops")
   (simple-benchmark [coll "foobar"] (seq coll) 1000000)
   (simple-benchmark [coll "foobar"] (first coll) 1000000)
   (simple-benchmark [coll "foobar"] (nth coll 2) 1000000)
-  (simple-benchmark [coll (tuple 1 2 3)] (seq coll) 1000000)
-  (simple-benchmark [coll (tuple 1 2 3)] (first coll) 1000000)
-  (simple-benchmark [coll (tuple 1 2 3)] (nth coll 2) 1000000)
+  (simple-benchmark [coll #?(:clje (tuple 1 2 3) :clj (int-array [1 2 3]))] (seq coll) 1000000)
+  (simple-benchmark [coll #?(:clje (tuple 1 2 3) :clj (int-array [1 2 3]))] (first coll) 1000000)
+  (simple-benchmark [coll #?(:clje (tuple 1 2 3) :clj (int-array [1 2 3]))] (nth coll 2) 1000000)
   (println)
 
   (println ";;; list ops")
@@ -192,7 +212,10 @@
 
   (println ";; higher-order variadic function calls")
   ;; Deliberately frustrates static-fn optimization and macros
-  (simple-benchmark [f tuple] (f 1 2 3 4 5 6 7 8 9 0) 100000)
+  (simple-benchmark [f #?(:clje tuple :clj int-array)] #?(:clje (f 1 2 3 4 5 6 7 8 9 0) :clj (f [1 2 3 4 5 6 7 8 9 0])) 100000)
   (simple-benchmark [f vector] (f 1 2 3 4 5 6 7 8 9 0) 100000)
   (simple-benchmark [] (= 1 1 1 1 1 1 1 1 1 0) 100000)
+
   )
+
+#?(:clj (-main))
