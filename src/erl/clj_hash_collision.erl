@@ -15,8 +15,9 @@
 get_entry(Map, Hash, Key) ->
   case maps:get(Hash, Map, ?NIL) of
     ?NIL -> ?NIL;
-    {K, V} -> {K, V};
-    KVs -> find_entry(KVs, Key)
+    {Key, V} -> {Key, V};
+    KVs when is_list(KVs) -> find_entry(KVs, Key);
+    _ -> ?NIL
   end.
 
 -spec create_entry(map(), integer(), any(), any()) ->
