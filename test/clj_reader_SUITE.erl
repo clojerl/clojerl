@@ -185,6 +185,9 @@ keyword(ReadFun) ->
   Keyword6 = clj_rt:keyword(<<"foo">>, <<"hello-world">>),
   Keyword6 = ReadFun(<<"::f/hello-world">>),
 
+  Keyword7 = clj_rt:keyword(<<"42hello-world">>),
+  Keyword7 = ReadFun(<<":42hello-world">>),
+
   ct:comment("Error: triple colon :::"),
   ok = try ReadFun(<<":::hello-world">>)
        catch _:_ -> ok
@@ -202,11 +205,6 @@ keyword(ReadFun) ->
 
   ct:comment("Error: single colon"),
   ok = try ReadFun(<<":">>)
-       catch _:_ -> ok
-       end,
-
-  ct:comment("Error: numeric first char in name"),
-  ok = try ReadFun(<<":42hello-world">>)
        catch _:_ -> ok
        end,
 

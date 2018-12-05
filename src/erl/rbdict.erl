@@ -160,9 +160,12 @@ store1(K, V, {empty, Compare}) ->
   {r, {empty, Compare}, K, V, {empty, Compare}, Compare};
 store1(K, V, {C, Left, K1, V1, Right, Compare}) ->
   case Compare(K, K1) of
-    -1 -> lbalance(C, store1(K, V, Left), K1, V1, Right, Compare);
-    1  -> rbalance(C, Left, K1, V1, store1(K, V, Right), Compare);
-    0  -> {C, Left, K, V, Right, Compare}
+    X when X == -1; not X ->
+      lbalance(C, store1(K, V, Left), K1, V1, Right, Compare);
+    X when X == 1; X ->
+      rbalance(C, Left, K1, V1, store1(K, V, Right), Compare);
+    0 ->
+      {C, Left, K, V, Right, Compare}
   end.
 
 %% Expanding out l/rbalance is slower!

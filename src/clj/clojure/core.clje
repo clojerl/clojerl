@@ -4209,7 +4209,7 @@
 
   {:added "1.0"}
   [x]
-  (clojerl.IHash/hash x))
+  (clj_rt/hash x))
 
 (defn mix-collection-hash
   "Mix final collection hash for ordered or unordered collections.
@@ -5313,7 +5313,27 @@
   {:added "1.2"}
 
   [e & clauses]
-  `(case* ~e ~@clauses))
+  (let [default (if (odd? (count clauses))
+                  (last clauses)
+                  `(throw (clojerl.Error. (str "No matching clause: " ~e))))]
+    (if (> 2 (count clauses))
+      `(let [e# ~e] ~default)
+      (let [f     (fn [[k expr]]
+                    (if (list? k)
+                      (map #(vector % expr) k)
+                      [[k expr]]))
+            pairs (->> clauses
+                       (partition 2)
+                       (mapcat f)
+                       (zipmap (range)))
+            m     (->> pairs
+                       (map (fn [[i [v _]]] [(list 'quote  v) i]))
+                       (into {}))
+            clauses (->> pairs
+                         (map (fn [[i [_ expr]]] [i expr]))
+                         (apply concat))]
+        `(let [i# (~m ~e)]
+           (case* i# ~@clauses ~default))))))
 
 ;; redefine reduce with internal-reduce
 

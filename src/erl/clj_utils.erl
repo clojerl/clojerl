@@ -106,11 +106,10 @@ parse_symbol(Str) ->
   end.
 
 verify_symbol_name({_, Name} = Result) ->
-  NotNumeric = fun(<<C/utf8, _/binary>>) -> char_type(C) =/= number end,
   NoEndColon = fun(X) -> binary:last(X) =/= $: end,
   NoDoubleSlash = fun(X) -> re:run(X, <<"/.*?/">>) == nomatch end,
   ApplyPred = fun(Fun) -> Fun(Name) end,
-  case lists:all(ApplyPred, [NotNumeric, NoEndColon, NoDoubleSlash]) of
+  case lists:all(ApplyPred, [NoEndColon, NoDoubleSlash]) of
     true -> Result;
     false -> ?NIL
   end.
