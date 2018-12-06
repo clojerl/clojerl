@@ -398,7 +398,7 @@ with_meta(X, Meta) ->
   if
     IsAssociative -> 'clojerl.IAssociative':contains_key(Coll, Key);
     IsSet -> 'clojerl.ISet':contains(Coll, Key);
-    true  -> ?ERROR(["contains? not supported on type: ", type(Coll)])
+    true  -> ?ERROR([<<"contains? not supported on type: ">>, type(Coll)])
   end.
 
 -spec get(any(), any()) -> any().
@@ -612,12 +612,28 @@ hash_set(Items) ->
   end.
 
 -spec keys('clojerl.IMap':type()) -> list().
-keys(Map) ->
-  'clojerl.IMap':keys(Map).
+keys(?NIL) -> ?NIL;
+keys(X) ->
+  case 'map?'(X) of
+    true -> 'clojerl.IMap':keys(X);
+    _ ->
+      ?ERROR_WHEN( seq(X) =/= ?NIL
+                 , [<<"Unable to get keys for: ">>, X]
+                 ),
+      ?NIL
+  end.
 
 -spec vals('clojerl.IMap':type()) -> list().
 vals(?NIL) -> ?NIL;
-vals(Map) -> 'clojerl.IMap':vals(Map).
+vals(X) ->
+  case 'map?'(X) of
+    true -> 'clojerl.IMap':vals(X);
+    _ ->
+      ?ERROR_WHEN( seq(X) =/= ?NIL
+                 , [<<"Unable to get vals for: ">>, X]
+                 ),
+      ?NIL
+  end.
 
 -spec 'even?'(integer()) -> boolean().
 'even?'(X) ->
