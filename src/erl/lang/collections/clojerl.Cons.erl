@@ -98,7 +98,7 @@ reduce(#{?TYPE := ?M, first := First, more := More}, F, Init) ->
 do_reduce(F, Acc, [First | Items]) ->
   Val = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> Val;
+    true  -> 'clojerl.Reduced':deref(Val);
     false -> do_reduce(F, Val, Items)
   end;
 do_reduce(_F, Acc, []) ->

@@ -148,7 +148,7 @@ do_reduce(_F, Acc, Start, End, Step) when
 do_reduce(F, Acc, Start, End, Step) ->
   Val = clj_rt:apply(F, [Acc, Start]),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> Val;
+    true  -> 'clojerl.Reduced':deref(Val);
     false -> do_reduce(F, Val, Start + Step, End, Step)
   end.
 

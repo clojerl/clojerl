@@ -183,7 +183,7 @@ reduce(#{?TYPE := ?M, array := Array}, F, Init) ->
 do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
   Val = clj_rt:apply(F, [Acc, array:get(Index, Array)]),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> Val;
+    true  -> 'clojerl.Reduced':deref(Val);
     false -> do_reduce(F, Val, Index + 1, Size, Array)
   end;
 do_reduce(_F, Acc, _Index, _Size, _Array) ->
