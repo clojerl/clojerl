@@ -806,7 +806,7 @@
         false true
         0 42
         0.0 3.14
-        0M 1M
+        1M
         \c
         "" "abc"
         'sym

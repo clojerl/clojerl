@@ -760,7 +760,7 @@ read_map(#{ src   := <<"{"/utf8, _/binary>>
   case length(ReversedItems) of
     X when X rem 2 == 0 ->
       Items = lists:reverse(ReversedItems),
-      Map = 'clojerl.Map':with_meta( clj_rt:hash_map(Items)
+      Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
                                    , file_location_meta(State0)
                                    ),
       State2#{forms => [Map | Forms]};
@@ -1010,7 +1010,7 @@ read_set(#{forms := Forms, loc := Loc} = State0) ->
   #{forms := ReversedItems} = State2,
 
   Items       = lists:reverse(ReversedItems),
-  Set         = clj_rt:hash_set(Items),
+  Set         = 'clojerl.Set':?CONSTRUCTOR(Items, true),
   SetWithMeta = 'clojerl.Set':with_meta(Set, file_location_meta(State0)),
 
   State2#{forms => [SetWithMeta | Forms]}.

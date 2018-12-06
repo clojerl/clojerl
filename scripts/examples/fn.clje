@@ -3,7 +3,7 @@
 (def one 1)
 
 ;; Resolve var in another ns
-(clojure.core/prn {:a 2, #{1 2 2} one})
+(clojure.core/prn {:a 2, #{1 2 3} one})
 
 ;; Provide the value of an fn-var as an argument
 

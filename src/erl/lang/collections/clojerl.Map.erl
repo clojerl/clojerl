@@ -18,7 +18,9 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/1]).
+-export([ ?CONSTRUCTOR/1
+        , ?CONSTRUCTOR/2
+        ]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -63,15 +65,21 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
+  ?CONSTRUCTOR(KeyValues, false);
+?CONSTRUCTOR(KeyValues) ->
+  ?CONSTRUCTOR(clj_rt:to_list(KeyValues)).
+
+-spec ?CONSTRUCTOR(list(), boolean()) -> type().
+?CONSTRUCTOR(KeyValues, FailDuplicates) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
-  {Count, Map} = lists:foldl(fun build_mappings/2, {0, #{}}, KeyValuePairs),
+  {Count, Map, _} = lists:foldl( fun build_mappings/2
+                               , {0, #{}, FailDuplicates}
+                               , KeyValuePairs),
   #{ ?TYPE => ?M
    , map   => Map
    , meta  => ?NIL
    , count => Count
-   };
-?CONSTRUCTOR(KeyValues) ->
-  ?CONSTRUCTOR(clj_rt:to_list(KeyValues)).
+   }.
 
 %% @private
 -spec build_key_values(list(), list()) -> [{any(), any()}].
@@ -81,12 +89,15 @@ build_key_values(KeyValues, [K, V | Items]) ->
   build_key_values([{K, V} | KeyValues], Items).
 
 %% @private
--spec build_mappings({any(), any()}, {integer(), mappings()}) ->
+-spec build_mappings({any(), any()}, {integer(), mappings(), boolean()}) ->
   {integer(), mappings()}.
-build_mappings({Key, Value}, {Count, Map}) ->
+build_mappings({Key, Value}, {Count, Map, FailDuplicates}) ->
   Hash = clj_rt:hash(Key),
   {Diff, Entry} = create_entry(Map, Hash, Key, Value),
-  {Count + Diff, Map#{Hash => Entry}}.
+  ?ERROR_WHEN( FailDuplicates andalso Diff == 0
+             , [<<"Duplicate key: ">>, Value]
+             ),
+  {Count + Diff, Map#{Hash => Entry}, FailDuplicates}.
 
 %%------------------------------------------------------------------------------
 %% Protocols
