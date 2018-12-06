@@ -391,6 +391,11 @@ with_meta(X, Meta) ->
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(?NIL, _) ->
   false;
+'contains?'(Coll, Key)
+  when is_number(Key) andalso (is_tuple(Coll) orelse is_binary(Coll)) ->
+  N = erlang:trunc(Key),
+  Count = count(Coll),
+  N >= 0 andalso N < Count;
 'contains?'(Coll, Key) ->
   IsAssociative = 'associative?'(Coll),
   IsSet = 'set?'(Coll),
