@@ -82,7 +82,7 @@ subvec(Vector, Start, End) ->
 %% clojerl.IAssociative
 
 contains_key(#{?TYPE := ?M, array := Array}, Index) ->
-  Index < array:size(Array).
+  Index >= 0 andalso Index < array:size(Array).
 
 entry_at(#{?TYPE := ?M, array := Array}, Index) ->
   array:get(Index, Array).
