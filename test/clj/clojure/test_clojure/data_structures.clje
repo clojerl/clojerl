@@ -8,7 +8,6 @@
 
 ; Author: Frantisek Sodomka
 
-
 (ns clojure.test-clojure.data-structures
   (:use clojure.test
         [clojure.test.generative :exclude (is)])
@@ -33,99 +32,18 @@
              (+ i (count (nthnext coll i)))
              (+ i (count (drop i coll))))))))
 
-(defn- transient? [x]
-  (instance? clojure.lang.ITransientCollection x))
-
-(defn gen-transient-set-action []
-  (gen/rand-nth [[#(conj! %1 %2) #(conj %1 %2) (gen/uniform -100 100)]
-                 [#(disj! %1 %2) #(disj %1 %2) (gen/uniform -100 100)]
-                 [#(deref (future (conj! %1 %2))) #(conj %1 %2) (gen/uniform -100 100)]
-                 [#(deref (future (disj! %1 %2))) #(disj %1 %2) (gen/uniform -100 100)]
-                 [persistent! identity]
-                 [identity transient]]))
-
-(defn gen-transient-set-actions []
-  (gen/reps #(gen/uniform 0 100) gen-transient-set-action))
-
-(defn tempty? [t]
-  (= (count t) 0))
-
-(defn gen-transient-vector-action []
-  (gen/rand-nth [[#(conj! %1 %2) #(conj %1 %2) (gen/uniform -100 100)]
-                 [(fn [v _] (if (tempty? v) v (pop! v)))
-                  (fn [v _] (if (tempty? v) v (pop v)))
-                  (gen/uniform -100 100)]
-                 [#(deref (future (conj! %1 %2))) #(conj %1 %2) (gen/uniform -100 100)]
-                 [(fn [v _] (if (tempty? v) v (deref (future (pop! v)))))
-                  (fn [v _] (if (tempty? v) v (pop v)))
-                  (gen/uniform -100 100)]
-                 [persistent! identity]
-                 [identity transient]]))
-
-(defn gen-transient-vector-actions []
-  (gen/reps #(gen/uniform 0 100) gen-transient-vector-action))
-
-(defn gen-transient-map-action []
-  (gen/rand-nth [[#(assoc! %1 %2 %2) #(assoc %1 %2 %2) (gen/uniform -100 100)]
-                 [#(dissoc! %1 %2) #(dissoc %1 %2) (gen/uniform -100 100)]
-                 [#(deref (future (assoc! %1 %2 %2))) #(assoc %1 %2 %2) (gen/uniform -100 100)]
-                 [#(deref (future (dissoc! %1 %2))) #(dissoc %1 %2) (gen/uniform -100 100)]
-                 [persistent! identity]
-                 [identity transient]]))
-
-(defn gen-transient-map-actions []
-  (gen/reps #(gen/uniform 0 100) gen-transient-map-action))
-
 (defn assert-same-collection [a b]
   (assert (= (count a) (count b) (.size a) (.size b)))
   (assert (= a b))
   (assert (= b a))
-  (assert (.equals ^Object a b))
-  (assert (.equals ^Object b a))
   (assert (= (hash a) (hash b)))
-  (assert (= (.hashCode ^Object a) (.hashCode ^Object b)))
   (assert (= a
              (into (empty a) a)
              (into (empty b) b)
              (into (empty a) b)
              (into (empty b) a))))
 
-(defn apply-actions [coll actions]
-  (reduce (fn [c [tfunc pfunc & args]]
-            (apply (if (transient? c) tfunc pfunc) c args))
-          coll
-          actions))
-
-(defn to-persistent [c]
-  (if (transient? c) (persistent! c) c))
-
-(defspec same-output-persistent-transient-set
-  identity
-  [^{:tag clojure.test-clojure.data-structures/gen-transient-set-actions} actions]
-  (assert-same-collection
-   (to-persistent (apply-actions #{} actions))
-   (to-persistent (apply-actions #{} actions))))
-
-(defspec same-output-persistent-transient-vector
-  identity
-  [^{:tag clojure.test-clojure.data-structures/gen-transient-vector-actions} actions]
-  (assert-same-collection
-   (to-persistent (apply-actions [] actions))
-   (to-persistent (apply-actions [] actions))))
-
-(defspec same-output-persistent-transient-map
-  identity
-  [^{:tag clojure.test-clojure.data-structures/gen-transient-map-actions} actions]
-  (assert-same-collection
-   (to-persistent (apply-actions clojure.lang.PersistentArrayMap/EMPTY actions))
-   (to-persistent (apply-actions clojure.lang.PersistentArrayMap/EMPTY actions)))
-  (assert-same-collection
-   (to-persistent (apply-actions clojure.lang.PersistentHashMap/EMPTY actions))
-   (to-persistent (apply-actions clojure.lang.PersistentHashMap/EMPTY actions))))
-
 ;; *** General ***
-
-(defstruct equality-struct :a :b)
 
 (deftest test-equality
   ; nil is not equal to any other value
@@ -141,15 +59,10 @@
       (lazy-seq {})
       (lazy-seq #{})
       (lazy-seq "")
-      (lazy-seq (into-array []))
-      (new Object) )
+      (lazy-seq (into-tuple []))
+      (erlang/make_ref))
 
   ; numbers equality across types (see tests below - NOT IMPLEMENTED YET)
-
-  ; ratios
-  (is (== 1/2 0.5))
-  (is (== 1/1000 0.001))
-  (is (not= 2/3 0.6666666666666666))
 
   ; vectors equal other seqs by items equality
   (are [x y] (= x y)
@@ -194,18 +107,10 @@
 ;;       (hash-map   :a 1 :z 3 :c 2)
 ;;       (array-map  :a 1 :z 3 :c 2))
 
-  ; struct-map vs. sorted-map, hash-map and array-map
-  (are [x] (and (not= (class (struct equality-struct 1 2)) (class x))
-                (= (struct equality-struct 1 2) x))
-      (sorted-map-by compare :a 1 :b 2)
-      (sorted-map :a 1 :b 2)
-      (hash-map   :a 1 :b 2)
-      (array-map  :a 1 :b 2))
-
   (is (not= (sorted-set :a) (sorted-set 1)))
 
   ; sorted-set vs. hash-set
-  (is (not= (class (sorted-set 1)) (class (hash-set 1))))
+  (is (not= (type (sorted-set 1)) (type (hash-set 1))))
   (are [x y] (= x y)
       (sorted-set-by <) (hash-set)
       (sorted-set-by < 1) (hash-set 1)
@@ -217,7 +122,7 @@
 
 ;; *** Collections ***
 
-(deftest test-count
+#_(deftest test-count
   (let [EMPTY clojure.lang.PersistentQueue/EMPTY]
     (are [x y] (= (count x) y)
          EMPTY 0
@@ -267,8 +172,8 @@
 
 (deftest test-conj
   ; doesn't work on strings or arrays
-  (is (thrown? ClassCastException (conj "" \a)))
-  (is (thrown? ClassCastException (conj (into-array []) 1)))
+  (is (thrown? :error (conj "" \a)))
+  (is (thrown? :error (conj (into-tuple []) 1)))
 
   (are [x y] (= x y)
       (conj nil 1) '(1)
@@ -347,8 +252,8 @@
 
 (deftest test-peek
   ; doesn't work for sets and maps
-  (is (thrown? ClassCastException (peek #{1})))
-  (is (thrown? ClassCastException (peek {:a 1})))
+  (is (thrown? :error (peek #{1})))
+  (is (thrown? :error (peek {:a 1})))
 
   (are [x y] (= x y)
       (peek nil) nil
@@ -380,12 +285,12 @@
 
 (deftest test-pop
   ; doesn't work for sets and maps
-  (is (thrown? ClassCastException (pop #{1})))
-  (is (thrown? ClassCastException (pop #{:a 1})))
+  (is (thrown? :error (pop #{1})))
+  (is (thrown? :error (pop #{:a 1})))
 
   ; collection cannot be empty
-  (is (thrown? IllegalStateException (pop ())))
-  (is (thrown? IllegalStateException (pop [])))
+  (is (thrown? :error (pop ())))
+  (is (thrown? :error (pop [])))
 
   (are [x y] (= x y)
       (pop nil) nil
@@ -440,8 +345,8 @@
       ; different data structures
       (list true false nil)
         '(true false nil)
-      (list 1 2.5 2/3 "ab" \x 'cd :kw)
-        '(1 2.5 2/3 "ab" \x cd :kw)
+      (list 1 2.5 "ab" \x 'cd :kw)
+        '(1 2.5 "ab" \x cd :kw)
       (list (list 1 2) [3 4] {:a 1 :b 2} #{:c :d})
         '((1 2) [3 4] {:a 1 :b 2} #{:c :d})
 
@@ -508,30 +413,17 @@
 
   ; contains? also works on java.util.Map and java.util.Set.
   (are [x y] (= x y)
-      (contains? (java.util.HashMap. {}) :a) false
-      (contains? (java.util.HashMap. {}) nil) false
+      (contains? #erl{} :a) false
+      (contains? #erl{} nil) false
 
-      (contains? (java.util.HashMap. {:a 1}) :a) true
-      (contains? (java.util.HashMap. {:a 1}) :b) false
-      (contains? (java.util.HashMap. {:a 1}) nil) false
+      (contains? #erl{:a 1} :a) true
+      (contains? #erl{:a 1} :b) false
+      (contains? #erl{:a 1} nil) false
 
-      (contains? (java.util.HashMap. {:a 1 :b 2}) :a) true
-      (contains? (java.util.HashMap. {:a 1 :b 2}) :b) true
-      (contains? (java.util.HashMap. {:a 1 :b 2}) :c) false
-      (contains? (java.util.HashMap. {:a 1 :b 2}) nil) false
-
-      ; sets
-      (contains? (java.util.HashSet. #{}) 1) false
-      (contains? (java.util.HashSet. #{}) nil) false
-
-      (contains? (java.util.HashSet. #{1}) 1) true
-      (contains? (java.util.HashSet. #{1}) 2) false
-      (contains? (java.util.HashSet. #{1}) nil) false
-
-      (contains? (java.util.HashSet. #{1 2 3}) 1) true
-      (contains? (java.util.HashSet. #{1 2 3}) 3) true
-      (contains? (java.util.HashSet. #{1 2 3}) 10) false
-      (contains? (java.util.HashSet. #{1 2 3}) nil) false)
+      (contains? #erl{:a 1 :b 2} :a) true
+      (contains? #erl{:a 1 :b 2} :b) true
+      (contains? #erl{:a 1 :b 2} :c) false
+      (contains? #erl{:a 1 :b 2} nil) false)
 
   ; numerically indexed collections (e.g. vectors and Java arrays)
   ; => test if the numeric key is WITHIN THE RANGE OF INDEXES
@@ -550,21 +442,21 @@
       (contains? [1 2 3] -1) false
 
       ; arrays
-      (contains? (into-array []) 0) false
-      (contains? (into-array []) -1) false
-      (contains? (into-array []) 1) false
+      (contains? (into-tuple []) 0) false
+      (contains? (into-tuple []) -1) false
+      (contains? (into-tuple []) 1) false
 
-      (contains? (into-array [1]) 0) true
-      (contains? (into-array [1]) -1) false
-      (contains? (into-array [1]) 1) false
+      (contains? (into-tuple [1]) 0) true
+      (contains? (into-tuple [1]) -1) false
+      (contains? (into-tuple [1]) 1) false
 
-      (contains? (into-array [1 2 3]) 0) true
-      (contains? (into-array [1 2 3]) 2) true
-      (contains? (into-array [1 2 3]) 3) false
-      (contains? (into-array [1 2 3]) -1) false)
+      (contains? (into-tuple [1 2 3]) 0) true
+      (contains? (into-tuple [1 2 3]) 2) true
+      (contains? (into-tuple [1 2 3]) 3) false
+      (contains? (into-tuple [1 2 3]) -1) false)
 
   ; 'contains?' will not operate on non-associative things
-  (are [x]  (is (thrown? Exception (contains? x 1)))
+  (are [x]  (is (thrown? :error (contains? x 1)))
        '(1 2 3)
        3))
 
@@ -628,13 +520,13 @@
 
 
 (deftest test-sorted-map-keys
-  (is (thrown? ClassCastException (sorted-map () 1)))
-  (is (thrown? ClassCastException (sorted-map #{} 1)))
-  (is (thrown? ClassCastException (sorted-map {} 1)))
+  (is (thrown? :error (sorted-map () 1)))
+  (is (thrown? :error (sorted-map #{} 1)))
+  (is (thrown? :error (sorted-map {} 1)))
 
-  (is (thrown? ClassCastException (assoc (sorted-map) () 1)))
-  (is (thrown? ClassCastException (assoc (sorted-map) #{} 1)))
-  (is (thrown? ClassCastException (assoc (sorted-map) {} 1)))
+  (is (thrown? :error (assoc (sorted-map) () 1)))
+  (is (thrown? :error (assoc (sorted-map) #{} 1)))
+  (is (thrown? :error (assoc (sorted-map) {} 1)))
 
   ;; doesn't throw
   (let [cmp #(compare (count %1) (count %2))]
@@ -649,7 +541,6 @@
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -667,7 +558,6 @@
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -680,7 +570,7 @@
 
 (deftest test-get
   (let [m {:a 1, :b 2, :c {:d 3, :e 4}, :f nil, :g false, nil {:h 5}}]
-    (is (thrown? IllegalArgumentException (get-in {:a 1} 5)))
+    (is (thrown? :error (get-in {:a 1} 5)))
     (are [x y] (= x y)
          (get m :a) 1
          (get m :e) nil
@@ -730,7 +620,7 @@
   (testing "map-entry? = true"
     (are [entry]
       (true? (map-entry? entry))
-      (first (doto (java.util.HashMap.) (.put "x" 1))))))
+      (first #erl{"x" 1}))))
 
 ;; *** Sets ***
 
@@ -751,8 +641,8 @@
 
   (are [x y] (= x y)
       ; equal classes
-      (class #{}) (class (hash-set))
-      (class #{1 2}) (class (hash-set 1 2))
+      (type #{}) (type (hash-set))
+      (type #{1 2}) (type (hash-set 1 2))
 
       ; creating
       (hash-set) #{}
@@ -766,8 +656,8 @@
       ; different data structures
       (hash-set true false nil)
         #{true false nil}
-      (hash-set 1 2.5 2/3 "ab" \x 'cd :kw)
-        #{1 2.5 2/3 "ab" \x 'cd :kw}
+      (hash-set 1 2.5 "ab" \x 'cd :kw)
+        #{1 2.5 "ab" \x 'cd :kw}
       (hash-set (list 1 2) [3 4] {:a 1 :b 2} #{:c :d})
         #{'(1 2) [3 4] {:a 1 :b 2} #{:c :d}}
 
@@ -782,13 +672,13 @@
       (hash-set #{}) #{#{}}
       (hash-set 1 #{}) #{1 #{}}
       (hash-set #{} 2) #{#{} 2}
-      (hash-set (Integer. -1)) (hash-set (Long. -1))))
+      (hash-set -1) (hash-set -1)))
 
 
 (deftest test-sorted-set
   ; only compatible types can be used
-  (is (thrown? ClassCastException (sorted-set 1 "a")))
-  (is (thrown? ClassCastException (sorted-set '(1 2) [3 4])))
+  (is (thrown? :error (sorted-set 1 "a")))
+  (is (thrown? :error (sorted-set '(1 2) [3 4])))
 
   ; creates set?
   (are [x] (set? x)
@@ -802,7 +692,6 @@
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -811,12 +700,12 @@
       [] [1 2]
   )
   ; cannot be cast to java.lang.Comparable
-  (is (thrown? ClassCastException (sorted-set ())))
-  (is (thrown? ClassCastException (sorted-set {})))
-  (is (thrown? ClassCastException (sorted-set #{})))
-  (is (thrown? ClassCastException (sorted-set '(1 2) '(1 2))))
-  (is (thrown? ClassCastException (sorted-set {:a 1 :b 2} {:a 1 :b 2})))
-  (is (thrown? ClassCastException (sorted-set #{1 2} #{1 2})))
+  (is (thrown? :error (sorted-set ())))
+  (is (thrown? :error (sorted-set {})))
+  (is (thrown? :error (sorted-set #{})))
+  (is (thrown? :error (sorted-set '(1 2) '(1 2))))
+  (is (thrown? :error (sorted-set {:a 1 :b 2} {:a 1 :b 2})))
+  (is (thrown? :error (sorted-set #{1 2} #{1 2})))
 
   (are [x y] (= x y)
       ; generating
@@ -836,10 +725,10 @@
 
 (deftest test-sorted-set-by
   ; only compatible types can be used
-  ; NB: not a ClassCastException, but a RuntimeException is thrown,
+  ; NB: not a :error, but a RuntimeException is thrown,
   ; requires discussion on whether this should be symmetric with test-sorted-set
-  (is (thrown? Exception (sorted-set-by < 1 "a")))
-  (is (thrown? Exception (sorted-set-by < '(1 2) [3 4])))
+  (is (thrown? :error (sorted-set-by < 1 "a")))
+  (is (thrown? :error (sorted-set-by < '(1 2) [3 4])))
 
   ; creates set?
   (are [x] (set? x)
@@ -853,7 +742,6 @@
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -865,11 +753,11 @@
       #{} ; #{1 2}
   )
   ; cannot be cast to java.lang.Comparable
-  ; NB: not a ClassCastException, but a RuntimeException is thrown,
+  ; NB: not a :error, but a RuntimeException is thrown,
   ; requires discussion on whether this should be symmetric with test-sorted-set
-  (is (thrown? Exception (sorted-set-by compare '(1 2) '(1 2))))
-  (is (thrown? Exception (sorted-set-by compare {:a 1 :b 2} {:a 1 :b 2})))
-  (is (thrown? Exception (sorted-set-by compare #{1 2} #{1 2})))
+  (is (thrown? :error (sorted-set-by compare '(1 2) '(1 2))))
+  (is (thrown? :error (sorted-set-by compare {:a 1 :b 2} {:a 1 :b 2})))
+  (is (thrown? :error (sorted-set-by compare #{1 2} #{1 2})))
 
   (are [x y] (= x y)
       ; generating
@@ -894,7 +782,7 @@
       [] [1 2]
       #{} #{1 2}
       {} {:a 1 :b 2}
-      (into-array []) (into-array [1 2])
+      (into-tuple []) (into-tuple [1 2])
       "" "abc" )
 
   ; unique
@@ -903,7 +791,6 @@
       false true
       0 42
       0.0 3.14
-      2/3
       0M 1M
       \c
       "" "abc"
@@ -928,8 +815,8 @@
       {} #{}
       {:a 1 :b 2} #{[:a 1] [:b 2]}
 
-      (into-array []) #{}
-      (into-array [1 2]) #{1 2}
+      (into-tuple []) #{}
+      (into-tuple [1 2]) #{1 2}
 
       "" #{}
       "abc" #{\a \b \c} ))
@@ -937,9 +824,9 @@
 
 (deftest test-disj
   ; doesn't work on lists, vectors or maps
-  (is (thrown? ClassCastException (disj '(1 2) 1)))
-  (is (thrown? ClassCastException (disj [1 2] 1)))
-  (is (thrown? ClassCastException (disj {:a 1} :a)))
+  (is (thrown? :error (disj '(1 2) 1)))
+  (is (thrown? :error (disj [1 2] 1)))
+  (is (thrown? :error (disj {:a 1} :a)))
 
   ; identity
   (are [x] (= (disj x) x)
@@ -951,7 +838,6 @@
         false true
         0 42
         0.0 3.14
-        2/3
         0M 1M
         \c
         "" "abc"
@@ -962,7 +848,7 @@
         #{} #{1 2}} )
 
   ; type identity
-  (are [x] (= (class (disj x)) (class x))
+  (are [x] (= (type (disj x)) (type x))
       (hash-set)
       (hash-set 1 2)
       (sorted-set)
@@ -995,13 +881,13 @@
 
 ;; *** Queues ***
 
-(deftest test-queues
+#_(deftest test-queues
   (let [EMPTY clojure.lang.PersistentQueue/EMPTY]
     (are [x y] (= x y)
       EMPTY EMPTY
       (into EMPTY (range 50)) (into EMPTY (range 50))
-      (conj EMPTY (Long. -1)) (conj EMPTY (Integer. -1))
-      (hash (conj EMPTY (Long. -1))) (hash (conj EMPTY (Integer. -1)))
+      (conj EMPTY -1) (conj EMPTY -1)
+      (hash (conj EMPTY -1)) (hash (conj EMPTY -1))
       (hash [1 2 3]) (hash (conj EMPTY 1 2 3))
       (range 5) (into EMPTY (range 5))
       (range 1 6) (-> EMPTY
@@ -1054,7 +940,7 @@
         w5c (with-meta [5] {:me "w5c"})]
 
     ;; Sets
-    (is (thrown? IllegalArgumentException
+    (is (thrown? :error
                  (read-string "#{1 2 3 4 1 5}")))
     ;; If there are duplicate items when doing (conj #{} x1 x2 ...),
     ;; the behavior is that the metadata of the first item is kept.
@@ -1070,7 +956,7 @@
       #{z3a x1} [z3a z3b x1])
 
     ;; Maps
-    (is (thrown? IllegalArgumentException
+    (is (thrown? :error
                  (read-string "{:a 1, :b 2, :a -1, :c 3}")))
     ;; If there are duplicate keys when doing (assoc {} k1 v1 k2 v2
     ;; ...), the behavior is that the metadata of the first duplicate
@@ -1091,7 +977,7 @@
                                         v4a z3a, y2 2, v4b z3b, w5c v4c])))
 
 (deftest test-array-map-arity
-  (is (thrown? IllegalArgumentException
+  (is (thrown? :error
                (array-map 1 2 3))))
 
 (deftest test-assoc
@@ -1101,26 +987,23 @@
        {:a 1} (assoc {} :a 1)
        {nil 1} (assoc {} nil 1)
        {:a 2 :b -2} (assoc {} :b -2 :a 2))
-  (is (thrown? IllegalArgumentException (assoc [] 0 5 1)))
-  (is (thrown? IllegalArgumentException (assoc {} :b -2 :a))))
+  (is (thrown? :error (assoc [] 0 5 1)))
+  (is (thrown? :error (assoc {} :b -2 :a))))
 
 (defn is-same-collection [a b]
-  (let [msg (format "(class a)=%s (class b)=%s a=%s b=%s"
-                    (.getName (class a)) (.getName (class b)) a b)]
+  (let [msg (format "(type a)=%s (type b)=%s a=%s b=%s"
+                    (str (type a)) (str (type b)) a b)]
     (is (= (count a) (count b) (.size a) (.size b)) msg)
     (is (= a b) msg)
     (is (= b a) msg)
-    (is (.equals ^Object a b) msg)
-    (is (.equals ^Object b a) msg)
-    (is (= (hash a) (hash b)) msg)
-    (is (= (.hashCode ^Object a) (.hashCode ^Object b)) msg)))
+    (is (= (hash a) (hash b)) msg)))
 
 (deftest ordered-collection-equality-test
   (let [empty-colls [ []
                       '()
                       (lazy-seq)
-                      clojure.lang.PersistentQueue/EMPTY
-                      (vector-of :long) ]]
+                      #_clojure.lang.PersistentQueue/EMPTY
+                      #_(vector-of :long)]]
     (doseq [c1 empty-colls, c2 empty-colls]
       (is-same-collection c1 c2)))
   (let [colls1 [ [-3 :a "7th"]
@@ -1128,12 +1011,12 @@
                  (lazy-seq (cons -3
                    (lazy-seq (cons :a
                      (lazy-seq (cons "7th" nil))))))
-                 (into clojure.lang.PersistentQueue/EMPTY
+                 #_(into clojure.lang.PersistentQueue/EMPTY
                        [-3 :a "7th"])
                  (sequence (map identity) [-3 :a "7th"]) ]]
     (doseq [c1 colls1, c2 colls1]
       (is-same-collection c1 c2)))
-  (is-same-collection [-3 1 7] (vector-of :long -3 1 7)))
+  (is-same-collection [-3 1 7] (into-tuple [-3 1 7])))
 
 (defn case-indendent-string-cmp [s1 s2]
   (compare (string/lower-case s1) (string/lower-case s2)))
@@ -1173,13 +1056,13 @@
 ;; See: http://clojure.org/data_structures#hash
 
 (defn hash-ordered [collection]
-  (-> (reduce (fn [acc e] (unchecked-add-int (unchecked-multiply-int 31 acc) (hash e)))
+  (-> (reduce (fn [acc e] (+ (* 31 acc) (hash e)))
               1
               collection)
       (mix-collection-hash (count collection))))
 
 (defn hash-unordered [collection]
-  (-> (reduce unchecked-add-int 0 (map hash collection))
+  (-> (reduce + 0 (map hash collection))
       (mix-collection-hash (count collection))))
 
 (defn gen-elements
@@ -1206,106 +1089,10 @@
 
 (deftest ireduce-reduced
   (let [f (fn [_ a] (if (= a 5) (reduced "foo")))]
-    (is (= "foo" (.reduce ^clojure.lang.IReduce (list 1 2 3 4 5) f)))
-    (is (= "foo" (.reduce ^clojure.lang.IReduce (seq (long-array [1 2 3 4 5])) f)))))
-
-(defn seq-iter-match
-  [^clojure.lang.Seqable seqable ^Iterable iterable]
-  (if (nil? iterable)
-    (when (not (nil? (seq seqable)))
-      (throw (ex-info "Null iterable but seq has elements"
-                      {:pos 0 :seqable seqable :iterable iterable})))
-    (let [i (.iterator iterable)]
-      (loop [s (seq seqable)
-             n 0]
-        (if (seq s)
-          (do
-            (when-not (.hasNext i)
-              (throw (ex-info "Iterator exhausted before seq"
-                              {:pos n :seqable seqable :iterable iterable})))
-              (when-not (= (.next i) (first s))
-                (throw (ex-info "Iterator and seq did not match"
-                                {:pos n :seqable seqable :iterable iterable})))
-                (recur (rest s) (inc n)))
-          (when (.hasNext i)
-            (throw (ex-info "Seq exhausted before iterator"
-                            {:pos n :seqable seqable :iterable iterable}))))))))
-
-(deftest test-seq-iter-match
-  (let [maps (mapcat #(vector (apply array-map %)
-                              (apply hash-map %)
-                              (apply sorted-map %))
-                     [[] [nil 1] [nil 1 2 3] [1 2 3 4]])]
-    (doseq [m maps]
-      (seq-iter-match m m)
-      (seq-iter-match (keys m) (keys m))
-      (seq-iter-match (vals m) (vals m))
-      (seq-iter-match (rest (keys m)) (rest (keys m)))
-      (seq-iter-match (rest (vals m)) (rest (vals m))))))
-
-(defn gen-map
-  []
-  (gen/hash-map (rand-nth cgen/ednable-scalars) (rand-nth cgen/ednable-scalars)))
-
-(defspec seq-and-iter-match-for-maps
-  identity
-  [^{:tag clojure.test-clojure.data-structures/gen-map} m]
-  (seq-iter-match m m))
-
-(defn gen-set
-  []
-  (gen/set (rand-nth cgen/ednable-scalars)))
-
-(defspec seq-and-iter-match-for-sets
-  identity
-  [^{:tag clojure.test-clojure.data-structures/gen-set} s]
-  (seq-iter-match s s))
-
-(defn gen-queue
-  []
-  (into clojure.lang.PersistentQueue/EMPTY
-        (gen/vec (rand-nth cgen/ednable-scalars))))
-
-(defspec seq-and-iter-match-for-queues
-  identity
-  [^{:tag clojure.test-clojure.data-structures/gen-queue} q]
-  (seq-iter-match q q))
+    (is (= "foo" (.reduce ^clojerl.IReduce (list 1 2 3 4 5) f)))
+    (is (= "foo" (.reduce ^clojerl.IReduce (seq (into-tuple [1 2 3 4 5])) f)))))
 
 (defrecord Rec [a b])
-
-(defn gen-record
-  []
-  (let [r (->Rec (gen/int) (gen/int))]
-       (gen/one-of r
-                   (merge r (gen-map)))))
-
-(defspec seq-and-iter-match-for-records
-         identity
-         [^{:tag clojure.test-clojure.data-structures/gen-record} r]
-         (seq-iter-match r r))
-
-(defspec seq-and-iter-match-for-keys
-         identity
-         [^{:tag clojure.test-clojure.data-structures/gen-map} m]
-         (seq-iter-match (keys m) (keys m)))
-
-(defspec seq-and-iter-match-for-vals
-         identity
-         [^{:tag clojure.test-clojure.data-structures/gen-map} m]
-         (seq-iter-match (vals m) (vals m)))
-
-(defstruct test-struct :a :b)
-
-(defn gen-struct
-  []
-  (let [s (struct test-struct (gen/int) (gen/int))]
-    (gen/one-of s
-                (assoc s (rand-nth cgen/ednable-scalars) (rand-nth cgen/ednable-scalars)))))
-
-(defspec seq-and-iter-match-for-structs
-         identity
-         [^{:tag clojure.test-clojure.data-structures/gen-struct} s]
-         (seq-iter-match s s))
 
 (deftest record-hashing
   (let [r (->Rec 1 1)
