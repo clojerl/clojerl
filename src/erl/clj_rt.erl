@@ -268,8 +268,8 @@ peek(?NIL) -> ?NIL;
 peek(Stack)     -> 'clojerl.IStack':peek(Stack).
 
 -spec pop(any()) -> any().
-pop(?NIL) -> ?NIL;
-pop(Stack)     -> 'clojerl.IStack':pop(Stack).
+pop(?NIL)  -> ?NIL;
+pop(Stack) -> 'clojerl.IStack':pop(Stack).
 
 -spec name(any()) -> binary() | ?NIL.
 name(X) when is_binary(X) -> X;

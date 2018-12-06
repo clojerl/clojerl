@@ -1,6 +1,7 @@
 -module('clojerl.List').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
@@ -149,7 +150,7 @@ peek(#{?TYPE := ?M, items := Items}) ->
   'erlang.List':peek(Items).
 
 pop(#{?TYPE := ?M, items := []} = List) ->
-  List;
+  ?ERROR(<<"Can't pop empty list">>);
 pop(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
 
