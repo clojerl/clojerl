@@ -170,8 +170,7 @@ reduce(_Config) ->
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
 
-  Reduced = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusMaxFun),
-  10 = clj_rt:deref(Reduced),
+  10 = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusMaxFun),
 
   Array           = array:from_list(lists:seq(0, 32)),
   EmptyChunkedSeq = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 33),

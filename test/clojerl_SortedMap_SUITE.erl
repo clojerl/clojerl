@@ -243,7 +243,7 @@ associative(_Config) ->
 complete_coverage(_Config) ->
   NotEmptyMap = sorted_map([a, b, 2, 3]),
   EmptyMap    = clj_rt:empty(NotEmptyMap),
-  EmptyMap    = sorted_map([]),
+  true        = clj_rt:equiv(sorted_map([]), EmptyMap),
 
   MapMeta  = clj_rt:with_meta(sorted_map([1, 2, 3, 4]), #{a => 1}),
   #{a := 1} = clj_rt:meta(MapMeta),

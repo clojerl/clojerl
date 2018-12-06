@@ -170,8 +170,7 @@ reduce(_Config) ->
                  ([X, Y]) when X < 10 -> X + Y;
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
-  Reduced = 'clojerl.IReduce':reduce(ChunkedCons2, PlusMaxFun),
-  10 = clj_rt:deref(Reduced),
+  10 = 'clojerl.IReduce':reduce(ChunkedCons2, PlusMaxFun),
 
   {comments, ""}.
 

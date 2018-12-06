@@ -155,7 +155,11 @@ cons(_Config) ->
 stack(_Config) ->
   EmptyList = clj_rt:list([]),
   ?NIL = clj_rt:peek(EmptyList),
-  EmptyList = clj_rt:pop(EmptyList),
+
+  ct:comment("Can't pop an empty list"),
+  ok = try clj_rt:pop(EmptyList), error
+       catch error:_ -> ok
+       end,
 
   OneList   = clj_rt:list([1]),
   1         = clj_rt:peek(OneList),
@@ -187,8 +191,7 @@ reduce(_Config) ->
                  ([X, Y]) when X < 10 -> X + Y;
                  ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
             end,
-  Reduced = 'clojerl.IReduce':reduce(TenList, PlusMaxFun),
-  10 = clj_rt:deref(Reduced),
+  10 = 'clojerl.IReduce':reduce(TenList, PlusMaxFun),
 
   {comments, ""}.
 
