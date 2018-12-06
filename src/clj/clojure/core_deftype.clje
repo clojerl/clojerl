@@ -83,7 +83,7 @@
           eqhash (fn [[i m]]
                    [(conj i 'clojerl.IHash)
                     (conj m
-                          `(~'hash [this#] 1))])
+                          `(~'hash [this#] (clj_utils/record_hash this#)))])
           iobj (fn [[i m]]
                  [(conj i 'clojerl.IMeta)
                   (conj m
