@@ -78,7 +78,14 @@
 new() -> new(fun default_compare/2).
 
 new(Compare) when is_function(Compare) ->
-  {empty, Compare}.
+  F = fun(X, Y) ->
+          case Compare(X, Y) of
+            true  -> 1;
+            false -> -1;
+            Z     -> Z
+          end
+      end,
+  {empty, F}.
 
 compare_fun({empty, Compare}) -> Compare;
 compare_fun({_, _, _, _, _, Compare}) -> Compare.
@@ -160,12 +167,9 @@ store1(K, V, {empty, Compare}) ->
   {r, {empty, Compare}, K, V, {empty, Compare}, Compare};
 store1(K, V, {C, Left, K1, V1, Right, Compare}) ->
   case Compare(K, K1) of
-    X when X == -1; not X ->
-      lbalance(C, store1(K, V, Left), K1, V1, Right, Compare);
-    X when X == 1; X ->
-      rbalance(C, Left, K1, V1, store1(K, V, Right), Compare);
-    0 ->
-      {C, Left, K, V, Right, Compare}
+    -1 -> lbalance(C, store1(K, V, Left), K1, V1, Right, Compare);
+    1  -> rbalance(C, Left, K1, V1, store1(K, V, Right), Compare);
+    0  -> {C, Left, K, V, Right, Compare}
   end.
 
 %% Expanding out l/rbalance is slower!
