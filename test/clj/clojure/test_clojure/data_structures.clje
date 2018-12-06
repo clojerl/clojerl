@@ -33,7 +33,7 @@
              (+ i (count (drop i coll))))))))
 
 (defn assert-same-collection [a b]
-  (assert (= (count a) (count b) (.size a) (.size b)))
+  (assert (= (count a) (count b)))
   (assert (= a b))
   (assert (= b a))
   (assert (= (hash a) (hash b)))
@@ -486,7 +486,7 @@
       (diff (keys (hash-map :a 1 :b 2)) '(:a :b)) nil )   ; (keys (hash-map :a 1 :b 2)) '(:a :b)
 
   (let [m {:a 1 :b 2}
-        k (keys m)]
+        k (apply list (keys m))]
     (is (= {:hi :there} (meta (with-meta k {:hi :there}))))))
 
 
@@ -515,7 +515,7 @@
       (diff (vals (hash-map :a 1 :b 2)) '(1 2)) nil )   ; (vals (hash-map :a 1 :b 2)) '(1 2)
 
   (let [m {:a 1 :b 2}
-        v (vals m)]
+        v (apply list (vals m))]
     (is (= {:hi :there} (meta (with-meta v {:hi :there}))))))
 
 
@@ -991,9 +991,9 @@
   (is (thrown? :error (assoc {} :b -2 :a))))
 
 (defn is-same-collection [a b]
-  (let [msg (format "(type a)=%s (type b)=%s a=%s b=%s"
-                    (str (type a)) (str (type b)) a b)]
-    (is (= (count a) (count b) (.size a) (.size b)) msg)
+  (let [msg (format "(type a)=~s (type b)=~s a=~s b=~s"
+                    (str (type a)) (str (type b)) (str a) (str b))]
+    (is (= (count a) (count b)) msg)
     (is (= a b) msg)
     (is (= b a) msg)
     (is (= (hash a) (hash b)) msg)))
@@ -1013,7 +1013,7 @@
                      (lazy-seq (cons "7th" nil))))))
                  #_(into clojure.lang.PersistentQueue/EMPTY
                        [-3 :a "7th"])
-                 (sequence (map identity) [-3 :a "7th"]) ]]
+                 #_(sequence (map identity) [-3 :a "7th"]) ]]
     (doseq [c1 colls1, c2 colls1]
       (is-same-collection c1 c2)))
   (is-same-collection [-3 1 7] (into-tuple [-3 1 7])))
