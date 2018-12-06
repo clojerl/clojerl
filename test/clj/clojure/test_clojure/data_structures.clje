@@ -520,14 +520,6 @@
 
 
 (deftest test-sorted-map-keys
-  (is (thrown? :error (sorted-map () 1)))
-  (is (thrown? :error (sorted-map #{} 1)))
-  (is (thrown? :error (sorted-map {} 1)))
-
-  (is (thrown? :error (assoc (sorted-map) () 1)))
-  (is (thrown? :error (assoc (sorted-map) #{} 1)))
-  (is (thrown? :error (assoc (sorted-map) {} 1)))
-
   ;; doesn't throw
   (let [cmp #(compare (count %1) (count %2))]
     (assoc (sorted-map-by cmp) () 1)
@@ -676,10 +668,6 @@
 
 
 (deftest test-sorted-set
-  ; only compatible types can be used
-  (is (thrown? :error (sorted-set 1 "a")))
-  (is (thrown? :error (sorted-set '(1 2) [3 4])))
-
   ; creates set?
   (are [x] (set? x)
        (sorted-set)
@@ -699,14 +687,6 @@
       :kw
       [] [1 2]
   )
-  ; cannot be cast to java.lang.Comparable
-  (is (thrown? :error (sorted-set ())))
-  (is (thrown? :error (sorted-set {})))
-  (is (thrown? :error (sorted-set #{})))
-  (is (thrown? :error (sorted-set '(1 2) '(1 2))))
-  (is (thrown? :error (sorted-set {:a 1 :b 2} {:a 1 :b 2})))
-  (is (thrown? :error (sorted-set #{1 2} #{1 2})))
-
   (are [x y] (= x y)
       ; generating
       (sorted-set) #{}
@@ -724,12 +704,6 @@
 
 
 (deftest test-sorted-set-by
-  ; only compatible types can be used
-  ; NB: not a :error, but a RuntimeException is thrown,
-  ; requires discussion on whether this should be symmetric with test-sorted-set
-  (is (thrown? :error (sorted-set-by < 1 "a")))
-  (is (thrown? :error (sorted-set-by < '(1 2) [3 4])))
-
   ; creates set?
   (are [x] (set? x)
        (sorted-set-by <)
@@ -752,12 +726,6 @@
       {}  ; {:a 1 :b 2}
       #{} ; #{1 2}
   )
-  ; cannot be cast to java.lang.Comparable
-  ; NB: not a :error, but a RuntimeException is thrown,
-  ; requires discussion on whether this should be symmetric with test-sorted-set
-  (is (thrown? :error (sorted-set-by compare '(1 2) '(1 2))))
-  (is (thrown? :error (sorted-set-by compare {:a 1 :b 2} {:a 1 :b 2})))
-  (is (thrown? :error (sorted-set-by compare #{1 2} #{1 2})))
 
   (are [x y] (= x y)
       ; generating
