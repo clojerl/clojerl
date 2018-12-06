@@ -252,6 +252,8 @@ get(#{?TYPE := ?M, tuple := TupleMap}, Key, NotFound) ->
 
 %% clojerl.IMap
 
+keys(#{?TYPE := ?M, tuple := {}}) ->
+  ?NIL;
 keys(#{?TYPE := ?M, tuple := TupleMap}) ->
   Fun = fun
           Fun([], Acc) ->
@@ -261,6 +263,8 @@ keys(#{?TYPE := ?M, tuple := TupleMap}) ->
         end,
   Fun(tuple_to_list(TupleMap), []).
 
+vals(#{?TYPE := ?M, tuple := {}}) ->
+  ?NIL;
 vals(#{?TYPE := ?M, tuple := TupleMap}) ->
   Fun = fun
           Fun([], Acc) ->

@@ -218,7 +218,10 @@ get(#{?TYPE := ?M, map := Map}, Key, NotFound) ->
 %% clojerl.IMap
 
 keys(#{?TYPE := ?M, map := Map}) ->
-  maps:fold(fun keys_fold/3, [], Map).
+  case maps:size(Map) of
+    0 -> ?NIL;
+    _ -> maps:fold(fun keys_fold/3, [], Map)
+  end.
 
 keys_fold(_, {K, _}, Keys) ->
   [K | Keys];
@@ -226,7 +229,10 @@ keys_fold(_, KVs, Keys) ->
   [K || {K, _} <- KVs] ++ Keys.
 
 vals(#{?TYPE := ?M, map := Map}) ->
-  maps:fold(fun vals_fold/3, [], Map).
+  case maps:size(Map) of
+    0 -> ?NIL;
+    _ -> maps:fold(fun vals_fold/3, [], Map)
+  end.
 
 vals_fold(_, {_, V}, Vals) ->
   [V | Vals];

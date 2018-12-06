@@ -137,10 +137,16 @@ get(Map, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
 
 keys(Map) ->
-  maps:keys(Map).
+  case maps:size(Map) of
+    0 -> ?NIL;
+    _ -> maps:keys(Map)
+  end.
 
 vals(Map) ->
-  maps:values(Map).
+  case maps:size(Map) of
+    0 -> ?NIL;
+    _ -> maps:values(Map)
+  end.
 
 without(Map, Key) ->
   maps:remove(Key, Map).

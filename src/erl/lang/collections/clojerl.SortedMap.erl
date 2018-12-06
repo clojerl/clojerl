@@ -155,7 +155,7 @@ equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
       TypeModule   = clj_rt:type_module(Y),
       KeyHashFun   = fun(X) -> {X, clj_rt:hash(X)} end,
       KeyHashPairs = lists:map( KeyHashFun
-                              , 'erlang.List':to_list(TypeModule:keys(Y))
+                              , clj_rt:to_list(TypeModule:keys(Y))
                               ),
       Fun = fun({Key, Hash}) ->
                 Entry = get_entry(Keys, Hash, Key),
@@ -221,11 +221,17 @@ get(#{?TYPE := ?M, keys := Keys, vals := Vals}, Key, NotFound) ->
 
 %% clojerl.IMap
 
-keys(#{?TYPE := ?M, vals := Vals}) ->
-  rbdict:fetch_keys(Vals).
+keys(#{?TYPE := ?M, vals := Vals, keys := Keys}) ->
+  case maps:size(Keys) of
+    0 -> ?NIL;
+    _ -> rbdict:fetch_keys(Vals)
+  end.
 
-vals(#{?TYPE := ?M, vals := Vals}) ->
-  [V || {_, V} <- rbdict:to_list(Vals)].
+vals(#{?TYPE := ?M, vals := Vals, keys := Keys}) ->
+  case maps:size(Keys) of
+    0 -> ?NIL;
+    _ -> [V || {_, V} <- rbdict:to_list(Vals)]
+  end.
 
 without( #{?TYPE := ?M, keys := Keys0, vals := Vals0, count := Count} = M
        , Key
