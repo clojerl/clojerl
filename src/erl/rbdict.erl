@@ -132,6 +132,8 @@ size1({_, L, _, _, R, _}) ->
 
 %% fetch(Key, Dict) -> Value.
 
+fetch(_, {empty, _}) ->
+  ?NIL;
 fetch(K, {_, Left, K1, Val, Right, Compare}) ->
   case Compare(K, K1) of
     -1 -> fetch(K, Left);
