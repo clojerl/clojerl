@@ -144,7 +144,11 @@ count(#{?TYPE := ?M, count := Count}) -> Count.
 equiv( #{?TYPE := ?M, vals := ValsX, count := Count}
      , #{?TYPE := ?M, vals := ValsY, count := Count}
      ) ->
-  'erlang.List':equiv(rbdict:to_list(ValsX), rbdict:to_list(ValsY));
+  Fun = fun({KeyX, ValueX}) ->
+            ValueY = rbdict:fetch(KeyX, ValsY),
+            ValueY /= ?NIL andalso clj_rt:equiv(ValueX, ValueY)
+        end,
+  lists:all(Fun, rbdict:to_list(ValsX));
 equiv(#{?TYPE := ?M, keys := Keys, vals := Vals}, Y) ->
   case clj_rt:'map?'(Y) of
     true  ->
