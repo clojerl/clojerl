@@ -221,7 +221,7 @@ disjoin(_Config) ->
 complete_coverage(_Config) ->
   NotEmptySet = sorted_set([a, b, 2, 3]),
   EmptySet    = clj_rt:empty(NotEmptySet),
-  EmptySet    = sorted_set([]),
+  true        = clj_rt:equiv(sorted_set([]), EmptySet),
 
   SetMeta  = clj_rt:with_meta(sorted_set([1, 2, 3, 4]), #{a => 1}),
   #{a := 1} = clj_rt:meta(SetMeta),

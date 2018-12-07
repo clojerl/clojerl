@@ -57,6 +57,8 @@
         , merge/3
         ]).
 
+-export([default_compare/2]).
+
 -type n() :: {empty, fun()} | {r | b, n(), any(), any(), n(), fun()}.
 
 %% The algorithms here are taken directly from Okasaki and Rbset in
@@ -78,7 +80,18 @@
 new() -> new(fun default_compare/2).
 
 new(Compare) when is_function(Compare) ->
-  {empty, Compare}.
+  F = fun(X, Y) ->
+          case Compare(X, Y) of
+            true -> -1;
+            false ->
+              case Compare(Y, X) of
+                true -> 1;
+                false -> 0
+              end;
+            Z -> Z
+          end
+      end,
+  {empty, F}.
 
 compare_fun({empty, Compare}) -> Compare;
 compare_fun({_, _, _, _, _, Compare}) -> Compare.
@@ -125,6 +138,8 @@ size1({_, L, _, _, R, _}) ->
 
 %% fetch(Key, Dict) -> Value.
 
+fetch(_, {empty, _}) ->
+  ?NIL;
 fetch(K, {_, Left, K1, Val, Right, Compare}) ->
   case Compare(K, K1) of
     -1 -> fetch(K, Left);
@@ -160,12 +175,9 @@ store1(K, V, {empty, Compare}) ->
   {r, {empty, Compare}, K, V, {empty, Compare}, Compare};
 store1(K, V, {C, Left, K1, V1, Right, Compare}) ->
   case Compare(K, K1) of
-    X when X == -1; not X ->
-      lbalance(C, store1(K, V, Left), K1, V1, Right, Compare);
-    X when X == 1; X ->
-      rbalance(C, Left, K1, V1, store1(K, V, Right), Compare);
-    0 ->
-      {C, Left, K, V, Right, Compare}
+    -1 -> lbalance(C, store1(K, V, Left), K1, V1, Right, Compare);
+    1  -> rbalance(C, Left, K1, V1, store1(K, V, Right), Compare);
+    0  -> {C, Left, K, V, Right, Compare}
   end.
 
 %% Expanding out l/rbalance is slower!

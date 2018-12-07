@@ -57,19 +57,12 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  Vals   = [{X, true} || X <- Values],
-  {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
-  #{ ?TYPE  => ?M
-   , hashes => Hashes
-   , dict   => rbdict:from_list(Vals)
-   , count  => Count
-   , meta   => ?NIL
-   }.
+  ?CONSTRUCTOR(fun rbdict:default_compare/2, Values).
 
 -spec ?CONSTRUCTOR(function(), list()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
-  Vals   = [{X, true} || X <- Values],
   {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
+  Vals = maps:fold(fun ctor_fold/3, [], Hashes),
   #{ ?TYPE  => ?M
    , hashes => Hashes
    , dict   => rbdict:from_list(Compare, Vals)
@@ -77,12 +70,19 @@
    , meta   => ?NIL
    }.
 
+-spec ctor_fold(integer(), {any(), any()} | [{any(), any()}], [any()]) ->
+  [any()].
+ctor_fold(_, KVs, Values) when is_list(KVs) ->
+  KVs ++ Values;
+ctor_fold(_, KV, Values) ->
+  [KV | Values].
+
 %% @private
 -spec build_mappings(any(), {integer(), mappings()}) -> {integer(), mappings()}.
-build_mappings(Value, {Count, Map}) ->
+build_mappings(Value, {Count, Hashes}) ->
   Hash = clj_rt:hash(Value),
-  {Diff, Entry} = create_entry(Map, Hash, Value, true),
-  {Count + Diff, Map#{Hash => Entry}}.
+  {Diff, Entry} = create_entry(Hashes, Hash, Value, true),
+  {Count + Diff, Hashes#{Hash => Entry}}.
 
 %%------------------------------------------------------------------------------
 %% Protocols

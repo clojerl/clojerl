@@ -133,7 +133,7 @@ push_bindings(BindingsMap) ->
                   end,
   NewBindings1  = lists:foldl( AddBindingFun
                              , NewBindings
-                             , clj_rt:keys(BindingsMap)
+                             , clj_rt:to_list(clj_rt:keys(BindingsMap))
                              ),
   erlang:put(dynamic_bindings, NewBindings1),
   ok.

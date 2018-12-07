@@ -268,8 +268,8 @@ peek(?NIL) -> ?NIL;
 peek(Stack)     -> 'clojerl.IStack':peek(Stack).
 
 -spec pop(any()) -> any().
-pop(?NIL) -> ?NIL;
-pop(Stack)     -> 'clojerl.IStack':pop(Stack).
+pop(?NIL)  -> ?NIL;
+pop(Stack) -> 'clojerl.IStack':pop(Stack).
 
 -spec name(any()) -> binary() | ?NIL.
 name(X) when is_binary(X) -> X;
@@ -391,6 +391,11 @@ with_meta(X, Meta) ->
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(?NIL, _) ->
   false;
+'contains?'(Coll, Key)
+  when is_number(Key) andalso (is_tuple(Coll) orelse is_binary(Coll)) ->
+  N = erlang:trunc(Key),
+  Count = count(Coll),
+  N >= 0 andalso N < Count;
 'contains?'(Coll, Key) ->
   IsAssociative = 'associative?'(Coll),
   IsSet = 'set?'(Coll),
@@ -398,7 +403,7 @@ with_meta(X, Meta) ->
   if
     IsAssociative -> 'clojerl.IAssociative':contains_key(Coll, Key);
     IsSet -> 'clojerl.ISet':contains(Coll, Key);
-    true  -> ?ERROR(["contains? not supported on type: ", type(Coll)])
+    true  -> ?ERROR([<<"contains? not supported on type: ">>, type(Coll)])
   end.
 
 -spec get(any(), any()) -> any().
@@ -612,12 +617,28 @@ hash_set(Items) ->
   end.
 
 -spec keys('clojerl.IMap':type()) -> list().
-keys(Map) ->
-  'clojerl.IMap':keys(Map).
+keys(?NIL) -> ?NIL;
+keys(X) ->
+  case 'map?'(X) of
+    true -> 'clojerl.IMap':keys(X);
+    _ ->
+      ?ERROR_WHEN( seq(X) =/= ?NIL
+                 , [<<"Unable to get keys for: ">>, X]
+                 ),
+      ?NIL
+  end.
 
 -spec vals('clojerl.IMap':type()) -> list().
 vals(?NIL) -> ?NIL;
-vals(Map) -> 'clojerl.IMap':vals(Map).
+vals(X) ->
+  case 'map?'(X) of
+    true -> 'clojerl.IMap':vals(X);
+    _ ->
+      ?ERROR_WHEN( seq(X) =/= ?NIL
+                 , [<<"Unable to get vals for: ">>, X]
+                 ),
+      ?NIL
+  end.
 
 -spec 'even?'(integer()) -> boolean().
 'even?'(X) ->

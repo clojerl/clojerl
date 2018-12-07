@@ -159,7 +159,7 @@ do_reduce(ChunkedSeq, F, Init) ->
   ChunkFirst = chunked_first(ChunkedSeq),
   Val        = 'clojerl.TupleChunk':reduce(ChunkFirst, F, Init),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> Val;
+    true  -> 'clojerl.Reduced':deref(Val);
     false ->
       case chunked_next(ChunkedSeq) of
         ?NIL        -> Val;

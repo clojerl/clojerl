@@ -1,6 +1,7 @@
 -module('clojerl.Set').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
@@ -13,7 +14,9 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/1]).
+-export([ ?CONSTRUCTOR/1
+        , ?CONSTRUCTOR/2
+        ]).
 -export([count/1]).
 -export([ cons/2
         , empty/1
@@ -39,8 +42,7 @@
        , [ get_entry/3
          , create_entry/4
          , without_entry/3
-         ]
-       ).
+         ]).
 
 -type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
 
@@ -52,21 +54,32 @@
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Values) when is_list(Values) ->
-  {Count, MapSet} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
+  ?CONSTRUCTOR(Values, false);
+?CONSTRUCTOR(Values) ->
+  ?CONSTRUCTOR(clj_rt:to_list(Values)).
+
+-spec ?CONSTRUCTOR(list(), boolean()) -> type().
+?CONSTRUCTOR(Values, FailDuplicates) when is_list(Values) ->
+  {Count, MapSet, _} = lists:foldl( fun build_mappings/2
+                                  , {0, #{}, FailDuplicates}
+                                  , Values
+                                  ),
   #{ ?TYPE => ?M
    , set   => MapSet
    , count => Count
    , meta  => ?NIL
-   };
-?CONSTRUCTOR(Values) ->
-  ?CONSTRUCTOR(clj_rt:to_list(Values)).
+   }.
 
 %% @private
--spec build_mappings(any(), {integer(), mappings()}) -> {integer(), mappings()}.
-build_mappings(Value, {Count, Map}) ->
+-spec build_mappings(any(), {integer(), mappings(), boolean()}) ->
+  {integer(), mappings(), boolean()}.
+build_mappings(Value, {Count, Map, FailDuplicates}) ->
   Hash = clj_rt:hash(Value),
   {Diff, Entry} = create_entry(Map, Hash, Value, true),
-  {Count + Diff, Map#{Hash => Entry}}.
+  ?ERROR_WHEN( FailDuplicates andalso Diff == 0
+             , [<<"Duplicate key: ">>, Value]
+             ),
+  {Count + Diff, Map#{Hash => Entry}, FailDuplicates}.
 
 %%------------------------------------------------------------------------------
 %% Protocols

@@ -83,7 +83,7 @@
           eqhash (fn [[i m]]
                    [(conj i 'clojerl.IHash)
                     (conj m
-                          `(~'hash [this#] 1))])
+                          `(~'hash [this#] (clj_utils/record_hash this#)))])
           iobj (fn [[i m]]
                  [(conj i 'clojerl.IMeta)
                   (conj m
@@ -94,7 +94,7 @@
                      (conj m
                            `(~'get [this# k#] (get this# k# nil))
                            `(~'get [this# k# else#]
-                             (case k# ~@(mapcat (fn [fld] [(keyword fld) fld])
+                             (case* k# ~@(mapcat (fn [fld] [(keyword fld) fld])
                                                 base-fields)
                                    (get ~'__extmap k# else#))))])
           imap (fn [[i m]]

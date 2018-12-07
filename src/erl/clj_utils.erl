@@ -48,6 +48,8 @@
 
         , resource_to_ns/1
         , ns_to_resource/1
+
+        , record_hash/1
         ]).
 
 -define(CORE_CHUNK, "Core").
@@ -505,6 +507,15 @@ resource_to_ns(Resource) ->
 ns_to_resource(NsName) ->
   Resource = binary:replace(NsName, <<".">>, <<"/">>, [global]),
   binary:replace(Resource, <<"-">>, <<"_">>, [global]).
+
+-spec record_hash(map()) -> integer().
+record_hash(#{?TYPE := _, '__extmap' := ExternalMap} = Record) ->
+  MapFields = maps:without([?TYPE, '__extmap', '__meta'], Record),
+  AllFields = case ExternalMap of
+                ?NIL -> MapFields;
+                _ -> maps:merge(MapFields, ExternalMap)
+              end,
+  clj_rt:hash(AllFields).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% The MIT License (MIT)

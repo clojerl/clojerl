@@ -99,7 +99,7 @@ do_reduce(_Fun, Acc, []) ->
 do_reduce(Fun, Acc, [Item | Items]) ->
   Val = clj_rt:apply(Fun, [Acc, Item]),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> Val;
+    true  -> 'clojerl.Reduced':deref(Val);
     false -> do_reduce(Fun, Val, Items)
   end.
 

@@ -114,7 +114,7 @@ do_reduce(F, Acc, Seq) when Seq =/= ?NIL ->
   First  = Module:first(Seq),
   Val    = clj_rt:apply(F, [Acc, First]),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> Val;
+    true  -> 'clojerl.Reduced':deref(Val);
     false -> do_reduce(F, Val, Module:next(Seq))
   end;
 do_reduce(_F, Acc, _Seq) ->
