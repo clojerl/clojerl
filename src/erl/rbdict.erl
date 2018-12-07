@@ -57,6 +57,8 @@
         , merge/3
         ]).
 
+-export([default_compare/2]).
+
 -type n() :: {empty, fun()} | {r | b, n(), any(), any(), n(), fun()}.
 
 %% The algorithms here are taken directly from Okasaki and Rbset in
