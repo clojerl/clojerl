@@ -90,7 +90,7 @@ build_key_values(KeyValues, [K, V | Items]) ->
 
 %% @private
 -spec build_mappings({any(), any()}, {integer(), mappings(), boolean()}) ->
-  {integer(), mappings()}.
+  {integer(), mappings(), boolean()}.
 build_mappings({Key, Value}, {Count, Map, FailDuplicates}) ->
   Hash = clj_rt:hash(Key),
   {Diff, Entry} = create_entry(Map, Hash, Key, Value),

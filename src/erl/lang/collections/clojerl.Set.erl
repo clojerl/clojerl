@@ -72,7 +72,7 @@
 
 %% @private
 -spec build_mappings(any(), {integer(), mappings(), boolean()}) ->
-  {integer(), mappings()}.
+  {integer(), mappings(), boolean()}.
 build_mappings(Value, {Count, Map, FailDuplicates}) ->
   Hash = clj_rt:hash(Value),
   {Diff, Entry} = create_entry(Map, Hash, Value, true),
