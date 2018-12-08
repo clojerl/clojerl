@@ -274,12 +274,12 @@ import_type(TypeName, CheckLoaded) ->
   Ns      = current(),
   Exists  = mapping(Ns, Sym),
 
-  ?WARN_WHEN( Exists =/= ?NIL
-              andalso not clj_rt:equiv(Exists, Type)
-            , [ Sym , <<" already refers to: ">> , Exists
-              , <<" in namespace: ">> , name(Ns)
-              ]
-            ),
+  ?ERROR_WHEN( Exists =/= ?NIL
+               andalso not clj_rt:equiv(Exists, Type)
+             , [ Sym , <<" already refers to: ">> , Exists
+               , <<" in namespace: ">> , name(Ns)
+               ]
+             ),
 
   gen_server:call(?MODULE, {intern, Ns, Sym, Type}).
 
