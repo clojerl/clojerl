@@ -4,8 +4,10 @@
 
 -behavior('clojerl.IHash').
 -behavior('clojerl.IEquiv').
+-behavior('clojerl.IStringable').
 
--export([ ?CONSTRUCTOR/1
+-export([ ?CONSTRUCTOR/0
+        , ?CONSTRUCTOR/1
         , year/1
         , month/1
         , day/1
@@ -17,6 +19,7 @@
 
 -export([hash/1]).
 -export([equiv/2]).
+-export([str/1]).
 
 %% EPOCH = calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}}).
 -define(EPOCH, 62167219200).
@@ -24,6 +27,10 @@
 -type type() :: #{ ?TYPE => ?M
                  , date  => calendar:datetime()
                  }.
+
+-spec ?CONSTRUCTOR() -> type().
+?CONSTRUCTOR() ->
+  ?CONSTRUCTOR({erlang:date(), erlang:time()}).
 
 -spec ?CONSTRUCTOR(calendar:datetime()) -> type().
 ?CONSTRUCTOR(Timestamp) when is_integer(Timestamp), -?EPOCH =< Timestamp ->
@@ -63,3 +70,6 @@ hash(Date) -> erlang:phash2(Date).
 
 equiv(#{?TYPE := ?M, date := Date}, #{?TYPE := ?M, date := Date}) -> true;
 equiv(_ , _) -> false.
+
+str(#{?TYPE := ?M, date := {{Y, M, D}, {H, MM, S}}}) ->
+  iolist_to_binary(io_lib:format("~p-~p-~pT~p:~p:~p", [Y, M, D, H, MM, S])).
