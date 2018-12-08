@@ -12,20 +12,20 @@
 
 'close'(X) ->
   case clj_rt:type_module(X) of
-    'erlang.io.File' ->
-      'erlang.io.File':'close'(X);
     'erlang.io.PushbackReader' ->
       'erlang.io.PushbackReader':'close'(X);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'close'(X);
     'erlang.io.StringWriter' ->
       'erlang.io.StringWriter':'close'(X);
+    'erlang.io.File' ->
+      'erlang.io.File':'close'(X);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'close', Type)
   end.
 
-?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('erlang.io.PushbackReader') -> true;
 ?SATISFIES('erlang.io.StringReader') -> true;
 ?SATISFIES('erlang.io.StringWriter') -> true;
+?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES(_) -> false.

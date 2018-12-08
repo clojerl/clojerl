@@ -12,38 +12,38 @@
 
 '->erl'(X, Recursive) ->
   case clj_rt:type_module(X) of
-    'clojerl.ChunkedCons' ->
-      'clojerl.ChunkedCons':'->erl'(X, Recursive);
-    'clojerl.Cons' ->
-      'clojerl.Cons':'->erl'(X, Recursive);
     'clojerl.LazySeq' ->
       'clojerl.LazySeq':'->erl'(X, Recursive);
-    'clojerl.List' ->
-      'clojerl.List':'->erl'(X, Recursive);
-    'clojerl.Map' ->
-      'clojerl.Map':'->erl'(X, Recursive);
     'clojerl.Range' ->
       'clojerl.Range':'->erl'(X, Recursive);
     'clojerl.TupleMap' ->
       'clojerl.TupleMap':'->erl'(X, Recursive);
-    'clojerl.Vector.ChunkedSeq' ->
-      'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
-    'clojerl.Vector' ->
-      'clojerl.Vector':'->erl'(X, Recursive);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'->erl'(X, Recursive);
+    'clojerl.List' ->
+      'clojerl.List':'->erl'(X, Recursive);
+    'clojerl.Vector' ->
+      'clojerl.Vector':'->erl'(X, Recursive);
+    'clojerl.Map' ->
+      'clojerl.Map':'->erl'(X, Recursive);
+    'clojerl.Cons' ->
+      'clojerl.Cons':'->erl'(X, Recursive);
+    'clojerl.Vector.ChunkedSeq' ->
+      'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
+    'clojerl.ChunkedCons' ->
+      'clojerl.ChunkedCons':'->erl'(X, Recursive);
     Type ->
       clj_protocol:not_implemented(?MODULE, '->erl', Type)
   end.
 
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES('clojerl.Cons') -> true;
 ?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Map') -> true;
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;
+?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.Map') -> true;
+?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
+?SATISFIES('clojerl.ChunkedCons') -> true;
 ?SATISFIES(_) -> false.

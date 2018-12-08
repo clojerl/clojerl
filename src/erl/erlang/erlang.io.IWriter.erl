@@ -13,10 +13,10 @@
 
 'write'(Writer, Str) ->
   case clj_rt:type_module(Writer) of
-    'erlang.io.File' ->
-      'erlang.io.File':'write'(Writer, Str);
     'erlang.io.StringWriter' ->
       'erlang.io.StringWriter':'write'(Writer, Str);
+    'erlang.io.File' ->
+      'erlang.io.File':'write'(Writer, Str);
     'clojerl.Keyword' ->
       'clojerl.Keyword':'write'(Writer, Str);
     Type ->
@@ -25,17 +25,17 @@
 
 'write'(Writer, Format, Value) ->
   case clj_rt:type_module(Writer) of
-    'erlang.io.File' ->
-      'erlang.io.File':'write'(Writer, Format, Value);
     'erlang.io.StringWriter' ->
       'erlang.io.StringWriter':'write'(Writer, Format, Value);
+    'erlang.io.File' ->
+      'erlang.io.File':'write'(Writer, Format, Value);
     'clojerl.Keyword' ->
       'clojerl.Keyword':'write'(Writer, Format, Value);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'write', Type)
   end.
 
-?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('erlang.io.StringWriter') -> true;
+?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES(_) -> false.
