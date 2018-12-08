@@ -622,15 +622,15 @@
   (list 'new 'clojerl.LazySeq (list* '^{:once true} fn* [] body)))
 
 (defn chunk-buffer [capacity]
-  #erl())
+  (clojerl.ChunkBuffer. capacity))
 
-(defn chunk-append [b x]
-  (conj b x))
+(defn chunk-append [^clojerl.ChunkBuffer b x]
+  (.add b x))
 
-(defn ^clojerl.IChunk chunk [b]
-  (clojerl.TupleChunk. (erlang/list_to_tuple.1 (lists/reverse b))))
+(defn ^clojerl.IChunk chunk [^clojerl.ChunkBuffer b]
+  (.chunk b))
 
-(defn  ^clojerl.IChunk chunk-first ^clojerl.IChunk [^clojerl.IChunkedSeq s]
+(defn ^clojerl.IChunk chunk-first ^clojerl.IChunk [^clojerl.IChunkedSeq s]
   (.chunked_first s))
 
 (defn ^clojerl.ISeq chunk-rest ^clojerl.ISeq [^clojerl.IChunkedSeq s]
@@ -3800,7 +3800,7 @@
                               do-cmod (fn do-cmod [[[k v :as pair] & etc]]
                                         (cond
                                           (= k :let) `(let ~v ~(do-cmod etc))
-                                          (= k :while) `(when ~v ~(do-cmod etc))
+                                          (= k :while) `(if ~v ~(do-cmod etc) ~gb)
                                           (= k :when) `(if ~v
                                                          ~(do-cmod etc)
                                                          (recur
@@ -3821,7 +3821,7 @@
                                                    (let [~bind (clojerl.TupleChunk/nth c# ~gi)]
                                                      ~(do-cmod mod-pairs))
                                                    ~gb))]
-                                       (if ~gb
+                                       (if (= size# (clojerl.ChunkBuffer/count ~gb))
                                          (chunk-cons
                                            (chunk ~gb)
                                            (~giter (chunk-rest ~gxs)))
