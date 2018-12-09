@@ -611,7 +611,11 @@ analyze_fn_method(List, LoopType, LoopId, AnalyzeBody, Env0) ->
 
 -spec is_not_ampersand(any()) -> boolean().
 is_not_ampersand(?NIL) -> true;
-is_not_ampersand(X)    -> clj_rt:str(X) =/= <<"&">>.
+is_not_ampersand(X)    ->
+  not ( clj_rt:'symbol?'(X)
+        andalso 'clojerl.Symbol':namespace(X) == ?NIL
+        andalso 'clojerl.Symbol':name(X) == <<"&">>
+      ).
 
 -spec analyze_method_params(['clojerl.Symbol':type()], clj_env:env()) ->
   clj_env:env().
