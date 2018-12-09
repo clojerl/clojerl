@@ -15,12 +15,12 @@
 
 'read'(Reader) ->
   case clj_rt:type_module(Reader) of
-    'erlang.io.File' ->
-      'erlang.io.File':'read'(Reader);
     'erlang.io.PushbackReader' ->
       'erlang.io.PushbackReader':'read'(Reader);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'read'(Reader);
+    'erlang.io.File' ->
+      'erlang.io.File':'read'(Reader);
     'clojerl.Keyword' ->
       'clojerl.Keyword':'read'(Reader);
     Type ->
@@ -29,12 +29,12 @@
 
 'read'(Reader, Length) ->
   case clj_rt:type_module(Reader) of
-    'erlang.io.File' ->
-      'erlang.io.File':'read'(Reader, Length);
     'erlang.io.PushbackReader' ->
       'erlang.io.PushbackReader':'read'(Reader, Length);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'read'(Reader, Length);
+    'erlang.io.File' ->
+      'erlang.io.File':'read'(Reader, Length);
     'clojerl.Keyword' ->
       'clojerl.Keyword':'read'(Reader, Length);
     Type ->
@@ -43,12 +43,12 @@
 
 'read_line'(Reader) ->
   case clj_rt:type_module(Reader) of
-    'erlang.io.File' ->
-      'erlang.io.File':'read_line'(Reader);
     'erlang.io.PushbackReader' ->
       'erlang.io.PushbackReader':'read_line'(Reader);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'read_line'(Reader);
+    'erlang.io.File' ->
+      'erlang.io.File':'read_line'(Reader);
     'clojerl.Keyword' ->
       'clojerl.Keyword':'read_line'(Reader);
     Type ->
@@ -57,20 +57,20 @@
 
 'skip'(Reader, N) ->
   case clj_rt:type_module(Reader) of
-    'erlang.io.File' ->
-      'erlang.io.File':'skip'(Reader, N);
     'erlang.io.PushbackReader' ->
       'erlang.io.PushbackReader':'skip'(Reader, N);
     'erlang.io.StringReader' ->
       'erlang.io.StringReader':'skip'(Reader, N);
+    'erlang.io.File' ->
+      'erlang.io.File':'skip'(Reader, N);
     'clojerl.Keyword' ->
       'clojerl.Keyword':'skip'(Reader, N);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'skip', Type)
   end.
 
-?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('erlang.io.PushbackReader') -> true;
 ?SATISFIES('erlang.io.StringReader') -> true;
+?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES(_) -> false.

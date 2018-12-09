@@ -15,10 +15,10 @@
   case clj_rt:type_module(Coll) of
     'erlang.Tuple' ->
       'erlang.Tuple':'nth'(Coll, N);
-    'clojerl.TupleChunk' ->
-      'clojerl.TupleChunk':'nth'(Coll, N);
     'clojerl.Vector' ->
       'clojerl.Vector':'nth'(Coll, N);
+    'clojerl.TupleChunk' ->
+      'clojerl.TupleChunk':'nth'(Coll, N);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'nth', Type)
   end.
@@ -27,15 +27,15 @@
   case clj_rt:type_module(Coll) of
     'erlang.Tuple' ->
       'erlang.Tuple':'nth'(Coll, N, NotFound);
-    'clojerl.TupleChunk' ->
-      'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
     'clojerl.Vector' ->
       'clojerl.Vector':'nth'(Coll, N, NotFound);
+    'clojerl.TupleChunk' ->
+      'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'nth', Type)
   end.
 
 ?SATISFIES('erlang.Tuple') -> true;
-?SATISFIES('clojerl.TupleChunk') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
+?SATISFIES('clojerl.TupleChunk') -> true;
 ?SATISFIES(_) -> false.

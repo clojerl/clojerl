@@ -485,6 +485,11 @@
    :added "1.0"}
   [x] (erlang/=:= x true))
 
+(defn boolean?
+  "Return true if x is a Boolean"
+  {:added "1.9"}
+  [x] (instance? clojerl.Boolean x))
+
 (defn not
   "Returns true if x is logical false, false otherwise."
   {:tag clojerl.Boolean
@@ -1121,6 +1126,28 @@
   {:added "1.0"}
   [n] (not (even? n)))
 
+(defn int?
+  "Return true if x is a fixed precision integer"
+  {:added "1.9"}
+  [x] (instance? clojerl.Integer x))
+
+(defn pos-int?
+  "Return true if x is a positive fixed precision integer"
+  {:added "1.9"}
+  [x] (and (int? x)
+           (pos? x)))
+
+(defn neg-int?
+  "Return true if x is a negative fixed precision integer"
+  {:added "1.9"}
+  [x] (and (int? x)
+           (neg? x)))
+
+(defn nat-int?
+  "Return true if x is a non-negative fixed precision integer"
+  {:added "1.9"}
+  [x] (and (int? x)
+           (not (neg? x))))
 
 ;;
 
@@ -1409,13 +1436,13 @@
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
   [^clojerl.Symbol multifn dispatch-val & fn-tail]
-  (let [fn-name (gensym (str (.name multifn) "_method_"))]
+  (let [fn-name (gensym (str (.name multifn) "_method_" dispatch-val))]
     `(do
        (defn- ~fn-name ~@fn-tail)
        (erl-on-load*
         (clojerl.MultiFn/add_method (var ~multifn)
-                                      ~dispatch-val
-                                      (var ~fn-name))))))
+                                    ~dispatch-val
+                                    (var ~fn-name))))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
@@ -3004,6 +3031,41 @@
    :added "1.0"}
   [x] (clj_rt/boolean x))
 
+(defn ident?
+  "Return true if x is a symbol or keyword"
+  {:added "1.9"}
+  [x] (or (keyword? x) (symbol? x)))
+
+(defn simple-ident?
+  "Return true if x is a symbol or keyword without a namespace"
+  {:added "1.9"}
+  [x] (and (ident? x) (nil? (namespace x))))
+
+(defn qualified-ident?
+  "Return true if x is a symbol or keyword with a namespace"
+  {:added "1.9"}
+  [x] (boolean (and (ident? x) (namespace x) true)))
+
+(defn simple-symbol?
+  "Return true if x is a symbol without a namespace"
+  {:added "1.9"}
+  [x] (and (symbol? x) (nil? (namespace x))))
+
+(defn qualified-symbol?
+  "Return true if x is a symbol with a namespace"
+  {:added "1.9"}
+  [x] (boolean (and (symbol? x) (namespace x) true)))
+
+(defn simple-keyword?
+  "Return true if x is a keyword without a namespace"
+  {:added "1.9"}
+  [x] (and (keyword? x) (nil? (namespace x))))
+
+(defn qualified-keyword?
+  "Return true if x is a keyword with a namespace"
+  {:added "1.9"}
+  [x] (boolean (and (keyword? x) (namespace x) true)))
+
 (defn number?
   "Returns true if x is a Number"
   {:inline '(fn* [x] `(erlang/is_number ~x))
@@ -3025,6 +3087,12 @@
   {:added "1.0"}
   [n]
   (erlang/is_float n))
+
+(defn rational?
+  "Returns true if n is a rational number"
+  {:added "1.0"}
+  [n]
+  (integer? n))
 
 (def ^:dynamic ^{:private true} print-initialized false)
 
@@ -4944,6 +5012,11 @@
   [x] (or  (instance? clojerl.List x)
            (instance? erlang.List x)))
 
+(defn seqable?
+  "Return true if the seq function is supported for x"
+  {:added "1.9"}
+  [x] (or (nil? x) (satisfies? clojerl.ISeqable x)))
+
 (defn ifn?
   "Returns true if x implements IFn. Note that many data structures
   (e.g. sets and maps) implement IFn"
@@ -4981,6 +5054,11 @@
  {:added "1.0"}
   [coll]
   (satisfies? clojerl.IReversible coll))
+
+(defn indexed?
+  "Return true if coll implements Indexed, indicating efficient lookup by index"
+  {:added "1.9"}
+  [coll] (satisfies? clojerl.IIndexed coll))
 
 (def ^:dynamic
  ^{:doc "bound in a repl thread to the most recent value printed"
@@ -5345,7 +5423,32 @@
 ;; (load "gvec")
 (load "core/protocols")
 (load "instant")
+
+(defprotocol Inst
+  (inst-ms* [inst]))
+
+(extend-protocol Inst
+  erlang.util.Date
+  (inst-ms* [inst] (* 1000 (.timestamp ^erlang.util.Date inst))))
+
+(defn inst-ms
+  "Return the number of milliseconds since January 1, 1970, 00:00:00 GMT"
+  {:added "1.9"}
+  [inst]
+  (inst-ms* inst))
+
+(defn inst?
+  "Return true if x satisfies Inst"
+  {:added "1.9"}
+  [x]
+  (satisfies? Inst x))
+
 (load "uuid")
+
+(defn uuid?
+  "Return true if x is a java.util.UUID"
+  {:added "1.9"}
+  [x] (instance? erlang.util.UUID x))
 
 (defn reduce ([f coll]) ([f val coll]))
 
