@@ -56,6 +56,10 @@
 
 (deftest test-dynamic-ns
   (testing "a call to ns returns nil"
-   (is (= nil (call-ns))))
-  (testing "requiring a dynamically created ns should not throw an exception"
+    (is (= nil (call-ns))))
+  ;; NOTE: This is not valid for Clojerl. The ns (module) is created
+  ;; at compile time when there is at least one `def` expression, and
+  ;; this only works if the `ns` expression and the `def` expression
+  ;; are at the top level.
+  #_(testing "requiring a dynamically created ns should not throw an exception"
     (is (= nil (let [a (call-ns-sym)] (require a))))))
