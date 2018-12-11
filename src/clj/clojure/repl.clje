@@ -218,7 +218,8 @@ str-or-pattern."
   "Returns a sorted seq of symbols naming public vars in
   a namespace"
   [ns]
-  (sort (map (comp symbol first) (ns-publics (the-ns ns)))))
+  (sort (map (comp symbol first)
+             (ns-publics (the-ns (get (ns-aliases *ns*) (str ns) ns))))))
 
 (defmacro dir
   "Prints a sorted directory of public vars in a namespace"
