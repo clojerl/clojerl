@@ -453,8 +453,7 @@ check_if_override(Ns, Sym, Old, New) ->
 
   Message  = [Sym, <<" already refers to: ">>, Old, <<" in namespace: ">>, Ns],
 
-  Warn     = not ( clj_rt:equiv(OldVarNs, NewVarNs)
-                   orelse OldVarNs =:= NsName
+  Warn     = not ( OldVarNs =:= NsName
                    orelse NewVarNs =:= <<"clojure.core">>
                  ),
 

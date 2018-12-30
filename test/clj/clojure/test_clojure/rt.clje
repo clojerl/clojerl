@@ -60,8 +60,9 @@
      #".* Cannot infer target type in \(. x zap 1\)\r?\n"
      (defn foo [x] (.zap x 1)))))
 
-(def example-var)
-(deftest binding-root-clears-macro-metadata
+;; TODO: [#332] There is no re-binding of a var's root
+#_(def example-var)
+#_(deftest binding-root-clears-macro-metadata
   (alter-meta! #'example-var assoc :macro true)
   (is (contains? (meta #'example-var) :macro))
   (.bindRoot #'example-var 0)
@@ -93,5 +94,5 @@
           replacement (gensym)]
       (is (thrown? :error
                    (.refer ns 'subset? #'clojure.set/intersection)))
-      (is (nil? ('subset? (ns-publics ns))))
-      (is (= #'clojure.set/subset? ('subset? (ns-refers ns)))))))
+      (is (nil? ((ns-publics ns) "subset?")))
+      (is (= #'clojure.set/subset? ((ns-refers ns) "subset?"))))))

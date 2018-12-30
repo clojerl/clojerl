@@ -196,8 +196,11 @@ refer(_Config) ->
   Var2    = 'clojerl.Namespace':find_var(Ns2, NameSym),
 
   Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var2),
-  %% This should be fine, even though Var2 is from a different ns
-  Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var2),
+
+  %% This should generate an error
+  ok      = try 'clojerl.Namespace':refer(Ns1, NameSym, Var2), error
+            catch error:_ -> ok
+            end,
 
   {comment, ""}.
 
