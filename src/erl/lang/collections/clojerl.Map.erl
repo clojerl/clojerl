@@ -281,4 +281,4 @@ to_list_fold(_Hash, KVs, List) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = M) ->
-  clj_rt:print(M).
+  clj_rt:print_str(M).

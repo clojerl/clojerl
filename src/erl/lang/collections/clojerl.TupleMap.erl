@@ -315,7 +315,7 @@ do_to_list([K, V | Rest], Acc0) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = TupleMap) ->
-  clj_rt:print(TupleMap).
+  clj_rt:print_str(TupleMap).
 
 %%------------------------------------------------------------------------------
 %% Helper functions

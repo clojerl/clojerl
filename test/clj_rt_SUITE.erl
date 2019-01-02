@@ -38,7 +38,7 @@ end_per_testcase(_, Config) ->
 print(_Config) ->
   ct:comment("The underlying processes used for printing don't hang around"),
   Count = length(erlang:processes()),
-  <<"#erl[]">> = clj_rt:print({}),
+  clj_rt:print({}, standard_io),
   Count = length(erlang:processes()),
 
   {comments, ""}.

@@ -206,4 +206,4 @@ to_list(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
 
 str(#{?TYPE := ?M} = ChunkedSeq) ->
   List = clj_rt:list(to_list(ChunkedSeq)),
-  clj_rt:print(List).
+  clj_rt:print_str(List).

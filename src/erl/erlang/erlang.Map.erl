@@ -152,7 +152,7 @@ without(Map, Key) ->
   maps:remove(Key, Map).
 
 str(Map) when is_map(Map) ->
-  clj_rt:print(Map).
+  clj_rt:print_str(Map).
 
 seq(Map) when is_map(Map) ->
 case maps:to_list(Map) of

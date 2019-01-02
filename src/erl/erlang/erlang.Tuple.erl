@@ -66,4 +66,4 @@ seq(Tuple) -> tuple_to_list(Tuple).
 to_list(Tuple) -> tuple_to_list(Tuple).
 
 str(Tuple) when is_tuple(Tuple) ->
-  clj_rt:print(Tuple).
+  clj_rt:print_str(Tuple).

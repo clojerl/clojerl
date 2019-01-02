@@ -283,4 +283,4 @@ to_list(#{?TYPE := ?M, vals := Vals}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = SortedMap) ->
-  clj_rt:print(SortedMap).
+  clj_rt:print_str(SortedMap).

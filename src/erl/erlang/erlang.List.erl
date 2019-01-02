@@ -78,7 +78,7 @@ str([]) ->
 str(Items) when is_list(Items) ->
   case io_lib:printable_unicode_list(Items) of
     true  -> unicode:characters_to_binary(Items);
-    false -> clj_rt:print(Items)
+    false -> clj_rt:print_str(Items)
   end.
 
 seq([]) -> ?NIL;

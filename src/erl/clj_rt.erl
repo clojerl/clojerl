@@ -30,7 +30,7 @@
         , 'contains?'/2
         , boolean/1
         , byte/1, char/1, short/1
-        , str/1, print/1
+        , str/1, print_str/1, print/2
         , list/1, vector/1, hash_map/1, hash_set/1
         , subvec/3
         , keys/1, vals/1
@@ -488,63 +488,68 @@ short(X) ->
 str(?NIL) -> <<"">>;
 str(X)    -> 'clojerl.IStringable':str(X).
 
--spec print(any()) -> binary().
-print(X) ->
-  case 'clojure.core':'print-initialized__val'() of
-    true  ->
-      StringWriter = 'erlang.io.StringWriter':?CONSTRUCTOR(),
-      try
-        'clojure.core':'pr-on'(X, StringWriter),
-        'erlang.io.StringWriter':str(StringWriter)
-      after
-        'erlang.io.StringWriter':close(StringWriter)
-      end;
-    false ->
-      PrintReadably = boolean('clojure.core':'*print-readably*__val'()),
-      Type          = type_module(X),
-      do_print(X, Type, PrintReadably)
+-spec print_str(any()) -> ?NIL.
+print_str(X) ->
+  Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(),
+  try
+    print(X, Writer),
+    'erlang.io.StringWriter':str(Writer)
+  after
+    'erlang.io.StringWriter':close(Writer)
   end.
 
--spec do_print(any(), atom(), boolean()) -> binary().
-do_print(?NIL, _, _) ->
-  <<"nil">>;
-do_print(X, 'clojerl.String', true) ->
-  do_print_string(X, <<"\"">>);
-do_print(X, 'clojerl.String', false) ->
-  X;
-do_print(X, 'clojerl.Cons', _PrintReadably) ->
-  do_print_seq(X, <<"(">>, <<")">>);
-do_print(X, 'clojerl.LazySeq', _PrintReadably) ->
-  do_print_seq(X, <<"(">>, <<")">>);
-do_print(X, 'clojerl.List', _PrintReadably) ->
-  do_print_seq(X, <<"(">>, <<")">>);
-do_print(X, 'clojerl.Map', _PrintReadably) ->
-  do_print_map(X);
-do_print(X, 'clojerl.Range', _PrintReadably) ->
-  do_print_seq(X, <<"(">>, <<")">>);
-do_print(X, 'clojerl.Set', _PrintReadably) ->
-  do_print_seq(X, <<"#{">>, <<"}">>);
-do_print(X, 'clojerl.SortedSet', _PrintReadably) ->
-  do_print_seq(X, <<"#{">>, <<"}">>);
-do_print(X, 'clojerl.SortedMap', _PrintReadably) ->
-  do_print_map(X);
-do_print(X, 'clojerl.TupleMap', _PrintReadably) ->
-  do_print_map(X);
-do_print(X, 'clojerl.Vector', _PrintReadably) ->
-  do_print_seq(X, <<"[">>, <<"]">>);
-do_print(X, 'erlang.List', _PrintReadably) ->
-  do_print_seq(X, <<"#erl(">>, <<")">>);
-do_print(X, 'erlang.Map', _PrintReadably) ->
-  do_print_map(X, <<"#erl{">>, <<"}">>);
-do_print(X, 'erlang.Tuple', _PrintReadably) ->
-  do_print_seq(X, <<"#erl[">>, <<"]">>);
-do_print(X, _Type, _PrintReadably) ->
-  str(X).
+-spec print(any(), 'erlang.io.IWriter':type()) -> ?NIL.
+print(X, Writer) ->
+  case 'clojure.core':'print-initialized__val'() of
+    true  ->
+      'clojure.core':'pr-on'(X, Writer);
+    false ->
+      PrintReadably = boolean('clojure.core':'*print-readably*__val'()),
+      do_print(X, type_module(X), PrintReadably, Writer),
+      ?NIL
+  end.
 
--spec do_print_string(binary(), binary()) -> binary().
-do_print_string(<<>>, Acc) ->
-  <<Acc/binary, "\"">>;
-do_print_string(<<X/utf8, Rest/binary>>, Acc) ->
+-spec do_print(any(), atom(), boolean(), 'erlang.io.IWriter':type()) -> any().
+do_print(?NIL, _, _, Writer) ->
+  'erlang.io.IWriter':write(Writer, <<"nil">>);
+do_print(X, 'clojerl.String', true, Writer) ->
+  'erlang.io.IWriter':write(Writer, <<"\"">>),
+  do_print_string(X, Writer);
+do_print(X, 'clojerl.String', false, Writer) ->
+  'erlang.io.IWriter':write(Writer, X);
+do_print(X, 'clojerl.Cons', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"(">>, <<")">>, Writer);
+do_print(X, 'clojerl.LazySeq', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"(">>, <<")">>, Writer);
+do_print(X, 'clojerl.List', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"(">>, <<")">>, Writer);
+do_print(X, 'clojerl.Map', _PrintReadably, Writer) ->
+  do_print_map(X, Writer);
+do_print(X, 'clojerl.Range', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"(">>, <<")">>, Writer);
+do_print(X, 'clojerl.Set', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"#{">>, <<"}">>, Writer);
+do_print(X, 'clojerl.SortedSet', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"#{">>, <<"}">>, Writer);
+do_print(X, 'clojerl.SortedMap', _PrintReadably, Writer) ->
+  do_print_map(X, Writer);
+do_print(X, 'clojerl.TupleMap', _PrintReadably, Writer) ->
+  do_print_map(X, Writer);
+do_print(X, 'clojerl.Vector', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"[">>, <<"]">>, Writer);
+do_print(X, 'erlang.List', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"#erl(">>, <<")">>, Writer);
+do_print(X, 'erlang.Map', _PrintReadably, Writer) ->
+  do_print_map(X, <<"#erl{">>, <<"}">>, Writer);
+do_print(X, 'erlang.Tuple', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"#erl[">>, <<"]">>, Writer);
+do_print(X, _Type, _PrintReadably, Writer) ->
+  'erlang.io.IWriter':write(Writer, str(X)).
+
+-spec do_print_string(binary(), 'erlang.io.IWriter':type()) -> any().
+do_print_string(<<>>, Writer) ->
+  'erlang.io.IWriter':write(Writer, <<"\"">>);
+do_print_string(<<X/utf8, Rest/binary>>, Writer) ->
   Ch = case <<X>> of
          <<"\n">> -> <<"\\n">>;
          <<"\t">> -> <<"\\t">>;
@@ -555,29 +560,52 @@ do_print_string(<<X/utf8, Rest/binary>>, Acc) ->
          <<"\b">> -> <<"\\b">>;
          Default  -> Default
        end,
-  do_print_string(Rest, <<Acc/binary, Ch/binary>>).
+  'erlang.io.IWriter':write(Writer, Ch),
+  do_print_string(Rest, Writer).
 
--spec do_print_seq(any(), binary(), binary()) -> binary().
-do_print_seq(X, First, Last) ->
-  Items = lists:map(fun print/1, to_list(X)),
-  Strs  = 'clojerl.String':join(Items, <<" ">>),
-  <<First/binary, Strs/binary, Last/binary>>.
+-spec do_print_seq(any(), binary(), binary(), 'erlang.io.IWriter':type()) ->
+  any().
+do_print_seq(X, First, Last, Writer) ->
+  'erlang.io.IWriter':write(Writer, First),
+  Rest = case to_list(X) of
+           [] -> [];
+           [Item | Rest_] ->
+             print(Item, Writer),
+             Rest_
+         end,
+  PrintItem = fun(Item) ->
+                  'erlang.io.IWriter':write(Writer, <<" ">>),
+                  print(Item, Writer)
+              end,
+  lists:foreach(PrintItem, Rest),
+  'erlang.io.IWriter':write(Writer, Last).
 
--spec do_print_map(any()) -> binary().
-do_print_map(X) ->
-  do_print_map(X, <<"{">>, <<"}">>).
+-spec do_print_map(any(), 'erlang.io.IWriter':type()) -> any().
+do_print_map(X, Writer) ->
+  do_print_map(X, <<"{">>, <<"}">>, Writer).
 
--spec do_print_map(any(), binary(), binary()) -> binary().
-do_print_map(X, First, Last) ->
-  FunItem  = fun(Item) ->
-                 [K, V] = to_list(Item),
-                 Key    = print(K),
-                 Value  = print(V),
-                 <<Key/binary, " ", Value/binary>>
-             end,
-  ItemsStr = lists:map(FunItem, to_list(X)),
-  Strs  = 'clojerl.String':join(ItemsStr, <<", ">>),
-  <<First/binary, Strs/binary, Last/binary>>.
+-spec do_print_map(any(), binary(), binary(), 'erlang.io.IWriter':type()) ->
+  any().
+do_print_map(X, First, Last, Writer) ->
+  'erlang.io.IWriter':write(Writer, First),
+  ItemFun = fun(Item) ->
+                [K, V] = to_list(Item),
+                print(K, Writer),
+                'erlang.io.IWriter':write(Writer, <<" ">>),
+                print(V, Writer)
+            end,
+  ConcatFun = fun(Item) ->
+                  'erlang.io.IWriter':write(Writer, <<", ">>),
+                  ItemFun(Item)
+              end,
+  Rest = case to_list(X) of
+           [] -> [];
+           [Item | Rest_] ->
+             ItemFun(Item),
+             Rest_
+         end,
+  lists:foreach(ConcatFun, Rest),
+  'erlang.io.IWriter':write(Writer, Last).
 
 -spec 'list'(list()) -> 'clojerl.List':type().
 list(Items) ->

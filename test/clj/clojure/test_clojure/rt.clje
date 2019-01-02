@@ -18,7 +18,7 @@
   (with-out-str
     (try
      (push-thread-bindings {#'clojure.core/print-initialized false})
-     (clj_rt/print x)
+     (clj_rt/print x *out*)
      (finally
       (pop-thread-bindings)))))
 

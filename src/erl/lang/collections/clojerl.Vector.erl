@@ -246,4 +246,4 @@ to_list(#{?TYPE := ?M, array := Array}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = Vector) ->
-  clj_rt:print(Vector).
+  clj_rt:print_str(Vector).
