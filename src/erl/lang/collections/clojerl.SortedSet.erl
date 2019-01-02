@@ -201,4 +201,4 @@ to_list(#{?TYPE := ?M, dict := Dict}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = SortedSet) ->
-  clj_rt:print(SortedSet).
+  clj_rt:print_str(SortedSet).

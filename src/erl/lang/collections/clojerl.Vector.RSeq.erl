@@ -135,4 +135,4 @@ do_to_list(Array, Current, End, Result) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = X) ->
-  clj_rt:print(clj_rt:list(to_list(X))).
+  clj_rt:print_str(clj_rt:list(to_list(X))).

@@ -184,7 +184,7 @@ to_list(#{?TYPE := ?M, start := Start, 'end' := End, step := Step}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = Range) ->
-  clj_rt:print(Range).
+  clj_rt:print_str(Range).
 
 %%------------------------------------------------------------------------------
 %% Helper functions

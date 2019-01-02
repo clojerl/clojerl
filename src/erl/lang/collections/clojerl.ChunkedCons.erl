@@ -180,4 +180,4 @@ to_list(#{?TYPE := ?M, chunk := Chunk, more := More}) ->
 
 str(#{?TYPE := ?M} = ChunkedCons) ->
   List = clj_rt:list(to_list(ChunkedCons)),
-  clj_rt:print(List).
+  clj_rt:print_str(List).

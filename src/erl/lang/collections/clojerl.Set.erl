@@ -182,4 +182,4 @@ to_list_fold(_Hash, Vs, List) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M} = Set) ->
-  clj_rt:print(Set).
+  clj_rt:print_str(Set).

@@ -166,4 +166,4 @@ to_list(#{?TYPE := ?M, items := Items}) -> Items.
 str(#{?TYPE := ?M, items := []}) ->
   <<"()">>;
 str(#{?TYPE := ?M} = List) ->
-  clj_rt:print(List).
+  clj_rt:print_str(List).
