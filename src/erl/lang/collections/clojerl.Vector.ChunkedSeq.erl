@@ -109,9 +109,9 @@ equiv( #{?TYPE := ?M, array := X, size := SizeX}
       'erlang.List':equiv(X1, Y1);
     false -> false
   end;
-equiv(#{?TYPE := ?M, array := X}, Y) ->
+equiv(#{?TYPE := ?M} = X, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> 'erlang.List':equiv(array:to_list(X), Y);
+    true  -> 'erlang.List':equiv(to_list(X), Y);
     false -> false
   end.
 
