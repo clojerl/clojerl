@@ -82,15 +82,18 @@ subvec(Vector, Start, End) ->
 %% clojerl.IAssociative
 
 contains_key(#{?TYPE := ?M, array := Array}, Index) ->
-  Index >= 0 andalso Index < array:size(Array).
+  is_valid_index(Array, Index).
 
 entry_at(#{?TYPE := ?M, array := Array}, Index) ->
-  array:get(Index, Array).
+  case is_valid_index(Array, Index) of
+    true  -> ?CONSTRUCTOR([Index, array:get(Index, Array)]);
+    false -> ?NIL
+  end.
 
 assoc(#{?TYPE := ?M, array := Array} = Vector, Index, Value) ->
-  case  Index =< array:size(Array) of
+  case is_valid_index(Array, Index) orelse Index == array:size(Array) of
     true  -> Vector#{array => array:set(Index, Value, Array)};
-    false -> error(<<"Index out of bounds">>)
+    false -> ?ERROR(<<"Index out of bounds">>)
   end.
 
 %% clojerl.ICounted
@@ -135,11 +138,14 @@ equiv(#{?TYPE := ?M, array := X}, Y) ->
 
 %% clojerl.IFn
 
-apply(#{?TYPE := ?M, array := Array}, [Index]) ->
+apply(#{?TYPE := ?M, array := Array}, [Index]) when is_integer(Index) ->
+  ?ERROR_WHEN(not is_valid_index(Array, Index), <<"Index out of bounds">>),
   array:get(Index, Array);
+apply(#{?TYPE := ?M}, [_]) ->
+  ?ERROR(<<"Key must be integer">>);
 apply(#{?TYPE := ?M}, Args) ->
   CountBin = integer_to_binary(length(Args)),
-  throw(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
+  ?ERROR(<<"Wrong number of args for vector, got: ", CountBin/binary>>).
 
 %% clojerl.IHash
 
@@ -152,7 +158,7 @@ get(#{?TYPE := ?M} = Vector, Index) ->
   get(Vector, Index, ?NIL).
 
 get(#{?TYPE := ?M, array := Array}, Index, NotFound) ->
-  case Index < array:size(Array) of
+  case is_valid_index(Array, Index) of
     true  -> array:get(Index, Array);
     false -> NotFound
   end.
@@ -204,13 +210,13 @@ rseq(#{?TYPE := ?M, array := Array}) ->
 %% clojerl.IIndexed
 
 nth(#{?TYPE := ?M, array := Array}, N) ->
-  case N < array:size(Array) of
+  case is_valid_index(Array, N) of
     true  -> array:get(N, Array);
     false -> error(badarg)
   end.
 
 nth(#{?TYPE := ?M, array := Array}, N, NotFound) ->
-  case N < array:size(Array) of
+  case is_valid_index(Array, N) of
     true  -> array:get(N, Array);
     false -> NotFound
   end.
@@ -247,3 +253,10 @@ to_list(#{?TYPE := ?M, array := Array}) ->
 
 str(#{?TYPE := ?M} = Vector) ->
   clj_rt:print_str(Vector).
+
+%%------------------------------------------------------------------------------
+%% Helper functions
+%%------------------------------------------------------------------------------
+
+is_valid_index(Array, Index) ->
+  is_integer(Index) andalso Index >= 0 andalso Index < array:size(Array).
