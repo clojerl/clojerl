@@ -260,8 +260,8 @@ associative(_Config) ->
        catch error:_ -> ok
        end,
 
-  a = clj_rt:find(TwoVector, 0),
-  b = clj_rt:find(TwoVector, 1),
+  true = clj_rt:equiv([0, a], clj_rt:find(TwoVector, 0)),
+  true = clj_rt:equiv([1, b], clj_rt:find(TwoVector, 1)),
 
   ?NIL = clj_rt:find(TwoVector, 3),
 

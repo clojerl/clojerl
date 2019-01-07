@@ -13,13 +13,13 @@
 
 (deftest test-reversed-vec
   (let [r (range 6)
-        v (into (vector-of :int) r)
+        v (into [] r)
         reversed (.rseq v)]
     (testing "returns the right impl"
-      (is (= clojure.lang.APersistentVector$RSeq (class reversed))))
+      (is (= clojerl.Vector.RSeq (type reversed))))
     (testing "RSeq methods"
       (is (= [5 4 3 2 1 0] reversed))
-      (is (= 5 (.index reversed)))
+      ;; (is (= 5 (.index reversed)))
       (is (= 5 (.first reversed)))
       (is (= [4 3 2 1 0] (.next reversed)))
       (is (= [3 2 1 0] (.. reversed next next)))
@@ -32,9 +32,9 @@
 
 (deftest test-vecseq
   (let [r (range 100)
-        vs (into (vector-of :int) r)
+        vs (into [] r)
         vs-1 (next vs)
-        vs-32 (.chunkedNext (seq vs))]
+        vs-32 (.chunked_next (seq vs))]
     (testing "="
       (are [a b] (= a b)
            vs vs
@@ -46,11 +46,11 @@
            vs vs-32
            vs-32 vs))
     (testing "IPersistentCollection.empty"
-      (are [a] (identical? clojure.lang.PersistentList/EMPTY (.empty (seq a)))
+      (are [a] (identical? () (.empty (seq a)))
            vs vs-1 vs-32))
     (testing "IPersistentCollection.cons"
       (are [result input] (= result (.cons input :foo))
-           [:foo 1] (seq (into (vector-of :int) [1]))))
+           [:foo 1] (seq (into [] [1]))))
     (testing "IPersistentCollection.count"
       (are [ct s] (= ct (.count (seq s)))
            100 vs
@@ -83,7 +83,7 @@
 
 (deftest test-primitive-subvector-reduce
   ;; regression test for CLJ-1082
-  (is (== 60 (let [prim-vec (into (vector-of :long) (range 1000))]
+  (is (== 60 (let [prim-vec (into [] (range 1000))]
                (reduce + (subvec prim-vec 10 15))))))
 
 (deftest test-vec-compare
@@ -115,9 +115,9 @@
                         (zipmap (keys num-seqs)
                                 (map #(into base-val %1) (vals num-seqs))))
         ; Vecs made of int primitives
-        int-vecs      (create-vals (vector-of :int))
+        int-vecs      (create-vals [])
         ; Vecs made of long primitives
-        long-vecs     (create-vals (vector-of :long))
+        long-vecs     (create-vals [])
         ; standard boxing vectors
         regular-vecs  (create-vals [])
         ; the standard int Vec for comparisons
@@ -221,7 +221,7 @@
              (:rand-greater-3 int-vecs)
              (:rand-greater-3 long-vecs)
              (:rand-greater-3 regular-vecs))))
-    (testing "Comparable.compareTo"
+    #_(testing "Comparable.compareTo"
       (testing "incompatible"
         (is (thrown? NullPointerException (.compareTo int-vec nil)))
         (are [x] (thrown? ClassCastException (.compareTo int-vec x))
@@ -283,14 +283,14 @@
              (:rand-lesser-3 regular-vecs))))))
 
 (deftest test-vec-associative
-  (let [empty-v (vector-of :long)
+  (let [empty-v []
         v       (into empty-v (range 1 6))]
     (testing "Associative.containsKey"
-      (are [x] (.containsKey v x)
+      (are [x] (.contains_key v x)
            0 1 2 3 4)
-      (are [x] (not (.containsKey v x))
+      (are [x] (not (.contains_key v x))
            -1 -100 nil [] "" #"" #{} 5 100)
-      (are [x] (not (.containsKey empty-v x))
+      (are [x] (not (.contains_key empty-v x))
            0 1))
     (testing "contains?"
       (are [x] (contains? v x)
@@ -299,18 +299,18 @@
            -1 -100 nil "" 5 100)
       (are [x] (not (contains? empty-v x))
            0 1))
-    (testing "Associative.entryAt"
-      (are [idx val] (= (clojure.lang.MapEntry. idx val)
-                        (.entryAt v idx))
+    (testing "Associative.entry_at"
+      (are [idx val] (= [idx val]
+                        (.entry_at v idx))
            0 1
            2 3
            4 5)
-      (are [idx] (nil? (.entryAt v idx))
+      (are [idx] (nil? (.entry_at v idx))
            -5 -1 5 10 nil "")
-      (are [idx] (nil? (.entryAt empty-v idx))
+      (are [idx] (nil? (.entry_at empty-v idx))
            0 1))))
 
-(deftest test-vec-creation
+#_(deftest test-vec-creation
   (testing "Plain (vector-of :type)"
     (are [x] (and (empty? x) (instance? clojure.core.Vec x))
          (vector-of :boolean)
@@ -372,10 +372,9 @@
         (vector-of :double 1 2 3)))))
 
 (deftest empty-vector-equality
-  (let [colls [[] (vector-of :long) '()]]
+  (let [colls [[] '()]]
     (doseq [c1 colls, c2 colls]
-      (is (= c1 c2))
-      (is (.equals c1 c2)))))
+      (is (= c1 c2)))))
 
 (defn =vec
   [expected v] (and (vector? v) (= expected v)))
@@ -398,8 +397,8 @@
 (deftest test-subvec
   (let [v1 (vec (range 100))
         v2 (subvec v1 50 57)]
-    (is (thrown? IndexOutOfBoundsException (v2 -1)))
-    (is (thrown? IndexOutOfBoundsException (v2 7)))
+    (is (thrown? :error (v2 -1)))
+    (is (thrown? :error (v2 7)))
     (is (= (v1 50) (v2 0)))
     (is (= (v1 56) (v2 6)))))
 
@@ -411,8 +410,9 @@
   (is (= [[1 2] [3 4]] (vec (sorted-map 1 2 3 4))))
   (is (= [0 1 2 3] (vec (range 4))))
   (is (= [\a \b \c \d] (vec "abcd")))
-  (is (= [0 1 2 3] (vec (object-array (range 4)))))
-  (is (= [1 2 3 4] (vec (eduction (map inc) (range 4)))))
-  (is (= [0 1 2 3] (vec (reify clojure.lang.IReduceInit
+  (is (= [0 1 2 3] (vec (range 4))))
+  ;; TODO: uncomment when #562 is done
+  #_(is (= [1 2 3 4] (vec (eduction (map inc) (range 4)))))
+  #_(is (= [0 1 2 3] (vec (reify clojure.lang.IReduceInit
                           (reduce [_ f start]
                             (reduce f start (range 4))))))))
