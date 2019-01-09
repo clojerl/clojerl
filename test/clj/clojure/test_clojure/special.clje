@@ -53,19 +53,19 @@
     (is (= 2 d))))
 
 (deftest keywords-not-allowed-in-let-bindings
-  (is (thrown-with-msg? Exception #"Unsupported binding form: :a"
+  (is (thrown-with-msg? clojerl.Error #"Unsupported binding form: :a"
                         (eval '(let [:a 1] a))))
-  (is (thrown-with-msg? Exception #"Unsupported binding form: :a/b"
+  (is (thrown-with-msg? clojerl.Error #"Unsupported binding form: :a/b"
                         (eval '(let [:a/b 1] b))))
-  (is (thrown-with-msg? Exception #"Unsupported binding form: :a"
+  (is (thrown-with-msg? clojerl.Error #"Unsupported binding form: :a"
                         (eval '(let [[:a] [1]] a))))
-  (is (thrown-with-msg? Exception #"Unsupported binding form: :a/b"
+  (is (thrown-with-msg? clojerl.Error #"Unsupported binding form: :a/b"
                         (eval '(let [[:a/b] [1]] b)))))
 
 (deftest namespaced-syms-only-allowed-in-map-destructuring
-  (is (thrown-with-msg? Exception #"Can't let qualified name: a/x"
+  (is (thrown-with-msg? clojerl.Error #"Not a valid binding symbol, had: a/x"
                         (eval '(let [a/x 1, [y] [1]] x))))
-  (is (thrown-with-msg? Exception #"Can't let qualified name: a/x"
+  (is (thrown-with-msg? clojerl.Error #"Not a valid binding symbol, had: a/x"
                         (eval '(let [[a/x] [1]] x)))))
 
 (require '[clojure.string :as s])
@@ -75,10 +75,5 @@
     (is (= y 2))))
 
 (deftest quote-with-multiple-args
-  (let [ex (is (thrown? clojure.lang.Compiler$CompilerException
-                        (eval '(quote 1 2 3))))]
-    (is (= '(quote 1 2 3)
-           (-> ex
-               (.getCause)
-               (ex-data)
-               (:form))))))
+  (is (thrown? clojerl.Error #"Wrong number of args to quote, had: 3"
+                (eval '(quote 1 2 3)))))
