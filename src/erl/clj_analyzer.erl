@@ -1161,8 +1161,7 @@ parse_def(List, Env) ->
   Var0         = lookup_var(VarSymbol),
 
   ?ERROR_WHEN( Var0 =:= ?NIL
-             , [ <<"Can't refer to qualified var that "
-                   "doesn't exist: ">>
+             , [ <<"Can't refer to qualified var that doesn't exist: ">>
                , VarSymbol
                ]
              , clj_env:location(Env)
