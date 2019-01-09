@@ -14,7 +14,8 @@
 ;;  Created 29 October 2008
 
 (ns clojure.test-clojure.printer
-  (:use clojure.test))
+  (:use clojure.test)
+  (:require [clojure.stacktrace :as stack]))
 
 (deftest print-length-empty-seq
   (let [coll () val "()"]
@@ -86,9 +87,8 @@
   (are [x s] (= s (binding [*print-dup* true] (print-str x)))
        1 "1"
        1.0 "1.0"
-       1N "1N"
-       (java.math.BigInteger. "1") "#=(java.math.BigInteger. \"1\")"
-       1M "1M"
+       1N "1" ;; all integers are arbritrary precision
+       1M "1.0" ;; there is no bigdecimal type
        "hi" "\"hi\""))
 
 (deftest print-dup-readable
@@ -110,44 +110,20 @@
        #'var-with-type "#'clojure.test-clojure.printer/var-with-type"))
 
 (deftest print-meta
-  (are [x s] (binding [*print-meta* true] 
+  (are [x s] (binding [*print-meta* true]
                (let [pstr (pr-str x)]
-                 (and (.endsWith pstr s)
-                      (.startsWith pstr "^")
+                 (and (.ends_with pstr s)
+                      (.starts_with pstr "^")
                       (.contains pstr (pr-str (meta x))))))
        #'pr-str  "#'clojure.core/pr-str"
        #'var-with-meta "#'clojure.test-clojure.printer/var-with-meta"
        #'var-with-type "#'clojure.test-clojure.printer/var-with-type"))
 
-(defn ^:private ednize-stack-trace-element
-  [^StackTraceElement ste]
-  [(symbol (.getClassName ste))
-   (symbol (.getMethodName ste))
-   (.getFileName ste)
-   (.getLineNumber ste)])
-
-(defn ^:private ednize-throwable-data
-  [throwable-data]
-  (-> throwable-data
-      (update :via (fn [vias]
-                     (map (fn [via]
-                            (-> via
-                                (update :type #(symbol (.getName %)))
-                                (update :at ednize-stack-trace-element)))
-                          vias)))
-      (update :trace #(map ednize-stack-trace-element %))))
-
 (deftest print-throwable
   (binding [*data-readers* {'error identity}]
-    (are [e] (= (-> e Throwable->map ednize-throwable-data)
+    (are [e] (= (-> e IError->map)
                 (-> e pr-str read-string))
-         (Exception. "heyo")
-         (Throwable. "I can a throwable"
-                     (Exception. "chain 1"
-                                 (Exception. "chan 2")))
-         (ex-info "an ex-info" {:with "its" :data 29})
-         (Exception. "outer"
-                     (ex-info "an ex-info" {:with "data"}
-                              (Error. "less outer"
-                                      (ex-info "the root"
-                                               {:with "even" :more 'data})))))))
+      (clojerl.Error. "heyo")
+      (ex-info "an ex-info" {:with "its" :data 29})
+      (ex-info "an ex-info" {:with "data"}
+               (clojerl.Error. "less outer")))))
