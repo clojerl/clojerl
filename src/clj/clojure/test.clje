@@ -730,7 +730,10 @@
   {:added "1.6"}
   [vars]
   (doseq [[ns vars] (group-by (comp :ns meta) vars)]
-    (let [once-fixture-fn (join-fixtures (::once-fixtures (meta ns)))
+    (let [ns              (find-ns ns) ;; we need to fetch the actual ns
+                                       ;; not the stripped down value in
+                                       ;; the var's metadata
+          once-fixture-fn (join-fixtures (::once-fixtures (meta ns)))
           each-fixture-fn (join-fixtures (::each-fixtures (meta ns)))]
       (once-fixture-fn
        (fn []
