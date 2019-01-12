@@ -49,43 +49,43 @@
   (if (number? n) (pos? n) false))
 
 (defn- empty?$ [s]
-  (if (instance? clojure.lang.Seqable s) (empty? s) false))
+  (if (satisfies? clojerl.ISeqable s) (empty? s) false))
 
-(def gen-mapfn
+(gen/defgen gen-mapfn
   (pickfn inc$ dec$))
 
-(def gen-mapcatfn
+(gen/defgen gen-mapcatfn
   (pickfn vector
-          #(if (instance? clojure.lang.Seqable %) (partition-all 3 %) (vector %))))
+          #(if (satisfies? clojerl.ISeqable %) (partition-all 3 %) (vector %))))
 
-(def gen-predfn
+(gen/defgen gen-predfn
   (pickfn odd?$ pos?$ empty?$ sequential?))
 
-(def gen-indexedfn
+(gen/defgen gen-indexedfn
   (pickfn (fn [index item] index)
           (fn [index item] item)
           (fn [index item] (if (number? item) (+ index item) index))))
 
-(def gen-take (fbind (literal gen/s-pos-int) take))
-(def gen-drop (fbind (literal gen/pos-int) drop))
-(def gen-drop-while (fbind gen-predfn drop-while))
-(def gen-map (fbind gen-mapfn map))
-(def gen-mapcat (fbind gen-mapcatfn mapcat))
-(def gen-filter (fbind gen-predfn filter))
-(def gen-remove (fbind gen-predfn remove))
-(def gen-keep (fbind gen-predfn keep))
-(def gen-partition-all (fbind (literal gen/s-pos-int) partition-all))
-(def gen-partition-by (fbind gen-predfn partition-by))
-(def gen-take-while (fbind gen-predfn take-while))
-(def gen-take-nth (fbind (literal gen/s-pos-int) take-nth))
-(def gen-keep-indexed (fbind gen-indexedfn keep-indexed))
-(def gen-map-indexed (fbind gen-indexedfn map-indexed))
-(def gen-replace (fbind (literal (gen/return (hash-map (range 100) (range 1 100)))) replace))
-(def gen-distinct (gen/return {:desc 'distinct :seq (partial distinct) :xf (distinct)}))
-(def gen-dedupe (gen/return {:desc 'dedupe :seq (partial dedupe) :xf (dedupe)}))
-(def gen-interpose (fbind (literal gen/s-pos-int) interpose))
+(gen/defgen gen-take (fbind (literal gen/s-pos-int) take))
+(gen/defgen gen-drop (fbind (literal gen/pos-int) drop))
+(gen/defgen gen-drop-while (fbind gen-predfn drop-while))
+(gen/defgen gen-map (fbind gen-mapfn map))
+(gen/defgen gen-mapcat (fbind gen-mapcatfn mapcat))
+(gen/defgen gen-filter (fbind gen-predfn filter))
+(gen/defgen gen-remove (fbind gen-predfn remove))
+(gen/defgen gen-keep (fbind gen-predfn keep))
+(gen/defgen gen-partition-all (fbind (literal gen/s-pos-int) partition-all))
+(gen/defgen gen-partition-by (fbind gen-predfn partition-by))
+(gen/defgen gen-take-while (fbind gen-predfn take-while))
+(gen/defgen gen-take-nth (fbind (literal gen/s-pos-int) take-nth))
+(gen/defgen gen-keep-indexed (fbind gen-indexedfn keep-indexed))
+(gen/defgen gen-map-indexed (fbind gen-indexedfn map-indexed))
+(gen/defgen gen-replace (fbind (literal (gen/return (hash-map (range 100) (range 1 100)))) replace))
+(gen/defgen gen-distinct (gen/return {:desc 'distinct :seq (partial distinct) :xf (distinct)}))
+(gen/defgen gen-dedupe (gen/return {:desc 'dedupe :seq (partial dedupe) :xf (dedupe)}))
+(gen/defgen gen-interpose (fbind (literal gen/s-pos-int) interpose))
 
-(def gen-action
+(gen/defgen gen-action
   (gen/one-of [gen-take gen-drop gen-map gen-mapcat
                gen-filter gen-remove gen-keep
                gen-partition-all gen-partition-by gen-take-while
@@ -93,10 +93,10 @@
                gen-keep-indexed gen-map-indexed
                gen-distinct gen-dedupe gen-interpose]))
 
-(def gen-actions
+(gen/defgen gen-actions
   (gen/vector gen-action 1 5))
 
-(def gen-coll
+(gen/defgen gen-coll
   (gen/vector gen/int))
 
 (defn apply-as-seq [coll actions]
@@ -124,7 +124,7 @@
   (transduce (apply comp (map :xf actions)) conj coll))
 
 (defmacro return-exc [& forms]
-  `(try ~@forms (catch Throwable e# e#)))
+  `(try ~@forms (catch :error e# e#)))
 
 (defn build-results
   [coll actions]
@@ -141,7 +141,7 @@
      :xe      xe
      :xt      xt}))
 
-(def result-gen
+(gen/defgen result-gen
   (gen/fmap
     (fn [[c a]] (build-results c a))
     (gen/tuple gen-coll gen-actions)))
@@ -166,62 +166,30 @@
           with-out-str)))))
 
 (deftest test-transduce
-  (let [long+ (fn ([a b] (+ (long a) (long b)))
+  (let [long+ (fn ([a b] (+ a b))
                 ([a] a)
                 ([] 0))
         mapinc (map inc)
-        mapinclong (map (comp inc long))
         arange (range 100)
         avec (into [] arange)
         alist (into () arange)
-        obj-array (into-array arange)
-        int-array (into-array Integer/TYPE (map #(Integer. (int %)) arange))
-        long-array (into-array Long/TYPE arange)
-        float-array (into-array Float/TYPE arange)
-        char-array (into-array Character/TYPE (map char arange))
-        double-array (into-array Double/TYPE arange)
-        byte-array (into-array Byte/TYPE (map byte arange))
-        int-vec (into (vector-of :int) arange)
-        long-vec (into (vector-of :long) arange)
-        float-vec (into (vector-of :float) arange)
-        char-vec (into (vector-of :char) (map char arange))
-        double-vec (into (vector-of :double) arange)
-        byte-vec (into (vector-of :byte) (map byte arange))]
+        obj-tuple (into-tuple arange)
+        int-vec (into [] arange)
+        float-vec (into [] arange)]
     (is (== 5050
             (transduce mapinc + arange)
             (transduce mapinc + avec)
             (transduce mapinc + alist)
-            (transduce mapinc + obj-array)
-            (transduce mapinc + int-array)
-            (transduce mapinc + long-array)
-            (transduce mapinc + float-array)
-            (transduce mapinclong + char-array)
-            (transduce mapinc + double-array)
-            (transduce mapinclong + byte-array)
+            (transduce mapinc + obj-tuple)
             (transduce mapinc + int-vec)
-            (transduce mapinc + long-vec)
-            (transduce mapinc + float-vec)
-            (transduce mapinclong + char-vec)
-            (transduce mapinc + double-vec)
-            (transduce mapinclong + byte-vec)
-            ))
+            (transduce mapinc + float-vec)))
     (is (== 5051
             (transduce mapinc + 1 arange)
             (transduce mapinc + 1 avec)
             (transduce mapinc + 1 alist)
-            (transduce mapinc + 1 obj-array)
-            (transduce mapinc + 1 int-array)
-            (transduce mapinc + 1 long-array)
-            (transduce mapinc + 1 float-array)
-            (transduce mapinclong + 1 char-array)
-            (transduce mapinc + 1 double-array)
-            (transduce mapinclong + 1 byte-array)
+            (transduce mapinc + 1 obj-tuple)
             (transduce mapinc + 1 int-vec)
-            (transduce mapinc + 1 long-vec)
-            (transduce mapinc + 1 float-vec)
-            (transduce mapinclong + 1 char-vec)
-            (transduce mapinc + 1 double-vec)
-            (transduce mapinclong + 1 byte-vec)))))
+            (transduce mapinc + 1 float-vec)))))
 
 (deftest test-dedupe
   (are [x y] (= (transduce (dedupe) conj x) y)
@@ -317,7 +285,7 @@
   (is (= [[:a]] (sequence (comp (partition-by keyword?) (take 1)) [:a])))
   (is (= [[[:a]]] (sequence (comp (partition-by keyword?) (take 1)  (partition-by keyword?) (take 1)) [:a])))
   (is (= [[0]] (transduce (comp (take 1) (partition-all 3) (take 1)) conj [] (range 15))))
-  (is (= [1] (transduce (take 1) conj (seq (long-array [1 2 3 4]))))))
+  (is (= [1] (transduce (take 1) conj (seq (into-tuple [1 2 3 4]))))))
 
 (deftest test-sequence-multi-xform
   (is (= [11 12 13 14] (sequence (map +) [1 2 3 4] (repeat 10))))
@@ -336,7 +304,7 @@
           (->> (range 5)
             (eduction (mapcat range) (map inc))
             sort)))
-    (is (= [1 1 2 1 2 3 1 2 3 4]
+    #_(is (= [1 1 2 1 2 3 1 2 3 4]
           (vec (->> (range 5)
                  (eduction (mapcat range) (map inc))
                  to-array))))
