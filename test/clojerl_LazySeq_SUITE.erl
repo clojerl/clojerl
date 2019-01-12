@@ -18,6 +18,7 @@
         , cons/1
         , reduce/1
         , to_erl/1
+        , infinite_seq/1
         , complete_coverage/1
         ]).
 
@@ -195,6 +196,22 @@ to_erl(_Config) ->
 
   {comments, ""}.
 
+-spec infinite_seq(config()) -> result().
+infinite_seq(_Config) ->
+  LazySeq = range(0, infinity),
+  0   = clj_rt:nth(LazySeq, 0),
+  42  = clj_rt:nth(LazySeq, 42),
+
+  0   = clj_rt:nth(LazySeq, 0, foo),
+  42  = clj_rt:nth(LazySeq, 42, foo),
+  foo = clj_rt:nth(LazySeq, -1, foo),
+
+  ct:comment("Negative index generates error"),
+  ok  = try clj_rt:nth(LazySeq, -1), error
+        catch _:_ -> ok end,
+
+  {comments, ""}.
+
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   ?NIL = 'clojerl.LazySeq':'_'(?NIL),
@@ -211,7 +228,7 @@ complete_coverage(_Config) ->
 -spec range(integer(), integer()) -> 'clojerl.LazySeq':type().
 range(Start, End) ->
   Fun = fun
-          ([]) when Start =< End ->
+          ([]) when Start =< End; End == infinity ->
             'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End));
           ([]) when Start > End ->
             ?NIL
