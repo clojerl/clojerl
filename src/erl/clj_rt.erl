@@ -146,7 +146,7 @@ nth_from(Coll, N) ->
       end;
     _ ->
       case 'clojerl.ISequential':?SATISFIES(Type) of
-        true  -> clj_utils:nth(N + 1, to_list(Coll));
+        true  -> nth_seq(N, seq(Coll));
         false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
       end
   end.
@@ -162,10 +162,26 @@ nth_from(Coll, N, NotFound) ->
       end;
     _ ->
       case 'clojerl.ISequential':?SATISFIES(Type) of
-        true  -> clj_utils:nth(N + 1, to_list(Coll), NotFound);
+        true  -> nth_seq(N, seq(Coll), NotFound);
         false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
       end
   end.
+
+-spec nth_seq(non_neg_integer(), any()) -> any().
+nth_seq(Index, Seq) when Index < 0; Seq == ?NIL ->
+  ?ERROR(<<"Index out of bounds">>);
+nth_seq(0, Seq) ->
+  first(Seq);
+nth_seq(N, Seq) ->
+  nth_seq(N - 1, next(Seq)).
+
+-spec nth_seq(non_neg_integer(), any(), any()) -> any().
+nth_seq(Index, Seq, NotFound) when Index < 0; Seq == ?NIL ->
+  NotFound;
+nth_seq(0, Seq, _) ->
+  first(Seq);
+nth_seq(N, Seq, NotFound) ->
+  nth_seq(N - 1, next(Seq), NotFound).
 
 -spec 'empty?'(any()) -> boolean().
 'empty?'(?NIL) -> true;
