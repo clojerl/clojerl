@@ -104,7 +104,9 @@ with_meta(#{?TYPE := ?M} = Ns0, Meta) ->
 
 %% clojerl.IReference
 
-alter_meta(#{?TYPE := ?M, id := _Id, meta := Meta0} = Ns0, F, Args0) ->
+alter_meta(#{?TYPE := ?M, name := Name}, F, Args0) ->
+  Ns0   = find(Name),
+  Meta0 = clj_rt:meta(Ns0),
   Args1 = clj_rt:cons(Meta0, Args0),
   Meta1 = clj_rt:apply(F, Args1),
   Ns1   = Ns0#{meta := Meta1},
