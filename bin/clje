@@ -14,7 +14,7 @@ SELF=$(readlink_f "$0")
 CLJE_BINDIR=$(dirname "$SELF")
 
 if type -p rlwrap >/dev/null 2>&1; then
-  rlwrap -r -q '\"' -b "(){}[],^%3@\";:'" $CLJE_BINDIR/clojerl "$@"
+  rlwrap -r -q '\"' -b "(){}[],^%#@\";:'" $CLJE_BINDIR/clojerl "$@"
 else
   echo "Please install rlwrap for command editing or use \"clojerl\" instead."
 fi
