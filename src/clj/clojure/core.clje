@@ -6275,10 +6275,28 @@
   ([prob coll]
      (filter (fn [_] (< (rand) prob)) coll)))
 
+(deftype EductionSeq [xform f coll]
+  clojerl.ISeqable
+  (seq [this]
+    (when (seq coll) this))
+  (to_list [this]
+    (-> (transduce xform conj [] coll) clj_rt/to_list))
+
+  clojerl.ISeq
+  (first [this] (f nil (first coll)))
+  (next [this]
+    (when-let [x (next coll)]
+      (EductionSeq. xform f x)))
+  (more [this]
+    (EductionSeq. xform f (rest coll))))
+
 (deftype Eduction [xform coll]
-  ;; Iterable
-  ;; (iterator [_]
-  ;;   (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
+  clojerl.ISeqable
+  (seq [this]
+    (when (seq coll)
+      (EductionSeq. xform (xform (fn [_ x] x)) coll)))
+  (to_list [this]
+    (-> this seq clj_rt/to_list))
 
   clojerl.IReduce
   (reduce [this f] (transduce xform (completing f) coll))
