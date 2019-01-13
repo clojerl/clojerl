@@ -411,8 +411,8 @@
   (is (= [0 1 2 3] (vec (range 4))))
   (is (= [\a \b \c \d] (vec "abcd")))
   (is (= [0 1 2 3] (vec (range 4))))
-  ;; TODO: uncomment when #562 is done
-  #_(is (= [1 2 3 4] (vec (eduction (map inc) (range 4)))))
+  (is (= [1 2 3 4] (vec (eduction (map inc) (range 4)))))
+  ;; TODO: uncomment when reify is done
   #_(is (= [0 1 2 3] (vec (reify clojure.lang.IReduceInit
                           (reduce [_ f start]
                             (reduce f start (range 4))))))))
