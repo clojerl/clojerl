@@ -165,7 +165,8 @@
   [ex & [tr]]
   (binding [*out* *err*]
     (println ex)
-    (doall (map #(-> % stack-element-str println) tr))))
+    (doseq [x tr]
+      (-> x stack-element-str println))))
 
 (def ^{:doc "A sequence of lib specs that are applied to `require`
 by default when a new command-line REPL is started."} repl-requires
@@ -250,7 +251,7 @@ by default when a new command-line REPL is started."} repl-requires
                     (set! *2 *1)
                     (set! *1 value))))
             (catch _ e :stack st
-              (caught e st)
+              (caught e)
               (set! *e e)
               (set! *stacktrace st))))]
     (with-bindings

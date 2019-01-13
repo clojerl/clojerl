@@ -97,6 +97,23 @@
 
 (defmethod print-dup nil [o ^IWriter w] (print-method o w))
 
+(defn- print-tagged-object [o rep ^IWriter w]
+  (when (instance? clojerl.IMeta o)
+    (print-meta o w))
+  (.write w "#object[")
+  (let [^erlang.Type t (type o)]
+    (.write w (.str t)))
+  (.write w " ")
+  (.write w (format "0x~.16B " (erlang/phash2 o)))
+  (print-method rep w)
+  (.write w "]"))
+
+(defn- print-object [o, ^IWriter w]
+  (print-tagged-object o (str o) w))
+
+#_(defmethod print-method :default [o, ^IWriter w]
+  (print-object o w))
+
 (defmethod print-method clojerl.Keyword [o, ^IWriter w]
   (.write w (str o)))
 
@@ -105,8 +122,12 @@
 (defmethod print-method clojerl.Integer [o, ^IWriter w]
   (.write w (str o)))
 
+(defmethod print-dup clojerl.Integer [o, ^IWriter w] (print-method o w))
+
 (defmethod print-method clojerl.Float [o, ^IWriter w]
   (.write w (str o)))
+
+(defmethod print-dup clojerl.Float [o, ^IWriter w] (print-method o w))
 
 (defmethod print-method clojerl.Boolean [o, ^IWriter w]
   (.write w (str o)))
@@ -254,6 +275,72 @@
 (defmethod print-method erlang.Tuple [s, ^IWriter w]
   (print-meta s w)
   (print-sequential "#erl[" pr-on " " "]" (seq s) w))
+
+(defn- deref-as-map [^clojerl.IDeref o]
+  (let [[ex val]
+        (try [false (deref o)]
+             (catch :error e
+               [true e]))]
+    {:status
+     (cond
+      ex
+      :failed
+
+      :else
+      :ready)
+
+     :val val}))
+
+(defmethod print-method clojerl.Atom [o ^IWriter w]
+  (print-tagged-object o (deref-as-map o) w))
+
+(defn IError->map
+  "Constructs a data representation for a IError with keys:
+    :type - exception type symbol
+    :message - exception message
+    :data - ex-data"
+  {:added "1.7"}
+  [^clojerl.IError o]
+  (merge {:type (symbol (str (type o)))}
+         (when-let [msg (.message o)]
+           {:message msg})
+         (when-let [ed (ex-data o)]
+           {:data ed})
+         (when-let [cause (ex-cause o)]
+           {:cause (IError->map cause)})))
+
+(defn- print-error [^clojerl.IError o ^IWriter w]
+  (.write w "#error {")
+  (let [{:keys [type message data cause]} (IError->map o)]
+    (.write w "\n :type ")
+    (print-method type w)
+    (when message
+      (.write w "\n :message ")
+      (print-method message w))
+    (when data
+      (.write w "\n :data ")
+      (print-method data w))
+    (when cause
+      (.write w "\n :cause ")
+      (print-method cause w)))
+  (.write w "}"))
+
+(defmethod print-method clojerl.Error [^clojerl.Error o ^IWriter w]
+  (print-error o w))
+
+(defmethod print-method clojerl.ExceptionInfo [^clojerl.ExceptionInfo o ^IWriter w]
+  (print-error o w))
+
+(defmethod print-method clojerl.reader.TaggedLiteral [o ^IWriter w]
+  (.write w "#")
+  (print-method (:tag o) w)
+  (.write w " ")
+  (print-method (:form o) w))
+
+(defmethod print-method clojerl.reader.ReaderConditional [o ^IWriter w]
+  (.write w "#?")
+  (when (:splicing? o) (.write w "@"))
+  (print-method (:form o) w))
 
 ;; Even though this is not the same as in Clojure JVM, it is still
 ;; true since the on_load code will be evaluated before the value for
