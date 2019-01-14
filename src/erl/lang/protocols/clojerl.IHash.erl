@@ -36,6 +36,8 @@
       'erlang.util.Date':'hash'(X);
     'clojerl.Reduced' ->
       'clojerl.Reduced':'hash'(X);
+    'clojerl.ProcessVal' ->
+      'clojerl.ProcessVal':'hash'(X);
     'clojerl.BitString' ->
       'clojerl.BitString':'hash'(X);
     'clojerl.Var' ->
@@ -116,6 +118,7 @@
 ?SATISFIES('erlang.Port') -> true;
 ?SATISFIES('erlang.util.Date') -> true;
 ?SATISFIES('clojerl.Reduced') -> true;
+?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.BitString') -> true;
 ?SATISFIES('clojerl.Var') -> true;
 ?SATISFIES('clojerl.Integer') -> true;

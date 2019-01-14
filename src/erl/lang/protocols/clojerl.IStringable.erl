@@ -46,6 +46,8 @@
       'clojerl.Reduced':'str'(X);
     'clojerl.reader.TaggedLiteral' ->
       'clojerl.reader.TaggedLiteral':'str'(X);
+    'clojerl.ProcessVal' ->
+      'clojerl.ProcessVal':'str'(X);
     'clojerl.BitString' ->
       'clojerl.BitString':'str'(X);
     'clojerl.Var' ->
@@ -129,6 +131,7 @@
 ?SATISFIES('erlang.io.File') -> true;
 ?SATISFIES('clojerl.Reduced') -> true;
 ?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
+?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.BitString') -> true;
 ?SATISFIES('clojerl.Var') -> true;
 ?SATISFIES('clojerl.Integer') -> true;
