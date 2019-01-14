@@ -22,6 +22,8 @@
       'erlang.util.Date':'equiv'(X, Y);
     'clojerl.reader.TaggedLiteral' ->
       'clojerl.reader.TaggedLiteral':'equiv'(X, Y);
+    'clojerl.ProcessVal' ->
+      'clojerl.ProcessVal':'equiv'(X, Y);
     'clojerl.Var' ->
       'clojerl.Var':'equiv'(X, Y);
     'clojerl.reader.ReaderConditional' ->
@@ -81,6 +83,7 @@
 ?SATISFIES('erlang.List') -> true;
 ?SATISFIES('erlang.util.Date') -> true;
 ?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
+?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.Var') -> true;
 ?SATISFIES('clojerl.reader.ReaderConditional') -> true;
 ?SATISFIES('clojerl.Atom') -> true;
