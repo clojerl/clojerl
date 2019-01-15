@@ -215,7 +215,7 @@ equiv(X, Y) ->
     andalso 'clojerl.IEquiv':?SATISFIES(type_module(Y))
   of
     true  -> 'clojerl.IEquiv':equiv(X, Y);
-    false -> X == Y
+    false -> X =:= Y
   end.
 
 -spec conj(any(), any()) -> any().
