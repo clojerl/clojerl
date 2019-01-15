@@ -6327,7 +6327,7 @@
   ([prob coll]
      (filter (fn [_] (< (rand) prob)) coll)))
 
-(deftype EductionSeq [xform f coll]
+(deftype EductionSeq [xform xhead xtail coll]
   clojerl.ISeqable
   (seq [this]
     (when (seq coll) this))
@@ -6335,24 +6335,30 @@
     (-> (transduce xform conj [] coll) clj_rt/to_list))
 
   clojerl.ISeq
-  (first [this] (f nil (first coll)))
+  (first [this]
+    (first (transduce xhead conj [] coll)))
   (next [this]
-    (when-let [x (next coll)]
-      (EductionSeq. xform f x)))
+    (when-let [x (seq (transduce xtail conj [] coll))]
+      (EductionSeq. xform xhead xtail x)))
   (more [this]
-    (EductionSeq. xform f (rest coll))))
+    (EductionSeq. xform xhead xtail (transduce xtail conj [] coll)))
+
+  clojerl.ISequential)
 
 (deftype Eduction [xform coll]
   clojerl.ISeqable
   (seq [this]
     (when (seq coll)
-      (EductionSeq. xform (xform (fn [_ x] x)) coll)))
+      (EductionSeq. xform (comp (take 1) xform) (drop 1) coll)))
   (to_list [this]
     (-> this seq clj_rt/to_list))
 
   clojerl.IReduce
   (reduce [this f] (transduce xform (completing f) coll))
   (reduce [this f init] (transduce xform (completing f) init coll))
+
+  clojerl.IEquiv
+  (equiv [this x] (= (.to_list this) x))
 
   clojerl.ISequential)
 
