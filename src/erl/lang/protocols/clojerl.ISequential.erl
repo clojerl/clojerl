@@ -11,6 +11,7 @@
 
 ?SATISFIES('erlang.Tuple') -> true;
 ?SATISFIES('erlang.List') -> true;
+?SATISFIES('clojerl.TransducerSeq') -> true;
 ?SATISFIES('clojerl.BitString') -> true;
 ?SATISFIES('clojerl.LazySeq') -> true;
 ?SATISFIES('clojerl.Range') -> true;

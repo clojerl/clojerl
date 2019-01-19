@@ -19,6 +19,8 @@
       'erlang.Map':'seq'(X);
     'erlang.List' ->
       'erlang.List':'seq'(X);
+    'clojerl.TransducerSeq' ->
+      'clojerl.TransducerSeq':'seq'(X);
     'clojerl.BitString' ->
       'clojerl.BitString':'seq'(X);
     'clojerl.String' ->
@@ -61,6 +63,8 @@
       'erlang.Map':'to_list'(X);
     'erlang.List' ->
       'erlang.List':'to_list'(X);
+    'clojerl.TransducerSeq' ->
+      'clojerl.TransducerSeq':'to_list'(X);
     'clojerl.BitString' ->
       'clojerl.BitString':'to_list'(X);
     'clojerl.String' ->
@@ -98,6 +102,7 @@
 ?SATISFIES('erlang.Tuple') -> true;
 ?SATISFIES('erlang.Map') -> true;
 ?SATISFIES('erlang.List') -> true;
+?SATISFIES('clojerl.TransducerSeq') -> true;
 ?SATISFIES('clojerl.BitString') -> true;
 ?SATISFIES('clojerl.String') -> true;
 ?SATISFIES('clojerl.LazySeq') -> true;
