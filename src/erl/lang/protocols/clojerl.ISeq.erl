@@ -16,6 +16,8 @@
   case clj_rt:type_module(Seq) of
     'erlang.List' ->
       'erlang.List':'first'(Seq);
+    'clojerl.TransducerSeq' ->
+      'clojerl.TransducerSeq':'first'(Seq);
     'clojerl.LazySeq' ->
       'clojerl.LazySeq':'first'(Seq);
     'clojerl.Range' ->
@@ -38,6 +40,8 @@
   case clj_rt:type_module(Seq) of
     'erlang.List' ->
       'erlang.List':'next'(Seq);
+    'clojerl.TransducerSeq' ->
+      'clojerl.TransducerSeq':'next'(Seq);
     'clojerl.LazySeq' ->
       'clojerl.LazySeq':'next'(Seq);
     'clojerl.Range' ->
@@ -60,6 +64,8 @@
   case clj_rt:type_module(Seq) of
     'erlang.List' ->
       'erlang.List':'more'(Seq);
+    'clojerl.TransducerSeq' ->
+      'clojerl.TransducerSeq':'more'(Seq);
     'clojerl.LazySeq' ->
       'clojerl.LazySeq':'more'(Seq);
     'clojerl.Range' ->
@@ -79,6 +85,7 @@
   end.
 
 ?SATISFIES('erlang.List') -> true;
+?SATISFIES('clojerl.TransducerSeq') -> true;
 ?SATISFIES('clojerl.LazySeq') -> true;
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;

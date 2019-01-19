@@ -2302,7 +2302,7 @@
 
 (defn sequence
   "Coerces coll to a (possibly empty) sequence, if it is not already
-  one. Will not force a lazy seq. (sequence nil) yields (), When a
+  one. Will not force a lazy seq. (sequence nil) yields (). When a
   transducer is supplied, returns a lazy sequence of applications of
   the transform to the items in coll(s), i.e. to the set of first
   items of each coll, followed by the set of second
@@ -6327,29 +6327,11 @@
   ([prob coll]
      (filter (fn [_] (< (rand) prob)) coll)))
 
-(deftype EductionSeq [xform xhead xtail coll]
-  clojerl.ISeqable
-  (seq [this]
-    (when (seq coll) this))
-  (to_list [this]
-    (-> (transduce xform conj [] coll) clj_rt/to_list))
-
-  clojerl.ISeq
-  (first [this]
-    (first (transduce xhead conj [] coll)))
-  (next [this]
-    (when-let [x (seq (transduce xtail conj [] coll))]
-      (EductionSeq. xform xhead xtail x)))
-  (more [this]
-    (EductionSeq. xform xhead xtail (transduce xtail conj [] coll)))
-
-  clojerl.ISequential)
-
 (deftype Eduction [xform coll]
   clojerl.ISeqable
   (seq [this]
     (when (seq coll)
-      (EductionSeq. xform (comp (take 1) xform) (drop 1) coll)))
+      (clojerl.TransducerSeq. xform coll)))
   (to_list [this]
     (-> this seq clj_rt/to_list))
 
