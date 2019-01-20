@@ -2314,10 +2314,8 @@
    (if (seq? coll) coll
        (or (seq coll) ())))
   ([xform coll]
-   (throw "unimplemented transducers")
-   #_(or (clojure.lang.RT/chunkIteratorSeq
-          (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
-         ()))
+   (or (seq (clojerl.TransducerSeq. xform coll))
+       ()))
   ([xform coll & colls]
    (throw "unimplemented transducers")
    #_(or (clojure.lang.RT/chunkIteratorSeq
@@ -6331,7 +6329,7 @@
   clojerl.ISeqable
   (seq [this]
     (when (seq coll)
-      (clojerl.TransducerSeq. xform coll)))
+      (seq (clojerl.TransducerSeq. xform coll))))
   (to_list [this]
     (-> this seq clj_rt/to_list))
 

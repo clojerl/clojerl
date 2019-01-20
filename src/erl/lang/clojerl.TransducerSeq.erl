@@ -2,14 +2,17 @@
 
 -include("clojerl.hrl").
 
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.ISequential').
+-behavior('clojerl.IStringable').
 
 -clojure(true).
 
 -export([?CONSTRUCTOR/2]).
 
+-export([equiv/2]).
 -export([ first/1
         , next/1
         , more/1
@@ -18,6 +21,7 @@
         , to_list/1
         ]).
 -export(['_'/1]).
+-export([str/1]).
 
 -type type() :: #{ ?TYPE => ?M
                  , xform => any()
@@ -50,6 +54,11 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.IEquiv
+
+equiv(#{?TYPE := ?M} = X, Y) ->
+  clj_rt:equiv(to_list(X), Y).
+
 %% clojerl.ISeq
 
 first(#{?TYPE := ?M, buffer := []}) ->
@@ -60,62 +69,83 @@ first(#{?TYPE := ?M, buffer := [Current | _]}) ->
 next(#{?TYPE := ?M, buffer := Buffer0} = X0) ->
   Buffer1 = case Buffer0 of
               [] -> Buffer0;
-              [_ | Rest] -> Rest
+              [_ | BufferRest] -> BufferRest
             end,
   case step(X0#{buffer => Buffer1}) of
     #{completed := true, buffer := []} -> ?NIL;
     X1 -> X1
   end.
 
-more(#{?TYPE := ?M} = X) ->
-  step(X).
+more(#{?TYPE := ?M, completed := true, buffer := []}) ->
+  ?NIL;
+more(#{?TYPE := ?M, buffer := []} = X) ->
+  step(X);
+more(#{?TYPE := ?M, buffer := [_ | Buffer]} = X) ->
+  step(X#{buffer => Buffer}).
 
 %% clojerl.ISeqable
 
+seq(#{?TYPE := ?M, completed := true, buffer := []}) ->
+  ?NIL;
 seq(#{?TYPE := ?M} = X) ->
-  X.
+  step(X).
 
 to_list(#{?TYPE := ?M} = X) ->
-  do_to_list(X, []).
+  do_to_list(seq(X), []).
 
 %% clojerl.ISequential
 
 '_'(#{?TYPE := ?M}) -> ok.
 
+%% clojerl.IStringable
+
+str(#{?TYPE := ?M} = X) ->
+  List = to_list(X),
+  clj_rt:print_str(clj_rt:list(List)).
+
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
 
-step(#{?TYPE := ?M, completed := true} = X) ->
+step(#{completed := true} = X) ->
   X;
-step(#{?TYPE := ?M, xform := XForm, coll := ?NIL} = X) ->
-  clj_rt:apply(XForm, [?NIL]),
-  X#{coll := ?NIL, completed := true};
-step(#{ ?TYPE  := ?M
-      , buffer := []
-      , xform  := XForm
+step(#{ xform  := XForm
+      , coll   := ?NIL
+      , key    := Key
+      , buffer := Buffer
+      } = X) ->
+  {_, Value} = fetch_item(XForm, [?NIL], Key),
+  X#{ completed := true
+    , buffer    := Buffer ++ lists:reverse(Value)
+    };
+step(#{ xform  := XForm
       , coll   := Coll0
       , key    := Key
+      , buffer := []
       } = X0) ->
   First = clj_rt:first(Coll0),
   Coll1 = clj_rt:next(Coll0),
-  {Result, Value} = fetch_item(XForm, First, Key),
-  Completed = case 'clojerl.Reduced':is_reduced(Result) of
-                true  -> clj_rt:apply(XForm, [?NIL]), true;
-                false -> false
+  {Result, Value0} = fetch_item(XForm, [?NIL, First], Key),
+  Completed = 'clojerl.Reduced':is_reduced(Result),
+  Value1    = case Completed of
+                true  ->
+                  {_, Value_} = fetch_item(XForm, [?NIL], Key),
+                  Value_ ++ Value0;
+                false ->
+                  Value0
               end,
   X1 = X0#{coll := Coll1, completed := Completed},
-  case Value of
+  case Value1 of
     [] -> step(X1);
-    _  -> X1#{buffer := lists:reverse(Value)}
+    _  -> X1#{buffer := lists:reverse(Value1)}
   end;
 step(X) ->
   X.
 
-fetch_item(XForm, X, Key) ->
+fetch_item(XForm, Args, Key) ->
   try
     erlang:put(Key, []),
-    Result = clj_rt:apply(XForm, [?NIL, X]),
+    Result = clj_rt:apply(XForm, Args),
     {Result, erlang:get(Key)}
   after
     erlang:erase(Key)

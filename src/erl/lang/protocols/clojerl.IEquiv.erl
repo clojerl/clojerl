@@ -20,6 +20,8 @@
       'erlang.List':'equiv'(X, Y);
     'erlang.util.Date' ->
       'erlang.util.Date':'equiv'(X, Y);
+    'clojerl.TransducerSeq' ->
+      'clojerl.TransducerSeq':'equiv'(X, Y);
     'clojerl.reader.TaggedLiteral' ->
       'clojerl.reader.TaggedLiteral':'equiv'(X, Y);
     'clojerl.ProcessVal' ->
@@ -82,6 +84,7 @@
 ?SATISFIES('erlang.Map') -> true;
 ?SATISFIES('erlang.List') -> true;
 ?SATISFIES('erlang.util.Date') -> true;
+?SATISFIES('clojerl.TransducerSeq') -> true;
 ?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
 ?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.Var') -> true;
