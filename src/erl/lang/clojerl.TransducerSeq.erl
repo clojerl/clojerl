@@ -109,33 +109,43 @@ str(#{?TYPE := ?M} = X) ->
 
 step(#{completed := true} = X) ->
   X;
-step(#{xform := XForm, coll := ?NIL} = X) ->
-  clj_rt:apply(XForm, [?NIL]),
-  X#{coll := ?NIL, completed := true};
-step(#{ buffer := []
-      , xform  := XForm
+step(#{ xform  := XForm
+      , coll   := ?NIL
+      , key    := Key
+      , buffer := Buffer
+      } = X) ->
+  {_, Value} = fetch_item(XForm, [?NIL], Key),
+  X#{ completed := true
+    , buffer    := Buffer ++ lists:reverse(Value)
+    };
+step(#{ xform  := XForm
       , coll   := Coll0
       , key    := Key
+      , buffer := []
       } = X0) ->
   First = clj_rt:first(Coll0),
   Coll1 = clj_rt:next(Coll0),
-  {Result, Value} = fetch_item(XForm, First, Key),
-  Completed = case 'clojerl.Reduced':is_reduced(Result) of
-                true  -> clj_rt:apply(XForm, [?NIL]), true;
-                false -> false
+  {Result, Value0} = fetch_item(XForm, [?NIL, First], Key),
+  Completed = 'clojerl.Reduced':is_reduced(Result),
+  Value1    = case Completed of
+                true  ->
+                  {_, Value_} = fetch_item(XForm, [?NIL], Key),
+                  Value_ ++ Value0;
+                false ->
+                  Value0
               end,
   X1 = X0#{coll := Coll1, completed := Completed},
-  case Value of
+  case Value1 of
     [] -> step(X1);
-    _  -> X1#{buffer := lists:reverse(Value)}
+    _  -> X1#{buffer := lists:reverse(Value1)}
   end;
 step(X) ->
   X.
 
-fetch_item(XForm, X, Key) ->
+fetch_item(XForm, Args, Key) ->
   try
     erlang:put(Key, []),
-    Result = clj_rt:apply(XForm, [?NIL, X]),
+    Result = clj_rt:apply(XForm, Args),
     {Result, erlang:get(Key)}
   after
     erlang:erase(Key)
