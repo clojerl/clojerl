@@ -459,7 +459,7 @@ quotient(X, Y) when is_integer(X), is_integer(Y) ->
 quotient(X, Y) ->
   quotient(trunc(X), trunc(Y)).
 
--spec floor(number()) -> number().
+-spec floor(number()) -> integer().
 floor(X) when X < 0 ->
   T = trunc(X),
   case X - T == 0 of
@@ -469,7 +469,7 @@ floor(X) when X < 0 ->
 floor(X) ->
   trunc(X).
 
--spec ceil(number()) -> number().
+-spec ceil(number()) -> integer().
 ceil(X) when X < 0 ->
   trunc(X);
 ceil(X) ->

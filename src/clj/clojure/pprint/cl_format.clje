@@ -206,7 +206,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm
   (cond
    (integer? x) true
     ;;(decimal? x) ;;no decimal support
-   (float? x)   (= x (clj_utils/floor x))
+   (float? x)   (== x (clj_utils/floor x))
     ;;(ratio? x) ;;no ratio support
    :else        false))
 
