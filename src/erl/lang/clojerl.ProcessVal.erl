@@ -1,6 +1,7 @@
 -module('clojerl.ProcessVal').
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IEquiv').
@@ -25,14 +26,14 @@
 ?CONSTRUCTOR(Value) ->
   UUID = 'erlang.util.UUID':random(),
   Id   = 'erlang.util.UUID':str(UUID),
-  _    = erlang:put(Id, Value),
+  _    = erlang:put(Id, {ok, Value}),
   #{ ?TYPE => ?M
    , id    => Id
    }.
 
 -spec reset(type(), any()) -> any().
 reset(#{?TYPE := ?M, id := Id}, Value) ->
-  _ = erlang:put(Id, Value),
+  _ = erlang:put(Id, {ok, Value}),
   Value.
 
 -spec destroy(type()) -> ok.
@@ -48,7 +49,10 @@ str(#{?TYPE := ?M, id := Id}) ->
   <<"#<clojerl.ProcessVal ", Id/binary, ">">>.
 
 deref(#{?TYPE := ?M, id := Id}) ->
-  erlang:get(Id).
+  case erlang:get(Id) of
+    undefined   -> ?ERROR([<<"No process value available for: ">>, Id]);
+    {ok, Value} -> Value
+  end.
 
 equiv( #{?TYPE := ?M, id := Id}
      , #{?TYPE := ?M, id := Id}
