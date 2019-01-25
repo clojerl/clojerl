@@ -2779,11 +2779,20 @@
   seq to reside in memory at one time."
   {:added "1.0"}
   ([coll]
-   (dorun coll)
-   coll)
+   (loop [coll (seq coll)
+          acc #erl()]
+     (if coll
+       (recur (next coll) (conj acc (first coll)))
+       (lists/reverse acc))))
   ([n coll]
-   (dorun n coll)
-   coll))
+   (loop [coll (seq coll)
+          acc #erl()
+          n n]
+     (if (and coll (pos? n))
+       (let [x    (first coll)
+             coll (next coll)]
+         (recur coll (conj acc x) (dec n)))
+       (lists/reverse acc)))))
 
 (defn nthnext
   "Returns the nth next of coll, (seq coll) when n is 0."
