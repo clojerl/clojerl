@@ -152,7 +152,7 @@
 
 (deftest seq-and-transducer
   (let [res (chk/quick-check
-              200000
+              20000
               (prop/for-all* [result-gen] result-good?))]
     (when-not (:result res)
       (is
