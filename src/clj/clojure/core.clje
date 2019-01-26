@@ -2182,6 +2182,35 @@
        (throw (new IllegalStateException ~(or message "I/O in transaction")))
        (do ~@body))))
 
+(defn process-val!
+  "Creates and returns a ProcessVal with an initial value of val."
+  {:added "1.7"
+   :tag clojerl.ProcessVal}
+  [val]
+  (clojerl.ProcessVal. val))
+
+(defn vreset!
+  "Sets the value of process-val to newval without regard for the
+   current value. Returns newval."
+  {:added "1.7"}
+  [^clojerl.ProcessVal vol newval]
+  (.reset vol newval))
+
+(defmacro vswap!
+  "Non-atomically swaps the value of the process-val as if:
+   (apply f current-value-of-vol args). Returns the value that
+   was swapped in."
+  {:added "1.7"}
+  [vol f & args]
+  (let [v (with-meta vol {:tag 'clojerl.ProcessVal})]
+    `(.reset ~v (~f (.deref ~v) ~@args))))
+
+(defn process-val?
+  "Returns true if x is a process-val."
+  {:added "1.7"}
+  [x]
+  (instance? clojerl.ProcessVal x))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
 
 (defn comp
@@ -2273,7 +2302,7 @@
 
 (defn sequence
   "Coerces coll to a (possibly empty) sequence, if it is not already
-  one. Will not force a lazy seq. (sequence nil) yields (), When a
+  one. Will not force a lazy seq. (sequence nil) yields (). When a
   transducer is supplied, returns a lazy sequence of applications of
   the transform to the items in coll(s), i.e. to the set of first
   items of each coll, followed by the set of second
@@ -2285,17 +2314,13 @@
    (if (seq? coll) coll
        (or (seq coll) ())))
   ([xform coll]
-   (throw "unimplemented transducers")
-   #_(or (clojure.lang.RT/chunkIteratorSeq
-          (clojure.lang.TransformerIterator/create xform (clojure.lang.RT/iter coll)))
-         ()))
+   (lazy-seq
+    (clojerl.TransducerSeq. xform coll)))
   ([xform coll & colls]
-   (throw "unimplemented transducers")
-   #_(or (clojure.lang.RT/chunkIteratorSeq
-          (clojure.lang.TransformerIterator/createMulti
-           xform
-           (map #(clojure.lang.RT/iter %) (cons coll colls))))
-         ())))
+   (lazy-seq
+    (clojerl.TransducerSeq. xform
+                            (apply map list (cons coll colls))
+                            true))))
 
 (defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
@@ -2486,12 +2511,14 @@
   there are fewer than n.  Returns a stateful transducer when
   no collection is provided."
   {:added "1.0"}
-  #_([n]
+  ([n]
      (fn [rf]
-       (let [nv (volatile! n)]
+       (let [nv (process-val! n)]
          (fn
            ([] (rf))
-           ([result] (rf result))
+           ([result]
+              (.destroy nv)
+              (rf result))
            ([result input]
               (let [n @nv
                     nn (vswap! nv dec)
@@ -2531,12 +2558,14 @@
   "Returns a lazy sequence of all but the first n items in coll.
   Returns a stateful transducer when no collection is provided."
   {:added "1.0"}
-  #_([n]
+  ([n]
      (fn [rf]
-       (let [nv (volatile! n)]
+       (let [nv (process-val! n)]
          (fn
            ([] (rf))
-           ([result] (rf result))
+           ([result]
+              (.destroy nv)
+              (rf result))
            ([result input]
               (let [n @nv]
                 (vswap! nv dec)
@@ -2572,12 +2601,14 @@
   first item for which (pred item) returns logical false.  Returns a
   stateful transducer when no collection is provided."
   {:added "1.0"}
-  #_([pred]
+  ([pred]
      (fn [rf]
-       (let [dv (volatile! true)]
+       (let [dv (process-val! true)]
          (fn
            ([] (rf))
-           ([result] (rf result))
+           ([result]
+              (.destroy dv)
+              (rf result))
            ([result input]
               (let [drop? @dv]
                 (if (and drop? (pred input))
@@ -2746,11 +2777,20 @@
   seq to reside in memory at one time."
   {:added "1.0"}
   ([coll]
-   (dorun coll)
-   coll)
+   (loop [coll (seq coll)
+          acc #erl()]
+     (if coll
+       (recur (next coll) (conj acc (first coll)))
+       (lists/reverse acc))))
   ([n coll]
-   (dorun n coll)
-   coll))
+   (loop [coll (seq coll)
+          acc #erl()
+          n n]
+     (if (and coll (pos? n))
+       (let [x    (first coll)
+             coll (next coll)]
+         (recur coll (conj acc x) (dec n)))
+       (lists/reverse acc)))))
 
 (defn nthnext
   "Returns the nth next of coll, (seq coll) when n is 0."
@@ -3499,12 +3539,14 @@
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
   transducer when no collection is provided."
   {:added "1.0"}
-  #_([n]
+  ([n]
      (fn [rf]
-       (let [iv (volatile! -1)]
+       (let [iv (process-val! -1)]
          (fn
            ([] (rf))
-           ([result] (rf result))
+           ([result]
+              (.destroy iv)
+              (rf result))
            ([result input]
               (let [i (vswap! iv inc)]
                 (if (zero? (rem i n))
@@ -4167,12 +4209,14 @@
   "Returns a lazy sequence of the elements of coll with duplicates removed.
   Returns a stateful transducer when no collection is provided."
   {:added "1.0"}
-  #_([]
+  ([]
    (fn [rf]
-     (let [seen (volatile! #{})]
+     (let [seen (process-val! #{})]
        (fn
          ([] (rf))
-         ([result] (rf result))
+         ([result]
+            (.destroy seen)
+            (rf result))
          ([result input]
           (if (contains? @seen input)
             result
@@ -4313,12 +4357,14 @@
   "Returns a lazy seq of the elements of coll separated by sep.
   Returns a stateful transducer when no collection is provided."
   {:added "1.0"}
-  #_([sep]
+  ([sep]
    (fn [rf]
-     (let [started (volatile! false)]
+     (let [started (process-val! false)]
        (fn
          ([] (rf))
-         ([result] (rf result))
+         ([result]
+            (.destroy started)
+            (rf result))
          ([result input]
           (if @started
             (let [sepr (rf result sep)]
@@ -5456,7 +5502,10 @@
 (defn- seq-reduce
   ([f coll]
     (if-let [s (seq coll)]
-      (reduce f (first s) (next s))
+      (let [nval (reduce f (first s) (next s))]
+        (if (reduced? nval)
+          @nval
+          nval))
       (f)))
   ([f val coll]
     (loop [val val, coll (seq coll)]
@@ -5798,18 +5847,19 @@
    transducer when no collection is provided."
   {:added "1.2"}
   ([f]
-   #_(fn [rf]
-    (let [a (java.util.ArrayList.)
-          pv (volatile! ::none)]
+   (fn [rf]
+    (let [a (process-val! [])
+          pv (process-val! ::none)]
       (fn
         ([] (rf))
         ([result]
-           (let [result (if (.isEmpty a)
+           (let [result (if (empty? @a)
                           result
-                          (let [v (vec (.toArray a))]
+                          (let [v @a]
                             ;;clear first!
-                            (.clear a)
+                            (vreset! a [])
                             (unreduced (rf result v))))]
+             (.destroy a)
              (rf result)))
         ([result input]
            (let [pval @pv
@@ -5818,13 +5868,13 @@
              (if (or (identical? pval ::none)
                      (= val pval))
                (do
-                 (.add a input)
+                 (vswap! a conj input)
                  result)
-               (let [v (vec (.toArray a))]
-                 (.clear a)
+               (let [v @a]
+                 (vreset! a [])
                  (let [ret (rf result v)]
                    (when-not (reduced? ret)
-                     (.add a input))
+                     (vswap! a conj input))
                    ret)))))))))
   ([f coll]
      (lazy-seq
@@ -5873,24 +5923,25 @@
   partitions with fewer than n items at the end.  Returns a stateful
   transducer when no collection is provided."
   {:added "1.2"}
-  #_([n]
+  ([n]
    (fn [rf]
-     (let [a (java.util.ArrayList. n)]
+     (let [a (process-val! [])]
        (fn
          ([] (rf))
          ([result]
-            (let [result (if (.isEmpty a)
+            (let [result (if (empty? @a)
                            result
-                           (let [v (vec (.toArray a))]
+                           (let [v @a]
                              ;;clear first!
-                             (.clear a)
+                             (vreset! a [])
                              (unreduced (rf result v))))]
+              (.destroy a)
               (rf result)))
          ([result input]
-            (.add a input)
-            (if (= n (.size a))
-              (let [v (vec (.toArray a))]
-                (.clear a)
+            (vswap! a conj input)
+            (if (= n (count @a))
+              (let [v @a]
+                (vreset! a [])
                 (rf result v))
               result))))))
   ([n coll]
@@ -5915,11 +5966,13 @@
   no collection is provided."
   {:added "1.2"}
   ([f]
-   #_(fn [rf]
-     (let [i (volatile! -1)]
+   (fn [rf]
+     (let [i (process-val! -1)]
        (fn
          ([] (rf))
-         ([result] (rf result))
+         ([result]
+            (.destroy i)
+            (rf result))
          ([result input]
           (rf result (f (vswap! i inc) input)))))))
   ([f coll]
@@ -5978,11 +6031,13 @@
   provided."
   {:added "1.2"}
   ([f]
-   #_(fn [rf]
-     (let [iv (volatile! -1)]
+   (fn [rf]
+     (let [iv (process-val! -1)]
        (fn
          ([] (rf))
-         ([result] (rf result))
+         ([result]
+            (.destroy iv)
+            (rf result))
          ([result input]
             (let [i (vswap! iv inc)
                   v (f i input)]
@@ -6249,22 +6304,30 @@
          (reduce rrf result input)))))
 
 (defn dedupe
-  "Returns a lazy sequence removing consecutive duplicates in coll.
-  Returns a transducer when no collection is provided."
+  "Returns a sequence removing consecutive duplicates in coll.
+  Returns a transducer when no collection is provided.
+
+  NOTE: the returned sequence is *not* lazy, because of how
+  lazy sequences work in clojerl, where the realized values
+  are not cached, and the fact that the internal state of this
+  transducer is destroyed once it reached the end of the
+  collection."
   {:added "1.7"}
   ([]
-   #_(fn [rf]
-     (let [pv (volatile! ::none)]
+   (fn [rf]
+     (let [pv (process-val! ::none)]
        (fn
          ([] (rf))
-         ([result] (rf result))
+         ([result]
+            (.destroy pv)
+            (rf result))
          ([result input]
             (let [prior @pv]
               (vreset! pv input)
               (if (= prior input)
                 result
                 (rf result input))))))))
-  ([coll] (sequence (dedupe) coll)))
+  ([coll] (doall (sequence (dedupe) coll))))
 
 (defn random-sample
   "Returns items from coll with random probability of prob (0.0 -
@@ -6275,32 +6338,20 @@
   ([prob coll]
      (filter (fn [_] (< (rand) prob)) coll)))
 
-(deftype EductionSeq [xform f coll]
-  clojerl.ISeqable
-  (seq [this]
-    (when (seq coll) this))
-  (to_list [this]
-    (-> (transduce xform conj [] coll) clj_rt/to_list))
-
-  clojerl.ISeq
-  (first [this] (f nil (first coll)))
-  (next [this]
-    (when-let [x (next coll)]
-      (EductionSeq. xform f x)))
-  (more [this]
-    (EductionSeq. xform f (rest coll))))
-
 (deftype Eduction [xform coll]
   clojerl.ISeqable
   (seq [this]
     (when (seq coll)
-      (EductionSeq. xform (xform (fn [_ x] x)) coll)))
+      (seq (clojerl.TransducerSeq. xform coll))))
   (to_list [this]
     (-> this seq clj_rt/to_list))
 
   clojerl.IReduce
   (reduce [this f] (transduce xform (completing f) coll))
   (reduce [this f init] (transduce xform (completing f) init coll))
+
+  clojerl.IEquiv
+  (equiv [this x] (= (.to_list this) x))
 
   clojerl.ISequential)
 

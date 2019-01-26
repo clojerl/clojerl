@@ -181,10 +181,10 @@ reduce(#{?TYPE := ?M, array := Array}, F) ->
   end.
 
 reduce(#{?TYPE := ?M, array := Array}, F, Init) ->
-  Fold = fun(_, Item, Acc) ->
-             clj_rt:apply(F, [Acc, Item])
-         end,
-  array:foldl(Fold, Init, Array).
+  case array:size(Array) of
+    0    -> Init;
+    Size -> do_reduce(F, Init, 0, Size, Array)
+  end.
 
 do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
   Val = clj_rt:apply(F, [Acc, array:get(Index, Array)]),

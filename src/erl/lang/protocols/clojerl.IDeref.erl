@@ -14,6 +14,8 @@
   case clj_rt:type_module(Ref) of
     'clojerl.Reduced' ->
       'clojerl.Reduced':'deref'(Ref);
+    'clojerl.ProcessVal' ->
+      'clojerl.ProcessVal':'deref'(Ref);
     'clojerl.Var' ->
       'clojerl.Var':'deref'(Ref);
     'clojerl.Atom' ->
@@ -23,6 +25,7 @@
   end.
 
 ?SATISFIES('clojerl.Reduced') -> true;
+?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.Var') -> true;
 ?SATISFIES('clojerl.Atom') -> true;
 ?SATISFIES(_) -> false.

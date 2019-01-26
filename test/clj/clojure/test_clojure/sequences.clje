@@ -729,8 +729,8 @@
     ;; (transduce (take 5) + (cycle [3 7])) 23
     ;; (transduce (take 5) + 2 (cycle [3 7])) 25
 
-    (take 2 (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
-    (first (next (cycle (map #(/ 42 %) '(2 1 0))))) 42
+    (take 2 (cycle (map #(/ 42 %) '(2 1 0)))) '(21.0 42.0)
+    (first (next (cycle (map #(/ 42 %) '(2 1 0))))) 42.0
     ;; (into [] (take 2) (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
     )
   )
@@ -1015,8 +1015,9 @@
       (reduce + (range 0.0 100.0)) 4950.0
       (reduce + 0 (range 0.0 100.0)) 4950.0
 
-      #_(reduce + (iterator-seq (.iterator (range 100)))) 4950
-      #_(reduce + (iterator-seq (.iterator (range 0.0 100.0 1.0)))) 4950.0 ))
+      ;; (reduce + (iterator-seq (.iterator (range 100)))) 4950
+      ;; (reduce + (iterator-seq (.iterator (range 0.0 100.0 1.0)))) 4950.0
+      ))
 
 (defn unlimited-range-create [& args]
   (let [[arg1 arg2 arg3] args]
