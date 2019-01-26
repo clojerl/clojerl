@@ -6304,8 +6304,14 @@
          (reduce rrf result input)))))
 
 (defn dedupe
-  "Returns a lazy sequence removing consecutive duplicates in coll.
-  Returns a transducer when no collection is provided."
+  "Returns a sequence removing consecutive duplicates in coll.
+  Returns a transducer when no collection is provided.
+
+  NOTE: the returned sequence is *not* lazy, because of how
+  lazy sequences work in clojerl, where the realized values
+  are not cached, and the fact that the internal state of this
+  transducer is destroyed once it reached the end of the
+  collection."
   {:added "1.7"}
   ([]
    (fn [rf]
@@ -6321,7 +6327,7 @@
               (if (= prior input)
                 result
                 (rf result input))))))))
-  ([coll] (sequence (dedupe) coll)))
+  ([coll] (doall (sequence (dedupe) coll))))
 
 (defn random-sample
   "Returns items from coll with random probability of prob (0.0 -
