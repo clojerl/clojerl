@@ -10,7 +10,7 @@
 
 -clojure(true).
 
--export([?CONSTRUCTOR/2]).
+-export([?CONSTRUCTOR/2, ?CONSTRUCTOR/3]).
 
 -export([equiv/2]).
 -export([ first/1
@@ -23,14 +23,21 @@
 -export(['_'/1]).
 -export([str/1]).
 
--type type() :: #{ ?TYPE => ?M
-                 , xform => any()
-                 , coll  => any()
-                 , next  => none | {next, any()}
+-type type() :: #{ ?TYPE     => ?M
+                 , xform     => any()
+                 , coll      => any()
+                 , key       => binary()
+                 , buffer    => [any()]
+                 , completed => boolean()
+                 , multi     => boolean()
                  }.
 
 -spec ?CONSTRUCTOR(any(), any()) -> type().
 ?CONSTRUCTOR(XForm, Coll) ->
+  ?CONSTRUCTOR(XForm, Coll, false).
+
+-spec ?CONSTRUCTOR(any(), any(), boolean()) -> type().
+?CONSTRUCTOR(XForm, Coll, Multi) ->
   UUID = 'erlang.util.UUID':random(),
   Key  = 'erlang.util.UUID':str(UUID),
   F = fun
@@ -47,6 +54,7 @@
        , key       => Key
        , buffer    => []
        , completed => false
+       , multi     => Multi
        },
   step(X).
 
@@ -122,10 +130,15 @@ step(#{ xform  := XForm
       , coll   := Coll0
       , key    := Key
       , buffer := []
+      , multi  := Multi
       } = X0) ->
   First = clj_rt:first(Coll0),
   Coll1 = clj_rt:next(Coll0),
-  {Result, Value0} = fetch_item(XForm, [?NIL, First], Key),
+  Args  = case Multi of
+            true -> [?NIL | clj_rt:to_list(First)];
+            false -> [?NIL, First]
+          end,
+  {Result, Value0} = fetch_item(XForm, Args, Key),
   Completed = 'clojerl.Reduced':is_reduced(Result),
   Value1    = case Completed of
                 true  ->
