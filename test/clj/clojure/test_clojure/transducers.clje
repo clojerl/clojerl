@@ -298,10 +298,9 @@
           (->> (range 5)
             (eduction (mapcat range) (map inc))
             sort)))
-    #_(is (= [1 1 2 1 2 3 1 2 3 4]
+    (is (= [1 1 2 1 2 3 1 2 3 4]
           (vec (->> (range 5)
-                 (eduction (mapcat range) (map inc))
-                 to-array))))
+                    (eduction (mapcat range) (map inc))))))
     (is (= {1 4, 2 3, 3 2, 4 1}
           (->> (range 5)
             (eduction (mapcat range) (map inc))
