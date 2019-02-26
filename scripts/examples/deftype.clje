@@ -45,6 +45,16 @@
 (prn (foo (new SomeRecord 1 2)))
 (prn (bar (new SomeRecord 1 2)))
 
+(extend-type default
+  clojerl.IStringable
+  (str [this]
+    (erlang/iolist_to_binary
+     (io_lib/format #erl"~p" #erl(this)))))
+
+(deftype NonStringable [])
+
+(prn (str (NonStringable.)))
+
 other/ExampleProtocol
 
 (prn #examples.deftype.SomeRecord{:x 1 :y 2})
