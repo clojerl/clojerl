@@ -28,6 +28,8 @@
       'clojerl.ProcessVal':'equiv'(X, Y);
     'clojerl.Var' ->
       'clojerl.Var':'equiv'(X, Y);
+    'clojerl.Delay' ->
+      'clojerl.Delay':'equiv'(X, Y);
     'clojerl.reader.ReaderConditional' ->
       'clojerl.reader.ReaderConditional':'equiv'(X, Y);
     'clojerl.Atom' ->
@@ -88,6 +90,7 @@
 ?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
 ?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.Var') -> true;
+?SATISFIES('clojerl.Delay') -> true;
 ?SATISFIES('clojerl.reader.ReaderConditional') -> true;
 ?SATISFIES('clojerl.Atom') -> true;
 ?SATISFIES('clojerl.Symbol') -> true;

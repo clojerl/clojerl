@@ -1,0 +1,21 @@
+(ns clojure.test-clojure.delays
+  (:use clojure.test))
+
+(deftest calls-once
+  (let [a (atom 0)
+        d (delay (swap! a inc))]
+    (is (= 0 @a))
+    (is (= 1 @d))
+    (is (= 1 @d))
+    (is (= 1 @a))))
+
+(deftest saves-exceptions
+  (let [f #(do (throw (clojerl.Error. "broken"))
+               1)
+        d (delay (f))
+        try-call #(try
+                    @d
+                    (catch _ e e))
+        first-result (try-call)]
+    (is (instance? clojerl.Error first-result))
+    (is (identical? first-result (try-call)))))

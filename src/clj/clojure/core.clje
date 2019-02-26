@@ -686,22 +686,19 @@
   calls. See also - realized?"
   {:added "1.0"}
   [& body]
-  (throw "unimplemented delay")
-  #_(list 'new 'clojerl.Delay (list* `^{:once true} fn* [] body)))
+  (list 'new 'clojerl.Delay (list* `^{:once true} fn* [] body)))
 
 (defn delay?
   "returns true if x is a Delay created with delay"
   {:added "1.0"}
   [x]
-  (throw "unimplemented delay")
-  #_(instance? clojerl.Delay x))
+  (instance? clojerl.Delay x))
 
 (defn force
   "If x is a Delay, returns the (possibly cached) value of its expression, else returns x"
   {:added "1.0"}
   [x]
-  (throw "unimplemented delay")
-  #_(clojerl.Delay/force x))
+  (clojerl.Delay/force x))
 
 (defmacro if-not
   "Evaluates test. If logical false, evaluates and returns then expr,
@@ -6207,8 +6204,7 @@
   "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
   {:added "1.3"}
   [x]
-  (throw "unimplemented realized?")
-  #_(.isRealized x))
+  (.realized? x))
 
 (defmacro cond->
   "Takes an expression and a set of test/form pairs. Threads expr (via ->)
