@@ -1453,15 +1453,32 @@ protocol_function_add_type({{Name, _}, {FName, Fun0}}
                    , cerl:c_case()
                    ) -> cerl:c_case().
 case_add_type(Name, Vars, ?DEFAULT_TYPE, ImplModule, Case) ->
-  Arg      = cerl:case_arg(Case),
-  Clauses0 = cerl:case_clauses(Case),
+  Arg        = cerl:case_arg(Case),
+  Clauses0   = cerl:case_clauses(Case),
 
   %% Add catch all clause
-  Clause   = cerl:c_clause( [new_c_var([])]
+  Clause     = cerl:c_clause( [new_c_var([])]
                           , call_mfa(ImplModule, Name, Vars, [])
                           ),
-  ButLast  = lists:droplast(Clauses0),
-  Clauses1 = ButLast ++ [Clause],
+
+  ButLast    = case lists:droplast(Clauses0) of
+                 [] -> [];
+                 ButLast_ ->
+                   %% We have to check again that the last clause is
+                   %% not a clause with a var, since that will be a
+                   %% catch-all clause, and the Erlang compiler adds
+                   %% an extra clause (i.e. match_fail) in case
+                   %% expressions.
+                   LastClause = lists:last(ButLast_),
+                   [LastArg]  = cerl:clause_pats(LastClause),
+                   case cerl:is_c_var(LastArg) of
+                     true  -> lists:droplast(ButLast_);
+                     false -> ButLast_
+                   end
+               end,
+
+  Clauses1   = ButLast ++ [Clause],
+
   cerl:update_c_case(Case, Arg, Clauses1);
 case_add_type(Name, Vars, TypeModule, ImplModule, Case) ->
   Arg      = cerl:case_arg(Case),
