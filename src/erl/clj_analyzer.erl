@@ -24,8 +24,35 @@ is_special(S) ->
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
   case clj_rt:'seq?'(Form) of
-    true  -> do_macroexpand_1(Form, Env);
+    true  -> safe_macroexpand_1(Form, Env);
     false -> Form
+  end.
+
+-spec safe_macroexpand_1(any(), clj_env:env()) -> any().
+safe_macroexpand_1(Form, Env) ->
+  try
+    do_macroexpand_1(Form, Env)
+  catch ?WITH_STACKTRACE(_, Error0, Stacktrace)
+    Location = error_location(Form, Env),
+    case 'clojerl.IError':?SATISFIES(Error0) of
+      true ->
+        Msg   = 'clojerl.IError':message(Error0),
+        Type  = clj_rt:type_module(Error0),
+        Error = apply( Type
+                     , ?CONSTRUCTOR
+                     , [clj_utils:format_error(Msg, Location)]
+                     ),
+        erlang:raise(error, Error, Stacktrace);
+      false ->
+        ?ERROR(clj_rt:str(Error0), Location, Stacktrace)
+    end
+  end.
+
+-spec error_location(any(), clj_env:env()) -> any().
+error_location(Form, Env) ->
+  case clj_reader:location_meta(Form) of
+    ?NIL -> clj_env:location(Env);
+    Location -> Location
   end.
 
 -spec do_macroexpand_1(any(), clj_env:env()) -> any().
