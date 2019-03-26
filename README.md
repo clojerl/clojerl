@@ -6,13 +6,20 @@ Clojure implemented on the Erlang VM.
 
 ## Building
 
-Building `clojerl` requires *Erlang/OTP 18+* and [*rebar3*](https://github.com/erlang/rebar3).
+Building `clojerl` requires *Erlang/OTP 18+* and [*rebar3*][rebar3].
 
     git clone https://github.com/clojerl/clojerl
     cd clojerl
     make
 
 ## Getting Started
+
+### Online REPL
+
+To try it out and get a sense of what you can do, you can visit
+[Try Clojerl][try-clojerl].
+
+### Local REPL
 
 Running `make repl` will start the REPL and show its prompt:
 
@@ -42,7 +49,39 @@ From the REPL it's possible to start evaluating Clojure expressions:
     nil
     clje.user=>
 
-For a very basic example of a project please check the [example-web-app](https://github.com/clojerl/example-web-app/) repository.
+### Code Examples
+
+There are some very basic examples in the [scripts/examples][examples]
+directory. These are meant to be references on how special forms in
+Clojure on the BEAM are used and how they sometimes differ from Clojure
+JVM.
+
+### Web Application Example
+
+For a very basic example of a web project please check the
+[example-web-app][example-web-app] repository.
+
+The
+
+### Building Your Own App
+
+The build tool for Clojerl project is currently [`rebar3`][rebar3], which
+is the official supported tool in the Erlang community.
+
+The [`rebar3_clojerl`][rebar3_clojerl] plugin provides helpful commands to:
+
+- Build a basic directory scaffolding for a new project
+- Compile
+- Run tests
+- Start a REPL
+
+For more information on how to use this plugin please check the
+documentation in [`rebar3_clojerl`][rebar3_clojerl].
+
+### Documentation and Resources
+
+There is more information regarding Clojerl [here][clojerl], like
+what features does it include and how it differs from Clojure.
 
 ## Rationale
 
@@ -147,3 +186,10 @@ and
 mailing lists.
 
 Any feedback, comment and/or suggestion is welcome!
+
+[rebar3]: https://github.com/erlang/rebar3
+[try-clojerl]: http://try.clojerl.online/
+[examples]: scripts/examples
+[example-web-app]: https://github.com/clojerl/example-web-app/
+[rebar3_clojerl]:https://github.com/clojerl/rebar3_clojerl
+[diffs-with-clojure]: https://clojerl.github.io/differences-with-clojure/
