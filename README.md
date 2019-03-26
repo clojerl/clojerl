@@ -193,3 +193,4 @@ Any feedback, comment and/or suggestion is welcome!
 [example-web-app]: https://github.com/clojerl/example-web-app/
 [rebar3_clojerl]:https://github.com/clojerl/rebar3_clojerl
 [diffs-with-clojure]: https://clojerl.github.io/differences-with-clojure/
+[clojerl]: http://clojerl.org/
