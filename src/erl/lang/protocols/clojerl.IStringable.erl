@@ -60,6 +60,8 @@
       'clojerl.Keyword':'str'(X);
     'clojerl.Boolean' ->
       'clojerl.Boolean':'str'(X);
+    'clojerl.Delay' ->
+      'clojerl.Delay':'str'(X);
     'clojerl.reader.ReaderConditional' ->
       'clojerl.reader.ReaderConditional':'str'(X);
     'clojerl.Float' ->
@@ -140,6 +142,7 @@
 ?SATISFIES('clojerl.Integer') -> true;
 ?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES('clojerl.Boolean') -> true;
+?SATISFIES('clojerl.Delay') -> true;
 ?SATISFIES('clojerl.reader.ReaderConditional') -> true;
 ?SATISFIES('clojerl.Float') -> true;
 ?SATISFIES('clojerl.Atom') -> true;

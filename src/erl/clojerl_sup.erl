@@ -26,5 +26,8 @@ init(_Args) ->
              , #{ id    => 'clojerl.Atom'
                 , start => {'clojerl.Atom', start_link, []}
                 }
+             , #{ id    => 'clojerl.Delay'
+                , start => {'clojerl.Delay', start_link, []}
+                }
              ],
   {ok, {SupFlags, Specs}}.

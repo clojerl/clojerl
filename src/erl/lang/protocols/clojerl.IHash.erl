@@ -48,6 +48,8 @@
       'clojerl.Keyword':'hash'(X);
     'clojerl.Boolean' ->
       'clojerl.Boolean':'hash'(X);
+    'clojerl.Delay' ->
+      'clojerl.Delay':'hash'(X);
     'clojerl.reader.ReaderConditional' ->
       'clojerl.reader.ReaderConditional':'hash'(X);
     'clojerl.Float' ->
@@ -124,6 +126,7 @@
 ?SATISFIES('clojerl.Integer') -> true;
 ?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES('clojerl.Boolean') -> true;
+?SATISFIES('clojerl.Delay') -> true;
 ?SATISFIES('clojerl.reader.ReaderConditional') -> true;
 ?SATISFIES('clojerl.Float') -> true;
 ?SATISFIES('clojerl.Atom') -> true;

@@ -18,6 +18,8 @@
       'clojerl.ProcessVal':'deref'(Ref);
     'clojerl.Var' ->
       'clojerl.Var':'deref'(Ref);
+    'clojerl.Delay' ->
+      'clojerl.Delay':'deref'(Ref);
     'clojerl.Atom' ->
       'clojerl.Atom':'deref'(Ref);
     Type ->
@@ -27,5 +29,6 @@
 ?SATISFIES('clojerl.Reduced') -> true;
 ?SATISFIES('clojerl.ProcessVal') -> true;
 ?SATISFIES('clojerl.Var') -> true;
+?SATISFIES('clojerl.Delay') -> true;
 ?SATISFIES('clojerl.Atom') -> true;
 ?SATISFIES(_) -> false.
