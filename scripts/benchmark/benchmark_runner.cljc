@@ -22,6 +22,16 @@
             (~print-fn (str ~bs-str ", " ~expr-str ", "
                             ~iterations " runs, " elapsed# " msecs")))))))
 
+#?(:clj
+   (defn vm-info []
+     (System/getProperty "java.version"))
+   :clje
+   (defn vm-info []
+     (->> [:otp_release :version]
+          (map (comp erlang/list_to_binary.1
+                     erlang/system_info.1))
+          (apply format "Erlang/OTP ~s [erts-~s]"))))
+
 (def strings
   (into [] (take 10 (iterate (fn [s] (str s "string")) "string"))))
 
@@ -45,6 +55,11 @@
 (defmethod simple-multi :foo [x] x)
 
 (defn -main [& args]
+  (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")
+  (println ";;; VM      = " (vm-info))
+  (println ";;; Clojure = " (clojure-version))
+  (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n")
+
   (simple-benchmark [x 1] (identity x) 1000000)
 
   (println ";; symbol construction")
