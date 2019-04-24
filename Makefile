@@ -48,5 +48,15 @@ benchmark: all
 	${V} (time ${CLOJERL} -m benchmark.benchmark-runner) 2>&1 | tee ${SCRIPTS}/benchmark/result.txt
 	${V} ${CLOJERL} -m benchmark.report ${SCRIPTS}/benchmark/result.txt ${SCRIPTS}/benchmark/result.prev.txt
 
+CLJ_BENCH=${SCRIPTS}/benchmark/clojure.txt
+CLJE_BENCH=${SCRIPTS}/benchmark/clojerl.txt
+CLJ_VS_CLJE=${SCRIPTS}/benchmark/clojure-vs-clojerl.md
+
+benchmark-comparison:
+	${V} clj -i scripts/benchmark/benchmark_runner.cljc | tee ${CLJ_BENCH}
+	${V} ${CLOJERL} -m benchmark.benchmark-runner | tee ${CLJE_BENCH}
+	${V} ${CLOJERL} -m benchmark.compare ${CLJ_BENCH} ${CLJE_BENCH} | tee ${CLJ_VS_CLJE}
+	${V} rm ${CLJ_BENCH} ${CLJE_BENCH}
+
 compile-examples: compile
 	${V} ${CLOJERLC} ${SCRIPTS}/examples/${EXAMPLE}.clje
