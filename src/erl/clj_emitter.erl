@@ -600,6 +600,9 @@ ast(#{op := with_meta} = WithMetaExpr, State) ->
 %%------------------------------------------------------------------------------
 %% Literal data structures
 %%------------------------------------------------------------------------------
+ast(#{op := vector, items := [], env := Env}, State) ->
+  Ast = cerl:ann_abstract(ann_from(Env), 'clojerl.Vector':?CONSTRUCTOR([])),
+  push_ast(Ast, State);
 ast(#{op := vector} = Expr, State) ->
   ?DEBUG(vector),
   #{ items := ItemsExprs
@@ -613,6 +616,9 @@ ast(#{op := vector} = Expr, State) ->
 
   Ast = call_mfa('clojerl.Vector', ?CONSTRUCTOR, [ListItems], ann_from(Env)),
   push_ast(Ast, State1);
+ast(#{op := map, keys := [], env := Env}, State) ->
+  Ast = cerl:ann_abstract(ann_from(Env), 'clojerl.Map':?CONSTRUCTOR([])),
+  push_ast(Ast, State);
 ast(#{op := map} = Expr, State) ->
   ?DEBUG(map),
   #{ keys := KeysExprs
@@ -667,6 +673,9 @@ ast(#{op := erl_map} = Expr, State) ->
 
   Ast = cerl:ann_c_map(ann_from(Env), PairsAsts),
   push_ast(Ast, State2);
+ast(#{op := set, items := [], env := Env}, State) ->
+  Ast = cerl:ann_abstract(ann_from(Env), 'clojerl.Set':?CONSTRUCTOR([])),
+  push_ast(Ast, State);
 ast(#{op := set} = Expr, State) ->
   ?DEBUG(set),
   #{ items := ItemsExprs
