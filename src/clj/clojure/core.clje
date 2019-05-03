@@ -5275,15 +5275,11 @@
   {:added "1.9"}
   [x] (instance? erlang.util.UUID x))
 
-(defn reduce ([f coll]) ([f val coll]))
-
+; simple reduce based on seqs, used as default
 (defn- seq-reduce
   ([f coll]
     (if-let [s (seq coll)]
-      (let [nval (reduce f (first s) (next s))]
-        (if (reduced? nval)
-          @nval
-          nval))
+      (reduce f (first s) (next s))
       (f)))
   ([f val coll]
     (loop [val val, coll (seq coll)]
@@ -5319,6 +5315,11 @@
   (kv-reduce
     [_ f init]
     init)
+
+  clojerl.SortedMap
+  (kv-reduce
+    [amap f init]
+    (reduce (fn [ret [k v]] (f ret k v)) init amap))
 
   ;;slow path default
   clojerl.Map

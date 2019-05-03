@@ -21,6 +21,8 @@
 -export([ ?CONSTRUCTOR/1
         , ?CONSTRUCTOR/2
         ]).
+-export([fold/8]).
+
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -55,7 +57,8 @@
          ]
        ).
 
--type mappings() :: #{integer() => {any(), any()} | [{any(), any()}]}.
+-type entry()    :: clj_hash_collision:entry().
+-type mappings() :: #{integer() => entry()}.
 
 -type type() :: #{ ?TYPE => ?M
                  , map   => mappings()
@@ -98,6 +101,35 @@ build_mappings({Key, Value}, {Count, Map, FailDuplicates}) ->
              , [<<"Duplicate key: ">>, Key]
              ),
   {Count + Diff, Map#{Hash => Entry}, FailDuplicates}.
+
+-spec fold(type(), integer(), any(), any(), any(), any(), any(), any()) ->
+  any().
+fold( #{?TYPE := ?M, map := Map} = M
+    , N
+    , Combine
+    , Reduce
+    , Invoke
+    , Task
+    , Fork
+    , Join
+    ) ->
+  F = fun() ->
+          Init = clj_rt:apply(Combine, []),
+          case count(M) of
+            0 -> Init;
+            _ ->
+              Entries = maps:values(Map),
+              Partitions = partition_kvs(Entries, N),
+              Tasks = [ create_task(KVs, Combine, Reduce, Task, Fork, Join)
+                        || KVs <- Partitions
+                      ],
+              Result = fold_tasks( Tasks, length(Partitions), Combine
+                                 , Reduce, Task, Fork, Join
+                                 ),
+              clj_rt:apply(Combine, [Init, Result])
+          end
+      end,
+  clj_rt:apply(Invoke, [F]).
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -282,3 +314,71 @@ to_list_fold(_Hash, KVs, List) ->
 
 str(#{?TYPE := ?M} = M) ->
   clj_rt:print_str(M).
+
+%%------------------------------------------------------------------------------
+%% Internal functions
+%%------------------------------------------------------------------------------
+
+%% Helper functions for fold/8 used by clojure.core.reducers
+
+-spec partition_kvs([entry()], integer()) -> [[{any(), any()}]].
+partition_kvs(Entries, N) ->
+  {_, Partitions} = partition_kvs(Entries, N, N, [], []),
+  Partitions.
+
+-spec partition_kvs( [entry()], integer(), integer()
+                   , [{any(), any()}], [[{any(), any()}]]
+                   ) ->
+  {integer(), [[{any(), any()}]]}.
+partition_kvs([], _MaxN, N, [], Acc) ->
+  {N, Acc};
+partition_kvs([], _MaxN, N, Current, Acc) ->
+  {N, [Current | Acc]};
+partition_kvs(Entries, MaxN, 0, Current, Acc0) ->
+  Acc = [Current | Acc0],
+  partition_kvs(Entries, MaxN, MaxN, [], Acc);
+partition_kvs([{_, _} = KV | Rest], MaxN, N, Current, Acc) ->
+  partition_kvs(Rest, MaxN, N - 1, [KV | Current], Acc);
+partition_kvs([KVs | Rest], MaxN, N0, Current0, Acc0) ->
+  %% Entries where there was a hash conflict
+  %% will contains a list of {K, V}.
+  case partition_kvs(KVs, MaxN, N0, Current0, Acc0) of
+    {0, Acc} ->
+      partition_kvs(KVs, MaxN, MaxN, [], Acc);
+    {N, [Current | Acc]} ->
+      partition_kvs(Rest, MaxN, N, Current, Acc)
+  end.
+
+-spec create_task([entry()], any(), any(), any(), any(), any()) ->
+  any().
+create_task(KVs, Combine, Reduce, Task, Fork, Join) ->
+  fun() ->
+      fold_kvs(KVs, Combine, Reduce, Task, Fork, Join)
+  end.
+
+-spec fold_tasks([function()], integer(), any(), any(), any(), any(), any()) ->
+  any().
+fold_tasks([], _Count, Combine, _Reduce, _Task, _Fork, _Join) ->
+  clj_rt:apply(Combine, []);
+fold_tasks([Task], _Count, _Combine, _Reduce, _Task, _Fork, _Join) ->
+  Task();
+fold_tasks(Tasks, Count, Combine, Reduce, Task, Fork, Join) ->
+  HalfCount = Count div 2,
+  {Tasks1, Tasks2} = lists:split(HalfCount, Tasks),
+  ForkedFun =
+    fun() ->
+        fold_tasks(Tasks2, Count - HalfCount, Combine, Reduce, Task, Fork, Join)
+    end,
+  Forked = clj_rt:apply(Fork, [clj_rt:apply(Task, [ForkedFun])]),
+  Result = fold_tasks(Tasks1, HalfCount, Combine, Reduce, Task, Fork, Join),
+  ResultJoin = clj_rt:apply(Join, [Forked]),
+  clj_rt:apply(Combine, [Result, ResultJoin]).
+
+-spec fold_kvs([entry()], any(), any(), any(), any(), any()) ->
+  any().
+fold_kvs(KVs, Combine, Reduce, _Task, _Fork, _Join) ->
+  Fun = fun ({K, V}, Acc) ->
+            clj_rt:apply(Reduce, [Acc, K, V])
+        end,
+  Init = clj_rt:apply(Combine, []),
+  lists:foldl(Fun, Init, KVs).
