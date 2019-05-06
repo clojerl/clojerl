@@ -174,26 +174,35 @@ with_meta(#{?TYPE := ?M} = Vector, Meta) ->
 
 reduce(#{?TYPE := ?M, array := Array}, F) ->
   case array:size(Array) of
-    0    -> clj_rt:apply(F, []);
-    Size ->
-      Init = array:get(0, Array),
-      do_reduce(F, Init, 1, Size, Array)
+    0 -> clj_rt:apply(F, []);
+    1 -> array:get(0, Array);
+    _ -> do_reduce(F, use_first, Array)
   end.
 
 reduce(#{?TYPE := ?M, array := Array}, F, Init) ->
   case array:size(Array) of
-    0    -> Init;
-    Size -> do_reduce(F, Init, 0, Size, Array)
+    0 -> Init;
+    _ -> do_reduce(F, {acc, Init}, Array)
   end.
 
-do_reduce(F, Acc, Index, Size, Array) when Index < Size ->
-  Val = clj_rt:apply(F, [Acc, array:get(Index, Array)]),
-  case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> 'clojerl.Reduced':deref(Val);
-    false -> do_reduce(F, Val, Index + 1, Size, Array)
-  end;
-do_reduce(_F, Acc, _Index, _Size, _Array) ->
-  Acc.
+do_reduce(F, Init, Array) ->
+  Ref  = make_ref(),
+  Fold = fun
+           (_, Item, use_first) -> {acc, Item};
+           (_, Item, {acc, Acc}) ->
+             Val = clj_rt:apply(F, [Acc, Item]),
+             case 'clojerl.Reduced':is_reduced(Val) of
+               true  -> throw({Ref, 'clojerl.Reduced':deref(Val)});
+               false -> {acc, Val}
+             end
+         end,
+  %% Use array:foldl/3 which has knowledge of the
+  %% underlying representation
+  try
+    {acc, Result} = array:foldl(Fold, Init, Array),
+    Result
+  catch throw:{Ref, Val} -> Val
+  end.
 
 %% clojerl.IReduce
 
