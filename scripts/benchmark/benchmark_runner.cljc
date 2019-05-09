@@ -1,4 +1,5 @@
-(ns benchmark.benchmark-runner)
+(ns benchmark.benchmark-runner
+  (:require [clojure.string :as string]))
 
 (defrecord Foo [bar baz])
 
@@ -211,13 +212,13 @@
   ;; (simple-benchmark [xs (into [] (range 1000000))] (r/reduce + (r/map inc (r/map inc (r/map inc xs)))) 1)
 
   (println ";; transducers")
-  ;; (simple-benchmark [xs (into [] (range 1000000))] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)
+  (simple-benchmark [xs (into [] (range 1000000))] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)
 
   (println ";; reduce range 1000000 many ops")
   (simple-benchmark [xs (range 1000000)] (reduce + 0 (map inc (map inc (map inc xs)))) 1)
 
   (println ";; transduce range 1000000 many ops ")
-  ;; (simple-benchmark [xs (range 1000000)] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)
+  (simple-benchmark [xs (range 1000000)] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)
 
   (println "\n")
 
@@ -231,6 +232,59 @@
   (simple-benchmark [f vector] (f 1 2 3 4 5 6 7 8 9 0) 100000)
   (simple-benchmark [] (= 1 1 1 1 1 1 1 1 1 0) 100000)
 
+  (println "\n")
+  (println ";; Destructuring a sequence")
+  (simple-benchmark [v (into [] (range 1000000))]
+                    (loop [[x & xs] v]
+                      (if-not (nil? xs)
+                        (recur xs)
+                        x))
+                    10)
+
+  (println "\n")
+  (println ";;; str")
+  (simple-benchmark [] (str 1) 1000000)
+  (simple-benchmark [] (str nil) 1000000)
+  (simple-benchmark [] (str "1") 1000000)
+  (simple-benchmark [] (str "1" "2") 1000000)
+  (simple-benchmark [] (str "1" "2" "3") 1000000)
+
+  (println "\n")
+  (println ";;; clojure.string")
+  (simple-benchmark [s "a" f clojure.string/capitalize] (f s) 1000000)
+  (simple-benchmark [s "aBcDeF" f clojure.string/capitalize] (f s) 1000000)
+
+  (println ";; printing of numbers")
+  (simple-benchmark [x true] (pr-str x) 1000)
+  (simple-benchmark [x 10] (pr-str x) 1000)
+
+  (println "\n")
+  (println ";; cycle")
+  (simple-benchmark [] (doall (take 1000 (cycle [1 2 3]))) 1000)
+  (simple-benchmark [] (into [] (take 1000) (cycle [1 2 3])) 1000)
+  (simple-benchmark [] (reduce + (take 64 (cycle [1 2 3]))) 10000)
+  (simple-benchmark [] (transduce (take 64) + (cycle [1 2 3])) 10000)
+
+  (println "\n")
+  (println ";; repeat")
+  (simple-benchmark [] (doall (take 1000 (repeat 1))) 1000)
+  (simple-benchmark [] (into [] (take 1000) (repeat 1)) 1000)
+  (simple-benchmark [] (doall (repeat 1000 1)) 1000)
+  (simple-benchmark [] (into [] (repeat 1000 1)) 1000)
+  (simple-benchmark [] (reduce + 0 (repeat 1000 1)) 1000)
+  (simple-benchmark [] (into [] (take 1000) (repeat 1)) 1000)
+  (simple-benchmark [] (reduce + (take 64 (repeat 1))) 10000)
+  (simple-benchmark [] (transduce (take 64) + (repeat 1)) 10000)
+  (simple-benchmark [] (reduce + (take 64 (repeat 48 1))) 10000)
+  (simple-benchmark [] (transduce (take 64) + (repeat 48 1)) 10000)
+
+  (println "\n")
+  (println ";; iterate")
+  (simple-benchmark [] (doall (take 1000 (iterate inc 0))) 1000)
+  (simple-benchmark [] (into [] (take 1000) (iterate inc 0)) 1000)
+  (simple-benchmark [] (reduce + (take 64 (iterate inc 0))) 10000)
+  (simple-benchmark [] (transduce (take 64) + (iterate inc 0)) 10000)
+  (println)
   )
 
 #?(:clj (-main))
