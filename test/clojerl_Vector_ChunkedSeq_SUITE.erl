@@ -172,8 +172,8 @@ reduce(_Config) ->
 
   10 = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusMaxFun),
 
-  Array           = array:from_list(lists:seq(0, 32)),
-  EmptyChunkedSeq = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 33),
+  Array           = clj_vector:new(lists:seq(0, 32)),
+  EmptyChunkedSeq = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 32, 1),
 
   0 = 'clojerl.IReduce':reduce(EmptyChunkedSeq, PlusFun, 0),
   0 = 'clojerl.IReduce':reduce(EmptyChunkedSeq, PlusFun),
@@ -187,8 +187,8 @@ to_erl(_Config) ->
   Tuple1      = clj_rt:'->erl'(ChunkedSeq1, false),
   Tuple1      = clj_rt:'->erl'(ChunkedSeq1, true),
 
-  Array            = array:from_list([1, ChunkedSeq1]),
-  ChunkedSeq2      = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0),
+  Array            = clj_vector:new([1, ChunkedSeq1]),
+  ChunkedSeq2      = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0, 0),
   {1, ChunkedSeq1} = clj_rt:'->erl'(ChunkedSeq2, false),
   {1, Tuple1}      = clj_rt:'->erl'(ChunkedSeq2, true),
 
@@ -201,8 +201,8 @@ complete_coverage(_Config) ->
   VectorMeta  = clj_rt:with_meta(chunked_seq(64), #{a => 1}),
   #{a := 1} = clj_rt:meta(VectorMeta),
 
-  Array = array:from_list(lists:seq(0, 32)),
-  ChunkedSeq = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 33),
+  Array = clj_vector:new(lists:seq(0, 32)),
+  ChunkedSeq = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 32, 1),
   ?NIL = clj_rt:seq(ChunkedSeq),
 
   {comments, ""}.

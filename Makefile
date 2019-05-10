@@ -46,7 +46,7 @@ CLOJERLC := ${CLOJERL} --compile -o ${EBIN}
 benchmark: all
 	${V} cp ${SCRIPTS}/benchmark/result.txt ${SCRIPTS}/benchmark/result.prev.txt
 	${V} (time ${CLOJERL} -m benchmark.benchmark-runner) 2>&1 | tee ${SCRIPTS}/benchmark/result.txt
-	${V} ${CLOJERL} -m benchmark.report ${SCRIPTS}/benchmark/result.txt ${SCRIPTS}/benchmark/result.prev.txt
+	${V} ${CLOJERL} -m benchmark.report ${SCRIPTS}/benchmark/result.txt ${SCRIPTS}/benchmark/result.prev.txt | tee ${SCRIPTS}/benchmark/report.md
 
 CLJ_BENCH=${SCRIPTS}/benchmark/clojure.txt
 CLJE_BENCH=${SCRIPTS}/benchmark/clojerl.txt

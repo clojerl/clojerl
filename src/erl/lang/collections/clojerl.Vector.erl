@@ -56,14 +56,14 @@
 -export([str/1]).
 
 -type type() :: #{ ?TYPE => ?M
-                 , array => array:array()
+                 , array => clj_vector:vector()
                  , meta  => ?NIL | any()
                  }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
 ?CONSTRUCTOR(Items) when is_list(Items) ->
   #{ ?TYPE => ?M
-   , array => array:from_list(Items, ?NIL)
+   , array => clj_vector:new(Items)
    , meta  => ?NIL
    }.
 
@@ -86,25 +86,24 @@ contains_key(#{?TYPE := ?M, array := Array}, Index) ->
 
 entry_at(#{?TYPE := ?M, array := Array}, Index) ->
   case is_valid_index(Array, Index) of
-    true  -> ?CONSTRUCTOR([Index, array:get(Index, Array)]);
+    true  -> ?CONSTRUCTOR([Index, clj_vector:get(Index, Array)]);
     false -> ?NIL
   end.
 
 assoc(#{?TYPE := ?M, array := Array} = Vector, Index, Value) ->
-  case is_valid_index(Array, Index) orelse Index == array:size(Array) of
-    true  -> Vector#{array => array:set(Index, Value, Array)};
+  case is_valid_index(Array, Index) orelse Index == clj_vector:size(Array) of
+    true  -> Vector#{array => clj_vector:set(Index, Value, Array)};
     false -> ?ERROR(<<"Index out of bounds">>)
   end.
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, array := Array}) -> array:size(Array).
+count(#{?TYPE := ?M, array := Array}) -> clj_vector:size(Array).
 
 %% clojerl.IColl
 
 cons(#{?TYPE := ?M, array := Array} = Vector, X) ->
-  NewArray = array:set(array:size(Array), X, Array),
-  Vector#{array => NewArray}.
+  Vector#{array => clj_vector:cons(X, Array)}.
 
 empty(_) -> ?CONSTRUCTOR([]).
 
@@ -113,16 +112,16 @@ empty(_) -> ?CONSTRUCTOR([]).
 equiv( #{?TYPE := ?M, array := X}
      , #{?TYPE := ?M, array := Y}
      ) ->
-  case array:size(X) == array:size(Y) of
+  case clj_vector:size(X) == clj_vector:size(Y) of
     true ->
-      X1 = array:to_list(X),
-      Y1 = array:to_list(Y),
+      X1 = clj_vector:to_list(X),
+      Y1 = clj_vector:to_list(Y),
       'erlang.List':equiv(X1, Y1);
     false -> false
   end;
 equiv(#{?TYPE := ?M, array := X}, Y) ->
   case clj_rt:'sequential?'(Y) of
-    true  -> 'erlang.List':equiv(array:to_list(X), Y);
+    true  -> 'erlang.List':equiv(clj_vector:to_list(X), Y);
     false -> false
   end.
 
@@ -140,7 +139,7 @@ equiv(#{?TYPE := ?M, array := X}, Y) ->
 
 apply(#{?TYPE := ?M, array := Array}, [Index]) when is_integer(Index) ->
   ?ERROR_WHEN(not is_valid_index(Array, Index), <<"Index out of bounds">>),
-  array:get(Index, Array);
+  clj_vector:get(Index, Array);
 apply(#{?TYPE := ?M}, [_]) ->
   ?ERROR(<<"Key must be integer">>);
 apply(#{?TYPE := ?M}, Args) ->
@@ -150,7 +149,7 @@ apply(#{?TYPE := ?M}, Args) ->
 %% clojerl.IHash
 
 hash(#{?TYPE := ?M, array := Array}) ->
-  clj_murmur3:ordered(array:to_list(Array)).
+  clj_murmur3:ordered(clj_vector:to_list(Array)).
 
 %% clojerl.ILookup
 
@@ -159,7 +158,7 @@ get(#{?TYPE := ?M} = Vector, Index) ->
 
 get(#{?TYPE := ?M, array := Array}, Index, NotFound) ->
   case is_valid_index(Array, Index) of
-    true  -> array:get(Index, Array);
+    true  -> clj_vector:get(Index, Array);
     false -> NotFound
   end.
 
@@ -173,43 +172,17 @@ with_meta(#{?TYPE := ?M} = Vector, Meta) ->
 %% clojerl.IReduce
 
 reduce(#{?TYPE := ?M, array := Array}, F) ->
-  case array:size(Array) of
-    0 -> clj_rt:apply(F, []);
-    1 -> array:get(0, Array);
-    _ -> do_reduce(F, use_first, Array)
-  end.
+  clj_vector:reduce(F, Array).
 
 reduce(#{?TYPE := ?M, array := Array}, F, Init) ->
-  case array:size(Array) of
-    0 -> Init;
-    _ -> do_reduce(F, {acc, Init}, Array)
-  end.
-
-do_reduce(F, Init, Array) ->
-  Ref  = make_ref(),
-  Fold = fun
-           (_, Item, use_first) -> {acc, Item};
-           (_, Item, {acc, Acc}) ->
-             Val = clj_rt:apply(F, [Acc, Item]),
-             case 'clojerl.Reduced':is_reduced(Val) of
-               true  -> throw({Ref, 'clojerl.Reduced':deref(Val)});
-               false -> {acc, Val}
-             end
-         end,
-  %% Use array:foldl/3 which has knowledge of the
-  %% underlying representation
-  try
-    {acc, Result} = array:foldl(Fold, Init, Array),
-    Result
-  catch throw:{Ref, Val} -> Val
-  end.
+  clj_vector:reduce(F, Init, Array).
 
 %% clojerl.IReduce
 
 rseq(#{?TYPE := ?M, array := Array}) ->
-  case array:size(Array) of
+  case clj_vector:size(Array) of
     0 -> ?NIL;
-    _ -> 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, array:size(Array) - 1)
+    _ -> 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, clj_vector:size(Array) - 1)
   end.
 
 %% clojerl.ISequential
@@ -220,43 +193,38 @@ rseq(#{?TYPE := ?M, array := Array}) ->
 
 nth(#{?TYPE := ?M, array := Array}, N) ->
   case is_valid_index(Array, N) of
-    true  -> array:get(N, Array);
+    true  -> clj_vector:get(N, Array);
     false -> error(badarg)
   end.
 
 nth(#{?TYPE := ?M, array := Array}, N, NotFound) ->
   case is_valid_index(Array, N) of
-    true  -> array:get(N, Array);
+    true  -> clj_vector:get(N, Array);
     false -> NotFound
   end.
 
 %% clojerl.IStack
 
 peek(#{?TYPE := ?M, array := Array}) ->
-  case array:size(Array) of
+  case clj_vector:size(Array) of
     0    -> ?NIL;
-    Size -> array:get(Size - 1, Array)
+    Size -> clj_vector:get(Size - 1, Array)
   end.
 
 pop(#{?TYPE := ?M, array := Array} = Vector) ->
-  case array:size(Array) of
-    0    -> error(<<"Can't pop empty vector">>);
-    Size ->
-      NewArray = array:resize(Size - 1, Array),
-      Vector#{array => NewArray}
-  end.
+  Vector#{array => clj_vector:pop(Array)}.
 
 %% clojerl.ISeqable
 
 seq(#{?TYPE := ?M, array := Array}) ->
-  case array:size(Array) of
+  case clj_vector:size(Array) of
     0 -> ?NIL;
-    Size when Size =< ?CHUNK_SIZE -> array:to_list(Array);
-    _ -> 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0)
+    Size when Size =< ?CHUNK_SIZE -> clj_vector:to_list(Array);
+    _ -> 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0, 0)
   end.
 
 to_list(#{?TYPE := ?M, array := Array}) ->
-  array:to_list(Array).
+  clj_vector:to_list(Array).
 
 %% clojerl.IStringable
 
@@ -268,4 +236,4 @@ str(#{?TYPE := ?M} = Vector) ->
 %%------------------------------------------------------------------------------
 
 is_valid_index(Array, Index) ->
-  is_integer(Index) andalso Index >= 0 andalso Index < array:size(Array).
+  is_integer(Index) andalso Index >= 0 andalso Index < clj_vector:size(Array).

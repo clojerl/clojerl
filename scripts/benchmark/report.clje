@@ -44,6 +44,9 @@
 (defn -main [& [path path-prev]]
   (let [items (make-report (slurp path))
         items-prev (when path-prev
-                     (vals (make-report (slurp path-prev))))
-        result (compare items items-prev)]
-    (print-report result)))
+                     (vals (make-report (slurp path-prev))))]
+    (-> (compare items items-prev)
+        print-report
+        with-out-str
+        (str/replace "-+-" "-|-")
+        println)))

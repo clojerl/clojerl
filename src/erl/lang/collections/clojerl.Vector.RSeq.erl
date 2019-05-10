@@ -37,12 +37,12 @@
 -export([str/1]).
 
 -type type() :: #{ ?TYPE => ?M
-                 , array => array:array()
+                 , array => clj_vector:vector()
                  , index => integer()
                  , meta  => ?NIL | any()
                  }.
 
--spec ?CONSTRUCTOR(array:array(), integer()) -> type().
+-spec ?CONSTRUCTOR(clj_vector:vector(), integer()) -> type().
 ?CONSTRUCTOR(Array, Index) when Index >= 0 ->
   #{ ?TYPE => ?M
    , array => Array
@@ -104,7 +104,7 @@ with_meta(#{?TYPE := ?M} = X, Meta) ->
 %% clojerl.ISeq
 
 first(#{?TYPE := ?M, index := Index, array := Array}) ->
-  array:get(Index, Array).
+  clj_vector:get(Index, Array).
 
 next(#{?TYPE := ?M, index := Index}) when Index =< 0 -> ?NIL;
 next(#{?TYPE := ?M, index := Index} = X) ->
@@ -129,7 +129,7 @@ to_list(#{?TYPE := ?M, array := Array, index := Index}) ->
 do_to_list(_Array, Current, End, Result) when Current > End ->
   Result;
 do_to_list(Array, Current, End, Result) ->
-  Item = array:get(Current, Array),
+  Item = clj_vector:get(Current, Array),
   do_to_list(Array, Current + 1, End, [Item | Result]).
 
 %% clojerl.IStringable
