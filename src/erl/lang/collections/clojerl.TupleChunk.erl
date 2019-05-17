@@ -68,39 +68,36 @@ hash(#{?TYPE := ?M, tuple := Tuple, offset := Offset, size := Size}) ->
   Items   = [erlang:element(I, Tuple)|| I <- Indexes],
   clj_murmur3:ordered(Items).
 
-reduce(#{?TYPE := ?M, tuple := Tuple, offset := Offset, size := Size}, Fun) ->
-  Size  = erlang:tuple_size(Tuple),
-  Init  = erlang:element(Offset + 1, Tuple),
-  Items = case Offset + 1 < Size of
-            true ->
-              Indexes = lists:seq(Offset + 2, Size),
-              [erlang:element(Index, Tuple)|| Index <- Indexes];
-            false ->
-              []
-          end,
-  do_reduce(Fun, Init, Items).
+reduce( #{ ?TYPE  := ?M
+         , tuple  := Tuple
+         , offset := Offset
+         , size   := Size}
+      , Fun
+      ) ->
+  Init = erlang:element(Offset + 1, Tuple),
+  case Offset + 1 < Size of
+    true -> do_reduce(Fun, Tuple, Size, Offset + 2, Init);
+    _ -> Init
+  end.
 
-reduce(#{ ?TYPE  := ?M
-        , tuple  := Tuple
-        , offset := Offset
-        , size   := Size
-        }
+reduce( #{ ?TYPE  := ?M
+         , tuple  := Tuple
+         , offset := Offset
+         , size   := Size
+         }
       , Fun
       , Init
       ) ->
-  Size     = erlang:tuple_size(Tuple),
-  Items    = [ erlang:element(Index, Tuple)
-               || Index <- lists:seq(Offset + 1, Size)
-             ],
-  do_reduce(Fun, Init, Items).
+  do_reduce(Fun, Tuple, Size, Offset + 1, Init).
 
-do_reduce(_Fun, Acc, []) ->
+do_reduce(_Fun, _Tuple, End, Current, Acc) when Current > End ->
   Acc;
-do_reduce(Fun, Acc, [Item | Items]) ->
+do_reduce(Fun, Tuple, End, Current, Acc) ->
+  Item = element(Current, Tuple),
   Val = clj_rt:apply(Fun, [Acc, Item]),
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> 'clojerl.Reduced':deref(Val);
-    false -> do_reduce(Fun, Val, Items)
+    _ -> do_reduce(Fun, Tuple, End, Current + 1, Val)
   end.
 
 nth(#{?TYPE := ?M} = TupleChunk, N) ->

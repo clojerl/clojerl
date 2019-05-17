@@ -142,7 +142,7 @@ to_erl(_Config) ->
   List1 = clj_rt:'->erl'(RSeq1, false),
   List1 = clj_rt:'->erl'(RSeq1, true),
 
-  Array = array:from_list([1, RSeq1]),
+  Array = clj_vector:new([1, RSeq1]),
   RSeq2 = 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, 1),
   [RSeq1, 1] = clj_rt:'->erl'(RSeq2, false),
   [List1, 1] = clj_rt:'->erl'(RSeq2, true),

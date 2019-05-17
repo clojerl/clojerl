@@ -16,7 +16,7 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/2]).
+-export([?CONSTRUCTOR/3]).
 
 -export([count/1]).
 -export([ cons/2
@@ -45,20 +45,28 @@
         ]).
 -export([str/1]).
 
--type type() :: #{ ?TYPE => ?M
-                 , array => array:array()
-                 , size  => non_neg_integer()
-                 , index => non_neg_integer()
-                 , meta  => ?NIL | any()
+-type type() :: #{ ?TYPE     => ?M
+                 , vector    => clj_vector:vector()
+                 , size      => non_neg_integer()
+                 , index     => non_neg_integer()
+                 , offset    => non_neg_integer()
+                 , node      => tuple()
+                 , node_size => non_neg_integer()
+                 , meta      => ?NIL | any()
                  }.
 
--spec ?CONSTRUCTOR(array:array(), non_neg_integer()) -> type().
-?CONSTRUCTOR(Array, Index) ->
-  #{ ?TYPE => ?M
-   , array => Array
-   , size  => array:size(Array)
-   , index => Index
-   , meta  => ?NIL
+-spec ?CONSTRUCTOR(clj_vector:vector(), non_neg_integer(), non_neg_integer()) ->
+  type().
+?CONSTRUCTOR(Vector, Index, Offset) ->
+  Size = clj_vector:size(Vector),
+  #{ ?TYPE     => ?M
+   , vector    => Vector
+   , size      => Size
+   , index     => Index
+   , offset    => Offset
+   , node      => clj_vector:tuple_for(Index, Vector)
+   , node_size => erlang:min(Size - Index, ?CHUNK_SIZE)
+   , meta      => ?NIL
    }.
 
 %%------------------------------------------------------------------------------
@@ -67,8 +75,8 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, size := Size, index := Index}) ->
-  Size - Index.
+count(#{?TYPE := ?M, size := Size, index := Index, offset := Offset}) ->
+  Size - (Index + Offset).
 
 %% clojerl.IColl
 
@@ -79,15 +87,32 @@ empty(_) -> clj_rt:list([]).
 
 %% clojerl.IChunkedSeq
 
-chunked_first(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
-  End  = erlang:min(Size, Index + ?CHUNK_SIZE),
-  List = [array:get(I, Array) || I <- lists:seq(Index, End - 1)],
-  'clojerl.TupleChunk':?CONSTRUCTOR(list_to_tuple(List)).
+chunked_first( #{ ?TYPE     := ?M
+                , offset    := Offset
+                , node      := Node
+                , node_size := NodeSize
+                }
+             ) ->
+  'clojerl.TupleChunk':?CONSTRUCTOR( Node
+                                   , Offset
+                                   , NodeSize
+                                   ).
 
-chunked_next(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
-  End = erlang:min(Size, Index + ?CHUNK_SIZE),
-  case End < Size of
-    true  -> ?CONSTRUCTOR(Array, Index + ?CHUNK_SIZE);
+chunked_next( #{ ?TYPE     := ?M
+               , vector    := Vector
+               , size      := Size
+               , index     := Index
+               , node_size := NodeSize
+               } = ChunkedSeq
+            ) ->
+  case Index + NodeSize < Size of
+    true ->
+      NewIndex = Index + ?CHUNK_SIZE,
+      ChunkedSeq#{ index     => NewIndex
+                 , offset    => 0
+                 , node      => clj_vector:tuple_for(NewIndex, Vector)
+                 , node_size => erlang:min(Size - NewIndex, ?CHUNK_SIZE)
+                 };
     false -> ?NIL
   end.
 
@@ -99,13 +124,13 @@ chunked_more(#{?TYPE := ?M} = ChunkedSeq) ->
 
 %% clojerl.IEquiv
 
-equiv( #{?TYPE := ?M, array := X, size := SizeX}
-     , #{?TYPE := ?M, array := Y, size := SizeY}
+equiv( #{?TYPE := ?M, vector := X, size := SizeX}
+     , #{?TYPE := ?M, vector := Y, size := SizeY}
      ) ->
   case SizeX =:= SizeY of
     true ->
-      X1 = array:to_list(X),
-      Y1 = array:to_list(Y),
+      X1 = clj_vector:to_list(X),
+      Y1 = clj_vector:to_list(Y),
       'erlang.List':equiv(X1, Y1);
     false -> false
   end;
@@ -127,8 +152,8 @@ equiv(#{?TYPE := ?M} = X, Y) ->
 
 %% clojerl.IHash
 
-hash(#{?TYPE := ?M, array := Array}) ->
-  clj_murmur3:ordered(array:to_list(Array)).
+hash(#{?TYPE := ?M, vector := Vector}) ->
+  clj_murmur3:ordered(clj_vector:to_list(Vector)).
 
 %% clojerl.IMeta
 
@@ -161,7 +186,8 @@ do_reduce(ChunkedSeq, F, Init) ->
   case 'clojerl.Reduced':is_reduced(Val) of
     true  -> 'clojerl.Reduced':deref(Val);
     false ->
-      case chunked_next(ChunkedSeq) of
+      Next = chunked_next(ChunkedSeq),
+      case Next of
         ?NIL        -> Val;
         ChunkedNext -> reduce(ChunkedNext, F, Val)
       end
@@ -169,13 +195,18 @@ do_reduce(ChunkedSeq, F, Init) ->
 
 %% clojerl.ISeq
 
-first(#{?TYPE := ?M, array := Array, index := Index}) ->
-  array:get(Index, Array).
+first(#{?TYPE := ?M, node := Node, offset := Offset}) ->
+  element(Offset + 1, Node).
 
-next(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
-  case Index + 1 < Size of
-    true  -> ?CONSTRUCTOR(Array, Index + 1);
-    false -> ?NIL
+next( #{ ?TYPE     := ?M
+       , offset    := Offset
+       , node_size := NodeSize
+       } = ChunkedSeq
+    ) ->
+  NewOffset = Offset + 1,
+  case NewOffset < NodeSize of
+    true  -> ChunkedSeq#{offset => NewOffset};
+    false -> chunked_next(ChunkedSeq)
   end.
 
 more(#{?TYPE := ?M} = ChunkedSeq) ->
@@ -190,17 +221,24 @@ more(#{?TYPE := ?M} = ChunkedSeq) ->
 
 %% clojerl.ISeqable
 
-seq(#{ ?TYPE := ?M
-     , size  := Size
-     , index := Index
+seq(#{ ?TYPE  := ?M
+     , size   := Size
+     , index  := Index
+     , offset := Offset
      } = ChunkedSeq) ->
-  case Index < Size of
+  case Index + Offset < Size of
     true  -> ChunkedSeq;
     false -> ?NIL
   end.
 
-to_list(#{?TYPE := ?M, array := Array, size := Size, index := Index}) ->
-  [array:get(I, Array) || I <- lists:seq(Index, Size - 1)].
+to_list(#{ ?TYPE  := ?M
+         , vector := Vector
+         , size   := Size
+         , index  := Index
+         , offset := Offset
+         }
+       ) ->
+  [clj_vector:get(I, Vector) || I <- lists:seq(Index + Offset, Size - 1)].
 
 %% clojerl.IStringable
 
