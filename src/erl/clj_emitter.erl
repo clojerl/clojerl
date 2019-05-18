@@ -448,7 +448,8 @@ ast(#{op := fn} = Expr, State) ->
 
   NameAtom = to_atom(NameSym),
   FName    = cerl:ann_c_fname(Ann, NameAtom, 1),
-  Ast      = cerl:ann_c_letrec(Ann, DefsAsts, FName),
+  WrappedFName = call_mfa('clojerl.Fn', ?CONSTRUCTOR, [FName], Ann),
+  Ast      = cerl:ann_c_letrec(Ann, DefsAsts, WrappedFName),
 
   push_ast(Ast, State1);
 ast(#{op := erl_fun} = Expr, State) ->

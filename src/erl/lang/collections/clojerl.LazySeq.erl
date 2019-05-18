@@ -45,9 +45,9 @@
                  }.
 
 -spec ?CONSTRUCTOR(function()) -> type().
-?CONSTRUCTOR(Fn) when is_function(Fn) ->
+?CONSTRUCTOR(Fn) ->
   #{ ?TYPE => ?M
-   , fn    => Fn
+   , fn    => 'clojerl.Fn':fn(Fn)
    , meta  => ?NIL
    }.
 

@@ -16,6 +16,8 @@
       'erlang.Map':'apply'(Fn, Args);
     'erlang.Fn' ->
       'erlang.Fn':'apply'(Fn, Args);
+    'clojerl.Fn' ->
+      'clojerl.Fn':'apply'(Fn, Args);
     'clojerl.Var' ->
       'clojerl.Var':'apply'(Fn, Args);
     'clojerl.Keyword' ->
@@ -40,6 +42,7 @@
 
 ?SATISFIES('erlang.Map') -> true;
 ?SATISFIES('erlang.Fn') -> true;
+?SATISFIES('clojerl.Fn') -> true;
 ?SATISFIES('clojerl.Var') -> true;
 ?SATISFIES('clojerl.Keyword') -> true;
 ?SATISFIES('clojerl.Symbol') -> true;

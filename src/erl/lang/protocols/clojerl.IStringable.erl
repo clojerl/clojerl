@@ -78,6 +78,8 @@
       'clojerl.AssertionError':'str'(X);
     'clojerl.Error' ->
       'clojerl.Error':'str'(X);
+    'clojerl.Fn' ->
+      'clojerl.Fn':'str'(X);
     'clojerl.BadArgumentError' ->
       'clojerl.BadArgumentError':'str'(X);
     'clojerl.ArityError' ->

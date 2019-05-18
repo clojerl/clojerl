@@ -34,6 +34,8 @@
       'erlang.Port':'hash'(X);
     'erlang.util.Date' ->
       'erlang.util.Date':'hash'(X);
+    'clojerl.Fn' ->
+      'clojerl.Fn':'hash'(X);
     'clojerl.Reduced' ->
       'clojerl.Reduced':'hash'(X);
     'clojerl.ProcessVal' ->
