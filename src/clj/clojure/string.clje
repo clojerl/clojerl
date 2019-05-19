@@ -196,10 +196,11 @@ Design notes for clojure.string:
   {:added "1.2"}
   [^clojerl.IStringable s]
   (let [^clojerl.String s (.str s)]
-    (if (< (count s) 2)
-      (upper-case s)
-      (str (upper-case (subs s 0 1))
-           (lower-case (subs s 1))))))
+    (if (< (.length s) 2)
+      (.to_upper ^clojerl.String s)
+      (.append ^clojerl.String
+               (.to_upper ^clojerl.String (.substring s 0 1))
+               (.to_lower ^clojerl.String (.substring s 1))))))
 
 (defn split
   "Splits string on a regular expression.  Optional argument limit is
