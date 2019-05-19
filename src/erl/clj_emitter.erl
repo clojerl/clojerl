@@ -1686,7 +1686,7 @@ case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
 %% ----- letrec -------
 
 -spec letrec_defs([expr()], [expr()], state()) ->
-  {[{ast(), ast()}], state()}.
+  {[{ast(), ast()}], [ast()], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
   {VarsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State0, VarsExprs)
                               , length(VarsExprs)

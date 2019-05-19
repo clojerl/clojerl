@@ -41,8 +41,10 @@
                            , form            => any()
                            , tag             => expr()
                            , 'variadic?'     => boolean()
+                           , min_fixed_arity => ?NIL | integer()
                            , max_fixed_arity => ?NIL | integer()
                            , variadic_arity  => ?NIL | integer()
+                           , 'erlang-fn?'    => boolean()
                            , methods         => [expr()]
                            , once            => boolean()
                            , local           => local_expr()
