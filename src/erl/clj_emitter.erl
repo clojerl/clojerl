@@ -446,10 +446,10 @@ ast(#{op := fn} = Expr, State) ->
 
   {DefsAsts, State1} = letrec_defs([LocalExpr], [Expr], State),
 
-  NameAtom = to_atom(NameSym),
-  FName    = cerl:ann_c_fname(Ann, NameAtom, 1),
-  WrappedFName = call_mfa('clojerl.Fn', ?CONSTRUCTOR, [FName], Ann),
-  Ast      = cerl:ann_c_letrec(Ann, DefsAsts, WrappedFName),
+  NameAtom  = to_atom(NameSym),
+  FName     = cerl:ann_c_fname(Ann, NameAtom, 1),
+  WrappedFn = call_mfa('clojerl.Fn', ?CONSTRUCTOR, [FName], Ann),
+  Ast       = cerl:ann_c_letrec(Ann, DefsAsts, WrappedFn),
 
   push_ast(Ast, State1);
 ast(#{op := erl_fun} = Expr, State) ->
@@ -570,16 +570,18 @@ ast(#{op := letfn} = Expr, State) ->
   {DefsAsts, State1} = letrec_defs(VarsExprs, FnsExprs, State),
   {BodyAst,  State2} = pop_ast(ast(BodyExpr, State1)),
 
-  FNamesAsts = [FNameAst || {FNameAst, _} <- DefsAsts],
-  VarsAsts   = [cerl:c_var(cerl:fname_id(FNameAst)) || FNameAst <- FNamesAsts],
+  FNamesAsts  = [FNameAst || {FNameAst, _} <- DefsAsts],
+  VarsAsts    = [cerl:c_var(cerl:fname_id(FNameAst)) || FNameAst <- FNamesAsts],
+  WrappedAsts = [ call_mfa('clojerl.Fn', ?CONSTRUCTOR, [X], [])
+                  || X <- FNamesAsts
+                ],
+  LetRecAst   = cerl:ann_c_letrec(Ann, DefsAsts, cerl:c_values(WrappedAsts)),
 
-  LetRecAst = cerl:ann_c_letrec(Ann, DefsAsts, cerl:c_values(FNamesAsts)),
-
-  LetAst    = cerl:ann_c_let( Ann
-                            , VarsAsts
-                            , LetRecAst
-                            , BodyAst
-                            ),
+  LetAst      = cerl:ann_c_let( Ann
+                              , VarsAsts
+                              , LetRecAst
+                              , BodyAst
+                              ),
 
   push_ast(LetAst, State2);
 %%------------------------------------------------------------------------------
@@ -1694,6 +1696,13 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                  || #{name := VarName, env := VarEnv} <- VarsExprs
                ],
 
+  WrappedFNamesAsts = [ call_mfa( 'clojerl.Fn'
+                                , ?CONSTRUCTOR
+                                , [X]
+                                , [])
+                      || X <- FNamesAsts
+                      ],
+
   FoldFun =
     fun( {FNameAst, #{op := fn} = FnExpr}
        , StateAcc
@@ -1728,7 +1737,7 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
         CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts ++ [CatchAll]),
         LetAst   = cerl:ann_c_let( Ann
                                  , VarsAsts
-                                 , cerl:c_values(FNamesAsts)
+                                 , cerl:c_values(WrappedFNamesAsts)
                                  , CaseAst
                                  ),
         FunAst   = cerl:ann_c_fun(Ann, [ArgsVar], LetAst),
