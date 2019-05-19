@@ -500,6 +500,8 @@ parse_fn(List, Env) ->
 
   {TagExpr, Env5} = fetch_type_tag(NameSym, Env4),
 
+  %% A fn can be emitted as an Erlang function when it is
+  %% defined with a single fixed arity.
   IsErlangFun = MinFixedArity =:= MaxFixedArity andalso not IsVariadic,
 
   FnExpr = #{ op              => fn

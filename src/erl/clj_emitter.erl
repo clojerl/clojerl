@@ -444,11 +444,15 @@ ast(#{op := fn} = Expr, State) ->
 
   Ann = ann_from(Env),
 
+  %% Use letrec_defs which defines a let binding for recursion.
+  %% Ideally this would only be introduced for functions where
+  %% it is needed, but there is currently no flag that marks a
+  %% fn as having recursion.
   { DefsAsts
-  , [WrappedFn]
+  , [FnValue]
   , State1
   } = letrec_defs([LocalExpr], [Expr], State),
-  Ast       = cerl:ann_c_letrec(Ann, DefsAsts, WrappedFn),
+  Ast = cerl:ann_c_letrec(Ann, DefsAsts, FnValue),
 
   push_ast(Ast, State1);
 ast(#{op := erl_fun} = Expr, State) ->
@@ -1688,42 +1692,50 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                               , length(VarsExprs)
                               ),
 
-  FNamesAsts   = [ case FnExpr of
-                     #{'erlang-fn?' := true, min_fixed_arity := A} ->
-                       cerl:ann_c_fname(ann_from(VarEnv), to_atom(VarName), A);
-                     _ ->
-                       cerl:ann_c_fname(ann_from(VarEnv), to_atom(VarName), 1)
-                   end
-                   || { #{name := VarName, env := VarEnv}
-                      , FnExpr
-                      } <- lists:zip(VarsExprs, FnsExprs)
+  FNamesAsts   = [ generate_fname(VarExpr, FnExpr)
+                   || {VarExpr, FnExpr} <- lists:zip(VarsExprs, FnsExprs)
                  ],
 
+  FnValuesAsts = [ generate_fn_values(FNameAst, FnExpr)
+                   || {FNameAst, FnExpr} <- lists:zip(FNamesAsts, FnsExprs)
+                 ],
+
+  FoldFun = fun
+              ({FNameAst, #{'erlang-fn?' := true} = FnExpr}, StateAcc) ->
+                erlang_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, StateAcc);
+              ({FNameAst, FnExpr}, StateAcc) ->
+                clojure_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, StateAcc)
+            end,
+
   PairsExprs = lists:zip(FNamesAsts, FnsExprs),
-
-  WrappedFNamesAsts = [ case FnExpr of
-                          #{'erlang-fn?' := true} -> X;
-                          _ -> call_mfa('clojerl.Fn',?CONSTRUCTOR, [X], [])
-                        end
-                        || {X, FnExpr} <- lists:zip(FNamesAsts, FnsExprs)
-                      ],
-
-  FoldFun =
-    fun
-      ({FNameAst, #{'erlang-fn?' := true} = FnExpr}, StateAcc) ->
-        erlang_fun(VarsAsts, WrappedFNamesAsts, FNameAst, FnExpr, StateAcc);
-      ({FNameAst, FnExpr}, StateAcc) ->
-        clojure_fun(VarsAsts, WrappedFNamesAsts, FNameAst, FnExpr, StateAcc)
-    end,
 
   {FunsAsts, State2} = pop_ast( lists:foldl(FoldFun, State1, PairsExprs)
                               , length(PairsExprs)
                               ),
 
-  {lists:zip(FNamesAsts, FunsAsts), WrappedFNamesAsts, State2}.
+  {lists:zip(FNamesAsts, FunsAsts), FnValuesAsts, State2}.
 
+-spec generate_fname(expr(), expr()) -> ast().
+generate_fname(#{name := VarName, env := VarEnv}, FnExpr) ->
+  Arity = arity_from_fn(FnExpr),
+  cerl:ann_c_fname(ann_from(VarEnv), to_atom(VarName), Arity).
+
+-spec arity_from_fn(expr()) -> arity().
+arity_from_fn(#{'erlang-fn?' := true, min_fixed_arity := A}) ->
+  A;
+arity_from_fn(_) ->
+  1.
+
+-spec generate_fn_values(ast(), expr()) -> ast().
+generate_fn_values(FNameAst, #{'erlang-fn?' := true}) ->
+  FNameAst;
+generate_fn_values(FNameAst, _) ->
+  call_mfa('clojerl.Fn',?CONSTRUCTOR, [FNameAst], []).
+
+%% clojerl.Fn functions are emitted as single argument Erlang
+%% functions, where the argument should always be an Erlang list.
 -spec clojure_fun([expr()], [ast()], ast(), expr(), state()) -> state().
-clojure_fun(VarsAsts, FNamesAsts, FNameAst, FnExpr, State0) ->
+clojure_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, State0) ->
   #{ op      := fn
    , methods := Methods
    , env     := Env
@@ -1753,9 +1765,11 @@ clojure_fun(VarsAsts, FNamesAsts, FNameAst, FnExpr, State0) ->
 
   ArgsVar  = new_c_var(Ann),
   CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts ++ [CatchAll]),
+
+  %% Wrap the body in a let which includes a binding for recursion
   LetAst   = cerl:ann_c_let( Ann
                            , VarsAsts
-                           , cerl:c_values(FNamesAsts)
+                           , cerl:c_values(FnValuesAsts)
                            , CaseAst
                            ),
   FunAst   = cerl:ann_c_fun(Ann, [ArgsVar], LetAst),
@@ -1763,7 +1777,7 @@ clojure_fun(VarsAsts, FNamesAsts, FNameAst, FnExpr, State0) ->
   push_ast(FunAst, State2).
 
 -spec erlang_fun([expr()], [ast()], ast(), expr(), state()) -> state().
-erlang_fun(VarsAsts, FNamesAsts, _FNameAst, FnExpr, State0) ->
+erlang_fun(VarsAsts, FnValuesAsts, _FNameAst, FnExpr, State0) ->
   #{ op      := fn
    , methods := Methods
    , env     := Env
@@ -1774,9 +1788,11 @@ erlang_fun(VarsAsts, FNamesAsts, _FNameAst, FnExpr, State0) ->
   State1 = lists:foldl(fun method_to_function_clause/2, State0, Methods),
   {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
   {Vars, CaseAst} = body_from_clauses(Ann, ClausesAsts),
+
+  %% Wrap the body in a let which includes a binding for recursion
   LetAst   = cerl:ann_c_let( Ann
                            , VarsAsts
-                           , cerl:c_values(FNamesAsts)
+                           , cerl:c_values(FnValuesAsts)
                            , CaseAst
                            ),
   FunAst   = cerl:ann_c_fun(Ann, Vars, LetAst),
