@@ -438,17 +438,21 @@ ast(#{op := extend_type} = Expr, State) ->
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->
   ?DEBUG(fn),
-  #{ local   := LocalExpr = #{name := NameSym}
+  #{ local   := LocalExpr
    , env     := Env
    } = Expr,
 
   Ann = ann_from(Env),
 
-  {DefsAsts, State1} = letrec_defs([LocalExpr], [Expr], State),
-
-  NameAtom = to_atom(NameSym),
-  FName    = cerl:ann_c_fname(Ann, NameAtom, 1),
-  Ast      = cerl:ann_c_letrec(Ann, DefsAsts, FName),
+  %% Use letrec_defs which defines a let binding for recursion.
+  %% Ideally this would only be introduced for functions where
+  %% it is needed, but there is currently no flag that marks a
+  %% fn as having recursion.
+  { DefsAsts
+  , [FnValue]
+  , State1
+  } = letrec_defs([LocalExpr], [Expr], State),
+  Ast = cerl:ann_c_letrec(Ann, DefsAsts, FnValue),
 
   push_ast(Ast, State1);
 ast(#{op := erl_fun} = Expr, State) ->
@@ -566,19 +570,18 @@ ast(#{op := letfn} = Expr, State) ->
 
   Ann = ann_from(Env),
 
-  {DefsAsts, State1} = letrec_defs(VarsExprs, FnsExprs, State),
+  {DefsAsts, WrappedAsts, State1} = letrec_defs(VarsExprs, FnsExprs, State),
   {BodyAst,  State2} = pop_ast(ast(BodyExpr, State1)),
 
-  FNamesAsts = [FNameAst || {FNameAst, _} <- DefsAsts],
-  VarsAsts   = [cerl:c_var(cerl:fname_id(FNameAst)) || FNameAst <- FNamesAsts],
+  FNamesAsts  = [FNameAst || {FNameAst, _} <- DefsAsts],
+  VarsAsts    = [cerl:c_var(cerl:fname_id(FNameAst)) || FNameAst <- FNamesAsts],
+  LetRecAst   = cerl:ann_c_letrec(Ann, DefsAsts, cerl:c_values(WrappedAsts)),
 
-  LetRecAst = cerl:ann_c_letrec(Ann, DefsAsts, cerl:c_values(FNamesAsts)),
-
-  LetAst    = cerl:ann_c_let( Ann
-                            , VarsAsts
-                            , LetRecAst
-                            , BodyAst
-                            ),
+  LetAst      = cerl:ann_c_let( Ann
+                              , VarsAsts
+                              , LetRecAst
+                              , BodyAst
+                              ),
 
   push_ast(LetAst, State2);
 %%------------------------------------------------------------------------------
@@ -1683,57 +1686,26 @@ case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
 %% ----- letrec -------
 
 -spec letrec_defs([expr()], [expr()], state()) ->
-  {[{ast(), ast()}], state()}.
+  {[{ast(), ast()}], [ast()], state()}.
 letrec_defs(VarsExprs, FnsExprs, State0) ->
   {VarsAsts, State1} = pop_ast( lists:foldl(fun ast/2, State0, VarsExprs)
                               , length(VarsExprs)
                               ),
 
-  FNamesAsts = [ cerl:ann_c_fname(ann_from(VarEnv), to_atom(VarName), 1)
-                 || #{name := VarName, env := VarEnv} <- VarsExprs
-               ],
+  FNamesAsts   = [ generate_fname(VarExpr, FnExpr)
+                   || {VarExpr, FnExpr} <- lists:zip(VarsExprs, FnsExprs)
+                 ],
 
-  FoldFun =
-    fun( {FNameAst, #{op := fn} = FnExpr}
-       , StateAcc
-       ) ->
-        #{ methods := Methods
-         , env     := Env
-         } = FnExpr,
+  FnValuesAsts = [ generate_fn_values(FNameAst, FnExpr)
+                   || {FNameAst, FnExpr} <- lists:zip(FNamesAsts, FnsExprs)
+                 ],
 
-        Ann = ann_from(Env),
-
-        StateAcc1 = lists:foldl(fun method_to_case_clause/2, StateAcc, Methods),
-        {ClausesAsts, StateAcc2} = pop_ast(StateAcc1, length(Methods)),
-
-        %% Create the clause that will handle the cases when the arguments
-        %% provided are wrong or there is no match in the clauses
-        CatchAllVar = new_c_var(Ann),
-        Length      = call_mfa(erlang, length, [CatchAllVar], Ann),
-        FName0      = cerl:fname_id(FNameAst),
-        FName1      = cerl:abstract(atom_to_binary(FName0, utf8)),
-        ErrorCtror  = call_mfa( 'clojerl.ArityError'
-                              , ?CONSTRUCTOR
-                              , [Length, FName1]
-                              , Ann),
-        ThrowErr    = call_mfa(erlang, error, [ErrorCtror], Ann),
-        CatchAll    = cerl:ann_c_clause( Ann
-                                       , [CatchAllVar]
-                                       , cerl:abstract(true)
-                                       , ThrowErr
-                                       ),
-
-        ArgsVar  = new_c_var(Ann),
-        CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts ++ [CatchAll]),
-        LetAst   = cerl:ann_c_let( Ann
-                                 , VarsAsts
-                                 , cerl:c_values(FNamesAsts)
-                                 , CaseAst
-                                 ),
-        FunAst   = cerl:ann_c_fun(Ann, [ArgsVar], LetAst),
-
-        push_ast(FunAst, StateAcc2)
-    end,
+  FoldFun = fun
+              ({FNameAst, #{'erlang-fn?' := true} = FnExpr}, StateAcc) ->
+                erlang_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, StateAcc);
+              ({FNameAst, FnExpr}, StateAcc) ->
+                clojure_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, StateAcc)
+            end,
 
   PairsExprs = lists:zip(FNamesAsts, FnsExprs),
 
@@ -1741,7 +1713,91 @@ letrec_defs(VarsExprs, FnsExprs, State0) ->
                               , length(PairsExprs)
                               ),
 
-  {lists:zip(FNamesAsts, FunsAsts), State2}.
+  {lists:zip(FNamesAsts, FunsAsts), FnValuesAsts, State2}.
+
+-spec generate_fname(expr(), expr()) -> ast().
+generate_fname(#{name := VarName, env := VarEnv}, FnExpr) ->
+  Arity = arity_from_fn(FnExpr),
+  cerl:ann_c_fname(ann_from(VarEnv), to_atom(VarName), Arity).
+
+-spec arity_from_fn(expr()) -> arity().
+arity_from_fn(#{'erlang-fn?' := true, min_fixed_arity := A}) ->
+  A;
+arity_from_fn(_) ->
+  1.
+
+-spec generate_fn_values(ast(), expr()) -> ast().
+generate_fn_values(FNameAst, #{'erlang-fn?' := true}) ->
+  FNameAst;
+generate_fn_values(FNameAst, _) ->
+  call_mfa('clojerl.Fn',?CONSTRUCTOR, [FNameAst], []).
+
+%% clojerl.Fn functions are emitted as single argument Erlang
+%% functions, where the argument should always be an Erlang list.
+-spec clojure_fun([expr()], [ast()], ast(), expr(), state()) -> state().
+clojure_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, State0) ->
+  #{ op      := fn
+   , methods := Methods
+   , env     := Env
+   } = FnExpr,
+
+  Ann = ann_from(Env),
+
+  State1 = lists:foldl(fun method_to_case_clause/2, State0, Methods),
+  {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
+
+  %% Create the clause that will handle the cases when the arguments
+  %% provided are wrong or there is no match in the clauses
+  CatchAllVar = new_c_var(Ann),
+  Length      = call_mfa(erlang, length, [CatchAllVar], Ann),
+  FName0      = cerl:fname_id(FNameAst),
+  FName1      = cerl:abstract(atom_to_binary(FName0, utf8)),
+  ErrorCtror  = call_mfa( 'clojerl.ArityError'
+                        , ?CONSTRUCTOR
+                        , [Length, FName1]
+                        , Ann),
+  ThrowErr    = call_mfa(erlang, error, [ErrorCtror], Ann),
+  CatchAll    = cerl:ann_c_clause( Ann
+                                 , [CatchAllVar]
+                                 , cerl:abstract(true)
+                                 , ThrowErr
+                                 ),
+
+  ArgsVar  = new_c_var(Ann),
+  CaseAst  = cerl:ann_c_case(Ann, ArgsVar, ClausesAsts ++ [CatchAll]),
+
+  %% Wrap the body in a let which includes a binding for recursion
+  LetAst   = cerl:ann_c_let( Ann
+                           , VarsAsts
+                           , cerl:c_values(FnValuesAsts)
+                           , CaseAst
+                           ),
+  FunAst   = cerl:ann_c_fun(Ann, [ArgsVar], LetAst),
+
+  push_ast(FunAst, State2).
+
+-spec erlang_fun([expr()], [ast()], ast(), expr(), state()) -> state().
+erlang_fun(VarsAsts, FnValuesAsts, _FNameAst, FnExpr, State0) ->
+  #{ op      := fn
+   , methods := Methods
+   , env     := Env
+   } = FnExpr,
+
+  Ann = ann_from(Env),
+
+  State1 = lists:foldl(fun method_to_function_clause/2, State0, Methods),
+  {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
+  {Vars, CaseAst} = body_from_clauses(Ann, ClausesAsts),
+
+  %% Wrap the body in a let which includes a binding for recursion
+  LetAst   = cerl:ann_c_let( Ann
+                           , VarsAsts
+                           , cerl:c_values(FnValuesAsts)
+                           , CaseAst
+                           ),
+  FunAst   = cerl:ann_c_fun(Ann, Vars, LetAst),
+
+  push_ast(FunAst, State2).
 
 %% ----- Binary literal -------
 

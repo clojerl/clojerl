@@ -110,13 +110,13 @@ seq(_Config) ->
   true = ?NIL =/= clj_rt:rest(LazySeq0),
   ?NIL = clj_rt:seq(clj_rt:rest(LazySeq0)),
 
-  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> range(1, 3) end),
+  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> range(1, 3) end),
   1 = clj_rt:first(LazySeqBis),
   2 = clj_rt:first(clj_rt:rest(LazySeqBis)),
   3 = clj_rt:first(clj_rt:next(clj_rt:next(LazySeqBis))),
   [1, 2, 3] = clj_rt:to_list(clj_rt:seq(LazySeqBis)),
 
-  LazySeqEmpty = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> [] end),
+  LazySeqEmpty = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> [] end),
   [] = clj_rt:to_list(LazySeqEmpty),
 
   {comments, ""}.
@@ -162,10 +162,11 @@ cons(_Config) ->
 
 -spec reduce(config()) -> result().
 reduce(_Config) ->
-  PlusFun = fun
-              ([]) -> 0;
-              ([X, Y]) -> X + Y
-            end,
+  PlusFun0     = fun
+                   ([]) -> 0;
+                   ([X, Y]) -> X + Y
+                 end,
+  PlusFun      = 'clojerl.Fn':?CONSTRUCTOR(PlusFun0),
   EmptyLazySeq = range(1, 0),
 
   0  = 'clojerl.IReduce':reduce(EmptyLazySeq, PlusFun),
@@ -176,10 +177,9 @@ reduce(_Config) ->
   60 = 'clojerl.IReduce':reduce(TenLazySeq, PlusFun, 5),
 
   PlusMaxFun = fun
-                 ([]) -> 0;
-                 ([X, Y]) when X < 10 -> X + Y;
-                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
-            end,
+                 (X, Y) when X < 10 -> X + Y;
+                 (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+               end,
   10 = 'clojerl.IReduce':reduce(TenLazySeq, PlusMaxFun),
 
   {comments, ""}.
@@ -190,7 +190,7 @@ to_erl(_Config) ->
   [1, 2, 3] = clj_rt:'->erl'(LazySeq1, false),
   [1, 2, 3] = clj_rt:'->erl'(LazySeq1, true),
 
-  LazySeq2       = 'clojerl.LazySeq':?CONSTRUCTOR(fun([]) -> [1, LazySeq1] end),
+  LazySeq2       = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> [1, LazySeq1] end),
   [1, LazySeq1]  = clj_rt:'->erl'(LazySeq2, false),
   [1, [1, 2, 3]] = clj_rt:'->erl'(LazySeq2, true),
 
@@ -228,9 +228,9 @@ complete_coverage(_Config) ->
 -spec range(integer(), integer()) -> 'clojerl.LazySeq':type().
 range(Start, End) ->
   Fun = fun
-          ([]) when Start =< End; End == infinity ->
-            'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End));
-          ([]) when Start > End ->
-            ?NIL
-        end,
+           () when Start =< End; End == infinity ->
+             'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End));
+           () when Start > End ->
+             ?NIL
+         end,
   'clojerl.LazySeq':?CONSTRUCTOR(Fun).

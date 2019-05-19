@@ -152,11 +152,11 @@ cons(_Config) ->
 
 -spec reduce(config()) -> result().
 reduce(_Config) ->
-  PlusFun     = fun
+  PlusFun0    = fun
                   ([]) -> 0;
                   ([X, Y]) -> X + Y
                 end,
-
+  PlusFun     = 'clojerl.Fn':?CONSTRUCTOR(PlusFun0),
   ChunkedSeq1 = chunked_seq(64),
   2016        = 'clojerl.IReduce':reduce(ChunkedSeq1, PlusFun),
 
@@ -164,11 +164,10 @@ reduce(_Config) ->
   528         = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusFun),
   529         = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusFun, 1),
 
-  PlusMaxFun = fun
-                 ([]) -> 0;
-                 ([X, Y]) when X < 10 -> X + Y;
-                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
-            end,
+  PlusMaxFun  = fun
+                  (X, Y) when X < 10 -> X + Y;
+                  (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+                end,
 
   10 = 'clojerl.IReduce':reduce(ChunkedSeq2, PlusMaxFun),
 

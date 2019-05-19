@@ -218,10 +218,11 @@ stack(_Config) ->
 
 -spec reduce(config()) -> result().
 reduce(_Config) ->
-  PlusFun = fun
-              ([]) -> 0;
-              ([X, Y]) -> X + Y
-            end,
+  PlusFun0    = fun
+                  ([]) -> 0;
+                  ([X, Y]) -> X + Y
+                end,
+  PlusFun     = 'clojerl.Fn':?CONSTRUCTOR(PlusFun0),
   EmptyVector = clj_rt:vector([]),
 
   0  = 'clojerl.IReduce':reduce(EmptyVector, PlusFun),
@@ -232,10 +233,9 @@ reduce(_Config) ->
   60 = 'clojerl.IReduce':reduce(TenVector, PlusFun, 5),
 
   PlusMaxFun = fun
-                 ([]) -> 0;
-                 ([X, Y]) when X < 10 -> X + Y;
-                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
-            end,
+                 (X, Y) when X < 10 -> X + Y;
+                 (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+               end,
   10 = 'clojerl.IReduce':reduce(TenVector, PlusMaxFun),
 
   {comments, ""}.

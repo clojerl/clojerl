@@ -11,22 +11,15 @@
         , str/1
         ]).
 
-apply(Fun, Args) when is_function(Fun), is_list(Args) ->
-  {module, Module} = erlang:fun_info(Fun, module),
+apply(Fun, Args) when is_list(Args) ->
+  erlang:apply(Fun, Args);
+apply(Fun, Args) ->
+  erlang:apply(Fun, clj_rt:to_list(Args)).
 
-  Args1 = case clj_module:is_clojure(Module) of
-            true  -> [Args];
-            false -> Args
-          end,
-
-  erlang:apply(Fun, Args1);
-apply(Fun, Args) when is_function(Fun) ->
-  apply(Fun, clj_rt:to_list(Args)).
-
-hash(Fun) when is_function(Fun) ->
+hash(Fun) ->
   erlang:phash2(Fun).
 
-str(Fun) when is_function(Fun) ->
+str(Fun) ->
   {module, Module} = erlang:fun_info(Fun, module),
   {name, Name}     = erlang:fun_info(Fun, name),
   ModuleBin        = atom_to_binary(Module, utf8),

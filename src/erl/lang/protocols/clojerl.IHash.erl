@@ -104,6 +104,8 @@
       'clojerl.SortedSet':'hash'(X);
     'clojerl.TupleChunk' ->
       'clojerl.TupleChunk':'hash'(X);
+    'clojerl.Fn' ->
+      'clojerl.Fn':'hash'(X);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'hash', Type)
   end.
@@ -154,4 +156,5 @@
 ?SATISFIES('clojerl.ChunkedCons') -> true;
 ?SATISFIES('clojerl.SortedSet') -> true;
 ?SATISFIES('clojerl.TupleChunk') -> true;
+?SATISFIES('clojerl.Fn') -> true;
 ?SATISFIES(_) -> false.

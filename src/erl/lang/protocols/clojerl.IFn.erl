@@ -34,6 +34,8 @@
       'clojerl.Set':'apply'(Fn, Args);
     'clojerl.SortedSet' ->
       'clojerl.SortedSet':'apply'(Fn, Args);
+    'clojerl.Fn' ->
+      'clojerl.Fn':'apply'(Fn, Args);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'apply', Type)
   end.
@@ -49,4 +51,5 @@
 ?SATISFIES('clojerl.Map') -> true;
 ?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.SortedSet') -> true;
+?SATISFIES('clojerl.Fn') -> true;
 ?SATISFIES(_) -> false.

@@ -106,7 +106,7 @@
 (defn- call-through
   "Recursively call x until it doesn't return a function."
   [x]
-  (if (or (var? x) (fn? x))
+  (if (fn? x)
     (recur (x))
     x))
 
