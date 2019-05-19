@@ -141,20 +141,14 @@ cons(_Config) ->
 
 -spec reduce(config()) -> result().
 reduce(_Config) ->
-  PlusFun = fun
-              ([]) -> 0;
-              ([X, Y]) -> X + Y
-            end,
-
   TenCons = range(1, 10),
-  55 = 'clojerl.IReduce':reduce(TenCons, PlusFun),
-  60 = 'clojerl.IReduce':reduce(TenCons, PlusFun, 5),
+  55 = 'clojerl.IReduce':reduce(TenCons, fun erlang:'+'/2),
+  60 = 'clojerl.IReduce':reduce(TenCons, fun erlang:'+'/2, 5),
 
   PlusMaxFun = fun
-                 ([]) -> 0;
-                 ([X, Y]) when X < 10 -> X + Y;
-                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
-            end,
+                 (X, Y) when X < 10 -> X + Y;
+                 (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+               end,
   10 = 'clojerl.IReduce':reduce(TenCons, PlusMaxFun),
 
   {comments, ""}.

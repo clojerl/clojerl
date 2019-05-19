@@ -152,10 +152,13 @@ cons(_Config) ->
 
 -spec reduce(config()) -> result().
 reduce(_Config) ->
-  PlusFun = fun
-              ([]) -> 0;
-              ([X, Y]) -> X + Y
-            end,
+  %% We need to wrap the fun into a clojerl.Fn because of the need
+  %% for multiple arities
+  PlusFun0     = fun
+                   ([]) -> 0;
+                   ([X, Y]) -> X + Y
+                 end,
+  PlusFun      = 'clojerl.Fn':?CONSTRUCTOR(PlusFun0),
   ChunkedCons1 = chunked_cons({}, ?NIL),
 
   0  = 'clojerl.IReduce':reduce(ChunkedCons1, PlusFun),
@@ -166,10 +169,10 @@ reduce(_Config) ->
   60 = 'clojerl.IReduce':reduce(ChunkedCons2, PlusFun, 5),
 
   PlusMaxFun = fun
-                 ([]) -> 0;
-                 ([X, Y]) when X < 10 -> X + Y;
-                 ([X, _]) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
-            end,
+                 (X, Y) when X < 10 -> X + Y;
+                 (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
+               end,
+
   10 = 'clojerl.IReduce':reduce(ChunkedCons2, PlusMaxFun),
 
   {comments, ""}.
