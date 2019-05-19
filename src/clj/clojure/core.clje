@@ -5068,9 +5068,15 @@
   [x] (satisfies? clojerl.IFn x))
 
 (defn fn?
-  "Returns true if x is an Erlang function."
+  "Returns true if x is a function, i.e. an Erlang function,
+  a Clojure function or a var with a function as its value."
   {:added "1.0"}
-  [x] (erlang/is_function x))
+  [x]
+  (case* (clj_rt/type_module x)
+     :erlang.Fn   true
+     :clojerl.Fn  true
+     :clojerl.Var (-> x meta :fn? boolean)
+     false))
 
 (defn associative?
  "Returns true if coll implements Associative"
