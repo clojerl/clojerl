@@ -78,8 +78,6 @@
       'clojerl.AssertionError':'str'(X);
     'clojerl.Error' ->
       'clojerl.Error':'str'(X);
-    'clojerl.Fn' ->
-      'clojerl.Fn':'str'(X);
     'clojerl.BadArgumentError' ->
       'clojerl.BadArgumentError':'str'(X);
     'clojerl.ArityError' ->
@@ -116,6 +114,8 @@
       'clojerl.ChunkedCons':'str'(X);
     'clojerl.SortedSet' ->
       'clojerl.SortedSet':'str'(X);
+    'clojerl.Fn' ->
+      'clojerl.Fn':'str'(X);
     Type ->
       clj_protocol:not_implemented(?MODULE, 'str', Type)
   end.
@@ -171,4 +171,5 @@
 ?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;
 ?SATISFIES('clojerl.SortedSet') -> true;
+?SATISFIES('clojerl.Fn') -> true;
 ?SATISFIES(_) -> false.
