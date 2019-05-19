@@ -154,7 +154,7 @@ pop(#{?TYPE := ?M, items := []}) ->
 pop(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
 
-%% clojerl.ISeq
+%% clojerl.ISeqable
 
 seq(#{?TYPE := ?M, items := []}) -> ?NIL;
 seq(#{?TYPE := ?M, items := Seq}) -> Seq.

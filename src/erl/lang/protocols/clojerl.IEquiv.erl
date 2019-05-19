@@ -60,14 +60,20 @@
       'clojerl.TupleMap':'equiv'(X, Y);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'equiv'(X, Y);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'equiv'(X, Y);
     'clojerl.List' ->
       'clojerl.List':'equiv'(X, Y);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'equiv'(X, Y);
     'clojerl.Vector' ->
       'clojerl.Vector':'equiv'(X, Y);
     'clojerl.Map' ->
       'clojerl.Map':'equiv'(X, Y);
     'clojerl.Cons' ->
       'clojerl.Cons':'equiv'(X, Y);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'equiv'(X, Y);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'equiv'(X, Y);
     'clojerl.Set' ->
@@ -106,10 +112,13 @@
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;
+?SATISFIES('clojerl.Cycle') -> true;
 ?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Iterate') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES('clojerl.Map') -> true;
 ?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Repeat') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;
