@@ -449,6 +449,11 @@ parse_fn(List, Env) ->
                     _  -> lists:max(FixedArities)
                   end,
 
+  MinFixedArity = case FixedArities of
+                    [] -> ?NIL;
+                    _  -> lists:min(FixedArities)
+                  end,
+
   %% Validations
   ?ERROR_WHEN( length(AllVariadics) >= 2
              , <<"Can't have more than 1 variadic overload">>
@@ -495,13 +500,17 @@ parse_fn(List, Env) ->
 
   {TagExpr, Env5} = fetch_type_tag(NameSym, Env4),
 
+  IsErlangFun = MinFixedArity =:= MaxFixedArity andalso not IsVariadic,
+
   FnExpr = #{ op              => fn
             , env             => Env
             , form            => List
             , tag             => TagExpr
             , 'variadic?'     => IsVariadic
+            , min_fixed_arity => MinFixedArity
             , max_fixed_arity => MaxFixedArity
             , variadic_arity  => VariadicArity
+            , 'erlang-fn?'    => IsErlangFun
             , methods         => MethodsExprs1
             , once            => IsOnce
             , local           => LocalExpr

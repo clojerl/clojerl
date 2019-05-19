@@ -110,15 +110,13 @@ seq(_Config) ->
   true = ?NIL =/= clj_rt:rest(LazySeq0),
   ?NIL = clj_rt:seq(clj_rt:rest(LazySeq0)),
 
-  FunBis = 'clojerl.Fn':?CONSTRUCTOR(fun([]) -> range(1, 3) end),
-  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(FunBis),
+  LazySeqBis = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> range(1, 3) end),
   1 = clj_rt:first(LazySeqBis),
   2 = clj_rt:first(clj_rt:rest(LazySeqBis)),
   3 = clj_rt:first(clj_rt:next(clj_rt:next(LazySeqBis))),
   [1, 2, 3] = clj_rt:to_list(clj_rt:seq(LazySeqBis)),
 
-  FunEmpty = 'clojerl.Fn':?CONSTRUCTOR(fun([]) -> [] end),
-  LazySeqEmpty = 'clojerl.LazySeq':?CONSTRUCTOR(FunEmpty),
+  LazySeqEmpty = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> [] end),
   [] = clj_rt:to_list(LazySeqEmpty),
 
   {comments, ""}.
@@ -192,8 +190,7 @@ to_erl(_Config) ->
   [1, 2, 3] = clj_rt:'->erl'(LazySeq1, false),
   [1, 2, 3] = clj_rt:'->erl'(LazySeq1, true),
 
-  Fun1 = 'clojerl.Fn':?CONSTRUCTOR(fun([]) -> [1, LazySeq1] end),
-  LazySeq2       = 'clojerl.LazySeq':?CONSTRUCTOR(Fun1),
+  LazySeq2       = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> [1, LazySeq1] end),
   [1, LazySeq1]  = clj_rt:'->erl'(LazySeq2, false),
   [1, [1, 2, 3]] = clj_rt:'->erl'(LazySeq2, true),
 
@@ -230,11 +227,10 @@ complete_coverage(_Config) ->
 
 -spec range(integer(), integer()) -> 'clojerl.LazySeq':type().
 range(Start, End) ->
-  Fun0 = fun
-           ([]) when Start =< End; End == infinity ->
+  Fun = fun
+           () when Start =< End; End == infinity ->
              'clojerl.Cons':?CONSTRUCTOR(Start, range(Start + 1, End));
-           ([]) when Start > End ->
+           () when Start > End ->
              ?NIL
          end,
-  Fun = 'clojerl.Fn':?CONSTRUCTOR(Fun0),
   'clojerl.LazySeq':?CONSTRUCTOR(Fun).

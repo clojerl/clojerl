@@ -45,9 +45,9 @@
                  }.
 
 -spec ?CONSTRUCTOR(function()) -> type().
-?CONSTRUCTOR(Fn) ->
+?CONSTRUCTOR(Fn) when is_function(Fn) ->
   #{ ?TYPE => ?M
-   , fn    => 'clojerl.Fn':fn(Fn)
+   , fn    => Fn
    , meta  => ?NIL
    }.
 
@@ -56,7 +56,7 @@
 %%------------------------------------------------------------------------------
 
 count(#{?TYPE := ?M, fn := Fn}) ->
-  case Fn([]) of
+  case Fn() of
     ?NIL -> 0;
     Seq       -> 'clojerl.ICounted':count(Seq)
   end.
@@ -121,21 +121,21 @@ do_reduce(_F, Acc, _Seq) ->
   Acc.
 
 first(#{?TYPE := ?M, fn := Fn}) ->
-  case Fn([]) of
+  case Fn() of
     ?NIL -> ?NIL;
     #{?TYPE := ?M} = LazySeq -> first(LazySeq);
     Seq -> clj_rt:first(Seq)
   end.
 
 next(#{?TYPE := ?M, fn := Fn}) ->
-  case Fn([]) of
+  case Fn() of
     ?NIL -> ?NIL;
     #{?TYPE := ?M} = LazySeq -> next(LazySeq);
     Seq -> clj_rt:next(Seq)
   end.
 
 more(#{?TYPE := ?M, fn := Fn}) ->
-  case Fn([]) of
+  case Fn() of
     ?NIL -> [];
     #{?TYPE := ?M} = LazySeq -> more(LazySeq);
     Seq -> clj_rt:rest(Seq)
@@ -144,7 +144,7 @@ more(#{?TYPE := ?M, fn := Fn}) ->
 '_'(_) -> ?NIL.
 
 seq(#{?TYPE := ?M, fn := Fn}) ->
-  case Fn([]) of
+  case Fn() of
     ?NIL ->
       ?NIL;
     #{?TYPE := ?M} = LazySeq ->
