@@ -32,7 +32,7 @@
                     , reader_opts => map()        %% Options for the reader
                     , time        => boolean()    %% Measure and show
                                                   %% compilation times
-                    , output_core => binary() | false %% Output .core code
+                    , output_core => boolean()    %% Output .core code
                     , fake        => boolean()    %% Fake modules being compiled
                     }.
 
@@ -416,8 +416,10 @@ when_verbose(_, _) ->
 
 -spec maybe_output_core(cerl:c_module(), options()) ->
   ok | {error, term()}.
-maybe_output_core(Module, #{output_core := Path}) when is_binary(Path) ->
+maybe_output_core(Module, #{output_core := true}) ->
   Source = core_pp:format(Module),
+  Name   = cerl:concrete(cerl:module_name(Module)),
+  Path   = atom_to_list(Name) ++ ".core",
   file:write_file(Path, Source);
 maybe_output_core(_, _) ->
   ok.
