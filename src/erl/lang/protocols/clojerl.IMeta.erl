@@ -31,14 +31,20 @@
       'clojerl.TupleMap':'meta'(X);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'meta'(X);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'meta'(X);
     'clojerl.List' ->
       'clojerl.List':'meta'(X);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'meta'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'meta'(X);
     'clojerl.Map' ->
       'clojerl.Map':'meta'(X);
     'clojerl.Cons' ->
       'clojerl.Cons':'meta'(X);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'meta'(X);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'meta'(X);
     'clojerl.Set' ->
@@ -71,14 +77,20 @@
       'clojerl.TupleMap':'with_meta'(X, Meta);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'with_meta'(X, Meta);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'with_meta'(X, Meta);
     'clojerl.List' ->
       'clojerl.List':'with_meta'(X, Meta);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'with_meta'(X, Meta);
     'clojerl.Vector' ->
       'clojerl.Vector':'with_meta'(X, Meta);
     'clojerl.Map' ->
       'clojerl.Map':'with_meta'(X, Meta);
     'clojerl.Cons' ->
       'clojerl.Cons':'with_meta'(X, Meta);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'with_meta'(X, Meta);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'with_meta'(X, Meta);
     'clojerl.Set' ->
@@ -100,10 +112,13 @@
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;
+?SATISFIES('clojerl.Cycle') -> true;
 ?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Iterate') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES('clojerl.Map') -> true;
 ?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Repeat') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;

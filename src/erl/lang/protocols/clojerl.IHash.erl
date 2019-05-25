@@ -86,14 +86,20 @@
       'clojerl.TupleMap':'hash'(X);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'hash'(X);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'hash'(X);
     'clojerl.List' ->
       'clojerl.List':'hash'(X);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'hash'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'hash'(X);
     'clojerl.Map' ->
       'clojerl.Map':'hash'(X);
     'clojerl.Cons' ->
       'clojerl.Cons':'hash'(X);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'hash'(X);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'hash'(X);
     'clojerl.Set' ->
@@ -147,10 +153,13 @@
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;
+?SATISFIES('clojerl.Cycle') -> true;
 ?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Iterate') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES('clojerl.Map') -> true;
 ?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Repeat') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;

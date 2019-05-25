@@ -35,14 +35,20 @@
       'clojerl.TupleMap':'seq'(X);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'seq'(X);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'seq'(X);
     'clojerl.List' ->
       'clojerl.List':'seq'(X);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'seq'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'seq'(X);
     'clojerl.Map' ->
       'clojerl.Map':'seq'(X);
     'clojerl.Cons' ->
       'clojerl.Cons':'seq'(X);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'seq'(X);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'seq'(X);
     'clojerl.Set' ->
@@ -79,14 +85,20 @@
       'clojerl.TupleMap':'to_list'(X);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'to_list'(X);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'to_list'(X);
     'clojerl.List' ->
       'clojerl.List':'to_list'(X);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'to_list'(X);
     'clojerl.Vector' ->
       'clojerl.Vector':'to_list'(X);
     'clojerl.Map' ->
       'clojerl.Map':'to_list'(X);
     'clojerl.Cons' ->
       'clojerl.Cons':'to_list'(X);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'to_list'(X);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'to_list'(X);
     'clojerl.Set' ->
@@ -110,10 +122,13 @@
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.TupleMap') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;
+?SATISFIES('clojerl.Cycle') -> true;
 ?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Iterate') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES('clojerl.Map') -> true;
 ?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Repeat') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.Set') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;

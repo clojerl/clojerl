@@ -24,10 +24,16 @@
       'clojerl.Range':'first'(Seq);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'first'(Seq);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'first'(Seq);
     'clojerl.List' ->
       'clojerl.List':'first'(Seq);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'first'(Seq);
     'clojerl.Cons' ->
       'clojerl.Cons':'first'(Seq);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'first'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'first'(Seq);
     'clojerl.ChunkedCons' ->
@@ -48,10 +54,16 @@
       'clojerl.Range':'next'(Seq);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'next'(Seq);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'next'(Seq);
     'clojerl.List' ->
       'clojerl.List':'next'(Seq);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'next'(Seq);
     'clojerl.Cons' ->
       'clojerl.Cons':'next'(Seq);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'next'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'next'(Seq);
     'clojerl.ChunkedCons' ->
@@ -72,10 +84,16 @@
       'clojerl.Range':'more'(Seq);
     'clojerl.Vector.RSeq' ->
       'clojerl.Vector.RSeq':'more'(Seq);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'more'(Seq);
     'clojerl.List' ->
       'clojerl.List':'more'(Seq);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'more'(Seq);
     'clojerl.Cons' ->
       'clojerl.Cons':'more'(Seq);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'more'(Seq);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'more'(Seq);
     'clojerl.ChunkedCons' ->
@@ -89,8 +107,11 @@
 ?SATISFIES('clojerl.LazySeq') -> true;
 ?SATISFIES('clojerl.Range') -> true;
 ?SATISFIES('clojerl.Vector.RSeq') -> true;
+?SATISFIES('clojerl.Cycle') -> true;
 ?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Iterate') -> true;
 ?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Repeat') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;
 ?SATISFIES(_) -> false.

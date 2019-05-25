@@ -19,12 +19,18 @@
       'clojerl.LazySeq':'reduce'(Coll, Fun);
     'clojerl.Range' ->
       'clojerl.Range':'reduce'(Coll, Fun);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'reduce'(Coll, Fun);
     'clojerl.List' ->
       'clojerl.List':'reduce'(Coll, Fun);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'reduce'(Coll, Fun);
     'clojerl.Vector' ->
       'clojerl.Vector':'reduce'(Coll, Fun);
     'clojerl.Cons' ->
       'clojerl.Cons':'reduce'(Coll, Fun);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'reduce'(Coll, Fun);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun);
     'clojerl.ChunkedCons' ->
@@ -43,12 +49,18 @@
       'clojerl.LazySeq':'reduce'(Coll, Fun, Init);
     'clojerl.Range' ->
       'clojerl.Range':'reduce'(Coll, Fun, Init);
+    'clojerl.Cycle' ->
+      'clojerl.Cycle':'reduce'(Coll, Fun, Init);
     'clojerl.List' ->
       'clojerl.List':'reduce'(Coll, Fun, Init);
+    'clojerl.Iterate' ->
+      'clojerl.Iterate':'reduce'(Coll, Fun, Init);
     'clojerl.Vector' ->
       'clojerl.Vector':'reduce'(Coll, Fun, Init);
     'clojerl.Cons' ->
       'clojerl.Cons':'reduce'(Coll, Fun, Init);
+    'clojerl.Repeat' ->
+      'clojerl.Repeat':'reduce'(Coll, Fun, Init);
     'clojerl.Vector.ChunkedSeq' ->
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun, Init);
     'clojerl.ChunkedCons' ->
@@ -62,9 +74,12 @@
 ?SATISFIES('erlang.List') -> true;
 ?SATISFIES('clojerl.LazySeq') -> true;
 ?SATISFIES('clojerl.Range') -> true;
+?SATISFIES('clojerl.Cycle') -> true;
 ?SATISFIES('clojerl.List') -> true;
+?SATISFIES('clojerl.Iterate') -> true;
 ?SATISFIES('clojerl.Vector') -> true;
 ?SATISFIES('clojerl.Cons') -> true;
+?SATISFIES('clojerl.Repeat') -> true;
 ?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
 ?SATISFIES('clojerl.ChunkedCons') -> true;
 ?SATISFIES('clojerl.TupleChunk') -> true;
