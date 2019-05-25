@@ -866,9 +866,11 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             LoopId     = maps:get(loop_id, Expr),
             LoopIdAtom = to_atom(LoopId),
 
-            FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, length(Patterns)),
+            Arity      = length(Patterns),
+            FNameAst   = cerl:ann_c_fname(Ann, LoopIdAtom, Arity),
             ClauseAst  = cerl:ann_c_clause(Ann, Patterns, Body),
-            {Vars, CaseAst} = case_from_clauses(Ann, [ClauseAst]),
+            { Vars
+            , CaseAst} = case_from_clauses(Ann, [ClauseAst]),
             FunAst     = cerl:ann_c_fun(Ann, Vars, CaseAst),
             Defs       = [{FNameAst, FunAst}],
             ApplyAst   = cerl:ann_c_apply([local | Ann], FNameAst, Patterns),
@@ -1187,7 +1189,11 @@ expand_first_argument( {FNameAst, FunAst}
   Ann  = cerl:get_ann(FunAst),
   [_ | VarsTail] = Vars,
   ClauseAst = cerl:c_clause([TypeTupleAst | VarsTail], Body),
-  CaseAst   = cerl:ann_c_case(Ann, cerl:c_values(Vars), [ClauseAst]),
+  FName = cerl:fname_id(FNameAst),
+  Arity = cerl:fname_arity(FNameAst),
+  FailClause = fail_function_clause(Ann, FName, Arity),
+  Clauses = [ClauseAst, FailClause],
+  CaseAst = cerl:ann_c_case(Ann, cerl:c_values(Vars), Clauses),
 
   { FNameAst
   , cerl:ann_c_fun(Ann, Vars, CaseAst)
@@ -1219,7 +1225,7 @@ accessor_function(Typename, FieldAst) ->
   TupleAst        = type_map(Typename, Ann, [FieldAst], [], match),
   AccessorName    = field_fun_name(FieldName),
   ClauseAst       = cerl:ann_c_clause(Ann, [TupleAst], FieldAst),
-  {Vars, CaseAst} = case_from_clauses(Ann, [ClauseAst]),
+  {Vars, CaseAst} = case_from_clauses(Ann, [ClauseAst], AccessorName, 1),
   function_form(AccessorName, Ann, Vars, CaseAst).
 
 -spec creation_function(atom(), [term()], [ast()], [ast()]) -> {ast(), ast()}.
@@ -1644,44 +1650,50 @@ add_functions(Module, Name, Ann, #{op := fn, methods := Methods}, State) ->
   lists:foreach(ExportFun, maps:keys(GroupedMethods)),
 
   FunctionFun =
-    fun(MethodsList, StateAcc) ->
+    fun({Arity, MethodsList}, StateAcc) ->
         StateAcc1 = lists:foldl( fun method_to_function_clause/2
                                , StateAcc
                                , MethodsList
                                ),
         {ClausesAst, StateAcc2} = pop_ast(StateAcc1, length(MethodsList)),
 
-        {Vars, CaseAst} = body_from_clauses(Ann, ClausesAst),
-        FunAst = function_form(Name, Ann, Vars, CaseAst),
+        {Vars, BodyAst} = case_from_clauses(Ann, ClausesAst, Name, Arity),
+        FunAst = function_form(Name, Ann, Vars, BodyAst),
 
         clj_module:add_functions([FunAst], Module),
 
         StateAcc2
     end,
 
-  lists:foldl(FunctionFun, State, maps:values(GroupedMethods)).
+  lists:foldl(FunctionFun, State, maps:to_list(GroupedMethods)).
 
--spec body_from_clauses([term()], [cerl:c_clause()]) ->
+-spec case_from_clauses([term()], [cerl:c_clause()], atom(), arity()) ->
   {[cerl:c_var()], ast()}.
-body_from_clauses(Ann, [ClauseAst]) ->
-  case cerl:clause_guard(ClauseAst) =:= cerl:c_atom(true) of
-    true  ->
-      Patterns = cerl:clause_pats(ClauseAst),
-      BodyAst  = cerl:clause_body(ClauseAst),
-      {Patterns, BodyAst};
-    false ->
-      case_from_clauses(Ann, [ClauseAst])
-  end;
-body_from_clauses(Ann, ClauseAsts) ->
-  case_from_clauses(Ann, ClauseAsts).
+case_from_clauses(Ann, ClausesAst0, Name, Arity) ->
+  MatchFailClause = fail_function_clause(Ann, Name, Arity),
+  ClausesAst1     = ClausesAst0 ++ [MatchFailClause],
+  Vars            = [new_c_var(Ann) || _ <- lists:seq(0, Arity - 1)],
+  CaseAst         = cerl:ann_c_case(Ann, cerl:c_values(Vars), ClausesAst1),
+  {Vars, CaseAst}.
 
 -spec case_from_clauses([term()], [cerl:c_clause()]) ->
   {[cerl:c_var()], ast()}.
 case_from_clauses(Ann, [ClauseAst | _] = ClausesAst) ->
   Patterns = cerl:clause_pats(ClauseAst),
-  Vars = [new_c_var(Ann) || _ <- lists:seq(0, length(Patterns) - 1)],
-  CaseAst = cerl:ann_c_case(Ann, cerl:c_values(Vars), ClausesAst),
+  Vars     = [new_c_var(Ann) || _ <- lists:seq(0, length(Patterns) - 1)],
+  CaseAst  = cerl:ann_c_case(Ann, cerl:c_values(Vars), ClausesAst),
   {Vars, CaseAst}.
+
+-spec fail_function_clause([term()], atom(), arity()) -> ast().
+fail_function_clause(Ann, Name, Arity) ->
+  PrimOpVars      = [new_c_var(Ann) || _ <- lists:seq(0, Arity - 1)],
+  PrimOpArgs      = cerl:c_tuple([cerl:c_atom(function_clause) | PrimOpVars]),
+  MatchFailPrimOp = cerl:ann_c_primop( [{function_name, {Name, Arity}} | Ann]
+                                     , cerl:c_atom(match_fail)
+                                     , [PrimOpArgs]
+                                     ),
+
+  cerl:c_clause(PrimOpVars, MatchFailPrimOp).
 
 %% ----- letrec -------
 
@@ -1777,23 +1789,24 @@ clojure_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, State0) ->
   push_ast(FunAst, State2).
 
 -spec erlang_fun([expr()], [ast()], ast(), expr(), state()) -> state().
-erlang_fun(VarsAsts, FnValuesAsts, _FNameAst, FnExpr, State0) ->
+erlang_fun(VarsAsts, FnValuesAsts, FNameAst, FnExpr, State0) ->
   #{ op      := fn
    , methods := Methods
    , env     := Env
    } = FnExpr,
 
   Ann = ann_from(Env),
-
+  FName = cerl:fname_id(FNameAst),
+  Arity = cerl:fname_arity(FNameAst),
   State1 = lists:foldl(fun method_to_function_clause/2, State0, Methods),
   {ClausesAsts, State2} = pop_ast(State1, length(Methods)),
-  {Vars, CaseAst} = body_from_clauses(Ann, ClausesAsts),
+  {Vars, BodyAst} = case_from_clauses(Ann, ClausesAsts, FName, Arity),
 
   %% Wrap the body in a let which includes a binding for recursion
   LetAst   = cerl:ann_c_let( Ann
                            , VarsAsts
                            , cerl:c_values(FnValuesAsts)
-                           , CaseAst
+                           , BodyAst
                            ),
   FunAst   = cerl:ann_c_fun(Ann, Vars, LetAst),
 
