@@ -47,10 +47,10 @@ parse_args(["-v" | Rest], Opts) ->
   parse_args(Rest, Opts#{version => true});
 parse_args(["-o", CompilePath | Rest], Opts) ->
   parse_args(Rest, Opts#{compile_path => CompilePath});
-parse_args( ["--to-core", Core | Rest]
+parse_args( ["--to-core" | Rest]
           , #{compile_opts := CompileOpts0} = Opts
           ) ->
-  CompileOpts1 = CompileOpts0#{output_core => list_to_binary(Core)},
+  CompileOpts1 = CompileOpts0#{output_core => true},
   parse_args(Rest, Opts#{compile_opts := CompileOpts1});
 parse_args([Compile | Rest], Opts)
   when Compile =:= "-c"; Compile =:= "--compile" ->
