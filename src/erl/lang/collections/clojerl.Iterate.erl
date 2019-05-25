@@ -59,7 +59,7 @@
 %% clojerl.ICounted
 
 count(#{?TYPE := ?M}) ->
-  ?ERROR(<<"Unsupported count operation for clojerl.Cycle">>).
+  ?ERROR(<<"Unsupported count operation for clojerl.Iterate">>).
 
 %% clojerl.IColl
 
@@ -130,4 +130,4 @@ to_list(#{?TYPE := ?M}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M}) ->
-  ?ERROR(<<"Can't generate an infinite list">>).
+  <<"#<clojerl.Iterate>">>.

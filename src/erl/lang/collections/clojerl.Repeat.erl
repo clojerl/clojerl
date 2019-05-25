@@ -64,7 +64,10 @@
 
 %% clojerl.ICounted
 
-count(#{?TYPE := ?M, count := Count}) -> Count.
+count(#{?TYPE := ?M, count := infinity}) ->
+  ?ERROR(<<"Unsupported count operation for clojerl.Cycle">>);
+count(#{?TYPE := ?M, count := Count}) ->
+  Count.
 
 %% clojerl.IColl
 
@@ -75,7 +78,7 @@ empty(_) -> clj_rt:list([]).
 %% clojerl.IEquiv
 
 equiv( #{?TYPE := ?M, value := X, count := Count}
-     , #{?TYPE := ?M, items := Y, count := Count}
+     , #{?TYPE := ?M, value := Y, count := Count}
      ) ->
   clj_rt:equiv(X, Y);
 equiv(#{?TYPE := ?M, count := infinity}, _) ->

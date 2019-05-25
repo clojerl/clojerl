@@ -151,4 +151,4 @@ to_list(#{?TYPE := ?M}) ->
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M}) ->
-  <<"#<Cycle>">>.
+  <<"#<clojerl.Cycle>">>.
