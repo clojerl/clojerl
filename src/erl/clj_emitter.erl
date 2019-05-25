@@ -2044,5 +2044,5 @@ new_c_var(Ann) ->
         X -> X
       end,
   erlang:put(local_var_counter, N + 1),
-  Name = list_to_atom("clj " ++ integer_to_list(N)),
+  Name = list_to_atom(integer_to_list(N)),
   cerl:ann_c_var([compiler_generated | Ann], Name).
