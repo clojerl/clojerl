@@ -502,6 +502,13 @@
    :added "1.6"}
   [x] (not (nil? x)))
 
+(defn str-helper
+  [^clojerl.String acc more]
+  (if more
+    (recur (.append acc (clj_rt/str (first more)))
+           (next more))
+    acc))
+
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
@@ -510,14 +517,9 @@
    :added "1.0"}
   (^clojerl.String [] "")
   (^clojerl.String [x]
-   (if (nil? x) "" (clj_rt/str x)))
+   (clj_rt/str x))
   (^clojerl.String [x & ys]
-                    ((fn [acc more]
-                       (if more
-                         (recur (.append acc (str (first more)))
-                                (next more))
-                         acc))
-                     (str x) ys)))
+   (str-helper (str x) ys)))
 
 (defn keyword?
   "Return true if x is a Keyword"
