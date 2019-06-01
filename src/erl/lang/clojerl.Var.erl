@@ -262,7 +262,7 @@ apply( #{ ?TYPE     := ?M
      ) ->
   {Arity, Args1} = case process_args(Meta, Args0) of
                      {Arity_, Args_, Rest_} ->
-                       {Arity_, Args_ ++ [clj_rt:seq(Rest_)]};
+                       {Arity_, Args_ ++ [Rest_]};
                      X -> X
                    end,
 
