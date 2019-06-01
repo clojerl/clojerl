@@ -256,10 +256,11 @@ apply( #{ ?TYPE     := ?M
         , ns_atom   := Module
         , name_atom := Function
         , fake_fun  := FakeFun
-        } = Var
+        , meta      := Meta
+        }
      , Args0
      ) ->
-  {Arity, Args1} = case process_args(Var, Args0) of
+  {Arity, Args1} = case process_args(Meta, Args0) of
                      {Arity_, Args_, Rest_} ->
                        {Arity_, Args_ ++ [clj_rt:seq(Rest_)]};
                      X -> X
@@ -267,25 +268,24 @@ apply( #{ ?TYPE     := ?M
 
   apply_fun(FakeFun, Module, Function, Arity, Args1).
 
--spec process_args(type(), [any()]) -> {arity(), [any()]}.
-process_args( #{?TYPE := ?M, meta := #{'variadic?' := true} = Meta}
-            , Args
-            ) ->
+-spec process_args(type(), [any()]) ->
+  {arity(), [any()]} | {arity(), [any()], any()}.
+process_args(#{'variadic?' := true} = Meta, Args) ->
   #{ max_fixed_arity := MaxFixedArity
    , variadic_arity  := VariadicArity
    } = Meta,
   {Length, Args1, Rest} = bounded_length(Args, VariadicArity),
   if
-    (MaxFixedArity =/= ?NIL)
-    andalso (Rest =:= ?NIL)
+    MaxFixedArity =/= ?NIL
+    andalso Rest =:= ?NIL
     andalso (MaxFixedArity >= Length orelse Length < VariadicArity) ->
       {Length, Args1};
     true ->
       {Length + 1, Args1, Rest}
   end;
-process_args(#{?TYPE := ?M}, Args) when is_list(Args) ->
+process_args(_, Args) when is_list(Args) ->
   {length(Args), Args};
-process_args(#{?TYPE := ?M}, Args) ->
+process_args(_, Args) ->
   Args1 = clj_rt:to_list(Args),
   {length(Args1), Args1}.
 
@@ -306,7 +306,7 @@ bounded_length(Args, Max) ->
   bounded_length(TypeModule:seq(Args), 0, Max, []).
 
 -spec bounded_length(any(), non_neg_integer(), non_neg_integer(), list()) ->
-  {non_neg_integer(), list()}.
+  {non_neg_integer(), list(), any()}.
 bounded_length(?NIL, N, _Max, Acc) ->
   {N, lists:reverse(Acc), ?NIL};
 bounded_length(Rest, N, _Max = N, Acc) ->
