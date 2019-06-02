@@ -34,6 +34,8 @@
       'clojerl.Cycle':'first'(Seq);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'first'(Seq);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'first'(Seq);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'first'(Seq);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -72,6 +74,8 @@
       'clojerl.Cycle':'next'(Seq);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'next'(Seq);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'next'(Seq);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'next'(Seq);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -110,6 +114,8 @@
       'clojerl.Cycle':'more'(Seq);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'more'(Seq);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'more'(Seq);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'more'(Seq);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -139,6 +145,7 @@
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
     #{?TYPE := 'clojerl.Cycle'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.StringSeq'} ->  true;
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := _} ->  false;
@@ -160,6 +167,7 @@
     'clojerl.Vector.RSeq' -> true;
     'clojerl.Cycle' -> true;
     'clojerl.Repeat' -> true;
+    'clojerl.StringSeq' -> true;
     'clojerl.Cons' -> true;
     'clojerl.ChunkedCons' -> true;
     'erlang.List' -> true;

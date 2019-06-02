@@ -44,6 +44,8 @@
       'clojerl.Cycle':'count'(Seq);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'count'(Seq);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'count'(Seq);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'count'(Seq);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -87,6 +89,7 @@
     #{?TYPE := 'erlang.io.StringWriter'} ->  true;
     #{?TYPE := 'clojerl.Cycle'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.StringSeq'} ->  true;
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
@@ -118,6 +121,7 @@
     'erlang.io.StringWriter' -> true;
     'clojerl.Cycle' -> true;
     'clojerl.Repeat' -> true;
+    'clojerl.StringSeq' -> true;
     'clojerl.Cons' -> true;
     'clojerl.ChunkedCons' -> true;
     'clojerl.TupleMap' -> true;

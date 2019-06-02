@@ -23,6 +23,7 @@
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
     #{?TYPE := 'clojerl.Cycle'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.StringSeq'} ->  true;
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := _} ->  false;
@@ -47,6 +48,7 @@
     'clojerl.Vector.RSeq' -> true;
     'clojerl.Cycle' -> true;
     'clojerl.Repeat' -> true;
+    'clojerl.StringSeq' -> true;
     'clojerl.Cons' -> true;
     'clojerl.ChunkedCons' -> true;
     'clojerl.BitString' -> true;
