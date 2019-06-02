@@ -1959,7 +1959,11 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
   case clj_rt:get(VarMeta, 'fn?', false) of
     true ->
       Function     = 'clojerl.Var':function(Var),
-      {_, Args1}   = 'clojerl.Var':process_args(Var, Args, fun list_ast/1),
+      {_, Args1}   = case 'clojerl.Var':process_args(VarMeta, Args) of
+                       {Arity_, Args_, Rest_} ->
+                         {Arity_, Args_ ++ [list_ast(Rest_)]};
+                       X -> X
+                     end,
       CurrentNs    = 'clojerl.Namespace':current(),
       CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
       NsName       = 'clojerl.Symbol':name(CurrentNsSym),

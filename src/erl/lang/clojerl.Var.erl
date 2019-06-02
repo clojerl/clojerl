@@ -23,7 +23,7 @@
 -export([ function/1
         , module/1
         , val_function/1
-        , process_args/3
+        , process_args/2
         , mark_fake_fun/1
         ]).
 
@@ -220,14 +220,12 @@ deref(#{ ?TYPE    := ?M
        , name     := Name
        , ns_atom  := Module
        , val_atom := FunctionVal
-       } = Var) ->
-  %% HACK
-  Fun = resolve_fun(Var, Module, FunctionVal, 0),
-
+       , fake_fun := FakeFun
+       }) ->
   try
     %% Make the call in case the module is not loaded and handle the case
     %% when it doesn't even exist gracefully.
-    Fun()
+    apply_fun(FakeFun, Module, FunctionVal, 0, [])
   catch
     ?WITH_STACKTRACE(Type, undef, Stacktrace)
       case erlang:function_exported(Module, FunctionVal, 0) of
@@ -254,33 +252,45 @@ meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 with_meta(#{?TYPE := ?M} = Var, Metadata) ->
   Var#{meta => Metadata}.
 
-apply(#{?TYPE := ?M, ns_atom := Module, name_atom := Function} = Var, Args0) ->
-  {Arity, Args1} = process_args(Var, Args0, fun clj_rt:seq/1),
-  Fun            = resolve_fun(Var, Module, Function, Arity),
+apply( #{ ?TYPE     := ?M
+        , ns_atom   := Module
+        , name_atom := Function
+        , fake_fun  := FakeFun
+        , meta      := Meta
+        }
+     , Args0
+     ) ->
+  {Arity, Args1} = case process_args(Meta, Args0) of
+                     {Arity_, Args_, Rest_} ->
+                       {Arity_, Args_ ++ [Rest_]};
+                     X -> X
+                   end,
 
-  erlang:apply(Fun, Args1).
+  apply_fun(FakeFun, Module, Function, Arity, Args1).
 
--spec process_args(type(), [any()], function()) -> {arity(), [any()]}.
-process_args( #{?TYPE := ?M, meta := #{'variadic?' := true} = Meta}
-            , Args
-            , RestFun
-            ) ->
+-spec process_args(type(), [any()]) ->
+  {arity(), [any()]} | {arity(), [any()], any()}.
+process_args(#{'variadic?' := true} = Meta, Args) ->
   #{ max_fixed_arity := MaxFixedArity
    , variadic_arity  := VariadicArity
    } = Meta,
   {Length, Args1, Rest} = bounded_length(Args, VariadicArity),
   if
-    MaxFixedArity =:= ?NIL
-    orelse Rest =/= ?NIL
-    orelse (MaxFixedArity < Length andalso Length >= VariadicArity)->
-      {Length + 1, Args1 ++ [RestFun(Rest)]};
+    MaxFixedArity =/= ?NIL
+    andalso Rest =:= ?NIL
+    andalso (MaxFixedArity >= Length orelse Length < VariadicArity) ->
+      {Length, Args1};
     true ->
-      {Length, Args1}
+      {Length + 1, Args1, Rest}
   end;
-process_args(#{?TYPE := ?M}, Args, _RestFun) ->
+process_args(_, Args) when is_list(Args) ->
+  {length(Args), Args};
+process_args(_, Args) ->
   Args1 = clj_rt:to_list(Args),
   {length(Args1), Args1}.
 
+-spec bounded_length(any(), non_neg_integer()) ->
+  {non_neg_integer(), list(), any()}.
 bounded_length(Args, Max) when is_list(Args) ->
   Length = length(Args),
   case Length =< Max of
@@ -295,6 +305,8 @@ bounded_length(Args, Max) ->
   TypeModule = clj_rt:type_module(Args),
   bounded_length(TypeModule:seq(Args), 0, Max, []).
 
+-spec bounded_length(any(), non_neg_integer(), non_neg_integer(), list()) ->
+  {non_neg_integer(), list(), any()}.
 bounded_length(?NIL, N, _Max, Acc) ->
   {N, lists:reverse(Acc), ?NIL};
 bounded_length(Rest, N, _Max = N, Acc) ->
@@ -309,8 +321,9 @@ bounded_length(Rest, N, Max, Acc) ->
 %% Helper functions
 %%------------------------------------------------------------------------------
 
--spec resolve_fun(type(), module(), atom(), arity()) -> fun().
-resolve_fun(#{fake_fun := false}, Module, Function, Arity) ->
-  fun Module:Function/Arity;
-resolve_fun(_, Module, Function, Arity) ->
-  clj_module:fake_fun(Module, Function, Arity).
+-spec apply_fun(type(), module(), atom(), arity(), [any()]) -> any().
+apply_fun(false, Module, Function, _Arity, Args) ->
+  erlang:apply(Module,Function, Args);
+apply_fun(_, Module, Function, Arity, Args) ->
+  Fun = clj_module:fake_fun(Module, Function, Arity),
+  erlang:apply(Fun, Args).

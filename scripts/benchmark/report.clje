@@ -17,11 +17,27 @@
   (->> (str/split content #"\n")
        (reduce process-line {})))
 
+(defn calculate-ratio
+  [{:keys [time time-prev] :as totals}]
+  (->> (/ time time-prev)
+       (format "~.2f")
+       (assoc totals :ratio)))
+
+(defn calculate-totals
+  [cols items]
+  (->> cols
+       (map #(vector % (reduce + (map % items))))
+       (into {:expr "Totals"})
+       calculate-ratio
+       (conj (vec items))))
+
 (defn print-report
   [items]
-  (->> items
-       (sort-by :diff%)
-       (pp/print-table [:expr :runs :time-prev :time :diff :diff%])))
+  (let [cols [:expr :runs :time-prev :time :diff :diff% :ratio]]
+    (->> items
+         (sort-by :diff%)
+         (calculate-totals [:time-prev :time :diff])
+         (pp/print-table cols))))
 
 (defn compare-item
   [items item-prev]
@@ -30,12 +46,14 @@
         t      (:time item)
         t-prev (:time item-prev)
         diff   (if t (- t t-prev) "-")
-        diff%  (if t (-> diff (/ t-prev) (* 100) int) "-")]
+        diff%  (if t (-> diff (/ t-prev) (* 100) int) "-")
+        ratio  (/ t t-prev)]
     (assoc items expr (assoc item-prev
                              :time-prev t-prev
                              :time t
                              :diff diff
-                             :diff% diff%))))
+                             :diff% diff%
+                             :ratio (format "~.2f" ratio)))))
 
 (defn compare
   [items items-prev]

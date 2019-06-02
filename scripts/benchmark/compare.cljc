@@ -41,8 +41,6 @@
      :ratio-num ratio
      :ratio     (format "~.2f" ratio)}))
 
-
-
 (defn -main [& [clj clje]]
   (let [items-clj  (-> (slurp clj) make-report)
         items-clje (-> (slurp clje) make-report)
