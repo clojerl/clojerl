@@ -1,0 +1,10 @@
+%% Don't compile .clje files if NO_CLJ has a value
+case os:getenv("NO_CLJ") of
+  false ->
+    ProviderHooks = { provider_hooks
+                    , [{post, [{compile, {clojerl, compile}}]}]
+                    },
+    [ ProviderHooks | CONFIG ];
+  _ ->
+    CONFIG
+end.

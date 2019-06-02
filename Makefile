@@ -20,7 +20,7 @@ test: clean
 	${V} ${REBAR3} as test do ct, clojerl test
 
 dialyzer: clean
-	${V} ${REBAR3} as dialyzer dialyzer
+	${V} NO_CLJ=true ${REBAR3} dialyzer
 
 shell:
 	${V} ${REBAR3} as dev shell --sname clojerl-shell --setcookie clojerl
