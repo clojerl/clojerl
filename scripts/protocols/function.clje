@@ -2,6 +2,39 @@
   (:require [protocols.utils :as utils]
             [clojure.string :as str]))
 
+(def primitive-types
+  '{"clojerl.String"    {:pred is_binary
+                         :order 1}
+    "clojerl.BitString" {:pred is_bitstring
+                         :order 2}
+    "clojerl.Integer"   {:pred is_integer
+                         :order 3}
+    "clojerl.Float"     {:pred is_float
+                         :order 4}
+    "clojerl.Boolean"   {:pred is_boolean
+                         :order 5}
+    "erlang.List"       {:pred is_list
+                         :order 6}
+    "erlang.Map"        {:pred is_map
+                         :order 7}
+    "erlang.Tuple"      {:pred is_tuple
+                         :order 8}
+    "erlang.Fn"         {:pred is_function
+                         :order 9}
+    ;; nil doesn't implement any protocols
+    ;; "clojerl.Nil"       {:pred nil
+    ;;                      :order 10}
+    "clojerl.Keyword"   {:pred is_atom
+                         :order 11}
+    "erlang.Port"       {:pred is_port
+                         :order 12}
+    "erlang.Process"    {:pred is_pid
+                         :order 13}
+    "erlang.Reference"  {:pred is_reference
+                         :order 14}})
+
+(def primitive-type? primitive-types)
+
 (def protocols
   '{clojerl.IAssociative   [contains_key  [Assoc Key]
                             entry_at      [Assoc Key]
@@ -71,19 +104,25 @@
   [f args]
   (let [args-str (apply str (interpose ", " args))]
     (str "'" f "'(" args-str ") ->\n"
-         "  case clj_rt:type_module(" (first args) ") of\n")))
+         "  case " (first args) " of\n")))
 
 (defn proto-function-tail
   [f args]
   (let [args-str (apply str (interpose ", " args))]
-    (str "    Type ->\n"
-         "      clj_protocol:not_implemented(?MODULE, '" f "', Type)\n"
+    (str "    X ->\n"
+         "      clj_protocol:not_implemented(?MODULE, '" f "', clj_rt:type_module(X))\n"
          "  end.\n\n")))
+
+(defn pattern-and-guard
+  [m]
+  (if (primitive-type? m)
+    (str "X when " (get-in primitive-types [m :pred]) "(X)")
+    (str "#{?TYPE := '" m "'}")))
 
 (defn proto-function-clause
   [f args m]
   (let [args-str (apply str (interpose ", " args))]
-    (str "    '" m "' ->\n"
+    (str "    " (pattern-and-guard m) " ->\n"
          "      '" m "':'" f "'(" args-str ");\n")))
 
 (defn proto-function
@@ -106,10 +145,13 @@
 
 (defn satisfies?-function
   [types]
-  (str (->> types
-            (map #(str "?SATISFIES('" % "') -> true;\n"))
+  (str "?SATISFIES(X) ->\n"
+       "  case X of\n"
+       (->> types
+            (map #(str "    " (pattern-and-guard %) " -> true;\n"))
             (apply str))
-       "?SATISFIES(_) -> false.\n"))
+       "    _ -> false\n"
+       "  end.\n"))
 
 (defn exports
   [fns]
@@ -132,10 +174,19 @@
                    ") -> any().\n")))
        (apply str)))
 
+(defn type-ordering
+  [type-name]
+  (-> type-name
+      (primitive-types {:order 0})
+      :order))
+
 (defn module
   [proto-name fns]
-  (let [types (utils/who-implements proto-name)]
+  (let [types (->> proto-name
+                   utils/who-implements
+                   (sort-by type-ordering))]
     (str "-module('" proto-name "').\n\n"
+         "-include(\"clojerl.hrl\").\n\n"
          "-include(\"clojerl_int.hrl\").\n\n"
          "-clojure(true).\n"
          "-protocol(true).\n\n"
