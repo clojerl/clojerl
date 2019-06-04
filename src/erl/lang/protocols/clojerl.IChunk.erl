@@ -1,5 +1,6 @@
 -module('clojerl.IChunk').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,12 +12,18 @@
 -callback 'drop_first'(any()) -> any().
 
 'drop_first'(Chunk) ->
-  case clj_rt:type_module(Chunk) of
-    'clojerl.TupleChunk' ->
+  case Chunk of
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'drop_first'(Chunk);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'drop_first', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk)
   end.
 
-?SATISFIES('clojerl.TupleChunk') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.TupleChunk'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

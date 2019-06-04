@@ -1,5 +1,6 @@
 -module('clojerl.IErl').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,39 +12,45 @@
 -callback '->erl'(any(), any()) -> any().
 
 '->erl'(X, Recursive) ->
-  case clj_rt:type_module(X) of
-    'clojerl.LazySeq' ->
+  case X of
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'->erl'(X, Recursive);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'->erl'(X, Recursive);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'->erl'(X, Recursive);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'->erl'(X, Recursive);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'->erl'(X, Recursive);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'->erl'(X, Recursive);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'->erl'(X, Recursive);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'->erl'(X, Recursive);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'->erl'(X, Recursive);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, '->erl', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, '->erl', X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, '->erl', X)
   end.
 
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

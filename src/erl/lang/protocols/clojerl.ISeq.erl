@@ -1,5 +1,6 @@
 -module('clojerl.ISeq').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -13,105 +14,115 @@
 -callback 'more'(any()) -> any().
 
 'first'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'erlang.List' ->
-      'erlang.List':'first'(Seq);
-    'clojerl.TransducerSeq' ->
+  case Seq of
+    #{?TYPE := 'clojerl.TransducerSeq'} ->
       'clojerl.TransducerSeq':'first'(Seq);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'first'(Seq);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'first'(Seq);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'first'(Seq);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'first'(Seq);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'first'(Seq);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'first'(Seq);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'first'(Seq);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'first'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'first'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'first'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'first', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'first', Seq);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'first'(Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'first', Seq)
   end.
 
 'next'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'erlang.List' ->
-      'erlang.List':'next'(Seq);
-    'clojerl.TransducerSeq' ->
+  case Seq of
+    #{?TYPE := 'clojerl.TransducerSeq'} ->
       'clojerl.TransducerSeq':'next'(Seq);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'next'(Seq);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'next'(Seq);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'next'(Seq);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'next'(Seq);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'next'(Seq);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'next'(Seq);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'next'(Seq);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'next'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'next'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'next'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'next', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'next', Seq);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'next'(Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'next', Seq)
   end.
 
 'more'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'erlang.List' ->
-      'erlang.List':'more'(Seq);
-    'clojerl.TransducerSeq' ->
+  case Seq of
+    #{?TYPE := 'clojerl.TransducerSeq'} ->
       'clojerl.TransducerSeq':'more'(Seq);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'more'(Seq);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'more'(Seq);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'more'(Seq);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'more'(Seq);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'more'(Seq);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'more'(Seq);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'more'(Seq);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'more'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'more'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'more'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'more', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'more', Seq);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'more'(Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'more', Seq)
   end.
 
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.TransducerSeq') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.TransducerSeq'} -> true;
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_list(ZZZ) -> true;
+    _ -> false
+  end.

@@ -1,5 +1,6 @@
 -module('clojerl.IReversible').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,12 +12,18 @@
 -callback 'rseq'(any()) -> any().
 
 'rseq'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'clojerl.Vector' ->
+  case Seq of
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'rseq'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'rseq', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'rseq', Seq)
   end.
 
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

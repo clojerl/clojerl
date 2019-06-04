@@ -1,5 +1,6 @@
 -module('clojerl.IAssociative').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -13,56 +14,66 @@
 -callback 'assoc'(any(), any(), any()) -> any().
 
 'contains_key'(Assoc, Key) ->
-  case clj_rt:type_module(Assoc) of
-    'erlang.Map' ->
-      'erlang.Map':'contains_key'(Assoc, Key);
-    'clojerl.SortedMap' ->
+  case Assoc of
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'contains_key'(Assoc, Key);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'contains_key'(Assoc, Key);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'contains_key'(Assoc, Key);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'contains_key'(Assoc, Key);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'contains_key', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'contains_key'(Assoc, Key);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc)
   end.
 
 'entry_at'(Assoc, Key) ->
-  case clj_rt:type_module(Assoc) of
-    'erlang.Map' ->
-      'erlang.Map':'entry_at'(Assoc, Key);
-    'clojerl.SortedMap' ->
+  case Assoc of
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'entry_at'(Assoc, Key);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'entry_at'(Assoc, Key);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'entry_at'(Assoc, Key);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'entry_at'(Assoc, Key);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'entry_at', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'entry_at'(Assoc, Key);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc)
   end.
 
 'assoc'(Assoc, Key, Value) ->
-  case clj_rt:type_module(Assoc) of
-    'erlang.Map' ->
-      'erlang.Map':'assoc'(Assoc, Key, Value);
-    'clojerl.SortedMap' ->
+  case Assoc of
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'assoc'(Assoc, Key, Value);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'assoc'(Assoc, Key, Value);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'assoc'(Assoc, Key, Value);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'assoc'(Assoc, Key, Value);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'assoc', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'assoc'(Assoc, Key, Value);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'assoc', Assoc)
   end.
 
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_map(ZZZ) -> true;
+    _ -> false
+  end.

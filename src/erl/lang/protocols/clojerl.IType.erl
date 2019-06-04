@@ -1,5 +1,6 @@
 -module('clojerl.IType').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -9,4 +10,8 @@
 
 -callback '_'(any()) -> any().
 
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

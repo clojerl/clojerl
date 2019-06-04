@@ -1,5 +1,6 @@
 -module('clojerl.IStack').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,30 +13,38 @@
 -callback 'pop'(any()) -> any().
 
 'peek'(Stack) ->
-  case clj_rt:type_module(Stack) of
-    'erlang.List' ->
-      'erlang.List':'peek'(Stack);
-    'clojerl.List' ->
+  case Stack of
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'peek'(Stack);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'peek'(Stack);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'peek', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'peek'(Stack);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack)
   end.
 
 'pop'(Stack) ->
-  case clj_rt:type_module(Stack) of
-    'erlang.List' ->
-      'erlang.List':'pop'(Stack);
-    'clojerl.List' ->
+  case Stack of
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'pop'(Stack);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'pop'(Stack);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'pop', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'pop'(Stack);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack)
   end.
 
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_list(ZZZ) -> true;
+    _ -> false
+  end.

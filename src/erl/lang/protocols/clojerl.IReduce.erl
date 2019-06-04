@@ -1,5 +1,6 @@
 -module('clojerl.IReduce').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,75 +13,83 @@
 -callback 'reduce'(any(), any(), any()) -> any().
 
 'reduce'(Coll, Fun) ->
-  case clj_rt:type_module(Coll) of
-    'erlang.List' ->
-      'erlang.List':'reduce'(Coll, Fun);
-    'clojerl.LazySeq' ->
+  case Coll of
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'reduce'(Coll, Fun);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'reduce'(Coll, Fun);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'reduce'(Coll, Fun);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'reduce'(Coll, Fun);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'reduce'(Coll, Fun);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'reduce'(Coll, Fun);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'reduce'(Coll, Fun);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'reduce'(Coll, Fun);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'reduce'(Coll, Fun);
-    'clojerl.TupleChunk' ->
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'reduce'(Coll, Fun);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'reduce', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'reduce'(Coll, Fun);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Coll)
   end.
 
 'reduce'(Coll, Fun, Init) ->
-  case clj_rt:type_module(Coll) of
-    'erlang.List' ->
-      'erlang.List':'reduce'(Coll, Fun, Init);
-    'clojerl.LazySeq' ->
+  case Coll of
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'reduce'(Coll, Fun, Init);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'reduce'(Coll, Fun, Init);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'reduce'(Coll, Fun, Init);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'reduce'(Coll, Fun, Init);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'reduce'(Coll, Fun, Init);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'reduce'(Coll, Fun, Init);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'reduce'(Coll, Fun, Init);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'reduce'(Coll, Fun, Init);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun, Init);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'reduce'(Coll, Fun, Init);
-    'clojerl.TupleChunk' ->
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'reduce'(Coll, Fun, Init);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'reduce', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'reduce'(Coll, Fun, Init);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Coll)
   end.
 
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES('clojerl.TupleChunk') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := 'clojerl.TupleChunk'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_list(ZZZ) -> true;
+    _ -> false
+  end.

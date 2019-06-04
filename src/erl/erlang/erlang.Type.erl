@@ -34,11 +34,8 @@ module(#{?TYPE := ?M, name := Name}) -> Name.
   clj_rt:type_module(X) == Name.
 
 -spec 'satisfies?'(type(), any()) -> boolean().
-'satisfies?'(#{?TYPE := ?M, name := Type}, #{?TYPE := ValueType}) ->
-  Type:?SATISFIES(ValueType);
 'satisfies?'(#{?TYPE := ?M, name := Type}, X) ->
-  ValueType = clj_rt:type_module(X),
-  Type:?SATISFIES(ValueType).
+  Type:?SATISFIES(X).
 
 -spec 'extends?'(type(), type()) -> boolean().
 'extends?'(#{?TYPE := ?M, name := Type}, #{?TYPE := ?M, name := ValueType}) ->

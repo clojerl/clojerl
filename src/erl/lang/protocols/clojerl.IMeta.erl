@@ -1,5 +1,6 @@
 -module('clojerl.IMeta').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,115 +13,123 @@
 -callback 'with_meta'(any(), any()) -> any().
 
 'meta'(X) ->
-  case clj_rt:type_module(X) of
-    'clojerl.Var' ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'meta'(X);
-    'clojerl.Atom' ->
+    #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'meta'(X);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'meta'(X);
-    'clojerl.Namespace' ->
+    #{?TYPE := 'clojerl.Namespace'} ->
       'clojerl.Namespace':'meta'(X);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'meta'(X);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'meta'(X);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'meta'(X);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'meta'(X);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'meta'(X);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'meta'(X);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'meta'(X);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'meta'(X);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'meta'(X);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'meta'(X);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'meta'(X);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'meta'(X);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'meta'(X);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'meta'(X);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'meta'(X);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'meta'(X);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'meta', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'meta', X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'meta', X)
   end.
 
 'with_meta'(X, Meta) ->
-  case clj_rt:type_module(X) of
-    'clojerl.Var' ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'with_meta'(X, Meta);
-    'clojerl.Atom' ->
+    #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'with_meta'(X, Meta);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'with_meta'(X, Meta);
-    'clojerl.Namespace' ->
+    #{?TYPE := 'clojerl.Namespace'} ->
       'clojerl.Namespace':'with_meta'(X, Meta);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'with_meta'(X, Meta);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'with_meta'(X, Meta);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'with_meta'(X, Meta);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'with_meta'(X, Meta);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'with_meta'(X, Meta);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'with_meta'(X, Meta);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'with_meta'(X, Meta);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'with_meta'(X, Meta);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'with_meta'(X, Meta);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'with_meta'(X, Meta);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'with_meta'(X, Meta);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'with_meta'(X, Meta);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'with_meta'(X, Meta);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'with_meta'(X, Meta);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'with_meta'(X, Meta);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'with_meta'(X, Meta);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'with_meta', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'with_meta', X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'with_meta', X)
   end.
 
-?SATISFIES('clojerl.Var') -> true;
-?SATISFIES('clojerl.Atom') -> true;
-?SATISFIES('clojerl.Symbol') -> true;
-?SATISFIES('clojerl.Namespace') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.Set') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES('clojerl.SortedSet') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} -> true;
+    #{?TYPE := 'clojerl.Atom'} -> true;
+    #{?TYPE := 'clojerl.Symbol'} -> true;
+    #{?TYPE := 'clojerl.Namespace'} -> true;
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.Set'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := 'clojerl.SortedSet'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

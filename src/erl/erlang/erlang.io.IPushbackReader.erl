@@ -1,5 +1,6 @@
 -module('erlang.io.IPushbackReader').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,12 +12,18 @@
 -callback 'unread'(any(), any()) -> any().
 
 'unread'(Reader, Ch) ->
-  case clj_rt:type_module(Reader) of
-    'erlang.io.PushbackReader' ->
+  case Reader of
+    #{?TYPE := 'erlang.io.PushbackReader'} ->
       'erlang.io.PushbackReader':'unread'(Reader, Ch);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'unread', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'unread', Reader);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'unread', Reader)
   end.
 
-?SATISFIES('erlang.io.PushbackReader') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'erlang.io.PushbackReader'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

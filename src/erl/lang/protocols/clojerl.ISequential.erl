@@ -1,5 +1,6 @@
 -module('clojerl.ISequential').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -9,19 +10,23 @@
 
 -callback '_'(any()) -> any().
 
-?SATISFIES('erlang.Tuple') -> true;
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.TransducerSeq') -> true;
-?SATISFIES('clojerl.BitString') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.TransducerSeq'} -> true;
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_bitstring(ZZZ) -> true;
+    ZZZ when is_list(ZZZ) -> true;
+    ZZZ when is_tuple(ZZZ) -> true;
+    _ -> false
+  end.

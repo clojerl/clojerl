@@ -1,5 +1,6 @@
 -module('erlang.io.IWriter').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,30 +13,38 @@
 -callback 'write'(any(), any(), any()) -> any().
 
 'write'(Writer, Str) ->
-  case clj_rt:type_module(Writer) of
-    'erlang.io.StringWriter' ->
+  case Writer of
+    #{?TYPE := 'erlang.io.StringWriter'} ->
       'erlang.io.StringWriter':'write'(Writer, Str);
-    'erlang.io.File' ->
+    #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'write'(Writer, Str);
-    'clojerl.Keyword' ->
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'write'(Writer, Str);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'write', Type)
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer)
   end.
 
 'write'(Writer, Format, Value) ->
-  case clj_rt:type_module(Writer) of
-    'erlang.io.StringWriter' ->
+  case Writer of
+    #{?TYPE := 'erlang.io.StringWriter'} ->
       'erlang.io.StringWriter':'write'(Writer, Format, Value);
-    'erlang.io.File' ->
+    #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'write'(Writer, Format, Value);
-    'clojerl.Keyword' ->
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'write'(Writer, Format, Value);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'write', Type)
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer)
   end.
 
-?SATISFIES('erlang.io.StringWriter') -> true;
-?SATISFIES('erlang.io.File') -> true;
-?SATISFIES('clojerl.Keyword') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'erlang.io.StringWriter'} -> true;
+    #{?TYPE := 'erlang.io.File'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_atom(ZZZ) -> true;
+    _ -> false
+  end.

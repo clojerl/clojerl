@@ -2,6 +2,7 @@
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
+-include("clojerl_protocol.hrl").
 -include("clojerl_expr.hrl").
 
 -export([ emit/1
@@ -1334,7 +1335,11 @@ type_map_ast(Typename, MapPairsAsts, MapType) ->
                create -> fun cerl:c_map_pair/2;
                match  -> fun c_map_pair_exact/2
              end,
-  TypeMapPairAst = MakePair(cerl:c_atom(?TYPE), cerl:c_atom(Typename)),
+  Value    = case Typename of
+               '_'      -> new_c_var([]);
+               Typename -> cerl:c_atom(Typename)
+             end,
+  TypeMapPairAst = MakePair(cerl:c_atom(?TYPE), Value),
   MakeMap([TypeMapPairAst | MapPairsAsts]).
 
 %% ----- defprotocol ------
@@ -1346,17 +1351,20 @@ protocol_function(Sig, Module, Ann) ->
   Arity          = clj_rt:second(Sig),
   Method         = to_atom(MethodSym),
   Vars           = [new_c_var(Ann) || _ <- lists:seq(1, Arity)],
-  TypeVar        = new_c_var(Ann),
+  FirstVar       = hd(Vars),
   Args           = [ cerl:c_atom(Module)
                    , cerl:c_atom(Method)
-                   , TypeVar
+                   , FirstVar
                    ],
 
-  FirstVar       = hd(Vars),
-  TypeCall       = call_mfa(clj_rt, type_module, [FirstVar], Ann),
+
   CatchAllBody   = call_mfa(clj_protocol, not_implemented, Args, Ann),
-  CatchAllClause = cerl:ann_c_clause(Ann, [TypeVar], CatchAllBody),
-  Body           = cerl:ann_c_case(Ann, TypeCall, [CatchAllClause]),
+  CatchAllClause = cerl:ann_c_clause(Ann, [FirstVar], CatchAllBody),
+
+  CatchAllMapClause = protocol_clause('_', CatchAllBody),
+
+  Clauses        = [CatchAllMapClause, CatchAllClause],
+  Body           = cerl:ann_c_case(Ann, FirstVar, Clauses),
 
   { cerl:c_fname(Method, Arity)
   , cerl:ann_c_fun(Ann, Vars, Body)
@@ -1366,8 +1374,12 @@ protocol_function(Sig, Module, Ann) ->
   {cerl:c_fname(), cerl:c_fun()}.
 satisfies_function(Ann) ->
   Arg         = new_c_var(Ann),
+
+  MapClause   = protocol_clause('_', cerl:abstract(false)),
   FalseClause = cerl:ann_c_clause(Ann, [new_c_var(Ann)], cerl:abstract(false)),
-  Body        = cerl:ann_c_case(Ann, Arg, [FalseClause]),
+  Clauses     = [MapClause, FalseClause],
+
+  Body        = cerl:ann_c_case(Ann, Arg, Clauses),
 
   { cerl:c_fname(?SATISFIES, 1)
   , cerl:ann_c_fun(Ann, [Arg], Body)
@@ -1399,70 +1411,72 @@ protocol_function_add_type({{Name, _}, X}, _TypeModule, _ImplModule)
        Name =:= behavior_info;
        Name =:= behaviour_info ->
   X;
-protocol_function_add_type( {{?SATISFIES, 1}, {FName, Fun0}}
+protocol_function_add_type( {{?SATISFIES, 1}, {FName, Fun00}}
                           , TypeModule
                           , _ImplModule
                           ) ->
-  Vars0    = cerl:fun_vars(Fun0),
-  Body0    = cerl:fun_body(Fun0),
+  Fun0        = unwrap_function(Fun00),
+  Vars        = cerl:fun_vars(Fun0),
+  Body0       = cerl:fun_body(Fun0),
 
-  Arg0     = cerl:case_arg(Body0),
-  Clauses0 = cerl:case_clauses(Body0),
+  Arg         = cerl:case_arg(Body0),
+  Clauses0    = cerl:case_clauses(Body0),
+  ClausesMap0 = clauses_to_map(Clauses0),
 
-  Clause   = cerl:c_clause([cerl:abstract(TypeModule)], cerl:abstract(true)),
-  Clauses1 = [Clause | Clauses0],
+  Clause      = protocol_clause(TypeModule, cerl:c_atom(true)),
+  Tag         = type_from_clause(Clause),
 
-  Body1    = cerl:update_c_case(Body0, Arg0, Clauses1),
-  Fun1     = cerl:update_c_fun(Fun0, Vars0, Body1),
+  CatchAll    = cerl:c_clause([new_c_var([])], cerl:c_atom(false)),
+  ClausesMap1 = ClausesMap0#{ Tag            => Clause
+                            , ?CATCH_ALL_TAG => CatchAll
+                            },
+  Clauses1    = sort_clauses(ClausesMap1),
+
+  Body1       = cerl:update_c_case(Body0, Arg, Clauses1),
+  Fun1        = cerl:update_c_fun(Fun0, Vars, Body1),
 
   {FName, Fun1};
-protocol_function_add_type({{Name, _}, {FName, Fun0}}
+protocol_function_add_type({{Name, _}, {FName, Fun00}}
                           , TypeModule
                           , ImplModule
                           ) ->
-  %% Top level case
-  FunVars0           = cerl:fun_vars(Fun0),
-  FunBody0           = cerl:fun_body(Fun0),
-  FunBodyArg0        = cerl:case_arg(FunBody0),
-  [FunBodyClause0 | FunBodyRestClauses0] = cerl:case_clauses(FunBody0),
+  Fun0  = unwrap_function(Fun00),
+  Vars  = cerl:fun_vars(Fun0),
+  Body0 = cerl:fun_body(Fun0),
 
-  %% First Clause
-  FunBodyClausePats0 = cerl:clause_pats(FunBodyClause0),
-  FunBodyClauseBody0 = cerl:clause_body(FunBodyClause0),
-
-  %% Check if there are nested 'case' expressions
-  Fun1 = case cerl:is_c_case(FunBodyClauseBody0) of
-           true ->
-             %% Add the clause for the type module.
-             FunBodyClauseBody1 = case_add_type( Name
-                                               , FunVars0
-                                               , TypeModule
-                                               , ImplModule
-                                               , FunBodyClauseBody0
-                                               ),
-             %% Rebuild function body
-             FunBodyClause1  = cerl:c_clause( FunBodyClausePats0
-                                            , FunBodyClauseBody1
-                                            ),
-
-             FunBodyClauses1 = [FunBodyClause1 | FunBodyRestClauses0],
-             FunBody1        = cerl:update_c_case( FunBody0
-                                                 , FunBodyArg0
-                                                 , FunBodyClauses1
-                                                 ),
-
-             cerl:update_c_fun(Fun0, FunVars0, FunBody1);
-           false ->
-             FunBody1 = case_add_type( Name
-                                     , FunVars0
-                                     , TypeModule
-                                     , ImplModule
-                                     , FunBody0
-                                     ),
-             cerl:update_c_fun(Fun0, FunVars0, FunBody1)
-         end,
+  Body1 = case_add_type( Name
+                       , Vars
+                       , TypeModule
+                       , ImplModule
+                       , Body0
+                       ),
+  Fun1  = cerl:update_c_fun(Fun0, Vars, Body1),
 
   {FName, Fun1}.
+
+-spec unwrap_function(cerl:cerl()) -> cerl:cerl().
+unwrap_function(Fun) ->
+  Case         = cerl:fun_body(Fun),
+  [Clause | _] = cerl:case_clauses(Case),
+  ClauseBody = cerl:clause_body(Clause),
+
+  case cerl:is_c_case(ClauseBody) of
+    true ->
+      %% io:format("====================~n"),
+      %% io:format("~s~n", [core_pp:format(Fun)]),
+      %% io:format("====================~n"),
+
+      InnerCase = ClauseBody,
+      Args      = cerl:clause_pats(Clause),
+      F = cerl:update_c_fun(Fun, Args, InnerCase),
+      %% io:format("====================~n"),
+      %% io:format("    AFTER           ~n"),
+      %% io:format("====================~n"),
+      %% io:format("~s~n", [core_pp:format(F)]),
+      %% io:format("====================~n"),
+      F;
+    _    -> Fun
+  end.
 
 -spec case_add_type( atom()
                    , [cerl:c_var()]
@@ -1499,28 +1513,85 @@ case_add_type(Name, Vars, ?DEFAULT_TYPE, ImplModule, Case) ->
 
   cerl:update_c_case(Case, Arg, Clauses1);
 case_add_type(Name, Vars, TypeModule, ImplModule, Case) ->
-  Arg      = cerl:case_arg(Case),
-  Clauses0 = cerl:case_clauses(Case),
+  Arg         = cerl:case_arg(Case),
+  Clauses0    = cerl:case_clauses(Case),
+  ClausesMap0 = clauses_to_map(Clauses0),
 
-  FoldFun  = fun(Item, ClausesAcc) ->
-                 [TypeAst] = cerl:clause_pats(Item),
-                 case
-                   cerl:is_c_var(TypeAst)
-                   orelse ( cerl:is_literal(TypeAst)
-                            andalso cerl:concrete(TypeAst) =/= TypeModule
-                          )
-                 of
-                   true  -> [Item | ClausesAcc];
-                   false -> ClausesAcc
-                 end
-             end,
-  Clauses1 = lists:foldl(FoldFun, [], Clauses0),
+  Body        = call_mfa(ImplModule, Name, Vars, []),
+  Clause      = protocol_clause(TypeModule, Body),
+  Tag         = type_from_clause(Clause),
 
-  Clause   = cerl:c_clause( [cerl:abstract(TypeModule)]
-                          , call_mfa(ImplModule, Name, Vars, [])
-                          ),
+  ClausesMap1 = ClausesMap0#{Tag => Clause},
+  Clauses1    = sort_clauses(ClausesMap1),
 
-  cerl:update_c_case(Case, Arg, [Clause | lists:reverse(Clauses1)]).
+  cerl:update_c_case(Case, Arg, Clauses1).
+
+-spec clauses_to_map([cerl:cerl()]) -> #{atom() => cerl:cerl()}.
+clauses_to_map(Clauses) ->
+  FoldFun     = fun(Item, ClausesMap) ->
+                    ClauseType = type_from_clause(Item),
+                    ClausesMap#{ClauseType => Item}
+                end,
+  lists:foldl(FoldFun, #{}, Clauses).
+
+%% @doc Generate the clause for a type in the protocol dispatch
+%%
+%% The generated code will be either (a) for a custom type or
+%% (b) for a primitive type.
+%%
+%% (a) #{?TYPE := 'some.Type'} -> body;
+%% (b) X when is_something(X) -> body;
+-spec protocol_clause(module(), cerl:cerl()) -> cerl:cerl().
+protocol_clause(Type, Body) ->
+  case maps:get(Type, ?PRIMITIVE_TYPES, custom) of
+    custom ->
+      Pattern = type_map_ast(Type, [], match),
+      cerl:c_clause([Pattern], Body);
+    #{pred := ?NIL} ->
+      Pattern = cerl:c_atom(?NIL),
+      cerl:c_clause([Pattern], Body);
+    #{pred := Predicate} ->
+      Pattern = new_c_var([]),
+      Guard   = call_mfa(erlang, Predicate, [Pattern], []),
+      cerl:c_clause([Pattern], Guard, Body)
+  end.
+
+-spec type_from_clause(cerl:cerl()) -> {atom(), cerl:cerl()}.
+type_from_clause(Clause) ->
+  Guard     = cerl:clause_guard(Clause),
+  [Pattern] = cerl:clause_pats(Clause),
+  case {cerl:type(Guard), cerl:type(Pattern)} of
+    {literal, var}     -> ?CATCH_ALL_TAG;
+    {literal, literal} -> ?NIL_TYPE;
+    {literal, map}     ->
+      [MapPairAst] = cerl:map_es(Pattern),
+      ValAst       = cerl:map_pair_val(MapPairAst),
+      case cerl:type(ValAst) of
+        literal -> cerl:concrete(ValAst);
+        var     -> ?CATCH_ALL_MAP_TAG
+      end;
+    _ ->
+      GuardNameAst = cerl:call_name(Guard),
+      GuardName = cerl:concrete(GuardNameAst),
+      maps:get(GuardName, ?GUARDS2TYPES)
+  end.
+
+-spec sort_clauses(#{atom() => cerl:cerl()}) -> [cerl:cerl()].
+sort_clauses(Clauses) ->
+  Sorted = lists:sort(fun compare/2, maps:to_list(Clauses)),
+  [X || {_, X} <- Sorted].
+
+-spec compare({atom(), cerl:cerl()}, {atom(), cerl:cerl()}) -> boolean().
+compare({X, _}, {Y, _})  -> order(X) < order(Y).
+
+-spec order(atom()) -> non_neg_integer().
+order(?CATCH_ALL_TAG) -> 1000;
+order(?CATCH_ALL_MAP_TAG) -> 0;
+order(T) ->
+   case maps:get(T, ?PRIMITIVE_TYPES, -1) of
+     #{order := Order} -> Order;
+     Order -> Order
+   end.
 
 %% ----- Case and receive Clauses -------
 

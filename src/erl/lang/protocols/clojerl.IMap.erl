@@ -1,5 +1,6 @@
 -module('clojerl.IMap').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -13,49 +14,59 @@
 -callback 'without'(any(), any()) -> any().
 
 'keys'(Map) ->
-  case clj_rt:type_module(Map) of
-    'erlang.Map' ->
-      'erlang.Map':'keys'(Map);
-    'clojerl.SortedMap' ->
+  case Map of
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'keys'(Map);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'keys'(Map);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'keys'(Map);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'keys', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Map);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'keys'(Map);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Map)
   end.
 
 'vals'(Map) ->
-  case clj_rt:type_module(Map) of
-    'erlang.Map' ->
-      'erlang.Map':'vals'(Map);
-    'clojerl.SortedMap' ->
+  case Map of
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'vals'(Map);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'vals'(Map);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'vals'(Map);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'vals', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Map);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'vals'(Map);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Map)
   end.
 
 'without'(Map, Key) ->
-  case clj_rt:type_module(Map) of
-    'erlang.Map' ->
-      'erlang.Map':'without'(Map, Key);
-    'clojerl.SortedMap' ->
+  case Map of
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'without'(Map, Key);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'without'(Map, Key);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'without'(Map, Key);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'without', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'without', Map);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'without'(Map, Key);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'without', Map)
   end.
 
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_map(ZZZ) -> true;
+    _ -> false
+  end.

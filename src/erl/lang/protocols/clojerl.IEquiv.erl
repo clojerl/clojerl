@@ -1,5 +1,6 @@
 -module('clojerl.IEquiv').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,117 +12,123 @@
 -callback 'equiv'(any(), any()) -> any().
 
 'equiv'(X, Y) ->
-  case clj_rt:type_module(X) of
-    'erlang.Tuple' ->
-      'erlang.Tuple':'equiv'(X, Y);
-    'erlang.Map' ->
-      'erlang.Map':'equiv'(X, Y);
-    'erlang.List' ->
-      'erlang.List':'equiv'(X, Y);
-    'erlang.util.Date' ->
+  case X of
+    #{?TYPE := 'erlang.util.Date'} ->
       'erlang.util.Date':'equiv'(X, Y);
-    'clojerl.TransducerSeq' ->
+    #{?TYPE := 'clojerl.TransducerSeq'} ->
       'clojerl.TransducerSeq':'equiv'(X, Y);
-    'clojerl.reader.TaggedLiteral' ->
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
       'clojerl.reader.TaggedLiteral':'equiv'(X, Y);
-    'clojerl.ProcessVal' ->
+    #{?TYPE := 'clojerl.ProcessVal'} ->
       'clojerl.ProcessVal':'equiv'(X, Y);
-    'clojerl.Var' ->
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'equiv'(X, Y);
-    'clojerl.Delay' ->
+    #{?TYPE := 'clojerl.Delay'} ->
       'clojerl.Delay':'equiv'(X, Y);
-    'clojerl.reader.ReaderConditional' ->
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'equiv'(X, Y);
-    'clojerl.Atom' ->
+    #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'equiv'(X, Y);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'equiv'(X, Y);
-    'clojerl.IllegalAccessError' ->
+    #{?TYPE := 'clojerl.IllegalAccessError'} ->
       'clojerl.IllegalAccessError':'equiv'(X, Y);
-    'clojerl.AssertionError' ->
+    #{?TYPE := 'clojerl.AssertionError'} ->
       'clojerl.AssertionError':'equiv'(X, Y);
-    'clojerl.Error' ->
+    #{?TYPE := 'clojerl.Error'} ->
       'clojerl.Error':'equiv'(X, Y);
-    'clojerl.BadArgumentError' ->
+    #{?TYPE := 'clojerl.BadArgumentError'} ->
       'clojerl.BadArgumentError':'equiv'(X, Y);
-    'clojerl.ArityError' ->
+    #{?TYPE := 'clojerl.ArityError'} ->
       'clojerl.ArityError':'equiv'(X, Y);
-    'clojerl.IOError' ->
+    #{?TYPE := 'clojerl.IOError'} ->
       'clojerl.IOError':'equiv'(X, Y);
-    'clojerl.ExceptionInfo' ->
+    #{?TYPE := 'clojerl.ExceptionInfo'} ->
       'clojerl.ExceptionInfo':'equiv'(X, Y);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'equiv'(X, Y);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'equiv'(X, Y);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'equiv'(X, Y);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'equiv'(X, Y);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'equiv'(X, Y);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'equiv'(X, Y);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'equiv'(X, Y);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'equiv'(X, Y);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'equiv'(X, Y);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'equiv'(X, Y);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'equiv'(X, Y);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'equiv'(X, Y);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'equiv'(X, Y);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'equiv'(X, Y);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'equiv'(X, Y);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'equiv'(X, Y);
-    'clojerl.TupleChunk' ->
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'equiv'(X, Y);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'equiv', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'equiv', X);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'equiv'(X, Y);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'equiv'(X, Y);
+    ZZZ when is_tuple(ZZZ) ->
+      'erlang.Tuple':'equiv'(X, Y);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'equiv', X)
   end.
 
-?SATISFIES('erlang.Tuple') -> true;
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('erlang.util.Date') -> true;
-?SATISFIES('clojerl.TransducerSeq') -> true;
-?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
-?SATISFIES('clojerl.ProcessVal') -> true;
-?SATISFIES('clojerl.Var') -> true;
-?SATISFIES('clojerl.Delay') -> true;
-?SATISFIES('clojerl.reader.ReaderConditional') -> true;
-?SATISFIES('clojerl.Atom') -> true;
-?SATISFIES('clojerl.Symbol') -> true;
-?SATISFIES('clojerl.IllegalAccessError') -> true;
-?SATISFIES('clojerl.AssertionError') -> true;
-?SATISFIES('clojerl.Error') -> true;
-?SATISFIES('clojerl.BadArgumentError') -> true;
-?SATISFIES('clojerl.ArityError') -> true;
-?SATISFIES('clojerl.IOError') -> true;
-?SATISFIES('clojerl.ExceptionInfo') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.Set') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES('clojerl.SortedSet') -> true;
-?SATISFIES('clojerl.TupleChunk') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'erlang.util.Date'} -> true;
+    #{?TYPE := 'clojerl.TransducerSeq'} -> true;
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} -> true;
+    #{?TYPE := 'clojerl.ProcessVal'} -> true;
+    #{?TYPE := 'clojerl.Var'} -> true;
+    #{?TYPE := 'clojerl.Delay'} -> true;
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} -> true;
+    #{?TYPE := 'clojerl.Atom'} -> true;
+    #{?TYPE := 'clojerl.Symbol'} -> true;
+    #{?TYPE := 'clojerl.IllegalAccessError'} -> true;
+    #{?TYPE := 'clojerl.AssertionError'} -> true;
+    #{?TYPE := 'clojerl.Error'} -> true;
+    #{?TYPE := 'clojerl.BadArgumentError'} -> true;
+    #{?TYPE := 'clojerl.ArityError'} -> true;
+    #{?TYPE := 'clojerl.IOError'} -> true;
+    #{?TYPE := 'clojerl.ExceptionInfo'} -> true;
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.Set'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := 'clojerl.SortedSet'} -> true;
+    #{?TYPE := 'clojerl.TupleChunk'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_list(ZZZ) -> true;
+    ZZZ when is_map(ZZZ) -> true;
+    ZZZ when is_tuple(ZZZ) -> true;
+    _ -> false
+  end.

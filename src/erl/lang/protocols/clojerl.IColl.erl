@@ -1,5 +1,6 @@
 -module('clojerl.IColl').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,105 +13,113 @@
 -callback 'empty'(any()) -> any().
 
 'cons'(Coll, Item) ->
-  case clj_rt:type_module(Coll) of
-    'erlang.Map' ->
-      'erlang.Map':'cons'(Coll, Item);
-    'erlang.List' ->
-      'erlang.List':'cons'(Coll, Item);
-    'clojerl.LazySeq' ->
+  case Coll of
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'cons'(Coll, Item);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'cons'(Coll, Item);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'cons'(Coll, Item);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'cons'(Coll, Item);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'cons'(Coll, Item);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'cons'(Coll, Item);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'cons'(Coll, Item);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'cons'(Coll, Item);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'cons'(Coll, Item);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'cons'(Coll, Item);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'cons'(Coll, Item);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'cons'(Coll, Item);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'cons'(Coll, Item);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'cons'(Coll, Item);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'cons'(Coll, Item);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'cons'(Coll, Item);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'cons', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'cons', Coll);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'cons'(Coll, Item);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'cons'(Coll, Item);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'cons', Coll)
   end.
 
 'empty'(Coll) ->
-  case clj_rt:type_module(Coll) of
-    'erlang.Map' ->
-      'erlang.Map':'empty'(Coll);
-    'erlang.List' ->
-      'erlang.List':'empty'(Coll);
-    'clojerl.LazySeq' ->
+  case Coll of
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'empty'(Coll);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'empty'(Coll);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'empty'(Coll);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'empty'(Coll);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'empty'(Coll);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'empty'(Coll);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'empty'(Coll);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'empty'(Coll);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'empty'(Coll);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'empty'(Coll);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'empty'(Coll);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'empty'(Coll);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'empty'(Coll);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'empty'(Coll);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'empty'(Coll);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'empty'(Coll);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'empty', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'empty', Coll);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'empty'(Coll);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'empty'(Coll);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'empty', Coll)
   end.
 
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.Set') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES('clojerl.SortedSet') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.Set'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := 'clojerl.SortedSet'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_list(ZZZ) -> true;
+    ZZZ when is_map(ZZZ) -> true;
+    _ -> false
+  end.

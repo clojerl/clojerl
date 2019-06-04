@@ -13,8 +13,9 @@ impl_module(ProtocolBin, TypeBin)
        is_binary(TypeBin) ->
   binary_to_atom(<<ProtocolBin/binary, "__", TypeBin/binary>>, utf8).
 
--spec not_implemented(module(), atom(), module()) -> no_return().
-not_implemented(Protocol, Function, Type) ->
+-spec not_implemented(module(), atom(), any()) -> no_return().
+not_implemented(Protocol, Function, Value) ->
+  Type = clj_rt:type_module(Value),
   ?ERROR( [ <<"No implementation of method: '">>
           , atom_to_binary(Function, utf8)
           , <<"' of protocol: ">>

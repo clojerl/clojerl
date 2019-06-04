@@ -108,22 +108,24 @@
 
 (defn proto-function-tail
   [f args]
-  (let [args-str (apply str (interpose ", " args))]
-    (str "    X ->\n"
-         "      clj_protocol:not_implemented(?MODULE, '" f "', clj_rt:type_module(X))\n"
-         "  end.\n\n")))
+  (str "    _ ->\n"
+       "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ")\n"
+       "  end.\n\n"))
 
 (defn pattern-and-guard
   [m]
   (if (primitive-type? m)
-    (str "X when " (get-in primitive-types [m :pred]) "(X)")
+    (str "ZZZ when " (get-in primitive-types [m :pred]) "(ZZZ)")
     (str "#{?TYPE := '" m "'}")))
 
 (defn proto-function-clause
   [f args m]
-  (let [args-str (apply str (interpose ", " args))]
-    (str "    " (pattern-and-guard m) " ->\n"
-         "      '" m "':'" f "'(" args-str ");\n")))
+  (if (underscore? m)
+    (str "    #{?TYPE := _} ->\n"
+         "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ");\n")
+    (let [args-str (apply str (interpose ", " args))]
+      (str "    " (pattern-and-guard m) " ->\n"
+           "      '" m "':'" f "'(" args-str ");\n"))))
 
 (defn proto-function
   [proto-name f args types]
@@ -148,7 +150,9 @@
   (str "?SATISFIES(X) ->\n"
        "  case X of\n"
        (->> types
-            (map #(str "    " (pattern-and-guard %) " -> true;\n"))
+            (map #(if (underscore? %)
+                    "    #{?TYPE := _} -> false;\n"
+                    (str "    " (pattern-and-guard %) " -> true;\n")))
             (apply str))
        "    _ -> false\n"
        "  end.\n"))
@@ -175,18 +179,21 @@
        (apply str)))
 
 (defn type-ordering
-  [type-name]
-  (-> type-name
-      (primitive-types {:order 0})
-      :order))
+  [x]
+  (if (underscore? x)
+    0
+    (-> x
+        (primitive-types {:order -1})
+        :order)))
 
 (defn module
   [proto-name fns]
   (let [types (->> proto-name
                    utils/who-implements
+                   (into ['_])
                    (sort-by type-ordering))]
     (str "-module('" proto-name "').\n\n"
-         "-include(\"clojerl.hrl\").\n\n"
+         "-include(\"clojerl.hrl\").\n"
          "-include(\"clojerl_int.hrl\").\n\n"
          "-clojure(true).\n"
          "-protocol(true).\n\n"

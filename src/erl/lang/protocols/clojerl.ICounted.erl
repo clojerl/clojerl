@@ -1,5 +1,6 @@
 -module('clojerl.ICounted').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,78 +12,84 @@
 -callback 'count'(any()) -> any().
 
 'count'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'erlang.Tuple' ->
-      'erlang.Tuple':'count'(Seq);
-    'erlang.Map' ->
-      'erlang.Map':'count'(Seq);
-    'erlang.io.StringWriter' ->
+  case Seq of
+    #{?TYPE := 'erlang.io.StringWriter'} ->
       'erlang.io.StringWriter':'count'(Seq);
-    'erlang.List' ->
-      'erlang.List':'count'(Seq);
-    'clojerl.BitString' ->
-      'clojerl.BitString':'count'(Seq);
-    'clojerl.String' ->
-      'clojerl.String':'count'(Seq);
-    'clojerl.LazySeq' ->
+    #{?TYPE := 'clojerl.LazySeq'} ->
       'clojerl.LazySeq':'count'(Seq);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'count'(Seq);
-    'clojerl.Range' ->
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'count'(Seq);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'count'(Seq);
-    'clojerl.Vector.RSeq' ->
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'count'(Seq);
-    'clojerl.Cycle' ->
+    #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'count'(Seq);
-    'clojerl.List' ->
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'count'(Seq);
-    'clojerl.Iterate' ->
+    #{?TYPE := 'clojerl.Iterate'} ->
       'clojerl.Iterate':'count'(Seq);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'count'(Seq);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'count'(Seq);
-    'clojerl.Cons' ->
+    #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'count'(Seq);
-    'clojerl.Repeat' ->
+    #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'count'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'count'(Seq);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'count'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'count'(Seq);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'count'(Seq);
-    'clojerl.TupleChunk' ->
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'count'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'count', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'count', Seq);
+    ZZZ when is_binary(ZZZ) ->
+      'clojerl.String':'count'(Seq);
+    ZZZ when is_bitstring(ZZZ) ->
+      'clojerl.BitString':'count'(Seq);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'count'(Seq);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'count'(Seq);
+    ZZZ when is_tuple(ZZZ) ->
+      'erlang.Tuple':'count'(Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'count', Seq)
   end.
 
-?SATISFIES('erlang.Tuple') -> true;
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('erlang.io.StringWriter') -> true;
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.BitString') -> true;
-?SATISFIES('clojerl.String') -> true;
-?SATISFIES('clojerl.LazySeq') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector.RSeq') -> true;
-?SATISFIES('clojerl.Cycle') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Iterate') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Cons') -> true;
-?SATISFIES('clojerl.Repeat') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.Set') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES('clojerl.SortedSet') -> true;
-?SATISFIES('clojerl.TupleChunk') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'erlang.io.StringWriter'} -> true;
+    #{?TYPE := 'clojerl.LazySeq'} -> true;
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.Range'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} -> true;
+    #{?TYPE := 'clojerl.Cycle'} -> true;
+    #{?TYPE := 'clojerl.List'} -> true;
+    #{?TYPE := 'clojerl.Iterate'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := 'clojerl.Cons'} -> true;
+    #{?TYPE := 'clojerl.Repeat'} -> true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
+    #{?TYPE := 'clojerl.Set'} -> true;
+    #{?TYPE := 'clojerl.ChunkedCons'} -> true;
+    #{?TYPE := 'clojerl.SortedSet'} -> true;
+    #{?TYPE := 'clojerl.TupleChunk'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_binary(ZZZ) -> true;
+    ZZZ when is_bitstring(ZZZ) -> true;
+    ZZZ when is_list(ZZZ) -> true;
+    ZZZ when is_map(ZZZ) -> true;
+    ZZZ when is_tuple(ZZZ) -> true;
+    _ -> false
+  end.

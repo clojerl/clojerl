@@ -1,5 +1,6 @@
 -module('clojerl.ILookup').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,65 +13,73 @@
 -callback 'get'(any(), any(), any()) -> any().
 
 'get'(X, Key) ->
-  case clj_rt:type_module(X) of
-    'erlang.Map' ->
-      'erlang.Map':'get'(X, Key);
-    'erlang.List' ->
-      'erlang.List':'get'(X, Key);
-    'clojerl.reader.TaggedLiteral' ->
+  case X of
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
       'clojerl.reader.TaggedLiteral':'get'(X, Key);
-    'clojerl.reader.ReaderConditional' ->
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'get'(X, Key);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'get'(X, Key);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'get'(X, Key);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'get'(X, Key);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'get'(X, Key);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'get'(X, Key);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'get'(X, Key);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'get', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'get'(X, Key);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'get'(X, Key);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'get', X)
   end.
 
 'get'(X, Key, NotFound) ->
-  case clj_rt:type_module(X) of
-    'erlang.Map' ->
-      'erlang.Map':'get'(X, Key, NotFound);
-    'erlang.List' ->
-      'erlang.List':'get'(X, Key, NotFound);
-    'clojerl.reader.TaggedLiteral' ->
+  case X of
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
       'clojerl.reader.TaggedLiteral':'get'(X, Key, NotFound);
-    'clojerl.reader.ReaderConditional' ->
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'get'(X, Key, NotFound);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'get'(X, Key, NotFound);
-    'clojerl.TupleMap' ->
+    #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'get'(X, Key, NotFound);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'get'(X, Key, NotFound);
-    'clojerl.Map' ->
+    #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'get'(X, Key, NotFound);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'get'(X, Key, NotFound);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'get'(X, Key, NotFound);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'get', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    ZZZ when is_list(ZZZ) ->
+      'erlang.List':'get'(X, Key, NotFound);
+    ZZZ when is_map(ZZZ) ->
+      'erlang.Map':'get'(X, Key, NotFound);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'get', X)
   end.
 
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
-?SATISFIES('clojerl.reader.ReaderConditional') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Set') -> true;
-?SATISFIES('clojerl.SortedSet') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} -> true;
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} -> true;
+    #{?TYPE := 'clojerl.SortedMap'} -> true;
+    #{?TYPE := 'clojerl.TupleMap'} -> true;
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.Map'} -> true;
+    #{?TYPE := 'clojerl.Set'} -> true;
+    #{?TYPE := 'clojerl.SortedSet'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_list(ZZZ) -> true;
+    ZZZ when is_map(ZZZ) -> true;
+    _ -> false
+  end.

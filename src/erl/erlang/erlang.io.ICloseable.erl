@@ -1,5 +1,6 @@
 -module('erlang.io.ICloseable').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,24 +12,30 @@
 -callback 'close'(any()) -> any().
 
 'close'(X) ->
-  case clj_rt:type_module(X) of
-    'erlang.io.PushbackReader' ->
+  case X of
+    #{?TYPE := 'erlang.io.PushbackReader'} ->
       'erlang.io.PushbackReader':'close'(X);
-    'erlang.io.StringReader' ->
+    #{?TYPE := 'erlang.io.StringReader'} ->
       'erlang.io.StringReader':'close'(X);
-    'erlang.io.StringWriter' ->
+    #{?TYPE := 'erlang.io.StringWriter'} ->
       'erlang.io.StringWriter':'close'(X);
-    'erlang.io.File' ->
+    #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'close'(X);
-    'clojerl.Delay' ->
+    #{?TYPE := 'clojerl.Delay'} ->
       'clojerl.Delay':'close'(X);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'close', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'close', X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'close', X)
   end.
 
-?SATISFIES('erlang.io.PushbackReader') -> true;
-?SATISFIES('erlang.io.StringReader') -> true;
-?SATISFIES('erlang.io.StringWriter') -> true;
-?SATISFIES('erlang.io.File') -> true;
-?SATISFIES('clojerl.Delay') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'erlang.io.PushbackReader'} -> true;
+    #{?TYPE := 'erlang.io.StringReader'} -> true;
+    #{?TYPE := 'erlang.io.StringWriter'} -> true;
+    #{?TYPE := 'erlang.io.File'} -> true;
+    #{?TYPE := 'clojerl.Delay'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

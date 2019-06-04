@@ -1,5 +1,6 @@
 -module('clojerl.IError').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -11,30 +12,36 @@
 -callback 'message'(any()) -> any().
 
 'message'(Error) ->
-  case clj_rt:type_module(Error) of
-    'clojerl.IllegalAccessError' ->
+  case Error of
+    #{?TYPE := 'clojerl.IllegalAccessError'} ->
       'clojerl.IllegalAccessError':'message'(Error);
-    'clojerl.AssertionError' ->
+    #{?TYPE := 'clojerl.AssertionError'} ->
       'clojerl.AssertionError':'message'(Error);
-    'clojerl.Error' ->
+    #{?TYPE := 'clojerl.Error'} ->
       'clojerl.Error':'message'(Error);
-    'clojerl.BadArgumentError' ->
+    #{?TYPE := 'clojerl.BadArgumentError'} ->
       'clojerl.BadArgumentError':'message'(Error);
-    'clojerl.ArityError' ->
+    #{?TYPE := 'clojerl.ArityError'} ->
       'clojerl.ArityError':'message'(Error);
-    'clojerl.IOError' ->
+    #{?TYPE := 'clojerl.IOError'} ->
       'clojerl.IOError':'message'(Error);
-    'clojerl.ExceptionInfo' ->
+    #{?TYPE := 'clojerl.ExceptionInfo'} ->
       'clojerl.ExceptionInfo':'message'(Error);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'message', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error)
   end.
 
-?SATISFIES('clojerl.IllegalAccessError') -> true;
-?SATISFIES('clojerl.AssertionError') -> true;
-?SATISFIES('clojerl.Error') -> true;
-?SATISFIES('clojerl.BadArgumentError') -> true;
-?SATISFIES('clojerl.ArityError') -> true;
-?SATISFIES('clojerl.IOError') -> true;
-?SATISFIES('clojerl.ExceptionInfo') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.IllegalAccessError'} -> true;
+    #{?TYPE := 'clojerl.AssertionError'} -> true;
+    #{?TYPE := 'clojerl.Error'} -> true;
+    #{?TYPE := 'clojerl.BadArgumentError'} -> true;
+    #{?TYPE := 'clojerl.ArityError'} -> true;
+    #{?TYPE := 'clojerl.IOError'} -> true;
+    #{?TYPE := 'clojerl.ExceptionInfo'} -> true;
+    #{?TYPE := _} -> false;
+    _ -> false
+  end.

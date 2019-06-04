@@ -1,5 +1,6 @@
 -module('clojerl.IIndexed').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,30 +13,38 @@
 -callback 'nth'(any(), any(), any()) -> any().
 
 'nth'(Coll, N) ->
-  case clj_rt:type_module(Coll) of
-    'erlang.Tuple' ->
-      'erlang.Tuple':'nth'(Coll, N);
-    'clojerl.Vector' ->
+  case Coll of
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'nth'(Coll, N);
-    'clojerl.TupleChunk' ->
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'nth'(Coll, N);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'nth', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
+    ZZZ when is_tuple(ZZZ) ->
+      'erlang.Tuple':'nth'(Coll, N);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll)
   end.
 
 'nth'(Coll, N, NotFound) ->
-  case clj_rt:type_module(Coll) of
-    'erlang.Tuple' ->
-      'erlang.Tuple':'nth'(Coll, N, NotFound);
-    'clojerl.Vector' ->
+  case Coll of
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'nth'(Coll, N, NotFound);
-    'clojerl.TupleChunk' ->
+    #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'nth', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
+    ZZZ when is_tuple(ZZZ) ->
+      'erlang.Tuple':'nth'(Coll, N, NotFound);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll)
   end.
 
-?SATISFIES('erlang.Tuple') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.TupleChunk') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.Vector'} -> true;
+    #{?TYPE := 'clojerl.TupleChunk'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_tuple(ZZZ) -> true;
+    _ -> false
+  end.

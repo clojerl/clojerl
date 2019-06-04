@@ -1,5 +1,6 @@
 -module('clojerl.INamed').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -12,30 +13,38 @@
 -callback 'namespace'(any()) -> any().
 
 'name'(X) ->
-  case clj_rt:type_module(X) of
-    'clojerl.Var' ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'name'(X);
-    'clojerl.Keyword' ->
-      'clojerl.Keyword':'name'(X);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'name'(X);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'name', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'name', X);
+    ZZZ when is_atom(ZZZ) ->
+      'clojerl.Keyword':'name'(X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'name', X)
   end.
 
 'namespace'(X) ->
-  case clj_rt:type_module(X) of
-    'clojerl.Var' ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'namespace'(X);
-    'clojerl.Keyword' ->
-      'clojerl.Keyword':'namespace'(X);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'namespace'(X);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'namespace', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X);
+    ZZZ when is_atom(ZZZ) ->
+      'clojerl.Keyword':'namespace'(X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X)
   end.
 
-?SATISFIES('clojerl.Var') -> true;
-?SATISFIES('clojerl.Keyword') -> true;
-?SATISFIES('clojerl.Symbol') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} -> true;
+    #{?TYPE := 'clojerl.Symbol'} -> true;
+    #{?TYPE := _} -> false;
+    ZZZ when is_atom(ZZZ) -> true;
+    _ -> false
+  end.
