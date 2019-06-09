@@ -17,13 +17,17 @@
   case Map of
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'keys'(Map);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'keys'(Map);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'keys'(Map);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'keys'(Map);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Map);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Map);
+    X_ when is_map(X_) ->
       'erlang.Map':'keys'(Map);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
@@ -35,13 +39,17 @@
   case Map of
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'vals'(Map);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'vals'(Map);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'vals'(Map);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'vals'(Map);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Map);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Map);
+    X_ when is_map(X_) ->
       'erlang.Map':'vals'(Map);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
@@ -53,13 +61,17 @@
   case Map of
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'without'(Map, Key);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'without'(Map, Key);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'without'(Map, Key);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'without'(Map, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'without', Map);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'without', Map);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'without', Map);
+    X_ when is_map(X_) ->
       'erlang.Map':'without'(Map, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'without', Map);
@@ -69,11 +81,13 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.SortedMap'} -> true;
-    #{?TYPE := 'clojerl.TupleMap'} -> true;
-    #{?TYPE := 'clojerl.Map'} -> true;
-    #{?TYPE := _} -> false;
-    ZZZ when is_map(ZZZ) -> true;
-    ?NIL -> false;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.Map'} ->  true;
+    #{?TYPE := 'clojerl.TupleMap'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    X_ when is_map(X_) ->  true;
+    ?NIL ->  false;
     _ -> false
   end.

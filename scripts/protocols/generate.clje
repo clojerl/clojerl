@@ -21,9 +21,8 @@
                          :order 8}
     "erlang.Fn"         {:pred is_function
                          :order 9}
-    ;; nil doesn't implement any protocols
-    ;; "clojerl.Nil"       {:pred nil
-    ;;                      :order 10}
+    "clojerl.Nil"       {:pred nil
+                         :order 10}
     "clojerl.Keyword"   {:pred is_atom
                          :order 11}
     "erlang.Port"       {:pred is_port
@@ -96,9 +95,17 @@
     erlang.io.ICloseable      [close     [X]]
     })
 
+(def UNDERSCORE '_)
+
+(def CATCH-ALL ::catch-all)
+
+(def NIL-TYPE "clojerl.Nil")
+(def STRING-TYPE "clojerl.String")
+(def BOOLEAN-TYPE "clojerl.Boolean")
+
 (defn underscore?
   [x]
-  (= x '_))
+  (= x UNDERSCORE))
 
 (defn keyword-type?
   [t]
@@ -111,73 +118,66 @@
          "  case " (first args) " of\n")))
 
 (defn pattern-and-guard
-  [m]
-  (if (primitive-type? m)
-    (str "ZZZ when " (get-in primitive-types [m :pred]) "(ZZZ)")
-    (str "#{?TYPE := '" m "'}")))
+  [type]
+  (cond
+    (= CATCH-ALL type)
+    "_"
 
-(defn not-implemented [f args]
-  (str "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ")"))
+    (underscore? type)
+    "#{?TYPE := _}"
 
-(defn implementation-call [f args type]
+    (= NIL-TYPE type)
+    "?NIL"
+
+    (primitive-type? type)
+    (str "X_ when " (get-in primitive-types [type :pred]) "(X_)")
+
+    :else
+    (str "#{?TYPE := '" type "'}")))
+
+(defn not-implemented-clause
+  [f args type]
+  (str "    " (pattern-and-guard type) " ->\n"
+       "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ")"))
+
+(defn implementation-call-clause
+  [f args type]
   (let [args-str (apply str (interpose ", " args))]
     (str "    " (pattern-and-guard type) " ->\n"
          "      '" type "':'" f "'(" args-str ");\n")))
 
 (defn proto-function-tail
   [f args]
-  (str "    _ ->\n"
-       (not-implemented f args) "\n"
+  (str (not-implemented-clause f args CATCH-ALL) "\n"
        "  end.\n\n"))
 
 (defn proto-function-clause
-  [f args type]
-  (cond
-    ;; Catch all clause for tagged maps
-    (underscore? type)
-    (str "    #{?TYPE := _} ->\n"
-         (not-implemented f args) ";\n")
-    ;; Add a clause for nil before the one for keywords
-    (= type "clojerl.Keyword")
-    (str "    ?NIL ->\n"
-         (not-implemented f args) ";\n"
-         (implementation-call f args type))
-    :else
-    (implementation-call f args type)))
+  [f args [type implemented?]]
+  (if implemented?
+    (implementation-call-clause f args type)
+    (str (not-implemented-clause f args type) ";\n")))
 
 (defn proto-function
-  [proto-name f args types]
+  [proto-name f args types-specs]
   (when-not (underscore? f)
     (str
      (proto-function-head f args)
-     (->> types
+     (->> types-specs
           (map (partial proto-function-clause f args))
           (apply str))
-     (when-not (some keyword-type? types)
-       (str "    ?NIL ->\n"
-            (not-implemented f args) ";\n"))
      (proto-function-tail f args))))
 
 (defn proto-functions
-  [proto-name fns types]
+  [proto-name fns types-specs]
   (->> fns
        (partition 2)
        (map (fn [[f args]]
-              (proto-function proto-name f args types)))
+              (proto-function proto-name f args types-specs)))
        (apply str)))
 
 (defn satisfies?-clause
-  [type]
-  (cond
-    (underscore? type)
-    "    #{?TYPE := _} -> false;\n"
-
-    (keyword-type? type)
-    (str "    ?NIL -> false;\n"
-         "    " (pattern-and-guard type) " -> true;\n")
-
-    :else
-    (str "    " (pattern-and-guard type) " -> true;\n")))
+  [[type implemented?]]
+  (str "    " (pattern-and-guard type) " ->  " implemented?  ";\n"))
 
 (defn satisfies?-function
   [types]
@@ -186,8 +186,6 @@
        (->> types
             (map satisfies?-clause)
             (apply str))
-       (when-not (some keyword-type? types)
-         "    ?NIL -> false;\n")
        "    _ -> false\n"
        "  end.\n"))
 
@@ -213,18 +211,26 @@
        (apply str)))
 
 (defn type-ordering
-  [x]
-  (if (underscore? x)
+  [[type _]]
+  (if (underscore? type)
     0
-    (-> x
-        (primitive-types {:order -1})
+    (-> (primitive-types type {:order -1})
         :order)))
 
 (defn module
   [proto-name fns]
   (let [types (->> proto-name
                    utils/who-implements
-                   (into ['_])
+                   (map #(vector % true))
+                   (into {UNDERSCORE      false
+                          ;; is_atom will return true for boolean and
+                          ;; undefined (i.e. nil)
+                          BOOLEAN-TYPE    false
+                          NIL-TYPE        false
+                          ;; is_binary and is_bitstring might return
+                          ;; true for the same value so we add the
+                          ;; default clause for no implementation
+                          STRING-TYPE     false})
                    (sort-by type-ordering))]
     (str "-module('" proto-name "').\n\n"
          "-include(\"clojerl.hrl\").\n"

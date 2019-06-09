@@ -17,15 +17,19 @@
   case Assoc of
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'contains_key'(Assoc, Key);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'contains_key'(Assoc, Key);
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'contains_key'(Assoc, Key);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'contains_key'(Assoc, Key);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'contains_key'(Assoc, Key);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'contains_key'(Assoc, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
+    X_ when is_map(X_) ->
       'erlang.Map':'contains_key'(Assoc, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
@@ -37,15 +41,19 @@
   case Assoc of
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'entry_at'(Assoc, Key);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'entry_at'(Assoc, Key);
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'entry_at'(Assoc, Key);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'entry_at'(Assoc, Key);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'entry_at'(Assoc, Key);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'entry_at'(Assoc, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
+    X_ when is_map(X_) ->
       'erlang.Map':'entry_at'(Assoc, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
@@ -57,15 +65,19 @@
   case Assoc of
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'assoc'(Assoc, Key, Value);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'assoc'(Assoc, Key, Value);
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'assoc'(Assoc, Key, Value);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'assoc'(Assoc, Key, Value);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'assoc'(Assoc, Key, Value);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'assoc'(Assoc, Key, Value);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
+    X_ when is_map(X_) ->
       'erlang.Map':'assoc'(Assoc, Key, Value);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
@@ -75,12 +87,14 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.SortedMap'} -> true;
-    #{?TYPE := 'clojerl.TupleMap'} -> true;
-    #{?TYPE := 'clojerl.Vector'} -> true;
-    #{?TYPE := 'clojerl.Map'} -> true;
-    #{?TYPE := _} -> false;
-    ZZZ when is_map(ZZZ) -> true;
-    ?NIL -> false;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.Map'} ->  true;
+    #{?TYPE := 'clojerl.Vector'} ->  true;
+    #{?TYPE := 'clojerl.TupleMap'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    X_ when is_map(X_) ->  true;
+    ?NIL ->  false;
     _ -> false
   end.

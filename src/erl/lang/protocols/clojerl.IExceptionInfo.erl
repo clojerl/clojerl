@@ -18,6 +18,10 @@
       'clojerl.ExceptionInfo':'data'(ExInfo);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'data', ExInfo);
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'data', ExInfo);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'data', ExInfo);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'data', ExInfo);
     _ ->
@@ -30,6 +34,10 @@
       'clojerl.ExceptionInfo':'cause'(ExInfo);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'cause', ExInfo);
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'cause', ExInfo);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'cause', ExInfo);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'cause', ExInfo);
     _ ->
@@ -38,8 +46,10 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.ExceptionInfo'} -> true;
-    #{?TYPE := _} -> false;
-    ?NIL -> false;
+    #{?TYPE := 'clojerl.ExceptionInfo'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    ?NIL ->  false;
     _ -> false
   end.

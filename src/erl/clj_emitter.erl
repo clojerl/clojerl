@@ -1344,6 +1344,25 @@ type_map_ast(Typename, MapPairsAsts, MapType) ->
 
 %% ----- defprotocol ------
 
+%% The clauses for these types/tags in the protocol dipatch
+%% functions should always be present
+-spec default_types() -> [atom() | module()].
+default_types() ->
+  [ %% Fallback clause for tagged maps since otherwise
+    %% the is_map/1 clause might be matched
+    ?CATCH_ALL_MAP_TAG
+    %% is_binary/1 and is_bitstring/1 might return
+    %% true for the same value so we add a default
+    %% not implemented clause
+  , 'clojerl.String'
+    %% is_atom will return true for boolean and
+    %% undefined (i.e. nil)
+  , 'clojerl.Boolean'
+  , ?NIL_TYPE
+    %% Fallback clause
+  , ?CATCH_ALL_TAG
+  ].
+
 -spec protocol_function(any(), module(), any()) ->
   {cerl:c_fname(), cerl:c_fun()}.
 protocol_function(Sig, Module, Ann) ->
@@ -1357,13 +1376,10 @@ protocol_function(Sig, Module, Ann) ->
                    , FirstVar
                    ],
 
-  CatchAllBody   = call_mfa(clj_protocol, not_implemented, Args, Ann),
-
-  CatchAllMap    = protocol_clause(?CATCH_ALL_MAP_TAG, CatchAllBody),
-  CatchAllNil    = protocol_clause(?NIL_TYPE, CatchAllBody),
-  CatchAll       = cerl:ann_c_clause(Ann, [FirstVar], CatchAllBody),
-
-  Clauses        = [CatchAllMap, CatchAllNil, CatchAll],
+  NotImplemented = call_mfa(clj_protocol, not_implemented, Args, Ann),
+  Clauses        = [ protocol_clause(TagOrType, NotImplemented)
+                     || TagOrType <- default_types()
+                   ],
   Body           = cerl:ann_c_case(Ann, FirstVar, Clauses),
 
   { cerl:c_fname(Method, Arity)
@@ -1373,13 +1389,13 @@ protocol_function(Sig, Module, Ann) ->
 -spec satisfies_function(any()) ->
   {cerl:c_fname(), cerl:c_fun()}.
 satisfies_function(Ann) ->
+  FalseBody   = cerl:abstract(false),
+
+  Clauses     = [ protocol_clause(TagOrType, FalseBody)
+                  || TagOrType <- default_types()
+                ],
+
   Arg         = new_c_var(Ann),
-
-  MapClause   = protocol_clause(?CATCH_ALL_MAP_TAG, cerl:abstract(false)),
-  NilClause   = protocol_clause(?NIL_TYPE, cerl:abstract(false)),
-  FalseClause = cerl:ann_c_clause(Ann, [new_c_var(Ann)], cerl:abstract(false)),
-  Clauses     = [MapClause, NilClause, FalseClause],
-
   Body        = cerl:ann_c_case(Ann, Arg, Clauses),
 
   { cerl:c_fname(?SATISFIES, 1)
@@ -1474,6 +1490,21 @@ remove_duplicated_catch_all(Fun) ->
   Vars    = cerl:fun_vars(Fun),
   cerl:update_c_fun(Fun, Vars, Case1).
 
+-spec should_replace(cerl:cerl()) -> boolean().
+should_replace(Clause) ->
+  Body = cerl:clause_body(Clause),
+  case cerl:type(Body) of
+    literal -> cerl:concrete(Body) =:= false;
+    call ->
+      Module   = cerl:call_module(Body),
+      Function = cerl:call_name(Body),
+
+      { cerl:concrete(Module)
+      , cerl:concrete(Function)
+      } =:= {clj_protocol, not_implemented};
+    _ -> false
+  end.
+
 -spec case_add_type( atom()
                    , module()
                    , cerl:c_case()
@@ -1483,13 +1514,18 @@ case_add_type(?DEFAULT_TYPE, Case, ClauseBody) ->
   Clauses0    = cerl:case_clauses(Case),
   ClausesMap0 = clauses_to_map(Clauses0),
 
-  %% Add catch all and catch all map clauses
-  ClauseAll    = protocol_clause(?CATCH_ALL_TAG, ClauseBody),
-  ClauseAllMap = protocol_clause(?CATCH_ALL_MAP_TAG, ClauseBody),
-
-  ClausesMap1 = ClausesMap0#{ ?CATCH_ALL_TAG     => ClauseAll
-                            , ?CATCH_ALL_MAP_TAG => ClauseAllMap
-                            },
+  Replace     =
+    fun (Tag, OriginalClause) ->
+        case
+          lists:member(Tag, default_types())
+          andalso should_replace(OriginalClause)
+        of
+          true -> protocol_clause(Tag, ClauseBody);
+          _ -> OriginalClause
+        end
+    end,
+  %% Replace the clauses for some types
+  ClausesMap1 = maps:map(Replace, ClausesMap0),
 
   Clauses1    = sort_clauses(ClausesMap1),
 

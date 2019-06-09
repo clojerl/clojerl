@@ -15,15 +15,19 @@
   case X of
     #{?TYPE := 'erlang.io.PushbackReader'} ->
       'erlang.io.PushbackReader':'close'(X);
-    #{?TYPE := 'erlang.io.StringReader'} ->
-      'erlang.io.StringReader':'close'(X);
+    #{?TYPE := 'clojerl.Delay'} ->
+      'clojerl.Delay':'close'(X);
     #{?TYPE := 'erlang.io.StringWriter'} ->
       'erlang.io.StringWriter':'close'(X);
     #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'close'(X);
-    #{?TYPE := 'clojerl.Delay'} ->
-      'clojerl.Delay':'close'(X);
+    #{?TYPE := 'erlang.io.StringReader'} ->
+      'erlang.io.StringReader':'close'(X);
     #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'close', X);
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'close', X);
+    X_ when is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
@@ -33,12 +37,14 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'erlang.io.PushbackReader'} -> true;
-    #{?TYPE := 'erlang.io.StringReader'} -> true;
-    #{?TYPE := 'erlang.io.StringWriter'} -> true;
-    #{?TYPE := 'erlang.io.File'} -> true;
-    #{?TYPE := 'clojerl.Delay'} -> true;
-    #{?TYPE := _} -> false;
-    ?NIL -> false;
+    #{?TYPE := 'erlang.io.PushbackReader'} ->  true;
+    #{?TYPE := 'clojerl.Delay'} ->  true;
+    #{?TYPE := 'erlang.io.StringWriter'} ->  true;
+    #{?TYPE := 'erlang.io.File'} ->  true;
+    #{?TYPE := 'erlang.io.StringReader'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    ?NIL ->  false;
     _ -> false
   end.

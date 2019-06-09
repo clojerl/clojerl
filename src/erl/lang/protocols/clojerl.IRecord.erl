@@ -12,7 +12,9 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := _} -> false;
-    ?NIL -> false;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    ?NIL ->  false;
     _ -> false
   end.

@@ -12,9 +12,11 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.SortedMap'} -> true;
-    #{?TYPE := 'clojerl.SortedSet'} -> true;
-    #{?TYPE := _} -> false;
-    ?NIL -> false;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    ?NIL ->  false;
     _ -> false
   end.

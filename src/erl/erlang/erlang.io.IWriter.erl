@@ -20,9 +20,13 @@
       'erlang.io.File':'write'(Writer, Str);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    ZZZ when is_atom(ZZZ) ->
+    X_ when is_atom(X_) ->
       'clojerl.Keyword':'write'(Writer, Str);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer)
@@ -36,9 +40,13 @@
       'erlang.io.File':'write'(Writer, Format, Value);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    ZZZ when is_atom(ZZZ) ->
+    X_ when is_atom(X_) ->
       'clojerl.Keyword':'write'(Writer, Format, Value);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer)
@@ -46,10 +54,12 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'erlang.io.StringWriter'} -> true;
-    #{?TYPE := 'erlang.io.File'} -> true;
-    #{?TYPE := _} -> false;
-    ?NIL -> false;
-    ZZZ when is_atom(ZZZ) -> true;
+    #{?TYPE := 'erlang.io.StringWriter'} ->  true;
+    #{?TYPE := 'erlang.io.File'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    ?NIL ->  false;
+    X_ when is_atom(X_) ->  true;
     _ -> false
   end.

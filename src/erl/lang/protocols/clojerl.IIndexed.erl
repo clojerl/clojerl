@@ -14,13 +14,17 @@
 
 'nth'(Coll, N) ->
   case Coll of
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'nth'(Coll, N);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'nth'(Coll, N);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'nth'(Coll, N);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'nth', Coll);
-    ZZZ when is_tuple(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
+    X_ when is_tuple(X_) ->
       'erlang.Tuple':'nth'(Coll, N);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'nth', Coll);
@@ -30,13 +34,17 @@
 
 'nth'(Coll, N, NotFound) ->
   case Coll of
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'nth'(Coll, N, NotFound);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'nth'(Coll, N, NotFound);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'nth', Coll);
-    ZZZ when is_tuple(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
+    X_ when is_tuple(X_) ->
       'erlang.Tuple':'nth'(Coll, N, NotFound);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'nth', Coll);
@@ -46,10 +54,12 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.Vector'} -> true;
-    #{?TYPE := 'clojerl.TupleChunk'} -> true;
-    #{?TYPE := _} -> false;
-    ZZZ when is_tuple(ZZZ) -> true;
-    ?NIL -> false;
+    #{?TYPE := 'clojerl.TupleChunk'} ->  true;
+    #{?TYPE := 'clojerl.Vector'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    X_ when is_tuple(X_) ->  true;
+    ?NIL ->  false;
     _ -> false
   end.

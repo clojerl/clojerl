@@ -13,33 +13,37 @@
 
 'apply'(Fn, Args) ->
   case Fn of
+    #{?TYPE := 'clojerl.SortedMap'} ->
+      'clojerl.SortedMap':'apply'(Fn, Args);
+    #{?TYPE := 'clojerl.Set'} ->
+      'clojerl.Set':'apply'(Fn, Args);
+    #{?TYPE := 'clojerl.Map'} ->
+      'clojerl.Map':'apply'(Fn, Args);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'apply'(Fn, Args);
+    #{?TYPE := 'clojerl.SortedSet'} ->
+      'clojerl.SortedSet':'apply'(Fn, Args);
     #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'apply'(Fn, Args);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'apply'(Fn, Args);
-    #{?TYPE := 'clojerl.SortedMap'} ->
-      'clojerl.SortedMap':'apply'(Fn, Args);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'apply'(Fn, Args);
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'apply'(Fn, Args);
-    #{?TYPE := 'clojerl.Map'} ->
-      'clojerl.Map':'apply'(Fn, Args);
-    #{?TYPE := 'clojerl.Set'} ->
-      'clojerl.Set':'apply'(Fn, Args);
-    #{?TYPE := 'clojerl.SortedSet'} ->
-      'clojerl.SortedSet':'apply'(Fn, Args);
     #{?TYPE := 'clojerl.Fn'} ->
       'clojerl.Fn':'apply'(Fn, Args);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'apply'(Fn, Args);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn);
-    ZZZ when is_map(ZZZ) ->
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'apply', Fn);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'apply', Fn);
+    X_ when is_map(X_) ->
       'erlang.Map':'apply'(Fn, Args);
-    ZZZ when is_function(ZZZ) ->
+    X_ when is_function(X_) ->
       'erlang.Fn':'apply'(Fn, Args);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn);
-    ZZZ when is_atom(ZZZ) ->
+    X_ when is_atom(X_) ->
       'clojerl.Keyword':'apply'(Fn, Args);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn)
@@ -47,19 +51,21 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.Var'} -> true;
-    #{?TYPE := 'clojerl.Symbol'} -> true;
-    #{?TYPE := 'clojerl.SortedMap'} -> true;
-    #{?TYPE := 'clojerl.TupleMap'} -> true;
-    #{?TYPE := 'clojerl.Vector'} -> true;
-    #{?TYPE := 'clojerl.Map'} -> true;
-    #{?TYPE := 'clojerl.Set'} -> true;
-    #{?TYPE := 'clojerl.SortedSet'} -> true;
-    #{?TYPE := 'clojerl.Fn'} -> true;
-    #{?TYPE := _} -> false;
-    ZZZ when is_map(ZZZ) -> true;
-    ZZZ when is_function(ZZZ) -> true;
-    ?NIL -> false;
-    ZZZ when is_atom(ZZZ) -> true;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.Set'} ->  true;
+    #{?TYPE := 'clojerl.Map'} ->  true;
+    #{?TYPE := 'clojerl.Vector'} ->  true;
+    #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := 'clojerl.Var'} ->  true;
+    #{?TYPE := 'clojerl.Symbol'} ->  true;
+    #{?TYPE := 'clojerl.Fn'} ->  true;
+    #{?TYPE := 'clojerl.TupleMap'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    X_ when is_map(X_) ->  true;
+    X_ when is_function(X_) ->  true;
+    ?NIL ->  false;
+    X_ when is_atom(X_) ->  true;
     _ -> false
   end.

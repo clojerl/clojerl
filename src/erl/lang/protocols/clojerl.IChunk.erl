@@ -17,6 +17,10 @@
       'clojerl.TupleChunk':'drop_first'(Chunk);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
+    X_ when is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
+    X_ when is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
     _ ->
@@ -25,8 +29,10 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.TupleChunk'} -> true;
-    #{?TYPE := _} -> false;
-    ?NIL -> false;
+    #{?TYPE := 'clojerl.TupleChunk'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when is_binary(X_) ->  false;
+    X_ when is_boolean(X_) ->  false;
+    ?NIL ->  false;
     _ -> false
   end.
