@@ -22,6 +22,8 @@
       clj_protocol:not_implemented(?MODULE, 'nth', Coll);
     ZZZ when is_tuple(ZZZ) ->
       'erlang.Tuple':'nth'(Coll, N);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'nth', Coll)
   end.
@@ -36,6 +38,8 @@
       clj_protocol:not_implemented(?MODULE, 'nth', Coll);
     ZZZ when is_tuple(ZZZ) ->
       'erlang.Tuple':'nth'(Coll, N, NotFound);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'nth', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'nth', Coll)
   end.
@@ -46,5 +50,6 @@
     #{?TYPE := 'clojerl.TupleChunk'} -> true;
     #{?TYPE := _} -> false;
     ZZZ when is_tuple(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

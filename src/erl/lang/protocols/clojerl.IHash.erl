@@ -107,6 +107,8 @@
       'erlang.Tuple':'hash'(X);
     ZZZ when is_function(ZZZ) ->
       'erlang.Fn':'hash'(X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'hash', X);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'hash'(X);
     ZZZ when is_port(ZZZ) ->
@@ -168,6 +170,7 @@
     ZZZ when is_map(ZZZ) -> true;
     ZZZ when is_tuple(ZZZ) -> true;
     ZZZ when is_function(ZZZ) -> true;
+    ?NIL -> false;
     ZZZ when is_atom(ZZZ) -> true;
     ZZZ when is_port(ZZZ) -> true;
     ZZZ when is_pid(ZZZ) -> true;

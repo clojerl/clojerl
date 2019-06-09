@@ -17,6 +17,8 @@
       'clojerl.TupleChunk':'drop_first'(Chunk);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'drop_first', Chunk)
   end.
@@ -25,5 +27,6 @@
   case X of
     #{?TYPE := 'clojerl.TupleChunk'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

@@ -23,6 +23,8 @@
       'clojerl.ChunkedCons':'chunked_first'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq)
   end.
@@ -36,6 +38,8 @@
     #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'chunked_next'(Seq);
     #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
+    ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq)
@@ -51,6 +55,8 @@
       'clojerl.ChunkedCons':'chunked_more'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq)
   end.
@@ -61,5 +67,6 @@
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
     #{?TYPE := 'clojerl.ChunkedCons'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

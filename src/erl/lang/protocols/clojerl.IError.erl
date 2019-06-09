@@ -29,6 +29,8 @@
       'clojerl.ExceptionInfo':'message'(Error);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'message', Error)
   end.
@@ -43,5 +45,6 @@
     #{?TYPE := 'clojerl.IOError'} -> true;
     #{?TYPE := 'clojerl.ExceptionInfo'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

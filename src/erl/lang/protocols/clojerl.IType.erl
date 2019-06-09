@@ -13,5 +13,6 @@
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

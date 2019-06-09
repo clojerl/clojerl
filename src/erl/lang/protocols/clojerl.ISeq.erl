@@ -41,6 +41,8 @@
       clj_protocol:not_implemented(?MODULE, 'first', Seq);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'first'(Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'first', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'first', Seq)
   end.
@@ -73,6 +75,8 @@
       clj_protocol:not_implemented(?MODULE, 'next', Seq);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'next'(Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'next', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'next', Seq)
   end.
@@ -105,6 +109,8 @@
       clj_protocol:not_implemented(?MODULE, 'more', Seq);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'more'(Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'more', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'more', Seq)
   end.
@@ -124,5 +130,6 @@
     #{?TYPE := 'clojerl.ChunkedCons'} -> true;
     #{?TYPE := _} -> false;
     ZZZ when is_list(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

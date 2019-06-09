@@ -28,5 +28,6 @@
     ZZZ when is_bitstring(ZZZ) -> true;
     ZZZ when is_list(ZZZ) -> true;
     ZZZ when is_tuple(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

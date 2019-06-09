@@ -60,6 +60,8 @@
       'erlang.Map':'seq'(X);
     ZZZ when is_tuple(ZZZ) ->
       'erlang.Tuple':'seq'(X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'seq', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'seq', X)
   end.
@@ -112,6 +114,8 @@
       'erlang.Map':'to_list'(X);
     ZZZ when is_tuple(ZZZ) ->
       'erlang.Tuple':'to_list'(X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'to_list', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'to_list', X)
   end.
@@ -141,5 +145,6 @@
     ZZZ when is_list(ZZZ) -> true;
     ZZZ when is_map(ZZZ) -> true;
     ZZZ when is_tuple(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

@@ -18,6 +18,8 @@
       'clojerl.ExceptionInfo':'data'(ExInfo);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'data', ExInfo);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'data', ExInfo);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'data', ExInfo)
   end.
@@ -28,6 +30,8 @@
       'clojerl.ExceptionInfo':'cause'(ExInfo);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'cause', ExInfo);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'cause', ExInfo);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'cause', ExInfo)
   end.
@@ -36,5 +40,6 @@
   case X of
     #{?TYPE := 'clojerl.ExceptionInfo'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

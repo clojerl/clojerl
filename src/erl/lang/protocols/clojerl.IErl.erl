@@ -35,6 +35,8 @@
       'clojerl.ChunkedCons':'->erl'(X, Recursive);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, '->erl', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, '->erl', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, '->erl', X)
   end.
@@ -52,5 +54,6 @@
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} -> true;
     #{?TYPE := 'clojerl.ChunkedCons'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

@@ -17,6 +17,8 @@
       'clojerl.Vector':'rseq'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'rseq', Seq)
   end.
@@ -25,5 +27,6 @@
   case X of
     #{?TYPE := 'clojerl.Vector'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

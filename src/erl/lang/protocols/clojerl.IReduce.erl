@@ -40,6 +40,8 @@
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'reduce'(Coll, Fun);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll)
   end.
@@ -72,6 +74,8 @@
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'reduce'(Coll, Fun, Init);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll)
   end.
@@ -91,5 +95,6 @@
     #{?TYPE := 'clojerl.TupleChunk'} -> true;
     #{?TYPE := _} -> false;
     ZZZ when is_list(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

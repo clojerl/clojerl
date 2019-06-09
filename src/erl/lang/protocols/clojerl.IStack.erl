@@ -22,6 +22,8 @@
       clj_protocol:not_implemented(?MODULE, 'peek', Stack);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'peek'(Stack);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'peek', Stack)
   end.
@@ -36,6 +38,8 @@
       clj_protocol:not_implemented(?MODULE, 'pop', Stack);
     ZZZ when is_list(ZZZ) ->
       'erlang.List':'pop'(Stack);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'pop', Stack)
   end.
@@ -46,5 +50,6 @@
     #{?TYPE := 'clojerl.Vector'} -> true;
     #{?TYPE := _} -> false;
     ZZZ when is_list(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

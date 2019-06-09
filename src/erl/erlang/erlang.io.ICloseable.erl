@@ -25,6 +25,8 @@
       'clojerl.Delay':'close'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'close', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'close', X)
   end.
@@ -37,5 +39,6 @@
     #{?TYPE := 'erlang.io.File'} -> true;
     #{?TYPE := 'clojerl.Delay'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

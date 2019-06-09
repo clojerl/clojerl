@@ -25,6 +25,8 @@
       'clojerl.Atom':'deref'(Ref);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'deref', Ref);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref)
   end.
@@ -37,5 +39,6 @@
     #{?TYPE := 'clojerl.Delay'} -> true;
     #{?TYPE := 'clojerl.Atom'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

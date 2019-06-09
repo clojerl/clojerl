@@ -18,6 +18,8 @@
       'clojerl.Namespace':'alter_meta'(Ref, Fun, Args);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'alter_meta', Ref);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'alter_meta', Ref);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'alter_meta', Ref)
   end.
@@ -28,6 +30,8 @@
       'clojerl.Namespace':'reset_meta'(Ref, Meta);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'reset_meta', Ref);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'reset_meta', Ref);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'reset_meta', Ref)
   end.
@@ -36,5 +40,6 @@
   case X of
     #{?TYPE := 'clojerl.Namespace'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

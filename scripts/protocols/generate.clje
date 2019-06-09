@@ -1,4 +1,4 @@
-(ns protocols.function
+(ns protocols.generate
   (:require [protocols.utils :as utils]
             [clojure.string :as str]))
 
@@ -100,17 +100,15 @@
   [x]
   (= x '_))
 
+(defn keyword-type?
+  [t]
+  (= t "clojerl.Keyword"))
+
 (defn proto-function-head
   [f args]
   (let [args-str (apply str (interpose ", " args))]
     (str "'" f "'(" args-str ") ->\n"
          "  case " (first args) " of\n")))
-
-(defn proto-function-tail
-  [f args]
-  (str "    _ ->\n"
-       "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ")\n"
-       "  end.\n\n"))
 
 (defn pattern-and-guard
   [m]
@@ -118,14 +116,34 @@
     (str "ZZZ when " (get-in primitive-types [m :pred]) "(ZZZ)")
     (str "#{?TYPE := '" m "'}")))
 
+(defn not-implemented [f args]
+  (str "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ")"))
+
+(defn implementation-call [f args type]
+  (let [args-str (apply str (interpose ", " args))]
+    (str "    " (pattern-and-guard type) " ->\n"
+         "      '" type "':'" f "'(" args-str ");\n")))
+
+(defn proto-function-tail
+  [f args]
+  (str "    _ ->\n"
+       (not-implemented f args) "\n"
+       "  end.\n\n"))
+
 (defn proto-function-clause
-  [f args m]
-  (if (underscore? m)
+  [f args type]
+  (cond
+    ;; Catch all clause for tagged maps
+    (underscore? type)
     (str "    #{?TYPE := _} ->\n"
-         "      clj_protocol:not_implemented(?MODULE, '" f "', " (first args) ");\n")
-    (let [args-str (apply str (interpose ", " args))]
-      (str "    " (pattern-and-guard m) " ->\n"
-           "      '" m "':'" f "'(" args-str ");\n"))))
+         (not-implemented f args) ";\n")
+    ;; Add a clause for nil before the one for keywords
+    (= type "clojerl.Keyword")
+    (str "    ?NIL ->\n"
+         (not-implemented f args) ";\n"
+         (implementation-call f args type))
+    :else
+    (implementation-call f args type)))
 
 (defn proto-function
   [proto-name f args types]
@@ -135,6 +153,9 @@
      (->> types
           (map (partial proto-function-clause f args))
           (apply str))
+     (when-not (some keyword-type? types)
+       (str "    ?NIL ->\n"
+            (not-implemented f args) ";\n"))
      (proto-function-tail f args))))
 
 (defn proto-functions
@@ -145,15 +166,28 @@
               (proto-function proto-name f args types)))
        (apply str)))
 
+(defn satisfies?-clause
+  [type]
+  (cond
+    (underscore? type)
+    "    #{?TYPE := _} -> false;\n"
+
+    (keyword-type? type)
+    (str "    ?NIL -> false;\n"
+         "    " (pattern-and-guard type) " -> true;\n")
+
+    :else
+    (str "    " (pattern-and-guard type) " -> true;\n")))
+
 (defn satisfies?-function
   [types]
   (str "?SATISFIES(X) ->\n"
        "  case X of\n"
        (->> types
-            (map #(if (underscore? %)
-                    "    #{?TYPE := _} -> false;\n"
-                    (str "    " (pattern-and-guard %) " -> true;\n")))
+            (map satisfies?-clause)
             (apply str))
+       (when-not (some keyword-type? types)
+         "    ?NIL -> false;\n")
        "    _ -> false\n"
        "  end.\n"))
 

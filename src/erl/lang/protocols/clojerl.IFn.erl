@@ -37,6 +37,8 @@
       'erlang.Map':'apply'(Fn, Args);
     ZZZ when is_function(ZZZ) ->
       'erlang.Fn':'apply'(Fn, Args);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'apply', Fn);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'apply'(Fn, Args);
     _ ->
@@ -57,6 +59,7 @@
     #{?TYPE := _} -> false;
     ZZZ when is_map(ZZZ) -> true;
     ZZZ when is_function(ZZZ) -> true;
+    ?NIL -> false;
     ZZZ when is_atom(ZZZ) -> true;
     _ -> false
   end.

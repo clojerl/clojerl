@@ -36,6 +36,8 @@
       'erlang.List':'get'(X, Key);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'get'(X, Key);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'get', X)
   end.
@@ -64,6 +66,8 @@
       'erlang.List':'get'(X, Key, NotFound);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'get'(X, Key, NotFound);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'get', X)
   end.
@@ -81,5 +85,6 @@
     #{?TYPE := _} -> false;
     ZZZ when is_list(ZZZ) -> true;
     ZZZ when is_map(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

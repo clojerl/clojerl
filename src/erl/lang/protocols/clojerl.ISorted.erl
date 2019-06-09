@@ -15,5 +15,6 @@
     #{?TYPE := 'clojerl.SortedMap'} -> true;
     #{?TYPE := 'clojerl.SortedSet'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

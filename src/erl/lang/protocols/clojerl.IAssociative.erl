@@ -27,6 +27,8 @@
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'contains_key'(Assoc, Key);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc)
   end.
@@ -45,6 +47,8 @@
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'entry_at'(Assoc, Key);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc)
   end.
@@ -63,6 +67,8 @@
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'assoc'(Assoc, Key, Value);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc)
   end.
@@ -75,5 +81,6 @@
     #{?TYPE := 'clojerl.Map'} -> true;
     #{?TYPE := _} -> false;
     ZZZ when is_map(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

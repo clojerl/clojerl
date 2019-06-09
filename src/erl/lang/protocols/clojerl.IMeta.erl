@@ -56,6 +56,8 @@
       'clojerl.SortedSet':'meta'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'meta', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'meta', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'meta', X)
   end.
@@ -104,6 +106,8 @@
       'clojerl.SortedSet':'with_meta'(X, Meta);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'with_meta', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X)
   end.
@@ -131,5 +135,6 @@
     #{?TYPE := 'clojerl.ChunkedCons'} -> true;
     #{?TYPE := 'clojerl.SortedSet'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

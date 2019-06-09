@@ -24,6 +24,8 @@
       'erlang.io.File':'read'(Reader);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'read', Reader);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'read'(Reader);
     _ ->
@@ -39,6 +41,8 @@
     #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'read'(Reader, Length);
     #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'read', Reader);
+    ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'read'(Reader, Length);
@@ -56,6 +60,8 @@
       'erlang.io.File':'read_line'(Reader);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'read_line', Reader);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'read_line', Reader);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'read_line'(Reader);
     _ ->
@@ -72,6 +78,8 @@
       'erlang.io.File':'skip'(Reader, N);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'skip', Reader);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'skip', Reader);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'skip'(Reader, N);
     _ ->
@@ -84,6 +92,7 @@
     #{?TYPE := 'erlang.io.StringReader'} -> true;
     #{?TYPE := 'erlang.io.File'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     ZZZ when is_atom(ZZZ) -> true;
     _ -> false
   end.

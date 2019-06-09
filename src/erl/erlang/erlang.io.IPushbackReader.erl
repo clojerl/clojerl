@@ -17,6 +17,8 @@
       'erlang.io.PushbackReader':'unread'(Reader, Ch);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'unread', Reader);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'unread', Reader);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'unread', Reader)
   end.
@@ -25,5 +27,6 @@
   case X of
     #{?TYPE := 'erlang.io.PushbackReader'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

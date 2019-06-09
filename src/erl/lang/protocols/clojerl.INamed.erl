@@ -20,6 +20,8 @@
       'clojerl.Symbol':'name'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'name', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'name', X);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'name'(X);
     _ ->
@@ -34,6 +36,8 @@
       'clojerl.Symbol':'namespace'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'namespace'(X);
     _ ->
@@ -45,6 +49,7 @@
     #{?TYPE := 'clojerl.Var'} -> true;
     #{?TYPE := 'clojerl.Symbol'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     ZZZ when is_atom(ZZZ) -> true;
     _ -> false
   end.

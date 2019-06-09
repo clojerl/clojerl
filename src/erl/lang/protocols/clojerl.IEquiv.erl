@@ -87,6 +87,8 @@
       'erlang.Map':'equiv'(X, Y);
     ZZZ when is_tuple(ZZZ) ->
       'erlang.Tuple':'equiv'(X, Y);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'equiv', X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'equiv', X)
   end.
@@ -130,5 +132,6 @@
     ZZZ when is_list(ZZZ) -> true;
     ZZZ when is_map(ZZZ) -> true;
     ZZZ when is_tuple(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

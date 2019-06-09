@@ -20,6 +20,8 @@
       'erlang.io.File':'write'(Writer, Str);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'write'(Writer, Str);
     _ ->
@@ -34,6 +36,8 @@
       'erlang.io.File':'write'(Writer, Format, Value);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'write', Writer);
     ZZZ when is_atom(ZZZ) ->
       'clojerl.Keyword':'write'(Writer, Format, Value);
     _ ->
@@ -45,6 +49,7 @@
     #{?TYPE := 'erlang.io.StringWriter'} -> true;
     #{?TYPE := 'erlang.io.File'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     ZZZ when is_atom(ZZZ) -> true;
     _ -> false
   end.

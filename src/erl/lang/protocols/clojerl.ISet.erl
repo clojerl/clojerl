@@ -20,6 +20,8 @@
       'clojerl.SortedSet':'disjoin'(Coll, Item);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'disjoin', Coll);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'disjoin', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'disjoin', Coll)
   end.
@@ -32,6 +34,8 @@
       'clojerl.SortedSet':'contains'(Coll, Item);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'contains', Coll);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'contains', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'contains', Coll)
   end.
@@ -41,5 +45,6 @@
     #{?TYPE := 'clojerl.Set'} -> true;
     #{?TYPE := 'clojerl.SortedSet'} -> true;
     #{?TYPE := _} -> false;
+    ?NIL -> false;
     _ -> false
   end.

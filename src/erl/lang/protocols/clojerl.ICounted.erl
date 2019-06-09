@@ -61,6 +61,8 @@
       'erlang.Map':'count'(Seq);
     ZZZ when is_tuple(ZZZ) ->
       'erlang.Tuple':'count'(Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'count', Seq);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'count', Seq)
   end.
@@ -91,5 +93,6 @@
     ZZZ when is_list(ZZZ) -> true;
     ZZZ when is_map(ZZZ) -> true;
     ZZZ when is_tuple(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

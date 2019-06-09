@@ -52,6 +52,8 @@
       'erlang.List':'cons'(Coll, Item);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'cons'(Coll, Item);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'cons', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'cons', Coll)
   end.
@@ -96,6 +98,8 @@
       'erlang.List':'empty'(Coll);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'empty'(Coll);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'empty', Coll);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'empty', Coll)
   end.
@@ -121,5 +125,6 @@
     #{?TYPE := _} -> false;
     ZZZ when is_list(ZZZ) -> true;
     ZZZ when is_map(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.

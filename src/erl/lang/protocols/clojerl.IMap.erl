@@ -25,6 +25,8 @@
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'keys'(Map);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'keys', Map);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map)
   end.
@@ -41,6 +43,8 @@
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'vals'(Map);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'vals', Map);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map)
   end.
@@ -57,6 +61,8 @@
       clj_protocol:not_implemented(?MODULE, 'without', Map);
     ZZZ when is_map(ZZZ) ->
       'erlang.Map':'without'(Map, Key);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'without', Map);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'without', Map)
   end.
@@ -68,5 +74,6 @@
     #{?TYPE := 'clojerl.Map'} -> true;
     #{?TYPE := _} -> false;
     ZZZ when is_map(ZZZ) -> true;
+    ?NIL -> false;
     _ -> false
   end.
