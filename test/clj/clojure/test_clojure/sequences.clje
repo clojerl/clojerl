@@ -78,8 +78,8 @@
       (map inc #{}) ()
       (map inc {}) ()
       ;; TODO: transducers missing
-      ;; (sequence (map inc) (range 10)) (range 1 11)
-      ;; (range 1 11) (sequence (map inc) (range 10))
+      (sequence (map inc) (range 10)) (range 1 11)
+      (range 1 11) (sequence (map inc) (range 10))
       ))
 
 
@@ -724,14 +724,14 @@
 
     (take 3 (cycle [nil])) '(nil nil nil)
 
-    ;; (transduce (take 5) + (cycle [1])) 5
-    ;; (transduce (take 5) + 2 (cycle [1])) 7
-    ;; (transduce (take 5) + (cycle [3 7])) 23
-    ;; (transduce (take 5) + 2 (cycle [3 7])) 25
+    (transduce (take 5) + (cycle [1])) 5
+    (transduce (take 5) + 2 (cycle [1])) 7
+    (transduce (take 5) + (cycle [3 7])) 23
+    (transduce (take 5) + 2 (cycle [3 7])) 25
 
     (take 2 (cycle (map #(/ 42 %) '(2 1 0)))) '(21.0 42.0)
     (first (next (cycle (map #(/ 42 %) '(2 1 0))))) 42.0
-    ;; (into [] (take 2) (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
+    (into [] (take 2) (cycle (map #(/ 42 %) '(2 1 0)))) '(21.0 42.0)
     )
   )
 
@@ -780,11 +780,11 @@
       (is (= '(256 128 64 32 16 8 4 2 1 0) (take 10 (iterate #(quot % 2) 256))))
       (is (= '(0 true) (take 2 (iterate zero? 0))))
       (is (= 2 (first (next (next (iterate inc 0))))))
-      ;; (is (= [1 2 3] (into [] (take 3) (next (iterate inc 0)))))
+      (is (= [1 2 3] (into [] (take 3) (next (iterate inc 0)))))
 
       ;; reduce via transduce
-      ;; (is (= (transduce (take 5) + (iterate #(* 2 %) 2)) 62))
-      ;; (is (= (transduce (take 5) + 1 (iterate #(* 2 %) 2)) 63))
+      (is (= (transduce (take 5) + (iterate #(* 2 %) 2)) 62))
+      (is (= (transduce (take 5) + 1 (iterate #(* 2 %) 2)) 63))
   )
 
 
