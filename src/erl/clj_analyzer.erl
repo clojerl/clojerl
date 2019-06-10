@@ -248,7 +248,7 @@ maybe_clear_def_var(OpStr, Env0) ->
     false -> clear_def_var(Env0)
   end.
 
--spec do_analyze_seq(boolean(), any()) -> clj_env:env().
+-spec do_analyze_seq('clojerl.List':type(), any()) -> clj_env:env().
 do_analyze_seq(List, Env0) ->
   Op      = clj_rt:first(List),
 
