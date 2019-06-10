@@ -26,7 +26,7 @@
 -type type() :: #{ ?TYPE     => ?M
                  , xform     => any()
                  , coll      => any()
-                 , key       => binary()
+                 , key       => {transducer_seq, integer()}
                  , buffer    => [any()]
                  , completed => boolean()
                  , multi     => boolean()
@@ -38,16 +38,15 @@
 
 -spec ?CONSTRUCTOR(any(), any(), boolean()) -> type().
 ?CONSTRUCTOR(XForm, Coll, Multi) ->
-  UUID = 'erlang.util.UUID':random(),
-  Key  = 'erlang.util.UUID':str(UUID),
-  F0   = fun
-           ([]) -> ?NIL;
-           ([Acc]) -> Acc;
-           ([Acc, Item]) ->
-             erlang:put(Key, [Item | erlang:get(Key)]),
-             Acc
-         end,
-  F    = 'clojerl.Fn':?CONSTRUCTOR(F0),
+  Key = {transducer_seq, erlang:unique_integer()},
+  F0  = fun
+          ([]) -> ?NIL;
+          ([Acc]) -> Acc;
+          ([Acc, Item]) ->
+            erlang:put(Key, [Item | erlang:get(Key)]),
+            Acc
+        end,
+  F   = 'clojerl.Fn':?CONSTRUCTOR(F0),
   XForm1 = clj_rt:apply(XForm, [F]),
   X = #{ ?TYPE     => ?M
        , xform     => XForm1

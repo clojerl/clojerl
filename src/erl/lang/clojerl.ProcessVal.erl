@@ -19,14 +19,13 @@
 -export([str/1]).
 
 -type type() :: #{ ?TYPE => ?M
-                 , id    => binary()
+                 , id    => {process_val, integer()}
                  }.
 
 -spec ?CONSTRUCTOR(any()) -> type().
 ?CONSTRUCTOR(Value) ->
-  UUID = 'erlang.util.UUID':random(),
-  Id   = 'erlang.util.UUID':str(UUID),
-  _    = erlang:put(Id, {ok, Value}),
+  Id = {process_val, erlang:unique_integer()},
+  _  = erlang:put(Id, {ok, Value}),
   #{ ?TYPE => ?M
    , id    => Id
    }.
@@ -45,8 +44,9 @@ destroy(#{?TYPE := ?M, id := Id}) ->
 %% Protocols
 %%------------------------------------------------------------------------------
 
-str(#{?TYPE := ?M, id := Id}) ->
-  <<"#<clojerl.ProcessVal ", Id/binary, ">">>.
+str(#{?TYPE := ?M, id := {process_val, Id}}) ->
+  IdStr = integer_to_binary(Id),
+  <<"#<clojerl.ProcessVal ", IdStr/binary, ">">>.
 
 deref(#{?TYPE := ?M, id := Id}) ->
   case erlang:get(Id) of
