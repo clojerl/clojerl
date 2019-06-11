@@ -8,6 +8,7 @@
 
 -export(['drop_first'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'drop_first'(any()) -> any().
 
@@ -34,5 +35,11 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.TupleChunk' -> true;
     _ -> false
   end.

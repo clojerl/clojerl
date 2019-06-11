@@ -8,6 +8,7 @@
 
 -export(['->erl'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback '->erl'(any(), any()) -> any().
 
@@ -61,5 +62,20 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Range' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'clojerl.TupleMap' -> true;
     _ -> false
   end.

@@ -8,6 +8,7 @@
 
 -export(['disjoin'/2, 'contains'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'disjoin'(any(), any()) -> any().
 -callback 'contains'(any(), any()) -> any().
@@ -56,5 +57,12 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Set' -> true;
+    'clojerl.SortedSet' -> true;
     _ -> false
   end.

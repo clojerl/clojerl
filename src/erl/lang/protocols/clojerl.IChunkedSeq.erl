@@ -8,6 +8,7 @@
 
 -export(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'chunked_first'(any()) -> any().
 -callback 'chunked_next'(any()) -> any().
@@ -82,5 +83,13 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Range' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.ChunkedCons' -> true;
     _ -> false
   end.

@@ -8,6 +8,7 @@
 
 -export(['nth'/2, 'nth'/3]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'nth'(any(), any()) -> any().
 -callback 'nth'(any(), any(), any()) -> any().
@@ -61,5 +62,13 @@
     X_ when is_boolean(X_) ->  false;
     X_ when is_tuple(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.TupleChunk' -> true;
+    'clojerl.Vector' -> true;
+    'erlang.Tuple' -> true;
     _ -> false
   end.

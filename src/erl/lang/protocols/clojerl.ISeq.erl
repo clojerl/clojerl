@@ -8,6 +8,7 @@
 
 -export(['first'/1, 'next'/1, 'more'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'first'(any()) -> any().
 -callback 'next'(any()) -> any().
@@ -145,5 +146,22 @@
     X_ when is_boolean(X_) ->  false;
     X_ when is_list(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Iterate' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.TransducerSeq' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'erlang.List' -> true;
     _ -> false
   end.

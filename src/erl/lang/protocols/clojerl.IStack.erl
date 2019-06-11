@@ -8,6 +8,7 @@
 
 -export(['peek'/1, 'pop'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'peek'(any()) -> any().
 -callback 'pop'(any()) -> any().
@@ -61,5 +62,13 @@
     X_ when is_boolean(X_) ->  false;
     X_ when is_list(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.List' -> true;
+    'clojerl.Vector' -> true;
+    'erlang.List' -> true;
     _ -> false
   end.

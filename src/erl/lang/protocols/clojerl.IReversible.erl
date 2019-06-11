@@ -8,6 +8,7 @@
 
 -export(['rseq'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'rseq'(any()) -> any().
 
@@ -34,5 +35,11 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Vector' -> true;
     _ -> false
   end.

@@ -8,6 +8,7 @@
 
 -export(['reduce'/2, 'reduce'/3]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'reduce'(any(), any()) -> any().
 -callback 'reduce'(any(), any(), any()) -> any().
@@ -106,5 +107,22 @@
     X_ when is_boolean(X_) ->  false;
     X_ when is_list(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.TupleChunk' -> true;
+    'clojerl.Iterate' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'erlang.List' -> true;
     _ -> false
   end.

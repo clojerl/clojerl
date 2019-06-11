@@ -8,6 +8,7 @@
 
 -export(['equiv'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'equiv'(any(), any()) -> any().
 
@@ -139,5 +140,46 @@
     X_ when is_map(X_) ->  true;
     X_ when is_tuple(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.IOError' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Delay' -> true;
+    'erlang.util.Date' -> true;
+    'clojerl.ArityError' -> true;
+    'clojerl.reader.TaggedLiteral' -> true;
+    'clojerl.Var' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'clojerl.reader.ReaderConditional' -> true;
+    'clojerl.BadArgumentError' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.ExceptionInfo' -> true;
+    'clojerl.Error' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.TransducerSeq' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.IllegalAccessError' -> true;
+    'clojerl.Iterate' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.ProcessVal' -> true;
+    'clojerl.TupleMap' -> true;
+    'clojerl.AssertionError' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Atom' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.TupleChunk' -> true;
+    'clojerl.Map' -> true;
+    'erlang.List' -> true;
+    'erlang.Map' -> true;
+    'erlang.Tuple' -> true;
     _ -> false
   end.

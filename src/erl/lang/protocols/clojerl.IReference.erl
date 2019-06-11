@@ -8,6 +8,7 @@
 
 -export(['alter_meta'/3, 'reset_meta'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'alter_meta'(any(), any(), any()) -> any().
 -callback 'reset_meta'(any(), any()) -> any().
@@ -51,5 +52,11 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Namespace' -> true;
     _ -> false
   end.

@@ -8,6 +8,7 @@
 
 -export(['contains_key'/2, 'entry_at'/2, 'assoc'/3]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'contains_key'(any(), any()) -> any().
 -callback 'entry_at'(any(), any()) -> any().
@@ -96,5 +97,15 @@
     X_ when is_boolean(X_) ->  false;
     X_ when is_map(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.SortedMap' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.TupleMap' -> true;
+    'erlang.Map' -> true;
     _ -> false
   end.

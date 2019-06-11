@@ -8,6 +8,7 @@
 
 -export(['read'/1, 'read'/2, 'read_line'/1, 'skip'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'read'(any()) -> any().
 -callback 'read'(any(), any()) -> any().
@@ -112,5 +113,14 @@
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
     X_ when is_atom(X_) ->  true;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'erlang.io.PushbackReader' -> true;
+    'erlang.io.File' -> true;
+    'erlang.io.StringReader' -> true;
+    'clojerl.Keyword' -> true;
     _ -> false
   end.

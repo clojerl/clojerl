@@ -39,7 +39,7 @@ module(#{?TYPE := ?M, name := Name}) -> Name.
 
 -spec 'extends?'(type(), type()) -> boolean().
 'extends?'(#{?TYPE := ?M, name := Type}, #{?TYPE := ?M, name := ValueType}) ->
-  Type:?SATISFIES(ValueType).
+  Type:?EXTENDS(ValueType).
 
 %%------------------------------------------------------------------------------
 %% Protocols

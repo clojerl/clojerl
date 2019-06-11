@@ -8,6 +8,7 @@
 
 -export(['close'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'close'(any()) -> any().
 
@@ -46,5 +47,15 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'erlang.io.PushbackReader' -> true;
+    'clojerl.Delay' -> true;
+    'erlang.io.StringWriter' -> true;
+    'erlang.io.File' -> true;
+    'erlang.io.StringReader' -> true;
     _ -> false
   end.

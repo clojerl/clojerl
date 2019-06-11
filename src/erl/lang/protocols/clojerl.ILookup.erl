@@ -8,6 +8,7 @@
 
 -export(['get'/2, 'get'/3]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'get'(any(), any()) -> any().
 -callback 'get'(any(), any(), any()) -> any().
@@ -96,5 +97,20 @@
     X_ when is_list(X_) ->  true;
     X_ when is_map(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.reader.ReaderConditional' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.reader.TaggedLiteral' -> true;
+    'clojerl.TupleMap' -> true;
+    'erlang.List' -> true;
+    'erlang.Map' -> true;
     _ -> false
   end.

@@ -189,6 +189,21 @@
        "    _ -> false\n"
        "  end.\n"))
 
+(defn extends?-clause
+  [[type implemented?]]
+  (when implemented?
+    (str "    '" type "' -> true;\n")))
+
+(defn extends?-function
+  [types]
+  (str "?EXTENDS(X) ->\n"
+       "  case X of\n"
+       (->> types
+            (map extends?-clause)
+            (apply str))
+       "    _ -> false\n"
+       "  end.\n"))
+
 (defn exports
   [fns]
   (->> fns
@@ -240,11 +255,14 @@
          (let [ex (exports fns)]
            (when-not (empty? ex)
              (str "-export([" ex "]).\n")))
-         "-export([?SATISFIES/1]).\n\n"
+         "-export([?SATISFIES/1]).\n"
+         "-export([?EXTENDS/1]).\n\n"
          (callbacks fns)
          "\n"
          (proto-functions proto-name fns types)
-         (satisfies?-function types))))
+         (satisfies?-function types)
+         "\n"
+         (extends?-function types))))
 
 (defn write-module
   [content proto-name]

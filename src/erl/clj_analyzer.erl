@@ -2020,7 +2020,7 @@ parse_catch_type(ErrType, Env0) ->
     {{type, Type}, Env1} ->
       IError     = 'erlang.Type':?CONSTRUCTOR('clojerl.IError'),
       TypeModule = 'erlang.Type':module(Type),
-      ?ERROR_WHEN( not 'clojerl.IError':?SATISFIES(TypeModule)
+      ?ERROR_WHEN( not 'clojerl.IError':?EXTENDS(TypeModule)
                  , [<<"Type ">>, Type, <<" does not implement ">>, IError]
                  , clj_env:location(Env0)
                  ),

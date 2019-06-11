@@ -8,6 +8,7 @@
 
 -export(['keys'/1, 'vals'/1, 'without'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'keys'(any()) -> any().
 -callback 'vals'(any()) -> any().
@@ -89,5 +90,14 @@
     X_ when is_boolean(X_) ->  false;
     X_ when is_map(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.SortedMap' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.TupleMap' -> true;
+    'erlang.Map' -> true;
     _ -> false
   end.

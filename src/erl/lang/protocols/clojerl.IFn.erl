@@ -8,6 +8,7 @@
 
 -export(['apply'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'apply'(any(), any()) -> any().
 
@@ -67,5 +68,22 @@
     X_ when is_function(X_) ->  true;
     ?NIL ->  false;
     X_ when is_atom(X_) ->  true;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.SortedMap' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.Var' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.Fn' -> true;
+    'clojerl.TupleMap' -> true;
+    'erlang.Map' -> true;
+    'erlang.Fn' -> true;
+    'clojerl.Keyword' -> true;
     _ -> false
   end.

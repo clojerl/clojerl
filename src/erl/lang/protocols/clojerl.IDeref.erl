@@ -8,6 +8,7 @@
 
 -export(['deref'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'deref'(any()) -> any().
 
@@ -46,5 +47,15 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Reduced' -> true;
+    'clojerl.Delay' -> true;
+    'clojerl.Atom' -> true;
+    'clojerl.Var' -> true;
+    'clojerl.ProcessVal' -> true;
     _ -> false
   end.

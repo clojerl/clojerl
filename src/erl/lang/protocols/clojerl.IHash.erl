@@ -8,6 +8,7 @@
 
 -export(['hash'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'hash'(any()) -> any().
 
@@ -175,5 +176,60 @@
     X_ when is_port(X_) ->  true;
     X_ when is_pid(X_) ->  true;
     X_ when is_reference(X_) ->  true;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.IOError' -> true;
+    'clojerl.Fn' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Delay' -> true;
+    'erlang.util.Date' -> true;
+    'clojerl.ArityError' -> true;
+    'clojerl.Var' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'clojerl.reader.ReaderConditional' -> true;
+    'clojerl.Namespace' -> true;
+    'clojerl.BadArgumentError' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.ExceptionInfo' -> true;
+    'clojerl.Error' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.Reduced' -> true;
+    'clojerl.IllegalAccessError' -> true;
+    'clojerl.Iterate' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'erlang.util.Regex' -> true;
+    'clojerl.ProcessVal' -> true;
+    'clojerl.TupleMap' -> true;
+    'clojerl.AssertionError' -> true;
+    'erlang.util.UUID' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Atom' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.SortedSet' -> true;
+    'erlang.Type' -> true;
+    'clojerl.TupleChunk' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.String' -> true;
+    'clojerl.BitString' -> true;
+    'clojerl.Integer' -> true;
+    'clojerl.Float' -> true;
+    'clojerl.Boolean' -> true;
+    'erlang.List' -> true;
+    'erlang.Map' -> true;
+    'erlang.Tuple' -> true;
+    'erlang.Fn' -> true;
+    'clojerl.Keyword' -> true;
+    'erlang.Port' -> true;
+    'erlang.Process' -> true;
+    'erlang.Reference' -> true;
     _ -> false
   end.

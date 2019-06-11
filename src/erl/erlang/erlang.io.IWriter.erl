@@ -8,6 +8,7 @@
 
 -export(['write'/2, 'write'/3]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'write'(any(), any()) -> any().
 -callback 'write'(any(), any(), any()) -> any().
@@ -61,5 +62,13 @@
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
     X_ when is_atom(X_) ->  true;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'erlang.io.StringWriter' -> true;
+    'erlang.io.File' -> true;
+    'clojerl.Keyword' -> true;
     _ -> false
   end.

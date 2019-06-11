@@ -7,6 +7,7 @@
 -protocol(true).
 
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback '_'(any()) -> any().
 
@@ -31,5 +32,25 @@
     X_ when is_list(X_) ->  true;
     X_ when is_tuple(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Iterate' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.TransducerSeq' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'clojerl.BitString' -> true;
+    'erlang.List' -> true;
+    'erlang.Tuple' -> true;
     _ -> false
   end.

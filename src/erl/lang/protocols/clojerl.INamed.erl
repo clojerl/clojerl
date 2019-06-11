@@ -8,6 +8,7 @@
 
 -export(['name'/1, 'namespace'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'name'(any()) -> any().
 -callback 'namespace'(any()) -> any().
@@ -61,5 +62,13 @@
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
     X_ when is_atom(X_) ->  true;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Var' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.Keyword' -> true;
     _ -> false
   end.

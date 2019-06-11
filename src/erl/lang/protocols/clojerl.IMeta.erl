@@ -8,6 +8,7 @@
 
 -export(['meta'/1, 'with_meta'/2]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'meta'(any()) -> any().
 -callback 'with_meta'(any(), any()) -> any().
@@ -146,5 +147,30 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Iterate' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Atom' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.Namespace' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.Var' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'clojerl.TupleMap' -> true;
     _ -> false
   end.

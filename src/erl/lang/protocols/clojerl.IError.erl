@@ -8,6 +8,7 @@
 
 -export(['message'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'message'(any()) -> any().
 
@@ -52,5 +53,17 @@
     X_ when is_binary(X_) ->  false;
     X_ when is_boolean(X_) ->  false;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.IOError' -> true;
+    'clojerl.Error' -> true;
+    'clojerl.ExceptionInfo' -> true;
+    'clojerl.IllegalAccessError' -> true;
+    'clojerl.BadArgumentError' -> true;
+    'clojerl.AssertionError' -> true;
+    'clojerl.ArityError' -> true;
     _ -> false
   end.

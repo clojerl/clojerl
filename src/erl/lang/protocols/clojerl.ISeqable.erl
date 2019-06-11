@@ -8,6 +8,7 @@
 
 -export(['seq'/1, 'to_list'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'seq'(any()) -> any().
 -callback 'to_list'(any()) -> any().
@@ -151,5 +152,32 @@
     X_ when is_map(X_) ->  true;
     X_ when is_tuple(X_) ->  true;
     ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Iterate' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.TransducerSeq' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Cons' -> true;
+    'clojerl.ChunkedCons' -> true;
+    'clojerl.TupleMap' -> true;
+    'clojerl.String' -> true;
+    'clojerl.BitString' -> true;
+    'erlang.List' -> true;
+    'erlang.Map' -> true;
+    'erlang.Tuple' -> true;
     _ -> false
   end.
