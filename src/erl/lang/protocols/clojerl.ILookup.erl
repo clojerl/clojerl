@@ -1,5 +1,6 @@
 -module('clojerl.ILookup').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -7,70 +8,109 @@
 
 -export(['get'/2, 'get'/3]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'get'(any(), any()) -> any().
 -callback 'get'(any(), any(), any()) -> any().
 
 'get'(X, Key) ->
-  case clj_rt:type_module(X) of
-    'erlang.Map' ->
-      'erlang.Map':'get'(X, Key);
-    'erlang.List' ->
-      'erlang.List':'get'(X, Key);
-    'clojerl.reader.TaggedLiteral' ->
-      'clojerl.reader.TaggedLiteral':'get'(X, Key);
-    'clojerl.reader.ReaderConditional' ->
+  case X of
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'get'(X, Key);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'get'(X, Key);
-    'clojerl.TupleMap' ->
-      'clojerl.TupleMap':'get'(X, Key);
-    'clojerl.Vector' ->
-      'clojerl.Vector':'get'(X, Key);
-    'clojerl.Map' ->
-      'clojerl.Map':'get'(X, Key);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'get'(X, Key);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.Map'} ->
+      'clojerl.Map':'get'(X, Key);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'get'(X, Key);
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'get'(X, Key);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'get', Type)
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
+      'clojerl.reader.TaggedLiteral':'get'(X, Key);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'get'(X, Key);
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    X_ when erlang:is_list(X_) ->
+      'erlang.List':'get'(X, Key);
+    X_ when erlang:is_map(X_) ->
+      'erlang.Map':'get'(X, Key);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'get', X)
   end.
 
 'get'(X, Key, NotFound) ->
-  case clj_rt:type_module(X) of
-    'erlang.Map' ->
-      'erlang.Map':'get'(X, Key, NotFound);
-    'erlang.List' ->
-      'erlang.List':'get'(X, Key, NotFound);
-    'clojerl.reader.TaggedLiteral' ->
-      'clojerl.reader.TaggedLiteral':'get'(X, Key, NotFound);
-    'clojerl.reader.ReaderConditional' ->
+  case X of
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'get'(X, Key, NotFound);
-    'clojerl.SortedMap' ->
+    #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'get'(X, Key, NotFound);
-    'clojerl.TupleMap' ->
-      'clojerl.TupleMap':'get'(X, Key, NotFound);
-    'clojerl.Vector' ->
-      'clojerl.Vector':'get'(X, Key, NotFound);
-    'clojerl.Map' ->
-      'clojerl.Map':'get'(X, Key, NotFound);
-    'clojerl.Set' ->
+    #{?TYPE := 'clojerl.Set'} ->
       'clojerl.Set':'get'(X, Key, NotFound);
-    'clojerl.SortedSet' ->
+    #{?TYPE := 'clojerl.Map'} ->
+      'clojerl.Map':'get'(X, Key, NotFound);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'get'(X, Key, NotFound);
+    #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'get'(X, Key, NotFound);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'get', Type)
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
+      'clojerl.reader.TaggedLiteral':'get'(X, Key, NotFound);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'get'(X, Key, NotFound);
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    X_ when erlang:is_list(X_) ->
+      'erlang.List':'get'(X, Key, NotFound);
+    X_ when erlang:is_map(X_) ->
+      'erlang.Map':'get'(X, Key, NotFound);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'get', X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'get', X)
   end.
 
-?SATISFIES('erlang.Map') -> true;
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.reader.TaggedLiteral') -> true;
-?SATISFIES('clojerl.reader.ReaderConditional') -> true;
-?SATISFIES('clojerl.SortedMap') -> true;
-?SATISFIES('clojerl.TupleMap') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES('clojerl.Map') -> true;
-?SATISFIES('clojerl.Set') -> true;
-?SATISFIES('clojerl.SortedSet') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.Set'} ->  true;
+    #{?TYPE := 'clojerl.Map'} ->  true;
+    #{?TYPE := 'clojerl.Vector'} ->  true;
+    #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->  true;
+    #{?TYPE := 'clojerl.TupleMap'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
+    X_ when erlang:is_map(X_) ->  true;
+    ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.reader.ReaderConditional' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.reader.TaggedLiteral' -> true;
+    'clojerl.TupleMap' -> true;
+    'erlang.List' -> true;
+    'erlang.Map' -> true;
+    _ -> false
+  end.

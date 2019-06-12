@@ -1,5 +1,6 @@
 -module('clojerl.IChunkedSeq').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -7,48 +8,88 @@
 
 -export(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'chunked_first'(any()) -> any().
 -callback 'chunked_next'(any()) -> any().
 -callback 'chunked_more'(any()) -> any().
 
 'chunked_first'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'clojerl.Range' ->
+  case Seq of
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'chunked_first'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'chunked_first'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'chunked_first'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'chunked_first', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq)
   end.
 
 'chunked_next'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'clojerl.Range' ->
+  case Seq of
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'chunked_next'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'chunked_next'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'chunked_next'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'chunked_next', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq)
   end.
 
 'chunked_more'(Seq) ->
-  case clj_rt:type_module(Seq) of
-    'clojerl.Range' ->
+  case Seq of
+    #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'chunked_more'(Seq);
-    'clojerl.Vector.ChunkedSeq' ->
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'chunked_more'(Seq);
-    'clojerl.ChunkedCons' ->
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'chunked_more'(Seq);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'chunked_more', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq)
   end.
 
-?SATISFIES('clojerl.Range') -> true;
-?SATISFIES('clojerl.Vector.ChunkedSeq') -> true;
-?SATISFIES('clojerl.ChunkedCons') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.Range'} ->  true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
+    #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Range' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.ChunkedCons' -> true;
+    _ -> false
+  end.

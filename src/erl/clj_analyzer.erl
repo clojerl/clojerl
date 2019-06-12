@@ -248,7 +248,7 @@ maybe_clear_def_var(OpStr, Env0) ->
     false -> clear_def_var(Env0)
   end.
 
--spec do_analyze_seq(boolean(), any()) -> clj_env:env().
+-spec do_analyze_seq('clojerl.List':type(), any()) -> clj_env:env().
 do_analyze_seq(List, Env0) ->
   Op      = clj_rt:first(List),
 
@@ -2020,7 +2020,7 @@ parse_catch_type(ErrType, Env0) ->
     {{type, Type}, Env1} ->
       IError     = 'erlang.Type':?CONSTRUCTOR('clojerl.IError'),
       TypeModule = 'erlang.Type':module(Type),
-      ?ERROR_WHEN( not 'clojerl.IError':?SATISFIES(TypeModule)
+      ?ERROR_WHEN( not 'clojerl.IError':?EXTENDS(TypeModule)
                  , [<<"Type ">>, Type, <<" does not implement ">>, IError]
                  , clj_env:location(Env0)
                  ),

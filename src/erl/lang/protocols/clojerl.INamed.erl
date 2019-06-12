@@ -1,5 +1,6 @@
 -module('clojerl.INamed').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -7,35 +8,67 @@
 
 -export(['name'/1, 'namespace'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'name'(any()) -> any().
 -callback 'namespace'(any()) -> any().
 
 'name'(X) ->
-  case clj_rt:type_module(X) of
-    'clojerl.Var' ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'name'(X);
-    'clojerl.Keyword' ->
-      'clojerl.Keyword':'name'(X);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'name'(X);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'name', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'name', X);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'name', X);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'name', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'name', X);
+    X_ when erlang:is_atom(X_) ->
+      'clojerl.Keyword':'name'(X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'name', X)
   end.
 
 'namespace'(X) ->
-  case clj_rt:type_module(X) of
-    'clojerl.Var' ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->
       'clojerl.Var':'namespace'(X);
-    'clojerl.Keyword' ->
-      'clojerl.Keyword':'namespace'(X);
-    'clojerl.Symbol' ->
+    #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'namespace'(X);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'namespace', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X);
+    X_ when erlang:is_atom(X_) ->
+      'clojerl.Keyword':'namespace'(X);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'namespace', X)
   end.
 
-?SATISFIES('clojerl.Var') -> true;
-?SATISFIES('clojerl.Keyword') -> true;
-?SATISFIES('clojerl.Symbol') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.Var'} ->  true;
+    #{?TYPE := 'clojerl.Symbol'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    ?NIL ->  false;
+    X_ when erlang:is_atom(X_) ->  true;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.Var' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.Keyword' -> true;
+    _ -> false
+  end.

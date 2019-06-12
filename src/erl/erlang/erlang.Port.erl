@@ -15,5 +15,5 @@ str(Port) when is_port(Port) ->
 
 %% clojerl.IHash
 
-hash(Port) when is_pid(Port) ->
+hash(Port) when is_port(Port) ->
   erlang:phash2(Port).

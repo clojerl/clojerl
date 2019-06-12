@@ -63,7 +63,8 @@
        (map #(subs % 1))
        (filter (comp not #{"$_clj_on_load"
                            "module_info"
-                           "__satisfies?__"}))
+                           "__satisfies?__"
+                           "__extends?__"}))
        (filter #(not (str/ends-with? % "__val")))
        sort))
 
