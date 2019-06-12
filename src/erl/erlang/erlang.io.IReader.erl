@@ -25,13 +25,13 @@
       'erlang.io.StringReader':'read'(Reader);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'read'(Reader);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader)
@@ -47,13 +47,13 @@
       'erlang.io.StringReader':'read'(Reader, Length);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'read'(Reader, Length);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'read', Reader)
@@ -69,13 +69,13 @@
       'erlang.io.StringReader':'read_line'(Reader);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'read_line', Reader);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'read_line', Reader);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'read_line', Reader);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'read_line', Reader);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'read_line'(Reader);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'read_line', Reader)
@@ -91,13 +91,13 @@
       'erlang.io.StringReader':'skip'(Reader, N);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'skip', Reader);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'skip', Reader);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'skip', Reader);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'skip', Reader);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'skip'(Reader, N);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'skip', Reader)
@@ -109,10 +109,10 @@
     #{?TYPE := 'erlang.io.File'} ->  true;
     #{?TYPE := 'erlang.io.StringReader'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
-    X_ when is_atom(X_) ->  true;
+    X_ when erlang:is_atom(X_) ->  true;
     _ -> false
   end.
 

@@ -33,13 +33,13 @@
       'clojerl.TupleMap':'get'(X, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'get'(X, Key);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'get'(X, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
@@ -67,13 +67,13 @@
       'clojerl.TupleMap':'get'(X, Key, NotFound);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'get'(X, Key, NotFound);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'get'(X, Key, NotFound);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'get', X);
@@ -92,10 +92,10 @@
     #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
-    X_ when is_map(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
+    X_ when erlang:is_map(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

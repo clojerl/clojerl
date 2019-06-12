@@ -30,9 +30,9 @@
       'clojerl.ArityError':'message'(Error);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
@@ -50,8 +50,8 @@
     #{?TYPE := 'clojerl.AssertionError'} ->  true;
     #{?TYPE := 'clojerl.ArityError'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

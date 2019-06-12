@@ -21,13 +21,13 @@
       'clojerl.Symbol':'name'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'name', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'name', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'name', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'name', X);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'name'(X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'name', X)
@@ -41,13 +41,13 @@
       'clojerl.Symbol':'namespace'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'namespace'(X);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X)
@@ -58,10 +58,10 @@
     #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
-    X_ when is_atom(X_) ->  true;
+    X_ when erlang:is_atom(X_) ->  true;
     _ -> false
   end.
 

@@ -26,11 +26,11 @@
       'clojerl.TupleMap':'contains_key'(Assoc, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'contains_key'(Assoc, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'contains_key', Assoc);
@@ -50,11 +50,11 @@
       'clojerl.TupleMap':'entry_at'(Assoc, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'entry_at'(Assoc, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'entry_at', Assoc);
@@ -74,11 +74,11 @@
       'clojerl.TupleMap':'assoc'(Assoc, Key, Value);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'assoc'(Assoc, Key, Value);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'assoc', Assoc);
@@ -93,9 +93,9 @@
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_map(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_map(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

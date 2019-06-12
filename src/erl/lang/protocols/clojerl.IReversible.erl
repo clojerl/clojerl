@@ -18,9 +18,9 @@
       'clojerl.Vector':'rseq'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'rseq', Seq);
@@ -32,8 +32,8 @@
   case X of
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

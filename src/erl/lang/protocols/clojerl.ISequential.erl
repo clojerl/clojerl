@@ -26,11 +26,11 @@
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_bitstring(X_) ->  true;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
-    X_ when is_tuple(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_bitstring(X_) ->  true;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
+    X_ when erlang:is_tuple(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

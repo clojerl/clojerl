@@ -36,9 +36,9 @@
       'clojerl.TupleMap':'->erl'(X, Recursive);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, '->erl', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, '->erl', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, '->erl', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, '->erl', X);
@@ -59,8 +59,8 @@
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

@@ -34,17 +34,17 @@
       'clojerl.TupleMap':'apply'(Fn, Args);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'apply'(Fn, Args);
-    X_ when is_function(X_) ->
+    X_ when erlang:is_function(X_) ->
       'erlang.Fn':'apply'(Fn, Args);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'apply'(Fn, Args);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'apply', Fn)
@@ -62,12 +62,12 @@
     #{?TYPE := 'clojerl.Fn'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_map(X_) ->  true;
-    X_ when is_function(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_map(X_) ->  true;
+    X_ when erlang:is_function(X_) ->  true;
     ?NIL ->  false;
-    X_ when is_atom(X_) ->  true;
+    X_ when erlang:is_atom(X_) ->  true;
     _ -> false
   end.
 

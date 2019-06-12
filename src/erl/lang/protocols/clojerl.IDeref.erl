@@ -26,9 +26,9 @@
       'clojerl.ProcessVal':'deref'(Ref);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
@@ -44,8 +44,8 @@
     #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := 'clojerl.ProcessVal'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

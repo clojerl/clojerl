@@ -26,9 +26,9 @@
       'erlang.io.StringReader':'close'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'close', X);
@@ -44,8 +44,8 @@
     #{?TYPE := 'erlang.io.File'} ->  true;
     #{?TYPE := 'erlang.io.StringReader'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

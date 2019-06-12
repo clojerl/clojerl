@@ -39,11 +39,11 @@
       'clojerl.ChunkedCons':'reduce'(Coll, Fun);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'reduce'(Coll, Fun);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
@@ -77,11 +77,11 @@
       'clojerl.ChunkedCons':'reduce'(Coll, Fun, Init);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'reduce'(Coll, Fun, Init);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
@@ -103,9 +103,9 @@
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

@@ -49,13 +49,13 @@
       'clojerl.TupleMap':'cons'(Coll, Item);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'cons', Coll);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'cons', Coll);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'cons', Coll);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'cons'(Coll, Item);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'cons'(Coll, Item);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'cons', Coll);
@@ -99,13 +99,13 @@
       'clojerl.TupleMap':'empty'(Coll);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'empty', Coll);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'empty', Coll);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'empty', Coll);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'empty'(Coll);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'empty'(Coll);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'empty', Coll);
@@ -132,10 +132,10 @@
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
-    X_ when is_map(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
+    X_ when erlang:is_map(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

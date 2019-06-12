@@ -21,13 +21,13 @@
       'erlang.io.File':'write'(Writer, Str);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'write'(Writer, Str);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer)
@@ -41,13 +41,13 @@
       'erlang.io.File':'write'(Writer, Format, Value);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
-    X_ when is_atom(X_) ->
+    X_ when erlang:is_atom(X_) ->
       'clojerl.Keyword':'write'(Writer, Format, Value);
     _ ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer)
@@ -58,10 +58,10 @@
     #{?TYPE := 'erlang.io.StringWriter'} ->  true;
     #{?TYPE := 'erlang.io.File'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
-    X_ when is_atom(X_) ->  true;
+    X_ when erlang:is_atom(X_) ->  true;
     _ -> false
   end.
 

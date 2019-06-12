@@ -40,11 +40,11 @@
       'clojerl.ChunkedCons':'first'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'first', Seq);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'first', Seq);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'first', Seq);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'first'(Seq);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'first', Seq);
@@ -78,11 +78,11 @@
       'clojerl.ChunkedCons':'next'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'next', Seq);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'next', Seq);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'next', Seq);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'next'(Seq);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'next', Seq);
@@ -116,11 +116,11 @@
       'clojerl.ChunkedCons':'more'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'more', Seq);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'more', Seq);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'more', Seq);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'more'(Seq);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'more', Seq);
@@ -142,9 +142,9 @@
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

@@ -21,11 +21,11 @@
       'clojerl.Vector':'peek'(Stack);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'peek', Stack);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'peek', Stack);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'peek', Stack);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'peek'(Stack);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'peek', Stack);
@@ -41,11 +41,11 @@
       'clojerl.Vector':'pop'(Stack);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'pop', Stack);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'pop', Stack);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'pop', Stack);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'pop'(Stack);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'pop', Stack);
@@ -58,9 +58,9 @@
     #{?TYPE := 'clojerl.List'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

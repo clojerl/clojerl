@@ -57,9 +57,9 @@
       'clojerl.TupleMap':'meta'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'meta', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'meta', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'meta', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'meta', X);
@@ -111,9 +111,9 @@
       'clojerl.TupleMap':'with_meta'(X, Meta);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X);
@@ -144,8 +144,8 @@
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

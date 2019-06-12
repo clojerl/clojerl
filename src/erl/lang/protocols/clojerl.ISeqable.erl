@@ -51,17 +51,17 @@
       'clojerl.TupleMap':'seq'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'seq', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       'clojerl.String':'seq'(X);
-    X_ when is_bitstring(X_) ->
+    X_ when erlang:is_bitstring(X_) ->
       'clojerl.BitString':'seq'(X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'seq', X);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'seq'(X);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'seq'(X);
-    X_ when is_tuple(X_) ->
+    X_ when erlang:is_tuple(X_) ->
       'erlang.Tuple':'seq'(X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'seq', X);
@@ -107,17 +107,17 @@
       'clojerl.TupleMap':'to_list'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'to_list', X);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       'clojerl.String':'to_list'(X);
-    X_ when is_bitstring(X_) ->
+    X_ when erlang:is_bitstring(X_) ->
       'clojerl.BitString':'to_list'(X);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'to_list', X);
-    X_ when is_list(X_) ->
+    X_ when erlang:is_list(X_) ->
       'erlang.List':'to_list'(X);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'to_list'(X);
-    X_ when is_tuple(X_) ->
+    X_ when erlang:is_tuple(X_) ->
       'erlang.Tuple':'to_list'(X);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'to_list', X);
@@ -145,12 +145,12 @@
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  true;
-    X_ when is_bitstring(X_) ->  true;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_list(X_) ->  true;
-    X_ when is_map(X_) ->  true;
-    X_ when is_tuple(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  true;
+    X_ when erlang:is_bitstring(X_) ->  true;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
+    X_ when erlang:is_map(X_) ->  true;
+    X_ when erlang:is_tuple(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.

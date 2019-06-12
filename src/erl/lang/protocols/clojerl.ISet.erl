@@ -21,9 +21,9 @@
       'clojerl.SortedSet':'disjoin'(Coll, Item);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'disjoin', Coll);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'disjoin', Coll);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'disjoin', Coll);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'disjoin', Coll);
@@ -39,9 +39,9 @@
       'clojerl.SortedSet':'contains'(Coll, Item);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'contains', Coll);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'contains', Coll);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'contains', Coll);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'contains', Coll);
@@ -54,8 +54,8 @@
     #{?TYPE := 'clojerl.Set'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
     ?NIL ->  false;
     _ -> false
   end.

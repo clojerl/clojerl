@@ -24,11 +24,11 @@
       'clojerl.TupleMap':'keys'(Map);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'keys'(Map);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'keys', Map);
@@ -46,11 +46,11 @@
       'clojerl.TupleMap':'vals'(Map);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'vals'(Map);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'vals', Map);
@@ -68,11 +68,11 @@
       'clojerl.TupleMap':'without'(Map, Key);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'without', Map);
-    X_ when is_binary(X_) ->
+    X_ when erlang:is_binary(X_) ->
       clj_protocol:not_implemented(?MODULE, 'without', Map);
-    X_ when is_boolean(X_) ->
+    X_ when erlang:is_boolean(X_) ->
       clj_protocol:not_implemented(?MODULE, 'without', Map);
-    X_ when is_map(X_) ->
+    X_ when erlang:is_map(X_) ->
       'erlang.Map':'without'(Map, Key);
     ?NIL ->
       clj_protocol:not_implemented(?MODULE, 'without', Map);
@@ -86,9 +86,9 @@
     #{?TYPE := 'clojerl.Map'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
-    X_ when is_binary(X_) ->  false;
-    X_ when is_boolean(X_) ->  false;
-    X_ when is_map(X_) ->  true;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_map(X_) ->  true;
     ?NIL ->  false;
     _ -> false
   end.
