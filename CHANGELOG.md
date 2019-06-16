@@ -1,7 +1,85 @@
 # Change Log
 
-## [0.4.1](https://github.com/clojerl/clojerl/tree/0.4.1)
+## [0.5.0](https://github.com/clojerl/clojerl/tree/0.5.0)
 
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.4.1...0.5.0)
+
+**Implemented enhancements:**
+
+- Improve performance of calling anonymous fns [\#631](https://github.com/clojerl/clojerl/issues/631)
+- Cycle, Iterate and Repeat [\#630](https://github.com/clojerl/clojerl/issues/630)
+- Experiment with Clojure vector implementation [\#628](https://github.com/clojerl/clojerl/issues/628)
+- Run benchmarks comparing them against Clojure JVM [\#589](https://github.com/clojerl/clojerl/issues/589)
+
+**Fixed bugs:**
+
+- extend-type for default doesn't work as expected [\#616](https://github.com/clojerl/clojerl/issues/616)
+- Using clojure.core/nth in an inifinite lazy seq never returns [\#607](https://github.com/clojerl/clojerl/issues/607)
+- Hash collisions generate wrong behaviour for set [\#590](https://github.com/clojerl/clojerl/issues/590)
+- str function for namespaces returns unexpected result [\#581](https://github.com/clojerl/clojerl/issues/581)
+- Eduction should implement ISeqable [\#562](https://github.com/clojerl/clojerl/issues/562)
+
+**Closed issues:**
+
+- Embed type dispatch in the protocol module [\#644](https://github.com/clojerl/clojerl/issues/644)
+- Improve implementation of clojure.core/str and clojure.string/capitalize [\#637](https://github.com/clojerl/clojerl/issues/637)
+- Build with Erlang/OTP 22.0 [\#634](https://github.com/clojerl/clojerl/issues/634)
+- Performance degradation when reducing a vector [\#625](https://github.com/clojerl/clojerl/issues/625)
+- Avoid calling constructor function for empty literal collections [\#622](https://github.com/clojerl/clojerl/issues/622)
+- Examples? [\#618](https://github.com/clojerl/clojerl/issues/618)
+- Bad break character in clje rlwrap command [\#610](https://github.com/clojerl/clojerl/issues/610)
+- Dispatch value in defmethod can't be a qualified symbol [\#605](https://github.com/clojerl/clojerl/issues/605)
+- Migrate the rest of clojure.test-clojure.\* from Clojure upstream [\#587](https://github.com/clojerl/clojerl/issues/587)
+- Build with OTP 21.1 [\#585](https://github.com/clojerl/clojerl/issues/585)
+- \(/ 1\) throws an undef exception [\#583](https://github.com/clojerl/clojerl/issues/583)
+- Stateful Transducers [\#249](https://github.com/clojerl/clojerl/issues/249)
+
+**Merged pull requests:**
+
+- \[Closes \#644\] Embed type dispatch in the protocol module [\#645](https://github.com/clojerl/clojerl/pull/645) ([jfacorro](https://github.com/jfacorro))
+- Avoid creating erlang.util.UUID for each ProcessVal and TransducerSeq [\#643](https://github.com/clojerl/clojerl/pull/643) ([jfacorro](https://github.com/jfacorro))
+- Fix CI  [\#640](https://github.com/clojerl/clojerl/pull/640) ([jfacorro](https://github.com/jfacorro))
+- Improve clojerl.Var/apply performance [\#639](https://github.com/clojerl/clojerl/pull/639) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#637\] Improve str and capitalize implementation [\#638](https://github.com/clojerl/clojerl/pull/638) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#630\] Cycle, Repeat and Iterate [\#636](https://github.com/clojerl/clojerl/pull/636) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#634\] Erlang/OTP 22.0 [\#635](https://github.com/clojerl/clojerl/pull/635) ([jfacorro](https://github.com/jfacorro))
+- Update benchmark comparing with Clojure [\#633](https://github.com/clojerl/clojerl/pull/633) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#631\] improve performance apply anon fn [\#632](https://github.com/clojerl/clojerl/pull/632) ([jfacorro](https://github.com/jfacorro))
+- \[\#628\] Experiment with better vector implementation [\#629](https://github.com/clojerl/clojerl/pull/629) ([jfacorro](https://github.com/jfacorro))
+- Add missing cases from the cljs benchmarks [\#627](https://github.com/clojerl/clojerl/pull/627) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#625\] Improve perf reduce vector [\#626](https://github.com/clojerl/clojerl/pull/626) ([jfacorro](https://github.com/jfacorro))
+- Update benchmark results [\#624](https://github.com/clojerl/clojerl/pull/624) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#622\] Emit literal empty data structures instead of calling function [\#623](https://github.com/clojerl/clojerl/pull/623) ([jfacorro](https://github.com/jfacorro))
+- \[\#589\] Benchmarks clojerl vs clojure [\#621](https://github.com/clojerl/clojerl/pull/621) ([jfacorro](https://github.com/jfacorro))
+- \[\#90\] Delay [\#620](https://github.com/clojerl/clojerl/pull/620) ([jfacorro](https://github.com/jfacorro))
+- \[\#618\] Improve documentation for Getting Started [\#619](https://github.com/clojerl/clojerl/pull/619) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#616\] extend-type fails for default [\#617](https://github.com/clojerl/clojerl/pull/617) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#249\] stateful transducers [\#615](https://github.com/clojerl/clojerl/pull/615) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#562\] Support ISeqable for Eduction through an EductionSeq type [\#613](https://github.com/clojerl/clojerl/pull/613) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#610\] Fix typo in clje script [\#612](https://github.com/clojerl/clojerl/pull/612) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] migrate clojure test clojure printer [\#611](https://github.com/clojerl/clojerl/pull/611) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] migrate clojure.test-clojure.test-fixtures [\#609](https://github.com/clojerl/clojerl/pull/609) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#607\] Traverse seq when calling nth for ISequential instead of using to\_list [\#608](https://github.com/clojerl/clojerl/pull/608) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#605\] Using qualified symbol in defmethod doesn't fail [\#606](https://github.com/clojerl/clojerl/pull/606) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Migrate clojure.test-clojure.special [\#604](https://github.com/clojerl/clojerl/pull/604) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Migrate clojure test clojure vectors [\#603](https://github.com/clojerl/clojerl/pull/603) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Add clojure.test-clojure.refs \(which is empty\) [\#602](https://github.com/clojerl/clojerl/pull/602) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] migrate clojure.test-clojure.rt [\#601](https://github.com/clojerl/clojerl/pull/601) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Migrate clojure.test-clojure.repl [\#600](https://github.com/clojerl/clojerl/pull/600) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] migrate clojure test clojure predicates [\#599](https://github.com/clojerl/clojerl/pull/599) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Add clojure.test-clojure.other-functions [\#598](https://github.com/clojerl/clojerl/pull/598) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Add clojure.test-clojure.ns-libs [\#597](https://github.com/clojerl/clojerl/pull/597) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] migrate clojure test clojure for [\#596](https://github.com/clojerl/clojerl/pull/596) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Migrate clojure.test-clojure.fn [\#595](https://github.com/clojerl/clojerl/pull/595) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Add clojure.test-clojure.evaluation [\#594](https://github.com/clojerl/clojerl/pull/594) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] Migrate clojure.test-clojure.data-structures [\#593](https://github.com/clojerl/clojerl/pull/593) ([jfacorro](https://github.com/jfacorro))
+- \[\#587\] clojure.test-clojure.clojure-walk, clojure.test-clojure.control [\#592](https://github.com/clojerl/clojerl/pull/592) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#590\] set hash collisions generate problems [\#591](https://github.com/clojerl/clojerl/pull/591) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#585\] Build with OTP 21.1 [\#586](https://github.com/clojerl/clojerl/pull/586) ([jfacorro](https://github.com/jfacorro))
+- \[Fixes \#583\] divide arity 1 fails [\#584](https://github.com/clojerl/clojerl/pull/584) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#581\] str for namespaces [\#582](https://github.com/clojerl/clojerl/pull/582) ([jfacorro](https://github.com/jfacorro))
+
+## [0.4.1](https://github.com/clojerl/clojerl/tree/0.4.1) (2018-11-28)
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.4.0...0.4.1)
 
 **Fixed bugs:**
