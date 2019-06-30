@@ -105,9 +105,9 @@ seq(_Config) ->
   [] = clj_rt:to_list(clj_rt:rest(List2)),
 
   List3 = clj_rt:list([]),
-  ?NIL = clj_rt:first(List3),
-  ?NIL = clj_rt:next(List3),
-  ?NIL = clj_rt:rest(List3),
+  ?NIL  = clj_rt:first(List3),
+  ?NIL  = clj_rt:next(List3),
+  []    = clj_rt:to_list(clj_rt:rest(List3)),
 
   {comments, ""}.
 

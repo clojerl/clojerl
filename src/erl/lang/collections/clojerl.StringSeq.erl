@@ -73,7 +73,7 @@ equiv(#{?TYPE := ?M, str := X}, Y) ->
 %% clojerl.IHash
 
 hash(#{?TYPE := ?M, str := Str}) ->
-  clj_murmur3:ordered(Str).
+  clj_murmur3:ordered(to_list(Str, [])).
 
 %% clojerl.ISeq
 
@@ -85,7 +85,7 @@ next(#{?TYPE := ?M, str := <<_/utf8>>}) -> ?NIL;
 next(#{?TYPE := ?M, str := <<_/utf8, Rest/binary>>} = Seq) ->
   Seq#{str => Rest}.
 
-more(#{?TYPE := ?M, str := <<>>}) -> ?NIL;
+more(#{?TYPE := ?M, str := <<>>}) -> [];
 more(#{?TYPE := ?M, str := <<_/utf8, Rest/binary>>} = Seq) ->
   Seq#{str => Rest}.
 
@@ -98,12 +98,12 @@ more(#{?TYPE := ?M, str := <<_/utf8, Rest/binary>>} = Seq) ->
 seq(#{?TYPE := ?M, str := <<>>}) -> ?NIL;
 seq(#{?TYPE := ?M} = Seq) -> Seq.
 
-to_list(#{?TYPE := ?M, str := Str})  -> to_list(Str, []).
+to_list(#{?TYPE := ?M, str := Str}) -> to_list(Str, []).
 
 %% clojerl.IStringable
 
 str(#{?TYPE := ?M, str := Str}) ->
-  clj_rt:print_str(to_list(Str, [])).
+  clj_rt:print_str(clj_rt:list(to_list(Str, []))).
 
 %%------------------------------------------------------------------------------
 %% Helper functions

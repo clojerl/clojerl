@@ -136,7 +136,7 @@ next(#{?TYPE := ?M, items := [_ | []]}) -> ?NIL;
 next(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
 
-more(#{?TYPE := ?M, items := []}) -> ?NIL;
+more(#{?TYPE := ?M, items := []} = List) -> List;
 more(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
 
