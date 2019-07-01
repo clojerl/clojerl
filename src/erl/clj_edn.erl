@@ -508,6 +508,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $^ -> read_meta(consume_char(State)); %% deprecated
     ${ -> read_set(NewState);
     $_ -> read_discard(NewState);
+    $: -> read_namespaced_map(NewState);
     $< -> ?ERROR(<<"Unreadable form">>, location(State));
     _  ->
       case clj_utils:char_type(Ch, ?NIL) of
@@ -544,6 +545,73 @@ read_discard(#{forms := Forms, return_on := ReturnOn} = State0) ->
   {_, State2} = read_pop_one(State1),
   %% Can't call read_one here because is might not be a top level form.
   State2#{forms := Forms, return_on := ReturnOn}.
+
+%%------------------------------------------------------------------------------
+%% #: namespaced map
+%%------------------------------------------------------------------------------
+
+-spec read_namespaced_map(state()) -> state().
+read_namespaced_map(State0) ->
+  {Symbol, State1} = read_pop_one(State0),
+
+  validate_namespaced_name(Symbol, State1),
+
+  {Map, State2}    = read_pop_one(State1),
+
+  ?ERROR_WHEN( not clj_rt:'map?'(Map)
+             , <<"Namespaced map must specify a map">>
+             , location(State2)
+             ),
+
+  Keys    = clj_rt:to_list(clj_rt:keys(Map)),
+  NewKeys = [ {Key, namespaced_key(clj_rt:name(Symbol), Key)}
+              || Key <- Keys,
+                 clj_rt:'keyword?'(Key) orelse clj_rt:'symbol?'(Key)
+            ],
+
+  NsMap   = lists:foldl(fun replace_for_namespaced_key/2, Map, NewKeys),
+
+  push_form(NsMap, State2).
+
+-spec validate_namespaced_name('clojerl.Symbol':type(), state()) -> ok.
+validate_namespaced_name(Symbol, State) ->
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+               orelse clj_rt:namespace(Symbol) =/= ?NIL
+             , [ <<"Namespaced map must specify a valid namespace: ">>
+               , Symbol
+               ]
+             , location(State)
+             ).
+
+-spec namespaced_key(binary(), 'clojerl.Keyword':type()) ->
+  'clojerl.Keyword':type().
+namespaced_key(Ns, Key) ->
+  KeyNs = clj_rt:namespace(Key),
+  case clj_rt:'keyword?'(Key) of
+    true ->
+      case KeyNs of
+        ?NIL    -> clj_rt:keyword(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:keyword(clj_rt:name(Key));
+        _       -> Key
+      end;
+    false ->
+      case KeyNs of
+        ?NIL    -> clj_rt:symbol(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:symbol(clj_rt:name(Key));
+        _       -> Key
+      end
+  end.
+
+-spec replace_for_namespaced_key( { 'clojerl.Keyword':type()
+                                  , 'clojerl.Keyword':type()
+                                  }
+                                , 'clojerl.IMap':type()
+                                ) ->
+  'clojerl.IMap':type().
+replace_for_namespaced_key({Key, NsKey}, Map) ->
+  Map1  = clj_rt:dissoc(Map, Key),
+  Value = clj_rt:get(Map, Key),
+  clj_rt:assoc(Map1, NsKey, Value).
 
 %%------------------------------------------------------------------------------
 %% # reader tag

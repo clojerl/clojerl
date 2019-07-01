@@ -940,6 +940,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
+    $: -> read_namespaced_map(NewState);
     $< -> ?ERROR(<<"Unreadable form">>, location(State));
     _  -> read_tagged(consume_char(State))
   end.
@@ -1204,6 +1205,121 @@ read_skip_suppress(State) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% #: namespaced map
+%%------------------------------------------------------------------------------
+
+-spec read_namespaced_map(state()) -> state().
+read_namespaced_map(State0) ->
+  { IsAuto
+  , Symbol
+  , State1
+  } = case peek_src(State0) of
+        $: ->
+          TmpState0 = consume_char(State0),
+          NextChar  = peek_src(TmpState0),
+          {_, TmpState1} = consume(TmpState0, [whitespace]),
+          ?ERROR_WHEN( is_whitespace(NextChar)
+                       andalso peek_src(TmpState1) =/= ${
+                     , <<"Namespaced map must specify a namespace">>
+                     , location(TmpState1)
+                     ),
+
+          case peek_src(TmpState1) of
+            ${ ->
+              {true, ?NIL, TmpState1};
+            _ ->
+              {TmpSymbol, TmpState2} = read_pop_one(TmpState1),
+              {true, TmpSymbol, TmpState2}
+          end;
+        NextChar ->
+          ?ERROR_WHEN( is_whitespace(NextChar)
+                     , <<"Namespaced map must specify a namespace">>
+                     , location(State0)
+                     ),
+          {TmpSymbol, TmpState1} = read_pop_one(State0),
+          {_, TmpState2} = consume(TmpState1, [whitespace]),
+          {false, TmpSymbol, TmpState2}
+      end,
+
+  {Map, State2} = read_pop_one(State1),
+
+  ?ERROR_WHEN( not clj_rt:'map?'(Map)
+             , <<"Namespaced map must specify a map">>
+             , location(State2)
+             ),
+
+  Ns      = resolve_namespace(IsAuto, Symbol, State2),
+  Keys    = clj_rt:to_list(clj_rt:keys(Map)),
+  NewKeys = [ {Key, namespaced_key(Ns, Key)}
+              || Key <- Keys,
+                 clj_rt:'keyword?'(Key) orelse clj_rt:'symbol?'(Key)
+            ],
+
+  NsMap   = lists:foldl(fun replace_for_namespaced_key/2, Map, NewKeys),
+
+  push_form(NsMap, State2).
+
+-spec resolve_namespace(boolean(), 'clojerl.Symbol':type(), state()) ->
+  'clojerl.Symbol':type().
+resolve_namespace(true, ?NIL, _State) ->
+  Ns   = 'clojerl.Namespace':current(),
+  Name = 'clojerl.Namespace':name(Ns),
+  clj_rt:name(Name);
+resolve_namespace(true, Symbol, State) ->
+  validate_namespaced_name(Symbol, State),
+  Ns = 'clojerl.Namespace':current(),
+  case 'clojerl.Namespace':alias(Ns, Symbol) of
+    ?NIL ->
+      ?ERROR(<<"Unknown auto-resolved namespace alias">>, location(State));
+    ResolvedNs ->
+      Name = 'clojerl.Namespace':name(ResolvedNs),
+      clj_rt:name(Name)
+  end;
+resolve_namespace(false, Symbol, State) ->
+  validate_namespaced_name(Symbol, State),
+  clj_rt:name(Symbol).
+
+-spec validate_namespaced_name('clojerl.Symbol':type(), state()) -> ok.
+validate_namespaced_name(Symbol, State) ->
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+               orelse clj_rt:namespace(Symbol) =/= ?NIL
+             , [ <<"Namespaced map must specify a valid namespace: ">>
+               , Symbol
+               ]
+             , location(State)
+             ).
+
+-spec namespaced_key(binary(), 'clojerl.Keyword':type()) ->
+  'clojerl.Keyword':type().
+namespaced_key(Ns, Key) ->
+  KeyNs = clj_rt:namespace(Key),
+  case clj_rt:'keyword?'(Key) of
+    true ->
+      case KeyNs of
+        ?NIL    -> clj_rt:keyword(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:keyword(clj_rt:name(Key));
+        _       -> Key
+      end;
+    false ->
+      case KeyNs of
+        ?NIL    -> clj_rt:symbol(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:symbol(clj_rt:name(Key));
+        _       -> Key
+      end
+  end.
+
+-spec replace_for_namespaced_key( { 'clojerl.Keyword':type()
+                                  , 'clojerl.Keyword':type()
+                                  }
+                                , 'clojerl.IMap':type()
+                                ) ->
+  'clojerl.IMap':type().
+replace_for_namespaced_key({Key, NsKey}, Map) ->
+  Map1  = clj_rt:dissoc(Map, Key),
+  Value = clj_rt:get(Map, Key),
+  clj_rt:assoc(Map1, NsKey, Value).
+
+%%------------------------------------------------------------------------------
 %% # reader tag
 %%------------------------------------------------------------------------------
 
@@ -1216,18 +1332,22 @@ read_tagged(State) ->
              , location(State)
              ),
 
+  read_tagged_symbol(Symbol, location(State), State1).
+
+-spec read_tagged_symbol('clojerl.Symbol':type(), any(), state()) -> state().
+read_tagged_symbol(Tag, Location, State0) ->
+  {Form, State1} = read_pop_one(State0),
   SupressRead = erlang:get(?SUPPRESS_READ),
-  {Form, State2} = read_pop_one(State1),
-  case 'clojerl.Symbol':str(Symbol) of
-    <<"erl">> -> erlang_literal(Form, State2);
-    <<"bin">> -> erlang_binary(Form, State2);
-    <<"as">>  -> erlang_alias(Form, State2);
+  case 'clojerl.Symbol':str(Tag) of
+    <<"erl">> -> erlang_literal(Form, State1);
+    <<"bin">> -> erlang_binary(Form, State1);
+    <<"as">>  -> erlang_alias(Form, State1);
     _ when SupressRead =:= true ->
-      push_form(tagged_literal(Symbol, Form), State2);
+      push_form(tagged_literal(Tag, Form), State1);
     _ ->
-      case 'clojerl.String':contains('clojerl.Symbol':name(Symbol), <<".">>) of
-        true  -> read_record(Symbol, Form, State2);
-        false -> read_tagged(Symbol, Form, location(State), State2)
+      case 'clojerl.String':contains('clojerl.Symbol':name(Tag), <<".">>) of
+        true  -> read_record(Tag, Form, State1);
+        false -> read_tagged(Tag, Form, Location, State1)
       end
   end.
 

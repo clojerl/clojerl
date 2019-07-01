@@ -619,7 +619,7 @@ do_print_map(X, First, Last, Writer) ->
   lists:foreach(ConcatFun, Rest),
   'erlang.io.IWriter':write(Writer, Last).
 
--spec 'list'(list()) -> 'clojerl.List':type().
+-spec 'list'(list() | ?NIL) -> 'clojerl.List':type().
 list(Items) ->
   'clojerl.List':?CONSTRUCTOR(Items).
 

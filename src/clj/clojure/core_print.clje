@@ -217,14 +217,17 @@
   (print-meta v w)
   (print-sequential "[" pr-on " " "]" v w))
 
-(defn- print-map [begin m end print-one ^IWriter w]
+(defn- print-prefix-map [prefix m print-one w]
   (print-sequential
-   begin
-   (fn [e  ^IWriter w]
-     (do (print-one (key e) w) (.write w \space) (print-one (val e) w)))
-   ", "
-   end
-   (seq m) w))
+    (str prefix "{")
+    (fn [e ^IWriter w]
+      (do (print-one (key e) w) (.write w \space) (print-one (val e) w)))
+    ", "
+    "}"
+    (seq m) w))
+
+(defn- print-map [m print-one w]
+  (print-prefix-map nil m print-one w))
 
 (defn- strip-ns
   [named]
@@ -250,19 +253,22 @@
 
 (defmethod print-method clojerl.Map [m, ^IWriter w]
   (print-meta m w)
-  (print-map "{" m "}" pr-on w))
+  (let [[ns lift-map] (lift-ns m)]
+    (if ns
+      (print-prefix-map (str "#:" ns) lift-map pr-on w)
+      (print-map m pr-on w))))
 
 (defmethod print-method clojerl.SortedMap [m, ^IWriter w]
   (print-meta m w)
-  (print-map "{" m "}" pr-on w))
+  (print-map m pr-on w))
 
 (defmethod print-method clojerl.TupleMap [m, ^IWriter w]
   (print-meta m w)
-  (print-map "{" m "}" pr-on w))
+  (print-map m pr-on w))
 
 (defmethod print-method erlang.Map [m, ^IWriter w]
   (print-meta m w)
-  (print-map "#erl{" m "}" pr-on w))
+  (print-prefix-map "#erl" m pr-on w))
 
 (defmethod print-method clojerl.Set [s, ^IWriter w]
   (print-meta s w)
