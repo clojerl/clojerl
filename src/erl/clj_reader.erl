@@ -56,6 +56,10 @@
 
 -type read_fold_fun() :: fun((any(), any()) -> any()).
 
+-define(ARG_ENV, arg_env).
+-define(GENSYM_ENV, gensym_env).
+-define(SUPPRESS_READ, suppress_read).
+
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
 read_fold(Fun, Src, Opts, Env) ->
@@ -487,7 +491,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
 
   try
     %% TODO: using process dictionary here might be a code smell
-    erlang:put(gensym_env, #{}),
+    erlang:put(?GENSYM_ENV, #{}),
     QuotedForm      = syntax_quote(Form),
     NewFormWithMeta = add_meta(Form, QuotedForm),
 
@@ -495,7 +499,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
   catch ?WITH_STACKTRACE(error, Reason, Stack)
       ?ERROR(Reason, location(NewState), Stack)
   after
-    erlang:erase(gensym_env)
+    erlang:erase(?GENSYM_ENV)
   end.
 
 -spec syntax_quote(any()) -> any().
@@ -568,7 +572,7 @@ syntax_quote_symbol(Symbol) ->
 
 -spec register_gensym(any()) -> any().
 register_gensym(Symbol) ->
-  GensymEnv = case erlang:get(gensym_env) of
+  GensymEnv = case erlang:get(?GENSYM_ENV) of
                 undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
@@ -584,7 +588,7 @@ register_gensym(Symbol) ->
       GenSym1    = 'clojerl.Symbol':with_meta(GenSym0, Meta),
 
       SymbolName = 'clojerl.Symbol':name(Symbol),
-      erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym1}),
+      erlang:put(?GENSYM_ENV, GensymEnv#{SymbolName => GenSym1}),
       GenSym1;
     GenSym ->
       GenSym
@@ -848,7 +852,7 @@ read_octal_char(#{src := RestToken} = State) ->
 
 -spec read_arg(state()) -> state().
 read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
-  case erlang:get(arg_env) of
+  case erlang:get(?ARG_ENV) of
     undefined ->
       read_symbol(State);
     ArgEnv ->
@@ -893,7 +897,7 @@ register_arg(N, ArgEnv) ->
     ?NIL ->
       ArgSymbol = gen_arg_sym(N),
       NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
-      erlang:put(arg_env, NewArgEnv),
+      erlang:put(?ARG_ENV, NewArgEnv),
       ArgSymbol;
     ArgSymbol -> ArgSymbol
   end.
@@ -955,18 +959,18 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  ?ERROR_WHEN(erlang:get(arg_env) =/= undefined
+  ?ERROR_WHEN(erlang:get(?ARG_ENV) =/= undefined
              , <<"Nested #()s are not allowed">>
              , location(State)
              ),
 
   {{Form, NewState}, ArgEnv} =
     try
-      erlang:put(arg_env, #{}),
-      {read_pop_one(State), erlang:get(arg_env)}
+      erlang:put(?ARG_ENV, #{}),
+      {read_pop_one(State), erlang:get(?ARG_ENV)}
     after
       %% Make sure the process dictionary entry gets removed
-      erlang:erase(arg_env)
+      erlang:erase(?ARG_ENV)
     end,
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
@@ -1091,12 +1095,12 @@ read_cond(#{opts := Opts} = State0) ->
              , location(State1)
              ),
 
-  OldSupressRead = case erlang:get(supress_read) of
+  OldSupressRead = case erlang:get(?SUPPRESS_READ) of
                      undefined -> false;
                      SR -> SR
                    end,
   SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,
-  erlang:put(supress_read, SupressRead),
+  erlang:put(?SUPPRESS_READ, SupressRead),
 
   try
     case SupressRead of
@@ -1108,7 +1112,7 @@ read_cond(#{opts := Opts} = State0) ->
         read_cond_delimited(IsSplicing, consume_char(State2))
     end
   after
-    erlang:put(supress_read, OldSupressRead)
+    erlang:put(?SUPPRESS_READ, OldSupressRead)
   end.
 
 reader_conditional(List, IsSplicing) ->
@@ -1187,16 +1191,16 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
 
 -spec read_skip_suppress(state()) -> state().
 read_skip_suppress(State) ->
-  OldSupressRead = case erlang:get(supress_read) of
+  OldSupressRead = case erlang:get(?SUPPRESS_READ) of
                      undefined -> false;
                      SR -> SR
                    end,
-  erlang:put(supress_read, true),
+  erlang:put(?SUPPRESS_READ, true),
   try
     {_, NewState} = read_pop_one(State),
     NewState
   after
-    erlang:put(supress_read, OldSupressRead)
+    erlang:put(?SUPPRESS_READ, OldSupressRead)
   end.
 
 %%------------------------------------------------------------------------------
@@ -1212,7 +1216,7 @@ read_tagged(State) ->
              , location(State)
              ),
 
-  SupressRead = erlang:get(supress_read),
+  SupressRead = erlang:get(?SUPPRESS_READ),
   {Form, State2} = read_pop_one(State1),
   case 'clojerl.Symbol':str(Symbol) of
     <<"erl">> -> erlang_literal(Form, State2);
