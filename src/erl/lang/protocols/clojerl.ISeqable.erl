@@ -43,6 +43,8 @@
       'clojerl.Cycle':'seq'(X);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'seq'(X);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'seq'(X);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'seq'(X);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -99,6 +101,8 @@
       'clojerl.Cycle':'to_list'(X);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'to_list'(X);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'to_list'(X);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'to_list'(X);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -141,6 +145,7 @@
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
     #{?TYPE := 'clojerl.Cycle'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.StringSeq'} ->  true;
     #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
@@ -171,6 +176,7 @@
     'clojerl.Vector.RSeq' -> true;
     'clojerl.Cycle' -> true;
     'clojerl.Repeat' -> true;
+    'clojerl.StringSeq' -> true;
     'clojerl.Cons' -> true;
     'clojerl.ChunkedCons' -> true;
     'clojerl.TupleMap' -> true;

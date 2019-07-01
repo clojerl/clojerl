@@ -127,7 +127,8 @@ str(_Config) ->
 -spec seq(config()) -> result().
 seq(_Config) ->
   5 = clj_rt:count(clj_rt:seq(<<"hello">>)),
-  [<<"h">>, <<"e">>, <<"l">>, <<"l">>, <<"o">>] = clj_rt:seq(<<"hello">>),
+  StringSeq = clj_rt:seq(<<"hello">>),
+  StringSeq = 'clojerl.StringSeq':?CONSTRUCTOR(<<"hello">>),
 
   ?NIL = clj_rt:seq(<<>>),
 

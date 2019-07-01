@@ -188,7 +188,7 @@ hash(Str) ->
   erlang:phash2(Str).
 
 seq(<<>>) -> ?NIL;
-seq(Str)  -> to_seq(Str, []).
+seq(Str)  -> 'clojerl.StringSeq':?CONSTRUCTOR(Str).
 
 to_list(Str)  -> to_seq(Str, []).
 
