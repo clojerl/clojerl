@@ -674,16 +674,10 @@
                       clojerl.Error #"Namespaced map must specify a valid namespace" "#:s/t{1 2}"
                       clojerl.Error #"Unknown auto-resolved namespace alias" "#::BOGUS{1 2}"
                       clojerl.Error #"Namespaced map must specify a namespace" "#: s{:a 1}"
-                      clojerl.Error #"Duplicate key: :user/a" "#::{:a 1 :a 2}"
-                      clojerl.Error #"Duplicate key: user/a" "#::{a 1 a 2}"))
+                      clojerl.Error #"Duplicate key: :.+/a" "#::{:a 1 :a 2}"
+                      clojerl.Error #"Duplicate key: .+/a" "#::{a 1 a 2}"))
 
 (deftest namespaced-map-edn
   (is (= {1 1, :a/b 2, :b/c 3, :d 4}
          (edn/read-string "#:a{1 1, :b 2, :b/c 3, :_/d 4}")
          (edn/read-string "#:a {1 1, :b 2, :b/c 3, :_/d 4}"))))
-
-(deftest invalid-symbol-value
-  (is (thrown-with-msg? clojerl.Error #"Invalid token" (read-string "##5")))
-  (is (thrown-with-msg? clojerl.Error #"Invalid token" (edn/read-string "##5")))
-  (is (thrown-with-msg? clojerl.Error #"Unknown symbolic value" (read-string "##Foo")))
-  (is (thrown-with-msg? clojerl.Error #"Unknown symbolic value" (edn/read-string "##Foo"))))

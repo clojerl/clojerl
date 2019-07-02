@@ -394,28 +394,26 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_map(state()) -> state().
-read_map(#{ src   := <<"{"/utf8, _/binary>>
-          , forms := Forms
-          , loc   := Loc
-          } = State0
-        ) ->
+read_map(#{src := <<"{"/utf8, _/binary>>} = State0) ->
+  {Items, State1} = read_map_items(State0),
+
+  ?ERROR_WHEN( length(Items) rem 2 =/= 0
+             , <<"Map literal must contain an even number of forms">>
+             , location(State0)
+             ),
+
+  Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
+                               , file_location_meta(State0)
+                               ),
+  push_form(Map, State1).
+
+-spec read_map_items(state()) -> {[any()], state()}.
+read_map_items(#{forms := Forms, loc := Loc} = State0) ->
   State  = add_scope(consume_char(State0)),
   State1 = read_until($}, location_started(State#{forms => []}, Loc)),
   State2 = remove_scope(State1),
   #{forms := ReversedItems} = State2,
-
-  case length(ReversedItems) of
-    X when X rem 2 == 0 ->
-      Items = lists:reverse(ReversedItems),
-      Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
-                                   , file_location_meta(State0)
-                                   ),
-      State2#{forms => [Map | Forms]};
-    _ ->
-      ?ERROR( <<"Map literal must contain an even number of forms">>
-            , location(State2)
-            )
-  end.
+  {lists:reverse(ReversedItems), State2#{forms => Forms}}.
 
 %%------------------------------------------------------------------------------
 %% Unmatched delimiter
@@ -556,22 +554,28 @@ read_namespaced_map(State0) ->
 
   validate_namespaced_name(Symbol, State1),
 
-  {Map, State2}    = read_pop_one(State1),
+  %% Make sure to consume all whitespace
+  {_, State2} = consume(State1, [whitespace]),
 
-  ?ERROR_WHEN( not clj_rt:'map?'(Map)
+  ?ERROR_WHEN( peek_src(State2) =/= ${
              , <<"Namespaced map must specify a map">>
              , location(State2)
              ),
 
-  Keys    = clj_rt:to_list(clj_rt:keys(Map)),
-  NewKeys = [ {Key, namespaced_key(clj_rt:name(Symbol), Key)}
-              || Key <- Keys,
-                 clj_rt:'keyword?'(Key) orelse clj_rt:'symbol?'(Key)
-            ],
+  {Items0, State3} = read_map_items(State2),
 
-  NsMap   = lists:foldl(fun replace_for_namespaced_key/2, Map, NewKeys),
+  ?ERROR_WHEN( length(Items0) rem 2 =/= 0
+             , <<"Namespaced map literal must contain an even number of forms">>
+             , location(State2)
+             ),
 
-  push_form(NsMap, State2).
+  Ns     = clj_rt:name(Symbol),
+  Items1 = process_namespaced_key_values(Ns, Items0, []),
+  Map    = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items1, true)
+                                  , file_location_meta(State3)
+                                  ),
+
+  push_form(Map, State3).
 
 -spec validate_namespaced_name('clojerl.Symbol':type(), state()) -> ok.
 validate_namespaced_name(Symbol, State) ->
@@ -602,16 +606,15 @@ namespaced_key(Ns, Key) ->
       end
   end.
 
--spec replace_for_namespaced_key( { 'clojerl.Keyword':type()
-                                  , 'clojerl.Keyword':type()
-                                  }
-                                , 'clojerl.IMap':type()
-                                ) ->
-  'clojerl.IMap':type().
-replace_for_namespaced_key({Key, NsKey}, Map) ->
-  Map1  = clj_rt:dissoc(Map, Key),
-  Value = clj_rt:get(Map, Key),
-  clj_rt:assoc(Map1, NsKey, Value).
+-spec process_namespaced_key_values(binary(), [any()], [any()]) -> [any()].
+process_namespaced_key_values(_Ns, [], Acc) ->
+  Acc;
+process_namespaced_key_values(Ns, [K0, V | KVs], Acc) ->
+  K1 = case clj_rt:'keyword?'(K0) orelse clj_rt:'symbol?'(K0) of
+         true  -> namespaced_key(Ns, K0);
+         false -> K0
+       end,
+  process_namespaced_key_values(Ns, KVs, [K1, V | Acc]).
 
 %%------------------------------------------------------------------------------
 %% # reader tag
