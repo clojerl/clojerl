@@ -127,3 +127,7 @@
       (ex-info "an ex-info" {:with "its" :data 29})
       (ex-info "an ex-info" {:with "data"}
                (clojerl.Error. "less outer")))))
+
+(deftest print-ns-maps
+  (is (= "#:user{:a 1}" (binding [*print-namespace-maps* true] (pr-str {:user/a 1}))))
+  (is (= "{:user/a 1}" (binding [*print-namespace-maps* false] (pr-str {:user/a 1})))))

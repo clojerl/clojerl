@@ -80,6 +80,7 @@
              *print-meta* *print-meta*
              *print-length* *print-length*
              *print-level* *print-level*
+             *print-namespace-maps* true
              *read-eval* *read-eval*
              *warn-on-infer* *warn-on-infer*
              *data-readers* *data-readers*

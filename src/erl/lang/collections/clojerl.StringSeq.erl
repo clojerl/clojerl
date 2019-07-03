@@ -34,7 +34,7 @@
                  , str   => binary()
                  }.
 
--spec ?CONSTRUCTOR(list()) -> type().
+-spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Str) ->
   #{ ?TYPE => ?M
    , str   => Str
