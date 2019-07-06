@@ -119,8 +119,7 @@ count(Seq)       -> 'clojerl.ICounted':count(Seq).
 nth(?NIL, _) -> ?NIL;
 nth([], _) -> ?NIL;
 nth(Coll, N) ->
-  Type = type_module(Coll),
-  case 'clojerl.IIndexed':?SATISFIES(Type) of
+  case 'clojerl.IIndexed':?SATISFIES(Coll) of
     true  -> 'clojerl.IIndexed':nth(Coll, N);
     false -> nth_from(Coll, N)
   end.
@@ -129,41 +128,38 @@ nth(Coll, N) ->
 nth(?NIL, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
 nth(Coll, N, NotFound) ->
-  Type = type_module(Coll),
-  case 'clojerl.IIndexed':?SATISFIES(Type) of
+  case 'clojerl.IIndexed':?SATISFIES(Coll) of
     true  -> 'clojerl.IIndexed':nth(Coll, N, NotFound);
     false -> nth_from(Coll, N, NotFound)
   end.
 
 -spec nth_from(any(), integer()) -> any().
 nth_from(Coll, N) ->
-  Type = type_module(Coll),
-  case Type of
-    'clojerl.String' ->
+  case 'string?'(Coll) of
+    true ->
       case N < 'clojerl.String':count(Coll) of
         true  -> 'clojerl.String':char_at(Coll, N);
         false -> ?ERROR(<<"Index out of bounds">>)
       end;
     _ ->
-      case 'clojerl.ISequential':?SATISFIES(Type) of
+      case 'clojerl.ISequential':?SATISFIES(Coll) of
         true  -> nth_seq(N, seq(Coll));
-        false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
+        false -> ?ERROR([<<"Can't apply nth to type ">>, type_module(Coll)])
       end
   end.
 
 -spec nth_from(any(), integer(), any()) -> any().
 nth_from(Coll, N, NotFound) ->
-  Type = type_module(Coll),
-  case Type of
-    'clojerl.String' ->
+  case 'string?'(Coll) of
+    true ->
       case N < 'clojerl.String':count(Coll) of
         true  -> 'clojerl.String':char_at(Coll, N);
         false -> NotFound
       end;
     _ ->
-      case 'clojerl.ISequential':?SATISFIES(Type) of
+      case 'clojerl.ISequential':?SATISFIES(Coll) of
         true  -> nth_seq(N, seq(Coll), NotFound);
-        false -> ?ERROR([<<"Can't apply nth to type ">>, Type])
+        false -> ?ERROR([<<"Can't apply nth to type ">>, type_module(Coll)])
       end
   end.
 
@@ -211,8 +207,8 @@ to_list(Seqable) ->
 -spec equiv(any(), any()) -> boolean().
 equiv(X, Y) ->
   case
-    'clojerl.IEquiv':?SATISFIES(type_module(X))
-    andalso 'clojerl.IEquiv':?SATISFIES(type_module(Y))
+    'clojerl.IEquiv':?SATISFIES(X)
+    andalso 'clojerl.IEquiv':?SATISFIES(Y)
   of
     true  -> 'clojerl.IEquiv':equiv(X, Y);
     false -> X =:= Y
@@ -313,19 +309,19 @@ keyword(Namespace, Name) ->
 
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
-  'clojerl.IColl':?SATISFIES(type_module(X)).
+  'clojerl.IColl':?SATISFIES(X).
 
 -spec 'sequential?'(any()) -> boolean().
 'sequential?'(X) ->
-  'clojerl.ISequential':?SATISFIES(type_module(X)).
+  'clojerl.ISequential':?SATISFIES(X).
 
 -spec 'associative?'(any()) -> boolean().
 'associative?'(X) ->
-  'clojerl.IAssociative':?SATISFIES(type_module(X)).
+  'clojerl.IAssociative':?SATISFIES(X).
 
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
-  'clojerl.ISeq':?SATISFIES(type_module(X)).
+  'clojerl.ISeq':?SATISFIES(X).
 
 -spec 'list?'(any()) -> boolean().
 'list?'(X) ->
@@ -337,19 +333,19 @@ keyword(Namespace, Name) ->
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
-  'clojerl.IMap':?SATISFIES(type_module(X)).
+  'clojerl.IMap':?SATISFIES(X).
 
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
-  'clojerl.ISet':?SATISFIES(type_module(X)).
+  'clojerl.ISet':?SATISFIES(X).
 
 -spec 'record?'(any()) -> boolean().
 'record?'(X) ->
-  'clojerl.IRecord':?SATISFIES(type_module(X)).
+  'clojerl.IRecord':?SATISFIES(X).
 
 -spec 'type?'(any()) -> boolean().
 'type?'(X) ->
-  'clojerl.IType':?SATISFIES(type_module(X)).
+  'clojerl.IType':?SATISFIES(X).
 
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
@@ -372,7 +368,7 @@ keyword(Namespace, Name) ->
 'string?'(X) -> type_module(X) == 'clojerl.String'.
 
 -spec 'nil?'(any()) -> boolean().
-'nil?'(X) -> type_module(X) == ?NIL_TYPE.
+'nil?'(X) -> X =:= ?NIL.
 
 -spec 'boolean?'(any()) -> boolean().
 'boolean?'(X) -> type_module(X) == 'clojerl.Boolean'.
@@ -402,7 +398,7 @@ with_meta(X, Meta) ->
 
 -spec 'meta?'(any()) -> any().
 'meta?'(X) ->
-  'clojerl.IMeta':?SATISFIES(type_module(X)).
+  'clojerl.IMeta':?SATISFIES(X).
 
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(?NIL, _) ->
@@ -425,7 +421,7 @@ with_meta(X, Meta) ->
 -spec get(any(), any()) -> any().
 get(?NIL, _Key) -> ?NIL;
 get(X, Key) ->
-  case 'clojerl.ILookup':?SATISFIES(type_module(X)) of
+  case 'clojerl.ILookup':?SATISFIES(X) of
     true  -> 'clojerl.ILookup':get(X, Key);
     false -> ?NIL
   end.
@@ -433,7 +429,7 @@ get(X, Key) ->
 -spec get(any(), any(), any()) -> any().
 get(?NIL, _Key, NotFound) -> NotFound;
 get(X, Key, NotFound) ->
-  case 'clojerl.ILookup':?SATISFIES(type_module(X)) of
+  case 'clojerl.ILookup':?SATISFIES(X) of
     true  -> 'clojerl.ILookup':get(X, Key, NotFound);
     false -> NotFound
   end.
@@ -623,7 +619,7 @@ do_print_map(X, First, Last, Writer) ->
   lists:foreach(ConcatFun, Rest),
   'erlang.io.IWriter':write(Writer, Last).
 
--spec 'list'(list()) -> 'clojerl.List':type().
+-spec 'list'(any()) -> 'clojerl.List':type().
 list(Items) ->
   'clojerl.List':?CONSTRUCTOR(Items).
 
@@ -728,7 +724,7 @@ hash(X)    -> 'clojerl.IHash':hash(X).
 -spec '->erl'(any(), boolean()) -> any().
 '->erl'(?NIL, _)      -> ?NIL;
 '->erl'(X, Recursive) ->
-  case 'clojerl.IErl':?SATISFIES(type_module(X)) of
+  case 'clojerl.IErl':?SATISFIES(X) of
     true  -> 'clojerl.IErl':'->erl'(X, Recursive);
     false -> X
   end.

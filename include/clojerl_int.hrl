@@ -14,6 +14,9 @@
 %% Name for the satisfies? function in protocols
 -define(SATISFIES, '__satisfies?__').
 
+%% Name for the extends? function in protocols
+-define(EXTENDS, '__extends?__').
+
 %% Reader constants
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).

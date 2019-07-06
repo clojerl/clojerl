@@ -56,6 +56,10 @@
 
 -type read_fold_fun() :: fun((any(), any()) -> any()).
 
+-define(ARG_ENV, arg_env).
+-define(GENSYM_ENV, gensym_env).
+-define(SUPPRESS_READ, suppress_read).
+
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
 read_fold(Fun, Src, Opts, Env) ->
@@ -487,7 +491,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
 
   try
     %% TODO: using process dictionary here might be a code smell
-    erlang:put(gensym_env, #{}),
+    erlang:put(?GENSYM_ENV, #{}),
     QuotedForm      = syntax_quote(Form),
     NewFormWithMeta = add_meta(Form, QuotedForm),
 
@@ -495,7 +499,7 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
   catch ?WITH_STACKTRACE(error, Reason, Stack)
       ?ERROR(Reason, location(NewState), Stack)
   after
-    erlang:erase(gensym_env)
+    erlang:erase(?GENSYM_ENV)
   end.
 
 -spec syntax_quote(any()) -> any().
@@ -568,7 +572,7 @@ syntax_quote_symbol(Symbol) ->
 
 -spec register_gensym(any()) -> any().
 register_gensym(Symbol) ->
-  GensymEnv = case erlang:get(gensym_env) of
+  GensymEnv = case erlang:get(?GENSYM_ENV) of
                 undefined -> throw(<<"Gensym literal not in syntax-quote">>);
                 X -> X
               end,
@@ -584,7 +588,7 @@ register_gensym(Symbol) ->
       GenSym1    = 'clojerl.Symbol':with_meta(GenSym0, Meta),
 
       SymbolName = 'clojerl.Symbol':name(Symbol),
-      erlang:put(gensym_env, GensymEnv#{SymbolName => GenSym1}),
+      erlang:put(?GENSYM_ENV, GensymEnv#{SymbolName => GenSym1}),
       GenSym1;
     GenSym ->
       GenSym
@@ -747,28 +751,26 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_map(state()) -> state().
-read_map(#{ src   := <<"{"/utf8, _/binary>>
-          , forms := Forms
-          , loc   := Loc
-          } = State0
-        ) ->
+read_map(#{src := <<"{"/utf8, _/binary>>} = State0) ->
+  {Items, State1} = read_map_items(State0),
+
+  ?ERROR_WHEN( length(Items) rem 2 =/= 0
+             , <<"Map literal must contain an even number of forms">>
+             , location(State0)
+             ),
+
+  Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
+                               , file_location_meta(State0)
+                               ),
+  push_form(Map, State1).
+
+-spec read_map_items(state()) -> {[any()], state()}.
+read_map_items(#{forms := Forms, loc := Loc} = State0) ->
   State  = add_scope(consume_char(State0)),
   State1 = read_until($}, location_started(State#{forms => []}, Loc)),
   State2 = remove_scope(State1),
   #{forms := ReversedItems} = State2,
-
-  case length(ReversedItems) of
-    X when X rem 2 == 0 ->
-      Items = lists:reverse(ReversedItems),
-      Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
-                                   , file_location_meta(State0)
-                                   ),
-      State2#{forms => [Map | Forms]};
-    _ ->
-      ?ERROR( <<"Map literal must contain an even number of forms">>
-            , location(State2)
-            )
-  end.
+  {lists:reverse(ReversedItems), State2#{forms => Forms}}.
 
 %%------------------------------------------------------------------------------
 %% Unmatched delimiter
@@ -848,7 +850,7 @@ read_octal_char(#{src := RestToken} = State) ->
 
 -spec read_arg(state()) -> state().
 read_arg(#{src := <<"%"/utf8, _/binary>>} = State) ->
-  case erlang:get(arg_env) of
+  case erlang:get(?ARG_ENV) of
     undefined ->
       read_symbol(State);
     ArgEnv ->
@@ -893,7 +895,7 @@ register_arg(N, ArgEnv) ->
     ?NIL ->
       ArgSymbol = gen_arg_sym(N),
       NewArgEnv = maps:put(N, ArgSymbol, ArgEnv),
-      erlang:put(arg_env, NewArgEnv),
+      erlang:put(?ARG_ENV, NewArgEnv),
       ArgSymbol;
     ArgSymbol -> ArgSymbol
   end.
@@ -936,6 +938,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $! -> read_comment(NewState);
     $_ -> read_discard(NewState);
     $? -> read_cond(NewState);
+    $: -> read_namespaced_map(NewState);
     $< -> ?ERROR(<<"Unreadable form">>, location(State));
     _  -> read_tagged(consume_char(State))
   end.
@@ -955,18 +958,18 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  ?ERROR_WHEN(erlang:get(arg_env) =/= undefined
+  ?ERROR_WHEN(erlang:get(?ARG_ENV) =/= undefined
              , <<"Nested #()s are not allowed">>
              , location(State)
              ),
 
   {{Form, NewState}, ArgEnv} =
     try
-      erlang:put(arg_env, #{}),
-      {read_pop_one(State), erlang:get(arg_env)}
+      erlang:put(?ARG_ENV, #{}),
+      {read_pop_one(State), erlang:get(?ARG_ENV)}
     after
       %% Make sure the process dictionary entry gets removed
-      erlang:erase(arg_env)
+      erlang:erase(?ARG_ENV)
     end,
 
   MaxArg = lists:max([0 | maps:keys(ArgEnv)]),
@@ -1091,12 +1094,12 @@ read_cond(#{opts := Opts} = State0) ->
              , location(State1)
              ),
 
-  OldSupressRead = case erlang:get(supress_read) of
+  OldSupressRead = case erlang:get(?SUPPRESS_READ) of
                      undefined -> false;
                      SR -> SR
                    end,
   SupressRead    = OldSupressRead orelse ReadCondOpt == preserve,
-  erlang:put(supress_read, SupressRead),
+  erlang:put(?SUPPRESS_READ, SupressRead),
 
   try
     case SupressRead of
@@ -1108,7 +1111,7 @@ read_cond(#{opts := Opts} = State0) ->
         read_cond_delimited(IsSplicing, consume_char(State2))
     end
   after
-    erlang:put(supress_read, OldSupressRead)
+    erlang:put(?SUPPRESS_READ, OldSupressRead)
   end.
 
 reader_conditional(List, IsSplicing) ->
@@ -1187,17 +1190,136 @@ match_feature(State = #{return_on := ReturnOn, opts := Opts}) ->
 
 -spec read_skip_suppress(state()) -> state().
 read_skip_suppress(State) ->
-  OldSupressRead = case erlang:get(supress_read) of
+  OldSupressRead = case erlang:get(?SUPPRESS_READ) of
                      undefined -> false;
                      SR -> SR
                    end,
-  erlang:put(supress_read, true),
+  erlang:put(?SUPPRESS_READ, true),
   try
     {_, NewState} = read_pop_one(State),
     NewState
   after
-    erlang:put(supress_read, OldSupressRead)
+    erlang:put(?SUPPRESS_READ, OldSupressRead)
   end.
+
+%%------------------------------------------------------------------------------
+%% #: namespaced map
+%%------------------------------------------------------------------------------
+
+-spec read_namespaced_map(state()) -> state().
+read_namespaced_map(State0) ->
+  {IsAuto, Symbol, State1} = is_auto_namespaced_map(peek_src(State0), State0),
+
+  %% Make sure to consume all whitespace
+  {_, State2} = consume(State1, [whitespace]),
+
+  ?ERROR_WHEN( peek_src(State2) =/= ${
+             , <<"Namespaced map must specify a map">>
+             , location(State2)
+             ),
+
+  {Items0, State3} = read_map_items(State2),
+
+  ?ERROR_WHEN( length(Items0) rem 2 =/= 0
+             , <<"Namespaced map literal must contain an even number of forms">>
+             , location(State2)
+             ),
+
+  Ns     = resolve_namespaced_map(IsAuto, Symbol, State3),
+  Items1 = process_namespaced_key_values(Ns, Items0, []),
+  Map    = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items1, true)
+                                  , file_location_meta(State2)
+                                  ),
+
+  push_form(Map, State3).
+
+-spec is_auto_namespaced_map(char(), state()) ->
+  {boolean(), ?NIL | 'clojerl.Symbol':type(), state()}.
+is_auto_namespaced_map($:, State0) ->
+  %% #:: { }, #::foo { } or an error
+  State1 = consume_char(State0),
+  NextChar  = peek_src(State1),
+  {_, State2} = consume(State1, [whitespace]),
+  ?ERROR_WHEN( is_whitespace(NextChar)
+               andalso peek_src(State2) =/= ${
+             , <<"Namespaced map must specify a namespace">>
+             , location(State2)
+             ),
+
+  case peek_src(State2) of
+    ${ -> %% #:: { }
+      {true, ?NIL, State2};
+    _ -> %% #::foo { }
+      {Symbol, State3} = read_pop_one(State2),
+      {true, Symbol, State3}
+  end;
+is_auto_namespaced_map(Char, State0) ->
+  %% #:foo { } or an error
+  ?ERROR_WHEN( is_whitespace(Char)
+             , <<"Namespaced map must specify a namespace">>
+             , location(State0)
+             ),
+  {Symbol, State1} = read_pop_one(State0),
+  {false, Symbol, State1}.
+
+-spec resolve_namespaced_map(boolean(), 'clojerl.Symbol':type(), state()) ->
+  'clojerl.Symbol':type().
+resolve_namespaced_map(true, ?NIL, _State) ->
+  Ns   = 'clojerl.Namespace':current(),
+  Name = 'clojerl.Namespace':name(Ns),
+  clj_rt:name(Name);
+resolve_namespaced_map(true, Symbol, State) ->
+  validate_namespaced_name(Symbol, State),
+  Ns = 'clojerl.Namespace':current(),
+  case 'clojerl.Namespace':alias(Ns, Symbol) of
+    ?NIL ->
+      ?ERROR(<<"Unknown auto-resolved namespace alias">>, location(State));
+    ResolvedNs ->
+      Name = 'clojerl.Namespace':name(ResolvedNs),
+      clj_rt:name(Name)
+  end;
+resolve_namespaced_map(false, Symbol, State) ->
+  validate_namespaced_name(Symbol, State),
+  clj_rt:name(Symbol).
+
+-spec validate_namespaced_name('clojerl.Symbol':type(), state()) -> ok.
+validate_namespaced_name(Symbol, State) ->
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+               orelse clj_rt:namespace(Symbol) =/= ?NIL
+             , [ <<"Namespaced map must specify a valid namespace: ">>
+               , Symbol
+               ]
+             , location(State)
+             ).
+
+-spec namespaced_key(binary(), 'clojerl.Keyword':type()) ->
+  'clojerl.Keyword':type().
+namespaced_key(Ns, Key) ->
+  KeyNs = clj_rt:namespace(Key),
+  case clj_rt:'keyword?'(Key) of
+    true ->
+      case KeyNs of
+        ?NIL    -> clj_rt:keyword(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:keyword(clj_rt:name(Key));
+        _       -> Key
+      end;
+    false ->
+      case KeyNs of
+        ?NIL    -> clj_rt:symbol(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:symbol(clj_rt:name(Key));
+        _       -> Key
+      end
+  end.
+
+-spec process_namespaced_key_values(binary(), [any()], [any()]) -> [any()].
+process_namespaced_key_values(_Ns, [], Acc) ->
+  Acc;
+process_namespaced_key_values(Ns, [K0, V | KVs], Acc) ->
+  K1 = case clj_rt:'keyword?'(K0) orelse clj_rt:'symbol?'(K0) of
+         true  -> namespaced_key(Ns, K0);
+         false -> K0
+       end,
+  process_namespaced_key_values(Ns, KVs, [K1, V | Acc]).
 
 %%------------------------------------------------------------------------------
 %% # reader tag
@@ -1212,18 +1334,22 @@ read_tagged(State) ->
              , location(State)
              ),
 
-  SupressRead = erlang:get(supress_read),
-  {Form, State2} = read_pop_one(State1),
-  case 'clojerl.Symbol':str(Symbol) of
-    <<"erl">> -> erlang_literal(Form, State2);
-    <<"bin">> -> erlang_binary(Form, State2);
-    <<"as">>  -> erlang_alias(Form, State2);
+  read_tagged_symbol(Symbol, location(State), State1).
+
+-spec read_tagged_symbol('clojerl.Symbol':type(), any(), state()) -> state().
+read_tagged_symbol(Tag, Location, State0) ->
+  {Form, State1} = read_pop_one(State0),
+  SupressRead = erlang:get(?SUPPRESS_READ),
+  case 'clojerl.Symbol':str(Tag) of
+    <<"erl">> -> erlang_literal(Form, State1);
+    <<"bin">> -> erlang_binary(Form, State1);
+    <<"as">>  -> erlang_alias(Form, State1);
     _ when SupressRead =:= true ->
-      push_form(tagged_literal(Symbol, Form), State2);
+      push_form(tagged_literal(Tag, Form), State1);
     _ ->
-      case 'clojerl.String':contains('clojerl.Symbol':name(Symbol), <<".">>) of
-        true  -> read_record(Symbol, Form, State2);
-        false -> read_tagged(Symbol, Form, location(State), State2)
+      case 'clojerl.String':contains('clojerl.Symbol':name(Tag), <<".">>) of
+        true  -> read_record(Tag, Form, State1);
+        false -> read_tagged(Tag, Form, Location, State1)
       end
   end.
 

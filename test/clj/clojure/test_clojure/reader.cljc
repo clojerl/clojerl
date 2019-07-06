@@ -26,8 +26,9 @@
                                 #_read-instant-calendar
                                 #_read-instant-timestamp]])
   (:require clojure.walk
-            #_[clojure.test.generative :refer (defspec)]
-            #_[clojure.test-clojure.generators :as cgen]))
+            [clojure.edn :as edn]
+            [clojure.test.generative :refer (defspec)]
+            [clojure.test-clojure.generators :as cgen]))
 
 ;; Symbols
 
@@ -547,13 +548,13 @@
      (-> o pr-str read-string)
      (catch :error t t))))
 
-#_(defspec types-that-should-roundtrip
+(defspec types-that-should-roundtrip
   roundtrip
   [^{:tag cgen/ednable} o]
   (when-not (= o %)
     (throw (ex-info "Value cannot roundtrip, see ex-data" {:printed o :read %}))))
 
-#_(defspec types-that-need-dup-to-roundtrip
+(defspec types-that-need-dup-to-roundtrip
   roundtrip-dup
   [^{:tag cgen/dup-readable} o]
   (when-not (= o %)
@@ -650,3 +651,33 @@
   (is (= 23 (read-string {:eof 23} "")))
   (is (= 23 (read {:eof 23} (new erlang.io.PushbackReader
                                  (new erlang.io.StringReader ""))))))
+
+(require '[clojure.string :as s])
+(deftest namespaced-maps
+  (is (= #:a{1 nil, :b nil, :b/c nil, :_/d nil}
+         #:a {1 nil, :b nil, :b/c nil, :_/d nil}
+         {1 nil, :a/b nil, :b/c nil, :d nil}))
+  (is (= #::{1 nil, :a nil, :a/b nil, :_/d nil}
+         #::  {1 nil, :a nil, :a/b nil, :_/d nil}
+         {1 nil, :clojure.test-clojure.reader/a nil, :a/b nil, :d nil} ))
+  (is (= #::s{1 nil, :a nil, :a/b nil, :_/d nil}
+         #::s  {1 nil, :a nil, :a/b nil, :_/d nil}
+         {1 nil, :clojure.string/a nil, :a/b nil, :d nil}))
+  (is (= (read-string "#:a{b 1 b/c 2}") {'a/b 1, 'b/c 2}))
+  (is (= (binding [*ns* (the-ns 'clojure.test-clojure.reader)] (read-string "#::{b 1, b/c 2, _/d 3}")) {'clojure.test-clojure.reader/b 1, 'b/c 2, 'd 3}))
+  (is (= (binding [*ns* (the-ns 'clojure.test-clojure.reader)] (read-string "#::s{b 1, b/c 2, _/d 3}")) {'clojure.string/b 1, 'b/c 2, 'd 3})))
+
+(deftest namespaced-map-errors
+  (are [err msg form] (thrown-with-msg? err msg (read-string form))
+                      clojerl.Error #"Invalid token" "#:::"
+                      clojerl.Error #"Namespaced map literal must contain an even number of forms" "#:s{1}"
+                      clojerl.Error #"Namespaced map must specify a valid namespace" "#:s/t{1 2}"
+                      clojerl.Error #"Unknown auto-resolved namespace alias" "#::BOGUS{1 2}"
+                      clojerl.Error #"Namespaced map must specify a namespace" "#: s{:a 1}"
+                      clojerl.Error #"Duplicate key: :.+/a" "#::{:a 1 :a 2}"
+                      clojerl.Error #"Duplicate key: .+/a" "#::{a 1 a 2}"))
+
+(deftest namespaced-map-edn
+  (is (= {1 1, :a/b 2, :b/c 3, :d 4}
+         (edn/read-string "#:a{1 1, :b 2, :b/c 3, :_/d 4}")
+         (edn/read-string "#:a {1 1, :b 2, :b/c 3, :_/d 4}"))))

@@ -1,5 +1,6 @@
 -module('clojerl.IStack').
 
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -clojure(true).
@@ -7,35 +8,67 @@
 
 -export(['peek'/1, 'pop'/1]).
 -export([?SATISFIES/1]).
+-export([?EXTENDS/1]).
 
 -callback 'peek'(any()) -> any().
 -callback 'pop'(any()) -> any().
 
 'peek'(Stack) ->
-  case clj_rt:type_module(Stack) of
-    'erlang.List' ->
-      'erlang.List':'peek'(Stack);
-    'clojerl.List' ->
+  case Stack of
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'peek'(Stack);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'peek'(Stack);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'peek', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack);
+    X_ when erlang:is_list(X_) ->
+      'erlang.List':'peek'(Stack);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'peek', Stack)
   end.
 
 'pop'(Stack) ->
-  case clj_rt:type_module(Stack) of
-    'erlang.List' ->
-      'erlang.List':'pop'(Stack);
-    'clojerl.List' ->
+  case Stack of
+    #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'pop'(Stack);
-    'clojerl.Vector' ->
+    #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'pop'(Stack);
-    Type ->
-      clj_protocol:not_implemented(?MODULE, 'pop', Type)
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack);
+    X_ when erlang:is_list(X_) ->
+      'erlang.List':'pop'(Stack);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'pop', Stack)
   end.
 
-?SATISFIES('erlang.List') -> true;
-?SATISFIES('clojerl.List') -> true;
-?SATISFIES('clojerl.Vector') -> true;
-?SATISFIES(_) -> false.
+?SATISFIES(X) ->
+  case X of
+    #{?TYPE := 'clojerl.List'} ->  true;
+    #{?TYPE := 'clojerl.Vector'} ->  true;
+    #{?TYPE := _} ->  false;
+    X_ when erlang:is_binary(X_) ->  false;
+    X_ when erlang:is_boolean(X_) ->  false;
+    X_ when erlang:is_list(X_) ->  true;
+    ?NIL ->  false;
+    _ -> false
+  end.
+
+?EXTENDS(X) ->
+  case X of
+    'clojerl.List' -> true;
+    'clojerl.Vector' -> true;
+    'erlang.List' -> true;
+    _ -> false
+  end.

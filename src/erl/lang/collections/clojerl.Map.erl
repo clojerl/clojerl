@@ -95,7 +95,7 @@ build_mappings({Key, Value}, {Count, Map, FailDuplicates}) ->
   Hash = clj_rt:hash(Key),
   {Diff, Entry} = create_entry(Map, Hash, Key, Value),
   ?ERROR_WHEN( FailDuplicates andalso Diff == 0
-             , [<<"Duplicate key: ">>, Value]
+             , [<<"Duplicate key: ">>, Key]
              ),
   {Count + Diff, Map#{Hash => Entry}, FailDuplicates}.
 

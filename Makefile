@@ -17,7 +17,7 @@ compile:
 	${V} ${REBAR3} compile
 
 test: clean
-	${V} ${REBAR3} as test do ct, clojerl test
+	${V} ${REBAR3} do ct, clojerl test
 
 dialyzer: clean
 	${V} NO_CLJ=true ${REBAR3} dialyzer

@@ -394,28 +394,26 @@ read_vector(#{ src   := <<"["/utf8, _/binary>>
 %%------------------------------------------------------------------------------
 
 -spec read_map(state()) -> state().
-read_map(#{ src   := <<"{"/utf8, _/binary>>
-          , forms := Forms
-          , loc   := Loc
-          } = State0
-        ) ->
+read_map(#{src := <<"{"/utf8, _/binary>>} = State0) ->
+  {Items, State1} = read_map_items(State0),
+
+  ?ERROR_WHEN( length(Items) rem 2 =/= 0
+             , <<"Map literal must contain an even number of forms">>
+             , location(State0)
+             ),
+
+  Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
+                               , file_location_meta(State0)
+                               ),
+  push_form(Map, State1).
+
+-spec read_map_items(state()) -> {[any()], state()}.
+read_map_items(#{forms := Forms, loc := Loc} = State0) ->
   State  = add_scope(consume_char(State0)),
   State1 = read_until($}, location_started(State#{forms => []}, Loc)),
   State2 = remove_scope(State1),
   #{forms := ReversedItems} = State2,
-
-  case length(ReversedItems) of
-    X when X rem 2 == 0 ->
-      Items = lists:reverse(ReversedItems),
-      Map = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items, true)
-                                   , file_location_meta(State0)
-                                   ),
-      State2#{forms => [Map | Forms]};
-    _ ->
-      ?ERROR( <<"Map literal must contain an even number of forms">>
-            , location(State2)
-            )
-  end.
+  {lists:reverse(ReversedItems), State2#{forms => Forms}}.
 
 %%------------------------------------------------------------------------------
 %% Unmatched delimiter
@@ -508,6 +506,7 @@ read_dispatch(#{src := <<"#"/utf8, Src/binary>>} = State) ->
     $^ -> read_meta(consume_char(State)); %% deprecated
     ${ -> read_set(NewState);
     $_ -> read_discard(NewState);
+    $: -> read_namespaced_map(NewState);
     $< -> ?ERROR(<<"Unreadable form">>, location(State));
     _  ->
       case clj_utils:char_type(Ch, ?NIL) of
@@ -544,6 +543,78 @@ read_discard(#{forms := Forms, return_on := ReturnOn} = State0) ->
   {_, State2} = read_pop_one(State1),
   %% Can't call read_one here because is might not be a top level form.
   State2#{forms := Forms, return_on := ReturnOn}.
+
+%%------------------------------------------------------------------------------
+%% #: namespaced map
+%%------------------------------------------------------------------------------
+
+-spec read_namespaced_map(state()) -> state().
+read_namespaced_map(State0) ->
+  {Symbol, State1} = read_pop_one(State0),
+
+  validate_namespaced_name(Symbol, State1),
+
+  %% Make sure to consume all whitespace
+  {_, State2} = consume(State1, [whitespace]),
+
+  ?ERROR_WHEN( peek_src(State2) =/= ${
+             , <<"Namespaced map must specify a map">>
+             , location(State2)
+             ),
+
+  {Items0, State3} = read_map_items(State2),
+
+  ?ERROR_WHEN( length(Items0) rem 2 =/= 0
+             , <<"Namespaced map literal must contain an even number of forms">>
+             , location(State2)
+             ),
+
+  Ns     = clj_rt:name(Symbol),
+  Items1 = process_namespaced_key_values(Ns, Items0, []),
+  Map    = 'clojerl.Map':with_meta( 'clojerl.Map':?CONSTRUCTOR(Items1, true)
+                                  , file_location_meta(State3)
+                                  ),
+
+  push_form(Map, State3).
+
+-spec validate_namespaced_name('clojerl.Symbol':type(), state()) -> ok.
+validate_namespaced_name(Symbol, State) ->
+  ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
+               orelse clj_rt:namespace(Symbol) =/= ?NIL
+             , [ <<"Namespaced map must specify a valid namespace: ">>
+               , Symbol
+               ]
+             , location(State)
+             ).
+
+-spec namespaced_key(binary(), 'clojerl.Keyword':type()) ->
+  'clojerl.Keyword':type().
+namespaced_key(Ns, Key) ->
+  KeyNs = clj_rt:namespace(Key),
+  case clj_rt:'keyword?'(Key) of
+    true ->
+      case KeyNs of
+        ?NIL    -> clj_rt:keyword(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:keyword(clj_rt:name(Key));
+        _       -> Key
+      end;
+    false ->
+      case KeyNs of
+        ?NIL    -> clj_rt:symbol(Ns, clj_rt:name(Key));
+        <<"_">> -> clj_rt:symbol(clj_rt:name(Key));
+        _       -> Key
+      end
+  end.
+
+-spec process_namespaced_key_values(binary(), [any()], [any()]) -> [any()].
+process_namespaced_key_values(_Ns, [], Acc) ->
+  Acc;
+process_namespaced_key_values(Ns, [K0, V | KVs], Acc) ->
+  K1 = case clj_rt:'keyword?'(K0) orelse clj_rt:'symbol?'(K0) of
+         true  -> namespaced_key(Ns, K0);
+         false -> K0
+       end,
+  process_namespaced_key_values(Ns, KVs, [K1, V | Acc]).
 
 %%------------------------------------------------------------------------------
 %% # reader tag
