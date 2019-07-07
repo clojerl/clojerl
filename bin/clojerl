@@ -2,18 +2,18 @@
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
   echo "Usage: `basename $0` [compile-opt*] [init-opt*] [main-opt] [arg*]
 
-  -h, --help            Print this help message and exit
-  -v                    Prints version and exits
-  -c, --compile         Compile files
+  -h, --help           Print this help message and exit
+  -v                   Prints version and exits
+  -c, --compile        Compile files
 
   compile-opt:
-   -pa PATH              Adds PATH to the beginning of the code path
-   -pz PATH              Adds PATH to the end of the code path
-   -o PATH               Specify output directory for compiled files
-   -t, --time            Print the time spent on compiling
-   -vv, --verbose        Verbose compiling
-   --to-core FILE        Output the Core Erlang representation to FILE
-   FILES                 List of .clje files
+   -pa PATH            Adds PATH to the beginning of the code path
+   -pz PATH            Adds PATH to the end of the code path
+   -o PATH             Specify output directory for compiled files
+   -t, --time          Print the time spent on compiling
+   -vv, --verbose      Verbose compiling
+   --to-core FILE      Output the Core Erlang representation to FILE
+   FILES               List of .clje files
 
   init-opt:
    -i, --init path     Load a file or resource
