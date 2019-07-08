@@ -5,28 +5,30 @@
 (def inc (fn* [x] (erlang/+ x 1)))
 (def dec (fn* [x] (erlang/- x 1)))
 
-(def loop
+(def loop-fn
   (fn* [state]
     (receive*
-     x {:when (erlang/=:= x :inc)}
-     (loop (inc state))
+     :inc
+     (loop-fn (inc state))
 
-     x {:when (erlang/=:= x :dec)}
-     (loop (dec state))
+     :dec
+     (loop-fn (dec state))
 
-     x {:when (erlang/=:= x :print)}
+     :print
      (do
        (prn state)
-       (loop state))
+       (loop-fn state))
+
+     #erl[:get pid]
+     (do
+       (erlang/send pid #erl[:acc state])
+       (loop-fn state))
 
      _
-     (loop state))))
+     (loop-fn state))))
 
-(def spawn
-  (fn* [f & args]
-       (erlang/spawn :clj_rt :apply #erl(f args))))
-
-(let* [x (spawn loop 42)]
+(let* [x (erlang/spawn (fn* [] (loop-fn 42)))
+       self (erlang/self)]
   (erlang/send x :inc)
   (erlang/send x :inc)
   (erlang/send x :inc)
@@ -34,4 +36,6 @@
   (erlang/send x :dec)
   (erlang/send x :dec)
   (erlang/send x :dec)
-  (erlang/send x :print))
+  (erlang/send x :print)
+  (erlang/send x #erl[:get self])
+  (receive* x (prn x)))

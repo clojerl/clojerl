@@ -349,14 +349,12 @@ compile_module(Module, Opts) ->
       error({Errors, Warnings})
   end.
 
--define(CERL_EVAL_MODULE, "cerl_eval").
-
 -spec eval_expressions([cerl:cerl()]) -> [any()].
 eval_expressions(Expressions) ->
   eval_expressions(Expressions, true).
 
 -spec eval_expressions([cerl:cerl()], boolean()) -> [any()].
-eval_expressions(Expressions, true) ->
+eval_expressions(Expressions, true = _ReplaceExprs) ->
   CurrentNs     = 'clojerl.Namespace':current(),
   CurrentNsSym  = 'clojerl.Namespace':name(CurrentNs),
   CurrentNsBin  = 'clojerl.Symbol':str(CurrentNsSym),
@@ -365,48 +363,8 @@ eval_expressions(Expressions, true) ->
                     || Expr <- Expressions
                   ],
   eval_expressions(ReplacedExprs, false);
-eval_expressions(Expressions, false) ->
-  {ModuleName, EvalModule} = eval_module(Expressions),
-  %% io:format("===== Eval Module ====~n~s~n", [core_pp:format(EvalModule)]),
-  Opts = [clint, from_core, return_errors, return_warnings],
-  case compile:noenv_forms(EvalModule, Opts) of
-    {ok, _, Beam, _Warnings} ->
-      code:load_binary(ModuleName, "", Beam),
-      ModuleName:eval();
-    {error, Errors, Warnings} ->
-      error({Errors, Warnings})
-  end.
-
--spec eval_module([cerl:cerl()]) -> {module(), cerl:c_module()}.
-eval_module(Expressions) ->
-  FunName = cerl:c_fname(eval, 0),
-  FunBody = case Expressions of
-                 [] -> cerl:c_nil();
-                 [Expr] -> Expr;
-                 [FirstExpr | RestExpr] -> cerl:c_seq(FirstExpr, RestExpr)
-               end,
-  Fun     = cerl:c_fun([], FunBody),
-
-  ModuleName = eval_module_name(),
-  {InfoExports, InfoFuns} = clj_module:module_info_funs(ModuleName),
-
-  Exports = [FunName | InfoExports],
-  Attrs   = [{cerl:c_atom(clojure), cerl:abstract([true])}],
-  Defs    = [{FunName, Fun} | InfoFuns],
-  Name    = cerl:c_atom(ModuleName),
-  {ModuleName, cerl:c_module(Name, Exports, Attrs, Defs)}.
-
--spec eval_module_name() -> module().
-eval_module_name() ->
-  eval_module_name(0).
-
--spec eval_module_name(non_neg_integer()) -> module().
-eval_module_name(N) ->
-  Name = list_to_atom(?CERL_EVAL_MODULE ++ integer_to_list(N)),
-  case code:is_loaded(Name) of
-    false -> Name;
-    _     -> eval_module_name(N + 1)
-  end.
+eval_expressions(Expressions, false = _ReplaceExprs) ->
+  core_eval:exprs(Expressions).
 
 -spec when_verbose(options(), binary()) -> ok.
 when_verbose(#{verbose := true}, Message) ->
