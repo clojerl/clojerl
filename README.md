@@ -1,6 +1,7 @@
 # clojerl
 
 [![Travis](https://travis-ci.org/clojerl/clojerl.svg?branch=master)](https://travis-ci.org/clojerl/clojerl)
+[![Hex.pm](https://img.shields.io/hexpm/v/clojerl.svg)]()
 
 Clojure implemented on the Erlang VM.
 
@@ -12,6 +13,12 @@ Building `clojerl` requires *Erlang/OTP 18+* and [*rebar3*][rebar3].
     cd clojerl
     make
 
+On Windows:
+
+    git clone https://github.com/clojerl/clojerl
+    cd clojerl
+    rebar3 compile
+
 ## Getting Started
 
 ### Online REPL
@@ -21,7 +28,8 @@ To try it out and get a sense of what you can do, you can visit
 
 ### Local REPL
 
-Running `make repl` will start the REPL and show its prompt:
+Running `make repl` (on Windows `bin/clje.bat`) will start the REPL
+and show its prompt:
 
     Clojure 0.0.0-974.592ad8a
     clje.user=>
@@ -61,14 +69,13 @@ JVM.
 For a very basic example of a web project please check the
 [example-web-app][example-web-app] repository.
 
-The
-
 ### Building Your Own App
 
-The build tool for Clojerl project is currently [`rebar3`][rebar3], which
-is the official supported tool in the Erlang community.
+The build tool for Clojerl is the [`rebar3_clojerl`][rebar3_clojerl]
+plugin. [`rebar3`][rebar3] is the official build tool in the Erlang
+community.
 
-The [`rebar3_clojerl`][rebar3_clojerl] plugin provides helpful commands to:
+The plugin provides helpful commands to:
 
 - Build a basic directory scaffolding for a new project
 - Compile
