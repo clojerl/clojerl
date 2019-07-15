@@ -1,7 +1,7 @@
 # clojerl
 
 [![Travis](https://travis-ci.org/clojerl/clojerl.svg?branch=master)](https://travis-ci.org/clojerl/clojerl)
-[![Hex.pm](https://img.shields.io/hexpm/v/clojerl.svg)]()
+[![Hex.pm](https://img.shields.io/hexpm/v/clojerl.svg)](https://hex.pm/packages/clojerl)
 
 Clojure implemented on the Erlang VM.
 
