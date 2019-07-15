@@ -2,9 +2,7 @@
 
 (def x 1)
 
-(def prn
-  (fn* [x]
-       (io/format "~s~n" #erl((clj_rt/str x)))))
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
 
 (prn (var x))
 

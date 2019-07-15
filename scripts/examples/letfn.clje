@@ -1,16 +1,22 @@
 (ns examples.letfn)
 
-(letfn [(f [x]
-          (when (pos? x)
-            (g (dec x))))
-        (g [x]
-          (when (zero? x)
-            (f (dec x))))]
+(def dec (fn* [x] (erlang/- x 1)))
+(def pos? (fn* [x] (erlang/> x 0)))
+(def zero? (fn* [x] (erlang/== x 0)))
+
+(def assert (fn* [result] (if result nil (erlang/error :failed-assertion))))
+
+(letfn* [f (fn* f [x]
+                (if (pos? x)
+                  (g (dec x))))
+         g (fn* g [x]
+                (if (zero? x)
+                  (f (dec x))))]
   (f 42))
 
-(let []
-  (letfn [(f []
-            (assoc {} :foo :bar)
-            :bar)]
-    (assert (= :bar (f))))
+(let* []
+  (letfn* [f (fn* f []
+                  (clj_rt/assoc {} :foo :bar)
+                  :bar)]
+    (assert (erlang/== :bar (f))))
   nil)

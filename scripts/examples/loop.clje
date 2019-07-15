@@ -1,42 +1,45 @@
 (ns examples.loop)
 
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
+
 ;; Use loop and recur
 
 (loop* [x 1]
        (if (erlang/< x 10)
          (do
-           (clojure.core/prn [:recur x])
+           (prn [:recur x])
            (recur (erlang/+ x 1)))
-         (clojure.core/prn [:end x])))
+         (prn [:end x])))
 
 ;; Nested loops
 
 (loop* [x 1]
        (if (erlang/< x 10)
          (do
-           (clojure.core/prn [:outer-recur x])
+           (prn [:outer-recur x])
            (recur (erlang/+ x 1)))
          (loop* [x :b x :a]
                 (if (clj_rt/equiv x :a)
                   (do
-                    (clojure.core/prn [:inner-recur x])
+                    (prn [:inner-recur x])
                     (recur :b :c))
-                  (clojure.core/prn [:inner-end x])))))
+                  (prn [:inner-end x])))))
 
 (let* [f (fn* [x]
-              (if (clojure.core/< 0 x)
+              (if (erlang/< 0 x)
                 (do
-                  (clojure.core/prn x)
+                  (prn x)
                   (recur (erlang/- x 1)))
                 x))]
-      (clojure.core/prn (f 10)))
+      (prn (f 10)))
 
-(clojure.core/defn f-recur
-  [x]
-  (if (clojure.core/< 0 x)
-    (do
-      (clojure.core/prn [:f-recur x])
-      (recur (erlang/- x 1)))
-    x))
+(def f-recur
+  (fn* f-recur
+    [x]
+    (if (erlang/< 0 x)
+      (do
+        (prn [:f-recur x])
+        (recur (erlang/- x 1)))
+      x)))
 
 (f-recur 5)

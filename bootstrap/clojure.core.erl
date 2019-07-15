@@ -316,7 +316,12 @@ ns__val() ->
 '*data-readers*__val'() ->
   var_value(<<"#'clojure.core/*data-readers*">>, #{}).
 
-'default-data-readers__val'() -> ?NIL.
+'default-data-readers__val'() ->
+  InstSymbol = clj_rt:symbol(<<"inst">>),
+  UUIDSymbol = clj_rt:symbol(<<"uuid">>),
+  #{ InstSymbol => fun(X) -> {inst, X} end
+   , UUIDSymbol => fun(X) -> {uuid, X} end
+   }.
 
 '*default-data-reader-fn*__val'() ->
   var_value(<<"#'clojure.core/*default-data-reader-fn*">>, ?NIL).

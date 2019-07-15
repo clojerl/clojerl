@@ -14,13 +14,13 @@ EXAMPLE   ?= *
 all: compile
 
 compile:
-	${V} ${REBAR3} compile
+	${V} ${REBAR3} clojerl compile
 
 test: clean
 	${V} ${REBAR3} do ct, clojerl test
 
 dialyzer: clean
-	${V} NO_CLJ=true ${REBAR3} dialyzer
+	${V} ${REBAR3} dialyzer
 
 shell:
 	${V} ${REBAR3} as dev shell --sname clojerl-shell --setcookie clojerl
