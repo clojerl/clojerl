@@ -1,22 +1,24 @@
 (ns examples.let)
 
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
+
 ;; Bind an anonymous function and call it
 
 (let* [f (fn* [] :bound-fn*)]
-  (clojure.core/prn (f)))
+  (prn (f)))
 
 ;; Nested lets with shadowed binding names
 
 (let* [x :outer]
-      (clojure.core/prn x) ;; should print :outer
+      (prn x) ;; should print :outer
       (let* [x :inner]
-            (clojure.core/prn x)) ;; should print :inner
-      (clojure.core/prn x) ;; should print :outer
+            (prn x)) ;; should print :inner
+      (prn x) ;; should print :outer
 )
 
 ;; Let with bindings with the same name
 
 (let* [x :first
        x [x :second]]
-      (clojure.core/prn x) ;; should print [:first :second]
+      (prn x) ;; should print [:first :second]
 )

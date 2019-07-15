@@ -1,5 +1,8 @@
 (ns examples.try)
 
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
+(def assert (fn* [result] (if result nil (erlang/error :failed-assertion))))
+
 (try (prn 1))
 
 (try (erlang/+ 1 :a)
@@ -46,7 +49,7 @@
 (try
   (erlang/exit :foo)
   (catch t e
-    (prn t e)))
+    (prn [t e])))
 
 ;; Use type name for error type
 
@@ -58,7 +61,7 @@
     (prn e)))
 
 (try
-  (throw (ex-info "hello" {:some :info}))
+  (throw (clojerl.ExceptionInfo. "hello" {:some :info}))
   (catch clojerl.ExceptionInfo e
     (prn e))
   (catch :error e
@@ -67,9 +70,9 @@
 ;; Provide stacktrace
 
 (try
-  (throw (ex-info "hello" {:some :info}) #erl())
+  (throw (clojerl.ExceptionInfo. "hello" {:some :info}) #erl())
   (catch clojerl.ExceptionInfo e :stack st
-    (assert (= #erl() st))
+    (assert (erlang/== #erl() st))
     (prn e))
   (catch :error e
     (throw :bad-stuff)))

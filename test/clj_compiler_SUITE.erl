@@ -16,6 +16,17 @@
         , def_var_compiled_ns/1
         ]).
 
+-define( EXCLUDE_FILES
+       , [ <<"scripts/examples/error.clje">>
+         , <<"scripts/examples/deftype.clje">>
+         , <<"scripts/examples/lazy_seq.clje">>
+         , <<"scripts/examples/ns.clje">>
+         , <<"scripts/examples/protocols.clje">>
+         , <<"scripts/examples/some_ns/two.clje">>
+         , <<"scripts/examples/some_ns/three.clje">>
+         ]
+       ).
+
 -spec all() -> [atom()].
 all() -> clj_test_utils:all(?MODULE).
 
@@ -87,11 +98,11 @@ compile_file(_Config) ->
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
-  ct:comment("Compile all scripts/clj/examples/*.clj files succesfully"),
+  ct:comment("Compile all scripts/examples/*.clje files succesfully"),
   Wildcard2 = clj_test_utils:relative_path(<<"scripts/examples/**/*.clje">>),
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
-  ErrorPath = clj_test_utils:relative_path(<<"scripts/examples/error.clje">>),
-  FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- [ErrorPath],
+  Exclude   = [clj_test_utils:relative_path(Path) || Path <- ?EXCLUDE_FILES],
+  FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- Exclude,
   [clj_compiler:compile_file(F, Opts) || F <- FilesBin2],
 
   {comments, ""}.
@@ -124,8 +135,8 @@ eval(_Config) ->
 -spec def_var_compiled_ns(config()) -> result().
 def_var_compiled_ns(_Config) ->
   ct:comment("Defining new var in compiled namespace is persisted"),
-  _  = clj_compiler:compile(<<"(ns examples.simple) (def foo 2)">>),
-  _  = clj_compiler:compile(<<"(ns examples.simple) (def x 1)">>),
+  _ = clj_compiler:compile(<<"(ns examples.simple) (def foo 2)">>),
+  _ = clj_compiler:compile(<<"(ns examples.simple) (def x 1)">>),
   check_var_value(<<"examples.simple">>, <<"foo">>, 2),
 
   {comments, ""}.

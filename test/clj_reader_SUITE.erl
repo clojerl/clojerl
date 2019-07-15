@@ -1202,12 +1202,11 @@ tagged(Config) when is_list(Config) ->
   tagged(fun read/1),
   tagged(fun read_io/1);
 tagged(ReadFun) ->
-  Date2016 = 'erlang.util.Date':?CONSTRUCTOR({{2016, 1, 1}, {0, 0, 0}}),
-  UUIDBin  = <<"de305d54-75b4-431b-adb2-eb6b9e546014">>,
-  UUID     = 'erlang.util.UUID':?CONSTRUCTOR(UUIDBin),
-  ct:comment("Use default readers"),
-  Date2016 = ReadFun(<<"#inst \"2016\"">>),
-  UUID     = ReadFun(<<"#uuid \"", UUIDBin/binary, "\"">>),
+  UUIDBin = <<"de305d54-75b4-431b-adb2-eb6b9e546014">>,
+
+  ct:comment("Use bootstraped default readers implementation"),
+  {inst, <<"2016">>} = ReadFun(<<"#inst \"2016\"">>),
+  {uuid, UUIDBin} = ReadFun(<<"#uuid \"", UUIDBin/binary, "\"">>),
 
   ct:comment("Use *default-data-reader-fn*"),
   DefaultReaderFunVar =
@@ -1224,10 +1223,8 @@ tagged(ReadFun) ->
   DataReadersVar = 'clojerl.Var':?CONSTRUCTOR( <<"clojure.core">>
                                              , <<"*data-readers*">>
                                              ),
-  DataReaders    = clj_rt:hash_map([ clj_rt:symbol(<<"bla">>)
-                                     , fun(_) -> bla end
-                                     ]
-                                    ),
+  BlaSymbol   = clj_rt:symbol(<<"bla">>),
+  DataReaders = #{BlaSymbol => fun(_) -> bla end},
 
   ok  = 'clojerl.Var':push_bindings(#{DataReadersVar => DataReaders}),
   bla = ReadFun(<<"#bla 1">>),

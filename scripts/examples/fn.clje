@@ -2,31 +2,35 @@
 
 (def one 1)
 
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
+
 ;; Resolve var in another ns
-(clojure.core/prn {:a 2, #{1 2 3} one})
+(prn {:a 2, #{1 2 3} one})
 
 ;; Provide the value of an fn-var as an argument
 
-(clojure.core/prn clojure.core/prn)
+(prn prn)
 
 ;; Use if
 
-(clojure.core/prn (if :test
-                    (do
-                      (clojure.core/prn ::then)
-                      :then)
-                    :else))
+(prn (if :test
+       (do
+         (prn ::then)
+         :then)
+       :else))
 
 ;; Assert uses throw
 
-(clojure.core/assert (clojure.core/= (clojure.core/str one) "1"))
+(def assert (fn* [result] (if result nil (erlang/error :failed-assertion))))
+
+(assert (erlang/== (clj_rt/str one) "1"))
 
 (def fixed-arity
   (fn* [x y] (clj_rt/str [x y])))
 
 ;; Call a fn with single fixed arity
 
-(clojure.core/prn (fixed-arity ::fixed ::arity))
+(prn (fixed-arity ::fixed ::arity))
 
 (def multiple-fixed-arities
   (fn*
@@ -36,9 +40,9 @@
 
 ;; Call a fn with multiple fixed arities
 
-(clojure.core/prn (multiple-fixed-arities :mult-fixed))
-(clojure.core/prn (multiple-fixed-arities :a :b))
-(clojure.core/prn (multiple-fixed-arities 1 2 3))
+(prn (multiple-fixed-arities :mult-fixed))
+(prn (multiple-fixed-arities :a :b))
+(prn (multiple-fixed-arities 1 2 3))
 
 (def variadic-arity
   (fn* [& xs] (clj_rt/str [:variadic-arity xs])))
@@ -48,13 +52,13 @@
 
 ;; Call a fn with a single variadic argument
 
-(clojure.core/prn (variadic-arity 1 2 4))
-(clojure.core/prn (variadic-arity 1 2 3))
-(clojure.core/prn (variadic-arity 1 2 3 4))
-(clojure.core/prn (variadic-arity))
+(prn (variadic-arity 1 2 4))
+(prn (variadic-arity 1 2 3))
+(prn (variadic-arity 1 2 3 4))
+(prn (variadic-arity))
 
-(clojure.core/prn (variadic-arity-2 1))
-(clojure.core/prn (variadic-arity-2 1 2 3))
+(prn (variadic-arity-2 1))
+(prn (variadic-arity-2 1 2 3))
 
 (def multiple-variadic
   (fn*
@@ -65,33 +69,33 @@
 
 ;; Call a  variadic fn that also has fixed arities
 
-(clojure.core/prn (multiple-variadic 1))
-(clojure.core/prn (multiple-variadic 1 2))
-(clojure.core/prn (multiple-variadic 1 2 3))
-(clojure.core/prn (multiple-variadic 1 2 3 4))
-(clojure.core/prn (multiple-variadic 1 2 3 4 5 6 7 8 9 :a :b :c))
+(prn (multiple-variadic 1))
+(prn (multiple-variadic 1 2))
+(prn (multiple-variadic 1 2 3))
+(prn (multiple-variadic 1 2 3 4))
+(prn (multiple-variadic 1 2 3 4 5 6 7 8 9 :a :b :c))
 
 ;; Call an anonymous fn with a single fixed arity
 
-(clojure.core/prn ((fn* [x] x) :anon-fn-fixed))
+(prn ((fn* [x] x) :anon-fn-fixed))
 
 ;; Call an anonymous fn with multiple fixed arities
 
-(clojure.core/prn ((fn* ([] :anon-fn-mult-0)
+(prn ((fn* ([] :anon-fn-mult-0)
                         ([_x] :anon-fn-mult-1))))
-(clojure.core/prn ((fn* ([] :anon-fn-mult-0)
+(prn ((fn* ([] :anon-fn-mult-0)
                         ([_x] :anon-fn-mult-1))
                    :arg))
 
 ;; Call an anonymous fn with a single variadic arity
 
-(clojure.core/prn ((fn* [& xs] [:anon-variadic xs]) 1 2 3))
+(prn ((fn* [& xs] [:anon-variadic xs]) 1 2 3))
 
-(clojure.core/prn ((fn*
+(prn ((fn*
                     ([] :anon-variadic-arity-0)
                     ([& xs] xs))))
 
-(clojure.core/prn ((fn*
+(prn ((fn*
                     ([] :anon-variadic-arity-0)
                     ([& xs] [:anon-variadic-arity xs])) 1))
 
@@ -102,107 +106,111 @@
 ;; Provide an anonymous fn as an argument to be used as a function
 
 (apply-f (fn* [x]
-              (clojure.core/prn [:apply-f-anon-fixed x]))
+              (prn [:apply-f-anon-fixed x]))
          :apply!!!)
 
-(clojure.core/apply (fn* [x]
-                         (clojure.core/prn [:apply-anon-fixed x]))
+(def apply (fn*
+            ([f args] (clojerl.IFn/apply f args))
+            ([f x args] (clojerl.IFn/apply f (clj_rt/cons x args)))))
+
+(apply (fn* [x]
+                         (prn [:apply-anon-fixed x]))
                     [:apply!!!])
 
-(clojure.core/apply (fn*
-                     ([x] (clojure.core/prn [:apply-anon-variadic-1 x]))
-                     ([x y] (clojure.core/prn [:apply-anon-variadic-2 x y]))
-                     ([x y & z] (clojure.core/prn [:apply-anon-variadic-n x y z])))
+(apply (fn*
+                     ([x] (prn [:apply-anon-variadic-1 x]))
+                     ([x y] (prn [:apply-anon-variadic-2 x y]))
+                     ([x y & z] (prn [:apply-anon-variadic-n x y z])))
                     [1])
 
-(clojure.core/apply (fn*
-                     ([x] (clojure.core/prn [:apply-anon-variadic-1 x]))
-                     ([x y] (clojure.core/prn [:apply-anon-variadic-2 x y]))
-                     ([x y & z] (clojure.core/prn [:apply-anon-variadic-n x y z])))
+(apply (fn*
+                     ([x] (prn [:apply-anon-variadic-1 x]))
+                     ([x y] (prn [:apply-anon-variadic-2 x y]))
+                     ([x y & z] (prn [:apply-anon-variadic-n x y z])))
                     [1 2])
 
-(clojure.core/apply (fn*
-                     ([x] (clojure.core/prn [:apply-anon-variadic-1 x]))
-                     ([x y] (clojure.core/prn [:apply-anon-variadic-2 x y]))
-                     ([x y & z] (clojure.core/prn [:apply-anon-variadic-n x y z])))
+(apply (fn*
+                     ([x] (prn [:apply-anon-variadic-1 x]))
+                     ([x y] (prn [:apply-anon-variadic-2 x y]))
+                     ([x y & z] (prn [:apply-anon-variadic-n x y z])))
                     [1 2 3 4 5])
 
 ;; Recursively call anonymous fn
 
-(clojure.core/prn
+(prn
  ((fn* count-10
         ([x]
          (if (erlang/> x 0)
            (do
-             (clojure.core/prn [:anon-recur x])
+             (prn [:anon-recur x])
              (count-10 (erlang/- x 1)))
-           (clojure.core/prn [:anon-recur :done]))))
+           (prn [:anon-recur :done]))))
   10
   ))
 
 ;; Recursively call variadic anonymous fn
 
-(clojure.core/prn
+(prn
  ((fn* count-10-variadic
         ([x & xs]
          (if (erlang/> x 0)
            (do
-             (clojure.core/prn [:variadic-anon-recur x xs])
+             (prn [:variadic-anon-recur x xs])
              (count-10-variadic (erlang/- x 1) x xs))
-           (clojure.core/prn [:variadic-anon-recur :done]))))
+           (prn [:variadic-anon-recur :done]))))
   10
   ))
 
 ;; Provide an erlang function as an argument to be used as a function
 
 (apply-f io/format.1 "io:format/1 FTW!!!~n")
-(clojure.core/apply io/format.2
+(apply io/format.2
                     "io:format/2 FTW!!!: ~s~n"
                     [#erl("lala")])
 ;; (apply-f io/format.2 "io:format/1 FTW!!!~n") ;; This should fail
 
 ;; Provide a fn var as an argument to be used as a function
 
-(apply-f clojure.core/prn :apply!!!)
+(apply-f prn :apply!!!)
 
 ;; Provide a fn variadic var as an argument to be used as a function
 
-(clojure.core/prn (apply-f variadic-arity :apply-f-variadic))
+(prn (apply-f variadic-arity :apply-f-variadic))
 
-(clojure.core/prn (clojure.core/apply variadic-arity []))
+(prn (apply variadic-arity []))
 
-(clojure.core/prn
- (clojure.core/apply variadic-arity
+(prn
+ (apply variadic-arity
                      [:apply-variadic 1 2 3]))
 
-(clojure.core/prn
- (clojure.core/apply variadic-arity-2
+(prn
+ (apply variadic-arity-2
                      [:apply-variadic-2 1 2 3]))
 
-(clojure.core/prn
- (clojure.core/apply variadic-arity-2
+(prn
+ (apply variadic-arity-2
                      [:apply-variadic-2]))
 
-(clojure.core/prn
- (clojure.core/apply multiple-variadic
+(prn
+ (apply multiple-variadic
                      [:apply-multi-variadic 1]))
-(clojure.core/prn
- (clojure.core/apply multiple-variadic
+(prn
+ (apply multiple-variadic
                      [:apply-multi-variadic 1 2]))
-(clojure.core/prn
- (clojure.core/apply multiple-variadic
+(prn
+ (apply multiple-variadic
                      [:apply-multi-variadic 1 2 3]))
-(clojure.core/prn
- (clojure.core/apply multiple-variadic
+(prn
+ (apply multiple-variadic
                      [:apply-multi-variadic 1 2 3 4 5 6]))
 
 ;; Keywords as a function for maps
 
-(clojure.core/prn (:a {:a 1}))
-(clojure.core/prn (:a {:b 2} :not-found-a))
-(clojure.core/prn (clojure.core/apply :b [{:b 2}]))
-(clojure.core/prn (clojure.core/apply :b {:c 3} [:not-found-b]))
-;; (clojure.core/prn (:a)) ;; This should fail
+(prn (:a {:a 1}))
+(prn (:a {:b 2} :not-found-a))
+(prn (apply :b [{:b 2}]))
+(prn (apply :b {:c 3} [:not-found-b]))
+;; (prn (:a)) ;; This should fail
 
 ;; Define and call a recursive fn var
 
@@ -210,9 +218,9 @@
   (fn* [x]
        (if (erlang/> x 0)
          (do
-           (clojure.core/prn [:recursive-fn x])
+           (prn [:recursive-fn x])
            (recursive (erlang/- x 1)))
-         (clojure.core/prn [:recursive-fn :done]))))
+         (prn [:recursive-fn :done]))))
 
 (recursive 15)
 
@@ -220,9 +228,9 @@
   (fn* y [x & xs]
        (if (erlang/> x 0)
          (do
-           (clojure.core/prn [:variadic-recursive-fn x xs])
+           (prn [:variadic-recursive-fn x xs])
            (variadic-recursive (erlang/- x 1) x xs))
-         (clojure.core/prn [:variadic-recursive-fn :done xs]))))
+         (prn [:variadic-recursive-fn :done xs]))))
 
 (variadic-recursive 15)
 
@@ -233,9 +241,9 @@
        ([x & xs]
         (if (erlang/> x 0)
           (do
-            (clojure.core/prn [:same-name-fn x xs])
+            (prn [:same-name-fn x xs])
             (same-name-fn (erlang/- x 1) x xs))
-          (clojure.core/prn [:same-name-fn :done xs])))))
+          (prn [:same-name-fn :done xs])))))
 
 (same-name-fn 3)
 
@@ -244,40 +252,48 @@
 (def dec-fn
   (fn* [] (fn* [x] (erlang/- x 1))))
 
-(clojure.core/prn ((dec-fn) 10))
+(prn ((dec-fn) 10))
 
 
 ;; Use a recursive fn* inside a var fn
 
-(clojure.core/defn recur-fn []
-  (clojure.core/let [f (fn* [x]
-            (if (erlang/< 0 x)
-              (recur (erlang/- x 1))
-              x))]
-    (f 5)))
+(def recur-fn
+  (fn* recur-fn []
+    (let* [f (fn* [x]
+               (if (erlang/< 0 x)
+                 (recur (erlang/- x 1))
+                 x))]
+      (f 5))))
 
-(clojure.core/prn (recur-fn))
+(prn (recur-fn))
 
 (def ^{:macro true} should-throw
   (fn* [_&form _&env & body]
-       `(try
-          (eval '~(cons 'do body))
-          (throw :error)
-          (catch ~'_ e#
-            (when (= e# :error)
-              (throw "Error not generated"))))))
+    (let* [tail '((throw :error)
+                 (catch t e
+                   (if (erlang/== e :error)
+                     (throw "Error not generated"))))
+           body (clj_rt/cons 'do body)
+           eval-form (clj_rt/cons 'clj_compiler/eval
+                                  #erl((clj_rt/cons 'quote #erl(body))))]
+      (clj_rt/cons
+       'try
+       (clj_rt/cons eval-form tail)))))
+
+(def neg? (fn* [x] (erlang/< x 0)))
+(def dec (fn* [x] (erlang/- x 1)))
 
 ;; [#453] Check that not all fn forms are bound to the var
 
 (def recur-in-let
-  (let [y (fn* [x]
+  (let* [y (fn* [x]
             (if (neg? x) :fin (recur (dec x))))]
     (y 10)))
 
 ;; [#453] `for` generates an internal loop, the def fails without the fix
 
-(def def-using-for
-  (into {} (for [x (range 10)] [x (inc x)])))
+;; (def def-using-for
+;;   (into {} (for [x (range 10)] [x (inc x)])))
 
 ;; [#453] fn inside a vector
 
@@ -337,4 +353,4 @@
 ;; [#490] `args` shouldn't get a new binding inside fn
 
 (let* [args :foo]
-  ((fn [y] (clojure.core/assert (erlang/=:= args :foo))) 1))
+  ((fn* [y] (assert (erlang/=:= args :foo))) 1))

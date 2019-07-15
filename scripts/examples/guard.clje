@@ -2,11 +2,11 @@
 
 (def
   ^{:macro true}
-  and (fn* [_&form _&env x y] `(if ~x ~y false)))
+  and (fn* [_&form _&env x y] #erl('if x y false)))
 
 (def
   ^{:macro true}
-  or (fn* [_&form _&env x y] `(if ~x true ~y)))
+  or (fn* [_&form _&env x y] #erl('if x true y)))
 
 (def assert (fn* [bool] (if bool :ok (throw "Assertion failed"))))
 

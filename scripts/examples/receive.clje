@@ -1,16 +1,23 @@
 (ns examples.receive)
 
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
+
+(def inc (fn* [x] (erlang/+ x 1)))
+(def dec (fn* [x] (erlang/- x 1)))
+
 (def loop
   (fn* [state]
     (receive*
      x {:when (erlang/=:= x :inc)}
-     (-> state inc loop)
+     (loop (inc state))
 
      x {:when (erlang/=:= x :dec)}
-     (-> state dec loop)
+     (loop (dec state))
 
      x {:when (erlang/=:= x :print)}
-     (loop (doto state prn))
+     (do
+       (prn state)
+       (loop state))
 
      _
      (loop state))))
@@ -19,7 +26,7 @@
   (fn* [f & args]
        (erlang/spawn :clj_rt :apply #erl(f args))))
 
-(let [x (spawn loop 42)]
+(let* [x (spawn loop 42)]
   (erlang/send x :inc)
   (erlang/send x :inc)
   (erlang/send x :inc)

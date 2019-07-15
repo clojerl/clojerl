@@ -1,5 +1,7 @@
 (ns examples.meta)
 
+(def prn (fn* [x] (io/format "~s~n" #erl((clj_rt/str x)))))
+
 (def x ^{:hello "world"} [])
 
-(prn (meta x))
+(prn (clj_rt/meta x))
