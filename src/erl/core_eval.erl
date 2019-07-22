@@ -1,3 +1,6 @@
+%% Parts of this module are heavily inspired in erl_eval.erl
+%% and some helper functions (e.g. for binary matching and eval'ing)
+%% are copied directly from there.
 -module(core_eval).
 
 -export([exprs/1]).
