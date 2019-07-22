@@ -161,11 +161,11 @@ expr(X, _Bindings) ->
 
 -spec merge_bindings(bindings(), bindings()) -> bindings().
 merge_bindings(Bindings1, Bindings2) ->
-  Fold = fun({K, V}, Acc) ->
-             case binding(Acc, Bindings2) of
-               {ok, V} -> Acc;
-               {ok, Current} -> raise({badmatch, Current});
-               unbound -> maps:put(K, V, Acc)
+  Fold = fun({K, {value, V}}, Acc) ->
+             case binding(K, Bindings2) of
+               {value, V} -> Acc;
+               {value, Current} -> raise({badmatch, Current});
+               unbound -> add_binding(K, V, Acc)
              end
          end,
   lists:foldl(Fold, Bindings2, maps:to_list(Bindings1)).
@@ -331,9 +331,7 @@ match_map_literal(#{} = Map, MapPattern, Bindings) ->
             end
         end,
   maps:map(Fun, MapPattern),
-  {match, Bindings};
-match_map_literal(_, _, _) ->
-  throw(nomatch).
+  {match, Bindings}.
 
 -spec match(value(), cerl:cerl(), bindings()) -> {match, bindings()} | nomatch.
 match(Value, Pattern, Bindings) ->
@@ -396,7 +394,7 @@ match_bitstrings(Value, Segments, Bindings0) ->
   {match, Bindings1}.
 
 -spec match_binary_segment(value(), cerl:cerl(), bindings()) ->
-  {match, bindings()} | nomatch.
+  {bindings(), value()}.
 match_binary_segment( Value
                     , #c_bitstr{ val   = ValExpr
                                , size  = SizeExpr
@@ -482,7 +480,7 @@ guard(Guard, Bindings) ->
 %% List of expression
 %% -----------------------------------------------------------------------------
 
--spec expr_list([cerl:cerl()], bindings()) -> {[term()], bindings()}.
+-spec expr_list([cerl:cerl()], bindings()) -> [value()].
 expr_list(Exprs, Bindings) ->
   Fun = fun(Expr, Values) ->
             Value = expr(Expr, Bindings),
@@ -770,14 +768,13 @@ raise(Error) ->
 raise(Error, Expr) ->
   raise(error, Error, Expr).
 
--spec raise(atom(), cerl:cerl(), term()) -> no_return().
+-spec raise(atom(), term(), cerl:cerl()) -> no_return().
 raise(Type, Error, Expr) ->
   Ann = cerl:get_ann(Expr),
-  Stacktrace = add_location(location(Ann), ?STACKTRACE),
+  Stacktrace = [location(Ann)| ?STACKTRACE],
   erlang:raise(Type, Error, Stacktrace).
 
--spec location(list()) ->
-  ?NIL | {location, integer()} | {location, integer(), string()}.
+-spec location(list()) -> tuple().
 location(Ann) ->
   Line = line(Ann),
   File = file(Ann),
@@ -796,9 +793,3 @@ file([{file, File} | _Rest]) ->
   File;
 file([_ | Rest]) ->
   file(Rest).
-
--spec add_location(?NIL | tuple(), list()) -> list().
-add_location(?NIL, Stacktrace) ->
-  Stacktrace;
-add_location(Location, Stacktrace) ->
-  [Location | Stacktrace].
