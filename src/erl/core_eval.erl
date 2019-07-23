@@ -3,9 +3,7 @@
 %% are copied directly from there.
 -module(core_eval).
 
--export([exprs/1]).
-
--export([core_print/1]).
+-export([exprs/1, expr/1, expr/2]).
 
 -include("clojerl.hrl").
 -include_lib("compiler/src/core_parse.hrl").
@@ -15,9 +13,6 @@
 
 -define(STACKTRACE,
         element(2, erlang:process_info(self(), current_stacktrace))).
-
-core_print(Expr) ->
-  io:format("~s~n", [core_pp:format(Expr)]).
 
 -spec exprs([cerl:cerl()]) -> value().
 exprs([]) ->
@@ -47,7 +42,7 @@ expr(#c_apply{op = Op, args = Args}, Bindings) ->
   apply(Operator, Arguments);
 %% Binary ----------------------------------------------------------------------
 expr(#c_binary{segments = Segments}, Bindings) ->
-  iolist_to_binary(expr_list(Segments, Bindings));
+  list_to_bitstring(expr_list(Segments, Bindings));
 %% Bitstring -------------------------------------------------------------------
 expr(#c_bitstr{ val   = Val
               , size  = Size
