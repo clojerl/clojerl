@@ -76,6 +76,7 @@ read_fold(Fun, Src, Opts0, Time, Env) ->
               true  -> fun time_read_one_fold/1;
               false -> fun read_one_fold/1
             end,
+  ok = clj_rt:reset_id(),
   read_fold_loop(Fun, ReadFun, State).
 
 -spec time_read_one_fold(state()) -> state().
@@ -146,6 +147,7 @@ read(Src) ->
 %%      or throws if there is no form to read.
 -spec read(binary(), opts()) -> any().
 read(Src, Opts) ->
+  ok = clj_rt:reset_id(),
   State = new_state(Src, clj_env:default(), Opts),
   try
     ensure_read(State)

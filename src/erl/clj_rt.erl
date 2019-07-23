@@ -36,7 +36,7 @@
         , keys/1, vals/1
         , 'even?'/1
         , apply/2
-        , next_id/0
+        , reset_id/0, next_id/0
         , gensym/0, gensym/1
         , compare_fun/2
         , shuffle/1
@@ -688,13 +688,19 @@ vals(X) ->
 apply(Fn, Args) ->
   'clojerl.IFn':apply(Fn, Args).
 
+-define(GENSYM_COUNT, '$__gensym_count__$').
+
+-spec reset_id() -> ok.
+reset_id() ->
+  erlang:erase(?GENSYM_COUNT), ok.
+
 -spec next_id() -> integer().
 next_id() ->
-  N = case erlang:get(gensym_count) of
+  N = case erlang:get(?GENSYM_COUNT) of
         undefined -> 0;
         X -> X
       end,
-  erlang:put(gensym_count, N + 1),
+  erlang:put(?GENSYM_COUNT, N + 1),
   N.
 
 -spec gensym() -> 'clojer.Symbol':type().
