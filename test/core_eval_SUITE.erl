@@ -63,9 +63,9 @@ alias(_Config) ->
                        end,
 
   ct:comment("Alias as an expression"),
-  {invalid_expr, c_alias} = try core_eval:expr(Alias)
-                            catch _:InvalidExpr -> InvalidExpr
-                            end,
+  {illegal_expr, _} = try core_eval:expr(Alias)
+                      catch _:InvalidExpr -> InvalidExpr
+                      end,
 
   {comments, ""}.
 
@@ -148,7 +148,7 @@ letrec(_Config) ->
   ct:comment("Simple letrec"),
   X      = cerl:c_var(x),
   Fun    = cerl:c_fun([X], X),
-  F      = cerl:c_var({f, 0}),
+  F      = cerl:c_var({f, 1}),
   Body   = cerl:c_apply(F, [cerl:abstract(foo)]),
   Letrec = cerl:c_letrec([{F, Fun}], Body),
   foo    = core_eval:expr(Letrec),
@@ -169,7 +169,8 @@ map(_Config) ->
   X     = cerl:c_var(x),
   Pair  = cerl:c_map_pair(X, cerl:abstract(1)),
   Map   = cerl:c_map([Pair]),
-  Value = core_eval:expr(Map, #{x => {value, one}}),
+  Let   = cerl:c_let([X], cerl:abstract(one), Map),
+  Value = core_eval:expr(Let),
   Value = #{one => 1},
 
   {comments, ""}.
@@ -245,39 +246,40 @@ seq(_Config) ->
   Try2 = cerl:c_try(Val, [X], Body, [A, B, C], B),
   foo  = core_eval:expr(Try2),
 
-  ct:comment("No match"),
-  Try3    = cerl:c_try(Val, [cerl:abstract(2)], Val, [A, B, C], B),
-  nomatch = try core_eval:expr(Try3)
-            catch _:nomatch -> error
-            end,
-
   {comments, ""}.
 
 tuple(_Config) ->
   ct:comment("Simple tuple"),
-
+  X         = cerl:c_var(x),
   Tuple     = cerl:c_tuple([ cerl:abstract(1)
                            , cerl:abstract(2)
                            , cerl:c_var(x)
                            ]),
-  {1, 2, 3} = core_eval:expr(Tuple, #{x => {value, 3}}),
+  Let       = cerl:c_let([X], cerl:abstract(3), Tuple),
+  {1, 2, 3} = core_eval:expr(Let),
 
   {comments, ""}.
 
 values(_Config) ->
+  A      = cerl:c_var(a),
+  B      = cerl:c_var(b),
+  C      = cerl:c_var(c),
+
   Foo    = cerl:abstract(foo),
   Values = cerl:c_values([Foo, Foo, Foo]),
-  [foo, foo, foo] = try core_eval:expr(Values)
-                    catch throw:{values, V} -> V
-                    end,
+
+  Tuple  = cerl:c_tuple([A, B, C]),
+
+  Let    = cerl:c_let([A, B, C], Values, Tuple),
+  {foo, foo, foo} = core_eval:expr(Let),
 
   {comments, ""}.
 
 var(_Config) ->
   X     = cerl:c_var(x),
-  error = try core_eval:expr(X)
-          catch error:{unbound, x} -> error
-          end,
+  {unbound_var, x, _} = try core_eval:expr(X)
+                        catch error:Error -> Error
+                        end,
 
   {comments, ""}.
 
@@ -289,18 +291,18 @@ invalid_exprs(_Config) ->
                             end,
 
   Clause = cerl:c_clause([Foo], Foo),
-  {invalid_expr, c_clause} = try core_eval:expr(Clause)
-                             catch _:Error2 -> Error2
-                             end,
+  {illegal_expr, _} = try core_eval:expr(Clause)
+                      catch _:Error2 -> Error2
+                      end,
 
   Module = cerl:c_module(Foo, [], []),
   {invalid_expr, c_module} = try core_eval:expr(Module)
                              catch _:Error3 -> Error3
                              end,
 
-  {invalid_expr, foo} = try core_eval:expr(foo)
-                        catch _:Error4 -> Error4
-                        end,
+  {illegal_expr, _} = try core_eval:expr(foo)
+                      catch _:Error4 -> Error4
+                      end,
 
   {comments, ""}.
 

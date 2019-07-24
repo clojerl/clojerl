@@ -14,6 +14,15 @@
 -define(STACKTRACE,
         element(2, erlang:process_info(self(), current_stacktrace))).
 
+-spec expr(cerl:cerl()) -> value().
+expr(Expr) ->
+  expr(Expr, #{}).
+
+-spec expr(cerl:cerl(), bindings()) -> value().
+expr(Expr, Bindings) ->
+  lint(Expr),
+  expr_(Expr, Bindings).
+
 -spec exprs([cerl:cerl()]) -> value().
 exprs([]) ->
   erlang:error(no_expressions);
@@ -27,24 +36,43 @@ exprs([Expr | Exprs]) ->
 %% Internal functions
 %% -----------------------------------------------------------------------------
 
--spec expr(cerl:cerl()) -> value().
-expr(Expr) ->
-  expr(Expr, #{}).
+-spec lint(cerl:cerl()) -> ok | no_return().
+lint(#c_module{} = Module) ->
+  case core_lint:module(Module) of
+    {ok, _} -> ok;
+    {error, [{_, Errors}], _Warnings} ->
+      raise(process_lint_errors(Errors))
+  end;
+lint(Expr) ->
+  Name    = cerl:abstract(m),
+  FName   = cerl:c_var({f, 0}),
+  Exports = [FName],
+  Fun     = cerl:c_fun([], Expr),
+  Defs    = [{FName, Fun}],
+  Module  = cerl:c_module(Name, Exports, Defs),
+  lint(Module).
 
--spec expr(cerl:cerl(), bindings()) -> value().
+-spec process_lint_errors([term()]) -> term().
+process_lint_errors(Errors0) ->
+  Errors1 = [Error || {'none', _, Error} <- Errors0],
+  case Errors1 of
+    [Error] -> Error;
+    _ -> Errors1
+  end.
+
+-spec expr_(cerl:cerl(), bindings()) -> value().
 %% Alias -----------------------------------------------------------------------
-expr(#c_alias{}, _Bindings) ->
-  erlang:error({invalid_expr, c_alias});
+%% Handled by core_lint
 %% Apply -----------------------------------------------------------------------
-expr(#c_apply{op = Op, args = Args}, Bindings) ->
-  Operator  = expr(Op, Bindings),
+expr_(#c_apply{op = Op, args = Args}, Bindings) ->
+  Operator  = expr_(Op, Bindings),
   Arguments = expr_list(Args, Bindings),
   apply(Operator, Arguments);
 %% Binary ----------------------------------------------------------------------
-expr(#c_binary{segments = Segments}, Bindings) ->
+expr_(#c_binary{segments = Segments}, Bindings) ->
   list_to_bitstring(expr_list(Segments, Bindings));
 %% Bitstring -------------------------------------------------------------------
-expr(#c_bitstr{ val   = Val
+expr_(#c_bitstr{ val   = Val
               , size  = Size
               , unit  = Unit
               , type  = Type
@@ -53,105 +81,100 @@ expr(#c_bitstr{ val   = Val
     , Bindings) ->
   expr_bitstr(Val, Size, Unit, Type, Flags, Bindings);
 %% Call ------------------------------------------------------------------------
-expr(#c_call{module = M, name = F, args = Args}, Bindings) ->
+expr_(#c_call{module = M, name = F, args = Args}, Bindings) ->
   Module    = cerl:concrete(M),
   Function  = cerl:concrete(F),
   Arguments = expr_list(Args, Bindings),
   apply(Module, Function, Arguments);
 %% Case ------------------------------------------------------------------------
-expr(#c_case{arg = Arg} = Expr, Bindings) ->
+expr_(#c_case{arg = Arg} = Expr, Bindings) ->
   Args   = check_c_values(Arg),
   Values = expr_list(Args, Bindings),
   case_clauses(Values, Expr, Bindings);
 %% Catch -----------------------------------------------------------------------
-expr(#c_catch{}, _Bindings) ->
+expr_(#c_catch{}, _Bindings) ->
   erlang:error({invalid_expr, c_catch});
 %% Clause ----------------------------------------------------------------------
-expr(#c_clause{}, _Bindings) ->
-  erlang:error({invalid_expr, c_clause});
+%% Handled by core_lint
 %% Cons ------------------------------------------------------------------------
-expr(#c_cons{hd = Head, tl = Tail}, Bindings) ->
-  HeadVal = expr(Head, Bindings),
-  TailVal = expr(Tail, Bindings),
+expr_(#c_cons{hd = Head, tl = Tail}, Bindings) ->
+  HeadVal = expr_(Head, Bindings),
+  TailVal = expr_(Tail, Bindings),
   [HeadVal | TailVal];
 %% Fun -------------------------------------------------------------------------
-expr(#c_fun{vars = Vars, body = Body}, Bindings) ->
+expr_(#c_fun{vars = Vars, body = Body}, Bindings) ->
   Names = [Name || #c_var{name = Name} <- Vars],
   create_fun(Names, Body, Bindings);
 %% Let -------------------------------------------------------------------------
-expr(#c_let{vars = Vars, arg = Arg, body = Body}, Bindings0) ->
+expr_(#c_let{vars = Vars, arg = Arg, body = Body}, Bindings0) ->
   Values    = expr_maybe_c_values(Arg, Bindings0),
   Pairs     = lists:zip(Vars, Values),
   Bindings1 = process_bindings(Pairs, Bindings0),
-  expr(Body, Bindings1);
+  expr_(Body, Bindings1);
 %% Letrec ----------------------------------------------------------------------
-expr(#c_letrec{defs = Defs, body = Body}, Bindings) ->
+expr_(#c_letrec{defs = Defs, body = Body}, Bindings) ->
   Fun = fun() -> letrec(Defs, Body, Bindings) end,
   with_proc_bindings(Fun);
 %% Literal ---------------------------------------------------------------------
-expr(#c_literal{val = Value}, _Bindings) ->
+expr_(#c_literal{val = Value}, _Bindings) ->
   Value;
 %% Map -------------------------------------------------------------------------
-expr(#c_map{is_pat = false, arg = Arg, es = Pairs}, Bindings) ->
-  Value    = expr(Arg, Bindings),
+expr_(#c_map{is_pat = false, arg = Arg, es = Pairs}, Bindings) ->
+  Value    = expr_(Arg, Bindings),
   MapPairs = expr_list(Pairs, Bindings),
   maps:merge(Value, maps:from_list(MapPairs));
 %% Map Pair --------------------------------------------------------------------
-expr(#c_map_pair{key = K, val = V}, Bindings) ->
-  {expr(K, Bindings), expr(V, Bindings)};
+expr_(#c_map_pair{key = K, val = V}, Bindings) ->
+  {expr_(K, Bindings), expr_(V, Bindings)};
 %% Module ----------------------------------------------------------------------
-expr(#c_module{}, _Bindings) ->
+expr_(#c_module{}, _Bindings) ->
   erlang:error({invalid_expr, c_module});
 %% Primitive Operation ---------------------------------------------------------
-expr(#c_primop{name = Name, args = Args} = Expr, Bindings) ->
-  NameValue  = expr(Name, Bindings),
+expr_(#c_primop{name = Name, args = Args} = Expr, Bindings) ->
+  NameValue  = expr_(Name, Bindings),
   ArgsValues = expr_list(Args, Bindings),
   primitive_op(NameValue, ArgsValues, Expr);
 %% Receive ---------------------------------------------------------------------
-expr( #c_receive{clauses = Clauses, timeout = Timeout, action = Action}
+expr_( #c_receive{clauses = Clauses, timeout = Timeout, action = Action}
     , Bindings
     ) ->
   receive_clauses(Clauses, Timeout, Action, Bindings);
 %% Sequence --------------------------------------------------------------------
-expr(#c_seq{arg = Argument, body = Body}, Bindings) ->
-  expr(Argument, Bindings),
-  expr(Body, Bindings);
+expr_(#c_seq{arg = Argument, body = Body}, Bindings) ->
+  expr_(Argument, Bindings),
+  expr_(Body, Bindings);
 %% Try -------------------------------------------------------------------------
-expr( #c_try{ arg = Arg
+expr_( #c_try{ arg = Arg
             , vars = Vars
             , body = Body
             , evars = EVars
             , handler = Handler
-            } = Expr
+            }
     , Bindings0
     ) ->
   try
-    Values = check_c_values(expr(Arg, Bindings0)),
-    case match_list(Values, Vars, Bindings0) of
-      {match, Bindings1} -> expr(Body, Bindings1);
-      nomatch -> raise(nomatch, Expr)
-    end
+    Values = check_c_values(expr_(Arg, Bindings0)),
+    {match, Bindings1} = match_list(Values, Vars, Bindings0),
+    expr_(Body, Bindings1)
   catch Type:Error ->
       EVarsNames = [cerl:var_name(Evar) || Evar <- EVars],
       Bindings2 = add_bindings(EVarsNames, [Type, Error, ?NIL], Bindings0),
-      expr(Handler, Bindings2)
+      expr_(Handler, Bindings2)
   end;
 %% Tuple -----------------------------------------------------------------------
-expr(#c_tuple{es = Elements}, Bindings) ->
+expr_(#c_tuple{es = Elements}, Bindings) ->
   Values = expr_list(Elements, Bindings),
   list_to_tuple(Values);
 %% Values ----------------------------------------------------------------------
-expr(#c_values{es = Elements}, Bindings) ->
+expr_(#c_values{es = Elements}, Bindings) ->
   Values = expr_list(Elements, Bindings),
   throw({values, Values});
 %% Var -------------------------------------------------------------------------
-expr(#c_var{name = Name} = Expr, Bindings) ->
+expr_(#c_var{name = Name} = Expr, Bindings) ->
   case binding(Name, Bindings) of
     {value, Value} -> Value;
     unbound -> raise({unbound, Name}, Expr)
-  end;
-expr(X, _Bindings) ->
-  throw({invalid_expr, X}).
+  end.
 
 %% -----------------------------------------------------------------------------
 %% Bindings
@@ -240,7 +263,7 @@ letrec(Defs, Body, Bindings0) ->
     end
     || {#c_var{name = Name}, #c_fun{vars = Vars, body = FunBody}} <- Defs
   ],
-  expr(Body, Bindings1).
+  expr_(Body, Bindings1).
 
 %% -----------------------------------------------------------------------------
 %% Case clauses
@@ -250,7 +273,7 @@ letrec(Defs, Body, Bindings0) ->
 case_clauses(Values, #c_case{clauses = Clauses} = Expr, Bindings0) ->
   case match_clause(Values, Clauses, Bindings0) of
     {match, Body, Bindings1} ->
-      expr(Body, Bindings1);
+      expr_(Body, Bindings1);
     nomatch ->
       case Values of
         [V] -> raise({case_clause, V}, Expr);
@@ -286,7 +309,7 @@ check_c_values(X) ->
 
 -spec expr_maybe_c_values(cerl:cerl(), bindings()) -> [cerl:cerl()].
 expr_maybe_c_values(Expr, Bindings) ->
-  try [expr(Expr, Bindings)]
+  try [expr_(Expr, Bindings)]
   catch throw:{values, Values} ->
       Values
   end.
@@ -308,7 +331,7 @@ match_list(_, _, _Bindings) ->
   {match, bindings()} | nomatch.
 match_map_pairs(Map, Pairs, Bindings) ->
   Fold = fun(#c_map_pair{op=#c_literal{val=exact}, key = K, val = V}, Acc0) ->
-             Key = expr(K, Bindings),
+             Key = expr_(K, Bindings),
              Value = case maps:find(Key, Map) of
                        {ok, Value_} -> Value_;
                        error -> throw(nomatch)
@@ -402,10 +425,10 @@ match_binary_segment( Value
                                }
                     , Bindings0
                     ) ->
-  Size   = expr(SizeExpr, Bindings0),
-  Unit   = expr(UnitExpr, Bindings0),
-  Type   = expr(TypeExpr, Bindings0),
-  Flags  = expr(FlagsExpr, Bindings0),
+  Size   = expr_(SizeExpr, Bindings0),
+  Unit   = expr_(UnitExpr, Bindings0),
+  Type   = expr_(TypeExpr, Bindings0),
+  Flags  = expr_(FlagsExpr, Bindings0),
 
   Endian = extract_endian(Flags),
   Sign   = extract_sign(Flags),
@@ -472,7 +495,7 @@ get_float(Bin, Size, big) ->
 
 -spec guard(cerl:cerl(), bindings()) -> value().
 guard(Guard, Bindings) ->
-  expr(Guard, Bindings).
+  expr_(Guard, Bindings).
 
 %% -----------------------------------------------------------------------------
 %% List of expression
@@ -481,7 +504,7 @@ guard(Guard, Bindings) ->
 -spec expr_list([cerl:cerl()], bindings()) -> [value()].
 expr_list(Exprs, Bindings) ->
   Fun = fun(Expr, Values) ->
-            Value = expr(Expr, Bindings),
+            Value = expr_(Expr, Bindings),
             [Value | Values]
         end,
   Values = lists:foldl(Fun, [], Exprs),
@@ -492,11 +515,11 @@ expr_list(Exprs, Bindings) ->
 %% -----------------------------------------------------------------------------
 
 expr_bitstr(Val, Size, Unit, Type, Flags, Bindings) ->
-  Value      = expr(Val, Bindings),
-  SizeValue  = expr(Size, Bindings),
-  UnitValue  = expr(Unit, Bindings),
-  TypeValue  = expr(Type, Bindings),
-  FlagsValue = expr(Flags, Bindings),
+  Value      = expr_(Val, Bindings),
+  SizeValue  = expr_(Size, Bindings),
+  UnitValue  = expr_(Unit, Bindings),
+  TypeValue  = expr_(Type, Bindings),
+  FlagsValue = expr_(Flags, Bindings),
 
   Endian     = extract_endian(FlagsValue),
   Sign       = extract_sign(FlagsValue),
@@ -726,7 +749,7 @@ create_fun(Vars, Body, Bindings) ->
   value().
 eval_fun(Vars, Values, Body, Bindings0) ->
   Bindings1 = add_bindings(Vars, Values, Bindings0),
-  expr(Body, Bindings1).
+  expr_(Body, Bindings1).
 
 %% -----------------------------------------------------------------------------
 %% Primitive Operation
@@ -747,11 +770,11 @@ primitive_op(Name, _, _Expr) ->
 -spec receive_clauses([cerl:cerl()], cerl:cerl(), cerl:cerl(), bindings()) ->
   value().
 receive_clauses(Clauses, TimeoutExpr, Action, Bindings0) ->
-  Timeout = expr(TimeoutExpr, Bindings0),
+  Timeout = expr_(TimeoutExpr, Bindings0),
   F = fun (Message) -> match_clause([Message], Clauses, Bindings0) end,
   case prim_eval:'receive'(F, Timeout) of
-    {match, Body, Bindings1} -> expr(Body, Bindings1);
-    timeout -> expr(Action, Bindings0)
+    {match, Body, Bindings1} -> expr_(Body, Bindings1);
+    timeout -> expr_(Action, Bindings0)
   end.
 
 %% -----------------------------------------------------------------------------
