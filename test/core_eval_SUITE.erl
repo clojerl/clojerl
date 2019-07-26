@@ -153,24 +153,41 @@ cons(_Config) ->
   {comments, ""}.
 
 'fun'(_Config) ->
-  X   = cerl:c_var(x),
-  Fun = cerl:c_fun([X], X),
+  [ begin
+      ct:comment("fun with ~p args", [N]),
+      Fun = fun_of_arity(N),
+      F   = core_eval:expr(Fun),
+      N   = apply(F, lists:seq(1, N))
+    end
+    || N <- lists:seq(1, 20)
+  ],
 
+  ct:comment("fun with 0 args"),
+  Fun = fun_of_arity(0),
   F   = core_eval:expr(Fun),
-
-  1   = F(1),
-  foo = F(foo),
+  0   = apply(F, []),
 
   {comments, ""}.
 
 letrec(_Config) ->
-  ct:comment("Simple letrec"),
-  X      = cerl:c_var(x),
-  Fun    = cerl:c_fun([X], X),
-  F      = cerl:c_var({f, 1}),
-  Body   = cerl:c_apply(F, [cerl:abstract(foo)]),
+  [ begin
+      ct:comment("letrec with ~p args", [N]),
+      Fun    = fun_of_arity(N),
+      F      = cerl:c_var({f, N}),
+      Args   = [cerl:abstract(X) || X <- lists:seq(1, N)],
+      Body   = cerl:c_apply(F, Args),
+      Letrec = cerl:c_letrec([{F, Fun}], Body),
+      N      = core_eval:expr(Letrec)
+    end
+    || N <- lists:seq(1, 20)
+  ],
+
+  ct:comment("letrec with 0 args"),
+  Fun    = fun_of_arity(0),
+  F      = cerl:c_var({f, 0}),
+  Body   = cerl:c_apply(F, []),
   Letrec = cerl:c_letrec([{F, Fun}], Body),
-  foo    = core_eval:expr(Letrec),
+  0      = core_eval:expr(Letrec),
 
   {comments, ""}.
 
@@ -348,13 +365,18 @@ segment(Val, Size, Unit, Type, Flags) ->
                ).
 
 assert_segments(Cases) ->
-  [begin
-     Comment = io_lib:format("~p => ~p", [Segment, Result]),
-     ct:comment(Comment),
-     {Val, Size, Unit, Type, Flags} = Segment,
-     SegmentInt   = segment(Val, Size, Unit, Type, Flags),
-     BitStringInt = cerl:c_binary([SegmentInt]),
-     Result       = core_eval:expr(BitStringInt)
-   end
-   || {Segment, Result} <- maps:to_list(Cases)
+  [ begin
+      ct:comment("~p => ~p", [Segment, Result]),
+      {Val, Size, Unit, Type, Flags} = Segment,
+      SegmentInt   = segment(Val, Size, Unit, Type, Flags),
+      BitStringInt = cerl:c_binary([SegmentInt]),
+      Result       = core_eval:expr(BitStringInt)
+    end
+    || {Segment, Result} <- maps:to_list(Cases)
   ].
+
+fun_of_arity(0) ->
+  cerl:c_fun([], cerl:abstract(0));
+fun_of_arity(N) ->
+  Vars = [cerl:c_var(X) || X <- lists:seq(1, N)],
+  cerl:c_fun(Vars, lists:last(Vars)).
