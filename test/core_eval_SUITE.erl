@@ -81,25 +81,44 @@ apply(_Config) ->
   {comments, ""}.
 
 binary(_Config) ->
-  ct:comment("Binary"),
-  SegmentA  = cerl:c_bitstr( cerl:abstract($a)
-                           , cerl:abstract(8)
-                           , cerl:abstract(1)
-                           , cerl:abstract(utf8)
-                           , cerl:abstract([])
-                           ),
-  Binary1   = cerl:c_binary([SegmentA, SegmentA, SegmentA]),
-  <<"aaa">> = core_eval:expr(Binary1),
+  ct:comment("UTF"),
+  CasesUtf = #{ {$a, 8, 1, utf8,  [big]}    => <<"a">>
+              , {$a, 8, 1, utf8,  [little]} => <<"a">>
+              , {$a, 8, 1, utf16, [big]}    => <<0, 97>>
+              , {$a, 8, 1, utf16, [little]} => <<97, 0>>
+              , {$a, 8, 1, utf32, [big]}    => <<0, 0, 0, 97>>
+              , {$a, 8, 1, utf32, [little]} => <<97, 0, 0, 0>>
+              },
+  assert_segments(CasesUtf),
 
-  ct:comment("Bitstring"),
-  SegmentBit = cerl:c_bitstr( cerl:abstract(1)
-                            , cerl:abstract(1)
-                            , cerl:abstract(1)
-                            , cerl:abstract(integer)
-                            , cerl:abstract([])
-                            ),
-  Binary2    = cerl:c_binary([SegmentBit, SegmentBit, SegmentBit]),
-  <<1:1, 1:1, 1:1>> = core_eval:expr(Binary2),
+  ct:comment("Integer"),
+  CasesInt = #{ {1, 1, 1, integer, []}                    => <<1:1>>
+              , {256, 16, 1, integer, [little, signed]}   => <<0, 1>>
+              , {256, 16, 1, integer, [little, unsigned]} => <<0, 1>>
+              , {256, 16, 1, integer, [big, signed]}      => <<1, 0>>
+              , {256, 16, 1, integer, [big, unsigned]}    => <<1, 0>>
+              , {256, 16, 1, integer, [native, signed]}   => <<0, 1>>
+              , {256, 16, 1, integer, [native, unsigned]} => <<0, 1>>
+              , {256, 16, 1, integer, [unsigned, native]} => <<0, 1>>
+              },
+  assert_segments(CasesInt),
+
+  ct:comment("Float"),
+  CasesFloat = #{ {1.0, 64, 1, float, [little]} => <<0, 0, 0, 0, 0, 0, 240, 63>>
+                , {1.0, 64, 1, float, [native]} => <<0, 0, 0, 0, 0, 0, 240, 63>>
+                , {1.0, 64, 1, float, [big]}    => <<63, 240, 0, 0, 0, 0, 0, 0>>
+                },
+  assert_segments(CasesFloat),
+
+  ct:comment("Binary"),
+  CasesBinary = #{ {<<"hello">>, all, 1, binary, []} => <<"hello">>
+                 , {<<"hello">>, 16, 1, binary, []}  => <<"he">>
+                 },
+  assert_segments(CasesBinary),
+
+  ok = try assert_segments(#{{<<1:1>>, all, 2, binary, []}  => <<"">>})
+       catch _:badarg -> ok
+       end,
 
   {comments, ""}.
 
@@ -314,3 +333,28 @@ complete_coverage(_Config) ->
   bar = core_eval:exprs([cerl:abstract(foo), cerl:abstract(bar)]),
 
   {comments, ""}.
+
+
+%%------------------------------------------------------------------------------
+%% Helper functions
+%%------------------------------------------------------------------------------
+
+segment(Val, Size, Unit, Type, Flags) ->
+  cerl:c_bitstr( cerl:abstract(Val)
+               , cerl:abstract(Size)
+               , cerl:abstract(Unit)
+               , cerl:abstract(Type)
+               , cerl:abstract(Flags)
+               ).
+
+assert_segments(Cases) ->
+  [begin
+     Comment = io_lib:format("~p => ~p", [Segment, Result]),
+     ct:comment(Comment),
+     {Val, Size, Unit, Type, Flags} = Segment,
+     SegmentInt   = segment(Val, Size, Unit, Type, Flags),
+     BitStringInt = cerl:c_binary([SegmentInt]),
+     Result       = core_eval:expr(BitStringInt)
+   end
+   || {Segment, Result} <- maps:to_list(Cases)
+  ].
