@@ -189,10 +189,6 @@ expr_(#c_var{name = Name} = Expr, Bindings) ->
 %% Bindings
 %% -----------------------------------------------------------------------------
 
--spec merge_bindings(bindings(), bindings()) -> bindings().
-merge_bindings(Bindings1, Bindings2) ->
-  maps:merge(Bindings1, Bindings2).
-
 -spec process_bindings([{cerl:cerl(), value()}], bindings()) -> bindings().
 process_bindings(Pairs, Bindings) ->
   Fun = fun({Var, Value}, Acc) ->
@@ -319,7 +315,6 @@ expr_maybe_c_values(Expr, Bindings) ->
 -spec match_list([value()], [cerl:cerl()], bindings()) ->
   {match, bindings()} | nomatch.
 match_list([Value | Values], [Pattern | Patterns], Bindings) ->
-  %% TODO: we need to use merge_bindings here
   case match(Value, Pattern, Bindings) of
     {match, Bindings1} -> match_list(Values, Patterns, Bindings1);
     nomatch -> nomatch
@@ -338,8 +333,8 @@ match_map_pairs(Map, Pairs, Bindings) ->
                        {ok, Value_} -> Value_;
                        error -> throw(nomatch)
                      end,
-             {match, Acc1} = do_match(Value, V, Bindings),
-             merge_bindings(Acc1, Acc0)
+             {match, Acc1} = do_match(Value, V, Acc0),
+             Acc1
          end,
   Bindings1 = lists:foldl(Fold, Bindings, Pairs),
   {match, Bindings1}.
@@ -411,8 +406,7 @@ do_match(_, _, _) ->
   {match, bindings()} | nomatch.
 match_bitstrings(Value, Segments, Bindings0) ->
   Fold = fun(Segment, {Acc0, Bin}) ->
-             {Acc1, Rest} = match_binary_segment(Bin, Segment, Bindings0),
-             {merge_bindings(Acc1, Acc0), Rest}
+             match_binary_segment(Bin, Segment, Acc0)
          end,
   case lists:foldl(Fold, {Bindings0, Value}, Segments) of
     {Bindings1, <<>>} -> {match, Bindings1};
