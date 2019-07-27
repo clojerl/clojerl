@@ -131,16 +131,110 @@ call(_Config) ->
   {comments, ""}.
 
 'case'(_Config) ->
-  ct:comment("Simple case with list pattern matching"),
+  ct:comment("Pattern match a list"),
   Arg1     = cerl:abstract([1, 2, 3]),
-
   VarX     = cerl:c_var(x),
+  VarY     = cerl:c_var(y),
   VarXs    = cerl:c_var(xs),
-  Pattern1 = cerl:c_cons(VarX, VarXs),
+  Pattern1 = cerl:c_cons(VarX, cerl:c_cons(VarY, VarXs)),
   Clause1  = cerl:c_clause([Pattern1], VarX),
-
   Case1    = cerl:c_case(Arg1, [Clause1]),
   1        = core_eval:expr(Case1),
+
+  CaseError1 = cerl:c_case(cerl:abstract([1]), [Clause1]),
+  try core_eval:expr(CaseError1)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  ct:comment("Pattern match a map"),
+  Arg2     = cerl:abstract(#{foo => bar, baz => foo}),
+  MapPair2 = cerl:c_map_pair_exact(cerl:abstract(foo), VarX),
+  Pattern2 = cerl:c_map([MapPair2]),
+  Clause2  = cerl:c_clause([Pattern2], VarX),
+  Clause2False = cerl:c_clause([Pattern2], cerl:abstract(false), VarX),
+  Case2    = cerl:c_case(Arg2, [Clause2False, Clause2]),
+  bar      = core_eval:expr(Case2),
+
+  ct:comment("Pattern match a literal map"),
+  MapPair3 = cerl:c_map_pair_exact(cerl:abstract(foo), cerl:abstract(bar)),
+  Pattern3 = cerl:c_alias(VarX, cerl:c_map([MapPair3])),
+  Clause3  = cerl:c_clause([Pattern3], VarX),
+  Case3    = cerl:c_case(Arg2, [Clause3]),
+  Result3  = core_eval:expr(Case3),
+  Result3  = cerl:concrete(Arg2),
+
+  CaseError2 = cerl:c_case(cerl:abstract(#{baz => 1}), [Clause2]),
+  try core_eval:expr(CaseError2)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  CaseError3 = cerl:c_case(cerl:abstract(1), [Clause2]),
+  try core_eval:expr(CaseError3)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  ct:comment("Pattern match a tuple"),
+  Arg4     = cerl:abstract({foo, bar}),
+  Pattern4 = cerl:c_tuple([VarX, VarY]),
+  Clause4  = cerl:c_clause([Pattern4], VarY),
+  Case4    = cerl:c_case(Arg4, [Clause4]),
+  bar      = core_eval:expr(Case4),
+
+  CaseError4a = cerl:c_case(cerl:abstract({foo}), [Clause4]),
+  try core_eval:expr(CaseError4a)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  CaseError4b = cerl:c_case(cerl:abstract(1), [Clause4]),
+  try core_eval:expr(CaseError4b)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  ct:comment("Pattern match a binary"),
+  Binary      = <<"foobarbaz">>,
+  Arg5        = cerl:abstract(Binary),
+  Rest        = {VarY, all, 8, binary,  []},
+  CasesBinary = #{ [{VarX, all, 8, binary, []}] => Binary
+                 , [{VarX, 3, 8, binary, []}, Rest] => <<"foo">>
+                 , [{VarX, 8, 1, integer, [signed, big]}, Rest] => $f
+                 , [{VarX, 8, 1, integer, [unsigned, big]}, Rest] => $f
+                 , [{VarX, 8, 1, integer, [signed, little]}, Rest] => $f
+                 , [{VarX, 8, 1, integer, [unsigned, little]}, Rest] => $f
+                 , [{VarX, 8, 1, integer, [signed, native]}, Rest] => $f
+                 , [{VarX, 8, 1, integer, [unsigned, native]}, Rest] => $f
+                 , [ {VarX, 64, 1, float, [big]}
+                   , Rest
+                   ] => 2.6714197151370644e185
+                 , [ {VarX, 64, 1, float, [little]}
+                   , Rest
+                   ] => 1.2967274390729776e161
+                 , [ {VarX, 64, 1, float, [native]}
+                   , Rest
+                   ] => 1.2967274390729776e161
+                 , [{VarX, undefined, 1, utf8, []}, Rest] => $f
+                 , [{VarX, undefined, 1, utf16, [big]}, Rest] => 26223
+                 , [{VarX, undefined, 1, utf16, [little]}, Rest] => 28518
+                 %% , [{VarX, undefined, 1, utf32, [big]}, Rest] => 28518
+                 %% , [{VarX, undefined, 1, utf32, [little]}, Rest] => 28518
+                 },
+
+  [ begin
+      ct:comment("Binary pattern: ~p -> ~p", [SegmentsSpec, Result]),
+      Segments = lists:map(fun segment/1, SegmentsSpec),
+      Pattern5 = cerl:c_binary(Segments),
+      Clause5  = cerl:c_clause([Pattern5], VarX),
+      Case5    = cerl:c_case(Arg5, [Clause5]),
+      Result   = core_eval:expr(Case5)
+    end
+    || {SegmentsSpec, Result} <- maps:to_list(CasesBinary)
+  ],
+
+  Pattern6 = cerl:c_binary([segment(VarX, all, 8, binary, [])]),
+  Clause6  = cerl:c_clause([Pattern6], cerl:abstract(1)),
+  CaseError5 = cerl:c_case(cerl:abstract(1), [Clause6]),
+  try core_eval:expr(CaseError5)
+  catch _:{case_clause, _} -> ok
+  end,
 
   {comments, ""}.
 
@@ -385,8 +479,15 @@ complete_coverage(_Config) ->
 %% Helper functions
 %%------------------------------------------------------------------------------
 
-segment(Val, Size, Unit, Type, Flags) ->
-  cerl:c_bitstr( cerl:abstract(Val)
+segment({Val, Size, Unit, Type, Flags}) ->
+  segment(Val, Size, Unit, Type, Flags).
+
+segment(Val0, Size, Unit, Type, Flags) ->
+  Val1 = case cerl:is_c_var(Val0) of
+           true -> Val0;
+           false -> cerl:abstract(Val0)
+         end,
+  cerl:c_bitstr( Val1
                , cerl:abstract(Size)
                , cerl:abstract(Unit)
                , cerl:abstract(Type)

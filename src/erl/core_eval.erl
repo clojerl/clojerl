@@ -191,14 +191,7 @@ expr_(#c_var{name = Name} = Expr, Bindings) ->
 
 -spec merge_bindings(bindings(), bindings()) -> bindings().
 merge_bindings(Bindings1, Bindings2) ->
-  Fold = fun({K, {value, V}}, Acc) ->
-             case binding(K, Bindings2) of
-               {value, V} -> Acc;
-               {value, Current} -> raise({badmatch, Current});
-               unbound -> add_binding(K, V, Acc)
-             end
-         end,
-  lists:foldl(Fold, Bindings2, maps:to_list(Bindings1)).
+  maps:merge(Bindings1, Bindings2).
 
 -spec process_bindings([{cerl:cerl(), value()}], bindings()) -> bindings().
 process_bindings(Pairs, Bindings) ->
@@ -395,7 +388,7 @@ do_match( Value
         ) when is_map(Value) ->
   {match, Bindings1} = match_map_literal(Value, Map, Bindings0),
   match_map_pairs(Value, Pairs, Bindings1);
-do_match(_, #c_map{is_pat = true}, _Bindings) ->
+do_match(_, #c_map{}, _Bindings) ->
   throw(nomatch);
 %% Tuple -----------------------------------------------------------------------
 do_match(Tuple, #c_tuple{es = Elements}, Bindings) when is_tuple(Tuple) ->
@@ -403,7 +396,8 @@ do_match(Tuple, #c_tuple{es = Elements}, Bindings) when is_tuple(Tuple) ->
 do_match(_, #c_tuple{}, _Bindings) ->
   throw(nomatch);
 %% Binary ----------------------------------------------------------------------
-do_match(<<_/binary>> = Value, #c_binary{segments = Segments}, Bindings) ->
+do_match(Value, #c_binary{segments = Segments}, Bindings)
+  when is_bitstring(Value) ->
   match_bitstrings(Value, Segments, Bindings);
 do_match(_, #c_binary{}, _Bindings) ->
   throw(nomatch);
@@ -420,8 +414,10 @@ match_bitstrings(Value, Segments, Bindings0) ->
              {Acc1, Rest} = match_binary_segment(Bin, Segment, Bindings0),
              {merge_bindings(Acc1, Acc0), Rest}
          end,
-  {Bindings1, _} = lists:foldl(Fold, {Bindings0, Value}, Segments),
-  {match, Bindings1}.
+  case lists:foldl(Fold, {Bindings0, Value}, Segments) of
+    {Bindings1, <<>>} -> {match, Bindings1};
+    _ -> throw(nomatch)
+  end.
 
 -spec match_binary_segment(value(), cerl:cerl(), bindings()) ->
   {bindings(), value()}.
