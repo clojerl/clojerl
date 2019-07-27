@@ -12,6 +12,7 @@
         , binary/1
         , call/1
         , 'case'/1
+        , 'catch'/1
         , cons/1
         , 'fun'/1
         , letrec/1
@@ -140,6 +141,38 @@ call(_Config) ->
 
   Case1    = cerl:c_case(Arg1, [Clause1]),
   1        = core_eval:expr(Case1),
+
+  {comments, ""}.
+
+'catch'(_Config) ->
+  ct:comment("Successful catch"),
+  Foo   = cerl:abstract(foo),
+  Catch = cerl:c_catch(Foo),
+  foo   = core_eval:expr(Catch),
+
+  ct:comment("catch with throw"),
+  ThrowFoo = cerl:c_call( cerl:abstract(erlang)
+                        , cerl:abstract(throw)
+                        , [cerl:abstract(foo)]
+                        ),
+  Catch2   = cerl:c_catch(ThrowFoo),
+  foo      = core_eval:expr(Catch2),
+
+  ct:comment("catch with exit"),
+  ExitFoo  = cerl:c_call( cerl:abstract(erlang)
+                        , cerl:abstract(exit)
+                        , [cerl:abstract(foo)]
+                        ),
+  Catch3   = cerl:c_catch(ExitFoo),
+  {'EXIT', foo} = core_eval:expr(Catch3),
+
+  ct:comment("catch with error"),
+  ErrorFoo = cerl:c_call( cerl:abstract(erlang)
+                        , cerl:abstract(error)
+                        , [cerl:abstract(foo)]
+                        ),
+  Catch4   = cerl:c_catch(ErrorFoo),
+  {'EXIT', {foo, _}} = core_eval:expr(Catch4),
 
   {comments, ""}.
 
@@ -320,11 +353,7 @@ var(_Config) ->
   {comments, ""}.
 
 invalid_exprs(_Config) ->
-  Foo   = cerl:abstract(foo),
-  Catch = cerl:c_catch(Foo),
-  {invalid_expr, c_catch} = try core_eval:expr(Catch)
-                            catch _:Error1 -> Error1
-                            end,
+  Foo = cerl:abstract(foo),
 
   Clause = cerl:c_clause([Foo], Foo),
   {illegal_expr, _} = try core_eval:expr(Clause)

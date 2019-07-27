@@ -6,6 +6,7 @@
 -export([exprs/1, expr/1, expr/2]).
 
 -include("clojerl.hrl").
+-include("clojerl_int.hrl").
 -include_lib("compiler/src/core_parse.hrl").
 
 -type value()    :: term().
@@ -92,8 +93,16 @@ expr_(#c_case{arg = Arg} = Expr, Bindings) ->
   Values = expr_list(Args, Bindings),
   case_clauses(Values, Expr, Bindings);
 %% Catch -----------------------------------------------------------------------
-expr_(#c_catch{}, _Bindings) ->
-  erlang:error({invalid_expr, c_catch});
+expr_(#c_catch{body = Body}, Bindings) ->
+  try expr_(Body, Bindings)
+  catch
+    throw:Error ->
+      Error;
+    exit:Error ->
+      {'EXIT', Error};
+    ?WITH_STACKTRACE(error, Error, Stacktrace)
+      {'EXIT', {Error, Stacktrace}}
+  end;
 %% Clause ----------------------------------------------------------------------
 %% Handled by core_lint
 %% Cons ------------------------------------------------------------------------
@@ -145,11 +154,11 @@ expr_(#c_seq{arg = Argument, body = Body}, Bindings) ->
   expr_(Body, Bindings);
 %% Try -------------------------------------------------------------------------
 expr_( #c_try{ arg = Arg
-            , vars = Vars
-            , body = Body
-            , evars = EVars
-            , handler = Handler
-            }
+             , vars = Vars
+             , body = Body
+             , evars = EVars
+             , handler = Handler
+             }
     , Bindings0
     ) ->
   try
