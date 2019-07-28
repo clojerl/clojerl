@@ -165,9 +165,9 @@ expr_( #c_try{ arg = Arg
     Values = check_c_values(expr_(Arg, Bindings0)),
     {match, Bindings1} = match_list(Values, Vars, Bindings0),
     expr_(Body, Bindings1)
-  catch Type:Error ->
+  catch ?WITH_STACKTRACE(Type, Error, Stack)
       EVarsNames = [cerl:var_name(Evar) || Evar <- EVars],
-      Bindings2 = add_bindings(EVarsNames, [Type, Error, ?NIL], Bindings0),
+      Bindings2 = add_bindings(EVarsNames, [Type, Error, Stack], Bindings0),
       expr_(Handler, Bindings2)
   end;
 %% Tuple -----------------------------------------------------------------------
@@ -759,6 +759,8 @@ primitive_op(raise, [X, Y], Expr) ->
   raise(Y, X, Expr);
 primitive_op(match_fail, [Error], Expr) ->
   raise(error, Error, Expr);
+primitive_op(build_stacktrace, [Stack], _Expr) ->
+  Stack;
 primitive_op(Name, _, _Expr) ->
   raise({not_implemented, Name}).
 
