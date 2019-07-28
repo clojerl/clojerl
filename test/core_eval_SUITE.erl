@@ -163,7 +163,7 @@ call(_Config) ->
 
   ct:comment("Pattern match a map"),
   Arg2     = cerl:abstract(#{foo => bar, baz => foo}),
-  MapPair2 = cerl:c_map_pair_exact(cerl:abstract(foo), VarX),
+  MapPair2 = c_map_pair_exact(cerl:abstract(foo), VarX),
   Pattern2 = cerl:c_map([MapPair2]),
   Clause2  = cerl:c_clause([Pattern2], VarX),
   Clause2False = cerl:c_clause([Pattern2], cerl:abstract(false), VarX),
@@ -171,7 +171,7 @@ call(_Config) ->
   bar      = core_eval:expr(Case2),
 
   ct:comment("Pattern match a literal map"),
-  MapPair3 = cerl:c_map_pair_exact(cerl:abstract(foo), cerl:abstract(bar)),
+  MapPair3 = c_map_pair_exact(cerl:abstract(foo), cerl:abstract(bar)),
   Pattern3 = cerl:c_alias(VarX, cerl:c_map([MapPair3])),
   Clause3  = cerl:c_clause([Pattern3], VarX),
   Case3    = cerl:c_case(Arg2, [Clause3]),
@@ -544,3 +544,6 @@ fun_of_arity(0) ->
 fun_of_arity(N) ->
   Vars = [cerl:c_var(X) || X <- lists:seq(1, N)],
   cerl:c_fun(Vars, lists:last(Vars)).
+
+c_map_pair_exact(K, V) ->
+  cerl:ann_c_map_pair([], cerl:abstract(exact), K, V).
