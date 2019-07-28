@@ -1,7 +1,40 @@
 # Change Log
 
-## [0.5.0](https://github.com/clojerl/clojerl/tree/0.5.0)
+## [0.5.1](https://github.com/clojerl/clojerl/tree/0.5.1)
 
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.5.0...0.5.1)
+
+**Implemented enhancements:**
+
+- String could implement the ISeq and IColl protocols [\#648](https://github.com/clojerl/clojerl/issues/648)
+- rlwrap is not available in MINGW64 [\#642](https://github.com/clojerl/clojerl/issues/642)
+- Implement Core Erlang interpreter to avoid generating modules when evaling [\#406](https://github.com/clojerl/clojerl/issues/406)
+
+**Fixed bugs:**
+
+- Avoid incrementing the atom count [\#659](https://github.com/clojerl/clojerl/issues/659)
+- bin/clojerl does not work on MINGW64 [\#641](https://github.com/clojerl/clojerl/issues/641)
+
+**Closed issues:**
+
+- Use pre provider\_hook from latest rebar3\_clojerl [\#656](https://github.com/clojerl/clojerl/issues/656)
+- Publish as a hex package [\#652](https://github.com/clojerl/clojerl/issues/652)
+- StructMaps [\#328](https://github.com/clojerl/clojerl/issues/328)
+- Implement 'Map namespace syntax' [\#325](https://github.com/clojerl/clojerl/issues/325)
+
+**Merged pull requests:**
+
+- \[Closes \#659\] Reset gensym id in top level reader functions just before reading forms [\#660](https://github.com/clojerl/clojerl/pull/660) ([jfacorro](https://github.com/jfacorro))
+- \[\#406\] core erlang interpreter [\#658](https://github.com/clojerl/clojerl/pull/658) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#656\] use pre provider hook [\#657](https://github.com/clojerl/clojerl/pull/657) ([jfacorro](https://github.com/jfacorro))
+- \[\#652\] Hex badge link [\#655](https://github.com/clojerl/clojerl/pull/655) ([jfacorro](https://github.com/jfacorro))
+- \[\#652\] Useful links in clojerl.app.src [\#654](https://github.com/clojerl/clojerl/pull/654) ([jfacorro](https://github.com/jfacorro))
+- \[\#652\] Modify clojerl.app.src to be able to publish to package [\#653](https://github.com/clojerl/clojerl/pull/653) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#325\] Map namespace syntax [\#650](https://github.com/clojerl/clojerl/pull/650) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#648\] StringSeq [\#649](https://github.com/clojerl/clojerl/pull/649) ([jfacorro](https://github.com/jfacorro))
+- Update rebar3\_clojerl plugin [\#647](https://github.com/clojerl/clojerl/pull/647) ([jfacorro](https://github.com/jfacorro))
+
+## [0.5.0](https://github.com/clojerl/clojerl/tree/0.5.0) (2019-06-16)
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.4.1...0.5.0)
 
 **Implemented enhancements:**
@@ -36,6 +69,7 @@
 
 **Merged pull requests:**
 
+- Prepare release 0.5.0 [\#646](https://github.com/clojerl/clojerl/pull/646) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#644\] Embed type dispatch in the protocol module [\#645](https://github.com/clojerl/clojerl/pull/645) ([jfacorro](https://github.com/jfacorro))
 - Avoid creating erlang.util.UUID for each ProcessVal and TransducerSeq [\#643](https://github.com/clojerl/clojerl/pull/643) ([jfacorro](https://github.com/jfacorro))
 - Fix CI  [\#640](https://github.com/clojerl/clojerl/pull/640) ([jfacorro](https://github.com/jfacorro))
@@ -45,7 +79,7 @@
 - \[Closes \#634\] Erlang/OTP 22.0 [\#635](https://github.com/clojerl/clojerl/pull/635) ([jfacorro](https://github.com/jfacorro))
 - Update benchmark comparing with Clojure [\#633](https://github.com/clojerl/clojerl/pull/633) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#631\] improve performance apply anon fn [\#632](https://github.com/clojerl/clojerl/pull/632) ([jfacorro](https://github.com/jfacorro))
-- \[\#628\] Experiment with better vector implementation [\#629](https://github.com/clojerl/clojerl/pull/629) ([jfacorro](https://github.com/jfacorro))
+- \[\#628\] Experiment with Clojure vector implementation [\#629](https://github.com/clojerl/clojerl/pull/629) ([jfacorro](https://github.com/jfacorro))
 - Add missing cases from the cljs benchmarks [\#627](https://github.com/clojerl/clojerl/pull/627) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#625\] Improve perf reduce vector [\#626](https://github.com/clojerl/clojerl/pull/626) ([jfacorro](https://github.com/jfacorro))
 - Update benchmark results [\#624](https://github.com/clojerl/clojerl/pull/624) ([jfacorro](https://github.com/jfacorro))
