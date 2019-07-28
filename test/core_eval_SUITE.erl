@@ -229,8 +229,6 @@ call(_Config) ->
                  , [{VarX, undefined, 1, utf8, []}, Rest] => $f
                  , [{VarX, undefined, 1, utf16, [big]}, Rest] => 26223
                  , [{VarX, undefined, 1, utf16, [little]}, Rest] => 28518
-                 %% , [{VarX, undefined, 1, utf32, [big]}, Rest] => 28518
-                 %% , [{VarX, undefined, 1, utf32, [little]}, Rest] => 28518
                  },
 
   [ assert_segments_pattern(Arg5, Segments, Result, VarX)
