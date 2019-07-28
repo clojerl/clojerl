@@ -23,7 +23,7 @@ dialyzer: clean
 	${V} ${REBAR3} dialyzer
 
 shell:
-	${V} ${REBAR3} as dev shell --sname clojerl-shell --setcookie clojerl
+	${V} ${REBAR3} as dev do clojerl compile, shell --sname clojerl-shell --setcookie clojerl
 
 clean:
 	${V} ${REBAR3} clean
@@ -59,4 +59,4 @@ benchmark-comparison:
 	${V} rm ${CLJ_BENCH} ${CLJE_BENCH}
 
 compile-examples: compile
-	${V} ${CLOJERLC} ${SCRIPTS}/examples/${EXAMPLE}.clje
+	${V} ${CLOJERLC} -vv ${SCRIPTS}/examples/${EXAMPLE}.clje
