@@ -708,9 +708,10 @@ loop(_Config) ->
    } = analyze_one(<<"(loop* [x 1 y :a] y)">>),
   2 = length(Bindings2),
 
-  false = clj_rt:equiv(LoopId0, LoopId1),
-  false = clj_rt:equiv(LoopId1, LoopId2),
-  false = clj_rt:equiv(LoopId0, LoopId2),
+  ct:comment("internal loop names are the same unless they are nested"),
+  true = clj_rt:equiv(LoopId0, LoopId1),
+  true = clj_rt:equiv(LoopId1, LoopId2),
+  true = clj_rt:equiv(LoopId0, LoopId2),
 
   ct:comment("loop with zero bindings, body and recur"),
   #{ op       := loop
