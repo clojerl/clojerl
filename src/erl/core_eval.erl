@@ -345,7 +345,7 @@ match_map_literal(#{} = Map, MapPattern, Bindings) ->
   Fun = fun(K, V) ->
             case maps:find(K, Map) of
               error -> throw(nomatch);
-              {ok, _} -> V
+              {ok, V} -> V
             end
         end,
   maps:map(Fun, MapPattern),

@@ -131,11 +131,26 @@ call(_Config) ->
   {comments, ""}.
 
 'case'(_Config) ->
-  ct:comment("Pattern match a list"),
-  Arg1     = cerl:abstract([1, 2, 3]),
   VarX     = cerl:c_var(x),
   VarY     = cerl:c_var(y),
   VarXs    = cerl:c_var(xs),
+  One      = cerl:abstract(1),
+  Two      = cerl:abstract(2),
+
+  ct:comment("Pattern match values"),
+  Arg0     = cerl:c_values([One, Two]),
+  Clause0  = cerl:c_clause([One, VarX], VarX),
+  Case0    = cerl:c_case(Arg0, [Clause0]),
+  2        = core_eval:expr(Case0),
+
+  ClauseError0 = cerl:c_clause([One, One], One),
+  CaseError0   = cerl:c_case(Arg0, [ClauseError0]),
+  try core_eval:expr(CaseError0)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  ct:comment("Pattern match a list"),
+  Arg1     = cerl:abstract([1, 2, 3]),
   Pattern1 = cerl:c_cons(VarX, cerl:c_cons(VarY, VarXs)),
   Clause1  = cerl:c_clause([Pattern1], VarX),
   Case1    = cerl:c_case(Arg1, [Clause1]),
@@ -218,21 +233,34 @@ call(_Config) ->
                  %% , [{VarX, undefined, 1, utf32, [little]}, Rest] => 28518
                  },
 
-  [ begin
-      ct:comment("Binary pattern: ~p -> ~p", [SegmentsSpec, Result]),
-      Segments = lists:map(fun segment/1, SegmentsSpec),
-      Pattern5 = cerl:c_binary(Segments),
-      Clause5  = cerl:c_clause([Pattern5], VarX),
-      Case5    = cerl:c_case(Arg5, [Clause5]),
-      Result   = core_eval:expr(Case5)
-    end
-    || {SegmentsSpec, Result} <- maps:to_list(CasesBinary)
+  [ assert_segments_pattern(Arg5, Segments, Result, VarX)
+    || {Segments, Result} <- maps:to_list(CasesBinary)
   ],
 
-  Pattern6 = cerl:c_binary([segment(VarX, all, 8, binary, [])]),
+  ct:comment("UTF32 binaries"),
+  ArgUTF32Big = cerl:abstract(<<"foo"/big-utf32>>),
+  SegmentsUTF32Big = [{VarX, undefined, 1, utf32, [big]}, Rest],
+  assert_segments_pattern(ArgUTF32Big, SegmentsUTF32Big, 102, VarX),
+
+  ArgUTF32Little = cerl:abstract(<<"foo"/little-utf32>>),
+  SegmentsUTF32Little = [{VarX, undefined, 1, utf32, [little]}, Rest],
+  assert_segments_pattern( ArgUTF32Little, SegmentsUTF32Little, 102, VarX),
+
+  ct:comment("Don't match binaries"),
+  Pattern6 = cerl:c_binary([segment(VarX, 2, 8, binary, [])]),
   Clause6  = cerl:c_clause([Pattern6], cerl:abstract(1)),
   CaseError5 = cerl:c_case(cerl:abstract(1), [Clause6]),
   try core_eval:expr(CaseError5)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  CaseError6 = cerl:c_case(cerl:abstract(<<"foo">>), [Clause6]),
+  try core_eval:expr(CaseError6)
+  catch _:{case_clause, _} -> ok
+  end,
+
+  CaseError7 = cerl:c_case(cerl:abstract(<<"f">>), [Clause6]),
+  try core_eval:expr(CaseError7)
   catch _:{case_clause, _} -> ok
   end,
 
@@ -504,6 +532,14 @@ assert_segments(Cases) ->
     end
     || {Segment, Result} <- maps:to_list(Cases)
   ].
+
+assert_segments_pattern(Arg, SegmentsSpec, Result, Var) ->
+  ct:comment("Binary pattern: ~p -> ~p", [SegmentsSpec, Result]),
+  Segments = lists:map(fun segment/1, SegmentsSpec),
+  Pattern  = cerl:c_binary(Segments),
+  Clause   = cerl:c_clause([Pattern], Var),
+  Case     = cerl:c_case(Arg, [Clause]),
+  Result   = core_eval:expr(Case).
 
 fun_of_arity(0) ->
   cerl:c_fun([], cerl:abstract(0));
