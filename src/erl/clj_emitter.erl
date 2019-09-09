@@ -437,6 +437,26 @@ ast(#{op := extend_type} = Expr, State) ->
   Ast = cerl:ann_c_atom(ann_from(Env), ?NIL),
   push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
 %%------------------------------------------------------------------------------
+%% behaviour
+%%------------------------------------------------------------------------------
+ast(#{op := behaviour} = Expr, State) ->
+  #{ name := NameSym
+   , env  := Env
+   } = Expr,
+
+  Ann       = ann_from(Env),
+  Name      = to_atom(NameSym),
+  CurrentNs = 'clojerl.Namespace':current(),
+  NsNameSym = 'clojerl.Namespace':name(CurrentNs),
+  Module    = to_atom(NsNameSym),
+  ok        = clj_module:ensure_loaded(file_from(Env), Module),
+
+  BehaviourAttr = {cerl:ann_c_atom(Ann, behavior), cerl:abstract([Name])},
+  clj_module:add_attributes([BehaviourAttr], Module),
+
+  Ast = cerl:ann_c_atom(Ann, ?NIL),
+  push_ast(Ast, State);
+%%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
 ast(#{op := fn} = Expr, State) ->

@@ -1,0 +1,38 @@
+(ns erlang.core)
+
+;;;;;;; behaviour ;;;;;;;;;;;;;
+
+(defn- defbehaviour*
+  [callbacks]
+  (let [callbacks (->> callbacks
+                      (map (fn [[name args]]
+                             #erl [(keyword name) (count args)]))
+                      ->erl
+                      )]
+    `(defn* ~'behaviour_info
+       [:callbacks]
+       '~callbacks)))
+
+(defmacro defbehaviour
+  "Defines Erlang behaviour callbacks for the current ns.
+
+  (defbehaviour
+    (foo [x])
+    (bar [x y x]))"
+  [& callbacks]
+  (defbehaviour* callbacks))
+
+(defn behaviour-callbacks
+  [ns]
+  (let [module (cond
+                 (instance? clojerl.Namespace ns)
+                 (-> ns ns-name keyword)
+
+                 :else (-> ns name keyword))]
+    (erlang/apply module
+                  :behaviour_info
+                  #erl(:callbacks))))
+
+(defmacro behaviours
+  [& names]
+  `(do ~@(map #(list 'behaviour* %) names)))

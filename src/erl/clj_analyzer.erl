@@ -152,6 +152,7 @@ special_forms() ->
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"extend-type*">> => fun parse_extend_type/2
+   , <<"behaviour*">>   => fun parse_behaviour/2
 
    , <<".">>            => fun parse_dot/2
 
@@ -1681,6 +1682,25 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
   {MethodsExprs, EnvAcc3} = clj_env:last_exprs(length(Methods), EnvAcc2),
 
   {ImplMapAcc#{ProtoExpr => MethodsExprs}, EnvAcc3}.
+
+%%------------------------------------------------------------------------------
+%% Parse behaviour
+%%------------------------------------------------------------------------------
+
+-spec parse_behaviour('clojerl.List':type(), clj_env:env()) -> clj_env:env().
+parse_behaviour(List, Env) ->
+  [ _BehaviourSym % behaviour*
+  , BehaviourName
+  ] = clj_rt:to_list(List),
+
+  BehaviourExpr = #{ op   => behaviour
+                   , env  => Env
+                   , form => List
+                   , tag  => type_expr(?NIL, Env)
+                   , name => BehaviourName
+                   },
+
+  clj_env:push_expr(BehaviourExpr, Env).
 
 %%------------------------------------------------------------------------------
 %% Parse dot
