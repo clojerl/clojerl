@@ -361,13 +361,19 @@ ast(#{op := defprotocol} = Expr, State) ->
 
   ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:abstract([true])},
   Functions0   = [protocol_function(Sig, Module, Ann) || Sig <- MethodsSigs],
+  Callbacks    = [ {cerl:fname_id(FName), cerl:fname_arity(FName)}
+                   || {FName, _} <- Functions0
+                 ],
+
   Satifies     = satisfies_function(Ann),
   Extends      = extends_function(Ann),
+  BehaviorInfo = behaviour_info_function(Ann, Callbacks),
 
-  Functions1   = [Satifies, Extends | Functions0],
+  Functions1   = [Satifies, Extends, BehaviorInfo | Functions0],
   Exports      = [ {cerl:fname_id(FName), cerl:fname_arity(FName)}
                    || {FName, _} <- Functions1
                  ],
+
 
   clj_module:add_attributes([ProtocolAttr], Module),
   clj_module:add_functions(Functions1, Module),
@@ -1432,6 +1438,20 @@ extends_function(Ann) ->
   Body        = cerl:ann_c_case(Ann, Arg, [Clause]),
 
   { cerl:c_fname(?EXTENDS, 1)
+  , cerl:ann_c_fun(Ann, [Arg], Body)
+  }.
+
+-spec behaviour_info_function(any(), [{atom(), arity()}]) ->
+  {cerl:c_fname(), cerl:c_fun()}.
+behaviour_info_function(Ann, FunArityList) ->
+  Arg         = new_c_var(Ann),
+
+  Callbacks   = cerl:abstract(callbacks),
+  ClauseBody  = cerl:abstract(FunArityList),
+  Clause      = cerl:ann_c_clause(Ann, [Callbacks], ClauseBody),
+  Body        = cerl:ann_c_case(Ann, Arg, [Clause]),
+
+  { cerl:c_fname(?BEHAVIOUR_INFO, 1)
   , cerl:ann_c_fun(Ann, [Arg], Body)
   }.
 
