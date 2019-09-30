@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'apply'(any(), any()) -> any().
+-optional_callbacks(['apply'/2]).
 
 'apply'(Fn, Args) ->
   case Fn of

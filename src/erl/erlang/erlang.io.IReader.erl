@@ -14,6 +14,7 @@
 -callback 'read'(any(), any()) -> any().
 -callback 'read_line'(any()) -> any().
 -callback 'skip'(any(), any()) -> any().
+-optional_callbacks(['read'/1, 'read'/2, 'read_line'/1, 'skip'/2]).
 
 'read'(Reader) ->
   case Reader of

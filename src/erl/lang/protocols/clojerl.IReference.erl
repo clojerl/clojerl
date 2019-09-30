@@ -12,6 +12,7 @@
 
 -callback 'alter_meta'(any(), any(), any()) -> any().
 -callback 'reset_meta'(any(), any()) -> any().
+-optional_callbacks(['alter_meta'/3, 'reset_meta'/2]).
 
 'alter_meta'(Ref, Fun, Args) ->
   case Ref of

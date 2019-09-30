@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'message'(any()) -> any().
+-optional_callbacks(['message'/1]).
 
 'message'(Error) ->
   case Error of

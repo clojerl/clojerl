@@ -12,6 +12,7 @@
 
 -callback 'get'(any(), any()) -> any().
 -callback 'get'(any(), any(), any()) -> any().
+-optional_callbacks(['get'/2, 'get'/3]).
 
 'get'(X, Key) ->
   case X of

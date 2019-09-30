@@ -13,6 +13,7 @@
 -callback 'first'(any()) -> any().
 -callback 'next'(any()) -> any().
 -callback 'more'(any()) -> any().
+-optional_callbacks(['first'/1, 'next'/1, 'more'/1]).
 
 'first'(Seq) ->
   case Seq of

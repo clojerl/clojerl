@@ -12,6 +12,7 @@
 
 -callback 'meta'(any()) -> any().
 -callback 'with_meta'(any(), any()) -> any().
+-optional_callbacks(['meta'/1, 'with_meta'/2]).
 
 'meta'(X) ->
   case X of

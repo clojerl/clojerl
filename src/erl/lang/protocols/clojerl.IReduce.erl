@@ -12,6 +12,7 @@
 
 -callback 'reduce'(any(), any()) -> any().
 -callback 'reduce'(any(), any(), any()) -> any().
+-optional_callbacks(['reduce'/2, 'reduce'/3]).
 
 'reduce'(Coll, Fun) ->
   case Coll of

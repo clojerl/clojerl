@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'drop_first'(any()) -> any().
+-optional_callbacks(['drop_first'/1]).
 
 'drop_first'(Chunk) ->
   case Chunk of

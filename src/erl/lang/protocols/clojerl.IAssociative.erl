@@ -13,6 +13,7 @@
 -callback 'contains_key'(any(), any()) -> any().
 -callback 'entry_at'(any(), any()) -> any().
 -callback 'assoc'(any(), any(), any()) -> any().
+-optional_callbacks(['contains_key'/2, 'entry_at'/2, 'assoc'/3]).
 
 'contains_key'(Assoc, Key) ->
   case Assoc of

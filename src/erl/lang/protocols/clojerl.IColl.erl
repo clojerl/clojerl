@@ -12,6 +12,7 @@
 
 -callback 'cons'(any(), any()) -> any().
 -callback 'empty'(any()) -> any().
+-optional_callbacks(['cons'/2, 'empty'/1]).
 
 'cons'(Coll, Item) ->
   case Coll of

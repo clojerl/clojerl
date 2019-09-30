@@ -12,6 +12,7 @@
 
 -callback 'name'(any()) -> any().
 -callback 'namespace'(any()) -> any().
+-optional_callbacks(['name'/1, 'namespace'/1]).
 
 'name'(X) ->
   case X of

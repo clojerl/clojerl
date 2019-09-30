@@ -12,6 +12,7 @@
 
 -callback 'seq'(any()) -> any().
 -callback 'to_list'(any()) -> any().
+-optional_callbacks(['seq'/1, 'to_list'/1]).
 
 'seq'(X) ->
   case X of

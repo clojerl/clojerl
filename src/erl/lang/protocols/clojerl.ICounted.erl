@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'count'(any()) -> any().
+-optional_callbacks(['count'/1]).
 
 'count'(Seq) ->
   case Seq of

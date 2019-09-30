@@ -225,6 +225,17 @@
                    ") -> any().\n")))
        (apply str)))
 
+(defn optional-callbacks
+  [fns]
+  (str "-optional_callbacks(["
+       (->> fns
+            (partition 2)
+            (map (fn [[f args]]
+                   (str "'" f "'/" (count args))))
+            (interpose ", ")
+            (apply str))
+       "]).\n"))
+
 (defn type-ordering
   [[type _]]
   (if (underscore? type)
@@ -258,6 +269,7 @@
          "-export([?SATISFIES/1]).\n"
          "-export([?EXTENDS/1]).\n\n"
          (callbacks fns)
+         (optional-callbacks fns)
          "\n"
          (proto-functions proto-name fns types)
          (satisfies?-function types)

@@ -12,6 +12,7 @@
 
 -callback 'data'(any()) -> any().
 -callback 'cause'(any()) -> any().
+-optional_callbacks(['data'/1, 'cause'/1]).
 
 'data'(ExInfo) ->
   case ExInfo of

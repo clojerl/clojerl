@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'deref'(any()) -> any().
+-optional_callbacks(['deref'/1]).
 
 'deref'(Ref) ->
   case Ref of

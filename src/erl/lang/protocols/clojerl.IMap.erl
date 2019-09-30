@@ -13,6 +13,7 @@
 -callback 'keys'(any()) -> any().
 -callback 'vals'(any()) -> any().
 -callback 'without'(any(), any()) -> any().
+-optional_callbacks(['keys'/1, 'vals'/1, 'without'/2]).
 
 'keys'(Map) ->
   case Map of

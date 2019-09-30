@@ -12,6 +12,7 @@
 
 -callback 'disjoin'(any(), any()) -> any().
 -callback 'contains'(any(), any()) -> any().
+-optional_callbacks(['disjoin'/2, 'contains'/2]).
 
 'disjoin'(Coll, Item) ->
   case Coll of

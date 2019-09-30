@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback '->erl'(any(), any()) -> any().
+-optional_callbacks(['->erl'/2]).
 
 '->erl'(X, Recursive) ->
   case X of

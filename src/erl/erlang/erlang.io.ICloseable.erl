@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'close'(any()) -> any().
+-optional_callbacks(['close'/1]).
 
 'close'(X) ->
   case X of

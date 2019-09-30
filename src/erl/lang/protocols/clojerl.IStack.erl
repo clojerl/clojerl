@@ -12,6 +12,7 @@
 
 -callback 'peek'(any()) -> any().
 -callback 'pop'(any()) -> any().
+-optional_callbacks(['peek'/1, 'pop'/1]).
 
 'peek'(Stack) ->
   case Stack of

@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'rseq'(any()) -> any().
+-optional_callbacks(['rseq'/1]).
 
 'rseq'(Seq) ->
   case Seq of

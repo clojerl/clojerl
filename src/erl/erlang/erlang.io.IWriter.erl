@@ -12,6 +12,7 @@
 
 -callback 'write'(any(), any()) -> any().
 -callback 'write'(any(), any(), any()) -> any().
+-optional_callbacks(['write'/2, 'write'/3]).
 
 'write'(Writer, Str) ->
   case Writer of
