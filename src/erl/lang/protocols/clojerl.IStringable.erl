@@ -15,92 +15,92 @@
 
 'str'(X) ->
   case X of
-    #{?TYPE := 'clojerl.Map'} ->
-      'clojerl.Map':'str'(X);
-    #{?TYPE := 'erlang.Type'} ->
-      'erlang.Type':'str'(X);
-    #{?TYPE := 'clojerl.SortedSet'} ->
-      'clojerl.SortedSet':'str'(X);
-    #{?TYPE := 'clojerl.SortedMap'} ->
-      'clojerl.SortedMap':'str'(X);
-    #{?TYPE := 'erlang.io.File'} ->
-      'erlang.io.File':'str'(X);
-    #{?TYPE := 'clojerl.Cycle'} ->
-      'clojerl.Cycle':'str'(X);
-    #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'str'(X);
-    #{?TYPE := 'clojerl.Atom'} ->
-      'clojerl.Atom':'str'(X);
-    #{?TYPE := 'clojerl.Repeat'} ->
-      'clojerl.Repeat':'str'(X);
-    #{?TYPE := 'erlang.util.UUID'} ->
-      'erlang.util.UUID':'str'(X);
-    #{?TYPE := 'clojerl.StringSeq'} ->
-      'clojerl.StringSeq':'str'(X);
+    #{?TYPE := 'clojerl.ArityError'} ->
+      'clojerl.ArityError':'str'(X);
     #{?TYPE := 'clojerl.AssertionError'} ->
       'clojerl.AssertionError':'str'(X);
-    #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'str'(X);
-    #{?TYPE := 'clojerl.ProcessVal'} ->
-      'clojerl.ProcessVal':'str'(X);
-    #{?TYPE := 'erlang.util.Regex'} ->
-      'erlang.util.Regex':'str'(X);
-    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
-      'clojerl.Vector.ChunkedSeq':'str'(X);
-    #{?TYPE := 'clojerl.Iterate'} ->
-      'clojerl.Iterate':'str'(X);
-    #{?TYPE := 'clojerl.IllegalAccessError'} ->
-      'clojerl.IllegalAccessError':'str'(X);
-    #{?TYPE := 'clojerl.Reduced'} ->
-      'clojerl.Reduced':'str'(X);
-    #{?TYPE := 'clojerl.Vector.RSeq'} ->
-      'clojerl.Vector.RSeq':'str'(X);
-    #{?TYPE := 'clojerl.TransducerSeq'} ->
-      'clojerl.TransducerSeq':'str'(X);
-    #{?TYPE := 'clojerl.Symbol'} ->
-      'clojerl.Symbol':'str'(X);
+    #{?TYPE := 'clojerl.Atom'} ->
+      'clojerl.Atom':'str'(X);
+    #{?TYPE := 'clojerl.BadArgumentError'} ->
+      'clojerl.BadArgumentError':'str'(X);
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
+      'clojerl.ChunkedCons':'str'(X);
     #{?TYPE := 'clojerl.Cons'} ->
       'clojerl.Cons':'str'(X);
+    #{?TYPE := 'clojerl.Cycle'} ->
+      'clojerl.Cycle':'str'(X);
+    #{?TYPE := 'clojerl.Delay'} ->
+      'clojerl.Delay':'str'(X);
     #{?TYPE := 'clojerl.Error'} ->
       'clojerl.Error':'str'(X);
     #{?TYPE := 'clojerl.ExceptionInfo'} ->
       'clojerl.ExceptionInfo':'str'(X);
-    #{?TYPE := 'erlang.io.StringWriter'} ->
-      'erlang.io.StringWriter':'str'(X);
-    #{?TYPE := 'clojerl.Set'} ->
-      'clojerl.Set':'str'(X);
-    #{?TYPE := 'clojerl.BadArgumentError'} ->
-      'clojerl.BadArgumentError':'str'(X);
-    #{?TYPE := 'clojerl.Namespace'} ->
-      'clojerl.Namespace':'str'(X);
-    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
-      'clojerl.reader.ReaderConditional':'str'(X);
-    #{?TYPE := 'erlang.io.StringReader'} ->
-      'erlang.io.StringReader':'str'(X);
-    #{?TYPE := 'clojerl.ChunkedCons'} ->
-      'clojerl.ChunkedCons':'str'(X);
-    #{?TYPE := 'clojerl.Var'} ->
-      'clojerl.Var':'str'(X);
-    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
-      'clojerl.reader.TaggedLiteral':'str'(X);
-    #{?TYPE := 'clojerl.ArityError'} ->
-      'clojerl.ArityError':'str'(X);
-    #{?TYPE := 'erlang.util.Date'} ->
-      'erlang.util.Date':'str'(X);
-    #{?TYPE := 'clojerl.Delay'} ->
-      'clojerl.Delay':'str'(X);
-    #{?TYPE := 'erlang.io.PushbackReader'} ->
-      'erlang.io.PushbackReader':'str'(X);
-    #{?TYPE := 'clojerl.Range'} ->
-      'clojerl.Range':'str'(X);
-    #{?TYPE := 'clojerl.LazySeq'} ->
-      'clojerl.LazySeq':'str'(X);
-    #{?TYPE := 'clojerl.List'} ->
-      'clojerl.List':'str'(X);
     #{?TYPE := 'clojerl.Fn'} ->
       'clojerl.Fn':'str'(X);
     #{?TYPE := 'clojerl.IOError'} ->
       'clojerl.IOError':'str'(X);
+    #{?TYPE := 'clojerl.IllegalAccessError'} ->
+      'clojerl.IllegalAccessError':'str'(X);
+    #{?TYPE := 'clojerl.Iterate'} ->
+      'clojerl.Iterate':'str'(X);
+    #{?TYPE := 'clojerl.LazySeq'} ->
+      'clojerl.LazySeq':'str'(X);
+    #{?TYPE := 'clojerl.List'} ->
+      'clojerl.List':'str'(X);
+    #{?TYPE := 'clojerl.Map'} ->
+      'clojerl.Map':'str'(X);
+    #{?TYPE := 'clojerl.Namespace'} ->
+      'clojerl.Namespace':'str'(X);
+    #{?TYPE := 'clojerl.ProcessVal'} ->
+      'clojerl.ProcessVal':'str'(X);
+    #{?TYPE := 'clojerl.Range'} ->
+      'clojerl.Range':'str'(X);
+    #{?TYPE := 'clojerl.Reduced'} ->
+      'clojerl.Reduced':'str'(X);
+    #{?TYPE := 'clojerl.Repeat'} ->
+      'clojerl.Repeat':'str'(X);
+    #{?TYPE := 'clojerl.Set'} ->
+      'clojerl.Set':'str'(X);
+    #{?TYPE := 'clojerl.SortedMap'} ->
+      'clojerl.SortedMap':'str'(X);
+    #{?TYPE := 'clojerl.SortedSet'} ->
+      'clojerl.SortedSet':'str'(X);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'str'(X);
+    #{?TYPE := 'clojerl.Symbol'} ->
+      'clojerl.Symbol':'str'(X);
+    #{?TYPE := 'clojerl.TransducerSeq'} ->
+      'clojerl.TransducerSeq':'str'(X);
+    #{?TYPE := 'clojerl.TupleMap'} ->
+      'clojerl.TupleMap':'str'(X);
+    #{?TYPE := 'clojerl.Var'} ->
+      'clojerl.Var':'str'(X);
+    #{?TYPE := 'clojerl.Vector'} ->
+      'clojerl.Vector':'str'(X);
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
+      'clojerl.Vector.ChunkedSeq':'str'(X);
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->
+      'clojerl.Vector.RSeq':'str'(X);
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
+      'clojerl.reader.ReaderConditional':'str'(X);
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
+      'clojerl.reader.TaggedLiteral':'str'(X);
+    #{?TYPE := 'erlang.Type'} ->
+      'erlang.Type':'str'(X);
+    #{?TYPE := 'erlang.io.File'} ->
+      'erlang.io.File':'str'(X);
+    #{?TYPE := 'erlang.io.PushbackReader'} ->
+      'erlang.io.PushbackReader':'str'(X);
+    #{?TYPE := 'erlang.io.StringReader'} ->
+      'erlang.io.StringReader':'str'(X);
+    #{?TYPE := 'erlang.io.StringWriter'} ->
+      'erlang.io.StringWriter':'str'(X);
+    #{?TYPE := 'erlang.util.Date'} ->
+      'erlang.util.Date':'str'(X);
+    #{?TYPE := 'erlang.util.Regex'} ->
+      'erlang.util.Regex':'str'(X);
+    #{?TYPE := 'erlang.util.UUID'} ->
+      'erlang.util.UUID':'str'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'str', X);
     X_ when erlang:is_binary(X_) ->
@@ -137,49 +137,49 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.Map'} ->  true;
-    #{?TYPE := 'erlang.Type'} ->  true;
-    #{?TYPE := 'clojerl.SortedSet'} ->  true;
-    #{?TYPE := 'clojerl.SortedMap'} ->  true;
-    #{?TYPE := 'erlang.io.File'} ->  true;
-    #{?TYPE := 'clojerl.Cycle'} ->  true;
-    #{?TYPE := 'clojerl.Vector'} ->  true;
-    #{?TYPE := 'clojerl.Atom'} ->  true;
-    #{?TYPE := 'clojerl.Repeat'} ->  true;
-    #{?TYPE := 'erlang.util.UUID'} ->  true;
-    #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.ArityError'} ->  true;
     #{?TYPE := 'clojerl.AssertionError'} ->  true;
-    #{?TYPE := 'clojerl.TupleMap'} ->  true;
-    #{?TYPE := 'clojerl.ProcessVal'} ->  true;
-    #{?TYPE := 'erlang.util.Regex'} ->  true;
-    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
-    #{?TYPE := 'clojerl.Iterate'} ->  true;
-    #{?TYPE := 'clojerl.IllegalAccessError'} ->  true;
-    #{?TYPE := 'clojerl.Reduced'} ->  true;
-    #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
-    #{?TYPE := 'clojerl.TransducerSeq'} ->  true;
-    #{?TYPE := 'clojerl.Symbol'} ->  true;
+    #{?TYPE := 'clojerl.Atom'} ->  true;
+    #{?TYPE := 'clojerl.BadArgumentError'} ->  true;
+    #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.Cons'} ->  true;
+    #{?TYPE := 'clojerl.Cycle'} ->  true;
+    #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.Error'} ->  true;
     #{?TYPE := 'clojerl.ExceptionInfo'} ->  true;
-    #{?TYPE := 'erlang.io.StringWriter'} ->  true;
-    #{?TYPE := 'clojerl.Set'} ->  true;
-    #{?TYPE := 'clojerl.BadArgumentError'} ->  true;
-    #{?TYPE := 'clojerl.Namespace'} ->  true;
-    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
-    #{?TYPE := 'erlang.io.StringReader'} ->  true;
-    #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
-    #{?TYPE := 'clojerl.Var'} ->  true;
-    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->  true;
-    #{?TYPE := 'clojerl.ArityError'} ->  true;
-    #{?TYPE := 'erlang.util.Date'} ->  true;
-    #{?TYPE := 'clojerl.Delay'} ->  true;
-    #{?TYPE := 'erlang.io.PushbackReader'} ->  true;
-    #{?TYPE := 'clojerl.Range'} ->  true;
-    #{?TYPE := 'clojerl.LazySeq'} ->  true;
-    #{?TYPE := 'clojerl.List'} ->  true;
     #{?TYPE := 'clojerl.Fn'} ->  true;
     #{?TYPE := 'clojerl.IOError'} ->  true;
+    #{?TYPE := 'clojerl.IllegalAccessError'} ->  true;
+    #{?TYPE := 'clojerl.Iterate'} ->  true;
+    #{?TYPE := 'clojerl.LazySeq'} ->  true;
+    #{?TYPE := 'clojerl.List'} ->  true;
+    #{?TYPE := 'clojerl.Map'} ->  true;
+    #{?TYPE := 'clojerl.Namespace'} ->  true;
+    #{?TYPE := 'clojerl.ProcessVal'} ->  true;
+    #{?TYPE := 'clojerl.Range'} ->  true;
+    #{?TYPE := 'clojerl.Reduced'} ->  true;
+    #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.Set'} ->  true;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Symbol'} ->  true;
+    #{?TYPE := 'clojerl.TransducerSeq'} ->  true;
+    #{?TYPE := 'clojerl.TupleMap'} ->  true;
+    #{?TYPE := 'clojerl.Var'} ->  true;
+    #{?TYPE := 'clojerl.Vector'} ->  true;
+    #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
+    #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->  true;
+    #{?TYPE := 'erlang.Type'} ->  true;
+    #{?TYPE := 'erlang.io.File'} ->  true;
+    #{?TYPE := 'erlang.io.PushbackReader'} ->  true;
+    #{?TYPE := 'erlang.io.StringReader'} ->  true;
+    #{?TYPE := 'erlang.io.StringWriter'} ->  true;
+    #{?TYPE := 'erlang.util.Date'} ->  true;
+    #{?TYPE := 'erlang.util.Regex'} ->  true;
+    #{?TYPE := 'erlang.util.UUID'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  true;
     X_ when erlang:is_bitstring(X_) ->  true;
@@ -200,49 +200,49 @@
 
 ?EXTENDS(X) ->
   case X of
-    'clojerl.Map' -> true;
-    'erlang.Type' -> true;
-    'clojerl.SortedSet' -> true;
-    'clojerl.SortedMap' -> true;
-    'erlang.io.File' -> true;
-    'clojerl.Cycle' -> true;
-    'clojerl.Vector' -> true;
-    'clojerl.Atom' -> true;
-    'clojerl.Repeat' -> true;
-    'erlang.util.UUID' -> true;
-    'clojerl.StringSeq' -> true;
+    'clojerl.ArityError' -> true;
     'clojerl.AssertionError' -> true;
-    'clojerl.TupleMap' -> true;
-    'clojerl.ProcessVal' -> true;
-    'erlang.util.Regex' -> true;
-    'clojerl.Vector.ChunkedSeq' -> true;
-    'clojerl.Iterate' -> true;
-    'clojerl.IllegalAccessError' -> true;
-    'clojerl.Reduced' -> true;
-    'clojerl.Vector.RSeq' -> true;
-    'clojerl.TransducerSeq' -> true;
-    'clojerl.Symbol' -> true;
+    'clojerl.Atom' -> true;
+    'clojerl.BadArgumentError' -> true;
+    'clojerl.ChunkedCons' -> true;
     'clojerl.Cons' -> true;
+    'clojerl.Cycle' -> true;
+    'clojerl.Delay' -> true;
     'clojerl.Error' -> true;
     'clojerl.ExceptionInfo' -> true;
-    'erlang.io.StringWriter' -> true;
-    'clojerl.Set' -> true;
-    'clojerl.BadArgumentError' -> true;
-    'clojerl.Namespace' -> true;
-    'clojerl.reader.ReaderConditional' -> true;
-    'erlang.io.StringReader' -> true;
-    'clojerl.ChunkedCons' -> true;
-    'clojerl.Var' -> true;
-    'clojerl.reader.TaggedLiteral' -> true;
-    'clojerl.ArityError' -> true;
-    'erlang.util.Date' -> true;
-    'clojerl.Delay' -> true;
-    'erlang.io.PushbackReader' -> true;
-    'clojerl.Range' -> true;
-    'clojerl.LazySeq' -> true;
-    'clojerl.List' -> true;
     'clojerl.Fn' -> true;
     'clojerl.IOError' -> true;
+    'clojerl.IllegalAccessError' -> true;
+    'clojerl.Iterate' -> true;
+    'clojerl.LazySeq' -> true;
+    'clojerl.List' -> true;
+    'clojerl.Map' -> true;
+    'clojerl.Namespace' -> true;
+    'clojerl.ProcessVal' -> true;
+    'clojerl.Range' -> true;
+    'clojerl.Reduced' -> true;
+    'clojerl.Repeat' -> true;
+    'clojerl.Set' -> true;
+    'clojerl.SortedMap' -> true;
+    'clojerl.SortedSet' -> true;
+    'clojerl.StringSeq' -> true;
+    'clojerl.Symbol' -> true;
+    'clojerl.TransducerSeq' -> true;
+    'clojerl.TupleMap' -> true;
+    'clojerl.Var' -> true;
+    'clojerl.Vector' -> true;
+    'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.Vector.RSeq' -> true;
+    'clojerl.reader.ReaderConditional' -> true;
+    'clojerl.reader.TaggedLiteral' -> true;
+    'erlang.Type' -> true;
+    'erlang.io.File' -> true;
+    'erlang.io.PushbackReader' -> true;
+    'erlang.io.StringReader' -> true;
+    'erlang.io.StringWriter' -> true;
+    'erlang.util.Date' -> true;
+    'erlang.util.Regex' -> true;
+    'erlang.util.UUID' -> true;
     'clojerl.String' -> true;
     'clojerl.BitString' -> true;
     'clojerl.Integer' -> true;

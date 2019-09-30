@@ -15,16 +15,16 @@
 
 'deref'(Ref) ->
   case Ref of
-    #{?TYPE := 'clojerl.Reduced'} ->
-      'clojerl.Reduced':'deref'(Ref);
-    #{?TYPE := 'clojerl.Delay'} ->
-      'clojerl.Delay':'deref'(Ref);
     #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'deref'(Ref);
-    #{?TYPE := 'clojerl.Var'} ->
-      'clojerl.Var':'deref'(Ref);
+    #{?TYPE := 'clojerl.Delay'} ->
+      'clojerl.Delay':'deref'(Ref);
     #{?TYPE := 'clojerl.ProcessVal'} ->
       'clojerl.ProcessVal':'deref'(Ref);
+    #{?TYPE := 'clojerl.Reduced'} ->
+      'clojerl.Reduced':'deref'(Ref);
+    #{?TYPE := 'clojerl.Var'} ->
+      'clojerl.Var':'deref'(Ref);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
     X_ when erlang:is_binary(X_) ->
@@ -39,11 +39,11 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.Reduced'} ->  true;
-    #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.Atom'} ->  true;
-    #{?TYPE := 'clojerl.Var'} ->  true;
+    #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.ProcessVal'} ->  true;
+    #{?TYPE := 'clojerl.Reduced'} ->  true;
+    #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -53,10 +53,10 @@
 
 ?EXTENDS(X) ->
   case X of
-    'clojerl.Reduced' -> true;
-    'clojerl.Delay' -> true;
     'clojerl.Atom' -> true;
-    'clojerl.Var' -> true;
+    'clojerl.Delay' -> true;
     'clojerl.ProcessVal' -> true;
+    'clojerl.Reduced' -> true;
+    'clojerl.Var' -> true;
     _ -> false
   end.

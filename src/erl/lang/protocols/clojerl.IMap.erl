@@ -17,10 +17,10 @@
 
 'keys'(Map) ->
   case Map of
-    #{?TYPE := 'clojerl.SortedMap'} ->
-      'clojerl.SortedMap':'keys'(Map);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'keys'(Map);
+    #{?TYPE := 'clojerl.SortedMap'} ->
+      'clojerl.SortedMap':'keys'(Map);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'keys'(Map);
     #{?TYPE := _} ->
@@ -39,10 +39,10 @@
 
 'vals'(Map) ->
   case Map of
-    #{?TYPE := 'clojerl.SortedMap'} ->
-      'clojerl.SortedMap':'vals'(Map);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'vals'(Map);
+    #{?TYPE := 'clojerl.SortedMap'} ->
+      'clojerl.SortedMap':'vals'(Map);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'vals'(Map);
     #{?TYPE := _} ->
@@ -61,10 +61,10 @@
 
 'without'(Map, Key) ->
   case Map of
-    #{?TYPE := 'clojerl.SortedMap'} ->
-      'clojerl.SortedMap':'without'(Map, Key);
     #{?TYPE := 'clojerl.Map'} ->
       'clojerl.Map':'without'(Map, Key);
+    #{?TYPE := 'clojerl.SortedMap'} ->
+      'clojerl.SortedMap':'without'(Map, Key);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'without'(Map, Key);
     #{?TYPE := _} ->
@@ -83,8 +83,8 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.Map'} ->  true;
+    #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
@@ -96,8 +96,8 @@
 
 ?EXTENDS(X) ->
   case X of
-    'clojerl.SortedMap' -> true;
     'clojerl.Map' -> true;
+    'clojerl.SortedMap' -> true;
     'clojerl.TupleMap' -> true;
     'erlang.Map' -> true;
     _ -> false

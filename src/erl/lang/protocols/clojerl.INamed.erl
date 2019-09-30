@@ -16,10 +16,10 @@
 
 'name'(X) ->
   case X of
-    #{?TYPE := 'clojerl.Var'} ->
-      'clojerl.Var':'name'(X);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'name'(X);
+    #{?TYPE := 'clojerl.Var'} ->
+      'clojerl.Var':'name'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'name', X);
     X_ when erlang:is_binary(X_) ->
@@ -36,10 +36,10 @@
 
 'namespace'(X) ->
   case X of
-    #{?TYPE := 'clojerl.Var'} ->
-      'clojerl.Var':'namespace'(X);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'namespace'(X);
+    #{?TYPE := 'clojerl.Var'} ->
+      'clojerl.Var':'namespace'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'namespace', X);
     X_ when erlang:is_binary(X_) ->
@@ -56,8 +56,8 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
+    #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -68,8 +68,8 @@
 
 ?EXTENDS(X) ->
   case X of
-    'clojerl.Var' -> true;
     'clojerl.Symbol' -> true;
+    'clojerl.Var' -> true;
     'clojerl.Keyword' -> true;
     _ -> false
   end.

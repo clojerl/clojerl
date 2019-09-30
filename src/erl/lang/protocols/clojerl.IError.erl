@@ -15,20 +15,20 @@
 
 'message'(Error) ->
   case Error of
-    #{?TYPE := 'clojerl.IOError'} ->
-      'clojerl.IOError':'message'(Error);
+    #{?TYPE := 'clojerl.ArityError'} ->
+      'clojerl.ArityError':'message'(Error);
+    #{?TYPE := 'clojerl.AssertionError'} ->
+      'clojerl.AssertionError':'message'(Error);
+    #{?TYPE := 'clojerl.BadArgumentError'} ->
+      'clojerl.BadArgumentError':'message'(Error);
     #{?TYPE := 'clojerl.Error'} ->
       'clojerl.Error':'message'(Error);
     #{?TYPE := 'clojerl.ExceptionInfo'} ->
       'clojerl.ExceptionInfo':'message'(Error);
+    #{?TYPE := 'clojerl.IOError'} ->
+      'clojerl.IOError':'message'(Error);
     #{?TYPE := 'clojerl.IllegalAccessError'} ->
       'clojerl.IllegalAccessError':'message'(Error);
-    #{?TYPE := 'clojerl.BadArgumentError'} ->
-      'clojerl.BadArgumentError':'message'(Error);
-    #{?TYPE := 'clojerl.AssertionError'} ->
-      'clojerl.AssertionError':'message'(Error);
-    #{?TYPE := 'clojerl.ArityError'} ->
-      'clojerl.ArityError':'message'(Error);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
     X_ when erlang:is_binary(X_) ->
@@ -43,13 +43,13 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.IOError'} ->  true;
+    #{?TYPE := 'clojerl.ArityError'} ->  true;
+    #{?TYPE := 'clojerl.AssertionError'} ->  true;
+    #{?TYPE := 'clojerl.BadArgumentError'} ->  true;
     #{?TYPE := 'clojerl.Error'} ->  true;
     #{?TYPE := 'clojerl.ExceptionInfo'} ->  true;
+    #{?TYPE := 'clojerl.IOError'} ->  true;
     #{?TYPE := 'clojerl.IllegalAccessError'} ->  true;
-    #{?TYPE := 'clojerl.BadArgumentError'} ->  true;
-    #{?TYPE := 'clojerl.AssertionError'} ->  true;
-    #{?TYPE := 'clojerl.ArityError'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -59,12 +59,12 @@
 
 ?EXTENDS(X) ->
   case X of
-    'clojerl.IOError' -> true;
+    'clojerl.ArityError' -> true;
+    'clojerl.AssertionError' -> true;
+    'clojerl.BadArgumentError' -> true;
     'clojerl.Error' -> true;
     'clojerl.ExceptionInfo' -> true;
+    'clojerl.IOError' -> true;
     'clojerl.IllegalAccessError' -> true;
-    'clojerl.BadArgumentError' -> true;
-    'clojerl.AssertionError' -> true;
-    'clojerl.ArityError' -> true;
     _ -> false
   end.

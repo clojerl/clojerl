@@ -16,10 +16,10 @@
 
 'write'(Writer, Str) ->
   case Writer of
-    #{?TYPE := 'erlang.io.StringWriter'} ->
-      'erlang.io.StringWriter':'write'(Writer, Str);
     #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'write'(Writer, Str);
+    #{?TYPE := 'erlang.io.StringWriter'} ->
+      'erlang.io.StringWriter':'write'(Writer, Str);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
     X_ when erlang:is_binary(X_) ->
@@ -36,10 +36,10 @@
 
 'write'(Writer, Format, Value) ->
   case Writer of
-    #{?TYPE := 'erlang.io.StringWriter'} ->
-      'erlang.io.StringWriter':'write'(Writer, Format, Value);
     #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'write'(Writer, Format, Value);
+    #{?TYPE := 'erlang.io.StringWriter'} ->
+      'erlang.io.StringWriter':'write'(Writer, Format, Value);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'write', Writer);
     X_ when erlang:is_binary(X_) ->
@@ -56,8 +56,8 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'erlang.io.StringWriter'} ->  true;
     #{?TYPE := 'erlang.io.File'} ->  true;
+    #{?TYPE := 'erlang.io.StringWriter'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -68,8 +68,8 @@
 
 ?EXTENDS(X) ->
   case X of
-    'erlang.io.StringWriter' -> true;
     'erlang.io.File' -> true;
+    'erlang.io.StringWriter' -> true;
     'clojerl.Keyword' -> true;
     _ -> false
   end.

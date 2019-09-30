@@ -239,9 +239,10 @@
 (defn type-ordering
   [[type _]]
   (if (underscore? type)
-    0
+    #erl[0 type]
     (-> (primitive-types type {:order -1})
-        :order)))
+        :order
+        (tuple type))))
 
 (defn module
   [proto-name fns]
