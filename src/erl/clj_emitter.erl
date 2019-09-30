@@ -1444,12 +1444,17 @@ extends_function(Ann) ->
 -spec behaviour_info_function(any(), [{atom(), arity()}]) ->
   {cerl:c_fname(), cerl:c_fun()}.
 behaviour_info_function(Ann, FunArityList) ->
-  Arg         = new_c_var(Ann),
+  Arg          = new_c_var(Ann),
 
-  Callbacks   = cerl:abstract(callbacks),
-  ClauseBody  = cerl:abstract(FunArityList),
-  Clause      = cerl:ann_c_clause(Ann, [Callbacks], ClauseBody),
-  Body        = cerl:ann_c_case(Ann, Arg, [Clause]),
+  ClauseBody   = cerl:abstract(FunArityList),
+
+  Callbacks    = cerl:abstract(callbacks),
+  Clause1      = cerl:ann_c_clause(Ann, [Callbacks], ClauseBody),
+
+  OptCallbacks = cerl:abstract(optional_callbacks),
+  Clause2      = cerl:ann_c_clause(Ann, [OptCallbacks], ClauseBody),
+
+  Body         = cerl:ann_c_case(Ann, Arg, [Clause1, Clause2]),
 
   { cerl:c_fname(?BEHAVIOUR_INFO, 1)
   , cerl:ann_c_fun(Ann, [Arg], Body)
