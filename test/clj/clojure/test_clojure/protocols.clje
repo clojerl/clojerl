@@ -64,7 +64,8 @@
        (filter (comp not #{"$_clj_on_load"
                            "module_info"
                            "__satisfies?__"
-                           "__extends?__"}))
+                           "__extends?__"
+                           "behaviour_info"}))
        (filter #(not (str/ends-with? % "__val")))
        sort))
 
