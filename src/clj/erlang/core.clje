@@ -4,35 +4,51 @@
 
 (defn- defbehaviour*
   [callbacks]
-  (let [callbacks (->> callbacks
-                      (map (fn [[name args]]
-                             #erl [(keyword name) (count args)]))
-                      ->erl
-                      )]
+  (let [fun-arity      (fn [name] #(tuple (keyword name) (count %)))
+        find-callbacks (fn [[name & arities]]
+                         (map (fun-arity name) arities))
+        find-optional  (fn [[name & arities]]
+                         (->> arities
+                              (filter #(-> % meta :optional))
+                              (map (fun-arity name))))
+        f              #(->> callbacks (map %) (apply concat) ->erl)]
     `(defn* ~'behaviour_info
-       [:callbacks]
-       '~callbacks)))
+       ([:callbacks] '~(f find-callbacks))
+       ([:optional_callbacks] '~(f find-optional)))))
 
 (defmacro defbehaviour
   "Defines Erlang behaviour callbacks for the current ns.
 
   (defbehaviour
     (foo [x])
-    (bar [x y x]))"
+    (bar [x] ^:optional [x y] [x y x]))"
   [& callbacks]
   (defbehaviour* callbacks))
 
 (defn behaviour-callbacks
-  [ns]
+  "Returns a list of callbacks for the provided namespace
+  if it defines.
+  "
+  [ns & [optional?]]
   (let [module (cond
                  (instance? clojerl.Namespace ns)
                  (-> ns ns-name keyword)
 
-                 :else (-> ns name keyword))]
-    (erlang/apply module
-                  :behaviour_info
-                  #erl(:callbacks))))
+                 :else (-> ns name keyword))
+        callback-type (if optional? :optional_callbacks :callbacks)]
+    (try
+      (erlang/apply module
+                    :behaviour_info
+                    #erl(callback-type))
+      (catch _ _
+        ()))))
 
 (defmacro behaviours
+  "Indicate the Erlang behaviours the current ns will implement.
+
+  (behaviours
+    gen_server
+    gen_fsm
+    custom)"
   [& names]
   `(do ~@(map #(list 'behaviour* %) names)))
