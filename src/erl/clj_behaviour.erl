@@ -13,7 +13,9 @@ check(Module) ->
   Exports = [extract_fa(E) || E <- ExportsAsts],
   Behaviours = [extract_behaviour(A) || A <- AttrsAsts, is_behaviour(A)],
 
-  [do_check(B, Exports) || B <- Behaviours],
+  File = find_file(AttrsAsts),
+
+  [do_check(File, B, Exports) || B <- Behaviours],
 
   ok.
 
@@ -31,37 +33,55 @@ is_behaviour({KeyAst, _}) ->
   Key = cerl:concrete(KeyAst),
   Key =:= behavior orelse Key =:= behaviour.
 
--spec do_check(module(), [{atom(), arity()}]) -> ok.
-do_check(Behaviour, Exports) ->
-  Callbacks = sets:from_list(callbacks(Behaviour, callbacks)),
-  Optional  = sets:from_list(callbacks(Behaviour, optional_callbacks)),
+-spec find_file([{cerl:cerl(), cerl:cerl()}]) -> binary().
+find_file(AttrsAsts) ->
+  case [V || {K, V} <- AttrsAsts, cerl:concrete(K) =:= file] of
+    [] -> <<?NO_SOURCE>>;
+    [V] -> to_binary(cerl:concrete(V))
+  end.
+
+-spec to_binary(any()) -> binary().
+to_binary([{X, _}]) ->
+  list_to_binary(X);
+to_binary(X) when is_list(X) ->
+  list_to_binary(X);
+to_binary(_) ->
+  <<?NO_SOURCE>>.
+
+-spec do_check(binary(), module(), [{atom(), arity()}]) -> ok.
+do_check(File, Behaviour, Exports) ->
+  Callbacks = sets:from_list(callbacks(Behaviour, File, callbacks)),
+  Optional  = sets:from_list(callbacks(Behaviour, File, optional_callbacks)),
   Required  = sets:subtract(Callbacks, Optional),
   Missing   = sets:subtract(Required, sets:from_list(Exports)),
 
-  [ ?WARN([ <<"undefined callback function ">>
-          , F, <<"/">>, A
-          , <<" (behaviour ">>, Behaviour, <<")">>
-          ])
+  [ ?WARN( [ <<"Missing callback '">>
+           , clj_rt:name(F), <<"' (arity ">>, A , <<")">>
+           , <<" for behaviour '">>, clj_rt:name(Behaviour), <<"'">>
+           ]
+         , location(File)
+         )
     || {F, A} <- sets:to_list(Missing)
   ],
 
   ok.
 
--spec callbacks(module(), callbacks | optional_callbacks) ->
+-spec callbacks(module(), binary(), callbacks | optional_callbacks) ->
   [{atom(), arity()}].
-callbacks(Behavior, Type) ->
+callbacks(Behavior, File, Type) ->
   try
     case Behavior:behaviour_info(Type) of
       undefined ->
         ?WARN_WHEN( Type =:= callbacks
                   , [<<"Undefined behaviour callbacks">>, Behavior]
+                  , location(File)
                   ),
         [];
       Functions ->
         case is_fa_list(Functions) of
           true -> Functions;
           false ->
-            ?WARN([<<"Ill defined ">>, Type, " in ", Behavior]),
+            ?WARN([<<"Ill defined ">>, Type, " in ", Behavior], location(File)),
             []
         end
     end
@@ -69,9 +89,14 @@ callbacks(Behavior, Type) ->
     _:_ ->
       ?WARN_WHEN( Type =:= callbacks
                 , [<<"Undefined behaviour ">>, Behavior]
+                , location(File)
                 ),
       []
   end.
+
+-spec location(binary()) -> clj_reader:location().
+location(File) ->
+  #{file => File, line => 1, column => 1}.
 
 is_fa_list([{F, A} | L]) when is_atom(F), is_integer(A), A >= 0 ->
   is_fa_list(L);
