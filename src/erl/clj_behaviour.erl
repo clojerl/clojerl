@@ -8,16 +8,19 @@
 -spec check(cerl:c_module()) -> ok.
 check(Module) ->
   ExportsAsts = cerl:module_exports(Module),
-  AttrsAsts = cerl:module_attrs(Module),
+  AttrsAsts   = cerl:module_attrs(Module),
+  File        = find_file(AttrsAsts),
 
-  Exports = [extract_fa(E) || E <- ExportsAsts],
-  Behaviours = [extract_behaviour(A) || A <- AttrsAsts, is_behaviour(A)],
-
-  File = find_file(AttrsAsts),
+  Exports     = [extract_fa(E) || E <- ExportsAsts],
+  Behaviours  = [extract_behaviour(A) || A <- AttrsAsts, is_behaviour(A)],
 
   [do_check(File, B, Exports) || B <- Behaviours],
 
   ok.
+
+%%------------------------------------------------------------------------------
+%% Internal
+%%------------------------------------------------------------------------------
 
 -spec extract_fa(cerl:cerl()) -> {atom(), arity()}.
 extract_fa(FunArityAst) ->

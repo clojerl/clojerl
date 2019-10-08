@@ -349,11 +349,11 @@ compile_module_fun(Opts) ->
 -spec compile_module(cerl:c_module(), options()) -> binary().
 compile_module(Module, Opts) ->
   ok       = maybe_output_core(Module, Opts),
+  ok       = clj_behaviour:check(Module),
+
   ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
              | maps:get(erl_flags, Opts, [])
              ],
-
-  clj_behaviour:check(Module),
 
   %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   case compile:noenv_forms(Module, ErlFlags) of

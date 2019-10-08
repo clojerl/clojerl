@@ -1,4 +1,6 @@
-(ns erlang.core)
+(ns ^{:doc "Erlang core features [EXPERIMENTAL]"
+      :author "Juan Facorro"}
+    erlang.core)
 
 ;;;;;;; behaviour ;;;;;;;;;;;;;
 
