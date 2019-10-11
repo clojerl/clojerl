@@ -13,15 +13,16 @@
 -callback 'chunked_first'(any()) -> any().
 -callback 'chunked_next'(any()) -> any().
 -callback 'chunked_more'(any()) -> any().
+-optional_callbacks(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1]).
 
 'chunked_first'(Seq) ->
   case Seq of
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
+      'clojerl.ChunkedCons':'chunked_first'(Seq);
     #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'chunked_first'(Seq);
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'chunked_first'(Seq);
-    #{?TYPE := 'clojerl.ChunkedCons'} ->
-      'clojerl.ChunkedCons':'chunked_first'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'chunked_first', Seq);
     X_ when erlang:is_binary(X_) ->
@@ -36,12 +37,12 @@
 
 'chunked_next'(Seq) ->
   case Seq of
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
+      'clojerl.ChunkedCons':'chunked_next'(Seq);
     #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'chunked_next'(Seq);
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'chunked_next'(Seq);
-    #{?TYPE := 'clojerl.ChunkedCons'} ->
-      'clojerl.ChunkedCons':'chunked_next'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'chunked_next', Seq);
     X_ when erlang:is_binary(X_) ->
@@ -56,12 +57,12 @@
 
 'chunked_more'(Seq) ->
   case Seq of
+    #{?TYPE := 'clojerl.ChunkedCons'} ->
+      'clojerl.ChunkedCons':'chunked_more'(Seq);
     #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'chunked_more'(Seq);
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'chunked_more'(Seq);
-    #{?TYPE := 'clojerl.ChunkedCons'} ->
-      'clojerl.ChunkedCons':'chunked_more'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'chunked_more', Seq);
     X_ when erlang:is_binary(X_) ->
@@ -76,9 +77,9 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.Range'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
-    #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -88,8 +89,8 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.ChunkedCons' -> true;
     'clojerl.Range' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
-    'clojerl.ChunkedCons' -> true;
     _ -> false
   end.

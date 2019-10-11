@@ -28,29 +28,29 @@
 (defn find-protocol-impls
   [protocol]
   (let [type->str #(subs (str %) 1)
-        prefix (type->str protocol)
+        prefix (str protocol)
+        ns-name (str/join "." (-> prefix (str/split #"\.") drop-last))
         f (fn [[module path]]
-            (str/starts-with? (type->str module) prefix))]
+            (or (str/starts-with? (type->str module) prefix)
+                (= ns-name (type->str module))))]
     (->> (code/all_loaded)
          (filter f)
-         (map first))))
+         (map (fn [[module _]]
+                [module (type->str module)])))))
 
 (defn clean-protocol [protocol]
-  (doseq [m (find-protocol-impls protocol)]
-    (delete-module m)))
+  (doseq [[module ns-name] (find-protocol-impls protocol)]
+    (clojerl.Namespace/remove (symbol ns-name))
+    (delete-module module)))
 
-;; temporary hack until I decide how to cleanly reload protocol
-;; this no longer works
+;; Upstream Clojure test doesn't have the implementation of
+;; this function figured out. It's unclear how to implement it
+;; for Clojure on the BEAM as well.
+;; This implementation does not work.
 (defn reload-example-protocols
   []
   ;; (clean-protocol ExampleProtocol)
   ;; (clean-protocol other/SimpleProtocol)
-
-  ;; (alter-var-root #'clojure.test-clojure.protocols.examples/ExampleProtocol
-  ;;                 assoc :impls {})
-  ;; (alter-var-root #'clojure.test-clojure.protocols.more-examples/SimpleProtocol
-  ;;                 assoc :impls {})
-
   (require :reload
            'clojure.test-clojure.protocols.examples
            'clojure.test-clojure.protocols.more-examples))
@@ -64,7 +64,8 @@
        (filter (comp not #{"$_clj_on_load"
                            "module_info"
                            "__satisfies?__"
-                           "__extends?__"}))
+                           "__extends?__"
+                           "behaviour_info"}))
        (filter #(not (str/ends-with? % "__val")))
        sort))
 
@@ -140,15 +141,6 @@
   (testing "record? and type? return expected result for IRecord and IType"
     (let [r (TestRecord. 1 2)]
       (is (record? r)))))
-
-(deftype ExtendsTestWidget []
-  ExampleProtocol)
-#_(deftest extends?-test
-  (reload-example-protocols)
-  (testing "returns false if a type does not implement the protocol at all"
-    (is (false? (extends? other/SimpleProtocol ExtendsTestWidget))))
-  (testing "returns true if a type implements the protocol directly" ;; semantics changed 4/15/2010
-    (is (true? (extends? ExampleProtocol ExtendsTestWidget)))))
 
 (deftype SatisfiesTestWidget []
   ExampleProtocol)

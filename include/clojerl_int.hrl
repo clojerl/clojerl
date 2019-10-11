@@ -17,6 +17,9 @@
 %% Name for the extends? function in protocols
 -define(EXTENDS, '__extends?__').
 
+%% Name for the callback for behaviors
+-define(BEHAVIOUR_INFO, behaviour_info).
+
 %% Reader constants
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).

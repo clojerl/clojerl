@@ -10,6 +10,7 @@
 -export([?EXTENDS/1]).
 
 -callback '_'(any()) -> any().
+-optional_callbacks(['_'/1]).
 
 ?SATISFIES(X) ->
   case X of

@@ -361,13 +361,19 @@ ast(#{op := defprotocol} = Expr, State) ->
 
   ProtocolAttr = {cerl:ann_c_atom(Ann, protocol), cerl:abstract([true])},
   Functions0   = [protocol_function(Sig, Module, Ann) || Sig <- MethodsSigs],
+  Callbacks    = [ {cerl:fname_id(FName), cerl:fname_arity(FName)}
+                   || {FName, _} <- Functions0
+                 ],
+
   Satifies     = satisfies_function(Ann),
   Extends      = extends_function(Ann),
+  BehaviorInfo = behaviour_info_function(Ann, Callbacks),
 
-  Functions1   = [Satifies, Extends | Functions0],
+  Functions1   = [Satifies, Extends, BehaviorInfo | Functions0],
   Exports      = [ {cerl:fname_id(FName), cerl:fname_arity(FName)}
                    || {FName, _} <- Functions1
                  ],
+
 
   clj_module:add_attributes([ProtocolAttr], Module),
   clj_module:add_functions(Functions1, Module),
@@ -436,6 +442,26 @@ ast(#{op := extend_type} = Expr, State) ->
 
   Ast = cerl:ann_c_atom(ann_from(Env), ?NIL),
   push_ast(Ast, State1#{force_remote_invoke => ForceRemote});
+%%------------------------------------------------------------------------------
+%% behaviour
+%%------------------------------------------------------------------------------
+ast(#{op := behaviour} = Expr, State) ->
+  #{ name := NameSym
+   , env  := Env
+   } = Expr,
+
+  Ann       = ann_from(Env),
+  Name      = to_atom(NameSym),
+  CurrentNs = 'clojerl.Namespace':current(),
+  NsNameSym = 'clojerl.Namespace':name(CurrentNs),
+  Module    = to_atom(NsNameSym),
+  ok        = clj_module:ensure_loaded(file_from(Env), Module),
+
+  BehaviourAttr = {cerl:ann_c_atom(Ann, behavior), cerl:abstract([Name])},
+  clj_module:add_attributes([BehaviourAttr], Module),
+
+  Ast = cerl:ann_c_atom(Ann, ?NIL),
+  push_ast(Ast, State);
 %%------------------------------------------------------------------------------
 %% fn, invoke, erl_fun
 %%------------------------------------------------------------------------------
@@ -1412,6 +1438,25 @@ extends_function(Ann) ->
   Body        = cerl:ann_c_case(Ann, Arg, [Clause]),
 
   { cerl:c_fname(?EXTENDS, 1)
+  , cerl:ann_c_fun(Ann, [Arg], Body)
+  }.
+
+-spec behaviour_info_function(any(), [{atom(), arity()}]) ->
+  {cerl:c_fname(), cerl:c_fun()}.
+behaviour_info_function(Ann, FunArityList) ->
+  Arg          = new_c_var(Ann),
+
+  ClauseBody   = cerl:abstract(FunArityList),
+
+  Callbacks    = cerl:abstract(callbacks),
+  Clause1      = cerl:ann_c_clause(Ann, [Callbacks], ClauseBody),
+
+  OptCallbacks = cerl:abstract(optional_callbacks),
+  Clause2      = cerl:ann_c_clause(Ann, [OptCallbacks], ClauseBody),
+
+  Body         = cerl:ann_c_case(Ann, Arg, [Clause1, Clause2]),
+
+  { cerl:c_fname(?BEHAVIOUR_INFO, 1)
   , cerl:ann_c_fun(Ann, [Arg], Body)
   }.
 

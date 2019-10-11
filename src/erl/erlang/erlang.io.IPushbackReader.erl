@@ -11,6 +11,7 @@
 -export([?EXTENDS/1]).
 
 -callback 'unread'(any(), any()) -> any().
+-optional_callbacks(['unread'/2]).
 
 'unread'(Reader, Ch) ->
   case Reader of

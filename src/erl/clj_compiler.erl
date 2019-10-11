@@ -17,6 +17,7 @@
         , eval_expressions/1
         , eval_expressions/2
         , compile_module/2
+        , current_file/0
         ]).
 
 -export([ no_warn_dynamic_var_name/1
@@ -217,6 +218,7 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   CompileFun =
     fun() ->
         try
+          current_file(File),
           Env2  = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Time, Env1),
           %% Maybe report time
           Time andalso report_time(Env2),
@@ -233,6 +235,21 @@ do_compile(Src, Opts0, Env0) when is_binary(Src) ->
   Result = clj_module:with_context(CompileFun),
 
   exit(Result).
+
+-define(CURRENT_FILE, '__current_file__').
+
+%% @doc Gets the current file that is being compiled if set
+-spec current_file() -> binary().
+current_file() ->
+   case erlang:get(?CURRENT_FILE) of
+     undefined -> <<?NO_SOURCE>>;
+     X -> X
+   end.
+
+%% @doc Sets the current file that is being compiled
+-spec current_file(binary()) -> ok.
+current_file(Filename) ->
+  erlang:put(?CURRENT_FILE, Filename).
 
 -spec do_eval(any(), options(), clj_env:env()) -> no_return().
 do_eval(Form, Opts0, Env0) ->
@@ -332,6 +349,8 @@ compile_module_fun(Opts) ->
 -spec compile_module(cerl:c_module(), options()) -> binary().
 compile_module(Module, Opts) ->
   ok       = maybe_output_core(Module, Opts),
+  ok       = clj_behaviour:check(Module),
+
   ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
              | maps:get(erl_flags, Opts, [])
              ],

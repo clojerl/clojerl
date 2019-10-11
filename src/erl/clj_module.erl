@@ -131,7 +131,8 @@ ensure_loaded(Source, Name) ->
 %% @end
 -spec maybe_ensure_loaded(module()) -> ok.
 maybe_ensure_loaded(Name) ->
-  in_context() andalso ensure_loaded(<<?NO_SOURCE>>, Name),
+  File = clj_compiler:current_file(),
+  in_context() andalso ensure_loaded(File, Name),
   ok.
 
 %% @doc Remove the module from the loaded modules in clj_module.

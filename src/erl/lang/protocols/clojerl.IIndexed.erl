@@ -12,6 +12,7 @@
 
 -callback 'nth'(any(), any()) -> any().
 -callback 'nth'(any(), any(), any()) -> any().
+-optional_callbacks(['nth'/2, 'nth'/3]).
 
 'nth'(Coll, N) ->
   case Coll of
