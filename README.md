@@ -21,6 +21,12 @@ On Windows:
 
 ## Getting Started
 
+### Documentation and Resources
+
+There is more information regarding Clojerl in [clojerl.org][clojerl], like
+what [features][features] does it include and
+[how it differs from Clojure][diff-with-clojure].
+
 ### Online REPL
 
 To try it out and get a sense of what you can do, you can visit
@@ -84,11 +90,6 @@ The plugin provides helpful commands to:
 
 For more information on how to use this plugin please check the
 documentation in [`rebar3_clojerl`][rebar3_clojerl].
-
-### Documentation and Resources
-
-There is more information regarding Clojerl [here][clojerl], like
-what features does it include and how it differs from Clojure.
 
 ## Rationale
 
@@ -201,3 +202,5 @@ Any feedback, comment and/or suggestion is welcome!
 [rebar3_clojerl]:https://github.com/clojerl/rebar3_clojerl
 [diffs-with-clojure]: https://clojerl.github.io/differences-with-clojure/
 [clojerl]: http://clojerl.org/
+[features]: http://clojerl.org/available-features
+[diff-with-clojure]: http://clojerl.org/differences-with-clojure
