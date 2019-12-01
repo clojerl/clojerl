@@ -11,6 +11,7 @@ start_link() ->
   {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
 init(_Args) ->
   SupFlags = #{strategy => one_for_one},
+  Schedulers = erlang:system_info(schedulers_online),
   Specs    = [ #{ id    => 'clojerl.Namespace'
                 , start => {'clojerl.Namespace', start_link, []}
                 }
@@ -28,6 +29,12 @@ init(_Args) ->
                 }
              , #{ id    => 'clojerl.Delay'
                 , start => {'clojerl.Delay', start_link, []}
+                }
+             , #{ id    => 'clojure.reducers'
+                , start => { clj_pool
+                           , start_link
+                           , ['clojure.reducers', #{workers => Schedulers}]
+                           }
                 }
              ],
   {ok, {SupFlags, Specs}}.

@@ -39,7 +39,9 @@
   (f))
 
 (defn- fjfork [task]
-  (erlang/spawn #(task))
+  (clj_pool/cast :clojure.reducers
+                 :erlang :apply #erl(#(task) #erl()))
+  ;; (erlang/spawn #(task))
   task)
 
 (defn- fjjoin [^Task task]
