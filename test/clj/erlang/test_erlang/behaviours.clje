@@ -1,0 +1,35 @@
+(ns erlang.test-erlang.behaviours
+  (:use clojure.test
+        clojure.test-helper)
+  (:require [erlang.core :as erl]))
+
+(erl/defbehaviour
+  (foo [])
+  (bar [a] ^:optional [a b])
+  (baz ^:optional [a b c d] [a b c d e f g]))
+
+(def this-ns-name (ns-name *ns*))
+
+(deftest check-callbacks
+  (testing "callbacks"
+    (is (= (erl/behaviour-callbacks this-ns-name)
+           '([:foo 0] [:bar 1] [:bar 2] [:baz 4] [:baz 7]))))
+  (testing "optional callbacks"
+    (is (= (erl/behaviour-callbacks this-ns-name true)
+           '([:bar 2] [:baz 4])))))
+
+(deftest warnings-emitted
+  (testing "Missing all mandatory callback functions"
+    (should-print-err-message
+     #"(?s).*(Missing callback '(handle_cast|init|handle_call)' \(arity (2|3|1)\) for behaviour 'gen_server'.*?){3}.*"
+     (do
+       (ns hello)
+       (erlang.core/behaviours gen_server))))
+  (testing "Missing some mandatory callback functions"
+    (should-print-err-message
+     #"(?s).*Missing callback 'handle_cast' \(arity 2\) for behaviour 'gen_server'.*"
+     (do
+       (ns hello)
+       (erlang.core/behaviours gen_server)
+       (defn init [x])
+       (defn handle_call [_ _ _])))))
