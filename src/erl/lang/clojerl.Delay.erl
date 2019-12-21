@@ -9,6 +9,7 @@
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IPending').
 -behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/1

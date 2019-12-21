@@ -1958,16 +1958,6 @@
       (.setMinHistory r (:min-history opts)))
     r)))
 
-(defn ^:private deref-future
-  ([fut]
-   (throw "unimplemented ref")
-   #_(.get fut))
-  ([fut timeout-ms timeout-val]
-   (throw "unimplemented ref")
-   #_(try (.get fut timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
-        (catch java.util.concurrent.TimeoutException e
-          timeout-val))))
-
 (defn deref
   "Also reader macro: @ref/@agent/@var/@atom/@delay/@future/@promise. Within a transaction,
   returns the in-transaction-value of ref, else returns the
@@ -1981,15 +1971,9 @@
   value is available. See also - realized?."
   {:added "1.0"}
   ([ref]
-   (if (satisfies? clojerl.IDeref ref)
-     (clj_rt/deref ref)
-     (throw (clojerl.Error. (str "unimplemented deref for type " (clj_rt/type ref))))
-     #_(deref-future ref)))
+   (.deref ^clojerl.IDeref ref))
   ([ref timeout-ms timeout-val]
-   (throw "unimplemented timeout for deref")
-   #_(if (instance? clojure.lang.IBlockingDeref ref)
-       (.deref ^clojure.lang.IBlockingDeref ref timeout-ms timeout-val)
-       (deref-future ref timeout-ms timeout-val))))
+   (.deref ^clojerl.IBlockingDeref ref timeout-ms timeout-val)))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -5367,15 +5351,13 @@
   "Returns true if x is a future"
   {:added "1.1"}
   [x]
-  (throw "unimplemented future")
-  #_(instance? java.util.concurrent.Future x))
+  (instance? clojerl.Future x))
 
 (defn future-done?
   "Returns true if future f is done"
   {:added "1.1"}
-  [f]
-  (throw "unimplemented future")
-  #_(.isDone f))
+  [^clojerl.Future f]
+  (.done? f))
 
 (defmacro letfn
   "fnspec ==> (fname [params*] exprs) or (fname ([params*] exprs)+)
@@ -5664,24 +5646,7 @@
   of deref with timeout is used. See also - realized?."
   {:added "1.1"}
   [f]
-  (throw "unimplemented future")
-  #_(let [f (binding-conveyor-fn f)
-        fut (.submit clojure.lang.Agent/soloExecutor ^Callable f)]
-    (reify
-     clojure.lang.IDeref
-     (deref [_] (deref-future fut))
-     clojure.lang.IBlockingDeref
-     (deref
-      [_ timeout-ms timeout-val]
-      (deref-future fut timeout-ms timeout-val))
-     clojure.lang.IPending
-     (isRealized [_] (.isDone fut))
-     java.util.concurrent.Future
-      (get [_] (.get fut))
-      (get [_ timeout unit] (.get fut timeout unit))
-      (isCancelled [_] (.isCancelled fut))
-      (isDone [_] (.isDone fut))
-      (cancel [_ interrupt?] (.cancel fut interrupt?)))))
+  (clojerl.Future. (binding-conveyor-fn f)))
 
 (defmacro future
   "Takes a body of expressions and yields a future object that will
@@ -5692,20 +5657,17 @@
   {:added "1.1"}
   [& body] `(future-call (^{:once true} fn* [] ~@body)))
 
-
 (defn future-cancel
   "Cancels the future, if possible."
   {:added "1.1"}
   [f]
-  (throw "unimplemented future")
-  #_(.cancel f true))
+  (.cancel f))
 
 (defn future-cancelled?
   "Returns true if future f is cancelled"
   {:added "1.1"}
   [f]
-  (throw "unimplemented future")
-  #_(.isCancelled f))
+  (.cancelled? f))
 
 (defn pmap
   "Like map, except f is applied in parallel. Semi-lazy in that the
@@ -5715,7 +5677,7 @@
   the coordination overhead."
   {:added "1.0"}
   ([f coll]
-   (let [n (+ 2 (erlang/system_info :logical_processors_available))
+   (let [n (+ 2 (erlang/system_info :logical_processors_online))
          rets (map #(future (f %)) coll)
          step (fn step [[x & xs :as vs] fs]
                 (lazy-seq
@@ -5792,36 +5754,14 @@
   blocking. See also - realized?."
   {:added "1.1"}
   []
-  (throw "unimplemented promise")
-  #_(let [d (java.util.concurrent.CountDownLatch. 1)
-        v (atom d)]
-    (reify
-     clojure.lang.IDeref
-       (deref [_] (.await d) @v)
-     clojure.lang.IBlockingDeref
-       (deref
-        [_ timeout-ms timeout-val]
-        (if (.await d timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
-          @v
-          timeout-val))
-     clojure.lang.IPending
-      (isRealized [this]
-       (zero? (.getCount d)))
-     clojure.lang.IFn
-     (invoke
-      [this x]
-      (when (and (pos? (.getCount d))
-                 (compare-and-set! v d x))
-        (.countDown d)
-        this)))))
+  (clojerl.Promise.))
 
 (defn deliver
   "Delivers the supplied value to the promise, releasing any pending
   derefs. A subsequent call to deliver on a promise will have no effect."
   {:added "1.1"}
   [promise val]
-  (throw "unimplemented promise")
-  #_(promise val))
+  (promise val))
 
 
 (defn flatten

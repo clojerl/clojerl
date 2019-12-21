@@ -1,4 +1,4 @@
--module('clojerl.IDeref').
+-module('clojerl.IBlockingDeref').
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
@@ -6,29 +6,19 @@
 -clojure(true).
 -protocol(true).
 
--export(['deref'/1]).
+-export(['deref'/3]).
 -export([?SATISFIES/1]).
 -export([?EXTENDS/1]).
 
--callback 'deref'(any()) -> any().
--optional_callbacks(['deref'/1]).
+-callback 'deref'(any(), any(), any()) -> any().
+-optional_callbacks(['deref'/3]).
 
-'deref'(Ref) ->
+'deref'(Ref, TimeoutMs, TimeoutValue) ->
   case Ref of
-    #{?TYPE := 'clojerl.Atom'} ->
-      'clojerl.Atom':'deref'(Ref);
-    #{?TYPE := 'clojerl.Delay'} ->
-      'clojerl.Delay':'deref'(Ref);
     #{?TYPE := 'clojerl.Future'} ->
-      'clojerl.Future':'deref'(Ref);
-    #{?TYPE := 'clojerl.ProcessVal'} ->
-      'clojerl.ProcessVal':'deref'(Ref);
+      'clojerl.Future':'deref'(Ref, TimeoutMs, TimeoutValue);
     #{?TYPE := 'clojerl.Promise'} ->
-      'clojerl.Promise':'deref'(Ref);
-    #{?TYPE := 'clojerl.Reduced'} ->
-      'clojerl.Reduced':'deref'(Ref);
-    #{?TYPE := 'clojerl.Var'} ->
-      'clojerl.Var':'deref'(Ref);
+      'clojerl.Promise':'deref'(Ref, TimeoutMs, TimeoutValue);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'deref', Ref);
     X_ when erlang:is_binary(X_) ->
@@ -43,13 +33,8 @@
 
 ?SATISFIES(X) ->
   case X of
-    #{?TYPE := 'clojerl.Atom'} ->  true;
-    #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.Future'} ->  true;
-    #{?TYPE := 'clojerl.ProcessVal'} ->  true;
     #{?TYPE := 'clojerl.Promise'} ->  true;
-    #{?TYPE := 'clojerl.Reduced'} ->  true;
-    #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -59,12 +44,7 @@
 
 ?EXTENDS(X) ->
   case X of
-    'clojerl.Atom' -> true;
-    'clojerl.Delay' -> true;
     'clojerl.Future' -> true;
-    'clojerl.ProcessVal' -> true;
     'clojerl.Promise' -> true;
-    'clojerl.Reduced' -> true;
-    'clojerl.Var' -> true;
     _ -> false
   end.

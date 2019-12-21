@@ -17,6 +17,10 @@
   case X of
     #{?TYPE := 'clojerl.Delay'} ->
       'clojerl.Delay':'close'(X);
+    #{?TYPE := 'clojerl.Future'} ->
+      'clojerl.Future':'close'(X);
+    #{?TYPE := 'clojerl.Promise'} ->
+      'clojerl.Promise':'close'(X);
     #{?TYPE := 'erlang.io.File'} ->
       'erlang.io.File':'close'(X);
     #{?TYPE := 'erlang.io.PushbackReader'} ->
@@ -40,6 +44,8 @@
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := 'clojerl.Delay'} ->  true;
+    #{?TYPE := 'clojerl.Future'} ->  true;
+    #{?TYPE := 'clojerl.Promise'} ->  true;
     #{?TYPE := 'erlang.io.File'} ->  true;
     #{?TYPE := 'erlang.io.PushbackReader'} ->  true;
     #{?TYPE := 'erlang.io.StringReader'} ->  true;
@@ -54,6 +60,8 @@
 ?EXTENDS(X) ->
   case X of
     'clojerl.Delay' -> true;
+    'clojerl.Future' -> true;
+    'clojerl.Promise' -> true;
     'erlang.io.File' -> true;
     'erlang.io.PushbackReader' -> true;
     'erlang.io.StringReader' -> true;
