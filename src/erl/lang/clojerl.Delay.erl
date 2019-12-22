@@ -9,6 +9,7 @@
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IPending').
 -behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/1
@@ -64,7 +65,7 @@ close(#{?TYPE := ?M, id := Id}) ->
 
 deref(#{?TYPE := ?M, id := Id, fn := Fn}) ->
   Result = case clj_utils:ets_get(?MODULE, Id) of
-             ?NIL -> gen_server:call(?MODULE, {deref, Id, Fn});
+             ?NIL -> gen_server:call(?MODULE, {deref, Id, Fn}, infinity);
              {Id, R} -> R
            end,
   case Result of

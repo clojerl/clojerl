@@ -37,6 +37,8 @@
       'clojerl.ExceptionInfo':'hash'(X);
     #{?TYPE := 'clojerl.Fn'} ->
       'clojerl.Fn':'hash'(X);
+    #{?TYPE := 'clojerl.Future'} ->
+      'clojerl.Future':'hash'(X);
     #{?TYPE := 'clojerl.IOError'} ->
       'clojerl.IOError':'hash'(X);
     #{?TYPE := 'clojerl.IllegalAccessError'} ->
@@ -53,6 +55,8 @@
       'clojerl.Namespace':'hash'(X);
     #{?TYPE := 'clojerl.ProcessVal'} ->
       'clojerl.ProcessVal':'hash'(X);
+    #{?TYPE := 'clojerl.Promise'} ->
+      'clojerl.Promise':'hash'(X);
     #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'hash'(X);
     #{?TYPE := 'clojerl.Reduced'} ->
@@ -138,6 +142,7 @@
     #{?TYPE := 'clojerl.Error'} ->  true;
     #{?TYPE := 'clojerl.ExceptionInfo'} ->  true;
     #{?TYPE := 'clojerl.Fn'} ->  true;
+    #{?TYPE := 'clojerl.Future'} ->  true;
     #{?TYPE := 'clojerl.IOError'} ->  true;
     #{?TYPE := 'clojerl.IllegalAccessError'} ->  true;
     #{?TYPE := 'clojerl.Iterate'} ->  true;
@@ -146,6 +151,7 @@
     #{?TYPE := 'clojerl.Map'} ->  true;
     #{?TYPE := 'clojerl.Namespace'} ->  true;
     #{?TYPE := 'clojerl.ProcessVal'} ->  true;
+    #{?TYPE := 'clojerl.Promise'} ->  true;
     #{?TYPE := 'clojerl.Range'} ->  true;
     #{?TYPE := 'clojerl.Reduced'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
@@ -196,6 +202,7 @@
     'clojerl.Error' -> true;
     'clojerl.ExceptionInfo' -> true;
     'clojerl.Fn' -> true;
+    'clojerl.Future' -> true;
     'clojerl.IOError' -> true;
     'clojerl.IllegalAccessError' -> true;
     'clojerl.Iterate' -> true;
@@ -204,6 +211,7 @@
     'clojerl.Map' -> true;
     'clojerl.Namespace' -> true;
     'clojerl.ProcessVal' -> true;
+    'clojerl.Promise' -> true;
     'clojerl.Range' -> true;
     'clojerl.Reduced' -> true;
     'clojerl.Repeat' -> true;

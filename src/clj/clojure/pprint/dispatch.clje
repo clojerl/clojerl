@@ -114,26 +114,15 @@
 
 (def ^{:private true} pprint-set (formatter-out "~<#{~;~@{~w~^ ~:_~}~;}~:>"))
 
-(def ^{:private true}
-     type-map {"core$future_call" "Future",
-               "core$promise" "Promise"})
-
-(defn- map-ref-type
-  "Map ugly type names to something simpler"
-  [name]
-  (or (when-let [match (re-find #"^[^$]+\$[^$]+" name)]
-        (type-map match))
-      name))
-
 (defn- pprint-ideref [o]
-  (let [prefix (str "#<" (map-ref-type (str (type o)))
+  (let [prefix (str "#<" (str (type o))
                     "@" (erlang/phash2 o) ": ")]
     (pprint-logical-block  :prefix prefix :suffix ">"
                            (pprint-indent :block (-> (count prefix) (- 2) -))
                            (pprint-newline :linear)
                            (write-out (cond
                                         (and (future? o) (not (future-done? o))) :pending
-                                       ;; (and (instance? clojure.lang.IPending o) (not (.isRealized ^clojure.lang.IPending o))) :not-delivered
+                                        (and (instance? clojerl.IPending o) (not (.realized? ^clojerl.IPending o))) :not-delivered
                                        :else @o)))))
 
 (def ^{:private true} pprint-pqueue (formatter-out "~<<-(~;~@{~w~^ ~_~}~;)-<~:>"))
@@ -158,7 +147,14 @@
  (use-method simple-dispatch clojerl.SortedSet pprint-set)
  ;; (use-method simple-dispatch clojure.lang.PersistentQueue pprint-pqueue)
  (use-method simple-dispatch clojerl.Var pprint-simple-default)
- (use-method simple-dispatch clojerl.IDeref pprint-ideref)
+
+ ;; TODO: replace all the following with
+ ;; (use-method simple-dispatch clojerl.IDeref pprint-ideref)
+ (use-method simple-dispatch clojerl.Future pprint-ideref)
+ (use-method simple-dispatch clojerl.Promise pprint-ideref)
+ (use-method simple-dispatch clojerl.Delay pprint-ideref)
+ (use-method simple-dispatch clojerl.Atom pprint-ideref)
+
  (use-method simple-dispatch clojerl.Nil pr)
  (use-method simple-dispatch :default pprint-simple-default))
 
@@ -465,7 +461,14 @@
  (use-method code-dispatch clojerl.Set pprint-set)
  (use-method code-dispatch clojerl.SortedSet pprint-set)
  ;; (use-method code-dispatch clojure.lang.PersistentQueue pprint-pqueue)
- (use-method code-dispatch clojerl.IDeref pprint-ideref)
+
+ ;; TODO: replace all the following with
+ ;; (use-method code-dispatch clojerl.IDeref pprint-ideref)
+ (use-method code-dispatch clojerl.Future pprint-ideref)
+ (use-method code-dispatch clojerl.Promise pprint-ideref)
+ (use-method code-dispatch clojerl.Delay pprint-ideref)
+ (use-method code-dispatch clojerl.Atom pprint-ideref)
+
  (use-method code-dispatch clojerl.Nil pr)
  (use-method code-dispatch :default pprint-simple-default))
 

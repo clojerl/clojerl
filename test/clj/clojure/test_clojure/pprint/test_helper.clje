@@ -28,3 +28,13 @@
           `(is (#'clojure.test-clojure.pprint.test-helper/back-match ~x ~y))
           (instance? clojerl.String y) `(is (= ~x (platform-newlines ~y)))
           :else `(is (= ~x ~y))))))
+
+(defmacro simple-tests-with-bindings [name bindings & test-pairs]
+  `(deftest ~name
+     (let [~@bindings]
+       ~@(for [[x y] (partition 2 test-pairs)]
+           (cond
+             (instance? erlang.util.Regex y)
+             `(is (#'clojure.test-clojure.pprint.test-helper/back-match ~x ~y))
+             (instance? clojerl.String y) `(is (= ~x (platform-newlines ~y)))
+             :else `(is (= ~x ~y)))))))

@@ -220,30 +220,37 @@ It is implemented with a number of custom enlive templates.\"
     (write obj :stream nil)))
 
 ;;; A bunch of predefined data to print
-;; (def future-filled (future-call (fn [] 100)))
-;; @future-filled
-;; (def future-unfilled (future-call (fn [] (.acquire (java.util.concurrent.Semaphore. 0)))))
-;; (def promise-filled (promise))
-;; (deliver promise-filled '(first second third))
-;; (def promise-unfilled (promise))
-;; (def basic-agent (agent '(first second third)))
-(def basic-atom (atom '(first second third)))
-;; (def basic-ref (ref '(first second third)))
-;; (def delay-forced (delay '(first second third)))
-;; (force delay-forced)
-;; (def delay-unforced (delay '(first second third)))
 (defrecord pprint-test-rec [a b c])
 
-(simple-tests pprint-datastructures-tests
- ;; (tst-pprint 20 future-filled) #"#<Future@[0-9a-f]+: \r?\n  100>"
- ;; (tst-pprint 20 future-unfilled) #"#<Future@[0-9a-f]+: \r?\n  :pending>"
- ;; (tst-pprint 20 promise-filled) #"#<Promise@[0-9a-f]+: \r?\n  \(first\r?\n   second\r?\n   third\)>"
+(simple-tests-with-bindings
+ pprint-datastructures-tests
+ ;; A bunch of predefined data to print moved here from the top
+ ;; level since most types here are made up of non-literal values
+ [;; future
+  future-filled (future-call (fn [] 100))
+  _ @future-filled
+  future-unfilled (future-call (fn [] (timer/sleep :infinity)))
+  ;; promise
+  promise-filled (promise)
+  _ (deliver promise-filled '(first second third))
+  promise-unfilled (promise)
+  ;; agent
+  ;; basic-agent (agent '(first second third))
+  ;; atom
+  basic-atom (atom '(first second third))
+  ;; delay
+  delay-forced (delay '(first second third))
+  _ (force delay-forced)
+  delay-unforced (delay '(first second third))]
+
+ (tst-pprint 20 future-filled) #"#<clojerl.Future@[0-9a-f]+: \r?\n  100>"
+ (tst-pprint 20 future-unfilled) #"#<clojerl.Future@[0-9a-f]+: \r?\n  :pending>"
+ (tst-pprint 20 promise-filled) #"#<clojerl.Promise@[0-9a-f]+: \r?\n  \(first\r?\n   second\r?\n   third\)>"
  ;; This hangs currently, cause we can't figure out whether a promise is filled
  ;;(tst-pprint 20 promise-unfilled) #"#<Promise@[0-9a-f]+: \r?\n  :pending>"
  ;; (tst-pprint 20 basic-agent) #"#<Agent@[0-9a-f]+: \r?\n  \(first\r?\n   second\r?\n   third\)>"
- ;; (tst-pprint 20 basic-atom) #"#<Atom [0-9A-F-]+: \r?\n  \(first\r?\n   second\r?\n   third\r?\)>"
- ;; (tst-pprint 20 basic-ref) #"#<Ref@[0-9a-f]+: \r?\n  \(first\r?\n   second\r?\n   third\)>"
- ;; (tst-pprint 20 delay-forced) #"#<Delay@[0-9a-f]+: \r?\n  \(first\r?\n   second\r?\n   third\)>"
+ (tst-pprint 20 basic-atom) #"#<clojerl.Atom@[0-9A-F-]+: \r?\n  \(first\r?\n   second\r?\n   third\r?\)>"
+ (tst-pprint 20 delay-forced) #"#<clojerl.Delay@[0-9a-f]+: \r?\n  \(first\r?\n   second\r?\n   third\)>"
  ;; Currently no way not to force the delay
  ;;(tst-pprint 20 delay-unforced) #"#<Delay@[0-9a-f]+: \n  :pending>"
  ;; (tst-pprint 20 (pprint-test-rec. 'first 'second 'third)) "{:a first,\n :b second,\n :c third}"

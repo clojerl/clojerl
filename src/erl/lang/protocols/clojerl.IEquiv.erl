@@ -35,6 +35,8 @@
       'clojerl.Error':'equiv'(X, Y);
     #{?TYPE := 'clojerl.ExceptionInfo'} ->
       'clojerl.ExceptionInfo':'equiv'(X, Y);
+    #{?TYPE := 'clojerl.Future'} ->
+      'clojerl.Future':'equiv'(X, Y);
     #{?TYPE := 'clojerl.IOError'} ->
       'clojerl.IOError':'equiv'(X, Y);
     #{?TYPE := 'clojerl.IllegalAccessError'} ->
@@ -49,6 +51,8 @@
       'clojerl.Map':'equiv'(X, Y);
     #{?TYPE := 'clojerl.ProcessVal'} ->
       'clojerl.ProcessVal':'equiv'(X, Y);
+    #{?TYPE := 'clojerl.Promise'} ->
+      'clojerl.Promise':'equiv'(X, Y);
     #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'equiv'(X, Y);
     #{?TYPE := 'clojerl.Repeat'} ->
@@ -113,6 +117,7 @@
     #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.Error'} ->  true;
     #{?TYPE := 'clojerl.ExceptionInfo'} ->  true;
+    #{?TYPE := 'clojerl.Future'} ->  true;
     #{?TYPE := 'clojerl.IOError'} ->  true;
     #{?TYPE := 'clojerl.IllegalAccessError'} ->  true;
     #{?TYPE := 'clojerl.Iterate'} ->  true;
@@ -120,6 +125,7 @@
     #{?TYPE := 'clojerl.List'} ->  true;
     #{?TYPE := 'clojerl.Map'} ->  true;
     #{?TYPE := 'clojerl.ProcessVal'} ->  true;
+    #{?TYPE := 'clojerl.Promise'} ->  true;
     #{?TYPE := 'clojerl.Range'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
     #{?TYPE := 'clojerl.Set'} ->  true;
@@ -159,6 +165,7 @@
     'clojerl.Delay' -> true;
     'clojerl.Error' -> true;
     'clojerl.ExceptionInfo' -> true;
+    'clojerl.Future' -> true;
     'clojerl.IOError' -> true;
     'clojerl.IllegalAccessError' -> true;
     'clojerl.Iterate' -> true;
@@ -166,6 +173,7 @@
     'clojerl.List' -> true;
     'clojerl.Map' -> true;
     'clojerl.ProcessVal' -> true;
+    'clojerl.Promise' -> true;
     'clojerl.Range' -> true;
     'clojerl.Repeat' -> true;
     'clojerl.Set' -> true;
