@@ -67,7 +67,7 @@ swap(_Config) ->
   N        = 100,
   Result   = N + 9,
   lists:foreach(ResetFun, lists:seq(1, N)),
-  ok       = wait_for(ok, N, 1000),
+  ok       = clj_test_utils:wait_for(ok, N, 1000),
   Result   = 'clojerl.Atom':deref(Atom),
 
   {comments, ""}.
@@ -89,7 +89,7 @@ reset(_Config) ->
              end,
   N        = 100,
   lists:foreach(ResetFun, lists:seq(1, N)),
-  ok = wait_for(ok, N, 1000),
+  ok = clj_test_utils:wait_for(ok, N, 1000),
 
   {comments, ""}.
 
@@ -155,17 +155,3 @@ complete_coverage(_Config) ->
   {ok, state}      = 'clojerl.Atom':code_change(msg, from, state),
 
   {comments, ""}.
-
-%%------------------------------------------------------------------------------
-%% Helper
-%%------------------------------------------------------------------------------
-
--spec wait_for(any(), integer(), timeout()) -> ok | timeout.
-wait_for(_Msg, 0, _Timeout) ->
-  ok;
-wait_for(Msg, N, Timeout) ->
-  receive
-    Msg -> wait_for(Msg, N - 1, Timeout)
-  after Timeout ->
-      timeout
-  end.

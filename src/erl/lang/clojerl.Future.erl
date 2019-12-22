@@ -62,11 +62,11 @@ cancel(#{?TYPE := ?M, pid := Pid}) ->
 
 -spec 'cancelled?'(type()) -> boolean().
 'cancelled?'(#{?TYPE := ?M, pid := Pid}) ->
-  erlang:is_process_alive(Pid).
+  not erlang:is_process_alive(Pid).
 
 -spec 'done?'(type()) -> boolean().
 'done?'(#{?TYPE := ?M, pid := Pid}) ->
-  gen_server:call(Pid, 'done?').
+  erlang:is_process_alive(Pid) andalso gen_server:call(Pid, 'done?').
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -80,19 +80,14 @@ close(#{?TYPE := ?M, pid := Pid}) ->
 %% clojerl.IBlockingDeref
 
 deref(#{?TYPE := ?M, pid := Pid}, TimeoutMs, TimeoutVal) ->
-  try gen_server:call(Pid, deref, TimeoutMs) of
-    {ok, Value}    -> Value;
-    {error, Error} -> ?ERROR(Error)
+  try do_deref(Pid, TimeoutMs)
   catch exit:{timeout, _} -> TimeoutVal
   end.
 
 %% clojerl.IDeref
 
 deref(#{?TYPE := ?M, pid := Pid}) ->
-  case gen_server:call(Pid, deref, infinity) of
-    {ok, Value} -> Value;
-    {error, Error} -> ?ERROR(Error)
-  end.
+  do_deref(Pid, infinity).
 
 %% clojerl.IEquiv
 
@@ -110,8 +105,8 @@ hash(#{?TYPE := ?M, id := Id}) ->
 
 %% clojerl.IPending
 
-'realized?'(#{?TYPE := ?M, pid := Pid}) ->
-  gen_server:call(Pid, deref) =/= ?NIL.
+'realized?'(#{?TYPE := ?M} = Future) ->
+  'done?'(Future).
 
 %% clojerl.IStringable
 
@@ -149,12 +144,12 @@ handle_call(deref, _From, #{result := Result} = State) ->
 handle_call('done?', _From, #{result := Result} = State) ->
   {reply, Result =/= ?NIL, State}.
 
-handle_cast(_Msg, State) ->
-  {noreply, State}.
-
-handle_info({result, Result}, #{pending := Pending} = State) ->
+handle_cast({result, Result}, #{pending := Pending} = State) ->
   [gen_server:reply(From, Result) || From <- queue:to_list(Pending)],
   {noreply, State#{result := Result, pending := queue:new()}}.
+
+handle_info(_Msg, State) ->
+  {noreply, State}.
 
 terminate(_Msg, State) ->
   {ok, State}.
@@ -171,5 +166,11 @@ eval(Pid, Fn) ->
   Result = try {ok, clj_rt:apply(Fn, [])}
            catch _:Error -> {error, Error}
            end,
-  Pid ! {result, Result},
-  ok.
+  ok = gen_server:cast(Pid, {result, Result}).
+
+-spec do_deref(pid(), timeout()) -> any().
+do_deref(Pid, Timeout) ->
+  case gen_server:call(Pid, deref, Timeout) of
+    {ok, Value} -> Value;
+    {error, Error} -> ?ERROR(Error)
+  end.

@@ -9,12 +9,12 @@
 -behavior('clojerl.IBlockingDeref').
 -behavior('clojerl.IDeref').
 -behavior('clojerl.IEquiv').
--behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IPending').
 -behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/0
+        , deliver/2
         ]).
 
 -export([close/1]).
@@ -22,7 +22,6 @@
 -export([deref/1]).
 -export(['realized?'/1]).
 -export([equiv/2]).
--export([apply/2]).
 -export([hash/1]).
 -export([str/1]).
 
@@ -56,6 +55,10 @@
    , pid   => Pid
    }.
 
+deliver(#{?TYPE := ?M, pid := Pid} = Promise, Value) ->
+  ok = gen_server:cast(Pid, {deliver, Value}),
+  Promise.
+
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
@@ -87,18 +90,6 @@ equiv( #{?TYPE := ?M, id := Id}
   true;
 equiv(_, _) ->
   false.
-
-%% clojerl.IFn
-
-apply(#{?TYPE := ?M, pid := Pid} = Promise, Args) ->
-  case clj_rt:to_list(Args) of
-    [Value] ->
-      gen_server:cast(Pid, {deliver, Value}),
-      Promise;
-    _ ->
-      CountBin = integer_to_binary(length(Args)),
-      ?ERROR(<<"Wrong number of args for promise, got: ", CountBin/binary>>)
-  end.
 
 %% clojerl.IHash
 

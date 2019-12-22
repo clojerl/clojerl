@@ -5760,8 +5760,8 @@
   "Delivers the supplied value to the promise, releasing any pending
   derefs. A subsequent call to deliver on a promise will have no effect."
   {:added "1.1"}
-  [promise val]
-  (promise val))
+  [^clojerl.Promise promise val]
+  (.deliver val))
 
 
 (defn flatten
