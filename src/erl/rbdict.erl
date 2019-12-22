@@ -80,18 +80,7 @@
 new() -> new(fun default_compare/2).
 
 new(Compare) when is_function(Compare) ->
-  F = fun(X, Y) ->
-          case Compare(X, Y) of
-            true -> -1;
-            false ->
-              case Compare(Y, X) of
-                true -> 1;
-                false -> 0
-              end;
-            Z -> Z
-          end
-      end,
-  {empty, F}.
+  {empty, Compare}.
 
 compare_fun({empty, Compare}) -> Compare;
 compare_fun({_, _, _, _, _, Compare}) -> Compare.
