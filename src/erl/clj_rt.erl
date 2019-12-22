@@ -714,9 +714,24 @@ gensym(Prefix) ->
 
 -spec compare_fun('erlang.Fn':type(), erlang | clojure) -> function().
 compare_fun(Fun, erlang) ->
-  fun(X, Y) -> clj_rt:apply(Fun, [X, Y]) =< 0 end;
+  fun(X, Y) ->
+      case clj_rt:apply(Fun, [X, Y]) of
+        Result when is_number(Result)  -> Result < 0;
+        Result when is_boolean(Result) -> Result
+      end
+  end;
 compare_fun(Fun, clojure) ->
-  fun(X, Y) -> clj_rt:apply(Fun, [X, Y]) end.
+  fun(X, Y) ->
+      case clj_rt:apply(Fun, [X, Y]) of
+        Result when is_number(Result) -> Result;
+        true -> -1;
+        false ->
+          case clj_rt:apply(Fun, [Y, X]) of
+            true  -> 1;
+            false -> 0
+          end
+      end
+  end.
 
 -spec shuffle(any()) -> [any()].
 shuffle(Seq) ->

@@ -735,6 +735,7 @@
 
       ; sorting
       (seq (sorted-set-by < 5 4 3 2 1)) '(1 2 3 4 5)
+      (seq (sorted-set-by > 5 4 3 2 1)) '(5 4 3 2 1)
 
       ; special cases
       (sorted-set-by compare nil) #{nil}
