@@ -58,7 +58,7 @@
    ;; :object (new java.util.Date)
 
    :var (var myvar)
-   ;; :delay (delay (+ 1 2))
+   :delay (delay (+ 1 2))
    })
 
 
@@ -103,7 +103,7 @@
 
   ;; class? [:class]
   var?   [:var]
-  ;; delay? [:delay]
+  delay? [:delay]
 })
 
 
