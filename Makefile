@@ -16,8 +16,13 @@ all: compile
 compile:
 	${V} ${REBAR3} clojerl compile
 
-test: clean
-	${V} ${REBAR3} do ct, clojerl test
+test-ct: clean
+	${V} ${REBAR3} do ct --cover, cover
+
+test-clj: clean
+	${V} ${REBAR3} clojerl test
+
+test: test-ct test-clj
 
 dialyzer: clean
 	${V} ${REBAR3} dialyzer
