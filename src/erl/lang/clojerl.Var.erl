@@ -24,6 +24,7 @@
         , module/1
         , val_function/1
         , process_args/2
+        , is_valid_arity/2
         , mark_fake_fun/1
         ]).
 
@@ -268,7 +269,18 @@ apply( #{ ?TYPE     := ?M
 
   apply_fun(FakeFun, Module, Function, Arity, Args1).
 
--spec process_args(type(), [any()]) ->
+-spec is_valid_arity(Meta :: map(), Arity :: arity()) -> boolean().
+is_valid_arity(#{'variadic?' := true} = Meta, Arity) ->
+  #{ max_fixed_arity := MaxFixedArity
+   , fixed_arities   := FixedArities
+   } = Meta,
+  MaxFixedArity =:= ?NIL
+    orelse MaxFixedArity =< Arity
+    orelse lists:member(Arity, FixedArities);
+is_valid_arity(#{fixed_arities := FixedArities}, Arity) ->
+  lists:member(Arity, FixedArities).
+
+-spec process_args(map(), [any()]) ->
   {arity(), [any()]} | {arity(), [any()], any()}.
 process_args(#{'variadic?' := true} = Meta, Args) ->
   #{ max_fixed_arity := MaxFixedArity
@@ -323,7 +335,7 @@ bounded_length(Rest, N, Max, Acc) ->
 
 -spec apply_fun(type(), module(), atom(), arity(), [any()]) -> any().
 apply_fun(false, Module, Function, _Arity, Args) ->
-  erlang:apply(Module,Function, Args);
+  erlang:apply(Module, Function, Args);
 apply_fun(_, Module, Function, Arity, Args) ->
   Fun = clj_module:fake_fun(Module, Function, Arity),
   erlang:apply(Fun, Args).

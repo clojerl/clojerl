@@ -354,3 +354,11 @@
 
 (let* [args :foo]
   ((fn* [y] (assert (erlang/=:= args :foo))) 1))
+
+;; [#679] Unreadable error message when calling undefined local function
+
+(def no-args-fn
+  (fn* []))
+
+(def call-no-args-fn-with-one-arg
+  (fn* [] (no-args-fn 1)))
