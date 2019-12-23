@@ -41,6 +41,7 @@
                            , form            => any()
                            , tag             => expr()
                            , 'variadic?'     => boolean()
+                           , fixed_arities   => [arity()]
                            , min_fixed_arity => ?NIL | integer()
                            , max_fixed_arity => ?NIL | integer()
                            , variadic_arity  => ?NIL | integer()

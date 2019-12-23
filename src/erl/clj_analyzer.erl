@@ -461,7 +461,10 @@ parse_fn(List, Env) ->
              , clj_env:location(Env)
              ),
 
-  %% DistinctFixedArities = lists:usort(FixedArities),
+  DistinctFixedArities = lists:usort(FixedArities),
+  %% NOTE: this is commented out since it doesn't apply to fn* expressions
+  %%       that use pattern matching.
+  %%
   %% ?ERROR_WHEN( length(DistinctFixedArities) =/= length(FixedArities)
   %%                     , <<"Can't have 2 or more overloads "
   %%                         "with the same arity">>
@@ -485,6 +488,7 @@ parse_fn(List, Env) ->
     case IsDef of
       true  ->
         VarMeta0 = #{ 'variadic?'     => IsVariadic
+                    , fixed_arities   => DistinctFixedArities
                     , max_fixed_arity => MaxFixedArity
                     , variadic_arity  => VariadicArity
                     , 'fn?'           => true
@@ -510,6 +514,7 @@ parse_fn(List, Env) ->
             , form            => List
             , tag             => TagExpr
             , 'variadic?'     => IsVariadic
+            , fixed_arities   => DistinctFixedArities
             , min_fixed_arity => MinFixedArity
             , max_fixed_arity => MaxFixedArity
             , variadic_arity  => VariadicArity
@@ -1279,11 +1284,22 @@ assert_only_literals(Var, Value, Env) ->
 var_fn_info(Var, #{op := fn} = Expr) ->
   %% Add information about the associated function
   %% to the var's metadata.
-  %% All information should be literal values.
-  RemoveKeys = [op, env, methods, form, once, local, tag],
-  ExprInfo   = maps:without(RemoveKeys, Expr),
-  VarMeta    = clj_rt:meta(Var),
-  VarMeta1   = clj_rt:merge([VarMeta, ExprInfo, #{'fn?' => true}]),
+  %% All information should be literal values, quoted
+  %% if necessary (e.g. a list that should be a list).
+  RemoveKeys    = [op, env, methods, form, once, local, tag, fixed_arities],
+  ExprInfo      = maps:without(RemoveKeys, Expr),
+
+  %% Quote the listed of fixed arities
+  QuoteSym      = clj_rt:symbol(<<"quote">>),
+  FixedArities  = maps:get(fixed_arities, Expr),
+  QuotedArities = [QuoteSym, FixedArities],
+
+  %% More info
+  ExtraInfo     = #{'fn?' => true, fixed_arities => QuotedArities},
+
+  %% Merge metadata
+  VarMeta       = clj_rt:meta(Var),
+  VarMeta1      = clj_rt:merge([VarMeta, ExprInfo, ExtraInfo]),
 
   clj_rt:with_meta(Var, VarMeta1);
 var_fn_info(Var, _) ->

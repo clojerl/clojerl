@@ -1910,7 +1910,7 @@ arity_from_fn(_) ->
 generate_fn_values(FNameAst, #{'erlang-fn?' := true}) ->
   FNameAst;
 generate_fn_values(FNameAst, _) ->
-  call_mfa('clojerl.Fn',?CONSTRUCTOR, [FNameAst], []).
+  call_mfa('clojerl.Fn', ?CONSTRUCTOR, [FNameAst], []).
 
 %% clojerl.Fn functions are emitted as single argument Erlang
 %% functions, where the argument should always be an Erlang list.
@@ -2126,22 +2126,25 @@ var_invoke(Var, Symbol, Args, Ann, State) ->
 
   case clj_rt:get(VarMeta, 'fn?', false) of
     true ->
-      Function     = 'clojerl.Var':function(Var),
-      {_, Args1}   = case 'clojerl.Var':process_args(VarMeta, Args) of
+      Function       = 'clojerl.Var':function(Var),
+      {Arity, Args1} = case 'clojerl.Var':process_args(VarMeta, Args) of
                        {Arity_, Args_, Rest_} ->
                          {Arity_, Args_ ++ [list_ast(Rest_)]};
                        X -> X
                      end,
-      CurrentNs    = 'clojerl.Namespace':current(),
-      CurrentNsSym = 'clojerl.Namespace':name(CurrentNs),
-      NsName       = 'clojerl.Symbol':name(CurrentNsSym),
-      VarNsName    = 'clojerl.Var':namespace(Var),
-      ForceRemote  = maps:get(force_remote_invoke, State),
-      %% When the var's symbol is not namespace qualified and the var's
-      %% namespace is the current namespace, emit a local function
-      %% call, otherwise emit a remote call.
+      ValidArity     = 'clojerl.Var':is_valid_arity(VarMeta, Arity),
+      CurrentNs      = 'clojerl.Namespace':current(),
+      CurrentNsSym   = 'clojerl.Namespace':name(CurrentNs),
+      NsName         = 'clojerl.Symbol':name(CurrentNsSym),
+      VarNsName      = 'clojerl.Var':namespace(Var),
+      ForceRemote    = maps:get(force_remote_invoke, State),
+      %% Emit a local function call when:
+      %%  - var's symbol is not namespace qualified
+      %%  - var's namespace is the current namespace
+      %%  - arity used is valid
+      %% Otherwise emit a remote call.
       case 'clojerl.Symbol':namespace(Symbol) of
-        ?NIL when NsName =:= VarNsName, not ForceRemote ->
+        ?NIL when ValidArity, NsName =:= VarNsName, not ForceRemote ->
           call_fa(Function, Args1, Ann);
         _ ->
           call_mfa(Module, Function, Args1, Ann)

@@ -14,6 +14,7 @@
                              , meta      => #{ macro           => true
                                              , 'variadic?'     => true
                                              , max_fixed_arity => ?NIL
+                                             , fixed_arities   => []
                                              , variadic_arity  => 3
                                              }
                              }
@@ -25,6 +26,7 @@
                              , val_atom  => 'in-ns__val'
                              , meta      => #{ 'variadic?'     => false
                                              , max_fixed_arity => 1
+                                             , fixed_arities   => [1]
                                              , variadic_arity  => ?NIL
                                              }
                              }
@@ -242,6 +244,7 @@ ns__val() ->
   Meta = #{ macro           => true
           , 'variadic?'     => true
           , max_fixed_arity => ?NIL
+          , fixed_arities   => []
           , variadic_arity  => 3
           },
   clj_rt:with_meta(Var, Meta).
@@ -261,6 +264,7 @@ ns__val() ->
   Var = 'clojerl.Var':?CONSTRUCTOR(<<"clojure.core">>, <<"in-ns">>),
   Meta = #{ 'variadic?'     => false
           , max_fixed_arity => 1
+          , fixed_arities   => [1]
           , variadic_arity  => ?NIL
           },
   clj_rt:with_meta(Var, Meta).
