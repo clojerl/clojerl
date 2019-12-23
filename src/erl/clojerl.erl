@@ -41,10 +41,16 @@ io_options() ->
   IoOpts = [{binary, true}, {encoding, unicode}],
   ok = io:setopts(IoOpts).
 
+%% Coverage analysis fails if the directory is sticky
+-ifdef(COVER).
+-spec stick() -> ok.
+stick() -> ok.
+-else.
 -spec stick() -> ok.
 stick() ->
   [code:stick_mod(M) || M <- ?STICKY_MODULES],
   ok.
+-endif.
 
 -spec unstick() -> ok.
 unstick() ->
