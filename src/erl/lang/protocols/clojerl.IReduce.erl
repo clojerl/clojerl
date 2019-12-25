@@ -18,8 +18,6 @@
   case Coll of
     #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'reduce'(Coll, Fun);
-    #{?TYPE := 'clojerl.Cons'} ->
-      'clojerl.Cons':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Iterate'} ->
@@ -56,8 +54,6 @@
   case Coll of
     #{?TYPE := 'clojerl.ChunkedCons'} ->
       'clojerl.ChunkedCons':'reduce'(Coll, Fun, Init);
-    #{?TYPE := 'clojerl.Cons'} ->
-      'clojerl.Cons':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Cycle'} ->
       'clojerl.Cycle':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Iterate'} ->
@@ -93,7 +89,6 @@
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
-    #{?TYPE := 'clojerl.Cons'} ->  true;
     #{?TYPE := 'clojerl.Cycle'} ->  true;
     #{?TYPE := 'clojerl.Iterate'} ->  true;
     #{?TYPE := 'clojerl.LazySeq'} ->  true;
@@ -114,7 +109,6 @@
 ?EXTENDS(X) ->
   case X of
     'clojerl.ChunkedCons' -> true;
-    'clojerl.Cons' -> true;
     'clojerl.Cycle' -> true;
     'clojerl.Iterate' -> true;
     'clojerl.LazySeq' -> true;

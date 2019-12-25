@@ -8,7 +8,6 @@
 -behavior('clojerl.IErl').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
--behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISequential').
 -behavior('clojerl.ISeqable').
@@ -25,9 +24,6 @@
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
-        ]).
--export([ reduce/2
-        , reduce/3
         ]).
 -export([ first/1
         , next/1
@@ -57,12 +53,18 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.ICounted
+
 count(#{?TYPE := ?M, more := More}) ->
   1 + clj_rt:count(More).
+
+%% clojerl.IColl
 
 cons(#{?TYPE := ?M} = Cons, X) -> ?CONSTRUCTOR(X, Cons).
 
 empty(_) -> [].
+
+%% clojerl.IEquiv
 
 equiv( #{?TYPE := ?M, first := FirstX, more := MoreX}
      , #{?TYPE := ?M, first := FirstY, more := MoreY}
@@ -74,6 +76,8 @@ equiv(#{?TYPE := ?M} = Cons, Y) ->
     false -> false
   end.
 
+%% clojerl.IErl
+
 '->erl'(#{?TYPE := ?M} = X, Recursive) ->
   List = to_list(X),
   case Recursive of
@@ -81,29 +85,19 @@ equiv(#{?TYPE := ?M} = Cons, Y) ->
     false -> List
   end.
 
+%% clojerl.IHash
+
 hash(#{?TYPE := ?M, first := First, more := More}) ->
   clj_murmur3:ordered({First, More}).
+
+%% clojerl.IMeta
 
 meta(#{?TYPE := ?M, meta := Meta}) -> Meta.
 
 with_meta(#{?TYPE := ?M} = List, Metadata) ->
   List#{meta => Metadata}.
 
-reduce(#{?TYPE := ?M, first := First, more := More}, F) ->
-  do_reduce(F, First, More).
-
-reduce(#{?TYPE := ?M, first := First, more := More}, F, Init) ->
-  do_reduce(F, Init, clj_rt:cons(First, More)).
-
-do_reduce(_F, Acc, ?NIL) ->
-  Acc;
-do_reduce(F, Acc, Seq) ->
-  First  = clj_rt:first(Seq),
-  Val    = clj_rt:apply(F, [Acc, First]),
-  case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> 'clojerl.Reduced':deref(Val);
-    false -> do_reduce(F, Val, clj_rt:next(Seq))
-  end.
+%% clojerl.ISeq
 
 first(#{?TYPE := ?M, first := First}) -> First.
 
@@ -113,12 +107,18 @@ next(#{?TYPE := ?M, more := More}) -> clj_rt:seq(More).
 more(#{?TYPE := ?M, more := ?NIL}) -> [];
 more(#{?TYPE := ?M, more := More}) -> More.
 
+%% clojerl.ISequential
+
 '_'(_) -> ?NIL.
+
+%% clojerl.ISeqable
 
 seq(#{?TYPE := ?M} = Cons) -> Cons.
 
 to_list(#{?TYPE := ?M, first := First, more := More}) ->
   [First | clj_rt:to_list(More)].
+
+%% clojerl.IStringable
 
 str(#{?TYPE := ?M} = Cons) ->
   clj_rt:print_str(Cons).

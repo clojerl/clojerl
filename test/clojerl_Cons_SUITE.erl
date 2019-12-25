@@ -16,7 +16,6 @@
         , seq/1
         , equiv/1
         , cons/1
-        , reduce/1
         , to_erl/1
         , complete_coverage/1
         ]).
@@ -136,20 +135,6 @@ cons(_Config) ->
 
   3    = clj_rt:count(ThreeList),
   true = clj_rt:equiv(clj_rt:to_list(ThreeList), [0, 1, 2]),
-
-  {comments, ""}.
-
--spec reduce(config()) -> result().
-reduce(_Config) ->
-  TenCons = range(1, 10),
-  55 = 'clojerl.IReduce':reduce(TenCons, fun erlang:'+'/2),
-  60 = 'clojerl.IReduce':reduce(TenCons, fun erlang:'+'/2, 5),
-
-  PlusMaxFun = fun
-                 (X, Y) when X < 10 -> X + Y;
-                 (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
-               end,
-  10 = 'clojerl.IReduce':reduce(TenCons, PlusMaxFun),
 
   {comments, ""}.
 
