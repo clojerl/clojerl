@@ -15,6 +15,8 @@
 
 'deref'(Ref) ->
   case Ref of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'deref'(Ref);
     #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'deref'(Ref);
     #{?TYPE := 'clojerl.Delay'} ->
@@ -43,6 +45,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->  true;
     #{?TYPE := 'clojerl.Atom'} ->  true;
     #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.Future'} ->  true;
@@ -59,6 +62,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Agent' -> true;
     'clojerl.Atom' -> true;
     'clojerl.Delay' -> true;
     'clojerl.Future' -> true;

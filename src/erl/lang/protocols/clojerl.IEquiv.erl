@@ -15,6 +15,8 @@
 
 'equiv'(X, Y) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'equiv'(X, Y);
     #{?TYPE := 'clojerl.ArityError'} ->
       'clojerl.ArityError':'equiv'(X, Y);
     #{?TYPE := 'clojerl.AssertionError'} ->
@@ -107,6 +109,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->  true;
     #{?TYPE := 'clojerl.ArityError'} ->  true;
     #{?TYPE := 'clojerl.AssertionError'} ->  true;
     #{?TYPE := 'clojerl.Atom'} ->  true;
@@ -155,6 +158,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Agent' -> true;
     'clojerl.ArityError' -> true;
     'clojerl.AssertionError' -> true;
     'clojerl.Atom' -> true;

@@ -16,6 +16,8 @@
 
 'alter_meta'(Ref, Fun, Args) ->
   case Ref of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'alter_meta'(Ref, Fun, Args);
     #{?TYPE := 'clojerl.Namespace'} ->
       'clojerl.Namespace':'alter_meta'(Ref, Fun, Args);
     #{?TYPE := _} ->
@@ -32,6 +34,8 @@
 
 'reset_meta'(Ref, Meta) ->
   case Ref of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'reset_meta'(Ref, Meta);
     #{?TYPE := 'clojerl.Namespace'} ->
       'clojerl.Namespace':'reset_meta'(Ref, Meta);
     #{?TYPE := _} ->
@@ -48,6 +52,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->  true;
     #{?TYPE := 'clojerl.Namespace'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
@@ -58,6 +63,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Agent' -> true;
     'clojerl.Namespace' -> true;
     _ -> false
   end.

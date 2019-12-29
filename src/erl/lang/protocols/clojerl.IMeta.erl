@@ -16,6 +16,8 @@
 
 'meta'(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'meta'(X);
     #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'meta'(X);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -70,6 +72,8 @@
 
 'with_meta'(X, Meta) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'with_meta'(X, Meta);
     #{?TYPE := 'clojerl.Atom'} ->
       'clojerl.Atom':'with_meta'(X, Meta);
     #{?TYPE := 'clojerl.ChunkedCons'} ->
@@ -124,6 +128,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->  true;
     #{?TYPE := 'clojerl.Atom'} ->  true;
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;
     #{?TYPE := 'clojerl.Cons'} ->  true;
@@ -153,6 +158,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Agent' -> true;
     'clojerl.Atom' -> true;
     'clojerl.ChunkedCons' -> true;
     'clojerl.Cons' -> true;

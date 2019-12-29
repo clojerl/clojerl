@@ -16,3 +16,4 @@ rebar.lock
 *.dump
 ebin/
 result.prev.txt
+erlang_ls.config
