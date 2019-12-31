@@ -42,24 +42,26 @@ lint(#c_module{} = Module) ->
   case core_lint:module(Module) of
     {ok, _} -> ok;
     {error, [{_, Errors}], _Warnings} ->
-      raise(process_lint_errors(Errors))
+      raise(process_lint_errors(Errors), Module)
   end;
-lint(Expr) ->
+lint(Expr) when is_tuple(Expr) ->
   Name    = cerl:abstract(m),
-  FName   = cerl:c_var({f, 0}),
+  FName   = cerl:c_var({eval, 0}),
   Exports = [FName],
   Fun     = cerl:c_fun([], Expr),
   Defs    = [{FName, Fun}],
-  Module  = cerl:c_module(Name, Exports, Defs),
-  lint(Module).
+  Ann     = cerl:get_ann(Expr),
+  Module  = cerl:ann_c_module(Ann, Name, Exports, Defs),
+  lint(Module);
+lint(_) ->
+  error(badarg).
 
 -spec process_lint_errors([term()]) -> term().
 process_lint_errors(Errors0) ->
-  Errors1 = [Error || {'none', _, Error} <- Errors0],
-  case Errors1 of
-    [Error] -> Error;
-    _ -> Errors1
-  end.
+  Errors1 = [ core_lint:format_error(Error)
+              || {'none', _, Error} <- Errors0
+            ],
+  iolist_to_binary(string:join(Errors1, "\n")).
 
 -spec expr_(cerl:cerl(), bindings()) -> value().
 %% Alias -----------------------------------------------------------------------
