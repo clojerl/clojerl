@@ -76,3 +76,14 @@
     (prn e))
   (catch :error e
     (throw :bad-stuff)))
+
+;; [#684] Pattern matching a local
+
+(let* [x 1
+       y (try
+           (throw 1)
+           (catch _ x :one)
+           (catch _ _ :not-one))]
+  (if (erlang/=:= y :one)
+    nil
+    (throw :error)))

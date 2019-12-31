@@ -38,4 +38,4 @@
   (erlang/send x :dec)
   (erlang/send x :print)
   (erlang/send x #erl[:get self])
-  (receive* x (prn x)))
+  (receive* msg (prn msg)))

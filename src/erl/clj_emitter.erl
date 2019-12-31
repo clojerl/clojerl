@@ -1064,7 +1064,9 @@ ast(#{op := 'catch'} = Expr, State0) ->
   {Guard0, State5}      = pop_ast(ast(GuardExpr, State4)),
   {Body, State6}        = catch_body(StackAst, TempStackAst, BodyExpr, State5),
 
-  {[PatternAst1], PatGuards} = clj_emitter_pattern:patterns([PatternAst0]),
+  { [PatternAst1]
+  , PatGuards
+  } = clj_emitter_pattern:patterns([PatternAst0], locals(Env)),
   VarsAsts = [ClassAst, PatternAst1, TempStackAst],
   Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
   Ast      = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
