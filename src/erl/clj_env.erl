@@ -17,6 +17,7 @@
         , add_locals_scope/1
         , remove_locals_scope/1
         , get_local/2
+        , get_locals/1
         , put_local/3
         , put_locals/2
         , save_locals_scope/1
@@ -104,6 +105,10 @@ restore_locals_scope(#{saved_locals := LocalsCache} = Env) ->
 -spec get_local('clojerl.Symbol':type(), env()) -> any().
 get_local(Sym, _Env = #{locals := Locals}) ->
   clj_scope:get(clj_rt:str(Sym), Locals).
+
+-spec get_locals(env()) -> [any()].
+get_locals(#{locals := Locals}) ->
+  clj_scope:values(Locals).
 
 -spec put_local('clojerl.Symbol':type(), any(), env()) -> env().
 put_local(Sym, Local, Env = #{locals := Locals}) ->
