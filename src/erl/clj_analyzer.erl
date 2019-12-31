@@ -854,8 +854,10 @@ parse_binding({Pattern, Init}, Env0) ->
                    false -> 'let'
                  end,
 
-  {PatternExpr, Env1} = clj_env:pop_expr(parse_pattern(Pattern, Env0)),
-  {InitExpr, Env2}    = clj_env:pop_expr(analyze_form(Init, Env1)),
+  {InitExpr, Env1}    = clj_env:pop_expr(analyze_form(Init, Env0)),
+  Env2                = clj_env:push(#{is_binding_context => true}, Env1),
+  {PatternExpr, Env3} = clj_env:pop_expr(parse_pattern(Pattern, Env2)),
+  Env4                = clj_env:pop(Env3),
 
   BindExpr = #{ op      => binding
               , env     => Env0
@@ -866,9 +868,9 @@ parse_binding({Pattern, Init}, Env0) ->
               , tag     => type_tag(PatternExpr)
               },
 
-  LocalExprs = clj_env:get(pattern_locals, [], Env2),
-  Env3       = clj_env:put_locals(lists:reverse(LocalExprs), Env2),
-  clj_env:push_expr(BindExpr, Env3).
+  LocalExprs = clj_env:get(pattern_locals, [], Env4),
+  Env5       = clj_env:put_locals(lists:reverse(LocalExprs), Env4),
+  clj_env:push_expr(BindExpr, Env5).
 
 -spec validate_bindings('clojerl.List':type(), clj_env:env()) -> ok.
 validate_bindings(Form, Env) ->
@@ -2237,7 +2239,7 @@ analyze_symbol(Symbol, Env0) ->
   {Expr1, Env2} = add_type_tag(Symbol, Expr0, Env1),
   clj_env:push_expr(Expr1, Env2).
 
--spec do_analyze_symbol(boolean(), 'clojerl.Symbol':t(), clj_env:env()) ->
+-spec do_analyze_symbol(boolean(), 'clojerl.Symbol':type(), clj_env:env()) ->
   {expr(), clj_env:env()}.
 do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
   ?ERROR_WHEN( not is_valid_bind_symbol(Symbol)
@@ -2245,12 +2247,23 @@ do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
              , clj_env:location(Env0)
              ),
 
+  %% When in a let or loop form binding context, bindings with the
+  %% same name as other bindings or locals should be shadowed.
+  %% This will avoid Erlang's single assignment behaviour
+  %% (which is not how Clojure works), and avoid conflicts with
+  %% variables with the same name (which the Core Erlang linter
+  %% complains about).
+  Shadow = case clj_env:get(is_binding_context, false, Env0) of
+             true  -> clj_env:get_local(Symbol, Env0);
+             false -> ?NIL %% Don't shadow
+           end,
+
   Expr0 = #{ op         => local
            , env        => Env0
            , form       => Symbol
            , tag        => ?NO_TAG
            , name       => Symbol
-           , shadow     => clj_env:get_local(Symbol, Env0)
+           , shadow     => Shadow
            , underscore => is_underscore(Symbol)
            , id         => erlang:unique_integer()
            },
