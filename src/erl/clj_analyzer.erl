@@ -637,10 +637,10 @@ is_not_ampersand(X)    ->
 -spec analyze_method_params(['clojerl.Symbol':type()], clj_env:env()) ->
   clj_env:env().
 analyze_method_params(ParamsNames, Env) ->
-  analyze_method_params(false, -1, ParamsNames, Env).
+  analyze_method_params(false, undefined, ParamsNames, Env).
 
 -spec analyze_method_params( boolean()
-                           , -1 | non_neg_integer()
+                           , undefined | non_neg_integer()
                            , ['clojerl.Symbol':type()]
                            , clj_env:env()
                            ) -> clj_env:env().
@@ -653,7 +653,7 @@ analyze_method_params(IsVariadic, Arity, Params, Env0) ->
                      , form        => Pattern
                      , tag         => type_tag(PatExpr)
                      , pattern     => PatExpr
-                     , 'variadic?' => IsVariadic andalso Id == Arity - 1
+                     , 'variadic?' => IsVariadic andalso Id + 1 == Arity
                      , arg_id      => Id
                      , local       => arg
                      },
