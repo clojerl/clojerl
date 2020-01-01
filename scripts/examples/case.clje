@@ -37,10 +37,22 @@
 ;; [#684] Pattern matching ignores existing bound symbol
 
 (def equal?
-  (fn*  [x y]
-        (case* x
-               y :equal
-               _ :not_equal)))
+  (fn* [x y]
+       (case* x
+              y :equal
+              _ :not_equal)))
 
 (assert-with-tags (erlang/=:= (equal? 1 1) :equal))
 (assert-with-tags (erlang/=:= (equal? 1 2) :not_equal))
+
+(def multiple-locals-not-ordered
+  (fn* [t & a]
+       (let* [r 5]
+         (loop* [n 10]
+           (case* n
+                  r #erl[:five n]
+                  _ (recur (erlang/- n 1))
+                  0 :zero)))))
+
+(assert-with-tags (erlang/=:= (multiple-locals-not-ordered 1 1)
+                              #erl[:five 5]))
