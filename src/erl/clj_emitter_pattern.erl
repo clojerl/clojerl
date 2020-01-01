@@ -1,6 +1,7 @@
 -module(clj_emitter_pattern).
 
--export([ pattern_list/1
+-export([ patterns/1
+        , patterns/2
         , fold_guards/1
         , fold_guards/2
         ]).
@@ -27,8 +28,11 @@ fold_guards(Guard0, PatternGuards) ->
                end,
   lists:foldr(FoldGuards, Guard0, PatternGuards).
 
-pattern_list(Patterns) ->
-  {PatArgs, PatGuards, _, _} = pattern_list(Patterns, []),
+patterns(Patterns) ->
+  patterns(Patterns, []).
+
+patterns(Patterns, KnownVars) ->
+  {PatArgs, PatGuards, _, _} = pattern_list(Patterns, KnownVars),
   {PatArgs, PatGuards}.
 
 %% -----------------------------------------------------------------------------

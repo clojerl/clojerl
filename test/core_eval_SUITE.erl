@@ -64,9 +64,9 @@ alias(_Config) ->
                        end,
 
   ct:comment("Alias as an expression"),
-  {illegal_expr, _} = try core_eval:expr(Alias)
-                      catch _:InvalidExpr -> InvalidExpr
-                      end,
+  <<"illegal expression in eval/0">> = try core_eval:expr(Alias)
+                                       catch _:InvalidExpr -> InvalidExpr
+                                       end,
 
   {comments, ""}.
 
@@ -466,9 +466,9 @@ values(_Config) ->
 
 var(_Config) ->
   X     = cerl:c_var(x),
-  {unbound_var, x, _} = try core_eval:expr(X)
-                        catch error:Error -> Error
-                        end,
+  <<"unbound variable x in eval/0">> = try core_eval:expr(X)
+                                       catch error:Error -> Error
+                                       end,
 
   {comments, ""}.
 
@@ -476,18 +476,18 @@ invalid_exprs(_Config) ->
   Foo = cerl:abstract(foo),
 
   Clause = cerl:c_clause([Foo], Foo),
-  {illegal_expr, _} = try core_eval:expr(Clause)
-                      catch _:Error2 -> Error2
-                      end,
+  <<"illegal expression in eval/0">> = try core_eval:expr(Clause)
+                                       catch _:Error2 -> Error2
+                                       end,
 
   Module = cerl:c_module(Foo, [], []),
   {invalid_expr, c_module} = try core_eval:expr(Module)
                              catch _:Error3 -> Error3
                              end,
 
-  {illegal_expr, _} = try core_eval:expr(foo)
-                      catch _:Error4 -> Error4
-                      end,
+  badarg = try core_eval:expr(foo)
+           catch _:Error4 -> Error4
+           end,
 
   {comments, ""}.
 

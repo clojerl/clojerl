@@ -11,6 +11,7 @@
         , put/3
         , update/3
         , to_map/2
+        , values/1
         ]).
 
 -type scope() :: #{ parent   => scope() | ?NIL
@@ -53,6 +54,10 @@ put(Map, Scope) ->
 update(Key, Value, Scope) ->
   do_update(Key, Value, Scope).
 
+-spec values(scope()) -> [any()].
+values(Scope) ->
+  do_values([], Scope).
+
 -spec to_map(function(), scope()) -> any().
 to_map(Fun, Scope) ->
   do_to_map(Fun, #{}, Scope).
@@ -91,3 +96,9 @@ do_update(K, V, Scope = #{mappings := Mappings, parent := Parent}) ->
         NewParent -> Scope#{parent => NewParent}
       end
   end.
+
+-spec do_values([any()], scope()) -> [any()].
+do_values(Values, ?NIL) ->
+  Values;
+do_values(Values, #{mappings := Mappings, parent := Parent}) ->
+  do_values(maps:values(Mappings) ++ Values, Parent).

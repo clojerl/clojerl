@@ -879,7 +879,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
       ({var, Var, Init, AnnBinding}, BodyAcc) ->
         cerl:ann_c_let(AnnBinding, [Var], Init, BodyAcc);
       ({_, Pattern, Init, AnnBinding}, BodyAcc) ->
-        {PatArgs, PatGuards} = clj_emitter_pattern:pattern_list([Pattern]),
+        {PatArgs, PatGuards} = clj_emitter_pattern:patterns([Pattern]),
         Guard       = clj_emitter_pattern:fold_guards(PatGuards),
         ClauseAst   = cerl:ann_c_clause(AnnBinding, PatArgs, Guard, BodyAcc),
         BadmatchAst = fail_clause(badmatch, AnnBinding),
@@ -1064,7 +1064,9 @@ ast(#{op := 'catch'} = Expr, State0) ->
   {Guard0, State5}      = pop_ast(ast(GuardExpr, State4)),
   {Body, State6}        = catch_body(StackAst, TempStackAst, BodyExpr, State5),
 
-  {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
+  { [PatternAst1]
+  , PatGuards
+  } = clj_emitter_pattern:patterns([PatternAst0], locals(Env)),
   VarsAsts = [ClassAst, PatternAst1, TempStackAst],
   Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
   Ast      = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
@@ -1711,7 +1713,9 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
   {GuardAst0, StateAcc2}     = pop_ast(ast(GuardExpr, StateAcc1)),
   {BodyAst0, StateAcc3}      = pop_ast(ast(BodyExpr, StateAcc2)),
 
-  {[PatternAst1], PatGuards} = clj_emitter_pattern:pattern_list([PatternAst0]),
+  { [PatternAst1]
+  , PatGuards
+  } = clj_emitter_pattern:patterns([PatternAst0], locals(EnvPattern)),
   GuardAst1 = clj_emitter_pattern:fold_guards(GuardAst0, PatGuards),
 
   ClauseAst = cerl:ann_c_clause(AnnPattern, [PatternAst1], GuardAst1, BodyAst0),
@@ -1759,7 +1763,7 @@ method_to_clause(MethodExpr, State0, ClauseFor) ->
                           , length(ParamsExprs)
                           ),
 
-  {PatternArgs, PatternGuards} = clj_emitter_pattern:pattern_list(Args),
+  {PatternArgs, PatternGuards} = clj_emitter_pattern:patterns(Args),
 
   {BodyAst, State2} = pop_ast(ast(BodyExpr, State1)),
 
@@ -2013,6 +2017,14 @@ pop_ast(State = #{asts := Asts}, N, Reverse) ->
   }.
 
 %% ----- Lexical renames -------
+
+-spec locals(clj_env:env()) -> [atom()].
+locals(Env) ->
+  [ clj_rt:keyword(Name)
+    || #{ name       := Name
+        , underscore := false
+        } <- clj_env:get_locals(Env)
+  ].
 
 -spec add_lexical_renames_scope(state()) -> state().
 add_lexical_renames_scope(State = #{lexical_renames := Renames}) ->

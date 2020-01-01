@@ -1,16 +1,22 @@
 (ns examples.case)
 
+(def assert-with-tags
+  (fn* [result & tags]
+       (if result
+         nil
+         (erlang/error #erl[:failed-assertion tags]))))
+
 (let* [x :b
        y (case* x
                 :a 1
                 :b 2
                 :c 3)
        z (case* y
-                x 2
+                x :one
                 #erl [:default :value])]
-  (erlang/display x)
-  (erlang/display y)
-  (erlang/display z))
+  (assert-with-tags (erlang/=:= x :b) :x)
+  (assert-with-tags (erlang/=:= y 2) :y)
+  (assert-with-tags (erlang/=:= z #erl[:default :value]) :z))
 
 (def case-match-ignore
   (fn* [x]
@@ -25,5 +31,16 @@
        (case* x
               #erl[a y a] y)))
 
-;; First and third don't have to be equal
+;; First and third have to be equal
 (let* [2 (case-match #erl[1 2 1])])
+
+;; [#684] Pattern matching ignores existing bound symbol
+
+(def equal?
+  (fn*  [x y]
+        (case* x
+               y :equal
+               _ :not_equal)))
+
+(assert-with-tags (erlang/=:= (equal? 1 1) :equal))
+(assert-with-tags (erlang/=:= (equal? 1 2) :not_equal))
