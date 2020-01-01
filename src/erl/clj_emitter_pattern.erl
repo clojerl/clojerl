@@ -28,11 +28,16 @@ fold_guards(Guard0, PatternGuards) ->
                end,
   lists:foldr(FoldGuards, Guard0, PatternGuards).
 
+-spec patterns([cerl:cerl()]) ->
+  {[cerl:cerl()], [cerl:cerl()]}.
 patterns(Patterns) ->
   patterns(Patterns, []).
 
+-spec patterns([cerl:cerl()], ordsets:ordset(atom())) ->
+  {[cerl:cerl()], [cerl:cerl()]}.
 patterns(Patterns, KnownVars) ->
-  {PatArgs, PatGuards, _, _} = pattern_list(Patterns, KnownVars),
+  KnownVarsSet = ordsets:from_list(KnownVars),
+  {PatArgs, PatGuards, _, _} = pattern_list(Patterns, KnownVarsSet),
   {PatArgs, PatGuards}.
 
 %% -----------------------------------------------------------------------------
