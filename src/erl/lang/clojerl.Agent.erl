@@ -199,7 +199,10 @@ with_meta(#{?TYPE := ?M, pid := Pid} = Agent, Meta) ->
 
 -spec alter_meta(type(), any(), any()) -> any().
 alter_meta(#{?TYPE := ?M, pid := Pid}, Fun, Args) ->
-  gen_server:call(Pid, {alter_meta, Fun, Args}).
+  case gen_server:call(Pid, {alter_meta, Fun, Args}) of
+    {ok, Meta} -> Meta;
+    {error, {Class, Reason}} -> erlang:raise(Class, Reason, [])
+  end.
 
 -spec reset_meta(type(), any()) -> any().
 reset_meta(#{?TYPE := ?M, pid := Pid}, Meta) ->
@@ -261,11 +264,17 @@ handle_call({set_field, Name, Value}, _From, #{id := Id} = State) ->
   _ = clj_utils:ets_save(?AGENT_TABLE, {Id, AgentState#{Name => Value}}),
   {reply, ok, State};
 handle_call({alter_meta, Fun, Args}, _From, #{id := Id} = State) ->
-  {_, AgentState}  = clj_utils:ets_get(?AGENT_TABLE, Id),
-  #{meta := Meta0} = AgentState,
-  Meta1 = clj_rt:apply(Fun, clj_rt:cons(Meta0, Args)),
-  _ = clj_utils:ets_save(?AGENT_TABLE, {Id, AgentState#{meta => Meta1}}),
-  {reply, Meta1, State}.
+  {_, AgentState0}  = clj_utils:ets_get(?AGENT_TABLE, Id),
+  #{meta := Meta0} = AgentState0,
+  Reply = try
+            Meta1 = clj_rt:apply(Fun, clj_rt:cons(Meta0, Args)),
+            AgentState1 = AgentState0#{meta => Meta1},
+              _ = clj_utils:ets_save(?AGENT_TABLE, {Id, AgentState1}),
+            {ok, Meta1}
+          catch Class:Reason ->
+              {error, {Class, Reason}}
+          end,
+  {reply, Reply, State}.
 
 -spec handle_cast({send, function(), any()}, state()) ->
   {noreply, state()}.
@@ -327,10 +336,8 @@ is_running_action() ->
 
 -spec add_pending_send(any(), any()) -> ok.
 add_pending_send(Fun, Args) ->
-  case erlang:get(?PENDING_SENDS) of
-    ?NIL    -> [{Fun, Args}];
-    Pending -> erlang:put(?PENDING_SENDS, [{Fun, Args} | Pending])
-  end.
+  Pending = erlang:get(?PENDING_SENDS),
+  erlang:put(?PENDING_SENDS, [{Fun, Args} | Pending]).
 
 -spec apply_action(binary(), any(), function(), any()) -> any().
 apply_action(Id, #{value := Value0} = AgentState0, Fun, Args) ->

@@ -6,6 +6,7 @@
         , all/2
         , init_per_suite/1
         , relative_path/1
+        , wait_for/2
         , wait_for/3
         ]).
 
@@ -27,6 +28,10 @@ init_per_suite(Config) ->
 relative_path(Path) ->
   Root = list_to_binary(code:lib_dir(clojerl)),
   <<Root/binary, "/", Path/binary>>.
+
+-spec wait_for(any(), timeout()) -> ok | timeout.
+wait_for(Msg, Timeout) ->
+  wait_for(Msg, 1, Timeout).
 
 -spec wait_for(any(), integer(), timeout()) -> ok | timeout.
 wait_for(_Msg, 0, _Timeout) ->

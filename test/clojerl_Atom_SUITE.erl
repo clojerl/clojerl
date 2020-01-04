@@ -93,7 +93,6 @@ reset(_Config) ->
 
   {comments, ""}.
 
-
 -spec compare_and_set(config()) -> result().
 compare_and_set(_Config) ->
   Atom = 'clojerl.Atom':?CONSTRUCTOR(2),
