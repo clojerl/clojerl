@@ -57,6 +57,10 @@
 -define(DEBUG_WHEN(Pred, Term), ok).
 -endif.
 
+%% ETS Tables
+
+-define(AGENT_TABLE, 'clojerl.Agent').
+
 %% Chunk size
 
 -define(CHUNK_SIZE, 32).

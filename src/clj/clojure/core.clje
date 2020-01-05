@@ -1695,12 +1695,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Refs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ^{:private true}
   setup-reference [r options]
-  (throw "unimplemented ref")
-  #_(let [opts (apply hash-map options)]
+  (let [opts (apply hash-map options)]
     (when (:meta opts)
-      (.resetMeta r (:meta opts)))
+      (.reset_meta r (:meta opts)))
     (when (:validator opts)
-      (.setValidator r (:validator opts)))
+      (.validator r (:validator opts)))
     r))
 
 (defn agent
@@ -1728,29 +1727,14 @@
   {:added "1.0"
    }
   ([state & options]
-   (throw "unimplemented agent")
-   #_(let [a (new clojure.lang.Agent state)
+   (let [a (new clojerl.Agent state)
          opts (apply hash-map options)]
      (setup-reference a options)
      (when (:error-handler opts)
-       (.setErrorHandler a (:error-handler opts)))
-     (.setErrorMode a (or (:error-mode opts)
-                          (if (:error-handler opts) :continue :fail)))
+       (.error_handler a (:error-handler opts)))
+     (.error_mode a (or (:error-mode opts)
+                        (if (:error-handler opts) :continue :fail)))
      a)))
-
-(defn set-agent-send-executor!
-  "Sets the ExecutorService to be used by send"
-  {:added "1.5"}
-  [executor]
-  (throw "unimplemented agent")
-  #_(set! clojure.lang.Agent/pooledExecutor executor))
-
-(defn set-agent-send-off-executor!
-  "Sets the ExecutorService to be used by send-off"
-  {:added "1.5"}
-  [executor]
-  (throw "unimplemented agent")
-  #_(set! clojure.lang.Agent/soloExecutor executor))
 
 (defn send-via
   "Dispatch an action to an agent. Returns the agent immediately.
@@ -1759,9 +1743,8 @@
 
   (apply action-fn state-of-agent args)"
   {:added "1.5"}
-  [executor a f & args]
-  (throw "unimplemented agent")
-  #_(.dispatch a (binding [*agent* a] (binding-conveyor-fn f)) args executor))
+  [a f & args]
+  (.dispatch a (binding [*agent* a] (binding-conveyor-fn f)) args))
 
 (defn send
   "Dispatch an action to an agent. Returns the agent immediately.
@@ -1771,8 +1754,7 @@
   (apply action-fn state-of-agent args)"
   {:added "1.0"}
   [a f & args]
-  (throw "unimplemented agent")
-  #_(apply send-via clojure.lang.Agent/pooledExecutor a f args))
+  (apply send-via a f args))
 
 (defn send-off
   "Dispatch a potentially blocking action to an agent. Returns the
@@ -1782,8 +1764,7 @@
   (apply action-fn state-of-agent args)"
   {:added "1.0"}
   [a f & args]
-  (throw "unimplemented agent")
-  #_(apply send-via clojure.lang.Agent/soloExecutor a f args))
+  (apply send-via a f args))
 
 (defn release-pending-sends
   "Normally, actions sent directly or indirectly during another action
@@ -1794,8 +1775,7 @@
   occurring, does nothing. Returns the number of actions dispatched."
   {:added "1.0"}
   []
-  (throw "unimplemented agent")
-  #_(clojure.lang.Agent/releasePendingSends))
+  (clojerl.Agent/release_pending_sends))
 
 (defn add-watch
   "Adds a watch function to an agent/atom/var/ref reference. The watch
@@ -1813,15 +1793,15 @@
   the watch mechanism."
   {:added "1.0"}
   [reference key fn]
-  (throw "unimplemented agent/atom/var/ref")
-  #_(.addWatch reference key fn))
+  (throw "unimplemented watches")
+  (.add_watch reference key fn))
 
 (defn remove-watch
   "Removes a watch (set by add-watch) from a reference"
   {:added "1.0"}
   [reference key]
-  (throw "unimplemented agent/atom/var/ref")
-  #_(.removeWatch reference key))
+  (throw "unimplemented watches")
+  (.remove_watch reference key))
 
 (defn agent-error
   "Returns the exception thrown during an asynchronous action of the
@@ -1829,8 +1809,7 @@
   failed."
   {:added "1.2"}
   [a]
-  (throw "unimplemented agent")
-  #_(.getError a))
+  (.error a))
 
 (defn restart-agent
   "When an agent is failed, changes the agent state to new-state and
@@ -1845,8 +1824,7 @@
   {:added "1.2"
    }
   [a, new-state & options]
-  (throw "unimplemented agent")
-  #_(let [opts (apply hash-map options)]
+  (let [opts (apply hash-map options)]
     (.restart a new-state (if (:clear-actions opts) true false))))
 
 (defn set-error-handler!
@@ -1856,16 +1834,14 @@
   agent and the exception."
   {:added "1.2"}
   [a, handler-fn]
-  (throw "unimplemented agent")
-  #_(.setErrorHandler a handler-fn))
+  (.error_handler a handler-fn))
 
 (defn error-handler
   "Returns the error-handler of agent a, or nil if there is none.
   See set-error-handler!"
   {:added "1.2"}
   [a]
-  (throw "unimplemented agent")
-  #_(.getErrorHandler a))
+  (.error_handler a))
 
 (defn set-error-mode!
   "Sets the error-mode of agent a to mode-keyword, which must be
@@ -1881,15 +1857,13 @@
   still work, returning the state of the agent before the error."
   {:added "1.2"}
   [a, mode-keyword]
-  (throw "unimplemented agent")
-  #_(.setErrorMode a mode-keyword))
+  (.error_mode a mode-keyword))
 
 (defn error-mode
   "Returns the error-mode of agent a.  See set-error-mode!"
   {:added "1.2"}
   [a]
-  (throw "unimplemented agent")
-  #_(.getErrorMode a))
+  (.error_mode a))
 
 (defn agent-errors
   "DEPRECATED: Use 'agent-error' instead.
@@ -1908,55 +1882,7 @@
   {:added "1.0"
    :deprecated "1.2"}
   [a]
-  (throw "unimplemented agent")
-  #_(restart-agent a (.deref a)))
-
-(defn shutdown-agents
-  "Initiates a shutdown of the thread pools that back the agent
-  system. Running actions will complete, but no new actions will be
-  accepted"
-  {:added "1.0"}
-  []
-  (throw "unimplemented agent")
-  #_(. clojure.lang.Agent shutdown))
-
-(defn ref
-  "Creates and returns a Ref with an initial value of x and zero or
-  more options (in any order):
-
-  :meta metadata-map
-
-  :validator validate-fn
-
-  :min-history (default 0)
-  :max-history (default 10)
-
-  If metadata-map is supplied, it will become the metadata on the
-  ref. validate-fn must be nil or a side-effect-free fn of one
-  argument, which will be passed the intended new state on any state
-  change. If the new state is unacceptable, the validate-fn should
-  return false or throw an exception. validate-fn will be called on
-  transaction commit, when all refs have their final values.
-
-  Normally refs accumulate history dynamically as needed to deal with
-  read demands. If you know in advance you will need history you can
-  set :min-history to ensure it will be available when first needed (instead
-  of after a read fault). History is limited, and the limit can be set
-  with :max-history."
-  {:added "1.0"
-   }
-  ([x]
-   (throw "unimplemented ref")
-   #_(new clojure.lang.Ref x))
-  ([x & options]
-   (throw "unimplemented ref")
-   #_(let [r  ^clojure.lang.Ref (setup-reference (ref x) options)
-         opts (apply hash-map options)]
-    (when (:max-history opts)
-      (.setMaxHistory r (:max-history opts)))
-    (when (:min-history opts)
-      (.setMinHistory r (:min-history opts)))
-    r)))
+  (restart-agent a (.deref a)))
 
 (defn deref
   "Also reader macro: @ref/@agent/@var/@atom/@delay/@future/@promise. Within a transaction,
@@ -2024,7 +1950,7 @@
   (.reset atom newval))
 
 (defn set-validator!
-  "Sets the validator-fn for a var/ref/agent/atom. validator-fn must be nil or a
+  "Sets the validator-fn for a var/agent/atom. validator-fn must be nil or a
   side-effect-free fn of one argument, which will be passed the intended
   new state on any state change. If the new state is unacceptable, the
   validator-fn should return false or throw an exception. If the current state (root
@@ -2032,15 +1958,13 @@
   will be thrown and the validator will not be changed."
   {:added "1.0"}
   [iref validator-fn]
-  (throw "unimplemented var/ref/agent/atom")
-  #_(. iref (setValidator validator-fn)))
+  (. iref (validator validator-fn)))
 
 (defn get-validator
-  "Gets the validator-fn for a var/ref/agent/atom."
+  "Gets the validator-fn for a var/agent/atom."
   {:added "1.0"}
   [iref]
-  (throw "unimplemented var/ref/agent/atom")
-  #_(. iref (getValidator)))
+  (. iref (validator)))
 
 (defn alter-meta!
   "Atomically sets the metadata for a namespace/var/ref/agent/atom to be:
@@ -2057,113 +1981,6 @@
   {:added "1.0"}
   [^clojerl.IReference iref metadata-map]
   (.reset_meta iref metadata-map))
-
-(defn commute
-  "Must be called in a transaction. Sets the in-transaction-value of
-  ref to:
-
-  (apply fun in-transaction-value-of-ref args)
-
-  and returns the in-transaction-value of ref.
-
-  At the commit point of the transaction, sets the value of ref to be:
-
-  (apply fun most-recently-committed-value-of-ref args)
-
-  Thus fun should be commutative, or, failing that, you must accept
-  last-one-in-wins behavior.  commute allows for more concurrency than
-  ref-set."
-  {:added "1.0"}
-
-  [ref fun & args]
-  (throw "unimplemented ref")
-  #_(. ref (commute fun args)))
-
-(defn alter
-  "Must be called in a transaction. Sets the in-transaction-value of
-  ref to:
-
-  (apply fun in-transaction-value-of-ref args)
-
-  and returns the in-transaction-value of ref."
-  {:added "1.0"}
-  [ref fun & args]
-  (throw "unimplemented ref")
-  #_(. ref (alter fun args)))
-
-(defn ref-set
-  "Must be called in a transaction. Sets the value of ref.
-  Returns val."
-  {:added "1.0"}
-  [ref val]
-  (throw "unimplemented ref")
-  #_(. ref (set val)))
-
-(defn ref-history-count
-  "Returns the history count of a ref"
-  {:added "1.1"}
-  [ref]
-  (throw "unimplemented ref")
-  #_(.getHistoryCount ref))
-
-(defn ref-min-history
-  "Gets the min-history of a ref, or sets it and returns the ref"
-  {:added "1.1"}
-  ([ref]
-   (throw "unimplemented ref")
-   #_(.getMinHistory ref))
-  ([ref n]
-   (throw "unimplemented ref")
-   #_(.setMinHistory ref n)))
-
-(defn ref-max-history
-  "Gets the max-history of a ref, or sets it and returns the ref"
-  {:added "1.1"}
-  ([ref]
-   (throw "unimplemented ref")
-   #_(.getMaxHistory ref))
-  ([ref n]
-   (throw "unimplemented ref")
-   #_(.setMaxHistory ref n)))
-
-(defn ensure
-  "Must be called in a transaction. Protects the ref from modification
-  by other transactions.  Returns the in-transaction-value of
-  ref. Allows for more concurrency than (ref-set ref @ref)"
-  {:added "1.0"}
-  [ref]
-  (throw "unimplemented ref")
-  #_(. ref (touch))
-  #_(. ref (deref)))
-
-(defmacro sync
-  "transaction-flags => TBD, pass nil for now
-
-  Runs the exprs (in an implicit do) in a transaction that encompasses
-  exprs and any nested calls.  Starts a transaction if none is already
-  running on this thread. Any uncaught exception will abort the
-  transaction and flow out of sync. The exprs may be run more than
-  once, but any effects on Refs will be atomic."
-  {:added "1.0"}
-  [flags-ignored-for-now & body]
-  (throw "unimplemented ref")
-  #_`(. clojure.lang.LockingTransaction
-      (runInTransaction (fn [] ~@body))))
-
-
-(defmacro io!
-  "If an io! block occurs in a transaction, throws an
-  error, else runs body in an implicit do. If the
-  first expression in body is a literal string, will use that as the
-  exception message."
-  {:added "1.0"}
-  [& body]
-  (throw "unimplemented ref")
-  #_(let [message (when (string? (first body)) (first body))
-        body (if message (next body) body)]
-    `(if (clojure.lang.LockingTransaction/isRunning)
-       (throw (new IllegalStateException ~(or message "I/O in transaction")))
-       (do ~@body))))
 
 (defn process-val!
   "Creates and returns a ProcessVal with an initial value of val."
@@ -2889,21 +2706,13 @@
   a failed agent is restarted with :clear-actions true."
   {:added "1.0"}
   [& agents]
-  (throw "unimplemented agent")
-  #_(io! "await in transaction"
-    (when *agent*
-      (throw (new Exception "Can't await in agent action")))
-    (let [latch (new java.util.concurrent.CountDownLatch (count agents))
-          count-down (fn [agent] (. latch (countDown)) agent)]
-      (doseq [agent agents]
-        (send agent count-down))
-      (. latch (await)))))
-
-(defn await1 [a]
-  (throw "unimplemented agent")
-  #_(when (pos? (.getQueueCount a))
-    (await a))
-    a)
+  (when *agent*
+    (throw (new clojerl.Error "Can't await in agent action")))
+  (let [latch (new erlang.util.CountDownLatch (count agents))
+        count-down (fn [agent] (. latch (count_down)) agent)]
+    (doseq [a agents]
+      (send a count-down))
+    (. latch (await))))
 
 (defn await-for
   "Blocks the current thread until all actions dispatched thus
@@ -2912,15 +2721,13 @@
   returning due to timeout, logical true otherwise."
   {:added "1.0"}
   [timeout-ms & agents]
-  (throw "unimplemented agent")
-    #_(io! "await-for in transaction"
-     (when *agent*
-       (throw (new Exception "Can't await in agent action")))
-     (let [latch (new java.util.concurrent.CountDownLatch (count agents))
-           count-down (fn [agent] (. latch (countDown)) agent)]
-       (doseq [agent agents]
-           (send agent count-down))
-       (. latch (await  timeout-ms (. java.util.concurrent.TimeUnit MILLISECONDS))))))
+  (when *agent*
+    (throw (new clojerl.Error "Can't await in agent action")))
+  (let [latch (new erlang.util.CountDownLatch (count agents))
+        count-down (fn [agent] (. latch (count_down)) agent)]
+    (doseq [a agents]
+      (send a count-down))
+    (. latch (await timeout-ms))))
 
 (defmacro dotimes
   "bindings => name n
@@ -4231,17 +4038,6 @@
                     v))
                 coll (range (count coll)))
        (map #(if-let [e (find smap %)] (val e) %) coll))))
-
-(defmacro dosync
-  "Runs the exprs (in an implicit do) in a transaction that encompasses
-  exprs and any nested calls.  Starts a transaction if none is already
-  running on this thread. Any uncaught exception will abort the
-  transaction and flow out of dosync. The exprs may be run more than
-  once, but any effects on Refs will be atomic."
-  {:added "1.0"}
-  [& exprs]
-  (throw "unsupported refs")
-  #_`(sync nil ~@exprs))
 
 #_(
     (defn mk-bound-fn

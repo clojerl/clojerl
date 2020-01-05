@@ -15,6 +15,8 @@
 
 'close'(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'close'(X);
     #{?TYPE := 'clojerl.Delay'} ->
       'clojerl.Delay':'close'(X);
     #{?TYPE := 'clojerl.Future'} ->
@@ -43,6 +45,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->  true;
     #{?TYPE := 'clojerl.Delay'} ->  true;
     #{?TYPE := 'clojerl.Future'} ->  true;
     #{?TYPE := 'clojerl.Promise'} ->  true;
@@ -59,6 +62,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Agent' -> true;
     'clojerl.Delay' -> true;
     'clojerl.Future' -> true;
     'clojerl.Promise' -> true;

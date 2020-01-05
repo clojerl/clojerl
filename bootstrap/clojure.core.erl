@@ -71,6 +71,15 @@
                 , meta      => #{dynamic => true}
                 }
 
+           , <<"*agent*">>  =>
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*agent*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*agent*'
+                , val_atom  => '*agent*__val'
+                , meta      => #{dynamic => true}
+                }
            , <<"*assert*">> =>
                #{ ?TYPE     => 'clojerl.Var'
                 , ns        => <<"clojure.core">>
@@ -209,6 +218,7 @@
         , '*compile-protocols-path*__val'/0
         , '*compile-files*__val'/0
 
+        , '*agent*__val'/0
         , '*assert*__val'/0
         , '*read-eval*__val'/0
         , '*command-line-args*__val'/0
@@ -285,6 +295,9 @@ ns__val() ->
 
 '*compile-files*__val'() ->
   var_value(<<"#'clojure.core/*compile-files*">>, false).
+
+'*agent*__val'() ->
+  var_value(<<"#'clojure.core/*agent*">>, ?NIL).
 
 '*assert*__val'() ->
   var_value(<<"#'clojure.core/*assert*">>, true).

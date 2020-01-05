@@ -15,6 +15,8 @@
 
 'hash'(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->
+      'clojerl.Agent':'hash'(X);
     #{?TYPE := 'clojerl.ArityError'} ->
       'clojerl.ArityError':'hash'(X);
     #{?TYPE := 'clojerl.AssertionError'} ->
@@ -131,6 +133,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Agent'} ->  true;
     #{?TYPE := 'clojerl.ArityError'} ->  true;
     #{?TYPE := 'clojerl.AssertionError'} ->  true;
     #{?TYPE := 'clojerl.Atom'} ->  true;
@@ -191,6 +194,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Agent' -> true;
     'clojerl.ArityError' -> true;
     'clojerl.AssertionError' -> true;
     'clojerl.Atom' -> true;

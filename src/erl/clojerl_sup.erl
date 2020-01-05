@@ -23,6 +23,9 @@ init(_Args) ->
              , #{ id    => 'clojerl.MultiFn'
                 , start => {'clojerl.MultiFn', start_link, []}
                 }
+             , #{ id    => 'clojerl.Agent.Server'
+                , start => {'clojerl.Agent.Server', start_link, []}
+                }
              , #{ id    => 'clojerl.Atom'
                 , start => {'clojerl.Atom', start_link, []}
                 }
