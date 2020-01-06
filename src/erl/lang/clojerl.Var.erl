@@ -166,28 +166,27 @@ get_bindings_map() ->
 reset_bindings(Bindings) ->
   erlang:put(dynamic_bindings, Bindings).
 
--spec dynamic_binding('clojerl.Var':type()) -> any().
+-spec dynamic_binding('clojerl.Var':type() | binary()) -> any().
+dynamic_binding(Key) when is_binary(Key) ->
+  clj_scope:get(Key, get_bindings());
 dynamic_binding(Var) ->
-  Key = clj_rt:str(Var),
-  clj_scope:get(Key, get_bindings()).
+  dynamic_binding(str(Var)).
 
--spec dynamic_binding('clojerl.Var':type(), any()) -> any().
-dynamic_binding(Var, Value) ->
+-spec dynamic_binding('clojerl.Var':type() | binary(), any()) -> any().
+dynamic_binding(Key, Value) when is_binary(Key) ->
   case get_bindings() of
-    ?NIL ->
-      push_bindings(#{}),
-      dynamic_binding(Var, Value);
-    Bindings  ->
-      Key = clj_rt:str(Var),
-      NewBindings = case clj_scope:update(Key, {ok, Value}, Bindings) of
-                      not_found ->
-                        clj_scope:put(Key, {ok, Value}, Bindings);
-                      NewBindingsTemp ->
-                        NewBindingsTemp
-                    end,
-      erlang:put(dynamic_bindings, NewBindings),
-      Value
-  end.
+    ?NIL -> push_bindings(#{});
+    X -> X
+  end,
+  Bindings0 = get_bindings(),
+  Bindings1 = case clj_scope:update(Key, {ok, Value}, Bindings0) of
+                  not_found -> clj_scope:put(Key, {ok, Value}, Bindings0);
+                  Bindings  -> Bindings
+                end,
+  erlang:put(dynamic_bindings, Bindings1),
+  Value;
+dynamic_binding(Var, Value) ->
+  dynamic_binding(str(Var), Value).
 
 -spec find('clojerl.Symbol':type()) -> type() | ?NIL.
 find(QualifiedSymbol) ->
