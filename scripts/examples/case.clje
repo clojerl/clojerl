@@ -56,3 +56,30 @@
 
 (assert-with-tags (erlang/=:= (multiple-locals-not-ordered 1 1)
                               #erl[:five 5]))
+
+(def two-bindings-same-name-in-let
+  (fn* []
+       (let* [x 1
+              x 2
+              y 1]
+         (case* y
+                x :x-is-one
+                :x-is-two))))
+
+(assert-with-tags
+ (erlang/=:= (two-bindings-same-name-in-let)
+             :x-is-two))
+
+(def three-bindings-same-name-in-let
+  (fn* []
+       (let* [x 1
+              x 2
+              x 3
+              y 1]
+         (case* y
+                x :x-is-one
+                :x-is-three))))
+
+(assert-with-tags
+ (erlang/=:= (three-bindings-same-name-in-let)
+             :x-is-three))

@@ -374,22 +374,23 @@ parse_fn(List, Env) ->
     end,
 
   %% Check if there is more than one method
-  MethodsList = case clj_rt:'vector?'(clj_rt:first(Methods)) of
-                  true  -> [Methods];
-                  false -> clj_rt:to_list(Methods)
-                end,
+  MethodsList     = case clj_rt:'vector?'(clj_rt:first(Methods)) of
+                      true  -> [Methods];
+                      false -> clj_rt:to_list(Methods)
+                    end,
 
   {TagExpr, Env0} = fetch_type_tag(NameSym, clj_env:add_locals_scope(Env)),
   %% Add the name of the fn as a local binding
-  LocalExpr     = #{ op         => local
-                   , env        => Env
-                   , form       => NameSym
-                   , tag        => TagExpr
-                   , name       => NameSym
-                   , shadow     => ?NIL
-                   , underscore => is_underscore(NameSym)
-                   , id         => erlang:unique_integer()
-                   },
+  LocalExpr       = #{ op         => local
+                     , env        => Env
+                     , form       => NameSym
+                     , tag        => TagExpr
+                     , name       => NameSym
+                     , shadow     => ?NIL
+                     , underscore => is_underscore(NameSym)
+                     , id         => erlang:unique_integer()
+                     , binding    => true
+                     },
 
   %% If there is a def var we add it to the local scope
   DefVar      = clj_env:get(def_var, Env),
@@ -953,9 +954,10 @@ parse_letfn(Form, Env0) ->
                                  , form       => FnName
                                  , tag        => TagExpr
                                  , name       => FnName
-                                 , shadow     => clj_env:get_local(FnName, Env)
+                                 , shadow     => ?NIL
                                  , underscore => is_underscore(FnName)
                                  , id         => erlang:unique_integer()
+                                 , binding    => true
                                  },
                    { [FnNameExpr|FnNamesExprsAcc]
                    , clj_env:put_locals([FnNameExpr], EnvAcc1)
@@ -2247,25 +2249,17 @@ do_analyze_symbol(true = _InPattern, Symbol, Env0) ->
              , clj_env:location(Env0)
              ),
 
-  %% When in a let or loop form binding context, bindings with the
-  %% same name as other bindings or locals should be shadowed.
-  %% This will avoid Erlang's single assignment behaviour
-  %% (which is not how Clojure works), and avoid conflicts with
-  %% variables with the same name (which the Core Erlang linter
-  %% complains about).
-  Shadow = case clj_env:get(is_binding_context, false, Env0) of
-             true  -> clj_env:get_local(Symbol, Env0);
-             false -> ?NIL %% Don't shadow
-           end,
+  IsBinding = clj_env:get(is_binding_context, false, Env0),
 
   Expr0 = #{ op         => local
            , env        => Env0
            , form       => Symbol
            , tag        => ?NO_TAG
            , name       => Symbol
-           , shadow     => Shadow
+           , shadow     => clj_env:get_local(Symbol, Env0)
            , underscore => is_underscore(Symbol)
            , id         => erlang:unique_integer()
+           , binding    => IsBinding
            },
   %% We need to do this here so that the registered local has a type tag.
   {Expr1, Env1} = add_type_tag(Symbol, Expr0, Env0),

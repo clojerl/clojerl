@@ -24,6 +24,7 @@
                            , shadow     => any()
                            , underscore => boolean()
                            , id         => integer()
+                           , binding    => boolean()
                            }.
 
 -type binding_expr()   :: #{ op          => binding
