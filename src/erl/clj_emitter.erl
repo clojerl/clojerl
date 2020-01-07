@@ -1066,7 +1066,7 @@ ast(#{op := 'catch'} = Expr, State0) ->
 
   { [PatternAst1]
   , PatGuards
-  } = clj_emitter_pattern:patterns([PatternAst0], locals(Env)),
+  } = clj_emitter_pattern:patterns([PatternAst0], locals(Env, State6)),
   VarsAsts = [ClassAst, PatternAst1, TempStackAst],
   Guard1   = clj_emitter_pattern:fold_guards(Guard0, PatGuards),
   Ast      = cerl:ann_c_clause(Ann, VarsAsts, Guard1, Body),
@@ -1715,7 +1715,9 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
 
   { [PatternAst1]
   , PatGuards
-  } = clj_emitter_pattern:patterns([PatternAst0], locals(EnvPattern)),
+  } = clj_emitter_pattern:patterns( [PatternAst0]
+                                  , locals(EnvPattern, StateAcc3)
+                                  ),
   GuardAst1 = clj_emitter_pattern:fold_guards(GuardAst0, PatGuards),
 
   ClauseAst = cerl:ann_c_clause(AnnPattern, [PatternAst1], GuardAst1, BodyAst0),
@@ -2018,12 +2020,13 @@ pop_ast(State = #{asts := Asts}, N, Reverse) ->
 
 %% ----- Lexical renames -------
 
--spec locals(clj_env:env()) -> [atom()].
-locals(Env) ->
-  [ clj_rt:keyword(Name)
-    || #{ name       := Name
-        , underscore := false
-        } <- clj_env:get_locals(Env)
+-spec locals(clj_env:env(), state()) -> [atom()].
+locals(Env, State) ->
+  [ begin
+      {Name, _} = get_lexical_rename(LocalExpr, State),
+      clj_rt:keyword(Name)
+    end
+    || LocalExpr <- clj_env:get_locals(Env)
   ].
 
 -spec add_lexical_renames_scope(state()) -> state().
@@ -2100,9 +2103,21 @@ hash_scope(LocalExpr) ->
   NameBin = 'clojerl.Symbol':name(Name),
   erlang:phash2({NameBin, Depth}).
 
+%% @doc Returns 0 if the local is not shadow or the depth otherwise
+%%
+%% In a binding context (let, loop, fn, letfn), bindings
+%% with the same name as other bindings or locals should
+%% be shadowed. Locals in a pattern should match the name
+%% of the shadowed local (if any).
+%% This will avoid Erlang's single assignment behaviour
+%% (which is not how Clojure works), and avoid conflicts with
+%% variables with the same name (which the Core Erlang linter
+%% complains about).
 -spec shadow_depth(local_expr()) -> non_neg_integer().
-shadow_depth(LocalExpr = #{shadow := _}) ->
+shadow_depth(LocalExpr = #{shadow := _, binding :=  true}) ->
   do_shadow_depth(LocalExpr, 0);
+shadow_depth(LocalExpr = #{shadow := _, binding := false}) ->
+  do_shadow_depth(LocalExpr, 0) - 1;
 shadow_depth(_) ->
   0.
 
