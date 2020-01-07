@@ -10,7 +10,7 @@
       :author "Alex Miller"}
   clojure.core.server
   (:require [clojure.string :as str]
-            ;; [clojure.edn :as edn]
+            [clojure.edn :as edn]
             [clojure.main :as m])
   (:import [clojerl String]
            [erlang.io PushbackReader]))
@@ -20,6 +20,9 @@
 (def ^:dynamic *session* nil)
 
 (defonce ^:private servers (atom {}))
+
+(defmacro process [& body]
+  `(erlang/spawn (fn* [] ~@body)))
 
 (defn- required
   "Throw if opts does not contain prop."
@@ -59,10 +62,7 @@
       (swap! servers update-in [name :sessions] dissoc client-id)
       (gen_tcp/close conn))))
 
-(defmacro in-process [& body]
-  `(erlang/spawn :clj_rt :apply #erl((fn* [] ~@body) #erl())))
-
-(defn* lift-result
+(defn* unwrap-result
   ([#erl[:ok res]] res)
   ([#erl[:error error]] (throw error))
   ([res] res))
@@ -74,36 +74,37 @@
    (-> address
        erlang/binary_to_list
        (inet/getaddr :inet)
-       lift-result)))
+       unwrap-result)))
 
 (defn listen [address port]
-  (lift-result (gen_tcp/listen port #erl(:binary #erl[:ip address] #erl[:active false]))))
+  (let [opts #erl(:binary #erl[:ip address] #erl[:active false])]
+    (unwrap-result (gen_tcp/listen port opts))))
 
 (defn accept-socket [socket]
-  (lift-result (gen_tcp/accept socket)))
+  (unwrap-result (gen_tcp/accept socket)))
 
 (deftype SocketWriter [conn]
   erlang.io.IWriter
   (write [this data]
-    (lift-result (gen_tcp/send conn data)))
+    (unwrap-result (gen_tcp/send conn data)))
   (write [this format values]
     (let [data (->> values (io_lib/format format) (erlang/iolist_to_binary.1))]
-      (lift-result (gen_tcp/send conn data)))))
+      (unwrap-result (gen_tcp/send conn data)))))
 
 (deftype SocketReader [conn]
   erlang.io.IReader
   (read [this]
-    (lift-result (gen_tcp/recv conn 1)))
+    (unwrap-result (gen_tcp/recv conn 1)))
   (read [this length]
-    (lift-result (gen_tcp/recv conn length :infinity)))
+    (unwrap-result (gen_tcp/recv conn length :infinity)))
   (read_line [this]
     (loop [line ""]
-      (let [char (lift-result (gen_tcp/recv conn 1))]
+      (let [char (unwrap-result (gen_tcp/recv conn 1))]
         (if (= char "\n")
           line
           (recur (str line char))))))
   (skip [this length]
-    (let [skipped (lift-result (gen_tcp/recv conn length))]
+    (let [skipped (unwrap-result (gen_tcp/recv conn length))]
       (count skipped))))
 
 (defn start-server
@@ -126,8 +127,7 @@
         address (getaddr address) ;; nil returns loopback
         socket  (listen address port)]
     (swap! servers assoc name {:name name, :socket socket, :sessions {}})
-    (in-process
-      (println "Clojure Server" name)
+    (process
       (try
         (loop [client-counter 1]
           (when (erlang/port_info socket)
@@ -136,8 +136,7 @@
                     in (new PushbackReader (new SocketReader conn))
                     out (new SocketWriter conn)
                     client-id (str client-counter)]
-                (in-process
-                  (println "Clojure Connection" name client-id)
+                (process
                   (accept-connection conn name client-id in out (if bind-err out *err*) accept args)))
               (catch _ disconnect))
             (recur (inc client-counter))))
@@ -171,7 +170,7 @@
     (fn [acc [^String k ^String v]]
       (let [[k1 k2 k3] (str/split k #"\.")]
         (if (and (= k1 "clojure") (= k2 "server"))
-          (conj acc (merge {:name k3} (read-string v)))
+          (conj acc (merge {:name k3} (edn/read-string v)))
           acc)))
     [] props))
 
