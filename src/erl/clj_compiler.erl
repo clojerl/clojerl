@@ -347,15 +347,14 @@ compile_module_fun(Opts) ->
   fun(Forms) -> compile_module(Forms, Opts) end.
 
 -spec compile_module(cerl:c_module(), options()) -> binary().
+compile_module(Module, #{output_core := true}) ->
+  ok = output_core(Module),
+  ?NO_SOURCE;
 compile_module(Module, Opts) ->
-  ok       = maybe_output_core(Module, Opts),
   ok       = clj_behaviour:check(Module),
-
   ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
              | maps:get(erl_flags, Opts, [])
              ],
-
-  %% io:format("===== Module ====~n~s~n", [core_pp:format(Module)]),
   case compile:noenv_forms(Module, ErlFlags) of
     {ok, _, Beam0, _Warnings} ->
       Name           = cerl:atom_val(cerl:module_name(Module)),
@@ -391,15 +390,18 @@ when_verbose(#{verbose := true}, Message) ->
 when_verbose(_, _) ->
   ok.
 
--spec maybe_output_core(cerl:c_module(), options()) ->
-  ok | {error, term()}.
-maybe_output_core(Module, #{output_core := true}) ->
-  Source = core_pp:format(Module),
-  Name   = cerl:concrete(cerl:module_name(Module)),
-  Path   = atom_to_list(Name) ++ ".core",
-  file:write_file(Path, Source);
-maybe_output_core(_, _) ->
-  ok.
+-spec output_core(cerl:c_module()) -> ok | {error, term()}.
+output_core(Module) ->
+  CompilePath = case compile_path(false) of
+                  ?NIL -> ".";
+                  X    -> X
+                end,
+  Source      = core_pp:format(Module),
+  Name        = cerl:concrete(cerl:module_name(Module)),
+  Filename    = atom_to_list(Name) ++ ".core",
+  Path        = filename:join(CompilePath, Filename),
+  ok          = filelib:ensure_dir(Path),
+  file:write_file(Path, Source).
 
 %% Keep compile_info information for modules that were originally compiled
 %% as Erlang modules (e.g. protocol modules).
