@@ -130,6 +130,15 @@ eval(_Config) ->
   Self      = erlang:self(),
   {Self, _} = clj_compiler:eval(clj_reader:read(<<"(erlang/self)">>)),
 
+  ct:comment("in-ns and ns should be available"),
+  {_, _}  = clj_compiler:eval(clj_reader:read(<<"(in-ns 'b)">>)),
+  ok      = try clj_compiler:eval(clj_reader:read(<<"in-ns">>)), ok
+            catch _:_ -> error
+            end,
+  ok      = try clj_compiler:eval(clj_reader:read(<<"ns">>)), ok
+            catch _:_ -> error
+            end,
+
   {comments, ""}.
 
 -spec def_var_compiled_ns(config()) -> result().
