@@ -2368,6 +2368,7 @@ resolve(Symbol, CheckPrivate, Env) ->
   CurrentNs = 'clojerl.Namespace':current(),
   Local     = clj_env:get_local(Symbol, Env),
   NsStr     = 'clojerl.Symbol':namespace(Symbol),
+  NameStr   = 'clojerl.Symbol':name(Symbol),
   MappedVal = 'clojerl.Namespace':find_mapping(CurrentNs, Symbol),
 
   if
@@ -2394,6 +2395,10 @@ resolve(Symbol, CheckPrivate, Env) ->
       %% Let's see how this works out.
       Expr = erl_fun(Symbol, Env),
       {{erl_fun, Expr}, Env};
+    NameStr =:= <<"in-ns">> orelse NameStr =:= <<"ns">> ->
+      ClojureCoreSym = clj_rt:symbol(<<"clojure.core">>, NameStr),
+      Var = 'clojerl.Namespace':find_var(ClojureCoreSym),
+      {{var, Var}, Env};
     true ->
       case is_maybe_type(Symbol) of
         true  ->
