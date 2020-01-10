@@ -9,7 +9,7 @@
 ;; Originally contributed by Stephen C. Gilardi
 
 (ns ^{:doc "Top-level main function for Clojure REPL and scripts."
-      :author "Stephen C. Gilardi and Rich Hickey"}
+       :author "Stephen C. Gilardi and Rich Hickey"}
   clojure.main
   (:refer-clojure :exclude [with-bindings]))
 
@@ -311,7 +311,7 @@ by default when a new command-line REPL is started."} repl-requires
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
   [args inits]
-  (ns 'clje.user)
+  (in-ns 'clje.user)
   (set! *command-line-args* args)
   (doseq [[opt arg] inits]
     ((init-dispatch opt) arg)))
@@ -329,7 +329,7 @@ by default when a new command-line REPL is started."} repl-requires
   present"
   [[_ & args] inits]
   (when-not (some #(= eval-opt (init-dispatch (first %))) inits)
-    (println "Clojure"  (clojure-version)))
+    (println "Clojure" (clojure-version)))
   (repl :init (fn []
                 (initialize args inits)
                 (apply require repl-requires)))

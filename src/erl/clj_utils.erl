@@ -16,6 +16,8 @@
 
         , compare/2
 
+        , env_vars/0
+
         , format_error/2
         , error_str/2
 
@@ -222,6 +224,17 @@ compare(X, Y) ->
     X == Y -> 0;
     X >  Y -> 1
   end.
+
+-spec env_vars() -> #{binary() => binary()}.
+env_vars() ->
+  Pairs = [ begin
+              EntryBin = unicode:characters_to_binary(Entry),
+              [K, V]   = binary:split(EntryBin, <<"=">>),
+              {K, V}
+            end
+            || Entry <- os:getenv()
+          ],
+  maps:from_list(Pairs).
 
 -spec format_error(any(), clj_reader:location() | ?NIL) -> binary().
 format_error(List, Location) when is_list(List) ->

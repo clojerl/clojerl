@@ -20,6 +20,7 @@ start(_Type, _Args) ->
   ok = stacktrace_depth(),
   ok = io_options(),
   ok = stick(),
+  ok = init(),
   {ok, self()}.
 
 -spec stop(any()) -> ok.
@@ -28,6 +29,27 @@ stop(_State) -> ok.
 %%==============================================================================
 %% Internal functions
 %%==============================================================================
+
+-spec init() -> ok.
+init() ->
+  CljeUserSym = clj_rt:symbol(<<"clje.user">>),
+  'clojure.core':'in-ns'(CljeUserSym),
+  %% This will not be available during bootstrap
+  case erlang:function_exported('clojure.core', refer, 2) of
+    true ->
+      ClojureCoreSym = clj_rt:symbol(<<"clojure.core">>),
+      'clojure.core':'refer'(ClojureCoreSym, []),
+
+      %% Maybe load user.clje script
+      clj_rt:load_script(<<"user.clje">>, false),
+
+      ClojureCoreServerSym = clj_rt:symbol(<<"clojure.core.server">>),
+      'clojure.core':require([ClojureCoreServerSym]),
+      'clojure.core.server':'start-servers'(clj_utils:env_vars()),
+      ok;
+    false ->
+      ok
+  end.
 
 -spec stacktrace_depth() -> ok.
 stacktrace_depth() ->
