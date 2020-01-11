@@ -17,7 +17,7 @@
 
 (in-ns 'clojure.pprint)
 
-(defmacro use-method
+(defmacro ^:private use-method
   "Installs a function as a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val func]
   `(clojerl.MultiFn/add_method (var ~multifn) ~dispatch-val (var ~func)))
