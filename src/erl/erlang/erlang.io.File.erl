@@ -87,13 +87,13 @@ read(File) ->
 read(#{?TYPE := ?M, pid := Pid}, Length) ->
   case io:get_chars(Pid, "", Length) of
     eof -> eof;
-    Str -> list_to_binary(Str)
+    Str -> unicode:characters_to_binary(Str)
   end.
 
 read_line(#{?TYPE := ?M, pid := Pid}) ->
   case io:request(Pid, {get_line, unicode, ""}) of
     eof -> eof;
-    Str -> list_to_binary(Str)
+    Str -> unicode:characters_to_binary(Str)
   end.
 
 skip(#{?TYPE := ?M}, _Length) ->
