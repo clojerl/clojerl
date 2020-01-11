@@ -9,7 +9,7 @@
 (ns clojure.core)
 
 ;; Unstick clojerl directory when bootstrapping.
-(clojerl/unstick)
+(clojerl_app/unstick)
 
 (def
   ^{:arglists '([& items])

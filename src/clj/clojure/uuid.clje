@@ -17,7 +17,7 @@
 
 (in-ns 'clojure.core)
 
-(clojerl/unstick)
+(clojerl_app/unstick)
 
 (defmethod print-method erlang.util.UUID [uuid ^erlang.io.IWriter w]
   (.write w (str "#uuid \"" (str uuid) "\"")))
