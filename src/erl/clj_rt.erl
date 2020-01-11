@@ -5,6 +5,7 @@
 
 -export([ type/1, type_module/1
         , load/1, load/2
+        , load_script/2
         , count/1, nth/2, nth/3
         , 'empty?'/1, empty/1
         , seq/1, seq_or_else/1, to_list/1
@@ -86,6 +87,22 @@ load(ScriptBase, FailIfNotFound) ->
                      );
         FullFilePath -> clj_compiler:compile_file(FullFilePath)
       end
+  end,
+  ?NIL.
+
+-spec load_script(binary(), boolean()) -> any().
+load_script(ScriptName, FailIfNotFound) ->
+  File = filename:basename(ScriptName),
+  Ext  = filename:extension(File),
+  Name = filename:basename(File, Ext),
+  case resolve_file(Name, [Ext]) of
+    ?NIL ->
+      ?ERROR_WHEN( FailIfNotFound
+                 , [ <<"Could not locate Clojure resource on code path: ">>
+                   , ScriptName
+                   ]
+                 );
+    FullFilePath -> clj_compiler:load_file(FullFilePath)
   end,
   ?NIL.
 

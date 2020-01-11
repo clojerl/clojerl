@@ -3139,8 +3139,7 @@
   stream/file"
   {:added "1.0"}
   [rdr]
-  (throw "unimplemented reader")
-  #_(. clojure.lang.Compiler (load rdr)))
+  (clj_compiler/load rdr))
 
 (defn load-string
   "Sequentially read and evaluate the set of forms contained in the

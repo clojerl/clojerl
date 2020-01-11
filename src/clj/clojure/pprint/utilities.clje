@@ -106,7 +106,7 @@ beginning of aseq"
 (defprotocol PrettyFlush
   (ppflush [_]))
 
-(defn char-code
+(defn- char-code
   "Convert char to int"
   [c]
   (cond

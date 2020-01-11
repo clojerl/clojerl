@@ -24,11 +24,17 @@
                              , ns_atom   => 'clojure.core'
                              , name_atom => 'in-ns'
                              , val_atom  => 'in-ns__val'
-                             , meta      => #{ 'variadic?'     => false
-                                             , max_fixed_arity => 1
-                                             , fixed_arities   => [1]
-                                             , variadic_arity  => ?NIL
-                                             }
+                             , meta      =>
+                                 #{ 'variadic?'     => false
+                                  , max_fixed_arity => 1
+                                  , fixed_arities   => [1]
+                                  , variadic_arity  => ?NIL
+                                  , doc             => <<"Sets *ns* to the"
+                                                         "namespace named by"
+                                                         "the symbol, creating"
+                                                         "it if needed.">>
+                                  , added           => <<"1.0">>
+                                  }
                              }
            , <<"*ns*">>  => #{ ?TYPE     => 'clojerl.Var'
                              , ns        => <<"clojure.core">>
@@ -36,11 +42,12 @@
                              , ns_atom   => 'clojure.core'
                              , name_atom => '*ns*'
                              , val_atom  => '*ns*__val'
-                             , meta      => #{ dynamic => true
-                                             , tag => #{ ?TYPE => 'erlang.Type'
-                                                       , name  => 'clojerl.Namespace'
-                                                       }
-                                             }
+                             , meta      =>
+                                 #{ dynamic => true
+                                  , tag => #{ ?TYPE => 'erlang.Type'
+                                            , name  => 'clojerl.Namespace'
+                                            }
+                                  }
                              }
 
            , <<"*compile-path*">> =>
@@ -78,7 +85,14 @@
                 , ns_atom   => 'clojure.core'
                 , name_atom => '*agent*'
                 , val_atom  => '*agent*__val'
-                , meta      => #{dynamic => true}
+                , meta      => #{ dynamic => true
+                                , doc => <<"The agent currently running an "
+                                           "action on this thread, else nil">>
+                                , tag => #{ ?TYPE => 'erlang.Type'
+                                          , name  => 'clojerl.Agent'
+                                          }
+                                , added           => <<"1.0">>
+                                }
                 }
            , <<"*assert*">> =>
                #{ ?TYPE     => 'clojerl.Var'

@@ -9,6 +9,7 @@
         , compile_file/2
         , compile/1
         , compile/2
+        , load/1
         , load_file/1
         , load_string/1
         , eval/1
@@ -116,14 +117,22 @@ compile(Src) when is_binary(Src) ->
 compile(Src, Opts) when is_binary(Src) ->
   compile(Src, Opts, clj_env:default()).
 
--spec load_string(binary()) -> any().
-load_string(Path) ->
-  Env = compile(Path),
+-spec load('erlang.io.PushbackReader':type()) -> any().
+load(PushbackReader) ->
+  Opts        = default_options(),
+  ReaderOpts0 = maps:get(reader_opts, Opts),
+  ReaderOpts1 = ReaderOpts0#{?OPT_IO_READER => PushbackReader},
+  Env         = compile(<<>>, Opts#{reader_opts => ReaderOpts1}),
   clj_env:get(eval, Env).
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->
   Env = compile_file(Path, default_options(), clj_env:default(), env),
+  clj_env:get(eval, Env).
+
+-spec load_string(binary()) -> any().
+load_string(Src) ->
+  Env = compile(Src),
   clj_env:get(eval, Env).
 
 -spec timed_compile(binary(), options(), clj_env:env()) ->
