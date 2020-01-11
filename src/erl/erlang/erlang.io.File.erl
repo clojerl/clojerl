@@ -7,7 +7,11 @@
 -behavior('erlang.io.IWriter').
 -behavior('clojerl.IStringable').
 
--export([open/1, open/2, path/1]).
+-export([ ?CONSTRUCTOR/1
+        , open/1
+        , open/2
+        , path/1
+        ]).
 -export([make_temp/2]).
 
 -export([close/1]).
@@ -26,6 +30,10 @@
                  , pid   => pid() | file:fd()
                  , path  => path()
                  }.
+
+-spec ?CONSTRUCTOR(path()) -> type().
+?CONSTRUCTOR(Path) ->
+  open(Path).
 
 -spec open(path()) -> type().
 open(Path) when is_binary(Path) ->
