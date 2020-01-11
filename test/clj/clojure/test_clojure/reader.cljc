@@ -16,10 +16,6 @@
 ;;  scgilardi (gmail)
 ;;  Created 22 October 2008
 
-;; Ensure there is a clje.user namespace
-(ns clje.user)
-(def x 1)
-
 (ns clojure.test-clojure.reader
   (:use clojure.test)
   (:use [clojure.instant :only [read-instant-date
