@@ -2,6 +2,7 @@
 
 -export([ ordered/1
         , unordered/1
+        , mix_coll_hash/2
         ]).
 
 -define(SEED, 0).
@@ -19,37 +20,37 @@
 ordered(Seq) ->
   List = clj_rt:to_list(Seq),
   Hashes = [clj_rt:hash(X) || X <- List],
-  murmur_ordered_coll(Hashes).
+  ordered_coll(Hashes).
 
 -spec unordered(any()) -> integer().
 unordered(Seq) ->
   List = clj_rt:to_list(Seq),
   Hashes = [clj_rt:hash(X) || X <- List],
-  murmur_unordered_coll(Hashes).
+  unordered_coll(Hashes).
 
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
 
-murmur_ordered_coll(Hashes) ->
-  Hash = do_murmur_ordered_coll(Hashes, 1),
-  murmur_mix_coll_hash(Hash, length(Hashes)).
+ordered_coll(Hashes) ->
+  Hash = do_ordered_coll(Hashes, 1),
+  mix_coll_hash(Hash, length(Hashes)).
 
-do_murmur_ordered_coll([], Hash) ->
+do_ordered_coll([], Hash) ->
   Hash;
-do_murmur_ordered_coll([H | Hashes], Hash) ->
-  do_murmur_ordered_coll(Hashes, ?UINT32(?UINT32(31 * Hash) + H)).
+do_ordered_coll([H | Hashes], Hash) ->
+  do_ordered_coll(Hashes, ?UINT32(?UINT32(31 * Hash) + H)).
 
-murmur_unordered_coll(Hashes) ->
-  Hash = do_murmur_unordered_coll(Hashes, 0) ,
-  murmur_mix_coll_hash(Hash, length(Hashes)).
+unordered_coll(Hashes) ->
+  Hash = do_unordered_coll(Hashes, 0) ,
+  mix_coll_hash(Hash, length(Hashes)).
 
-do_murmur_unordered_coll([], Hash) ->
+do_unordered_coll([], Hash) ->
   Hash;
-do_murmur_unordered_coll([H | Hashes], Hash) ->
-  do_murmur_unordered_coll(Hashes, ?UINT32(Hash + H)).
+do_unordered_coll([H | Hashes], Hash) ->
+  do_unordered_coll(Hashes, ?UINT32(Hash + H)).
 
-murmur_mix_coll_hash(Hash, Len) ->
+mix_coll_hash(Hash, Len) ->
   K1 = mix_k1(Hash),
   H1 = mix_h1(?SEED, K1),
   fmix(H1, Len).
