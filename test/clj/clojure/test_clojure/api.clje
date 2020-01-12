@@ -9,11 +9,9 @@
 (ns clojure.test-clojure.api
   (:require [clojure.test.generative :refer (defspec)]
             [clojure.test-clojure.generators :as cgen])
-  (:import clojure.lang.IFn
-           clojure.java.api.Clojure
-           clojure.lang.Var))
+  (:import clojerl.Var))
 
-(set! *warn-on-reflection* true)
+;; (set! *warn-on-infer* true)
 
 (defn roundtrip
   "Print an object and read it back with Clojure/read"
@@ -21,17 +19,17 @@
   (binding [*print-length* nil
             *print-dup* nil
             *print-level* nil]
-    (Clojure/read (pr-str o))))
+    (clojerl/read (pr-str o))))
 
 (defn api-var-str
   [^Var v]
-  (Clojure/var (str (.name (.ns v)))
-               (str (.sym v))))
+  (clojerl/var (.namespace v)
+               (.name v)))
 
 (defn api-var
   [^Var v]
-  (Clojure/var (.name (.ns v))
-               (.sym v)))
+  (clojerl/var (symbol (.namespace v))
+               (symbol (.name v))))
 
 (defspec api-can-read
   roundtrip
@@ -50,5 +48,3 @@
   [^{:tag cgen/var} v]
   (when-not (= v %)
     (throw (ex-info "Var cannot roundtrip strings through Clojure/var" {:from v :to %}))))
-
-
