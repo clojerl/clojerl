@@ -28,7 +28,9 @@ var(QualifiedName) ->
 
 -spec var(any(), any()) -> 'clojerl.Var':type().
 var(Ns, Name) ->
-  QualifiedSymbol = clj_rt:symbol(Ns, Name),
+  NsStr   = 'clojerl.Symbol':str(as_symbol(Ns)),
+  NameStr = 'clojerl.Symbol':str(as_symbol(Name)),
+  QualifiedSymbol = clj_rt:symbol(NsStr, NameStr),
   'clojerl.Var':find(QualifiedSymbol).
 
 %%==============================================================================
