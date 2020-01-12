@@ -182,7 +182,7 @@ this var as the value for the 'inst key. The timezone offset will be used
 
 (in-ns 'clojure.core)
 
-(clojerl/unstick)
+(clojerl_app/unstick)
 
 (defn- print-date
   "Print a java.util.Date as RFC3339 timestamp, always in UTC.

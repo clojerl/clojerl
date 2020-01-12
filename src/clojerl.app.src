@@ -2,7 +2,7 @@
 , [ {description, "Clojure for the Erlang VM"}
   , {vsn, git}
   , {applications, [kernel, stdlib, compiler]}
-  , {mod, {clojerl, []}}
+  , {mod, {clojerl_app, []}}
   , {modules, []}
   , {registered, []}
   , {licenses, ["EPL v1.0"]}

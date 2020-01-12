@@ -1,0 +1,5 @@
+#!/bin/bash
+
+bash bin/clojerl \
+     -pa test/clj _build/*/lib/*/ebin \
+     -m clojure.test.generative.runner $1
