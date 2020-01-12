@@ -455,45 +455,45 @@ Math/pow overflows to Infinity."
   []
   (gen/one-of #(gen/uniform -1 32) gen/byte gen/int))
 
-#_((defspec integer-commutative-laws
-     (partial map identity)
-     [^{:tag 'clojure.test-clojure.numbers/integer} a
-      ^{:tag 'clojure.test-clojure.numbers/integer} b]
-     (assert (= (+ a b) (+ b a)))
-     (assert (= (* a b) (* b a))))
+(defspec integer-commutative-laws
+  (partial map identity)
+  [^{:tag clojure.test-clojure.numbers/integer} a
+   ^{:tag clojure.test-clojure.numbers/integer} b]
+  (assert (= (+ a b) (+ b a)))
+  (assert (= (* a b) (* b a))))
 
-   (defspec integer-associative-laws
-     (partial map identity)
-     [^{:tag 'clojure.test-clojure.numbers/integer} a
-      ^{:tag 'clojure.test-clojure.numbers/integer} b
-      ^{:tag 'clojure.test-clojure.numbers/integer} c]
-     (assert (= (+ (+ a b) c) (+ a (+ b c))))
-     (assert (= (* (* a b) c) (* a (* b c)))))
+(defspec integer-associative-laws
+  (partial map identity)
+  [^{:tag clojure.test-clojure.numbers/integer} a
+   ^{:tag clojure.test-clojure.numbers/integer} b
+   ^{:tag clojure.test-clojure.numbers/integer} c]
+  (assert (= (+ (+ a b) c) (+ a (+ b c))))
+  (assert (= (* (* a b) c) (* a (* b c)))))
 
-   (defspec integer-distributive-laws
-     (partial map identity)
-     [^{:tag 'clojure.test-clojure.numbers/integer} a
-      ^{:tag 'clojure.test-clojure.numbers/integer} b
-      ^{:tag 'clojure.test-clojure.numbers/integer} c]
-     (assert (= (* a (+ b c)) (+ (* a b) (* a c)))))
+(defspec integer-distributive-laws
+  (partial map identity)
+  [^{:tag clojure.test-clojure.numbers/integer} a
+   ^{:tag clojure.test-clojure.numbers/integer} b
+   ^{:tag clojure.test-clojure.numbers/integer} c]
+  (assert (= (* a (+ b c)) (+ (* a b) (* a c)))))
 
-   (defspec addition-undoes-subtraction
-     (partial map identity)
-     [^{:tag 'clojure.test-clojure.numbers/integer} a
-      ^{:tag 'clojure.test-clojure.numbers/integer} b]
-     (assert (= a
-                (-> a (- b) (+ b)))))
+(defspec addition-undoes-subtraction
+  (partial map identity)
+  [^{:tag clojure.test-clojure.numbers/integer} a
+   ^{:tag clojure.test-clojure.numbers/integer} b]
+  (assert (= a
+             (-> a (- b) (+ b)))))
 
-   (defspec quotient-and-remainder
-     (fn [a b] (sort [a b]))
-     [^{:tag 'clojure.test-clojure.numbers/integer} a
-      ^{:tag 'clojure.test-clojure.numbers/integer} b]
-     (when-not (zero? (second %))
-       (let [[a d] %
-             q (quot a d)
-             r (rem a d)]
-         (assert (= a
-                    (+ (* q d) r)))))))
+(defspec quotient-and-remainder
+  (fn [a b] (sort [a b]))
+  [^{:tag clojure.test-clojure.numbers/integer} a
+   ^{:tag clojure.test-clojure.numbers/integer} b]
+  (when-not (zero? (second %))
+    (let [[a d] %
+          q (quot a d)
+          r (rem a d)]
+      (assert (= a
+                 (+ (* q d) r))))))
 
 (deftest comparisons
   (let [small-numbers [1 1.0 (int 1) (float 1.0) 1N 1M]

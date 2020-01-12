@@ -21,6 +21,10 @@ test-ct: clean
 
 test-clj: clean
 	${V} ${REBAR3} clojerl test
+	${V} echo
+	${V} echo "Running test.generative tests..."
+	${V} echo
+	${V} scripts/run-test-generative test/clj
 
 test: test-ct test-clj
 

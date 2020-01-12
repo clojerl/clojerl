@@ -1,4 +1,4 @@
 #!/bin/bash
 
-bin/clje -pa test/clj _build/*/lib/*/ebin \
-         -m clojure.test.generative.runner test
+bin/clojerl -pa test/clj _build/*/lib/*/ebin \
+            -m clojure.test.generative.runner $1
