@@ -1,7 +1,9 @@
 -module(clj_murmur3).
 
 -export([ ordered/1
+        , ordered_hashes/1
         , unordered/1
+        , unordered_hashes/1
         , mix_coll_hash/2
         ]).
 
@@ -20,35 +22,37 @@
 ordered(Seq) ->
   List = clj_rt:to_list(Seq),
   Hashes = [clj_rt:hash(X) || X <- List],
-  ordered_coll(Hashes).
+  ordered_hashes(Hashes).
 
 -spec unordered(any()) -> integer().
 unordered(Seq) ->
   List = clj_rt:to_list(Seq),
   Hashes = [clj_rt:hash(X) || X <- List],
-  unordered_coll(Hashes).
+  unordered_hashes(Hashes).
+
+-spec unordered_hashes([integer()]) -> integer().
+unordered_hashes(Hashes) ->
+  Hash = do_unordered_hashes(Hashes, 0) ,
+  mix_coll_hash(Hash, length(Hashes)).
+
+-spec ordered_hashes([integer()]) -> integer().
+ordered_hashes(Hashes) ->
+  Hash = do_ordered_hashes(Hashes, 1),
+  mix_coll_hash(Hash, length(Hashes)).
 
 %%------------------------------------------------------------------------------
 %% Internal functions
 %%------------------------------------------------------------------------------
 
-ordered_coll(Hashes) ->
-  Hash = do_ordered_coll(Hashes, 1),
-  mix_coll_hash(Hash, length(Hashes)).
-
-do_ordered_coll([], Hash) ->
+do_ordered_hashes([], Hash) ->
   Hash;
-do_ordered_coll([H | Hashes], Hash) ->
-  do_ordered_coll(Hashes, ?UINT32(?UINT32(31 * Hash) + H)).
+do_ordered_hashes([H | Hashes], Hash) ->
+  do_ordered_hashes(Hashes, ?UINT32(?UINT32(31 * Hash) + H)).
 
-unordered_coll(Hashes) ->
-  Hash = do_unordered_coll(Hashes, 0) ,
-  mix_coll_hash(Hash, length(Hashes)).
-
-do_unordered_coll([], Hash) ->
+do_unordered_hashes([], Hash) ->
   Hash;
-do_unordered_coll([H | Hashes], Hash) ->
-  do_unordered_coll(Hashes, ?UINT32(Hash + H)).
+do_unordered_hashes([H | Hashes], Hash) ->
+  do_unordered_hashes(Hashes, ?UINT32(Hash + H)).
 
 mix_coll_hash(Hash, Len) ->
   K1 = mix_k1(Hash),
