@@ -141,8 +141,15 @@ apply(_, Args) ->
 
 %% clojerl.IHash
 
-hash(#{?TYPE := ?M, dict := Dict}) ->
-  clj_murmur3:unordered(rbdict:fetch_keys(Dict)).
+hash(#{?TYPE := ?M, hashes := MapSet}) ->
+  Fun    = fun
+             (Hash, Entry, Acc) when is_list(Entry) ->
+               lists:duplicate(length(Entry), Hash) ++ Acc;
+             (Hash, _, Acc) ->
+               [Hash | Acc]
+           end,
+  Hashes = maps:fold(Fun, [], MapSet),
+  clj_murmur3:unordered_hashes(Hashes).
 
 %% clojerl.ILookup
 

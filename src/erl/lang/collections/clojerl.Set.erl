@@ -130,8 +130,14 @@ apply(_, Args) ->
 %% clojerl.IHash
 
 hash(#{?TYPE := ?M, set := MapSet}) ->
-  Vals = [V || {V, _} <- maps:values(MapSet)],
-  clj_murmur3:unordered(Vals).
+  Fun    = fun
+             (Hash, Entry, Acc) when is_list(Entry) ->
+               lists:duplicate(length(Entry), Hash) ++ Acc;
+             (Hash, _, Acc) ->
+               [Hash | Acc]
+           end,
+  Hashes = maps:fold(Fun, [], MapSet),
+  clj_murmur3:unordered_hashes(Hashes).
 
 %% clojerl.ILookup
 
