@@ -20,9 +20,6 @@ init(_Args) ->
              , #{ id    => clj_cache
                 , start => {clj_cache, start_link, []}
                 }
-             , #{ id    => 'clojerl.MultiFn'
-                , start => {'clojerl.MultiFn', start_link, []}
-                }
              , #{ id    => 'clojerl.Agent.Server'
                 , start => {'clojerl.Agent.Server', start_link, []}
                 }

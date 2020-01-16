@@ -1416,15 +1416,19 @@
       (throw (clojerl.Error. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")))
     (let [options   (apply hash-map options)
           default   (get options :default :default)
-          hierarchy (get options :hierarchy #'global-hierarchy)]
+          hierarchy (get options :hierarchy #'global-hierarchy)
+          mm-name-var (clj_multimethod/dispatch_map_var mm-name)
+          mm-name-map (symbol (namespace mm-name-var) (name mm-name-var))]
       (check-valid-options options :default :hierarchy)
+      (clj_multimethod/init mm-name)
       `(let [v# (def ~mm-name)]
          (when-not (and (clojerl.Var/has_root v#)
-                        (instance? clojerl.MultiFn (deref v#)))
-           (defn ~(with-meta mm-name m)
+                        (:multi-method (meta v#)))
+           (defn ~(with-meta mm-name (assoc m :multi-method true))
              [& args#]
              (let [val# (apply ~dispatch-fn args#)
-                   f#   (clojerl.MultiFn/get_method (var ~mm-name) val# ~default ~hierarchy)]
+                   f#   (or (clojerl.Map/get ~mm-name-map val#)
+                            (clojerl.Map/get ~mm-name-map ~default))]
                (when (nil? f#)
                  (throw
                   (clojerl.Error. (str "No multimethod defined for dispatch value " val#
@@ -1435,27 +1439,23 @@
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
   [^clojerl.Symbol multifn dispatch-val & fn-tail]
-  (let [dispatch-val-str (-> dispatch-val str (.replace "/" "__SLASH__"))
-        fn-name (gensym (str (.name multifn) "_method_" dispatch-val-str))]
+  (let [fn-name (gensym (str (.name multifn) "_method_"))]
     `(do
        (defn- ~fn-name ~@fn-tail)
-       (erl-on-load*
-        (clojerl.MultiFn/add_method (var ~multifn)
-                                    ~dispatch-val
-                                    (var ~fn-name))))))
+       (clj_multimethod/add_method ~multifn ~dispatch-val ~fn-name))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
   {:added "1.2"}
   [^clojerl.Var multifn]
-  (clojerl.MultiFn/remove_all multifn)
+  (clj_multimethod/remove_all multifn)
   multifn)
 
 (defn remove-method
   "Removes the method of multimethod associated with dispatch-value."
   {:added "1.0"}
   [^clojerl.Var multifn dispatch-val]
-  (clojerl.MultiFn/remove_method multifn dispatch-val))
+  (clj_multimethod/remove_method multifn dispatch-val))
 
 (defn prefer-method
   "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y
@@ -1468,14 +1468,14 @@
   "Given a multimethod, returns a map of dispatch values -> dispatch fns"
   {:added "1.0"}
   [^clojerl.Var multifn]
-  (clojerl.MultiFn/get_method_table multifn))
+  (clj_multimethod/get_method_table multifn))
 
 (defn get-method
   "Given a multimethod and a dispatch value, returns the dispatch fn
   that would apply to that value, or nil if none apply and no default"
   {:added "1.0"}
   [^clojerl.Var multifn dispatch-val]
-  (clojerl.MultiFn/get_method multifn dispatch-val))
+  (clj_multimethod/get_method multifn dispatch-val))
 
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"

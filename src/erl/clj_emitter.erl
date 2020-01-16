@@ -7,6 +7,7 @@
 
 -export([ emit/1
         , new_c_var/1
+        , function_form/4
         ]).
 
 -type ast()   :: cerl:cerl().
