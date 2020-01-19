@@ -16,7 +16,6 @@
         , ensure_loaded/2
         , maybe_ensure_loaded/1
         , is_loaded/1
-        , remove/1
 
         , fake_fun/3
         , replace_calls/2
@@ -64,9 +63,6 @@
                   %% ETS table where fake functions are kept. The key is the
                   %% funs value (i.e. Module:Function/Arity).
                   fake_funs         :: ets:tid(),
-                  %% ETS table where fake modules are kept. The key is the
-                  %% modules name.
-                  fake_modules      :: ets:tid(),
                   %% ETS table where function exports are kept. The key is the
                   %% function's name and arity.
                   exports           :: ets:tid(),
@@ -82,9 +78,11 @@
 
 -export_type([clj_module/0]).
 
--define(ON_LOAD_FUNCTION, '$_clj_on_load').
--define(MODULE_INFO, 'module_info').
--define(CLJ_MODULE_CONTEXT, '$clj_module_compiling').
+-define(PID_TO_MODULES,         'clj_module_pid_to_modules').
+-define(MODULE_TO_FAKE_MODULES, 'clj_module_module_to_fake_modules').
+-define(ON_LOAD_FUNCTION,       '$_clj_on_load').
+-define(MODULE_INFO,            'module_info').
+-define(CLJ_MODULE_CONTEXT,     '$clj_module_compiling').
 
 %%------------------------------------------------------------------------------
 %% Exported Functions
@@ -94,11 +92,9 @@
 with_context(Fun) ->
   try
     erlang:put(?CLJ_MODULE_CONTEXT, true),
-    X = Fun(),
-    erlang:erase(?CLJ_MODULE_CONTEXT),
-    X
+    Fun()
   after
-    cleanup()
+    erlang:erase(?CLJ_MODULE_CONTEXT)
   end.
 
 -spec in_context() -> boolean().
@@ -109,7 +105,8 @@ in_context() ->
 %% @end
 -spec all_modules() -> [cerl:c_module()].
 all_modules() ->
-  All = gen_server:call(?MODULE, all),
+  Self     = erlang:self(),
+  {_, All} = clj_utils:ets_get(?PID_TO_MODULES, Self, {Self, []}),
   lists:map(fun to_module/1, All).
 
 -spec get_module(atom()) -> cerl:c_module().
@@ -134,11 +131,6 @@ maybe_ensure_loaded(Name) ->
   File = clj_compiler:current_file(),
   in_context() andalso ensure_loaded(File, Name),
   ok.
-
-%% @doc Remove the module from the loaded modules in clj_module.
--spec remove(module()) -> ok.
-remove(Module) when is_atom(Module)->
-  gen_server:cast(?MODULE, {remove, self(), Module}).
 
 %% @doc Gets the named fake fun that corresponds to the mfa provided.
 %%
@@ -392,49 +384,50 @@ start_link() ->
 
 init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
-  %% The loaded_modules table keeps track of the modules loaded by process ID.
-  TabId = ets:new(loaded_modules, [set, protected, {keypos, 1}]),
-  {ok, #{loaded_modules => TabId}}.
+  %% Keeps track of the modules loaded by pid.
+  ets:new(?PID_TO_MODULES, [named_table, set, protected, {keypos, 1}]),
+  %% Keeps track of fake modules created by which modules.
+  %% It's necessary to keep it as a separate table because the
+  %% information needs to survive the compiling processes during
+  %% the cleanup.
+  ets:new(?MODULE_TO_FAKE_MODULES, [named_table, set, protected, {keypos, 1}]),
+  {ok, #{}}.
 
-handle_call({load, Module}, {Pid, _}, #{loaded_modules := TabId} = State) ->
+handle_call({load, Module}, {Pid, _}, State) ->
   Module = clj_utils:ets_save(?MODULE, Module),
-  case clj_utils:ets_get(TabId, Pid) of
+  case clj_utils:ets_get(?PID_TO_MODULES, Pid) of
     ?NIL ->
-      clj_utils:ets_save(TabId, {Pid, [Module]});
+      %% Monitor the process so we can cleanup when it dies
+      erlang:monitor(process, Pid),
+      clj_utils:ets_save(?PID_TO_MODULES, {Pid, [Module]});
     {Pid, Modules}  ->
-      clj_utils:ets_save(TabId, {Pid, [Module | Modules]})
+      clj_utils:ets_save(?PID_TO_MODULES, {Pid, [Module | Modules]})
   end,
 
-  {reply, ok, State};
-handle_call(cleanup, {Pid, _}, #{loaded_modules := TabId} = State) ->
-  Modules = case clj_utils:ets_get(TabId, Pid) of
-              ?NIL   -> [];
-              {Pid, Mods} -> Mods
-            end,
+  {reply, ok, State}.
 
-  true      = ets:delete(TabId, Pid),
-  DeleteFun = fun(M) -> ets:delete(?MODULE, M#module.name) end,
-  ok        = lists:foreach(DeleteFun, Modules),
+handle_cast({fake_module, Module, FakeModule}, State) ->
+  {_, FakeModules} = clj_utils:ets_get( ?MODULE_TO_FAKE_MODULES
+                                      , Module
+                                      , {Module, []}
+                                      ),
+  clj_utils:ets_save( ?MODULE_TO_FAKE_MODULES
+                    , {Module, [FakeModule | FakeModules]}
+                    ),
 
-  {reply, Modules, State};
-handle_call(all, {Pid, _}, #{loaded_modules := TabId} = State) ->
-  Modules = case clj_utils:ets_get(TabId, Pid) of
-              ?NIL   -> [];
-              {Pid, Mods} -> Mods
-            end,
-
-  {reply, Modules, State}.
-
-handle_cast({remove, Pid, ModuleName}, #{loaded_modules := TabId} = State) ->
-  delete_module(ModuleName),
-  case clj_utils:ets_get(TabId, Pid) of
-    {Pid, Modules} ->
-      NewModules = [M || M <- Modules, M#module.name =/= ModuleName],
-      clj_utils:ets_save(TabId, {Pid, NewModules});
-    ?NIL   -> ok
-  end,
+  {noreply, State};
+handle_cast(_Msg, State) ->
   {noreply, State}.
 
+%% Cleanup modules when the process dies
+handle_info({'DOWN', _MonitorRef, _Type, Pid, _Info}, State) ->
+  {Pid, Modules} = clj_utils:ets_get(?PID_TO_MODULES, Pid, {Pid, []}),
+
+  [cleanup(M#module.name) || M <- Modules],
+
+  true = ets:delete(?PID_TO_MODULES, Pid),
+
+  {noreply, State};
 handle_info(_Msg, State) ->
   {noreply, State}.
 
@@ -448,28 +441,15 @@ code_change(_Msg, _From, State) ->
 %% Helper Functions
 %%------------------------------------------------------------------------------
 
--spec delete_module(module()) -> ok.
-delete_module(ModuleName) ->
-  case clj_utils:ets_get(?MODULE, ModuleName) of
-    ?NIL -> ok;
-    Module ->
-      ets:delete(Module#module.mappings),
-      ets:delete(Module#module.aliases),
-      ets:delete(Module#module.funs),
-      ets:delete(Module#module.fake_funs),
-      ets:delete(Module#module.fake_modules),
-      ets:delete(Module#module.exports),
-      ets:delete(Module#module.on_load),
-      ets:delete(Module#module.attrs)
-  end,
-  true = ets:delete(?MODULE, ModuleName),
+-spec cleanup(module()) -> ok.
+cleanup(Module) ->
+  ets:delete(?MODULE, Module),
+  {_, FakeModules} = clj_utils:ets_get( ?MODULE_TO_FAKE_MODULES
+                                      , Module
+                                      , {Module, []}
+                                      ),
+  [begin code:purge(M), code:delete(M) end || M <- FakeModules],
   ok.
-
-%% @private
--spec cleanup() -> ok.
-cleanup() ->
-  Modules = gen_server:call(?MODULE, cleanup),
-  lists:foreach(fun delete_fake_modules/1, Modules).
 
 %% @private
 %% @doc
@@ -531,7 +511,7 @@ build_fake_fun(Function, Arity, Module) ->
     ok = 'clojerl.Var':pop_bindings()
   end,
 
-  clj_utils:ets_save(Module#module.fake_modules, {FakeModuleName}),
+  gen_server:cast(?MODULE, {fake_module, Module#module.name, FakeModuleName}),
 
   erlang:make_fun(FakeModuleName, Function, Arity).
 
@@ -543,13 +523,6 @@ build_fake_fun(Function, Arity, Module) ->
 -spec delete_fake_fun(function_id(), clj_module()) -> ok.
 delete_fake_fun(FunctionId, Module) ->
   true = ets:delete(Module#module.fake_funs, FunctionId),
-  ok.
-
-%% @private
--spec delete_fake_modules(clj_module()) -> ok.
-delete_fake_modules(Module) ->
-  FakeModulesId = Module#module.fake_modules,
-  [code:delete(Name) || {Name} <- ets:tab2list(FakeModulesId)],
   ok.
 
 %% @private
@@ -703,7 +676,6 @@ new(CoreModule) ->
                   , aliases      = ets:new(aliases, TableOpts)
                   , funs         = ets:new(funs, TableOpts)
                   , fake_funs    = ets:new(fake_funs, TableOpts)
-                  , fake_modules = ets:new(fake_modules, TableOpts)
                   , exports      = ets:new(exports, TableOpts)
                   , on_load      = ets:new(on_load, TableOpts)
                   , attrs        = ets:new(attributes, TableOpts)
