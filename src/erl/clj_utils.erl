@@ -43,6 +43,7 @@
         , bnand/2
 
         , ets_get/2
+        , ets_get/3
         , ets_save/2
 
         , format_stacktrace/1
@@ -501,8 +502,12 @@ bnand(X, Y) -> bnot(X band Y).
 
 -spec ets_get(atom() | ets:tid(), term()) -> term().
 ets_get(Table, Id) ->
+  ets_get(Table, Id, ?NIL).
+
+-spec ets_get(atom() | ets:tid(), term(), term()) -> term().
+ets_get(Table, Id, Default) ->
   case ets:lookup(Table, Id) of
-    [] -> ?NIL;
+    [] -> Default;
     [Value] -> Value
   end.
 
