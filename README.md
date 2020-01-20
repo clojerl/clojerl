@@ -187,7 +187,10 @@ fact, most of Clojure's core namespaces were ported from the original
 
 ## Discussion
 
-You can find me on [twitter](https://twitter.com/jfacorro) or lurking
+Join the conversation in the [#clojerl][clojerl-slack] channel!
+
+You can also find news and updates through [@clojerl][clojerl-twitter].
+Or if you have any questions you can find me [@jfacorro][jfacorro-twitter] or lurking
 on [Clojure](https://groups.google.com/forum/?hl=en#!forum/clojure)'s
 and
 [Erlang](https://groups.google.com/forum/?hl=en#!forum/erlang-programming)'s
@@ -204,3 +207,6 @@ Any feedback, comment and/or suggestion is welcome!
 [clojerl]: http://clojerl.org/
 [features]: http://clojerl.org/available-features
 [diff-with-clojure]: http://clojerl.org/differences-with-clojure
+[clojerl-slack]: https://app.slack.com/client/T055DJ9UH/C7KBUEAMC
+[clojerl-twitter]: https://twitter.com/clojerl
+[jfacorro-twitter]: https://twitter.com/jfacorro
