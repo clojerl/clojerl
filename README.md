@@ -32,6 +32,25 @@ what [features][features] does it include and
 To try it out and get a sense of what you can do, you can visit
 [Try Clojerl][try-clojerl].
 
+## Docker REPL
+
+To quickly try out `clojerl` via docker you could make use of docker image like so 
+
+```
+docker pull clojerl/clojerl
+docker run -it clojerl/clojerl
+
+```
+And you should be able to see the prompt 
+
+```clojure
+
+ Clojure 0.0.0-974.592ad8a
+ clje.user=>
+
+```
+
+
 ### Local REPL
 
 Running `make repl` (on Windows `bin/clje.bat`) will start the REPL
