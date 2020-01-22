@@ -1,4 +1,4 @@
-FROM erlang:latest
+FROM erlang:22.2.3
 
 RUN git clone https://github.com/clojerl/clojerl && \
         cd clojerl                               && \
