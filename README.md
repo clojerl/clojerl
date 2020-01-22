@@ -39,7 +39,6 @@ To quickly try out `clojerl` via docker you could make use of docker image like 
 ```
 docker pull clojerl/clojerl
 docker run -it clojerl/clojerl
-
 ```
 And you should be able to see the prompt 
 
