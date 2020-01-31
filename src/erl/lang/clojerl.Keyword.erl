@@ -85,7 +85,7 @@ apply(Keyword, Args) ->
 
 %% clojerl.IHash
 
-hash(Keyword) when is_atom(Keyword) ->
+hash(Keyword) ->
   erlang:phash2(Keyword).
 
 %% clojerl.INamed
