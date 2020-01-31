@@ -13,41 +13,42 @@
 
 -spec get_entry(mappings(), integer(), any()) -> ?NIL | {any(), any()}.
 get_entry(Map, Hash, Key) ->
-  case maps:get(Hash, Map, ?NIL) of
-    ?NIL -> ?NIL;
-    {Key, V} -> {Key, V};
-    KVs when is_list(KVs) -> find_entry(KVs, Key);
-    {K, V} ->
+  case Map of
+    #{Hash := {Key, V}} -> {Key, V};
+    #{Hash := KVs} when is_list(KVs) ->
+      find_entry(KVs, Key);
+    #{Hash := {K, V}} ->
       case clj_rt:equiv(Key, K) of
         true -> {K, V};
         false -> ?NIL
-      end
+      end;
+    _ -> ?NIL
   end.
 
 -spec create_entry(map(), integer(), any(), any()) ->
   {0 | 1, {any(), any()} | [{any(), any()}]}.
 create_entry(Map, Hash, Key, Value) ->
-  case maps:get(Hash, Map, ?NIL) of
-    ?NIL -> {1, {Key, Value}};
-    {K, V} ->
+  case Map of
+    #{Hash := {K, V}} ->
       case clj_rt:equiv(Key, K) of
         true  -> {0, {K, Value}};
         false -> {1, [{K, V}, {Key, Value}]}
       end;
-    KVs ->
-      assoc_entry(KVs, Key, Value, [])
+    #{Hash := KVs} ->
+      assoc_entry(KVs, Key, Value, []);
+    _ -> {1, {Key, Value}}
   end.
 
 -spec without_entry(map(), integer(), any()) -> {-1 | 0, map()}.
 without_entry(Map, Hash, Key) ->
-  case maps:get(Hash, Map, ?NIL) of
-    ?NIL   -> {0, Map};
-    {_, _} -> {-1, maps:remove(Hash, Map)};
-    KVs0   ->
+  case Map of
+    #{Hash := {_, _}} -> {-1, maps:remove(Hash, Map)};
+    #{Hash := KVs0}   ->
       case remove_entry(KVs0, Key, []) of
         {Diff, []}   -> {Diff, maps:remove(Hash, Map)};
         {Diff, KVs1} -> {Diff, Map#{Hash => KVs1}}
-      end
+      end;
+    _ -> {0, Map}
   end.
 
 -spec equiv(map(), map()) -> boolean().
