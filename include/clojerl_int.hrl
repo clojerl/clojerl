@@ -2,6 +2,10 @@
 
 -define(CLOJERL_INTERNAL, true).
 
+%%------------------------------------------------------------------------------
+%% Compiler (analyzer/emitter)
+%%------------------------------------------------------------------------------
+
 %% nil
 -define(NIL_TYPE, 'clojerl.Nil').
 
@@ -20,7 +24,13 @@
 %% Name for the callback for behaviors
 -define(BEHAVIOUR_INFO, behaviour_info).
 
+%% Annotation used in detect emitted calls to locals functions
+-define(LOCAL, local).
+
+%%------------------------------------------------------------------------------
 %% Reader constants
+%%------------------------------------------------------------------------------
+
 -define(PLATFORM_FEATURES, [clje]).
 -define(RESERVED_FEATURES, [else, none]).
 -define(DEFAULT_FEATURE, default).
@@ -41,6 +51,10 @@
 %% Show this as a file when none is available
 -define(NO_SOURCE, "NO_SOURCE_FILE").
 
+%%------------------------------------------------------------------------------
+%% Debug
+%%------------------------------------------------------------------------------
+
 %% Uncomment this define to enable debug messages.
 %% -define(CLJ_DEBUG, true).
 
@@ -57,15 +71,21 @@
 -define(DEBUG_WHEN(Pred, Term), ok).
 -endif.
 
+%%------------------------------------------------------------------------------
 %% ETS Tables
+%%------------------------------------------------------------------------------
 
 -define(AGENT_TABLE, 'clojerl.Agent').
 
+%%------------------------------------------------------------------------------
 %% Chunk size
+%%------------------------------------------------------------------------------
 
 -define(CHUNK_SIZE, 32).
 
+%%------------------------------------------------------------------------------
 %% Errors and warnings
+%%------------------------------------------------------------------------------
 
 -define(THROW(Msg), ?THROW(Msg, ?NIL)).
 -define(THROW(Msg, Loc), erlang:throw(clj_utils:format_error(Msg, Loc))).

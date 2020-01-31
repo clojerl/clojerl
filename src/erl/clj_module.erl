@@ -403,8 +403,6 @@ is_loaded(Name) ->
                    , {atom(), arity()} | undefined
                    ) ->
   cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
-replace_calls(#{?TYPE := 'clojerl.Var'} = Var0, _, _) ->
-  'clojerl.Var':mark_fake_fun(Var0);
 replace_calls( #c_call{ module = ModuleAst
                       , name   = FunctionAst
                       , args   = ArgsAsts
@@ -433,7 +431,7 @@ replace_calls( #c_apply{ op   = #c_var{name = {_, _} = FA0} = FNameAst
              , Module
              , FA1
              ) ->
-  case FA0 =:= FA1 orelse lists:member(local, Ann) of
+  case FA0 =:= FA1 orelse lists:member(?LOCAL, Ann) of
     true ->
       ArgsAsts1 = replace_calls(ArgsAsts, Module, FA1),
       cerl:ann_c_apply(Ann, FNameAst, ArgsAsts1);
@@ -446,8 +444,27 @@ replace_calls(Ast, Module, FA) when is_tuple(Ast) ->
   list_to_tuple(replace_calls(tuple_to_list(Ast), Module, FA));
 replace_calls(Asts, Module, FA) when is_list(Asts) ->
   [replace_calls(Item, Module, FA) || Item <- Asts];
+replace_calls(Ast, _Module, _FA) when is_map(Ast) ->
+  replace_vars(Ast);
 replace_calls(Ast, _Module, _FA) ->
   Ast.
+
+%% @doc Adds the fake_fun flag to literal vars
+-spec replace_vars(T) -> T when T :: any().
+replace_vars(#{?TYPE := 'clojerl.Var'} = Var0) ->
+  'clojerl.Var':mark_fake_fun(Var0);
+replace_vars(Map) when is_map(Map) ->
+  Fun = fun(K0, V0, Acc) ->
+            {K1, V1} = replace_vars({K0, V0}),
+            Acc#{K1 => V1}
+        end,
+  maps:fold(Fun, #{}, Map);
+replace_vars(X) when is_tuple(X) ->
+  list_to_tuple(replace_vars(tuple_to_list(X)));
+replace_vars(X) when is_list(X) ->
+  [replace_vars(Item) || Item <- X];
+replace_vars(X) ->
+  X.
 
 -spec fake_fun_call( [term()]
                    , module()

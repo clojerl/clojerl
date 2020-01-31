@@ -54,8 +54,12 @@ get_method_table(MultiFnVar) ->
   dispatch_map(MultiFnVar).
 
 -spec add_method('clojerl.Var':type(), any(), any()) -> 'clojerl.Var':type().
-add_method(MultiFnVar, DispatchValue, Method) ->
+add_method(MultiFnVar, DispatchValue, Method0) ->
   Assoc  = fun clj_rt:assoc/3,
+  Method = case clj_rt:type_module(Method0) of
+             'clojerl.Var' -> 'clojerl.Var':remove_fake_fun(Method0);
+             _ -> Method0
+           end,
   Args   = [DispatchValue, Method],
   update_dispatch_map(MultiFnVar, Assoc, Args).
 
