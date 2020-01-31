@@ -660,13 +660,17 @@ expand_list(List, Result) ->
 
 -spec add_meta(any(), any()) -> any().
 add_meta(Form, Result) ->
-  case clj_rt:'meta?'(Form) of
-    true ->
-      WithMetaSym = clj_rt:symbol(<<"clojure.core">>, <<"with-meta">>),
-      Meta = syntax_quote(clj_rt:meta(Form)),
-      clj_rt:list([WithMetaSym, Result, Meta]);
-    _ ->
-      Result
+  case clj_rt:'meta?'(Form) andalso clj_rt:meta(Form) of
+    false  -> Result;
+    ?NIL   -> Result;
+    Meta0  ->
+      case remove_location(Meta0) of
+        ?NIL ->
+          Result;
+        _ ->
+          WithMetaSym = clj_rt:symbol(<<"clojure.core">>, <<"with-meta">>),
+          clj_rt:list([WithMetaSym, Result, syntax_quote(Meta0)])
+      end
   end.
 
 is_unquote(Form) ->
