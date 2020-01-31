@@ -108,7 +108,7 @@ all_modules() ->
 
 -spec get_module(atom()) -> cerl:c_module().
 get_module(ModuleName) when is_atom(ModuleName) ->
-  to_module(clj_utils:ets_get(?MODULE, ModuleName)).
+  to_module(fetch_module(ModuleName)).
 
 %% @doc Makes sure the clj_module is loaded.
 -spec ensure_loaded(binary(), module()) -> ok.
@@ -146,7 +146,7 @@ maybe_ensure_loaded(Name) ->
 %% @end
 -spec fake_fun(module(), atom(), integer()) -> function().
 fake_fun(ModuleName, Function, Arity) ->
-  case clj_utils:ets_get(?MODULE, ModuleName) of
+  case fetch_module(ModuleName) of
     ?NIL ->
       fun ModuleName:Function/Arity;
     Module ->
@@ -172,7 +172,7 @@ replace_calls(Ast, CurrentModule) ->
   clj_module().
 add_mappings(_, ?NIL) -> error(badarg);
 add_mappings(Mappings, ModuleName) when is_atom(ModuleName)  ->
-  add_mappings(Mappings, clj_utils:ets_get(?MODULE, ModuleName));
+  add_mappings(Mappings, fetch_module(ModuleName));
 add_mappings(Mappings, Module) ->
   AddFun = fun
              ({K, V}) ->
@@ -190,7 +190,7 @@ add_mappings(Mappings, Module) ->
                ) -> clj_module().
 add_alias(AliasSym, AliasedNsSym, ModuleName) when is_atom(ModuleName)  ->
   ok = ensure_loaded(<<?NO_SOURCE>>, ModuleName),
-  add_alias(AliasSym, AliasedNsSym, clj_utils:ets_get(?MODULE, ModuleName));
+  add_alias(AliasSym, AliasedNsSym, fetch_module(ModuleName));
 add_alias(AliasSym, AliasedNsSym, Module) ->
   K = clj_rt:name(AliasSym),
   clj_utils:ets_save(Module#module.aliases, {K, AliasedNsSym}),
@@ -200,7 +200,7 @@ add_alias(AliasSym, AliasedNsSym, Module) ->
   clj_module().
 add_attributes(_, ?NIL) -> error(badarg);
 add_attributes(Attrs, ModuleName) when is_atom(ModuleName)  ->
-  add_attributes(Attrs, clj_utils:ets_get(?MODULE, ModuleName));
+  add_attributes(Attrs, fetch_module(ModuleName));
 add_attributes([], Module) ->
   Module;
 add_attributes(Attrs, Module) ->
@@ -212,7 +212,7 @@ add_attributes(Attrs, Module) ->
   clj_module().
 add_exports(_, ?NIL) -> error(badarg);
 add_exports(Exports, ModuleName) when is_atom(ModuleName)  ->
-  add_exports(Exports, clj_utils:ets_get(?MODULE, ModuleName));
+  add_exports(Exports, fetch_module(ModuleName));
 add_exports(Exports, Module) ->
   AddExport = fun(E) ->
                   clj_utils:ets_save(Module#module.exports, {E})
@@ -224,7 +224,7 @@ add_exports(Exports, Module) ->
   clj_module().
 add_functions(_, ?NIL) -> error(badarg);
 add_functions(Funs, ModuleName) when is_atom(ModuleName)  ->
-  add_functions(Funs, clj_utils:ets_get(?MODULE, ModuleName));
+  add_functions(Funs, fetch_module(ModuleName));
 add_functions(Funs, Module) ->
   SaveFun = fun(F) ->
                 FunctionId  = function_id(F),
@@ -238,7 +238,7 @@ add_functions(Funs, Module) ->
   clj_module().
 remove_all_functions(?NIL) -> error(badarg);
 remove_all_functions(ModuleName) when is_atom(ModuleName)  ->
-  remove_all_functions(clj_utils:ets_get(?MODULE, ModuleName));
+  remove_all_functions(fetch_module(ModuleName));
 remove_all_functions(Module) ->
   true = ets:delete_all_objects(Module#module.funs),
   true = ets:delete_all_objects(Module#module.exports),
@@ -248,7 +248,7 @@ remove_all_functions(Module) ->
   [{function_id(), {cerl:c_fname(), cerl:c_fun()}}].
 get_functions(?NIL) -> error(badarg);
 get_functions(ModuleName) when is_atom(ModuleName)  ->
-  get_functions(clj_utils:ets_get(?MODULE, ModuleName));
+  get_functions(fetch_module(ModuleName));
 get_functions(Module) ->
   ets:tab2list(Module#module.funs).
 
@@ -256,10 +256,7 @@ get_functions(Module) ->
   clj_module().
 add_on_load(_, ?NIL) -> error(badarg);
 add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
-  case clj_utils:ets_get(?MODULE, ModuleName) of
-    undefined -> error({not_found, ModuleName});
-    Module    -> add_on_load(Expr, Module)
-  end;
+  add_on_load(Expr, fetch_module(ModuleName));
 add_on_load(Expr, Module) ->
   clj_utils:ets_save(Module#module.on_load, {Expr, Expr}),
   Module.
@@ -322,8 +319,10 @@ handle_call({load, Module}, {Pid, _}, State) ->
     {Pid, Modules}  ->
       clj_utils:ets_save(?PID_TO_MODULES, {Pid, [Module | Modules]})
   end,
-
-  {reply, ok, State}.
+  {reply, ok, State};
+handle_call({fetch, ModuleName}, _From, State) ->
+  Module = clj_utils:ets_get(?MODULE, ModuleName),
+  {reply, Module, State}.
 
 handle_cast({fake_module, Module, FakeModule}, State) ->
   {_, FakeModules} = clj_utils:ets_get( ?MODULE_TO_FAKE_MODULES
@@ -359,6 +358,10 @@ code_change(_Msg, _From, State) ->
 %%------------------------------------------------------------------------------
 %% Helper Functions
 %%------------------------------------------------------------------------------
+
+-spec fetch_module(module()) -> ?NIL | clj_module().
+fetch_module(ModuleName) ->
+  gen_server:call(?MODULE, {fetch, ModuleName}).
 
 -spec cleanup(module()) -> ok.
 cleanup(Module) ->
