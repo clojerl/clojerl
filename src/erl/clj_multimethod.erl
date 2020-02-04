@@ -19,20 +19,8 @@
 -spec init('clojerl.Symbol':type()) -> ?NIL.
 init(MultiFnSym) ->
   DispatchMapVar = dispatch_map_var(MultiFnSym),
-  Module = 'clojerl.Var':module(DispatchMapVar),
-  clj_module:ensure_loaded(<<>>, Module),
-
-  EmptyMap  = 'clojerl.Map':?CONSTRUCTOR([]),
-  ValName   = 'clojerl.Var':val_function(DispatchMapVar),
-  ValAst    = cerl:abstract(EmptyMap),
-  ValFunAst = clj_emitter:function_form(ValName, [], [], ValAst),
-
-  clj_module:add_mappings([DispatchMapVar], Module),
-  clj_module:add_functions([ValFunAst], Module),
-  clj_module:add_exports([{ValName, 0}], Module),
-
-  CljModule = clj_module:get_module(Module),
-  clj_compiler:compile_module(CljModule),
+  EmptyMap       = 'clojerl.Map':?CONSTRUCTOR([]),
+  ok             = generate_dispatch_map(DispatchMapVar, EmptyMap),
 
   ?NIL.
 
@@ -94,23 +82,30 @@ dispatch_map_var(VarOrSymbol) ->
 -spec update_dispatch_map('clojerl.Var':type(), function(), [any()]) -> any().
 update_dispatch_map(MultiFnVar, Fun, Args) ->
   DispatchMapVar = dispatch_map_var(MultiFnVar),
-  Module         = 'clojerl.Var':module(DispatchMapVar),
-  ok             = clj_module:ensure_loaded(<<"">>, Module),
-
-  Map0            = 'clojerl.Var':deref(DispatchMapVar),
-  Map             = apply(Fun, [Map0 | Args]),
-
-  ValName         = 'clojerl.Var':val_function(DispatchMapVar),
-  ValAst          = cerl:abstract(Map),
-  ValFunAst       = clj_emitter:function_form(ValName, [], [], ValAst),
-
-  clj_module:add_functions([ValFunAst], Module),
-
-  CljModule = clj_module:get_module(Module),
-  clj_compiler:compile_module(CljModule),
+  Map0           = 'clojerl.Var':deref(DispatchMapVar),
+  Map            = apply(Fun, [Map0 | Args]),
+  ok             = generate_dispatch_map(DispatchMapVar, Map),
 
   MultiFnVar.
 
 -spec dispatch_map('clojerl.Var':type()) -> any().
 dispatch_map(MultiFnVar) ->
   'clojerl.Var':deref(dispatch_map_var(MultiFnVar)).
+
+-spec generate_dispatch_map('clojerl.Var':type(), any()) -> ok.
+generate_dispatch_map(DispatchMapVar, Map) ->
+  Module = 'clojerl.Var':module(DispatchMapVar),
+  clj_module:ensure_loaded(<<>>, Module),
+
+  ValName   = 'clojerl.Var':val_function(DispatchMapVar),
+  ValAst    = cerl:abstract(Map),
+  ValFunAst = clj_emitter:function_form(ValName, [], [], ValAst),
+
+  clj_module:add_mappings([DispatchMapVar], Module),
+  clj_module:add_functions([ValFunAst], Module),
+  clj_module:add_exports([{ValName, 0}], Module),
+
+  CljModule = clj_module:get_module(Module),
+  clj_compiler:compile_module(CljModule),
+
+  ok.
