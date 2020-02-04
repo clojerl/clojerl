@@ -25,8 +25,7 @@
         , val_function/1
         , process_args/2
         , is_valid_arity/2
-        , mark_fake_fun/1
-        , remove_fake_fun/1
+        , fake_fun/2
         ]).
 
 -export([ push_bindings/1
@@ -119,13 +118,9 @@ function(#{?TYPE := ?M, name_atom := NameAtom}) ->
 val_function(#{?TYPE := ?M, val_atom := ValAtom}) ->
   ValAtom.
 
--spec mark_fake_fun(type()) -> type().
-mark_fake_fun(#{?TYPE := ?M} = Var) ->
-  Var#{fake_fun => true}.
-
--spec remove_fake_fun(type()) -> type().
-remove_fake_fun(#{?TYPE := ?M} = Var) ->
-  Var#{fake_fun => false}.
+-spec fake_fun(type(), boolean()) -> type().
+fake_fun(#{?TYPE := ?M} = Var, IsFakeFun) ->
+  Var#{fake_fun => IsFakeFun}.
 
 -spec push_bindings('clojerl.IMap':type()) -> ok.
 push_bindings(BindingsMap) ->

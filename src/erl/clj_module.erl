@@ -455,7 +455,7 @@ replace_calls(Ast, _Module, _FA) ->
 %% @doc Adds the fake_fun flag to literal vars
 -spec replace_vars(T) -> T when T :: any().
 replace_vars(#{?TYPE := 'clojerl.Var'} = Var0) ->
-  'clojerl.Var':mark_fake_fun(Var0);
+  'clojerl.Var':fake_fun(Var0, true);
 replace_vars(Map) when is_map(Map) ->
   Fun = fun(K0, V0, Acc) ->
             {K1, V1} = replace_vars({K0, V0}),

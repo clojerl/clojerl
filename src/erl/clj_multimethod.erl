@@ -32,7 +32,6 @@ init(MultiFnSym) ->
   clj_module:add_exports([{ValName, 0}], Module),
 
   CljModule = clj_module:get_module(Module),
-
   clj_compiler:compile_module(CljModule),
 
   ?NIL.
@@ -56,9 +55,11 @@ get_method_table(MultiFnVar) ->
 -spec add_method('clojerl.Var':type(), any(), any()) -> 'clojerl.Var':type().
 add_method(MultiFnVar, DispatchValue, Method0) ->
   Assoc  = fun clj_rt:assoc/3,
-  Method = case clj_rt:type_module(Method0) of
-             'clojerl.Var' -> 'clojerl.Var':remove_fake_fun(Method0);
-             _ -> Method0
+  %% When Method is a var we need to make sure it's not
+  %% marked as a fake function.
+  Method = case clj_rt:'var?'(Method0) of
+             true  -> 'clojerl.Var':fake_fun(Method0, false);
+             false -> Method0
            end,
   Args   = [DispatchValue, Method],
   update_dispatch_map(MultiFnVar, Assoc, Args).
