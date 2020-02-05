@@ -1426,13 +1426,14 @@
                         (:multi-method (meta v#)))
            (defn ~(with-meta mm-name (assoc m :multi-method true))
              [& args#]
-             (let [val# (apply ~dispatch-fn args#)
-                   f#   (or (clojerl.Map/get ~mm-name-map val#)
-                            (clojerl.Map/get ~mm-name-map ~default))]
-               (when (nil? f#)
-                 (throw
-                  (clojerl.Error. (str "No multimethod defined for dispatch value " val#
-                                       " in " '~mm-name))))
+             (let [val# (clojerl.IFn/apply ~dispatch-fn args#)
+                   dispatch-map# ~mm-name-map
+                   f#   (or (clojerl.Map/get dispatch-map# val#)
+                            (clojerl.Map/get dispatch-map# ~default)
+                            (throw
+                             (clojerl.Error. (str "No multimethod defined for dispatch value " val#
+                                                  " in " '~mm-name))))]
+
                (apply f# args#))))))))
 
 (defmacro defmethod
