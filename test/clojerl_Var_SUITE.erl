@@ -296,18 +296,18 @@ find(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  Ns     = <<"clojerl_Var_SUITE">>,
-  Name   = <<"forty-two">>,
-  Var    = 'clojerl.Var':?CONSTRUCTOR(Ns, Name),
+  Ns        = <<"clojerl_Var_SUITE">>,
+  Name      = <<"forty-two">>,
+  Var       = 'clojerl.Var':?CONSTRUCTOR(Ns, Name),
+  VarNoRoot = 'clojerl.Var':?CONSTRUCTOR(Ns, <<"forty-five">>),
 
   VarPrivate = clj_rt:with_meta(Var, #{private => true}),
-  VarRoot    = clj_rt:with_meta(Var, #{has_root => true}),
 
   true  = 'clojerl.Var':is_public(Var),
   false = 'clojerl.Var':is_public(VarPrivate),
 
-  true  = 'clojerl.Var':has_root(VarRoot),
-  false = 'clojerl.Var':has_root(Var),
+  true  = 'clojerl.Var':has_root(Var),
+  false = 'clojerl.Var':has_root(VarNoRoot),
 
   42    = 'clojerl.Var':get(Var),
 
@@ -315,10 +315,15 @@ complete_coverage(_Config) ->
   Hash  = 'clojerl.IHash':hash(Var),
   true  = erlang:is_integer(Hash),
 
-  VarFortyTwo  = 'clojerl.Var':?CONSTRUCTOR(Ns, Name),
-  VarFortyFive = 'clojerl.Var':?CONSTRUCTOR(Ns, <<"forty-five">>),
+  ct:comment("Var is bound when it has a root"),
+  true  = 'clojerl.Var':is_bound(Var),
 
-  true  = 'clojerl.Var':is_bound(VarFortyTwo),
-  false = 'clojerl.Var':is_bound(VarFortyFive),
+  ct:comment("Var is not bound when it has not root and no dynamic binding"),
+  false = 'clojerl.Var':is_bound(VarNoRoot),
+
+  ct:comment("Is bound when dynamic and has a binding"),
+  VarNoRootDynamic = 'clojerl.Var':with_meta(VarNoRoot, #{dynamic => true}),
+  'clojerl.Var':push_bindings(#{VarNoRootDynamic => ?NIL}),
+  true  = 'clojerl.Var':is_bound(VarNoRootDynamic),
 
   {comments, ""}.
