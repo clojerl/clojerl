@@ -92,16 +92,14 @@ is_public(#{?TYPE := ?M}) ->
 
 -spec is_bound(type()) -> boolean().
 is_bound(#{?TYPE := ?M} = Var) ->
-  case deref(Var) of
-    ?UNBOUND -> false;
-    _ -> true
-  end.
+  has_root(Var)
+  orelse ( is_dynamic(Var)
+           andalso clj_scope:contains(str(Var), get_bindings())
+         ).
 
 -spec has_root(type()) -> boolean().
-has_root(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
-  maps:get(has_root, Meta, false);
-has_root(#{?TYPE := ?M}) ->
-  false.
+has_root(#{?TYPE := ?M} = Var) ->
+  deref(Var) =/= ?UNBOUND.
 
 -spec get(type()) -> boolean().
 get(Var) -> deref(Var).

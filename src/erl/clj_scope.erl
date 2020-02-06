@@ -7,6 +7,7 @@
         , parent/1
         , get/2
         , get/3
+        , contains/2
         , put/2
         , put/3
         , update/3
@@ -38,6 +39,10 @@ get(Key, Scope) ->
 -spec get(any(), any(), scope()) -> any().
 get(Key, Default, Scope) ->
   do_get(Key, Default, Scope).
+
+-spec contains(any(), scope()) -> boolean().
+contains(Key, Scope) ->
+  do_contains(Key, Scope).
 
 -spec put(any(), any(), scope()) -> scope().
 put(Key, Value, Scope = #{mappings := Mappings}) ->
@@ -75,11 +80,19 @@ do_to_map(Fun, Map, #{parent := Parent, mappings := Mappings}) ->
 do_get(_, Default, ?NIL) ->
   Default;
 do_get(Key, Default, Scope = #{mappings := Mappings}) ->
-  case maps:is_key(Key, Mappings) of
-    false ->
-      do_get(Key, Default, parent(Scope));
-    true ->
-      maps:get(Key, Mappings)
+  case Mappings of
+    #{Key := Value} -> Value;
+    _ -> do_get(Key, Default, parent(Scope))
+  end.
+
+%% @private
+-spec do_contains(any(), scope() | ?NIL) -> any().
+do_contains(_, ?NIL) ->
+  false;
+do_contains(Key, Scope = #{mappings := Mappings}) ->
+  case Mappings of
+    #{Key := _} -> true;
+    _ -> do_contains(Key, parent(Scope))
   end.
 
 %% @private
@@ -87,10 +100,10 @@ do_get(Key, Default, Scope = #{mappings := Mappings}) ->
 do_update(_K, _V, ?NIL) ->
   not_found;
 do_update(K, V, Scope = #{mappings := Mappings, parent := Parent}) ->
-  case maps:is_key(K, Mappings) of
-    true ->
+  case Mappings of
+    #{K := _} ->
       Scope#{mappings => Mappings#{K => V}};
-    false ->
+    _ ->
       case do_update(K, V, Parent) of
         not_found -> not_found;
         NewParent -> Scope#{parent => NewParent}
