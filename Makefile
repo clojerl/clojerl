@@ -35,8 +35,8 @@ shell:
 	${V} ${REBAR3} as dev do clojerl compile, shell --sname clojerl-shell --setcookie clojerl
 
 clean:
+	${V} rm -rf _build rebar.lock ebin
 	${V} ${REBAR3} clean
-	${V} rm -rf _build rebar.lock
 
 ci: test dialyzer
 

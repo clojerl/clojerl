@@ -20,7 +20,7 @@
 (defmacro ^:private use-method
   "Installs a function as a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val func]
-  `(clojerl.MultiFn/add_method (var ~multifn) ~dispatch-val (var ~func)))
+  `(clj_multimethod/add_method (var ~multifn) ~dispatch-val (var ~func)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementations of specific dispatch table entries
@@ -138,25 +138,24 @@
   {:added "1.2" :arglists '[[object]]}
   type)
 
-(erl-on-load*
- (use-method simple-dispatch clojerl.List pprint-list)
- (use-method simple-dispatch clojerl.Vector pprint-vector)
- (use-method simple-dispatch clojerl.Map pprint-map)
- (use-method simple-dispatch clojerl.SortedMap pprint-map)
- (use-method simple-dispatch clojerl.Set pprint-set)
- (use-method simple-dispatch clojerl.SortedSet pprint-set)
- ;; (use-method simple-dispatch clojure.lang.PersistentQueue pprint-pqueue)
- (use-method simple-dispatch clojerl.Var pprint-simple-default)
+(use-method simple-dispatch clojerl.List pprint-list)
+(use-method simple-dispatch clojerl.Vector pprint-vector)
+(use-method simple-dispatch clojerl.Map pprint-map)
+(use-method simple-dispatch clojerl.SortedMap pprint-map)
+(use-method simple-dispatch clojerl.Set pprint-set)
+(use-method simple-dispatch clojerl.SortedSet pprint-set)
+;; (use-method simple-dispatch clojure.lang.PersistentQueue pprint-pqueue)
+(use-method simple-dispatch clojerl.Var pprint-simple-default)
 
- ;; TODO: replace all the following with
- ;; (use-method simple-dispatch clojerl.IDeref pprint-ideref)
- (use-method simple-dispatch clojerl.Future pprint-ideref)
- (use-method simple-dispatch clojerl.Promise pprint-ideref)
- (use-method simple-dispatch clojerl.Delay pprint-ideref)
- (use-method simple-dispatch clojerl.Atom pprint-ideref)
+;; TODO: replace all the following with
+;; (use-method simple-dispatch clojerl.IDeref pprint-ideref)
+(use-method simple-dispatch clojerl.Future pprint-ideref)
+(use-method simple-dispatch clojerl.Promise pprint-ideref)
+(use-method simple-dispatch clojerl.Delay pprint-ideref)
+(use-method simple-dispatch clojerl.Atom pprint-ideref)
 
- (use-method simple-dispatch clojerl.Nil pr)
- (use-method simple-dispatch :default pprint-simple-default))
+(use-method simple-dispatch clojerl.Nil pr)
+(use-method simple-dispatch :default pprint-simple-default)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Dispatch for the code table
@@ -450,27 +449,26 @@
   {:added "1.2" :arglists '[[object]]}
   type)
 
-(erl-on-load*
- (use-method code-dispatch clojerl.List pprint-code-list)
- (use-method code-dispatch clojerl.Symbol pprint-code-symbol)
+(use-method code-dispatch clojerl.List pprint-code-list)
+(use-method code-dispatch clojerl.Symbol pprint-code-symbol)
 
- ;; The following are all exact copies of simple-dispatch
- (use-method code-dispatch clojerl.Vector pprint-vector)
- (use-method code-dispatch clojerl.Map pprint-map)
- (use-method code-dispatch clojerl.SortedMap pprint-map)
- (use-method code-dispatch clojerl.Set pprint-set)
- (use-method code-dispatch clojerl.SortedSet pprint-set)
- ;; (use-method code-dispatch clojure.lang.PersistentQueue pprint-pqueue)
+;; The following are all exact copies of simple-dispatch
+(use-method code-dispatch clojerl.Vector pprint-vector)
+(use-method code-dispatch clojerl.Map pprint-map)
+(use-method code-dispatch clojerl.SortedMap pprint-map)
+(use-method code-dispatch clojerl.Set pprint-set)
+(use-method code-dispatch clojerl.SortedSet pprint-set)
+;; (use-method code-dispatch clojure.lang.PersistentQueue pprint-pqueue)
 
- ;; TODO: replace all the following with
- ;; (use-method code-dispatch clojerl.IDeref pprint-ideref)
- (use-method code-dispatch clojerl.Future pprint-ideref)
- (use-method code-dispatch clojerl.Promise pprint-ideref)
- (use-method code-dispatch clojerl.Delay pprint-ideref)
- (use-method code-dispatch clojerl.Atom pprint-ideref)
+;; TODO: replace all the following with
+;; (use-method code-dispatch clojerl.IDeref pprint-ideref)
+(use-method code-dispatch clojerl.Future pprint-ideref)
+(use-method code-dispatch clojerl.Promise pprint-ideref)
+(use-method code-dispatch clojerl.Delay pprint-ideref)
+(use-method code-dispatch clojerl.Atom pprint-ideref)
 
- (use-method code-dispatch clojerl.Nil pr)
- (use-method code-dispatch :default pprint-simple-default))
+(use-method code-dispatch clojerl.Nil pr)
+(use-method code-dispatch :default pprint-simple-default)
 
 ;; TODO: This should be a root binding, but it's not available.
 (def ^:dynamic *print-pprint-dispatch* simple-dispatch)

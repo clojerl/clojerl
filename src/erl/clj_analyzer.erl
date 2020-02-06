@@ -76,7 +76,7 @@ do_macroexpand_1(Form, Env) ->
                                                  , clj_rt:rest(Form)
                                                  )
                                     ),
-                  MacroVar1 = 'clojerl.Var':mark_fake_fun(MacroVar),
+                  MacroVar1 = 'clojerl.Var':fake_fun(MacroVar, true),
                   'clojerl.IFn':apply(MacroVar1, Args);
                 false ->
                   case IsSymbol andalso not IsSpecial of

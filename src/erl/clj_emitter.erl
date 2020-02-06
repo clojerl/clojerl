@@ -7,6 +7,7 @@
 
 -export([ emit/1
         , new_c_var/1
+        , function_form/4
         ]).
 
 -type ast()   :: cerl:cerl().
@@ -571,11 +572,8 @@ ast(#{op := invoke} = Expr, State) ->
                            , Ann
                            ),
 
-      Ast = cerl:ann_c_let( Ann
-                          , [FVarAst]
-                          , ResolveAst
-                          , cerl:ann_c_apply([local | Ann], FVarAst, Args)
-                          ),
+      ApplyAst = cerl:ann_c_apply([?LOCAL | Ann], FVarAst, Args),
+      Ast      = cerl:ann_c_let(Ann, [FVarAst], ResolveAst, ApplyAst),
 
       push_ast(Ast, State);
     %% Apply Fn
@@ -902,7 +900,7 @@ ast(#{op := Op} = Expr, State0) when Op =:= 'let'; Op =:= loop ->
             , CaseAst} = case_from_clauses(Ann, [ClauseAst]),
             FunAst     = cerl:ann_c_fun(Ann, Vars, CaseAst),
             Defs       = [{FNameAst, FunAst}],
-            ApplyAst   = cerl:ann_c_apply([local | Ann], FNameAst, Patterns),
+            ApplyAst   = cerl:ann_c_apply([?LOCAL | Ann], FNameAst, Patterns),
             LetRecAst  = cerl:ann_c_letrec(Ann, Defs, ApplyAst),
 
             lists:foldl(FoldFun, LetRecAst, Bindings)
@@ -937,7 +935,7 @@ ast(#{op := recur} = Expr, State) ->
             call_mfa('clojerl.IFn', apply, [NameAst, ArgsAst], Ann);
           _LoopType -> %% fn_method | loop | var
             NameAst = cerl:ann_c_fname(Ann, LoopIdAtom, length(Args)),
-            cerl:ann_c_apply([local | Ann], NameAst, Args)
+            cerl:ann_c_apply([?LOCAL | Ann], NameAst, Args)
         end,
   push_ast(Ast, State1);
 %%------------------------------------------------------------------------------
@@ -1017,7 +1015,7 @@ ast(#{op := 'try'} = Expr, State) ->
         FinallyName     = cerl:var_name(new_c_var(Ann)),
         FinallyFName    = cerl:ann_c_fname(Ann, FinallyName, 0),
         FinallyFunAst   = cerl:ann_c_fun(Ann, [], Finally),
-        ApplyFinallyAst = cerl:ann_c_apply([local | Ann], FinallyFName, []),
+        ApplyFinallyAst = cerl:ann_c_apply([?LOCAL | Ann], FinallyFName, []),
 
         Defs = [{FinallyFName, FinallyFunAst}],
         OuterVarAst  = new_c_var(Ann),

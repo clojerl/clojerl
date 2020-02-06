@@ -17,6 +17,7 @@
         , eval/3
         , eval_expressions/1
         , eval_expressions/2
+        , compile_module/1
         , compile_module/2
         , current_file/0
         ]).
@@ -354,6 +355,10 @@ compile_module_fun(#{time := true} = Opts) ->
   end;
 compile_module_fun(Opts) ->
   fun(Forms) -> compile_module(Forms, Opts) end.
+
+-spec compile_module(cerl:c_module()) -> binary().
+compile_module(Module) ->
+  compile_module(Module, #{}).
 
 -spec compile_module(cerl:c_module(), options()) -> binary().
 compile_module(Module, #{output_core := true}) ->
