@@ -1420,21 +1420,18 @@
           mm-name-var (clj_multimethod/dispatch_map_var mm-name)
           mm-name-map (symbol (namespace mm-name-var) (name mm-name-var))]
       (check-valid-options options :default :hierarchy)
-      (clj_multimethod/init mm-name)
-      `(let [v# (def ~mm-name)]
-         (when-not (and (clojerl.Var/has_root v#)
-                        (:multi-method (meta v#)))
-           (defn ~(with-meta mm-name (assoc m :multi-method true))
-             [& args#]
-             (let [val# (clojerl.IFn/apply ~dispatch-fn args#)
-                   dispatch-map# ~mm-name-map
-                   f#   (or (clojerl.Map/get dispatch-map# val#)
-                            (clojerl.Map/get dispatch-map# ~default)
-                            (throw
-                             (clojerl.Error. (str "No multimethod defined for dispatch value " val#
-                                                  " in " '~mm-name))))]
-
-               (apply f# args#))))))))
+      (when-not (clj_multimethod/is_init mm-name)
+        (clj_multimethod/init mm-name)
+        `(defn ~(with-meta mm-name (assoc m :multi-method true))
+           [& args#]
+           (let [val# (clojerl.IFn/apply ~dispatch-fn args#)
+                 dispatch-map# ~mm-name-map
+                 f#   (or (clojerl.Map/get dispatch-map# val#)
+                          (clojerl.Map/get dispatch-map# ~default)
+                          (throw
+                           (clojerl.Error. (str "No multimethod defined for dispatch value " val#
+                                                " in " '~mm-name))))]
+             (clojerl.IFn/apply f# args#)))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "

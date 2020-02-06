@@ -3,6 +3,7 @@
 -include("clojerl.hrl").
 
 -export([ init/1
+        , is_init/1
         , dispatch_map_var/1
         , get_method/2
         , get_method/4
@@ -21,8 +22,14 @@ init(MultiFnSym) ->
   DispatchMapVar = dispatch_map_var(MultiFnSym),
   EmptyMap       = 'clojerl.Map':?CONSTRUCTOR([]),
   ok             = generate_dispatch_map(DispatchMapVar, EmptyMap),
-
   ?NIL.
+
+-spec is_init('clojerl.Symbol':type()) -> boolean().
+is_init(MultiFnSym) ->
+  case 'clojerl.Namespace':find_var(MultiFnSym) of
+    ?NIL -> false;
+    Var  -> clj_rt:get('clojerl.Var':meta(Var), 'multi-method')
+  end.
 
 -spec get_method('clojerl.Var':type(), any()) -> any().
 get_method(Var, Value) ->
