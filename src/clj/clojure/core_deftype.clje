@@ -76,77 +76,78 @@
         base-fields fields
         fields (conj fields '__meta '__extmap)
         type-hash (hash typename)]
-    (let [gs (gensym)
-          irecord (fn [[i m]]
-                    [(conj i 'clojerl.IRecord)
-                     (conj m '(_ [_]))])
-          eqhash (fn [[i m]]
-                   [(conj i 'clojerl.IHash)
-                    (conj m
-                          `(~'hash [this#] (clj_utils/record_hash this#)))])
-          iobj (fn [[i m]]
-                 [(conj i 'clojerl.IMeta)
-                  (conj m
-                        `(~'meta [this#] ~'__meta)
-                        `(~'with_meta [this# ~gs] (new ~typename ~@(replace {'__meta gs} fields))))])
-          ilookup (fn [[i m]]
-                    [(conj i 'clojerl.ILookup)
-                     (conj m
-                           `(~'get [this# k#] (get this# k# nil))
-                           `(~'get [this# k# else#]
-                             (case* k# ~@(mapcat (fn [fld] [(keyword fld) fld])
-                                                base-fields)
-                                   (get ~'__extmap k# else#))))])
-          imap (fn [[i m]]
-                 [(conj i
-                        'clojerl.ICounted 'clojerl.IColl 'clojerl.IEquiv
-                        'clojerl.IAssociative 'clojerl.ISeqable 'clojerl.IMap)
-                  (conj m
-                        `(~'count [this#] (+ ~(count base-fields) (count ~'__extmap)))
-                        `(~'empty [this#] (throw (clojerl.BadArgumentError. (str "Can't create empty: " ~(str typename)))))
-                        `(~'cons [this# e#] ((var imap-cons) this# e#))
-                        `(~'equiv [this# ~gs]
-                          (boolean
-                           (or (identical? this# ~gs)
-                               (when (identical? (type this#) (type ~gs))
-                                 (let [~gs ~(with-meta gs {:tag typename})]
-                                   (and  ~@(map (fn [fld] `(= ~fld (~ (symbol (str typename) (str "-" fld)) ~gs))) base-fields)
-                                         (= ~'__extmap (~(symbol (str typename) "-__extmap") ~gs))))))))
-                        `(~'contains_key [this# k#] (not (identical? this# (get this# k# this#))))
-                        `(~'entry_at [this# k#] (let [v# (get this# k# this#)]
-                                                  (when-not (identical? this# v#)
-                                                    [k# v#])))
-                        `(~'assoc [this# k# ~gs]
-                          (condp identical? k#
-                            ~@(mapcat (fn [fld]
-                                        [(keyword fld) (list* `new typename (replace {fld gs} fields))])
-                                      base-fields)
-                            (new ~typename ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
-                        `(~'seq [this#] (seq (concat [~@(map #(vector (keyword %) %) base-fields)]
-                                                     ~'__extmap)))
-                        `(~'to_list [this#]
-                          ;; TODO: Improve this implementation
-                          (clojerl.ISeqable/to_list (concat [~@(map #(vector (keyword %) %) base-fields)]
-                                                                 ~'__extmap)))
-                        `(~'keys [this#] (map first (seq this#)))
-                        `(~'vals [this#] (map second (seq this#)))
-                        `(~'without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
-                                                 (dissoc (with-meta (into {} this#) ~'__meta) k#)
-                                                 (new ~typename ~@(remove #{'__extmap} fields)
-                                                      (not-empty (dissoc ~'__extmap k#))))))])
-          istr (fn [[i m]]
-                 [(conj i 'clojerl.IStringable)
-                  (conj m
-                        `(~'str [this#]
-                          (str "#"
-                               ~(str typename)
-                               (merge (array-map ~@(mapcat (juxt keyword identity) base-fields))
-                                      ~'__extmap))))])]
-      (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap istr)]
-        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~typename ~(conj hinted-fields '__meta '__extmap)
-           :implements ~(vec i)
-           ~@(mapcat identity opts)
-           ~@m)))))
+    (let [gs (gensym)]
+      (letfn [(irecord [[i m]]
+                [(conj i 'clojerl.IRecord)
+                 (conj m '(_ [_]))])
+              (eqhash [[i m]]
+                [(conj i 'clojerl.IHash)
+                 (conj m
+                       `(~'hash [this#] (clj_utils/record_hash this#)))])
+              (iobj [[i m]]
+                [(conj i 'clojerl.IMeta)
+                 (conj m
+                       `(~'meta [this#] ~'__meta)
+                       `(~'with_meta [this# ~gs] (new ~typename ~@(replace {'__meta gs} fields))))])
+              (ilookup [[i m]]
+                [(conj i 'clojerl.ILookup)
+                 (conj m
+                       `(~'get [this# k#] (. ~typename (~'get this# k# nil)))
+                       `(~'get [this# k# else#]
+                         (case* k# ~@(mapcat (fn [fld] [(keyword fld) fld])
+                                             base-fields)
+                                (get ~'__extmap k# else#))))])
+              (imap [[i m]]
+                [(conj i
+                       'clojerl.ICounted 'clojerl.IColl 'clojerl.IEquiv
+                       'clojerl.IAssociative 'clojerl.ISeqable 'clojerl.IMap)
+                 (conj m
+                       `(~'count [this#] (+ ~(count base-fields) (count ~'__extmap)))
+                       `(~'empty [this#] (throw (clojerl.BadArgumentError. (str "Can't create empty: " ~(str typename)))))
+                       `(~'cons [this# e#] ((var imap-cons) this# e#))
+                       `(~'equiv [this# ~gs]
+                         (boolean
+                          (or (identical? this# ~gs)
+                              (when (identical? (type this#) (type ~gs))
+                                (let [~gs ~(with-meta gs {:tag typename})]
+                                  (and  ~@(map (fn [fld] `(= ~fld (~ (symbol (str typename) (str "-" fld)) ~gs))) base-fields)
+                                        (= ~'__extmap (~(symbol (str typename) "-__extmap") ~gs))))))))
+                       `(~'contains_key [this# k#] (not (identical? this# (. ~tagname (~'get this# k# this#)))))
+                       `(~'entry_at [this# k#] (let [v# (. ~tagname (~'get this# k# this#))]
+                                                 (when-not (identical? this# v#)
+                                                   [k# v#])))
+                       `(~'assoc [this# k# ~gs]
+                         (case* k#
+                           ~@(mapcat (fn [fld]
+                                       [(keyword fld) (list* `new typename (replace {fld gs} fields))])
+                                     base-fields)
+                           (new ~typename ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
+                       `(~'seq [this#] (seq (concat [~@(map #(vector (keyword %) %) base-fields)]
+                                                    ~'__extmap)))
+                       `(~'to_list [this#]
+                         ;; TODO: Improve this implementation
+                         (clojerl.ISeqable/to_list (concat [~@(map #(vector (keyword %) %) base-fields)]
+                                                           ~'__extmap)))
+                       `(~'keys [this#] (map first (seq this#)))
+                       `(~'vals [this#] (map second (seq this#)))
+                       `(~'without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                                (dissoc (with-meta (into {} this#) ~'__meta) k#)
+                                                (new ~typename ~@(remove #{'__extmap} fields)
+                                                     (not-empty (dissoc ~'__extmap k#))))))])
+              (istr [[i m]]
+                [(conj i 'clojerl.IStringable)
+                 (conj m
+                       `(~'str [this#]
+                         (str "#"
+                              ~(str typename)
+                              (merge (array-map ~@(mapcat (juxt keyword identity) base-fields))
+                                     ~'__extmap))))])
+              ]
+        (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap istr)]
+          `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~typename ~(conj hinted-fields '__meta '__extmap)
+             :implements ~(vec i)
+             ~@(mapcat identity opts)
+             ~@m))))))
 
 (defn- build-positional-factory
   "Used to build a positional factory for a given type/record.  Because of the
