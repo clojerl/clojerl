@@ -580,7 +580,11 @@ ast(#{op := invoke} = Expr, State) ->
     _ ->
       {FunAst, State2} = pop_ast(ast(FExpr, State1)),
       ArgsAst = list_ast(Args),
-      Ast     = call_mfa('clojerl.IFn', apply, [FunAst, ArgsAst], Ann),
+      Module  = case FExpr of
+                  #{tag := ?NO_TAG}         -> 'clojerl.IFn';
+                  #{tag := #{type := Type}} -> 'erlang.Type':module(Type)
+                end,
+      Ast = call_mfa(Module, apply, [FunAst, ArgsAst], Ann),
 
       push_ast(Ast, State2)
   end;
