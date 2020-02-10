@@ -73,9 +73,15 @@ find(Namespace, Name) ->
 %% clojerl.IFn
 
 apply(Keyword, [Map]) ->
-  clj_rt:get(Map, Keyword);
+  case 'clojerl.ILookup':?SATISFIES(Map) of
+    true  -> 'clojerl.ILookup':get(Map, Keyword);
+    false -> clj_rt:get(Map, Keyword)
+  end;
 apply(Keyword, [Map, NotFound]) ->
-  clj_rt:get(Map, Keyword, NotFound);
+  case 'clojerl.ILookup':?SATISFIES(Map) of
+    true  -> 'clojerl.ILookup':get(Map, Keyword, NotFound);
+    false -> clj_rt:get(Map, Keyword, NotFound)
+  end;
 apply(_Keyword, Args) ->
   CountBin = integer_to_binary(length(Args)),
   ?ERROR(<<"Wrong number of args for keyword, got: ", CountBin/binary>>).
