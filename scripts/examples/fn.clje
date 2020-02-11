@@ -110,8 +110,8 @@
          :apply!!!)
 
 (def apply (fn*
-            ([f args] (clojerl.IFn/apply f args))
-            ([f x args] (clojerl.IFn/apply f (clj_rt/cons x args)))))
+            ([f args] (clojerl.IFn/apply f (clj_rt/to_list args)))
+            ([f x args] (clojerl.IFn/apply f (clj_rt/to_list (clj_rt/cons x args))))))
 
 (apply (fn* [x]
                          (prn [:apply-anon-fixed x]))
