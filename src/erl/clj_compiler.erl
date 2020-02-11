@@ -50,11 +50,7 @@
 
 -spec default_options() -> options().
 default_options() ->
-  #{ erl_flags   => [ verbose
-                    , nowarn_unused_vars
-                    , nowarn_shadow_vars
-                    , nowarn_unused_record
-                    ]
+  #{ erl_flags   => []
    , clj_flags   => []
    , verbose     => false
    , reader_opts => #{}
