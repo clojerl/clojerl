@@ -57,12 +57,12 @@ end_per_testcase(_, Config) ->
 -spec compile(config()) -> result().
 compile(_Config) ->
   ct:comment("Compile code and check a var's value by deref'ing it"),
-  _Env = clj_compiler:compile(<<"(ns src) (def y :hello-world) 1">>),
+  _Env = clj_compiler:string(<<"(ns src) (def y :hello-world) 1">>),
   check_var_value(<<"src">>, <<"y">>, 'hello-world'),
 
   ct:comment("Try to compile invalid code"),
   ok = try
-         clj_compiler:compile(<<"(ns hello) (def 42 :forty-two)">>),
+         clj_compiler:string(<<"(ns hello) (def 42 :forty-two)">>),
          error
        catch _:_ ->
            ok
@@ -144,8 +144,8 @@ eval(_Config) ->
 -spec def_var_compiled_ns(config()) -> result().
 def_var_compiled_ns(_Config) ->
   ct:comment("Defining new var in compiled namespace is persisted"),
-  _ = clj_compiler:compile(<<"(ns examples.simple) (def foo 2)">>),
-  _ = clj_compiler:compile(<<"(ns examples.simple) (def x 1)">>),
+  _ = clj_compiler:string(<<"(ns examples.simple) (def foo 2)">>),
+  _ = clj_compiler:string(<<"(ns examples.simple) (def x 1)">>),
   check_var_value(<<"examples.simple">>, <<"foo">>, 2),
 
   {comments, ""}.

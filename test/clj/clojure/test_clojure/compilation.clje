@@ -308,7 +308,7 @@
 
 (defn compiler-fails-at? [row col source]
   (try
-    (clj_compiler/compile source)
+    (clj_compiler/string source)
     nil
     (catch :error e
       (let [e  (str e)

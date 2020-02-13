@@ -7,8 +7,8 @@
 
 -export([ file/1
         , file/2
-        , compile/1
-        , compile/2
+        , string/1
+        , string/2
         , load/1
         , load_file/1
         , load_string/1
@@ -17,8 +17,8 @@
         , eval/3
         , eval_expressions/1
         , eval_expressions/2
-        , compile_module/1
-        , compile_module/2
+        , module/1
+        , module/2
         , current_file/0
         ]).
 
@@ -65,56 +65,20 @@ file(File) when is_binary(File) ->
 file(File, Opts) when is_binary(File) ->
   file(File, Opts, clj_env:default(), compiled_modules).
 
--spec file( file:filename_all(), options(), clj_env:env(), return_type()) ->
-  compiled_modules() | clj_env:env().
-file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
-  ?ERROR_WHEN( not filelib:is_regular(File)
-             , [<<"File '">>, File, <<"' does not exist">>]
-             ),
-  case file:read_file(File) of
-    {ok, Src} ->
-      Opts  = maps:merge(default_options(), Opts0),
-      Opts1 = Opts#{ reader_opts => reader_opts(File)
-                   , file        => unicode:characters_to_list(File)
-                   },
-      when_time(Opts1, <<"Compiling ", File/binary, "\n">>),
-      CompileFun = case is_time(Opts1) of
-                     true  -> fun timed_compile/3;
-                     false -> fun compile/3
-                   end,
-      Env1 = CompileFun(Src, Opts1, Env0),
-      case ReturnType of
-        compiled_modules -> clj_env:get(compiled_modules, Env1);
-        env -> Env1
-      end;
-    Error ->
-      error(Error)
-  end.
+-spec string(binary()) -> clj_env:env().
+string(Src) when is_binary(Src) ->
+  string(Src, default_options()).
 
--spec reader_opts(binary()) -> map().
-reader_opts(File) ->
-  Opts = #{file => File},
-  case filename:extension(File) of
-    <<".cljc">> ->
-      Opts#{?OPT_READ_COND => allow};
-    _ ->
-      Opts
-  end.
-
--spec compile(binary()) -> clj_env:env().
-compile(Src) when is_binary(Src) ->
-  compile(Src, default_options()).
-
--spec compile(binary(), options()) -> clj_env:env().
-compile(Src, Opts) when is_binary(Src) ->
-  compile(Src, Opts, clj_env:default()).
+-spec string(binary(), options()) -> clj_env:env().
+string(Src, Opts) when is_binary(Src) ->
+  string(Src, Opts, clj_env:default()).
 
 -spec load('erlang.io.PushbackReader':type()) -> any().
 load(PushbackReader) ->
   Opts        = default_options(),
   ReaderOpts0 = maps:get(reader_opts, Opts),
   ReaderOpts1 = ReaderOpts0#{?OPT_IO_READER => PushbackReader},
-  Env         = compile(<<>>, Opts#{reader_opts => ReaderOpts1}),
+  Env         = string(<<>>, Opts#{reader_opts => ReaderOpts1}),
   clj_env:get(eval, Env).
 
 -spec load_file(binary()) -> any().
@@ -124,18 +88,21 @@ load_file(Path) ->
 
 -spec load_string(binary()) -> any().
 load_string(Src) ->
-  Env = compile(Src),
+  Env = string(Src),
   clj_env:get(eval, Env).
 
 -spec timed_compile(binary(), options(), clj_env:env()) ->
   compiled_modules().
 timed_compile(Src, Opts, Env) when is_binary(Src) ->
-  clj_utils:time("Total", fun compile/3, [Src, Opts, Env]).
+  clj_utils:time("Total", fun string/3, [Src, Opts, Env]).
 
--spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
-compile(Src, Opts, Env) when is_binary(Src) ->
+-spec string(binary(), options(), clj_env:env()) -> clj_env:env().
+string(Src, Opts, Env) when is_binary(Src) ->
   ProcDict = erlang:get(),
-  DoCompile = fun() -> copy_proc_dict(ProcDict), do_compile(Src, Opts, Env) end,
+  DoCompile = fun() ->
+                  copy_proc_dict(ProcDict),
+                  compile_string(Src, Opts, Env)
+              end,
   run_monitored(DoCompile).
 
 -spec eval(any()) -> {any(), clj_env:env()}.
@@ -177,6 +144,42 @@ no_warn_dynamic_var_name(Env) ->
 %% Helper functions
 %%------------------------------------------------------------------------------
 
+-spec file( file:filename_all(), options(), clj_env:env(), return_type()) ->
+  compiled_modules() | clj_env:env().
+file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
+  ?ERROR_WHEN( not filelib:is_regular(File)
+             , [<<"File '">>, File, <<"' does not exist">>]
+             ),
+  case file:read_file(File) of
+    {ok, Src} ->
+      Opts  = maps:merge(default_options(), Opts0),
+      Opts1 = Opts#{ reader_opts => reader_opts(File)
+                   , file        => unicode:characters_to_list(File)
+                   },
+      when_time(Opts1, <<"Compiling ", File/binary, "\n">>),
+      CompileFun = case is_time(Opts1) of
+                     true  -> fun timed_compile/3;
+                     false -> fun string/3
+                   end,
+      Env1 = CompileFun(Src, Opts1, Env0),
+      case ReturnType of
+        compiled_modules -> clj_env:get(compiled_modules, Env1);
+        env -> Env1
+      end;
+    Error ->
+      error(Error)
+  end.
+
+-spec reader_opts(binary()) -> map().
+reader_opts(File) ->
+  Opts = #{file => File},
+  case filename:extension(File) of
+    <<".cljc">> ->
+      Opts#{?OPT_READ_COND => allow};
+    _ ->
+      Opts
+  end.
+
 -spec copy_proc_dict([{any(), any()}]) -> ok.
 copy_proc_dict(List) ->
   [erlang:put(K, V) || {K, V} <- List],
@@ -194,8 +197,8 @@ run_monitored(Fun) ->
       throw(Info)
   end.
 
--spec do_compile(binary(), options(), clj_env:env()) -> no_return().
-do_compile(Src, Opts0, Env0) when is_binary(Src) ->
+-spec compile_string(binary(), options(), clj_env:env()) -> no_return().
+compile_string(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
 
   #{ clj_flags   := CljFlags
@@ -342,20 +345,20 @@ check_top_level_do(Fun, Form, Env) ->
 -spec compile_module_fun(options()) -> function().
 compile_module_fun(#{time := true} = Opts) ->
   fun(Module) ->
-      clj_utils:time("Compile Forms", fun compile_module/2, [Module, Opts])
+      clj_utils:time("Compile Forms", fun module/2, [Module, Opts])
   end;
 compile_module_fun(Opts) ->
-  fun(Module) -> compile_module(Module, Opts) end.
+  fun(Module) -> module(Module, Opts) end.
 
--spec compile_module(cerl:c_module()) -> binary().
-compile_module(Module) ->
-  compile_module(Module, #{}).
+-spec module(cerl:c_module()) -> binary().
+module(Module) ->
+  module(Module, #{}).
 
--spec compile_module(cerl:c_module(), options()) -> binary().
-compile_module(Module, #{output_core := true}) ->
+-spec module(cerl:c_module(), options()) -> binary().
+module(Module, #{output_core := true}) ->
   ok = output_core(Module),
   ?NO_SOURCE;
-compile_module(Module, Opts) ->
+module(Module, Opts) ->
   ok       = clj_behaviour:check(Module),
   ErlFlags = erl_compiler_options(Opts),
   case compile:noenv_forms(Module, ErlFlags) of

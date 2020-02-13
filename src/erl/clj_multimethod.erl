@@ -113,6 +113,6 @@ generate_dispatch_map(DispatchMapVar, Map) ->
   clj_module:add_exports([{ValName, 0}], Module),
 
   CljModule = clj_module:get_module(Module),
-  clj_compiler:compile_module(CljModule),
+  clj_compiler:module(CljModule),
 
   ok.

@@ -326,7 +326,7 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_functions(Functions, Module),
 
   Opts = clj_env:get(compiler_opts, #{}, Env),
-  clj_compiler:compile_module(clj_module:get_module(Module), Opts),
+  clj_compiler:module(clj_module:get_module(Module), Opts),
 
   Ast = cerl:ann_abstract(ann_from(Env), Name),
 
@@ -381,7 +381,7 @@ ast(#{op := defprotocol} = Expr, State) ->
   clj_module:add_exports(Exports, Module),
 
   Opts = clj_env:get(compiler_opts, #{}, Env),
-  clj_compiler:compile_module(clj_module:get_module(Module), Opts),
+  clj_compiler:module(clj_module:get_module(Module), Opts),
 
   Ast = cerl:ann_abstract(Ann, NameSym),
   push_ast(Ast, State);
@@ -422,7 +422,7 @@ ast(#{op := extend_type} = Expr, State) ->
 
         Opts       = clj_env:get(compiler_opts, #{}, Env),
 
-        clj_compiler:compile_module(clj_module:get_module(ImplModule), Opts),
+        clj_compiler:module(clj_module:get_module(ImplModule), Opts),
         protocol_add_type(TypeModule, ImplModule, ProtoModule, Opts),
 
         StateAcc2
@@ -1473,7 +1473,7 @@ protocol_add_type(TypeModule, ImplModule, ProtocolModule, Opts) ->
                  || F <- Functions0
                ],
   clj_module:add_functions(Functions1, ProtocolModule),
-  clj_compiler:compile_module(clj_module:get_module(ProtocolModule), Opts),
+  clj_compiler:module(clj_module:get_module(ProtocolModule), Opts),
   ok.
 
 -spec protocol_function_add_type( { {atom(), arity()}
