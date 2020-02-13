@@ -27,7 +27,6 @@ default_options() ->
   #{ compile      => false
    , compile_path => "ebin"
    , compile_opts => #{ time        => false
-                      , verbose     => false
                       , output_core => false
                       }
    , files        => []
@@ -58,9 +57,6 @@ parse_args([Compile | Rest], Opts)
 parse_args([TimeOpt | Rest], #{compile_opts := CompileOpts} = Opts)
   when TimeOpt =:= "-t"; TimeOpt =:= "--time" ->
   parse_args(Rest, Opts#{compile_opts := CompileOpts#{time := true}});
-parse_args([VerboseOpt | Rest], #{compile_opts := CompileOpts} = Opts)
-  when VerboseOpt =:= "-vv"; VerboseOpt =:= "--verbose" ->
-  parse_args(Rest, Opts#{compile_opts := CompileOpts#{verbose := true}});
 parse_args([File | Rest], Opts = #{files := Files, compile := true}) ->
   parse_args(Rest, Opts#{files => [File | Files]});
 parse_args([Arg | Rest], Opts = #{main_args := MainArgs}) ->
@@ -88,7 +84,7 @@ run_commands(#{ compile      := true
   FilesBin       = [list_to_binary(F) || F <- Files],
   try
     ok = 'clojerl.Var':push_bindings(Bindings),
-    [clj_compiler:compile_file(F, CompileOpts) || F <- FilesBin]
+    [clj_compiler:file(F, CompileOpts) || F <- FilesBin]
   catch ?WITH_STACKTRACE(Type, Reason, Stacktrace)
       handle_error(Type, Reason, Stacktrace)
   after

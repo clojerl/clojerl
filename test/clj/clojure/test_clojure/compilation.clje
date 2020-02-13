@@ -183,7 +183,7 @@
         (try
           (filelib/ensure_dir tmp)
           (os/putenv #erl"clojerl.compile.path" #erl"tmp")
-          (clj_compiler/compile_file "dummy.clj")
+          (clj_compiler/file "dummy.clj")
           (println "this should still work without throwing an exception" )
           (finally
             (if compile-path

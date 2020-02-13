@@ -281,7 +281,7 @@ by default when a new command-line REPL is started."} repl-requires
   "Loads Clojure source from a file or resource given its path. Paths
   beginning with @ or @/ are considered relative to codepath."
   [^clojerl.String path]
-  (clj_compiler/compile_file path))
+  (clj_compiler/load_file path))
 
 (defn- init-opt
   "Load a script"

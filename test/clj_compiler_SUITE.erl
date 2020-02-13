@@ -11,7 +11,7 @@
         ]).
 
 -export([ compile/1
-        , compile_file/1
+        , file/1
         , eval/1
         , def_var_compiled_ns/1
         ]).
@@ -70,22 +70,22 @@ compile(_Config) ->
 
   {comments, ""}.
 
--spec compile_file(config()) -> result().
-compile_file(_Config) ->
-  Opts = #{verbose => true, time => true},
+-spec file(config()) -> result().
+file(_Config) ->
+  Opts = #{time => true},
   Dir  = <<"scripts/examples">>,
   ct:comment("Compile a file and check a var's value by deref'ing it"),
   SimplePath = clj_test_utils:relative_path(<<Dir/binary, "/simple.clje">>),
-  _Env = clj_compiler:compile_file(SimplePath, Opts),
+  _Env = clj_compiler:file(SimplePath, Opts),
   check_var_value(<<"examples.simple">>, <<"x">>, 1),
 
   ct:comment("Try to compile a non-existen file"),
   NotExistsPath =
     clj_test_utils:relative_path(<<Dir/binary, "/abcdef_42.clje">>),
-  ok = try clj_compiler:compile_file(NotExistsPath, Opts), error
+  ok = try clj_compiler:file(NotExistsPath, Opts), error
        catch _:_ -> ok end,
 
-  Opts     = #{verbose => true, time => true},
+  Opts     = #{time => true},
   SrcPath  = clj_test_utils:relative_path(<<"src/clj">>),
   TestPath = clj_test_utils:relative_path(<<"scripts">>),
   true     = code:add_path(binary_to_list(SrcPath)),
@@ -94,7 +94,7 @@ compile_file(_Config) ->
   ct:comment("Compile two files and use vars from one and the other"),
   SimplePath  = <<TestPath/binary, "/examples/simple.clje">>,
   Simple2Path = <<TestPath/binary, "/examples/simple_2.clje">>,
-  [clj_compiler:compile_file(F, Opts) || F <- [SimplePath, Simple2Path]],
+  [clj_compiler:file(F, Opts) || F <- [SimplePath, Simple2Path]],
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
@@ -103,7 +103,7 @@ compile_file(_Config) ->
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
   Exclude   = [clj_test_utils:relative_path(Path) || Path <- ?EXCLUDE_FILES],
   FilesBin2 = lists:map(fun list_to_binary/1, Files2) -- Exclude,
-  [clj_compiler:compile_file(F, Opts) || F <- FilesBin2],
+  [clj_compiler:file(F, Opts) || F <- FilesBin2],
 
   {comments, ""}.
 

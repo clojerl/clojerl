@@ -228,7 +228,7 @@ ast(#{op := deftype} = Expr, State0) ->
                     ],
 
   %% Add this new type to the protocol
-  Opts = clj_env:get(compiler_opts, default_compiler_options(), Env),
+  Opts = clj_env:get(compiler_opts, #{}, Env),
   [ protocol_add_type(Module, ProtocolModule, Opts)
     || ProtocolModule <- ProtocolModules
   ],
@@ -325,7 +325,7 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Exports, Module),
   clj_module:add_functions(Functions, Module),
 
-  Opts = clj_env:get(compiler_opts, default_compiler_options(), Env),
+  Opts = clj_env:get(compiler_opts, #{}, Env),
   clj_compiler:compile_module(clj_module:get_module(Module), Opts),
 
   Ast = cerl:ann_abstract(ann_from(Env), Name),
@@ -380,7 +380,7 @@ ast(#{op := defprotocol} = Expr, State) ->
   clj_module:add_functions(Functions1, Module),
   clj_module:add_exports(Exports, Module),
 
-  Opts = clj_env:get(compiler_opts, default_compiler_options(), Env),
+  Opts = clj_env:get(compiler_opts, #{}, Env),
   clj_compiler:compile_module(clj_module:get_module(Module), Opts),
 
   Ast = cerl:ann_abstract(Ann, NameSym),
@@ -420,10 +420,7 @@ ast(#{op := extend_type} = Expr, State) ->
         clj_module:add_exports(Exports, ImplModule),
         clj_module:add_functions(FunctionsAsts, ImplModule),
 
-        Opts       = clj_env:get( compiler_opts
-                                , default_compiler_options()
-                                , Env
-                                ),
+        Opts       = clj_env:get(compiler_opts, #{}, Env),
 
         clj_compiler:compile_module(clj_module:get_module(ImplModule), Opts),
         protocol_add_type(TypeModule, ImplModule, ProtoModule, Opts),
@@ -2236,10 +2233,6 @@ ann_from(Env) ->
 -spec to_atom('clojerl.Symbol':type()) -> atom().
 to_atom(Symbol) ->
   binary_to_atom('clojerl.Symbol':name(Symbol), utf8).
-
--spec default_compiler_options() -> clj_compiler:opts().
-default_compiler_options() ->
-  #{erl_flags => [binary, debug_info], output_dir => <<"ebin">>}.
 
 -spec new_c_var(cerl:ann()) -> cerl:c_var().
 new_c_var(Ann) ->
