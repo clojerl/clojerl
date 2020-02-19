@@ -989,6 +989,8 @@ ast(#{op := 'try'} = Expr, State) ->
                               ],
   RaiseAst          = cerl:c_primop(cerl:c_atom(raise), [Z, Y]),
 
+  %% A last catch-call clause is mandatory for when none of the previous
+  %% catch clauses were matched.
   CatchAllClause    = cerl:ann_c_clause(Ann, CatchVarsAsts, RaiseAst),
   { ClausesVars
   , CaseAst
@@ -996,7 +998,7 @@ ast(#{op := 'try'} = Expr, State) ->
 
   {Finally, State2} = case FinallyExpr of
                         ?NIL -> {?NIL, State1};
-                        _         -> pop_ast(ast(FinallyExpr, State))
+                        _    -> pop_ast(ast(FinallyExpr, State))
                       end,
 
   VarAst = new_c_var(Ann),
