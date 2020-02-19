@@ -386,8 +386,35 @@ module(Module, Opts) ->
 erl_compiler_options(Opts) ->
   Source = maps:get(file, Opts, ?NO_SOURCE),
   [ from_core, clint, binary, return_errors, return_warnings, {source, Source}
-  | compile:env_compiler_options()
+  | env_compiler_options()
   ].
+
+%% @doc Parse ERL_COMPILER_OPTIONS env variable.
+%% Copied from the compile module because this function is
+%% not avaialble for older Erlang/OTP releases (i.e. 18).
+-spec env_compiler_options() -> [term()].
+env_compiler_options() ->
+  Key = "ERL_COMPILER_OPTIONS",
+  case os:getenv(Key) of
+    false ->
+      [];
+    Str when is_list(Str) ->
+      parse_compiler_options(Str)
+  end.
+
+-spec parse_compiler_options(string()) -> [term()].
+parse_compiler_options(Str) ->
+  case erl_scan:string(Str) of
+    {ok, Tokens, _} ->
+      Dot = {dot, erl_anno:new(1)},
+      case erl_parse:parse_term(Tokens ++ [Dot]) of
+        {ok, List} when is_list(List) -> List;
+        {ok, Term} -> [Term];
+        {error, _Reason} ->
+          []
+      end;
+    {error, {_, _, _Reason}, _} -> []
+  end.
 
 -spec eval_expressions([cerl:cerl()]) -> [any()].
 eval_expressions(Expressions) ->
