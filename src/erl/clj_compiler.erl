@@ -365,16 +365,19 @@ module(Module, #{output_core := true}) ->
   ok = output_core(Module),
   ?NO_SOURCE;
 module(Module, Opts) ->
-  ok       = clj_behaviour:check(Module),
-  ErlFlags = erl_compiler_options(Opts),
-  case compile:noenv_forms(Module, ErlFlags) of
+  ok      = clj_behaviour:check(Module),
+  ErlOpts = erl_compiler_options(Opts),
+  case compile:noenv_forms(Module, ErlOpts) of
     {ok, _, Beam0, _Warnings} ->
+      %% Fetch the module name from the AST since the one
+      %% returned is sometimes the empty list in older
+      %% Erlang/OTP releases (e.g. 19).
       Name           = cerl:atom_val(cerl:module_name(Module)),
       Beam1          = clj_utils:add_core_to_binary(Beam0, Module),
       Beam2          = maybe_replace_compile_info(Beam1, Module),
       BeamPath       = maybe_output_beam(Name, Module, Beam2, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam2),
-      list_to_binary(BeamPath);
+      unicode:characters_to_binary(BeamPath);
     {error, Errors, Warnings} ->
       error({Errors, Warnings})
   end.
