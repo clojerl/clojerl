@@ -5,10 +5,10 @@
 
 -dialyzer(no_return).
 
--export([ compile_file/1
-        , compile_file/2
-        , compile/1
-        , compile/2
+-export([ file/1
+        , file/2
+        , string/1
+        , string/2
         , load/1
         , load_file/1
         , load_string/1
@@ -17,8 +17,8 @@
         , eval/3
         , eval_expressions/1
         , eval_expressions/2
-        , compile_module/1
-        , compile_module/2
+        , module/1
+        , module/2
         , current_file/0
         ]).
 
@@ -29,9 +29,8 @@
 -type clj_flag() :: 'no-warn-symbol-as-erl-fun'
                   | 'no-warn-dynamic-var-name'.
 
--type options() :: #{ erl_flags   => [atom()]     %% erlang compilation flags
-                    , clj_flags   => [clj_flag()] %% clojerl compilation flags
-                    , verbose     => boolean()    %% Output verbose messages
+-type options() :: #{ clj_flags   => [clj_flag()] %% clojerl compilation flags
+                    , file        => string()     %% Source file name
                     , reader_opts => map()        %% Options for the reader
                     , time        => boolean()    %% Measure and show
                                                   %% compilation times
@@ -50,101 +49,62 @@
 
 -spec default_options() -> options().
 default_options() ->
-  #{ erl_flags   => [ verbose
-                    , nowarn_unused_vars
-                    , nowarn_shadow_vars
-                    , nowarn_unused_record
-                    ]
-   , clj_flags   => []
-   , verbose     => false
+  #{ clj_flags   => []
+   , file        => ?NO_SOURCE
    , reader_opts => #{}
    , time        => false
    , output_core => false
    , fake        => false
    }.
 
--spec compile_file(file:filename_all()) -> compiled_modules().
-compile_file(File) when is_binary(File) ->
-  compile_file(File, default_options()).
+-spec file(file:filename_all()) -> compiled_modules().
+file(File) when is_binary(File) ->
+  file(File, default_options()).
 
--spec compile_file(file:filename_all(), options()) -> compiled_modules().
-compile_file(File, Opts) when is_binary(File) ->
-  compile_file(File, Opts, clj_env:default(), compiled_modules).
+-spec file(file:filename_all(), options()) -> compiled_modules().
+file(File, Opts) when is_binary(File) ->
+  file(File, Opts, clj_env:default(), compiled_modules).
 
--spec compile_file( file:filename_all()
-                  , options()
-                  , clj_env:env()
-                  , return_type()
-                  ) -> compiled_modules() | clj_env:env().
-compile_file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
-  ?ERROR_WHEN( not filelib:is_regular(File)
-             , [<<"File '">>, File, <<"' does not exist">>]
-             ),
-  case file:read_file(File) of
-    {ok, Src} ->
-      Opts       = maps:merge(default_options(), Opts0),
-      FileStr    = binary_to_list(File),
-      ErlFlags   = maps:get(erl_flags, Opts, []),
-      ReaderOpts = reader_opts(File),
-      Opts1      = Opts#{ erl_flags   => [{source, FileStr} | ErlFlags]
-                        , reader_opts => ReaderOpts#{file => File}
-                        },
-      when_verbose(Opts1, <<"Compiling ", File/binary, "\n">>),
-      CompileFun = case Opts1 of
-                     #{time := true} -> fun timed_compile/3;
-                     _               -> fun compile/3
-                   end,
-      Env1 = CompileFun(Src, Opts1, Env0),
-      case ReturnType of
-        compiled_modules -> clj_env:get(compiled_modules, Env1);
-        env -> Env1
-      end;
-    Error ->
-      error(Error)
-  end.
+-spec string(binary()) -> clj_env:env().
+string(Src) when is_binary(Src) ->
+  string(Src, default_options()).
 
--spec reader_opts(binary()) -> map().
-reader_opts(File) ->
-  case filename:extension(File) of
-    <<".cljc">> -> #{?OPT_READ_COND => allow};
-    _ -> #{}
-  end.
-
--spec compile(binary()) -> clj_env:env().
-compile(Src) when is_binary(Src) ->
-  compile(Src, default_options()).
-
--spec compile(binary(), options()) -> clj_env:env().
-compile(Src, Opts) when is_binary(Src) ->
-  compile(Src, Opts, clj_env:default()).
+-spec string(binary(), options()) -> clj_env:env().
+string(Src, Opts) when is_binary(Src) ->
+  string(Src, Opts, clj_env:default()).
 
 -spec load('erlang.io.PushbackReader':type()) -> any().
 load(PushbackReader) ->
   Opts        = default_options(),
   ReaderOpts0 = maps:get(reader_opts, Opts),
   ReaderOpts1 = ReaderOpts0#{?OPT_IO_READER => PushbackReader},
-  Env         = compile(<<>>, Opts#{reader_opts => ReaderOpts1}),
+  Env         = string(<<>>, Opts#{reader_opts => ReaderOpts1}),
   clj_env:get(eval, Env).
 
 -spec load_file(binary()) -> any().
 load_file(Path) ->
-  Env = compile_file(Path, default_options(), clj_env:default(), env),
+  Env = file(Path, default_options(), clj_env:default(), env),
   clj_env:get(eval, Env).
 
 -spec load_string(binary()) -> any().
 load_string(Src) ->
-  Env = compile(Src),
+  Env = string(Src),
   clj_env:get(eval, Env).
 
--spec timed_compile(binary(), options(), clj_env:env()) ->
+-spec timed_string(binary(), options(), clj_env:env()) ->
   compiled_modules().
-timed_compile(Src, Opts, Env) when is_binary(Src) ->
-  clj_utils:time("Total", fun compile/3, [Src, Opts, Env]).
+timed_string(Src, Opts, Env) when is_binary(Src) ->
+  File = maps:get(file, Opts, ?NO_SOURCE),
+  ok   = io:format("Compiling ~s~n", [File]),
+  clj_utils:time("Total", fun string/3, [Src, Opts, Env]).
 
--spec compile(binary(), options(), clj_env:env()) -> clj_env:env().
-compile(Src, Opts, Env) when is_binary(Src) ->
+-spec string(binary(), options(), clj_env:env()) -> clj_env:env().
+string(Src, Opts, Env) when is_binary(Src) ->
   ProcDict = erlang:get(),
-  DoCompile = fun() -> copy_proc_dict(ProcDict), do_compile(Src, Opts, Env) end,
+  DoCompile = fun() ->
+                  copy_proc_dict(ProcDict),
+                  compile_string(Src, Opts, Env)
+              end,
   run_monitored(DoCompile).
 
 -spec eval(any()) -> {any(), clj_env:env()}.
@@ -168,7 +128,7 @@ eval1(Form, Opts, Env) ->
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
   {Exprs, Modules, Env1} = run_monitored(DoEval),
 
-  lists:foreach(compile_module_fun(Opts), Modules),
+  lists:foreach(module_fun(Opts), Modules),
   Value = eval_expressions(Exprs),
   clj_env:put(eval, Value, Env1).
 
@@ -185,6 +145,44 @@ no_warn_dynamic_var_name(Env) ->
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec file( file:filename_all(), options(), clj_env:env(), return_type()) ->
+  compiled_modules() | clj_env:env().
+file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
+  ?ERROR_WHEN( not filelib:is_regular(File)
+             , [<<"File '">>, File, <<"' does not exist">>]
+             ),
+  case file:read_file(File) of
+    {ok, Src} ->
+      Opts  = maps:merge(default_options(), Opts0),
+      Opts1 = Opts#{ reader_opts => reader_opts(File)
+                   , file        => unicode:characters_to_list(File)
+                   },
+      CompileFun = string_fun(Opts1),
+      Env1 = CompileFun(Src, Opts1, Env0),
+      case ReturnType of
+        compiled_modules -> clj_env:get(compiled_modules, Env1);
+        env -> Env1
+      end;
+    Error ->
+      error(Error)
+  end.
+
+-spec string_fun(options()) -> function().
+string_fun(#{time := true}) ->
+  fun timed_string/3;
+string_fun(_) ->
+  fun string/3.
+
+-spec reader_opts(binary()) -> map().
+reader_opts(File) ->
+  Opts = #{file => File},
+  case filename:extension(File) of
+    <<".cljc">> ->
+      Opts#{?OPT_READ_COND => allow};
+    _ ->
+      Opts
+  end.
 
 -spec copy_proc_dict([{any(), any()}]) -> ok.
 copy_proc_dict(List) ->
@@ -203,37 +201,36 @@ run_monitored(Fun) ->
       throw(Info)
   end.
 
--spec do_compile(binary(), options(), clj_env:env()) -> no_return().
-do_compile(Src, Opts0, Env0) when is_binary(Src) ->
+-spec compile_string(binary(), options(), clj_env:env()) -> no_return().
+compile_string(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
 
   #{ clj_flags   := CljFlags
-   , reader_opts := RdrOpts
+   , reader_opts := RdrOpts0
    , time        := Time
    } = Opts,
 
-  File     = maps:get(file, RdrOpts, ?NIL),
-  Mapping  = #{ clj_flags     => CljFlags
-              , compiler_opts => Opts
-              , eval          => ?NIL
-              , location      => #{file => File}
-              },
-  Env1     = clj_env:push(Mapping, Env0),
+  RdrOpts     = RdrOpts0#{time => Time},
+  File        = maps:get(file, RdrOpts, ?NIL),
+  Mapping     = #{ clj_flags     => CljFlags
+                 , compiler_opts => Opts
+                 , eval          => ?NIL
+                 , location      => #{file => File}
+                 },
+  Env1        = clj_env:push(Mapping, Env0),
 
-  AnnEmitEval = case Time of
-                  true  -> fun timed_analyze_emit_eval/2;
-                  false -> fun analyze_emit_eval/2
-                end,
+  %% Resolve function to be used (normal/timed)
+  AnnEmitEval = analyze_emit_eval_fun(Opts),
+  Fun         = module_fun(Opts),
 
   CompileFun =
     fun() ->
         try
           current_file(File),
-          Env2  = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Time, Env1),
+          Env2  = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Env1),
           %% Maybe report time
           Time andalso report_time(Env2),
           %% Compile all modules
-          Fun   = compile_module_fun(Opts),
           Beams = [Fun(M) || M <- clj_module:all_modules()],
           Env3  = clj_env:put(compiled_modules, Beams, Env2),
           {shutdown, Env3}
@@ -306,12 +303,15 @@ report_time(Env) ->
   ],
   ok.
 
--spec timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
-timed_analyze_emit_eval(Form, Env) ->
-  check_top_level_do(fun do_timed_analyze_emit_eval/2, Form, Env).
+analyze_emit_eval_fun(#{time := true}) ->
+  fun(Form, Env) ->
+      check_top_level_do(fun timed_analyze_emit_eval/2, Form, Env)
+  end;
+analyze_emit_eval_fun(_) ->
+   fun analyze_emit_eval/2.
 
--spec do_timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
-do_timed_analyze_emit_eval(Form, Env0) ->
+-spec timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
+timed_analyze_emit_eval(Form, Env0) ->
   {TimeAnn, Env1} = timer:tc(clj_analyzer, analyze, [Form, Env0]),
   Env2 = clj_env:time("Analyzer", TimeAnn, Env1),
 
@@ -348,37 +348,72 @@ check_top_level_do(Fun, Form, Env) ->
       Fun(Expanded, Env)
   end.
 
--spec compile_module_fun(options()) -> function().
-compile_module_fun(#{time := true} = Opts) ->
-  fun(Forms) ->
-      clj_utils:time("Compile Forms", fun compile_module/2, [Forms, Opts])
+-spec module_fun(options()) -> function().
+module_fun(#{time := true} = Opts) ->
+  fun(Module) ->
+      clj_utils:time("Compile Module", fun module/2, [Module, Opts])
   end;
-compile_module_fun(Opts) ->
-  fun(Forms) -> compile_module(Forms, Opts) end.
+module_fun(Opts) ->
+  fun(Module) -> module(Module, Opts) end.
 
--spec compile_module(cerl:c_module()) -> binary().
-compile_module(Module) ->
-  compile_module(Module, #{}).
+-spec module(cerl:c_module()) -> binary().
+module(Module) ->
+  module(Module, #{}).
 
--spec compile_module(cerl:c_module(), options()) -> binary().
-compile_module(Module, #{output_core := true}) ->
+-spec module(cerl:c_module(), options()) -> binary().
+module(Module, #{output_core := true}) ->
   ok = output_core(Module),
   ?NO_SOURCE;
-compile_module(Module, Opts) ->
-  ok       = clj_behaviour:check(Module),
-  ErlFlags = [ from_core, clint, binary, return_errors, return_warnings
-             | maps:get(erl_flags, Opts, [])
-             ],
-  case compile:noenv_forms(Module, ErlFlags) of
+module(Module, Opts) ->
+  ok      = clj_behaviour:check(Module),
+  ErlOpts = erl_compiler_options(Opts),
+  case compile:noenv_forms(Module, ErlOpts) of
     {ok, _, Beam0, _Warnings} ->
+      %% Fetch the module name from the AST since the one
+      %% returned is sometimes the empty list in older
+      %% Erlang/OTP releases (e.g. 19).
       Name           = cerl:atom_val(cerl:module_name(Module)),
       Beam1          = clj_utils:add_core_to_binary(Beam0, Module),
       Beam2          = maybe_replace_compile_info(Beam1, Module),
       BeamPath       = maybe_output_beam(Name, Module, Beam2, Opts),
       {module, Name} = code:load_binary(Name, BeamPath, Beam2),
-      list_to_binary(BeamPath);
+      unicode:characters_to_binary(BeamPath);
     {error, Errors, Warnings} ->
       error({Errors, Warnings})
+  end.
+
+-spec erl_compiler_options(options()) -> [term()].
+erl_compiler_options(Opts) ->
+  Source = maps:get(file, Opts, ?NO_SOURCE),
+  [ from_core, clint, binary, return_errors, return_warnings, {source, Source}
+  | env_compiler_options()
+  ].
+
+%% @doc Parse ERL_COMPILER_OPTIONS env variable.
+%% Copied from the compile module because this function is
+%% not avaialble for older Erlang/OTP releases (i.e. 18).
+-spec env_compiler_options() -> [term()].
+env_compiler_options() ->
+  Key = "ERL_COMPILER_OPTIONS",
+  case os:getenv(Key) of
+    false ->
+      [];
+    Str when is_list(Str) ->
+      parse_compiler_options(Str)
+  end.
+
+-spec parse_compiler_options(string()) -> [term()].
+parse_compiler_options(Str) ->
+  case erl_scan:string(Str) of
+    {ok, Tokens, _} ->
+      Dot = {dot, erl_anno:new(1)},
+      case erl_parse:parse_term(Tokens ++ [Dot]) of
+        {ok, List} when is_list(List) -> List;
+        {ok, Term} -> [Term];
+        {error, _Reason} ->
+          []
+      end;
+    {error, {_, _, _Reason}, _} -> []
   end.
 
 -spec eval_expressions([cerl:cerl()]) -> [any()].
@@ -397,12 +432,6 @@ eval_expressions(Expressions, true = _ReplaceExprs) ->
   eval_expressions(ReplacedExprs, false);
 eval_expressions(Expressions, false = _ReplaceExprs) ->
   core_eval:exprs(Expressions).
-
--spec when_verbose(options(), binary()) -> ok.
-when_verbose(#{verbose := true}, Message) ->
-  io:format(Message);
-when_verbose(_, _) ->
-  ok.
 
 -spec output_core(cerl:c_module()) -> ok | {error, term()}.
 output_core(Module) ->
@@ -472,7 +501,7 @@ output_beam(Name, IsProtocol, BeamBinary) ->
   BeamFilename = <<NameBin/binary, ".beam">>,
   BeamPath     = filename:join([CompilePath, BeamFilename]),
   ok           = file:write_file(BeamPath, BeamBinary),
-  binary_to_list(BeamPath).
+  unicode:characters_to_list(BeamPath).
 
 -spec compile_path(boolean()) -> binary() | ?NIL.
 compile_path(true) ->
@@ -489,5 +518,5 @@ compile_path(false) ->
 -spec ensure_path(binary()) -> ok.
 ensure_path(Path) when is_binary(Path) ->
   ok   = filelib:ensure_dir(filename:join([Path, "dummy"])),
-  true = code:add_path(binary_to_list(Path)),
+  true = code:add_path(unicode:characters_to_list(Path)),
   ok.

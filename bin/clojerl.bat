@@ -16,7 +16,6 @@ echo    -pa PATH            Adds PATH to the beginning of the code path
 echo    -pz PATH            Adds PATH to the end of the code path
 echo    -o PATH             Specify output directory for compiled files
 echo    -t, --time          Print the time spent on compiling
-echo    -vv, --verbose      Verbose compiling
 echo    --to-core FILE      Output the Core Erlang representation to FILE
 echo    FILES               List of .clje files
 echo.
@@ -54,7 +53,7 @@ rem Parse parameters
 :startloop
 set par=%1
 shift
-rem When there are no more parameters 
+rem When there are no more parameters
 if "%par%"=="" (goto erl_libs)
 rem Process parameters
 if "%par%"==""--werl"" (set "useWerl=1" && goto startloop)

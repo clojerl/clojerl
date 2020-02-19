@@ -8,6 +8,7 @@ REBAR3    := rebar3
 RLWRAP    := $(shell type -p rlwrap &> /dev/null && echo rlwrap || echo)
 V         := @
 EXAMPLE   ?= *
+OTP       := $(shell erl -noshell -eval "io:format(erlang:system_info(otp_release))" -eval "erlang:halt()" || echo)
 
 .PHONY: all clojure test shell clean
 
@@ -15,6 +16,14 @@ all: compile
 
 compile:
 	${V} ${REBAR3} clojerl compile
+
+compile-native:
+	${V} if [[ ${OTP} =~ 2.+ ]]; then \
+		echo "Compiling to native..."; \
+		ERL_COMPILER_OPTIONS="native" ${REBAR3} clojerl compile; \
+	else \
+		echo "Compiling to native not supported for Erlang/OTP ${OTP}"; \
+	fi;
 
 test-ct: clean
 	${V} ${REBAR3} do ct --cover, cover

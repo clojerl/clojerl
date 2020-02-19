@@ -228,7 +228,7 @@ ast(#{op := deftype} = Expr, State0) ->
                     ],
 
   %% Add this new type to the protocol
-  Opts = clj_env:get(compiler_opts, default_compiler_options(), Env),
+  Opts = clj_env:get(compiler_opts, #{}, Env),
   [ protocol_add_type(Module, ProtocolModule, Opts)
     || ProtocolModule <- ProtocolModules
   ],
@@ -325,8 +325,8 @@ ast(#{op := deftype} = Expr, State0) ->
   clj_module:add_exports(Exports, Module),
   clj_module:add_functions(Functions, Module),
 
-  Opts = clj_env:get(compiler_opts, default_compiler_options(), Env),
-  clj_compiler:compile_module(clj_module:get_module(Module), Opts),
+  Opts = clj_env:get(compiler_opts, #{}, Env),
+  clj_compiler:module(clj_module:get_module(Module), Opts),
 
   Ast = cerl:ann_abstract(ann_from(Env), Name),
 
@@ -380,8 +380,8 @@ ast(#{op := defprotocol} = Expr, State) ->
   clj_module:add_functions(Functions1, Module),
   clj_module:add_exports(Exports, Module),
 
-  Opts = clj_env:get(compiler_opts, default_compiler_options(), Env),
-  clj_compiler:compile_module(clj_module:get_module(Module), Opts),
+  Opts = clj_env:get(compiler_opts, #{}, Env),
+  clj_compiler:module(clj_module:get_module(Module), Opts),
 
   Ast = cerl:ann_abstract(Ann, NameSym),
   push_ast(Ast, State);
@@ -420,12 +420,9 @@ ast(#{op := extend_type} = Expr, State) ->
         clj_module:add_exports(Exports, ImplModule),
         clj_module:add_functions(FunctionsAsts, ImplModule),
 
-        Opts       = clj_env:get( compiler_opts
-                                , default_compiler_options()
-                                , Env
-                                ),
+        Opts       = clj_env:get(compiler_opts, #{}, Env),
 
-        clj_compiler:compile_module(clj_module:get_module(ImplModule), Opts),
+        clj_compiler:module(clj_module:get_module(ImplModule), Opts),
         protocol_add_type(TypeModule, ImplModule, ProtoModule, Opts),
 
         StateAcc2
@@ -992,6 +989,8 @@ ast(#{op := 'try'} = Expr, State) ->
                               ],
   RaiseAst          = cerl:c_primop(cerl:c_atom(raise), [Z, Y]),
 
+  %% A last catch-call clause is mandatory for when none of the previous
+  %% catch clauses were matched.
   CatchAllClause    = cerl:ann_c_clause(Ann, CatchVarsAsts, RaiseAst),
   { ClausesVars
   , CaseAst
@@ -999,7 +998,7 @@ ast(#{op := 'try'} = Expr, State) ->
 
   {Finally, State2} = case FinallyExpr of
                         ?NIL -> {?NIL, State1};
-                        _         -> pop_ast(ast(FinallyExpr, State))
+                        _    -> pop_ast(ast(FinallyExpr, State))
                       end,
 
   VarAst = new_c_var(Ann),
@@ -1476,7 +1475,7 @@ protocol_add_type(TypeModule, ImplModule, ProtocolModule, Opts) ->
                  || F <- Functions0
                ],
   clj_module:add_functions(Functions1, ProtocolModule),
-  clj_compiler:compile_module(clj_module:get_module(ProtocolModule), Opts),
+  clj_compiler:module(clj_module:get_module(ProtocolModule), Opts),
   ok.
 
 -spec protocol_function_add_type( { {atom(), arity()}
@@ -2236,10 +2235,6 @@ ann_from(Env) ->
 -spec to_atom('clojerl.Symbol':type()) -> atom().
 to_atom(Symbol) ->
   binary_to_atom('clojerl.Symbol':name(Symbol), utf8).
-
--spec default_compiler_options() -> clj_compiler:opts().
-default_compiler_options() ->
-  #{erl_flags => [binary, debug_info], output_dir => <<"ebin">>}.
 
 -spec new_c_var(cerl:ann()) -> cerl:c_var().
 new_c_var(Ann) ->

@@ -85,7 +85,7 @@ load(ScriptBase, FailIfNotFound) ->
                        , <<" on code path.">>
                        ]
                      );
-        FullFilePath -> clj_compiler:compile_file(FullFilePath)
+        FullFilePath -> clj_compiler:file(FullFilePath)
       end
   end,
   ?NIL.

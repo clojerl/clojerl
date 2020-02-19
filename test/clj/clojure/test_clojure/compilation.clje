@@ -183,7 +183,7 @@
         (try
           (filelib/ensure_dir tmp)
           (os/putenv #erl"clojerl.compile.path" #erl"tmp")
-          (clj_compiler/compile_file "dummy.clj")
+          (clj_compiler/file "dummy.clj")
           (println "this should still work without throwing an exception" )
           (finally
             (if compile-path
@@ -308,7 +308,7 @@
 
 (defn compiler-fails-at? [row col source]
   (try
-    (clj_compiler/compile source)
+    (clj_compiler/string source)
     nil
     (catch :error e
       (let [e  (str e)
