@@ -91,9 +91,11 @@ load_string(Src) ->
   Env = string(Src),
   clj_env:get(eval, Env).
 
--spec timed_compile(binary(), options(), clj_env:env()) ->
+-spec timed_string(binary(), options(), clj_env:env()) ->
   compiled_modules().
-timed_compile(Src, Opts, Env) when is_binary(Src) ->
+timed_string(Src, Opts, Env) when is_binary(Src) ->
+  File = maps:get(file, Opts, ?NO_SOURCE),
+  ok   = io:format("Compiling ~s~n", [File]),
   clj_utils:time("Total", fun string/3, [Src, Opts, Env]).
 
 -spec string(binary(), options(), clj_env:env()) -> clj_env:env().
@@ -126,7 +128,7 @@ eval1(Form, Opts, Env) ->
   DoEval   = fun() -> copy_proc_dict(ProcDict), do_eval(Form, Opts, Env) end,
   {Exprs, Modules, Env1} = run_monitored(DoEval),
 
-  lists:foreach(compile_module_fun(Opts), Modules),
+  lists:foreach(module_fun(Opts), Modules),
   Value = eval_expressions(Exprs),
   clj_env:put(eval, Value, Env1).
 
@@ -156,11 +158,7 @@ file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
       Opts1 = Opts#{ reader_opts => reader_opts(File)
                    , file        => unicode:characters_to_list(File)
                    },
-      when_time(Opts1, <<"Compiling ", File/binary, "\n">>),
-      CompileFun = case is_time(Opts1) of
-                     true  -> fun timed_compile/3;
-                     false -> fun string/3
-                   end,
+      CompileFun = string_fun(Opts1),
       Env1 = CompileFun(Src, Opts1, Env0),
       case ReturnType of
         compiled_modules -> clj_env:get(compiled_modules, Env1);
@@ -169,6 +167,12 @@ file(File, Opts0, Env0, ReturnType) when is_binary(File) ->
     Error ->
       error(Error)
   end.
+
+-spec string_fun(options()) -> function().
+string_fun(#{time := true}) ->
+  fun timed_string/3;
+string_fun(_) ->
+  fun string/3.
 
 -spec reader_opts(binary()) -> map().
 reader_opts(File) ->
@@ -202,32 +206,31 @@ compile_string(Src, Opts0, Env0) when is_binary(Src) ->
   Opts     = maps:merge(default_options(), Opts0),
 
   #{ clj_flags   := CljFlags
-   , reader_opts := RdrOpts
+   , reader_opts := RdrOpts0
    , time        := Time
    } = Opts,
 
-  File     = maps:get(file, RdrOpts, ?NIL),
-  Mapping  = #{ clj_flags     => CljFlags
-              , compiler_opts => Opts
-              , eval          => ?NIL
-              , location      => #{file => File}
-              },
-  Env1     = clj_env:push(Mapping, Env0),
+  RdrOpts     = RdrOpts0#{time => Time},
+  File        = maps:get(file, RdrOpts, ?NIL),
+  Mapping     = #{ clj_flags     => CljFlags
+                 , compiler_opts => Opts
+                 , eval          => ?NIL
+                 , location      => #{file => File}
+                 },
+  Env1        = clj_env:push(Mapping, Env0),
 
-  AnnEmitEval = case Time of
-                  true  -> fun timed_analyze_emit_eval/2;
-                  false -> fun analyze_emit_eval/2
-                end,
+  %% Resolve function to be used (normal/timed)
+  AnnEmitEval = analyze_emit_eval_fun(Opts),
+  Fun         = module_fun(Opts),
 
   CompileFun =
     fun() ->
         try
           current_file(File),
-          Env2  = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Time, Env1),
+          Env2  = clj_reader:read_fold(AnnEmitEval, Src, RdrOpts, Env1),
           %% Maybe report time
           Time andalso report_time(Env2),
           %% Compile all modules
-          Fun   = compile_module_fun(Opts),
           Beams = [Fun(M) || M <- clj_module:all_modules()],
           Env3  = clj_env:put(compiled_modules, Beams, Env2),
           {shutdown, Env3}
@@ -300,12 +303,15 @@ report_time(Env) ->
   ],
   ok.
 
--spec timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
-timed_analyze_emit_eval(Form, Env) ->
-  check_top_level_do(fun do_timed_analyze_emit_eval/2, Form, Env).
+analyze_emit_eval_fun(#{time := true}) ->
+  fun(Form, Env) ->
+      check_top_level_do(fun timed_analyze_emit_eval/2, Form, Env)
+  end;
+analyze_emit_eval_fun(_) ->
+   fun analyze_emit_eval/2.
 
--spec do_timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
-do_timed_analyze_emit_eval(Form, Env0) ->
+-spec timed_analyze_emit_eval(any(), clj_env:env()) -> clj_env:env().
+timed_analyze_emit_eval(Form, Env0) ->
   {TimeAnn, Env1} = timer:tc(clj_analyzer, analyze, [Form, Env0]),
   Env2 = clj_env:time("Analyzer", TimeAnn, Env1),
 
@@ -342,12 +348,12 @@ check_top_level_do(Fun, Form, Env) ->
       Fun(Expanded, Env)
   end.
 
--spec compile_module_fun(options()) -> function().
-compile_module_fun(#{time := true} = Opts) ->
+-spec module_fun(options()) -> function().
+module_fun(#{time := true} = Opts) ->
   fun(Module) ->
-      clj_utils:time("Compile Forms", fun module/2, [Module, Opts])
+      clj_utils:time("Compile Module", fun module/2, [Module, Opts])
   end;
-compile_module_fun(Opts) ->
+module_fun(Opts) ->
   fun(Module) -> module(Module, Opts) end.
 
 -spec module(cerl:c_module()) -> binary().
@@ -396,16 +402,6 @@ eval_expressions(Expressions, true = _ReplaceExprs) ->
   eval_expressions(ReplacedExprs, false);
 eval_expressions(Expressions, false = _ReplaceExprs) ->
   core_eval:exprs(Expressions).
-
--spec is_time(options()) -> boolean().
-is_time(#{time := Time}) ->
-  Time.
-
--spec when_time(options(), binary()) -> ok.
-when_time(#{time := true}, Message) ->
-  io:format(Message);
-when_time(_, _) ->
-  ok.
 
 -spec output_core(cerl:c_module()) -> ok | {error, term()}.
 output_core(Module) ->

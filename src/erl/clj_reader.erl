@@ -4,7 +4,6 @@
 -include("clojerl_int.hrl").
 
 -export([ read_fold/4
-        , read_fold/5
         , read/1, read/2
         , location_meta/1
         , remove_location/1
@@ -15,42 +14,45 @@
                      , file   => binary() | ?NIL
                      }.
 
--type opts() :: #{ ?OPT_READ_COND => allow | preserve
-                   %% When the value is `allow' then reader conditional will be
+-type opts() :: #{ %% When the value is `allow' then reader conditional will be
                    %% processed. If it is `preserve' then a ReaderConditional
                    %% value will be returned.
-                 , ?OPT_FEATURES  => 'clojerl.Set':type()
+                   ?OPT_READ_COND => allow | preserve
                    %% Set of features available when processing a reader
                    %% conditional.
-                 , ?OPT_EOF       => ?EOFTHROW | ok
+                 , ?OPT_FEATURES  => 'clojerl.Set':type()
                    %% When 'eofthrow' then throw, otherwise return value.
-                 , file           => file:filename_all()
+                 , ?OPT_EOF       => ?EOFTHROW | ok
                    %% Source file being read.
-                 , ?OPT_IO_READER => 'erlang.io.IPushbackReader':type()
+                 , file           => file:filename_all()
+                   %% Keep track of the time spent in the reader
+                 , time           => boolean()
                    %% IReader that should be used when there are no more
                    %% characters to be read from the binary.
+                 , ?OPT_IO_READER => 'erlang.io.IPushbackReader':type()
                  }.
 
 -export_type([location/0, opts/0]).
 
--type state() :: #{ src           => binary()
-                    %% A binary the represents Clojure source code
-                  , opts          => opts()
+-type state() :: #{ %% A binary the represents Clojure source code
+                    src           => binary()
                     %% The options map supplied to the reader.
-                  , forms         => [any()]
+                  , opts          => opts()
                     %% List of forms read (in reverse order).
-                  , pending_forms => [any()]
+                  , forms         => [any()]
                     %% Pending forms to be processed. Used by reader cond.
-                  , env           => clj_env:env()
+                  , pending_forms => [any()]
                     %% The current Clojure environment.
-                  , loc           => {non_neg_integer(), non_neg_integer()}
+                  , env           => clj_env:env()
                     %% Current line and column location.
-                  , bindings      => clj_scope:scope()
+                  , loc           => {non_neg_integer(), non_neg_integer()}
                     %% Current bindings.
-                  , return_on     => char() | ?NIL
+                  , bindings      => clj_scope:scope()
                     %% Used when reading a string
-                  , current       => binary() | ?NIL
+                  , return_on     => char() | ?NIL
                     %% Compiled regexes for numbers
+                  , current       => binary() | ?NIL
+                    %% Pre-compiled regular expressions for numbers
                   , number_types  => [{clj_utils:number_type(), re:mp()}]
                   }.
 
@@ -62,22 +64,20 @@
 
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
-read_fold(Fun, Src, Opts, Env) ->
-  read_fold(Fun, Src, Opts, false, Env).
-
--spec read_fold(read_fold_fun(), binary(), opts(), boolean(), clj_env:env()) ->
-  clj_env:env().
-read_fold(Fun, Src, Opts0, Time, Env) ->
+read_fold(Fun, Src, Opts0, Env) ->
   %% Since we want to consume all of the source, we don't want to
   %% throw when eof is reached.
   Opts    = Opts0#{?OPT_EOF => ok},
   State   = new_state(Src, Env, Opts),
-  ReadFun = case Time of
-              true  -> fun time_read_one_fold/1;
-              false -> fun read_one_fold/1
-            end,
+  ReadFun = read_fun(Opts),
   ok = clj_rt:reset_id(),
   read_fold_loop(Fun, ReadFun, State).
+
+-spec read_fun(opts()) -> function().
+read_fun(#{time := true}) ->
+  fun time_read_one_fold/1;
+read_fun(_) ->
+  fun read_one_fold/1.
 
 -spec time_read_one_fold(state()) -> state().
 time_read_one_fold(State0) ->
