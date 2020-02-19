@@ -12,5 +12,6 @@ install:
   - export PATH=$PWD:$PATH
 script:
   - make ci
+  - make clean compile-native
 notifications:
   email: false
