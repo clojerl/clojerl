@@ -49,6 +49,8 @@
                  }.
 
 -spec ?CONSTRUCTOR(list()) -> type().
+?CONSTRUCTOR([]) ->
+  #{?TYPE => ?M, items => [], meta => ?NIL};
 ?CONSTRUCTOR(Items) when is_list(Items) ->
   #{?TYPE => ?M, items => Items, meta => ?NIL};
 ?CONSTRUCTOR(?NIL) ->
