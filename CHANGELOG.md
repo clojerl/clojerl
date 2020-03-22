@@ -1,6 +1,82 @@
-# Change Log
+# Changelog
 
-## [0.5.1](https://github.com/clojerl/clojerl/tree/0.5.1)
+## [0.6.0](https://github.com/clojerl/clojerl/tree/0.6.0)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.5.1...0.6.0)
+
+**Implemented enhancements:**
+
+- Improve performace of getting from a Clojure map [\#714](https://github.com/clojerl/clojerl/issues/714)
+- case thrown "No match" error - stacktrace doesn't show where the violating code \(plus line number\) is in [\#711](https://github.com/clojerl/clojerl/issues/711)
+- Add line number of where compile error occured [\#706](https://github.com/clojerl/clojerl/issues/706)
+- clj\_module should remove modules when process that loaded them dies [\#704](https://github.com/clojerl/clojerl/issues/704)
+- Output .core file to the same dir as .beam [\#694](https://github.com/clojerl/clojerl/issues/694)
+- Compile to native code [\#310](https://github.com/clojerl/clojerl/issues/310)
+
+**Fixed bugs:**
+
+- Wrong implementation of clojerl.Var:has\_root/1 [\#718](https://github.com/clojerl/clojerl/issues/718)
+- mix-collection-hash and hash of unordered set must be equal [\#702](https://github.com/clojerl/clojerl/issues/702)
+- Create clje.user ns during initialization [\#699](https://github.com/clojerl/clojerl/issues/699)
+- in-ns not available in namespace created with in-ns [\#697](https://github.com/clojerl/clojerl/issues/697)
+- Starting socket REPL server prints unnecessary messages [\#691](https://github.com/clojerl/clojerl/issues/691)
+- Pattern matching ignores existing bound symbol [\#684](https://github.com/clojerl/clojerl/issues/684)
+- Item in lazy sequence processed twice when reducing [\#682](https://github.com/clojerl/clojerl/issues/682)
+- Unreadable error message when calling undefined local function [\#679](https://github.com/clojerl/clojerl/issues/679)
+- sort and sort-by have unexpected behavior with compare function  [\#670](https://github.com/clojerl/clojerl/issues/670)
+- \[\#684\] List of known variable must be ordset when emitting pattern [\#686](https://github.com/clojerl/clojerl/pull/686) ([jfacorro](https://github.com/jfacorro))
+
+**Closed issues:**
+
+- Improve record operations performance [\#720](https://github.com/clojerl/clojerl/issues/720)
+- Improve multimethod performance [\#716](https://github.com/clojerl/clojerl/issues/716)
+- Implement an Erlang Clojure API [\#681](https://github.com/clojerl/clojerl/issues/681)
+- Generate cover reports [\#677](https://github.com/clojerl/clojerl/issues/677)
+- Create issue templates [\#673](https://github.com/clojerl/clojerl/issues/673)
+- Inquiry: can Cider IDE be used with Clojerl? [\#671](https://github.com/clojerl/clojerl/issues/671)
+- State of Clojerl? [\#667](https://github.com/clojerl/clojerl/issues/667)
+- Xenial in Travis CI doesn't support OTP 18 [\#663](https://github.com/clojerl/clojerl/issues/663)
+- Use Erlang macros from Clojerl code [\#662](https://github.com/clojerl/clojerl/issues/662)
+- Better behaviour support [\#661](https://github.com/clojerl/clojerl/issues/661)
+- Refs, Agents and Atoms [\#117](https://github.com/clojerl/clojerl/issues/117)
+- Delay, Future and Promise [\#90](https://github.com/clojerl/clojerl/issues/90)
+
+**Merged pull requests:**
+
+- \[\#310\] Native code compilation [\#722](https://github.com/clojerl/clojerl/pull/722) ([jfacorro](https://github.com/jfacorro))
+- \[\#720\] Record ops performance [\#721](https://github.com/clojerl/clojerl/pull/721) ([jfacorro](https://github.com/jfacorro))
+- \[\#718\] Fix implementation and update tests for clojerl.Var:has\_root/1 [\#719](https://github.com/clojerl/clojerl/pull/719) ([jfacorro](https://github.com/jfacorro))
+- \[\#716\] Improve multimethod performance [\#717](https://github.com/clojerl/clojerl/pull/717) ([jfacorro](https://github.com/jfacorro))
+- \[\#714\] Improve map get performance [\#715](https://github.com/clojerl/clojerl/pull/715) ([jfacorro](https://github.com/jfacorro))
+- \[\#711\] Stack shows wrong location for error [\#713](https://github.com/clojerl/clojerl/pull/713) ([jfacorro](https://github.com/jfacorro))
+- \[\#706\] Report location of error during macroexpansion [\#712](https://github.com/clojerl/clojerl/pull/712) ([jfacorro](https://github.com/jfacorro))
+- Add Dockerfile and publish the official Docker image [\#710](https://github.com/clojerl/clojerl/pull/710) ([abhi18av](https://github.com/abhi18av))
+- \[\#707\] Google group and working link to Slack [\#709](https://github.com/clojerl/clojerl/pull/709) ([jfacorro](https://github.com/jfacorro))
+- \[\#707\] Include link to slack channel [\#708](https://github.com/clojerl/clojerl/pull/708) ([jfacorro](https://github.com/jfacorro))
+- \[\#704\] Remove clj\_module:remove/1, monitor compiling process and cleanup when it dies [\#705](https://github.com/clojerl/clojerl/pull/705) ([jfacorro](https://github.com/jfacorro))
+- \[\#702\] Fix hash implementation for sets [\#703](https://github.com/clojerl/clojerl/pull/703) ([jfacorro](https://github.com/jfacorro))
+- \[\#681\] Clojerl API [\#701](https://github.com/clojerl/clojerl/pull/701) ([jfacorro](https://github.com/jfacorro))
+- \[\#699\] Create clje.user on init [\#700](https://github.com/clojerl/clojerl/pull/700) ([jfacorro](https://github.com/jfacorro))
+- \[\#697\] Always resolve in-ns and ns [\#698](https://github.com/clojerl/clojerl/pull/698) ([jfacorro](https://github.com/jfacorro))
+- \[\#694\] Output .core file to the same dir as specified for .beam [\#695](https://github.com/clojerl/clojerl/pull/695) ([jfacorro](https://github.com/jfacorro))
+- \[\#684\] Use name of shadowed local in pattern matching [\#693](https://github.com/clojerl/clojerl/pull/693) ([jfacorro](https://github.com/jfacorro))
+- \[\#691\] Remove printed messages [\#692](https://github.com/clojerl/clojerl/pull/692) ([jfacorro](https://github.com/jfacorro))
+- Use var specific str function [\#690](https://github.com/clojerl/clojerl/pull/690) ([jfacorro](https://github.com/jfacorro))
+- \[\#117\] Agents [\#688](https://github.com/clojerl/clojerl/pull/688) ([jfacorro](https://github.com/jfacorro))
+- \[\#684\] Bound value not used in pattern matching [\#685](https://github.com/clojerl/clojerl/pull/685) ([jfacorro](https://github.com/jfacorro))
+- \[\#682\] Remove IReduce implementation from clojerl.Cons [\#683](https://github.com/clojerl/clojerl/pull/683) ([jfacorro](https://github.com/jfacorro))
+- \[\#679\] Emit a remote call to the var when the arity used does not exist [\#680](https://github.com/clojerl/clojerl/pull/680) ([jfacorro](https://github.com/jfacorro))
+- \[\#677\] Generate cover reports [\#678](https://github.com/clojerl/clojerl/pull/678) ([jfacorro](https://github.com/jfacorro))
+- \[\#670\] Fix handling of compare functions [\#676](https://github.com/clojerl/clojerl/pull/676) ([jfacorro](https://github.com/jfacorro))
+- \[\#90\] delay future promise [\#675](https://github.com/clojerl/clojerl/pull/675) ([jfacorro](https://github.com/jfacorro))
+- \[\#673\] Add issue templates [\#674](https://github.com/clojerl/clojerl/pull/674) ([jfacorro](https://github.com/jfacorro))
+- \[\#661\] Erlang behaviour tests [\#669](https://github.com/clojerl/clojerl/pull/669) ([jfacorro](https://github.com/jfacorro))
+- \[\#667\] Make clojerl.org link more visible in README [\#668](https://github.com/clojerl/clojerl/pull/668) ([jfacorro](https://github.com/jfacorro))
+- Bump OTP version to 22.1 [\#666](https://github.com/clojerl/clojerl/pull/666) ([robertoaloi](https://github.com/robertoaloi))
+- \[Closes \#661\] behaviours [\#665](https://github.com/clojerl/clojerl/pull/665) ([jfacorro](https://github.com/jfacorro))
+- \[Closes \#663\] Specify trusty [\#664](https://github.com/clojerl/clojerl/pull/664) ([jfacorro](https://github.com/jfacorro))
+
+## [0.5.1](https://github.com/clojerl/clojerl/tree/0.5.1) (2019-07-28)
 
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.5.0...0.5.1)
 
@@ -35,6 +111,7 @@
 - Update rebar3\_clojerl plugin [\#647](https://github.com/clojerl/clojerl/pull/647) ([jfacorro](https://github.com/jfacorro))
 
 ## [0.5.0](https://github.com/clojerl/clojerl/tree/0.5.0) (2019-06-16)
+
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.4.1...0.5.0)
 
 **Implemented enhancements:**
@@ -114,6 +191,7 @@
 - \[Closes \#581\] str for namespaces [\#582](https://github.com/clojerl/clojerl/pull/582) ([jfacorro](https://github.com/jfacorro))
 
 ## [0.4.1](https://github.com/clojerl/clojerl/tree/0.4.1) (2018-11-28)
+
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.4.0...0.4.1)
 
 **Fixed bugs:**
@@ -125,6 +203,7 @@
 - \[Fixes \#579\] Memory leak on clj\_rt:print/1 [\#580](https://github.com/clojerl/clojerl/pull/580) ([jfacorro](https://github.com/jfacorro))
 
 ## [0.4.0](https://github.com/clojerl/clojerl/tree/0.4.0) (2018-11-10)
+
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.3.0...0.4.0)
 
 **Implemented enhancements:**
@@ -172,6 +251,7 @@
 - \[Closes \#547\] letrec workaround ERL-658 [\#548](https://github.com/clojerl/clojerl/pull/548) ([jfacorro](https://github.com/jfacorro))
 
 ## [0.3.0](https://github.com/clojerl/clojerl/tree/0.3.0) (2018-06-30)
+
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.2.0...0.3.0)
 
 **Implemented enhancements:**
@@ -231,6 +311,7 @@
 - \[Closes \#504\] Reimplement protocol dispatch to improve performance [\#505](https://github.com/clojerl/clojerl/pull/505) ([jfacorro](https://github.com/jfacorro))
 
 ## [0.2.0](https://github.com/clojerl/clojerl/tree/0.2.0) (2018-04-08)
+
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.1.0...0.2.0)
 
 **Implemented enhancements:**
@@ -315,6 +396,9 @@
 - \[Closes \#114\] Tagged literal for erl funs [\#442](https://github.com/clojerl/clojerl/pull/442) ([jfacorro](https://github.com/jfacorro))
 
 ## [0.1.0](https://github.com/clojerl/clojerl/tree/0.1.0) (2017-10-23)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/553f5dd2c0d6abcda066dd09adb55428e741a4c5...0.1.0)
+
 **Implemented enhancements:**
 
 - Define Erlang expr\(\) type in the analyzer so that maybe dialyzer can do its magic [\#437](https://github.com/clojerl/clojerl/issues/437)
@@ -762,4 +846,4 @@
 
 
 
-\* *This Change Log was automatically generated by [github_changelog_generator](https://github.com/skywinder/Github-Changelog-Generator)*
+* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*
