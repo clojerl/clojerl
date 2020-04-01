@@ -11,12 +11,12 @@
 
 -spec start(any(), any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_Type, _Args) ->
-  {ok, _} = clojerl_sup:start_link(),
+  {ok, Pid} = clojerl_sup:start_link(),
   ok = stacktrace_depth(),
   ok = io_options(),
   ok = stick(),
   ok = init(),
-  {ok, self()}.
+  {ok, Pid}.
 
 -spec stop(any()) -> ok.
 stop(_State) -> ok.
