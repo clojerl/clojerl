@@ -16,7 +16,8 @@ echo    -pa PATH            Adds PATH to the beginning of the code path
 echo    -pz PATH            Adds PATH to the end of the code path
 echo    -o PATH             Specify output directory for compiled files
 echo    -t, --time          Print the time spent on compiling
-echo    --to-core FILE      Output the Core Erlang representation to FILE
+echo    --to-core           Output the Core Erlang representation to a file
+echo    --to-asm            Output the BEAM assembly representation to a file
 echo    FILES               List of .clje files
 echo.
 echo   init-opt:

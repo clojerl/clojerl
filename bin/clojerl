@@ -11,7 +11,8 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
    -pz PATH            Adds PATH to the end of the code path
    -o PATH             Specify output directory for compiled files
    -t, --time          Print the time spent on compiling
-   --to-core FILE      Output the Core Erlang representation to FILE
+   --to-core           Output the Core Erlang representation to a file
+   --to-asm            Output the BEAM assembly representation to a file
    FILES               List of .clje files
 
   init-opt:

@@ -34,7 +34,7 @@
                     , reader_opts => map()        %% Options for the reader
                     , time        => boolean()    %% Measure and show
                                                   %% compilation times
-                    , output_core => boolean()    %% Output .core code
+                    , output      => binary | asm | core %% Output format
                     , fake        => boolean()    %% Fake modules being compiled
                     }.
 
@@ -53,7 +53,7 @@ default_options() ->
    , file        => ?NO_SOURCE
    , reader_opts => #{}
    , time        => false
-   , output_core => false
+   , output      => binary
    , fake        => false
    }.
 
@@ -361,7 +361,10 @@ module(Module) ->
   module(Module, #{}).
 
 -spec module(cerl:c_module(), options()) -> binary().
-module(Module, #{output_core := true}) ->
+module(Module, #{output := asm}) ->
+  ok = output_asm(Module),
+  ?NO_SOURCE;
+module(Module, #{output := core}) ->
   ok = output_core(Module),
   ?NO_SOURCE;
 module(Module, Opts) ->
@@ -432,6 +435,24 @@ eval_expressions(Expressions, true = _ReplaceExprs) ->
   eval_expressions(ReplacedExprs, false);
 eval_expressions(Expressions, false = _ReplaceExprs) ->
   core_eval:exprs(Expressions).
+
+-spec output_asm(cerl:c_module()) -> ok | {error, term()}.
+output_asm(Module) ->
+  CompilePath = case compile_path(false) of
+                  ?NIL -> ".";
+                  X    -> unicode:characters_to_list(X)
+                end,
+
+  Name       = cerl:concrete(cerl:module_name(Module)),
+  Filename   = atom_to_list(Name),
+  Path       = filename:join(CompilePath, "dummy"),
+  ok         = filelib:ensure_dir(Path),
+  ErlOpts = [from_core, 'S', {outdir, CompilePath}, {source, Filename}],
+
+  case compile:noenv_forms(Module, ErlOpts) of
+    {ok, _, _Asm} -> ok;
+    {error, Errors, Warnings} -> error({Errors, Warnings})
+  end.
 
 -spec output_core(cerl:c_module()) -> ok | {error, term()}.
 output_core(Module) ->

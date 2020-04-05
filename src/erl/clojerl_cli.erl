@@ -26,8 +26,8 @@ start() ->
 default_options() ->
   #{ compile      => false
    , compile_path => "ebin"
-   , compile_opts => #{ time        => false
-                      , output_core => false
+   , compile_opts => #{ time   => false
+                      , output => binary
                       }
    , files        => []
    , main         => false
@@ -49,7 +49,12 @@ parse_args(["-o", CompilePath | Rest], Opts) ->
 parse_args( ["--to-core" | Rest]
           , #{compile_opts := CompileOpts0} = Opts
           ) ->
-  CompileOpts1 = CompileOpts0#{output_core => true},
+  CompileOpts1 = CompileOpts0#{output => core},
+  parse_args(Rest, Opts#{compile_opts := CompileOpts1});
+parse_args( ["--to-asm" | Rest]
+          , #{compile_opts := CompileOpts0} = Opts
+          ) ->
+  CompileOpts1 = CompileOpts0#{output => asm},
   parse_args(Rest, Opts#{compile_opts := CompileOpts1});
 parse_args([Compile | Rest], Opts)
   when Compile =:= "-c"; Compile =:= "--compile" ->
