@@ -173,13 +173,13 @@ special_forms() ->
    , <<"erl-list*">>    => fun parse_erlang_list/2
    , <<"erl-alias*">>   => fun parse_erlang_alias/2
    , <<"erl-on-load*">> => fun parse_on_load/2
+   , <<"behaviour*">>   => fun parse_behaviour/2
 
    , <<"import*">>      => fun parse_import/2
    , <<"new">>          => fun parse_new/2
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"extend-type*">> => fun parse_extend_type/2
-   , <<"behaviour*">>   => fun parse_behaviour/2
 
    , <<".">>            => fun parse_dot/2
 
