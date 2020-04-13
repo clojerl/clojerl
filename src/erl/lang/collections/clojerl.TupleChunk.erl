@@ -96,7 +96,10 @@ do_reduce(Fun, Tuple, End, Current, Acc) ->
   Item = element(Current, Tuple),
   Val = clj_rt:apply(Fun, [Acc, Item]),
   case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> 'clojerl.Reduced':deref(Val);
+    %% This will be part of reducing a ChunkedSeq so we
+    %% return the Reduced value, so the enclosing reducing
+    %% context can detect the reduction is done.
+    true -> Val;
     _ -> do_reduce(Fun, Tuple, End, Current + 1, Val)
   end.
 
