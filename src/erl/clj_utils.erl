@@ -365,7 +365,7 @@ maybe_sys_pre_expand(Code) ->
 %%------------------------------------------------------------------------------
 
 %% @doc Valid integers can be either in decimal, octal, hexadecimal or any
-%%      base specified (e.g. `2R010` is binary for `2`).
+%%      base specified (e.g. `2R010' is binary for `2').
 -spec parse_int([string()]) -> integer() | ?NIL.
 parse_int(Groups) ->
   case int_properties(Groups) of
@@ -427,8 +427,8 @@ do_number_type(Number, [{Type, RE} | Rest], ?NIL) ->
 do_number_type(_, _, Result) ->
   Result.
 
-%% @doc Like lists:nth/2 but returns nil if `Index` is
-%%      larger than the amount of elements in `List`.
+%% @doc Like lists:nth/2 but returns nil if `Index' is
+%%      larger than the amount of elements in `List'.
 nth(Index, List) ->
   case Index =< length(List) of
     true  -> lists:nth(Index, List);
