@@ -177,28 +177,34 @@ alias(_Config) ->
 
 -spec refer(config()) -> result().
 refer(_Config) ->
-  Ns1Sym  = clj_rt:symbol(<<"foo">>),
-  NameSym = clj_rt:symbol(<<"bar">>),
+  Ns1Sym  = clj_rt:symbol(<<"ns1">>),
+  NameSym = clj_rt:symbol(<<"some-var">>),
+
+  ct:comment("Create namespace and intern symbol to create var"),
   Ns1     = 'clojerl.Namespace':find_or_create(Ns1Sym),
   Ns1     = 'clojerl.Namespace':intern(Ns1, NameSym),
-
   Var0    = 'clojerl.Namespace':find_var(NameSym),
 
   Var1    = clj_rt:with_meta(Var0, #{foo => bar}),
   Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var1),
   Var1    = 'clojerl.Namespace':find_var(NameSym),
 
-  ct:comment("Referring the same var form another ns with the same symbol"),
-  Ns2Sym  = clj_rt:symbol(<<"baz">>),
+  ct:comment("Referring same var from same ns"),
+  Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var1),
+
+  ct:comment("Override local var with a var from another ns"),
+  Ns2Sym  = clj_rt:symbol(<<"ns2">>),
   Ns2     = 'clojerl.Namespace':find_or_create(Ns2Sym),
   Ns2     = 'clojerl.Namespace':intern(Ns2, NameSym),
-
   Var2    = 'clojerl.Namespace':find_var(Ns2, NameSym),
-
   Ns1     = 'clojerl.Namespace':refer(Ns1, NameSym, Var2),
 
-  %% This should generate an error
-  ok      = try 'clojerl.Namespace':refer(Ns1, NameSym, Var2), error
+  ct:comment("Override external var with a var from another ns"),
+  Ns3Sym  = clj_rt:symbol(<<"ns3">>),
+  Ns3     = 'clojerl.Namespace':find_or_create(Ns3Sym),
+  Ns3     = 'clojerl.Namespace':intern(Ns3, NameSym),
+  Var3    = 'clojerl.Namespace':find_var(Ns3, NameSym),
+  ok      = try 'clojerl.Namespace':refer(Ns1, NameSym, Var3), error
             catch error:_ -> ok
             end,
 
