@@ -4,6 +4,7 @@
 -include("clojerl_int.hrl").
 
 -behaviour(gen_server).
+
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReference').
@@ -254,7 +255,12 @@ refer(#{?TYPE := ?M} = Ns, Sym, Var) ->
              , <<"Can't refer namespace-qualified symbol">>
              ),
 
-  check_if_override(Ns, Sym, mapping(Ns, Sym), Var),
+  Old = mapping(Ns, Sym),
+
+  case 'clojerl.Var':equiv(Old, Var) of
+    true -> ok;
+    false -> check_if_override(Ns, Sym, Old, Var)
+  end,
 
   gen_server:call(?MODULE, {intern, Ns, Sym, Var}).
 
@@ -452,9 +458,7 @@ check_if_override(Ns, Sym, Old, New) ->
   NsName   = 'clojerl.Symbol':name(name(Ns)),
   OldVarNs = 'clojerl.Var':namespace(Old),
   NewVarNs = 'clojerl.Var':namespace(New),
-
   Message  = [Sym, <<" already refers to: ">>, Old, <<" in namespace: ">>, Ns],
-
   Warn     = not ( OldVarNs =:= NsName
                    orelse NewVarNs =:= <<"clojure.core">>
                  ),
