@@ -42,6 +42,8 @@
       'clojerl.SortedSet':'cons'(Coll, Item);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'cons'(Coll, Item);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'cons'(Coll, Item);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'cons'(Coll, Item);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -50,6 +52,8 @@
       'clojerl.Vector.ChunkedSeq':'cons'(Coll, Item);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'cons'(Coll, Item);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'cons'(Coll, Item);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'cons', Coll);
     X_ when erlang:is_binary(X_) ->
@@ -94,6 +98,8 @@
       'clojerl.SortedSet':'empty'(Coll);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'empty'(Coll);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'empty'(Coll);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'empty'(Coll);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -102,6 +108,8 @@
       'clojerl.Vector.ChunkedSeq':'empty'(Coll);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'empty'(Coll);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'empty'(Coll);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'empty', Coll);
     X_ when erlang:is_binary(X_) ->
@@ -133,10 +141,12 @@
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -161,10 +171,12 @@
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
     'clojerl.StringSeq' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'erlang.List' -> true;
     'erlang.Map' -> true;
     _ -> false

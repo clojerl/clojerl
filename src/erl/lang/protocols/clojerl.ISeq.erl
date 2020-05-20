@@ -41,6 +41,8 @@
       'clojerl.Vector.ChunkedSeq':'first'(Seq);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'first'(Seq);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'first'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'first', Seq);
     X_ when erlang:is_binary(X_) ->
@@ -81,6 +83,8 @@
       'clojerl.Vector.ChunkedSeq':'next'(Seq);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'next'(Seq);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'next'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'next', Seq);
     X_ when erlang:is_binary(X_) ->
@@ -121,6 +125,8 @@
       'clojerl.Vector.ChunkedSeq':'more'(Seq);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'more'(Seq);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'more'(Seq);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'more', Seq);
     X_ when erlang:is_binary(X_) ->
@@ -149,6 +155,7 @@
     #{?TYPE := 'clojerl.TransducerSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -171,6 +178,7 @@
     'clojerl.TransducerSeq' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'erlang.List' -> true;
     _ -> false
   end.

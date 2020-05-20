@@ -25,6 +25,8 @@
       'clojerl.SortedMap':'apply'(Fn, Args);
     #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'apply'(Fn, Args);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'apply'(Fn, Args);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'apply'(Fn, Args);
     #{?TYPE := 'clojerl.TupleMap'} ->
@@ -58,6 +60,7 @@
     #{?TYPE := 'clojerl.Set'} ->  true;
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Var'} ->  true;
@@ -79,6 +82,7 @@
     'clojerl.Set' -> true;
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.Symbol' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Var' -> true;

@@ -86,6 +86,7 @@
                             pop           [Stack]]
     clojerl.IStringable    [str           [X]]
     clojerl.IType          [_IType        [_]] ;; marker protocol
+    clojerl.IVector        [_IVector      [_]] ;; marker protocol
 
     ;; Erlang IO protocols
     erlang.io.IWriter         [write     [Writer Str]
@@ -114,7 +115,8 @@
   '#{clojerl.IRecord
      clojerl.ISequential
      clojerl.ISorted
-     clojerl.IType})
+     clojerl.IType
+     clojerl.IVector})
 
 (defn marker-protocol? [proto-name]
   (marker-protocols proto-name))

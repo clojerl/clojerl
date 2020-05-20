@@ -350,6 +350,11 @@
   [v n combinef reducef]
   (foldvec v n combinef reducef))
 
+ clojerl.Subvec
+ (coll-fold
+  [v n combinef reducef]
+  (foldvec v n combinef reducef))
+
  clojerl.Map
  (coll-fold
   [m n combinef reducef]

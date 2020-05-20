@@ -217,6 +217,10 @@
   (print-meta v w)
   (print-sequential "[" pr-on " " "]" v w))
 
+(defmethod print-method clojerl.Subvec [v, ^IWriter w]
+  (print-meta v w)
+  (print-sequential "[" pr-on " " "]" v w))
+
 (defn- print-prefix-map [prefix m print-one w]
   (print-sequential
     (str prefix "{")

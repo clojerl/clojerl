@@ -140,6 +140,7 @@
 
 (use-method simple-dispatch clojerl.List pprint-list)
 (use-method simple-dispatch clojerl.Vector pprint-vector)
+(use-method simple-dispatch clojerl.Subvec pprint-vector)
 (use-method simple-dispatch clojerl.Map pprint-map)
 (use-method simple-dispatch clojerl.SortedMap pprint-map)
 (use-method simple-dispatch clojerl.Set pprint-set)
@@ -454,6 +455,7 @@
 
 ;; The following are all exact copies of simple-dispatch
 (use-method code-dispatch clojerl.Vector pprint-vector)
+(use-method code-dispatch clojerl.Subvec pprint-vector)
 (use-method code-dispatch clojerl.Map pprint-map)
 (use-method code-dispatch clojerl.SortedMap pprint-map)
 (use-method code-dispatch clojerl.Set pprint-set)

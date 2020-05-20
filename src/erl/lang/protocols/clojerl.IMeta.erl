@@ -46,6 +46,8 @@
       'clojerl.SortedMap':'meta'(X);
     #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'meta'(X);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'meta'(X);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'meta'(X);
     #{?TYPE := 'clojerl.TupleMap'} ->
@@ -58,6 +60,8 @@
       'clojerl.Vector.ChunkedSeq':'meta'(X);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'meta'(X);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'meta'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'meta', X);
     X_ when erlang:is_binary(X_) ->
@@ -102,6 +106,8 @@
       'clojerl.SortedMap':'with_meta'(X, Meta);
     #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'with_meta'(X, Meta);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'with_meta'(X, Meta);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'with_meta'(X, Meta);
     #{?TYPE := 'clojerl.TupleMap'} ->
@@ -114,6 +120,8 @@
       'clojerl.Vector.ChunkedSeq':'with_meta'(X, Meta);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'with_meta'(X, Meta);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'with_meta'(X, Meta);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'with_meta', X);
     X_ when erlang:is_binary(X_) ->
@@ -143,12 +151,14 @@
     #{?TYPE := 'clojerl.Set'} ->  true;
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Var'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -173,11 +183,13 @@
     'clojerl.Set' -> true;
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.Symbol' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Var' -> true;
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     _ -> false
   end.

@@ -178,7 +178,7 @@
   ^{:arglists '([x])
     :doc "Return true if x is a Vector"
     :added "1.0"}
-  vector? (fn vector? [x] (instance? clojerl.Vector x)))
+  vector? (fn vector? [x] (satisfies? clojerl.IVector x)))
 
 (def
   ^{:arglists '([x])

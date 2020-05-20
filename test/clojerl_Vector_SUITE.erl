@@ -18,7 +18,6 @@
         , seq/1
         , equiv/1
         , cons/1
-        , subvec/1
         , stack/1
         , reduce/1
         , associative/1
@@ -185,16 +184,6 @@ cons(_Config) ->
 
   2    = clj_rt:count(TwoVector),
   true = clj_rt:equiv(TwoVector, [1, 2]),
-
-  {comments, ""}.
-
--spec subvec(config()) -> result().
-subvec(_Config) ->
-  OneToTen = clj_rt:vector(lists:seq(1, 10)),
-
-  ct:comment("Get subvec from 1 to 4, 0-based indexes"),
-  TwoToFive = 'clojerl.Vector':subvec(OneToTen, 1, 4),
-  [2, 3, 4] = clj_rt:to_list(TwoToFive),
 
   {comments, ""}.
 

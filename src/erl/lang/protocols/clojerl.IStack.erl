@@ -18,6 +18,8 @@
   case Stack of
     #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'peek'(Stack);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'peek'(Stack);
     #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'peek'(Stack);
     #{?TYPE := _} ->
@@ -38,6 +40,8 @@
   case Stack of
     #{?TYPE := 'clojerl.List'} ->
       'clojerl.List':'pop'(Stack);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'pop'(Stack);
     #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'pop'(Stack);
     #{?TYPE := _} ->
@@ -57,6 +61,7 @@
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := 'clojerl.List'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
@@ -69,6 +74,7 @@
 ?EXTENDS(X) ->
   case X of
     'clojerl.List' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.Vector' -> true;
     'erlang.List' -> true;
     _ -> false

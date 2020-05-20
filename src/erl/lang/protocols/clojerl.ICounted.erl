@@ -41,6 +41,8 @@
       'clojerl.SortedSet':'count'(Seq);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'count'(Seq);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'count'(Seq);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'count'(Seq);
     #{?TYPE := 'clojerl.TupleMap'} ->
@@ -51,6 +53,8 @@
       'clojerl.Vector.ChunkedSeq':'count'(Seq);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'count'(Seq);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'count'(Seq);
     #{?TYPE := 'erlang.io.StringWriter'} ->
       'erlang.io.StringWriter':'count'(Seq);
     #{?TYPE := _} ->
@@ -88,11 +92,13 @@
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleChunk'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := 'erlang.io.StringWriter'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  true;
@@ -120,11 +126,13 @@
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
     'clojerl.StringSeq' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TupleChunk' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'erlang.io.StringWriter' -> true;
     'clojerl.String' -> true;
     'clojerl.BitString' -> true;

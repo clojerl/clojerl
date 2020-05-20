@@ -30,12 +30,16 @@
       'clojerl.Range':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'reduce'(Coll, Fun);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'reduce'(Coll, Fun);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
     X_ when erlang:is_binary(X_) ->
@@ -66,12 +70,16 @@
       'clojerl.Range':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'reduce'(Coll, Fun, Init);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
       'clojerl.Vector.ChunkedSeq':'reduce'(Coll, Fun, Init);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'reduce'(Coll, Fun, Init);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'reduce', Coll);
     X_ when erlang:is_binary(X_) ->
@@ -95,9 +103,11 @@
     #{?TYPE := 'clojerl.List'} ->  true;
     #{?TYPE := 'clojerl.Range'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleChunk'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -115,9 +125,11 @@
     'clojerl.List' -> true;
     'clojerl.Range' -> true;
     'clojerl.Repeat' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TupleChunk' -> true;
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'erlang.List' -> true;
     _ -> false
   end.
