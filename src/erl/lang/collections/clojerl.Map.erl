@@ -251,16 +251,24 @@ hash(#{?TYPE := ?M} = Map) ->
 %% clojerl.IKVReduce
 
 'kv-reduce'(#{?TYPE := ?M, map := Map}, Fun, Init) ->
-  ListFold = fun({K, V}, Acc) ->
-                 'clojerl.IFn':apply(Fun, [Acc, K, V])
-             end,
-  MapFold  = fun
-               (_, {K, V}, Acc) ->
-                 'clojerl.IFn':apply(Fun, [Acc, K, V]);
-               (_, KVs, Acc) ->
-                 lists:foldl(ListFold, Acc, KVs)
-             end,
-  maps:fold(MapFold, Init, Map).
+  Ref = make_ref(),
+  ListFold =
+    fun({K, V}, Acc0) ->
+        Acc = 'clojerl.IFn':apply(Fun, [Acc0, K, V]),
+        case 'clojerl.Reduced':is_reduced(Acc) of
+          true  -> throw({reduced, Ref, Acc});
+          false -> Acc
+        end
+    end,
+  MapFold =
+    fun
+      (_, {K, V}, Acc) -> ListFold({K, V}, Acc);
+      (_, KVs, Acc)    -> lists:foldl(ListFold, Acc, KVs)
+    end,
+  try maps:fold(MapFold, Init, Map)
+  catch throw:{reduced, Ref, Acc} ->
+      'clojerl.Reduced':deref(Acc)
+  end.
 
 %% clojerl.ILookup
 

@@ -220,10 +220,18 @@ hash(#{?TYPE := ?M, vals := Vals}) ->
 %% clojerl.IKVReduce
 
 'kv-reduce'(#{?TYPE := ?M, vals := Vals}, Fun, Init) ->
-  F = fun(K, V, Acc) ->
-          clj_rt:apply(Fun, [Acc, K, V])
+  Ref = make_ref(),
+  F = fun(K, V, Acc0) ->
+          Acc = clj_rt:apply(Fun, [Acc0, K, V]),
+          case 'clojerl.Reduced':is_reduced(Acc) of
+            true  -> throw({reduced, Ref, Acc});
+            false -> Acc
+          end
       end,
-  rbdict:fold(F, Init, Vals).
+  try rbdict:fold(F, Init, Vals)
+  catch throw:{reduced, Ref, Acc} ->
+      'clojerl.Reduced':deref(Acc)
+  end.
 
 %% clojerl.ILookup
 

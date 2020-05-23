@@ -244,6 +244,7 @@ hash(#{?TYPE := ?M} = Map) ->
 %% clojerl.IKVReduce
 
 'kv-reduce'(#{?TYPE := ?M, tuple := Tuple}, Fun, Init) ->
+  Ref = make_ref(),
   Size = size(Tuple),
   Fold = fun
            Fold(N, Acc) when N > Size ->
@@ -252,9 +253,15 @@ hash(#{?TYPE := ?M} = Map) ->
              K = erlang:element(N, Tuple),
              V = erlang:element(N + 1, Tuple),
              Acc = 'clojerl.IFn':apply(Fun, [Acc0, K, V]),
-             Fold(N + 2, Acc)
+             case 'clojerl.Reduced':is_reduced(Acc) of
+               true  -> throw({reduced, Ref, Acc});
+               false -> Fold(N + 2, Acc)
+             end
          end,
-  Fold(1, Init).
+  try   Fold(1, Init)
+  catch throw:{reduced, Ref, Acc} ->
+      'clojerl.Reduced':deref(Acc)
+  end.
 
 %% clojerl.ILookup
 

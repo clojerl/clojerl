@@ -141,10 +141,18 @@ hash(Map) ->
 %% clojerl.IKVReduce
 
 'kv-reduce'(Map, Fun, Init) ->
-  F = fun(K, V, Acc) ->
-          clj_rt:apply(Fun, [Acc, K, V])
+  Ref = make_ref(),
+  F = fun(K, V, Acc0) ->
+          Acc = clj_rt:apply(Fun, [Acc0, K, V]),
+          case 'clojerl.Reduced':is_reduced(Acc) of
+            true  -> throw({reduced, Ref, Acc});
+            false -> Acc
+          end
       end,
-  maps:fold(F, Init, Map).
+  try maps:fold(F, Init, Map)
+  catch throw:{reduced, Ref, Acc} ->
+      'clojerl.Reduced':deref(Acc)
+  end.
 
 %% clojerl.ILookup
 
