@@ -12,6 +12,7 @@
 -behavior('clojerl.IErl').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IKVReduce').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
@@ -35,6 +36,7 @@
 -export(['->erl'/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export(['kv-reduce'/3]).
 -export([ get/2
         , get/3
         ]).
@@ -245,6 +247,20 @@ empty(_) -> ?CONSTRUCTOR([]).
 
 hash(#{?TYPE := ?M} = Map) ->
   clj_murmur3:unordered(Map).
+
+%% clojerl.IKVReduce
+
+'kv-reduce'(#{?TYPE := ?M, map := Map}, Fun, Init) ->
+  ListFold = fun({K, V}, Acc) ->
+                 'clojerl.IFn':apply(Fun, [Acc, K, V])
+             end,
+  MapFold  = fun
+               (_, {K, V}, Acc) ->
+                 'clojerl.IFn':apply(Fun, [Acc, K, V]);
+               (_, KVs, Acc) ->
+                 lists:foldl(ListFold, Acc, KVs)
+             end,
+  maps:fold(MapFold, Init, Map).
 
 %% clojerl.ILookup
 

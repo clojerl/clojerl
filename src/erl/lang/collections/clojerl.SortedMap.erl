@@ -10,6 +10,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IKVReduce').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
@@ -31,6 +32,7 @@
 -export([equiv/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export(['kv-reduce'/3]).
 -export([ get/2
         , get/3
         ]).
@@ -58,7 +60,7 @@
 
 -type type() :: #{ ?TYPE => ?M
                  , keys  => mappings()
-                 , vals  => any()
+                 , vals  => rbdict:dict()
                  , count => non_neg_integer()
                  , meta  => ?NIL | any()
                  }.
@@ -214,6 +216,14 @@ empty(#{?TYPE := ?M, vals := Vals}) ->
 
 hash(#{?TYPE := ?M, vals := Vals}) ->
   clj_murmur3:unordered(rbdict:to_list(Vals)).
+
+%% clojerl.IKVReduce
+
+'kv-reduce'(#{?TYPE := ?M, vals := Vals}, Fun, Init) ->
+  F = fun(K, V, Acc) ->
+          clj_rt:apply(Fun, [Acc, K, V])
+      end,
+  rbdict:fold(F, Init, Vals).
 
 %% clojerl.ILookup
 

@@ -59,7 +59,7 @@
   ([f coll] (reduce f (f) coll))
   ([f init coll]
    (cond
-     (map? coll) (clojure.core.protocols/kv-reduce coll f init)
+     (map? coll) (.kv-reduce ^clojerl.IKVReduce coll f init)
      (nil? coll) init
      :else (.reduce ^clojerl.IReduce coll f init))))
 

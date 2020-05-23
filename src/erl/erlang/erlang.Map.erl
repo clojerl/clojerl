@@ -8,6 +8,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IKVReduce').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.ISeqable').
@@ -24,6 +25,7 @@
 -export([ equiv/2]).
 -export([ apply/2]).
 -export([ hash/1]).
+-export(['kv-reduce'/3]).
 -export([ get/2
         , get/3
         ]).
@@ -40,6 +42,8 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.IAssociative
+
 contains_key(Map, Key) ->
   maps:is_key(Key, Map).
 
@@ -54,7 +58,11 @@ entry_at(Map, Key) ->
 assoc(Map, Key, Value) ->
   Map#{Key => Value}.
 
+%% clojerl.ICounted
+
 count(Map) -> maps:size(Map).
+
+%% clojerl.IColl
 
 cons(Map, X) ->
   IsVector = clj_rt:'vector?'(X),
@@ -70,8 +78,6 @@ cons(Map, X) ->
     _ ->
       throw(<<"Can't conj something that is not a key/value pair to a map.">>)
   end.
-
-%% clojerl.IColl
 
 empty(_) -> #{}.
 
@@ -127,14 +133,28 @@ apply(_, Args) ->
   CountBin = integer_to_binary(length(Args)),
   throw(<<"Wrong number of args for map, got: ", CountBin/binary>>).
 
+%% clojerl.IHash
+
 hash(Map) ->
   clj_murmur3:unordered(Map).
+
+%% clojerl.IKVReduce
+
+'kv-reduce'(Map, Fun, Init) ->
+  F = fun(K, V, Acc) ->
+          clj_rt:apply(Fun, [Acc, K, V])
+      end,
+  maps:fold(F, Init, Map).
+
+%% clojerl.ILookup
 
 get(Map, Key) ->
   get(Map, Key, ?NIL).
 
 get(Map, Key, NotFound) ->
   maps:get(Key, Map, NotFound).
+
+%% clojerl.IMap
 
 keys(Map) ->
   case maps:size(Map) of
@@ -151,8 +171,12 @@ vals(Map) ->
 without(Map, Key) ->
   maps:remove(Key, Map).
 
+%% clojerl.IStringable
+
 str(Map) when is_map(Map) ->
   clj_rt:print_str(Map).
+
+%% clojerl.ISeqable
 
 seq(Map) when is_map(Map) ->
 case maps:to_list(Map) of

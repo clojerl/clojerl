@@ -12,6 +12,7 @@
 -behavior('clojerl.IErl').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IKVReduce').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
@@ -35,6 +36,7 @@
 -export(['->erl'/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export(['kv-reduce'/3]).
 -export([ get/2
         , get/3
         ]).
@@ -238,6 +240,21 @@ empty(_) -> ?CONSTRUCTOR([]).
 
 hash(#{?TYPE := ?M} = Map) ->
   clj_murmur3:unordered(Map).
+
+%% clojerl.IKVReduce
+
+'kv-reduce'(#{?TYPE := ?M, tuple := Tuple}, Fun, Init) ->
+  Size = size(Tuple),
+  Fold = fun
+           Fold(N, Acc) when N > Size ->
+             Acc;
+           Fold(N, Acc0) ->
+             K = erlang:element(N, Tuple),
+             V = erlang:element(N + 1, Tuple),
+             Acc = 'clojerl.IFn':apply(Fun, [Acc0, K, V]),
+             Fold(N + 2, Acc)
+         end,
+  Fold(1, Init).
 
 %% clojerl.ILookup
 

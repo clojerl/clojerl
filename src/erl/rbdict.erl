@@ -59,7 +59,9 @@
 
 -export([default_compare/2]).
 
--type n() :: {empty, fun()} | {r | b, n(), any(), any(), n(), fun()}.
+-type dict() :: {empty, fun()} | {r | b, dict(), any(), any(), dict(), fun()}.
+
+-export_type([dict/0]).
 
 %% The algorithms here are taken directly from Okasaki and Rbset in
 %% ML/Scheme. The interface is compatible with the standard dict
