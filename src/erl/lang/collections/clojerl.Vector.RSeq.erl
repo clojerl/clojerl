@@ -30,7 +30,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -114,10 +113,6 @@ more(#{?TYPE := ?M, index := Index}) when Index =< 0 ->
   [];
 more(#{?TYPE := ?M, index := Index} = X) ->
   X#{index => Index - 1}.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.ISeqable
 

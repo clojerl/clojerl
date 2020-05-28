@@ -43,7 +43,6 @@
 -export([ reduce/2
         , reduce/3
         ]).
--export(['_'/1]).
 -export([ nth/2
         , nth/3
         ]).
@@ -184,10 +183,6 @@ rseq(#{?TYPE := ?M, array := Array}) ->
     0 -> ?NIL;
     _ -> 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, clj_vector:size(Array) - 1)
   end.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.IIndexed
 

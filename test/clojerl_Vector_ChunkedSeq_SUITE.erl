@@ -195,8 +195,6 @@ to_erl(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Vector.ChunkedSeq':'_'(?NIL),
-
   VectorMeta  = clj_rt:with_meta(chunked_seq(64), #{a => 1}),
   #{a := 1} = clj_rt:meta(VectorMeta),
 

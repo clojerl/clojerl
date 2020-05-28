@@ -152,8 +152,6 @@ to_erl(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Cons':'_'(?NIL),
-
   Cons = range(2, 2),
   []   = clj_rt:empty(Cons),
 

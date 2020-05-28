@@ -46,7 +46,6 @@
 -export([ seq/1
         , to_list/1
         ]).
--export(['_'/1]).
 -export([str/1]).
 
 -import( clj_hash_collision
@@ -293,10 +292,6 @@ to_list(#{?TYPE := ?M, vals := Vals}) ->
                   clj_rt:vector([Key, Val])
               end,
   lists:map(VectorFun, rbdict:to_list(Vals)).
-
-%% clojerl.ISorted
-
-'_'(_) -> ?NIL.
 
 %% clojerl.IStringable
 

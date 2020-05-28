@@ -146,8 +146,6 @@ cons(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.StringSeq':'_'(?NIL),
-
   StringSeq = clj_rt:seq(<<"foo">>),
   []        = clj_rt:empty(StringSeq),
 

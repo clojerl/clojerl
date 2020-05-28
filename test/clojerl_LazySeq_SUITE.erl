@@ -214,8 +214,6 @@ infinite_seq(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.LazySeq':'_'(?NIL),
-
   LazySeq   = range(2, 2),
   EmptyList = clj_rt:empty(LazySeq),
   EmptyList = [],

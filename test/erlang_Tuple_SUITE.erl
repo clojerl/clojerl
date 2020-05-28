@@ -15,7 +15,6 @@
         , nth/1
         , seq/1
         , str/1
-        , complete_coverage/1
         ]).
 
 -spec all() -> [atom()].
@@ -112,11 +111,5 @@ str(_Config) ->
 
   EmptyTuple = {},
   <<"#erl[]">> = clj_rt:str(EmptyTuple),
-
-  {comments, ""}.
-
--spec complete_coverage(config()) -> result().
-complete_coverage(_Config) ->
-  ?NIL = 'erlang.Tuple':'_'(?NIL),
 
   {comments, ""}.

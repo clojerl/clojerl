@@ -24,7 +24,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -88,10 +87,6 @@ next(#{?TYPE := ?M, str := <<_/utf8, Rest/binary>>} = Seq) ->
 more(#{?TYPE := ?M, str := <<>>}) -> [];
 more(#{?TYPE := ?M, str := <<_/utf8, Rest/binary>>} = Seq) ->
   Seq#{str => Rest}.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.ISeqable
 

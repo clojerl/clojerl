@@ -38,7 +38,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -175,10 +174,6 @@ more(#{?TYPE := ?M, chunk := Chunk0, more := More} = ChunkedCons) ->
     false  ->
       chunked_more(ChunkedCons)
   end.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.ISeqable
 

@@ -9,8 +9,8 @@
 -export([?SATISFIES/1]).
 -export([?EXTENDS/1]).
 
--callback '_'(any()) -> any().
--optional_callbacks(['_'/1]).
+-callback '_IRecord'(any()) -> any().
+-optional_callbacks(['_IRecord'/1]).
 
 ?SATISFIES(X) ->
   case X of

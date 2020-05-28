@@ -20,7 +20,6 @@
 -export([ seq/1
         , to_list/1
         ]).
--export(['_'/1]).
 -export([str/1]).
 
 -type type() :: #{ ?TYPE     => ?M
@@ -100,10 +99,6 @@ seq(#{?TYPE := ?M} = X) ->
 
 to_list(#{?TYPE := ?M} = X) ->
   do_to_list(seq(X), []).
-
-%% clojerl.ISequential
-
-'_'(#{?TYPE := ?M}) -> ok.
 
 %% clojerl.IStringable
 

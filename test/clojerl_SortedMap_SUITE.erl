@@ -255,8 +255,6 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
-  ?NIL  = 'clojerl.SortedMap':'_'([]),
-
   {comments, ""}.
 
 -spec sorted_map(list()) -> 'clojerl.Sorted':type().

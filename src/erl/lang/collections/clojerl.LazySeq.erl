@@ -33,7 +33,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -140,8 +139,6 @@ more(#{?TYPE := ?M, fn := Fn}) ->
     #{?TYPE := ?M} = LazySeq -> more(LazySeq);
     Seq -> clj_rt:rest(Seq)
   end.
-
-'_'(_) -> ?NIL.
 
 seq(#{?TYPE := ?M, fn := Fn}) ->
   case Fn() of

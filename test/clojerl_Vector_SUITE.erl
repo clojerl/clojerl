@@ -288,8 +288,6 @@ to_erl(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Vector':'_'(?NIL),
-
   NotEmptyVector = clj_rt:vector([a, b, 2, 3]),
   EmptyVector    = clj_rt:empty(NotEmptyVector),
   EmptyVector    = clj_rt:vector([]),

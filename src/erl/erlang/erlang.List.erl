@@ -30,7 +30,6 @@
         , more/1
         , next/1
         ]).
--export(['_'/1]).
 -export([ peek/1
         , pop/1
         ]).
@@ -95,8 +94,6 @@ more([_ | Rest]) -> Rest.
 next([]) -> ?NIL;
 next([_ | []]) -> ?NIL;
 next([_ | Rest]) -> Rest.
-
-'_'(_) -> ?NIL.
 
 peek([]) -> ?NIL;
 peek([X | _]) -> X.

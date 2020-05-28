@@ -151,8 +151,6 @@ to_erl(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Vector.RSeq':'_'(?NIL),
-
   RSeqMeta  = clj_rt:with_meta(rseq(64), #{a => 1}),
   #{a := 1} = clj_rt:meta(RSeqMeta),
 

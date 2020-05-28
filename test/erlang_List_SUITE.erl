@@ -212,8 +212,6 @@ reduce(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'erlang.List':'_'(?NIL),
-
   NotEmptyList = [a, b, 2, 3],
   EmptyList    = clj_rt:empty(NotEmptyList),
   EmptyList    = [],

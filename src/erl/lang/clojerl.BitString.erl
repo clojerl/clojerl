@@ -10,7 +10,6 @@
 
 -export([count/1]).
 -export([hash/1]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -25,8 +24,6 @@ count(BitString) ->
 
 hash(BitString) ->
   erlang:phash2(BitString).
-
-'_'(_) -> ?NIL.
 
 seq(<<>>) -> ?NIL;
 seq(BitString) -> bitstring_to_list(BitString).
