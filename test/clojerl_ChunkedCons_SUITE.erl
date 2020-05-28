@@ -173,7 +173,7 @@ reduce(_Config) ->
                  (X, _) -> 'clojerl.Reduced':?CONSTRUCTOR(X)
                end,
 
-  10 = 'clojerl.IReduce':reduce(ChunkedCons2, PlusMaxFun),
+  10 = clj_rt:deref('clojerl.IReduce':reduce(ChunkedCons2, PlusMaxFun)),
 
   {comments, ""}.
 

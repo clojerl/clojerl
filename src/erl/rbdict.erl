@@ -59,7 +59,9 @@
 
 -export([default_compare/2]).
 
--type n() :: {empty, fun()} | {r | b, n(), any(), any(), n(), fun()}.
+-type dict() :: {empty, fun()} | {r | b, dict(), any(), any(), dict(), fun()}.
+
+-export_type([dict/0]).
 
 %% The algorithms here are taken directly from Okasaki and Rbset in
 %% ML/Scheme. The interface is compatible with the standard dict
@@ -379,7 +381,7 @@ unbalright(b, A, Xk, Xv, {r, {b, B, Yk, Yv, C, F}, Zk, Zv, D, F}, F) ->
 
 fold(_, Acc, {empty, _}) -> Acc;
 fold(F, Acc, {_, A, Xk, Xv, B, _}) ->
-  fold(F, F(Xk, Xv, fold(F, Acc, B)), A).
+  fold(F, F(Xk, Xv, fold(F, Acc, A)), B).
 
 %% map(Fun, Dict) -> Dict.
 

@@ -120,23 +120,38 @@ with_meta(#{?TYPE := ?M} = List, Metadata) ->
 
 %% clojerl.IReduce
 
-reduce(#{?TYPE := ?M} = ChunkedCons, F) ->
-  case to_list(ChunkedCons) of
-    [] -> clj_rt:apply(F, []);
-    [X | Rest] -> do_reduce(F, X, Rest)
+reduce(#{?TYPE := ?M, chunk := Chunk, more := More}, F) ->
+  case 'clojerl.TupleChunk':count(Chunk) of
+    0 ->
+      reduce_more(More, F);
+    1 ->
+      Init = 'clojerl.TupleChunk':nth(Chunk, 0),
+      reduce_more(More, F, Init);
+    _ ->
+      Init = 'clojerl.TupleChunk':reduce(Chunk, F),
+      reduce_more(More, F, Init)
   end.
 
-reduce(#{?TYPE := ?M} = ChunkedCons, F, Init) ->
-  do_reduce(F, Init, to_list(ChunkedCons)).
+reduce(#{?TYPE := ?M, chunk := Chunk, more := More}, F, Init) ->
+  case 'clojerl.TupleChunk':count(Chunk) of
+    0 ->
+      reduce_more(More, F, Init);
+    _ ->
+      X = 'clojerl.TupleChunk':reduce(Chunk, F, Init),
+      reduce_more(More, F, X)
+  end.
 
-do_reduce(F, Acc, [Chunk | Items]) ->
-  Val = clj_rt:apply(F, [Acc, Chunk]),
-  case 'clojerl.Reduced':is_reduced(Val) of
-    true  -> 'clojerl.Reduced':deref(Val);
-    false -> do_reduce(F, Val, Items)
-  end;
-do_reduce(_F, Acc, []) ->
-  Acc.
+reduce_more(More, F) ->
+  case clj_rt:seq(More) of
+    ?NIL -> clj_rt:apply(F, []);
+    Seq -> 'clojerl.IReduce':reduce(Seq, F)
+  end.
+
+reduce_more(More, F, Init) ->
+  case clj_rt:seq(More) of
+    ?NIL -> Init;
+    Seq -> 'clojerl.IReduce':reduce(Seq, F, Init)
+  end.
 
 %% clojerl.ISeq
 

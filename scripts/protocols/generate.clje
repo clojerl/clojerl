@@ -56,6 +56,7 @@
     clojerl.IHash          [hash          [X]]
     clojerl.IIndexed       [nth           [Coll N]
                             nth           [Coll N NotFound]]
+    clojerl.IKVReduce      [kv-reduce     [Coll Fun Init]]
     clojerl.ILookup        [get           [X Key]
                             get           [X Key NotFound]]
     clojerl.IMap           [keys          [Map]

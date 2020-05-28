@@ -5246,7 +5246,7 @@
 (load "core_print")
 (load "core_deftype")
 ;; (load "gvec")
-(load "core/protocols")
+;; (load "core/protocols")
 (load "instant")
 
 (defprotocol Inst
@@ -5275,15 +5275,11 @@
   {:added "1.9"}
   [x] (instance? erlang.util.UUID x))
 
-(defn reduce ([f coll]) ([f val coll]))
-
+; simple reduce based on seqs, used as default
 (defn- seq-reduce
   ([f coll]
     (if-let [s (seq coll)]
-      (let [nval (reduce f (first s) (next s))]
-        (if (reduced? nval)
-          @nval
-          nval))
+      (reduce f (first s) (next s))
       (f)))
   ([f val coll]
     (loop [val val, coll (seq coll)]
@@ -5314,18 +5310,6 @@
      (clojerl.IReduce/reduce coll f val)
      (seq-reduce f val coll))))
 
-(extend-protocol clojure.core.protocols/IKVReduce
-  nil
-  (kv-reduce
-    [_ f init]
-    init)
-
-  ;;slow path default
-  clojerl.Map
-  (kv-reduce
-    [amap f init]
-    (reduce (fn [ret [k v]] (f ret k v)) init amap)))
-
 (defn reduce-kv
   "Reduces an associative collection. f should be a function of 3
   arguments. Returns the result of applying f to init, the first key
@@ -5335,7 +5319,9 @@
   where the keys will be the ordinals."
   {:added "1.4"}
   ([f init coll]
-   (clojure.core.protocols/kv-reduce coll f init)))
+   (if-not (nil? coll)
+     (.kv-reduce ^clojerl.IKVReduce coll f init)
+     init)))
 
 (defn completing
   "Takes a reducing function f of 2 args and returns a fn suitable for

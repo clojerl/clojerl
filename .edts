@@ -1,7 +1,0 @@
-:name "clojerl"
-:start-command "erl -sname clojerl-edts -pa _build/default/lib/clojerl/ebin -pa ebin -s clojerl"
-:node-name "clojerl-edts"
-:node-sname "clojerl-edts"
-:lib-dirs '("src" "test" "_build/default/lib")
-:app-include-dirs '("include")
-:erlang-cookie "clojerl"

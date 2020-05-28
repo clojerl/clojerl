@@ -10,6 +10,7 @@
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IKVReduce').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IMap').
 -behavior('clojerl.IMeta').
@@ -31,6 +32,7 @@
 -export([equiv/2]).
 -export([apply/2]).
 -export([hash/1]).
+-export(['kv-reduce'/3]).
 -export([ get/2
         , get/3
         ]).
@@ -58,7 +60,7 @@
 
 -type type() :: #{ ?TYPE => ?M
                  , keys  => mappings()
-                 , vals  => any()
+                 , vals  => rbdict:dict()
                  , count => non_neg_integer()
                  , meta  => ?NIL | any()
                  }.
@@ -214,6 +216,22 @@ empty(#{?TYPE := ?M, vals := Vals}) ->
 
 hash(#{?TYPE := ?M, vals := Vals}) ->
   clj_murmur3:unordered(rbdict:to_list(Vals)).
+
+%% clojerl.IKVReduce
+
+'kv-reduce'(#{?TYPE := ?M, vals := Vals}, Fun, Init) ->
+  Ref = make_ref(),
+  F = fun(K, V, Acc0) ->
+          Acc = clj_rt:apply(Fun, [Acc0, K, V]),
+          case 'clojerl.Reduced':is_reduced(Acc) of
+            true  -> throw({reduced, Ref, Acc});
+            false -> Acc
+          end
+      end,
+  try rbdict:fold(F, Init, Vals)
+  catch throw:{reduced, Ref, Acc} ->
+      'clojerl.Reduced':deref(Acc)
+  end.
 
 %% clojerl.ILookup
 
