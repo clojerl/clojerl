@@ -67,7 +67,7 @@
     clojerl.INamed         [name          [X]
                             namespace     [X]]
     clojerl.IPending       [realized?     [X]]
-    clojerl.IRecord        [_             [_]]
+    clojerl.IRecord        [_IRecord      [_]] ;; marker protocol
     clojerl.IReduce        [reduce        [Coll Fun]
                             reduce        [Coll Fun Init]]
     clojerl.IReference     [alter_meta    [Ref Fun Args]
@@ -78,14 +78,14 @@
                             more          [Seq]]
     clojerl.ISeqable       [seq           [X]
                             to_list       [X]]
-    clojerl.ISequential    [_             [_]]
+    clojerl.ISequential    [_ISequential  [_]] ;; marker protocol
     clojerl.ISet           [disjoin       [Coll Item]
                             contains      [Coll Item]]
-    clojerl.ISorted        [_             [_]]
+    clojerl.ISorted        [_ISorted      [_]] ;; marker protocol
     clojerl.IStack         [peek          [Stack]
                             pop           [Stack]]
     clojerl.IStringable    [str           [X]]
-    clojerl.IType          [_             [_]]
+    clojerl.IType          [_IType        [_]] ;; marker protocol
 
     ;; Erlang IO protocols
     erlang.io.IWriter         [write     [Writer Str]
@@ -105,6 +105,19 @@
 (def NIL-TYPE "clojerl.Nil")
 (def STRING-TYPE "clojerl.String")
 (def BOOLEAN-TYPE "clojerl.Boolean")
+
+;; These are protocols only used as markers. They need to include at
+;; least one clalback function, otherwise dialyzer complains. The
+;; callback functions are all named different in each protocol to
+;; avoid warnings of conflicts between behaviours.
+(def marker-protocols
+  '#{clojerl.IRecord
+     clojerl.ISequential
+     clojerl.ISorted
+     clojerl.IType})
+
+(defn marker-protocol? [proto-name]
+  (marker-protocols proto-name))
 
 (defn underscore?
   [x]
@@ -162,7 +175,7 @@
 
 (defn proto-function
   [proto-name f args types-specs]
-  (when-not (underscore? f)
+  (when-not (marker-protocol? proto-name)
     (str
      (proto-function-head f args)
      (->> types-specs
@@ -212,8 +225,7 @@
   (->> fns
        (partition 2)
        (keep (fn [[f args]]
-               (when-not (underscore? f)
-                 (str "'" f "'/" (count args)))))
+               (str "'" f "'/" (count args))))
        (interpose ", ")
        (apply str)))
 
@@ -267,9 +279,8 @@
          "-include(\"clojerl_int.hrl\").\n\n"
          "-clojure(true).\n"
          "-protocol(true).\n\n"
-         (let [ex (exports fns)]
-           (when-not (empty? ex)
-             (str "-export([" ex "]).\n")))
+         (when-not (marker-protocol? proto-name)
+           (str "-export([" (exports fns) "]).\n"))
          "-export([?SATISFIES/1]).\n"
          "-export([?EXTENDS/1]).\n\n"
          (callbacks fns)

@@ -13,7 +13,6 @@
 -export([count/1]).
 -export([equiv/2]).
 -export([hash/1]).
--export(['_'/1]).
 -export([ nth/2
         , nth/3
         ]).
@@ -48,8 +47,6 @@ do_equiv(X, Y, Size, Index) ->
   end.
 
 hash(Tuple) -> clj_murmur3:ordered(Tuple).
-
-'_'(_) -> ?NIL.
 
 nth(Tuple, N) ->
   erlang:element(N + 1, Tuple).

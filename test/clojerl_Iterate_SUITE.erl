@@ -152,8 +152,6 @@ reduce(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Iterate':'_'(?NIL),
-
   NotEmptyIterate = create_iterate(),
   EmptyIterate    = clj_rt:empty(NotEmptyIterate),
   true          = clj_rt:equiv(EmptyIterate, []),

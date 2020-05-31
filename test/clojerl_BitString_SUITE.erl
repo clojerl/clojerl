@@ -12,7 +12,6 @@
         , seq/1
         , str/1
         , hash/1
-        , complete_coverage/1
         ]).
 
 -spec all() -> [atom()].
@@ -58,11 +57,5 @@ hash(_Config) ->
 
   Hash = 'clojerl.IHash':hash(BitString),
   Hash = 'clojerl.IHash':hash(BitString),
-
-  {comments, ""}.
-
--spec complete_coverage(config()) -> result().
-complete_coverage(_Config) ->
-  ?NIL = 'clojerl.BitString':'_'(<<>>),
 
   {comments, ""}.

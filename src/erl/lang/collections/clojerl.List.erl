@@ -35,7 +35,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ peek/1
         , pop/1
         ]).
@@ -139,10 +138,6 @@ next(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
 more(#{?TYPE := ?M, items := []} = List) -> List;
 more(#{?TYPE := ?M, items := [_ | Rest]} = List) ->
   List#{items => Rest}.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.IStack
 

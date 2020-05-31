@@ -192,7 +192,6 @@ to_erl(_Config) ->
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
   ChunkedCons = chunked_cons({1, 2, 3}, ?NIL),
-  ?NIL = 'clojerl.ChunkedCons':'_'(ChunkedCons),
 
   ChunkedConsMeta = clj_rt:with_meta(ChunkedCons, #{a => 1}),
   #{a := 1} = clj_rt:meta(ChunkedConsMeta),

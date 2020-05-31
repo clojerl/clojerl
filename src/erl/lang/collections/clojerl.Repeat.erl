@@ -35,7 +35,6 @@
 -export([ seq/1
         , to_list/1
         ]).
--export(['_'/1]).
 -export([str/1]).
 
 -type type() :: #{ ?TYPE => ?M
@@ -159,10 +158,6 @@ to_list(#{?TYPE := ?M, count := infinity}) ->
   ?ERROR(<<"Can't generate an infinite list">>);
 to_list(#{?TYPE := ?M, count := Count, value := Value}) ->
   lists:duplicate(Count, Value).
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.IStringable
 

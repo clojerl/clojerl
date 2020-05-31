@@ -174,8 +174,6 @@ reduce(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Repeat':'_'(?NIL),
-
   NotEmptyRepeat = create_repeat(4, foo),
   EmptyRepeat    = clj_rt:empty(NotEmptyRepeat),
   true           = clj_rt:equiv(EmptyRepeat, []),

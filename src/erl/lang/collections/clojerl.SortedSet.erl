@@ -36,7 +36,6 @@
 -export([ seq/1
         , to_list/1
         ]).
--export(['_'/1]).
 -export([str/1]).
 
 -import( clj_hash_collision
@@ -200,10 +199,6 @@ seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
 
 to_list(#{?TYPE := ?M, dict := Dict}) ->
   rbdict:fetch_keys(Dict).
-
-%% clojerl.ISorted
-
-'_'(_) -> ?NIL.
 
 %% clojerl.IStringable
 

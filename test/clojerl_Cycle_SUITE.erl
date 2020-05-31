@@ -155,8 +155,6 @@ reduce(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.Cycle':'_'(?NIL),
-
   NotEmptyCycle = create_cycle([a, b, 2, 3]),
   EmptyCycle    = clj_rt:empty(NotEmptyCycle),
   true          = clj_rt:equiv(EmptyCycle, []),

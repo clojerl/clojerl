@@ -78,8 +78,7 @@
         type-hash (hash typename)]
     (let [gs (gensym)]
       (letfn [(irecord [[i m]]
-                [(conj i 'clojerl.IRecord)
-                 (conj m '(_ [_]))])
+                [(conj i 'clojerl.IRecord) m])
               (eqhash [[i m]]
                 [(conj i 'clojerl.IHash)
                  (conj m
@@ -295,9 +294,7 @@
   [tagname cname fields interfaces methods opts]
   (let [current-ns (ns-name *ns*)
         typename (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
-        interfaces (conj interfaces 'clojerl.IType)
-        ;; Dummy method for clojerl.IType
-        methods (conj methods '(_ [_]))]
+        interfaces (conj interfaces 'clojerl.IType)]
     `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~typename ~fields
        :implements ~interfaces
        ~@(mapcat identity opts)

@@ -209,8 +209,6 @@ to_erl(_Config) ->
 
 -spec complete_coverage(config()) -> result().
 complete_coverage(_Config) ->
-  ?NIL = 'clojerl.List':'_'(?NIL),
-
   NotEmptyList = clj_rt:list([a, b, 2, 3]),
   EmptyList    = clj_rt:empty(NotEmptyList),
   EmptyList    = clj_rt:list([]),

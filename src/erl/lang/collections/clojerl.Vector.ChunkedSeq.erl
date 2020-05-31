@@ -39,7 +39,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -214,10 +213,6 @@ more(#{?TYPE := ?M} = ChunkedSeq) ->
     ?NIL -> clj_rt:list([]);
     Seq  -> Seq
   end.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.ISeqable
 

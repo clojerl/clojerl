@@ -29,7 +29,6 @@
         , next/1
         , more/1
         ]).
--export(['_'/1]).
 -export([ seq/1
         , to_list/1
         ]).
@@ -106,10 +105,6 @@ next(#{?TYPE := ?M, more := More}) -> clj_rt:seq(More).
 
 more(#{?TYPE := ?M, more := ?NIL}) -> [];
 more(#{?TYPE := ?M, more := More}) -> More.
-
-%% clojerl.ISequential
-
-'_'(_) -> ?NIL.
 
 %% clojerl.ISeqable
 
