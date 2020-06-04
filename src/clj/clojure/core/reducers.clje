@@ -31,7 +31,7 @@
       (erlang/send parent result))))
 
 (defn fjtask [^clojerl.IFn f]
-  (let [id (erlang/unique_integer)
+  (let [id (erlang/make_ref)
         parent (erlang/self)]
     (Task. id f parent)))
 
