@@ -259,25 +259,39 @@ cons(Item, Seq) ->
 -spec first(any()) -> any().
 first(?NIL) -> ?NIL;
 first(Seq) ->
-  case 'seq?'(Seq) of
-    true  -> 'clojerl.ISeq':first(Seq);
-    false -> first(seq(Seq))
+  case 'clojerl.ISeq':?SATISFIES(Seq) of
+    true ->
+      'clojerl.ISeq':first(Seq);
+    false ->
+      case seq(Seq) of
+        ?NIL -> ?NIL;
+        X -> 'clojerl.ISeq':first(X)
+      end
   end.
 
 -spec next(any()) -> any().
 next(?NIL) -> ?NIL;
 next(Seq) ->
-  case 'seq?'(Seq) of
-    true  -> 'clojerl.ISeq':next(Seq);
-    false -> next(seq(Seq))
+  case 'clojerl.ISeq':?SATISFIES(Seq) of
+    true ->
+      'clojerl.ISeq':next(Seq);
+    false ->
+      case seq(Seq) of
+        ?NIL -> ?NIL;
+        X -> 'clojerl.ISeq':next(X)
+      end
   end.
 
 -spec rest(any()) -> any().
 rest(?NIL) -> [];
 rest(Seq) ->
-  case 'seq?'(Seq) of
-    true  -> 'clojerl.ISeq':more(Seq);
-    false -> rest(seq(Seq))
+  case 'clojerl.ISeq':?SATISFIES(Seq) of
+    true -> 'clojerl.ISeq':more(Seq);
+    false ->
+      case seq(Seq) of
+        ?NIL -> [];
+        X -> 'clojerl.ISeq':more(X)
+      end
   end.
 
 -spec second(any()) -> any().
