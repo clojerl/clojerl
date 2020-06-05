@@ -31,7 +31,7 @@
       (erlang/send parent result))))
 
 (defn fjtask [^clojerl.IFn f]
-  (let [id (erlang/unique_integer)
+  (let [id (erlang/make_ref)
         parent (erlang/self)]
     (Task. id f parent)))
 
@@ -346,6 +346,11 @@
   (reduce reducef (combinef) coll))
 
  clojerl.Vector
+ (coll-fold
+  [v n combinef reducef]
+  (foldvec v n combinef reducef))
+
+ clojerl.Subvec
  (coll-fold
   [v n combinef reducef]
   (foldvec v n combinef reducef))

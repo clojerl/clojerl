@@ -16,6 +16,8 @@
 
 'nth'(Coll, N) ->
   case Coll of
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'nth'(Coll, N);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'nth'(Coll, N);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -36,6 +38,8 @@
 
 'nth'(Coll, N, NotFound) ->
   case Coll of
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'nth'(Coll, N, NotFound);
     #{?TYPE := 'clojerl.TupleChunk'} ->
       'clojerl.TupleChunk':'nth'(Coll, N, NotFound);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -56,6 +60,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleChunk'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := _} ->  false;
@@ -68,6 +73,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Subvec' -> true;
     'clojerl.TupleChunk' -> true;
     'clojerl.Vector' -> true;
     'erlang.Tuple' -> true;

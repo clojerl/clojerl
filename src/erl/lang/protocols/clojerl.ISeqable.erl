@@ -42,6 +42,8 @@
       'clojerl.SortedSet':'seq'(X);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'seq'(X);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'seq'(X);
     #{?TYPE := 'clojerl.TransducerSeq'} ->
       'clojerl.TransducerSeq':'seq'(X);
     #{?TYPE := 'clojerl.TupleMap'} ->
@@ -52,6 +54,8 @@
       'clojerl.Vector.ChunkedSeq':'seq'(X);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'seq'(X);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'seq'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'seq', X);
     X_ when erlang:is_binary(X_) ->
@@ -100,6 +104,8 @@
       'clojerl.SortedSet':'to_list'(X);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'to_list'(X);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'to_list'(X);
     #{?TYPE := 'clojerl.TransducerSeq'} ->
       'clojerl.TransducerSeq':'to_list'(X);
     #{?TYPE := 'clojerl.TupleMap'} ->
@@ -110,6 +116,8 @@
       'clojerl.Vector.ChunkedSeq':'to_list'(X);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'to_list'(X);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'to_list'(X);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'to_list', X);
     X_ when erlang:is_binary(X_) ->
@@ -145,11 +153,13 @@
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TransducerSeq'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  true;
     X_ when erlang:is_bitstring(X_) ->  true;
@@ -176,11 +186,13 @@
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
     'clojerl.StringSeq' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TransducerSeq' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'clojerl.String' -> true;
     'clojerl.BitString' -> true;
     'erlang.List' -> true;

@@ -15,6 +15,8 @@
 
 'rseq'(Seq) ->
   case Seq of
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'rseq'(Seq);
     #{?TYPE := 'clojerl.Vector'} ->
       'clojerl.Vector':'rseq'(Seq);
     #{?TYPE := _} ->
@@ -31,6 +33,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
@@ -41,6 +44,7 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.Subvec' -> true;
     'clojerl.Vector' -> true;
     _ -> false
   end.

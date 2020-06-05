@@ -35,16 +35,16 @@
         ]).
 -export([str/1]).
 
--type type() :: #{ ?TYPE => ?M
-                 , array => clj_vector:vector()
-                 , index => integer()
-                 , meta  => ?NIL | any()
+-type type() :: #{ ?TYPE  => ?M
+                 , vector => 'clojerl.IVector':type()
+                 , index  => integer()
+                 , meta   => ?NIL | any()
                  }.
 
--spec ?CONSTRUCTOR(clj_vector:vector(), integer()) -> type().
-?CONSTRUCTOR(Array, Index) when Index >= 0 ->
+-spec ?CONSTRUCTOR('clojerl.IVector':type(), integer()) -> type().
+?CONSTRUCTOR(Vector, Index) when Index >= 0 ->
   #{ ?TYPE => ?M
-   , array => Array
+   , vector => Vector
    , index => Index
    , meta  => ?NIL
    }.
@@ -102,8 +102,8 @@ with_meta(#{?TYPE := ?M} = X, Meta) ->
 
 %% clojerl.ISeq
 
-first(#{?TYPE := ?M, index := Index, array := Array}) ->
-  clj_vector:get(Index, Array).
+first(#{?TYPE := ?M, index := Index, vector := Vector}) ->
+  'clojerl.ILookup':get(Vector, Index).
 
 next(#{?TYPE := ?M, index := Index}) when Index =< 0 -> ?NIL;
 next(#{?TYPE := ?M, index := Index} = X) ->
@@ -118,14 +118,14 @@ more(#{?TYPE := ?M, index := Index} = X) ->
 
 seq(#{?TYPE := ?M} = X) -> X.
 
-to_list(#{?TYPE := ?M, array := Array, index := Index}) ->
-  do_to_list(Array, 0, Index, []).
+to_list(#{?TYPE := ?M, vector := Vector, index := Index}) ->
+  do_to_list(Vector, 0, Index, []).
 
-do_to_list(_Array, Current, End, Result) when Current > End ->
+do_to_list(_Vector, Current, End, Result) when Current > End ->
   Result;
-do_to_list(Array, Current, End, Result) ->
-  Item = clj_vector:get(Current, Array),
-  do_to_list(Array, Current + 1, End, [Item | Result]).
+do_to_list(Vector, Current, End, Result) ->
+  Item = 'clojerl.ILookup':get(Vector, Current),
+  do_to_list(Vector, Current + 1, End, [Item | Result]).
 
 %% clojerl.IStringable
 

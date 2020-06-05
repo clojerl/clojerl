@@ -73,6 +73,8 @@
       'clojerl.SortedSet':'str'(X);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'str'(X);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'str'(X);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'str'(X);
     #{?TYPE := 'clojerl.TransducerSeq'} ->
@@ -87,6 +89,8 @@
       'clojerl.Vector.ChunkedSeq':'str'(X);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'str'(X);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'str'(X);
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'str'(X);
     #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
@@ -172,6 +176,7 @@
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
     #{?TYPE := 'clojerl.TransducerSeq'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
@@ -179,6 +184,7 @@
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
     #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->  true;
     #{?TYPE := 'erlang.Type'} ->  true;
@@ -238,6 +244,7 @@
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
     'clojerl.StringSeq' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.Symbol' -> true;
     'clojerl.TransducerSeq' -> true;
     'clojerl.TupleMap' -> true;
@@ -245,6 +252,7 @@
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'clojerl.reader.ReaderConditional' -> true;
     'clojerl.reader.TaggedLiteral' -> true;
     'erlang.Type' -> true;

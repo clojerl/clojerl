@@ -24,6 +24,8 @@
       'clojerl.SortedMap':'get'(X, Key);
     #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'get'(X, Key);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'get'(X, Key);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'get'(X, Key);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -58,6 +60,8 @@
       'clojerl.SortedMap':'get'(X, Key, NotFound);
     #{?TYPE := 'clojerl.SortedSet'} ->
       'clojerl.SortedSet':'get'(X, Key, NotFound);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'get'(X, Key, NotFound);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'get'(X, Key, NotFound);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -88,6 +92,7 @@
     #{?TYPE := 'clojerl.Set'} ->  true;
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
@@ -107,6 +112,7 @@
     'clojerl.Set' -> true;
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Vector' -> true;
     'clojerl.reader.ReaderConditional' -> true;

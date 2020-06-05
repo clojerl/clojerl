@@ -19,8 +19,9 @@
 -behavior('clojerl.IStack').
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
+-behavior('clojerl.IVector').
 
--export([?CONSTRUCTOR/1, subvec/3]).
+-export([?CONSTRUCTOR/1]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -65,14 +66,6 @@
    , array => clj_vector:new(Items)
    , meta  => ?NIL
    }.
-
--spec subvec(type(), integer(), integer()) -> type().
-subvec(Vector, Start, End) ->
-  AddItemAtFun =
-    fun(Index, Subvec) ->
-        cons(Subvec, nth(Vector, Index))
-    end,
-  lists:foldl(AddItemAtFun, ?CONSTRUCTOR([]), lists:seq(Start, End - 1)).
 
 %%------------------------------------------------------------------------------
 %% Protocols
@@ -178,10 +171,10 @@ reduce(#{?TYPE := ?M, array := Array}, F, Init) ->
 
 %% clojerl.IReduce
 
-rseq(#{?TYPE := ?M, array := Array}) ->
+rseq(#{?TYPE := ?M, array := Array} = Vector) ->
   case clj_vector:size(Array) of
     0 -> ?NIL;
-    _ -> 'clojerl.Vector.RSeq':?CONSTRUCTOR(Array, clj_vector:size(Array) - 1)
+    Count -> 'clojerl.Vector.RSeq':?CONSTRUCTOR(Vector, Count - 1)
   end.
 
 %% clojerl.IIndexed

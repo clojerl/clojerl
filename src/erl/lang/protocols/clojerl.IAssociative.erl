@@ -21,6 +21,8 @@
       'clojerl.Map':'contains_key'(Assoc, Key);
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'contains_key'(Assoc, Key);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'contains_key'(Assoc, Key);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'contains_key'(Assoc, Key);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -45,6 +47,8 @@
       'clojerl.Map':'entry_at'(Assoc, Key);
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'entry_at'(Assoc, Key);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'entry_at'(Assoc, Key);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'entry_at'(Assoc, Key);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -69,6 +73,8 @@
       'clojerl.Map':'assoc'(Assoc, Key, Value);
     #{?TYPE := 'clojerl.SortedMap'} ->
       'clojerl.SortedMap':'assoc'(Assoc, Key, Value);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'assoc'(Assoc, Key, Value);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'assoc'(Assoc, Key, Value);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -91,6 +97,7 @@
   case X of
     #{?TYPE := 'clojerl.Map'} ->  true;
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := _} ->  false;
@@ -105,6 +112,7 @@
   case X of
     'clojerl.Map' -> true;
     'clojerl.SortedMap' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Vector' -> true;
     'erlang.Map' -> true;

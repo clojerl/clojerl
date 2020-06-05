@@ -27,6 +27,8 @@
       'clojerl.Map':'->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Range'} ->
       'clojerl.Range':'->erl'(X, Recursive);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'->erl'(X, Recursive);
     #{?TYPE := 'clojerl.TupleMap'} ->
       'clojerl.TupleMap':'->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Vector'} ->
@@ -35,6 +37,8 @@
       'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'->erl'(X, Recursive);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'->erl'(X, Recursive);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, '->erl', X);
     X_ when erlang:is_binary(X_) ->
@@ -55,10 +59,12 @@
     #{?TYPE := 'clojerl.List'} ->  true;
     #{?TYPE := 'clojerl.Map'} ->  true;
     #{?TYPE := 'clojerl.Range'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -74,9 +80,11 @@
     'clojerl.List' -> true;
     'clojerl.Map' -> true;
     'clojerl.Range' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.TupleMap' -> true;
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     _ -> false
   end.

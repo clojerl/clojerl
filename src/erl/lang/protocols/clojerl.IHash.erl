@@ -73,6 +73,8 @@
       'clojerl.SortedSet':'hash'(X);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'hash'(X);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'hash'(X);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'hash'(X);
     #{?TYPE := 'clojerl.TupleChunk'} ->
@@ -87,6 +89,8 @@
       'clojerl.Vector.ChunkedSeq':'hash'(X);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'hash'(X);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'hash'(X);
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'hash'(X);
     #{?TYPE := 'erlang.Type'} ->
@@ -162,6 +166,7 @@
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
     #{?TYPE := 'clojerl.TupleChunk'} ->  true;
     #{?TYPE := 'clojerl.TupleMap'} ->  true;
@@ -169,6 +174,7 @@
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
     #{?TYPE := 'erlang.Type'} ->  true;
     #{?TYPE := 'erlang.util.Date'} ->  true;
@@ -223,6 +229,7 @@
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
     'clojerl.StringSeq' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.Symbol' -> true;
     'clojerl.TupleChunk' -> true;
     'clojerl.TupleMap' -> true;
@@ -230,6 +237,7 @@
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'clojerl.reader.ReaderConditional' -> true;
     'erlang.Type' -> true;
     'erlang.util.Date' -> true;

@@ -346,7 +346,7 @@ keyword(Namespace, Name) ->
 
 -spec 'vector?'(any()) -> boolean().
 'vector?'(X) ->
-  type_module(X) == 'clojerl.Vector'.
+  'clojerl.IVector':?SATISFIES(X).
 
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
@@ -566,6 +566,8 @@ do_print(X, 'clojerl.TupleMap', _PrintReadably, Writer) ->
   do_print_map(X, Writer);
 do_print(X, 'clojerl.Vector', _PrintReadably, Writer) ->
   do_print_seq(X, <<"[">>, <<"]">>, Writer);
+do_print(X, 'clojerl.Subvec', _PrintReadably, Writer) ->
+  do_print_seq(X, <<"[">>, <<"]">>, Writer);
 do_print(X, 'erlang.List', _PrintReadably, Writer) ->
   do_print_seq(X, <<"#erl(">>, <<")">>, Writer);
 do_print(X, 'erlang.Map', _PrintReadably, Writer) ->
@@ -656,7 +658,7 @@ subvec(Vector, Start, End) ->
              ),
   case Start of
     End -> vector([]);
-    _   -> 'clojerl.Vector':subvec(Vector, Start, End)
+    _   -> 'clojerl.Subvec':?CONSTRUCTOR(Vector, Start, End)
   end.
 
 -spec hash_map(list()) -> 'clojerl.Map':type().

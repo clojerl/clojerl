@@ -67,6 +67,8 @@
       'clojerl.SortedSet':'equiv'(X, Y);
     #{?TYPE := 'clojerl.StringSeq'} ->
       'clojerl.StringSeq':'equiv'(X, Y);
+    #{?TYPE := 'clojerl.Subvec'} ->
+      'clojerl.Subvec':'equiv'(X, Y);
     #{?TYPE := 'clojerl.Symbol'} ->
       'clojerl.Symbol':'equiv'(X, Y);
     #{?TYPE := 'clojerl.TransducerSeq'} ->
@@ -83,6 +85,8 @@
       'clojerl.Vector.ChunkedSeq':'equiv'(X, Y);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
       'clojerl.Vector.RSeq':'equiv'(X, Y);
+    #{?TYPE := 'clojerl.Vector.Seq'} ->
+      'clojerl.Vector.Seq':'equiv'(X, Y);
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->
       'clojerl.reader.ReaderConditional':'equiv'(X, Y);
     #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->
@@ -135,6 +139,7 @@
     #{?TYPE := 'clojerl.SortedMap'} ->  true;
     #{?TYPE := 'clojerl.SortedSet'} ->  true;
     #{?TYPE := 'clojerl.StringSeq'} ->  true;
+    #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.Symbol'} ->  true;
     #{?TYPE := 'clojerl.TransducerSeq'} ->  true;
     #{?TYPE := 'clojerl.TupleChunk'} ->  true;
@@ -143,6 +148,7 @@
     #{?TYPE := 'clojerl.Vector'} ->  true;
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->  true;
     #{?TYPE := 'clojerl.Vector.RSeq'} ->  true;
+    #{?TYPE := 'clojerl.Vector.Seq'} ->  true;
     #{?TYPE := 'clojerl.reader.ReaderConditional'} ->  true;
     #{?TYPE := 'clojerl.reader.TaggedLiteral'} ->  true;
     #{?TYPE := 'erlang.util.Date'} ->  true;
@@ -184,6 +190,7 @@
     'clojerl.SortedMap' -> true;
     'clojerl.SortedSet' -> true;
     'clojerl.StringSeq' -> true;
+    'clojerl.Subvec' -> true;
     'clojerl.Symbol' -> true;
     'clojerl.TransducerSeq' -> true;
     'clojerl.TupleChunk' -> true;
@@ -192,6 +199,7 @@
     'clojerl.Vector' -> true;
     'clojerl.Vector.ChunkedSeq' -> true;
     'clojerl.Vector.RSeq' -> true;
+    'clojerl.Vector.Seq' -> true;
     'clojerl.reader.ReaderConditional' -> true;
     'clojerl.reader.TaggedLiteral' -> true;
     'erlang.util.Date' -> true;
