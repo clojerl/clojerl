@@ -261,9 +261,10 @@
     :doc "Return the last item in coll, in linear time"
     :added "1.0"}
   last (fn last [s]
-         (if (next s)
-           (recur (next s))
-           (first s))))
+         (let [x (next s)]
+           (if x
+             (recur x)
+             (first s)))))
 
 (def
   ^{:arglists '([coll])
@@ -271,9 +272,10 @@
     :added "1.0"}
   butlast (fn butlast [s]
             (loop [ret [] s s]
-              (if (next s)
-                (recur (conj ret (first s)) (next s))
-                (seq ret)))))
+              (let [x (next s)]
+                (if x
+                  (recur (conj ret (first s)) x)
+                  (seq ret))))))
 
 (def
   ^{:doc "Used to generate the code for defn and defn*"
@@ -730,9 +732,10 @@
   ([x y] (clj_rt/equiv x y))
   ([x y & more]
    (if (clj_rt/equiv x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (clj_rt/equiv y (first more)))
+     (let [x (next more)]
+       (if x
+         (recur y (first more) x)
+         (clj_rt/equiv y (first more))))
      false)))
 
 (defn not=
@@ -818,9 +821,10 @@
   ([x y] (erlang/< x y))
   ([x y & more]
    (if (< x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (< y (first more)))
+     (let [x (next more)]
+       (if x
+         (recur y (first more) x)
+         (< y (first more))))
      false)))
 
 (defn inc
@@ -922,9 +926,10 @@
   ([x y] (erlang/=< x y))
   ([x y & more]
    (if (<= x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (<= y (first more)))
+     (let [x (next more)]
+       (if x
+         (recur y (first more) x)
+         (<= y (first more))))
      false)))
 
 (defn >
@@ -937,9 +942,10 @@
   ([x y] (erlang/> x y))
   ([x y & more]
    (if (> x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (> y (first more)))
+     (let [x (next more)]
+       (if x
+         (recur y (first more) x)
+         (> y (first more))))
      false)))
 
 (defn >=
@@ -952,9 +958,10 @@
   ([x y] (erlang/>= x y))
   ([x y & more]
    (if (>= x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (>= y (first more)))
+     (let [x (next more)]
+       (if x
+         (recur y (first more) x)
+         (>= y (first more))))
      false)))
 
 (defn ==
@@ -967,9 +974,10 @@
   ([x y] (erlang/== x y))
   ([x y & more]
    (if (== x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (== y (first more)))
+     (let [x (next more)]
+       (if x
+         (recur y (first more) x)
+         (== y (first more))))
      false)))
 
 (defn max
