@@ -61,9 +61,8 @@ do
             ;;
         *)
             # check if first char is dash
-            first_char=${key:0:1}
-            case $first_char in
-                -)
+            case $key in
+                -*)
                     break;
                     ;;
                 *)
