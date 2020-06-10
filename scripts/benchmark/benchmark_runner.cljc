@@ -1,5 +1,6 @@
 (ns benchmark.benchmark-runner
-  (:require [clojure.string :as string]))
+  (:require [clojure.core.reducers :as r]
+            [clojure.string :as string]))
 
 (defrecord Foo [bar baz])
 
@@ -209,7 +210,7 @@
   (println)
 
   (println ";; reducers")
-  ;; (simple-benchmark [xs (into [] (range 1000000))] (r/reduce + (r/map inc (r/map inc (r/map inc xs)))) 1)
+  (simple-benchmark [xs (into [] (range 1000000))] (r/reduce + (r/map inc (r/map inc (r/map inc xs)))) 1)
 
   (println ";; transducers")
   (simple-benchmark [xs (into [] (range 1000000))] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)

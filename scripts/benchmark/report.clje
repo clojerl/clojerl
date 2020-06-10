@@ -26,7 +26,10 @@
 (defn calculate-totals
   [cols items]
   (->> cols
-       (map #(vector % (reduce + (map % items))))
+       (map #(vector % (->> items
+                            (map %)
+                            (filter number?)
+                            (reduce +))))
        (into {:expr "Totals"})
        calculate-ratio
        (conj (vec items))))
