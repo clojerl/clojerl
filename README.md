@@ -23,9 +23,9 @@ On Windows:
 
 ### Documentation and Resources
 
-There is more information regarding Clojerl in [clojerl.org][clojerl], like
-what [features][features] does it include and
-[how it differs from Clojure][diff-with-clojure].
+There is more information regarding Clojerl in [clojerl.org][clojerl], where you
+can find what [features][features] does Clojerl include and [how it differs from
+Clojure][diff-with-clojure].
 
 ### Online REPL
 
@@ -34,19 +34,19 @@ To try it out and get a sense of what you can do, you can visit
 
 ## Docker REPL
 
-To quickly try out `clojerl` via docker you could make use of docker image like so 
+To quickly try out `clojerl` via docker you can make use of the docker
+image like so:
 
 ```
 docker pull clojerl/clojerl
 docker run -it clojerl/clojerl
 ```
-And you should be able to see the prompt 
+
+Then you should be able to see the prompt:
 
 ```clojure
-
- Clojure 0.0.0-974.592ad8a
- clje.user=>
-
+Clojure 0.6.0
+clje.user=>
 ```
 
 
@@ -55,7 +55,7 @@ And you should be able to see the prompt
 Running `make repl` (on Windows `bin/clje.bat`) will start the REPL
 and show its prompt:
 
-    Clojure 0.0.0-974.592ad8a
+    Clojure 0.6.0
     clje.user=>
 
 From the REPL it's possible to start evaluating Clojure expressions:
@@ -205,7 +205,7 @@ fact, most of Clojure's core namespaces were ported from the original
 
 ## Discussion
 
-Join the conversation in the [Clojerl][clojerl-mailing-list] mailing 
+Join the conversation in the [Clojerl][clojerl-mailing-list] mailing
 list or in the [`#clojerl` Slack channel][clojerl-slack]!
 
 You can also find news and updates through [@clojerl][clojerl-twitter].
