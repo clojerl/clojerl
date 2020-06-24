@@ -82,7 +82,8 @@ dispatch_map_var(VarOrSymbol) ->
               X -> X
             end,
   Name    = clj_rt:name(VarOrSymbol),
-  MapNs   = <<Ns/binary, ".", Name/binary, "__dispatch__">>,
+  MapNs0  = <<Ns/binary, ".", Name/binary, "__dispatch__">>,
+  MapNs   = munge(MapNs0),
   MapName = <<"map">>,
   'clojerl.Var':?CONSTRUCTOR(MapNs, MapName).
 
@@ -116,3 +117,24 @@ generate_dispatch_map(DispatchMapVar, Map) ->
   clj_compiler:module(CljModule),
 
   ok.
+
+-define( REPLACE
+       , #{ <<"?">> => <<"__QUESTION__">>
+          , <<"*">> => <<"__ASTERISK__">>
+          , <<"|">> => <<"__PIPE__">>
+          , <<"<">> => <<"__LT__">>
+          , <<">">> => <<"__GT__">>
+          , <<":">> => <<"__COLON__">>
+          , <<"\"">> => <<"__DOUBLE_QUOTE__">>
+          , <<"/">> => <<"__SLASH__">>
+          , <<"\\">> => <<"__BACKSLASH__">>
+          }
+       ).
+
+-spec munge(binary()) -> binary().
+munge(X) ->
+  maps:fold(fun replace_char/3, X, ?REPLACE).
+
+-spec replace_char(binary(), binary(), binary()) -> binary().
+replace_char(K, V, X) ->
+  binary:replace(X, K, V, [global]).
