@@ -32,7 +32,7 @@
   ([stream]
    (read {} stream))
   ([opts stream]
-     (clj_edn/read stream opts)))
+   (clj_edn/read "" (->erl (assoc opts :io-reader stream)))))
 
 (defn read-string
   "Reads one object from the string s. Returns nil when s is nil or empty.

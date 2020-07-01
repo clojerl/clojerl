@@ -50,3 +50,10 @@
 
 (deftest should-not-roundtrip
   (is (= 0 (:failures (run types-that-should-not-roundtrip)))))
+
+(deftest read-from-reader
+  (let [x (with-open [pbr (-> "{:one 1 :two \"2\"}"
+                              erlang.io.StringReader.
+                              erlang.io.PushbackReader.)]
+            (clojure.edn/read pbr))]
+    (is (= {:one 1 :two "2"} x))))
