@@ -18,7 +18,7 @@ compile:
 	${V} ${REBAR3} clojerl compile
 
 compile-native:
-	${V} if [[ ${OTP} =~ 2.+ ]]; then \
+	${V} if [[ ${OTP} =~ 2[^1] ]]; then \
 		echo "Compiling to native..."; \
 		ERL_COMPILER_OPTIONS="native" ${REBAR3} clojerl compile; \
 	else \

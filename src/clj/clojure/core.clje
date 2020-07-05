@@ -4590,10 +4590,10 @@
       (if load
         (try
           (load lib need-ns require)
-          (catch :error e
+          (catch :error e :stack stack
             (when undefined-on-entry
               (remove-ns lib))
-            (throw e)))
+            (erlang/raise :error e stack)))
         (throw-if (and need-ns (not (find-ns lib)))
                   "namespace '~s' not found" lib))
       (when (and need-ns *loading-verbosely*)
