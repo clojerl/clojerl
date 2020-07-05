@@ -26,6 +26,11 @@
        104    h
        "ello" ello])
 
+(let* [v "hello"
+       len 2
+       #bin[[x :type :binary :size len] [rest :type :binary]] v
+       "he" x])
+
 ;; let*
 
 (let* [#erl(a b)     #erl(1 2)
