@@ -2833,11 +2833,11 @@ parse_segment_size(Config, Type, Env) ->
               _       -> undefined
             end,
   Size = maps:get(size, Config, Default),
-  Env1 = case clj_env:get(in_pattern, false, Env) of
-           true  -> parse_pattern(Size, Env);
-           false -> analyze_form(Size, Env)
-         end,
-  clj_env:pop_expr(Env1).
+  %% Size can be a guard expression but it should not be
+  %% considered a pattern.
+  Env1 = clj_env:push(#{in_pattern => false}, Env),
+  Env2 = analyze_form(Size, Env1),
+  clj_env:pop_expr(clj_env:pop(Env2)).
 
 -spec parse_segment_unit(any(), atom(), clj_env:env()) ->
   {any(), clj_env:env()}.

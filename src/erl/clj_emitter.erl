@@ -2115,7 +2115,7 @@ hash_scope(LocalExpr) ->
 %% variables with the same name (which the Core Erlang linter
 %% complains about).
 -spec shadow_depth(local_expr()) -> non_neg_integer().
-shadow_depth(LocalExpr = #{shadow := _, binding :=  true}) ->
+shadow_depth(LocalExpr = #{shadow := _, binding := true}) ->
   do_shadow_depth(LocalExpr, 0);
 shadow_depth(LocalExpr = #{shadow := _, binding := false}) ->
   do_shadow_depth(LocalExpr, 0) - 1;
