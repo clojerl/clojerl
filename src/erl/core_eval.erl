@@ -443,56 +443,59 @@ get_value(Bin, integer, Size, Unit, Sign, Endian) ->
 get_value(Bin, float, Size, Unit, _Sign, Endian) ->
     get_float(Bin, Size * Unit, Endian);
 get_value(Bin, utf8, undefined, _Unit, _Sign, _Endian) ->
-    <<I/utf8,Rest/bits>> = Bin,
-    {I,Rest};
+    <<I/utf8, Rest/bits>> = Bin,
+    {I, Rest};
 get_value(Bin, utf16, undefined, _Unit, _Sign, big) ->
-    <<I/big-utf16,Rest/bits>> = Bin,
-    {I,Rest};
+    <<I/big-utf16, Rest/bits>> = Bin,
+    {I, Rest};
 get_value(Bin, utf16, undefined, _Unit, _Sign, little) ->
-    <<I/little-utf16,Rest/bits>> = Bin,
-    {I,Rest};
+    <<I/little-utf16, Rest/bits>> = Bin,
+    {I, Rest};
 get_value(Bin, utf32, undefined, _Unit, _Sign, big) ->
-    <<Val/big-utf32,Rest/bits>> = Bin,
-    {Val,Rest};
+    <<Val/big-utf32, Rest/bits>> = Bin,
+    {Val, Rest};
 get_value(Bin, utf32, undefined, _Unit, _Sign, little) ->
-    <<Val/little-utf32,Rest/bits>> = Bin,
-    {Val,Rest};
+    <<Val/little-utf32, Rest/bits>> = Bin,
+    {Val, Rest};
 get_value(Bin, binary, all, Unit, _Sign, _Endian) ->
-    0 = (bit_size(Bin) rem Unit),
-    {Bin,<<>>};
+    case (bit_size(Bin) rem Unit) of
+      0 -> ok;
+      _ -> throw(nomatch)
+    end,
+    {Bin, <<>>};
 get_value(Bin, binary, Size, Unit, _Sign, _Endian) ->
     TotSize = Size*Unit,
-    <<Val:TotSize/bitstring,Rest/bits>> = Bin,
-    {Val,Rest}.
+    <<Val:TotSize/bitstring, Rest/bits>> = Bin,
+    {Val, Rest}.
 
 get_integer(Bin, Size, signed, little) ->
-    <<Val:Size/little-signed,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/little-signed, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_integer(Bin, Size, unsigned, little) ->
-    <<Val:Size/little,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/little, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_integer(Bin, Size, signed, native) ->
-    <<Val:Size/native-signed,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/native-signed, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_integer(Bin, Size, unsigned, native) ->
-    <<Val:Size/native,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/native, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_integer(Bin, Size, signed, big) ->
-    <<Val:Size/signed,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/signed, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_integer(Bin, Size, unsigned, big) ->
-    <<Val:Size,Rest/binary-unit:1>> = Bin,
-    {Val,Rest}.
+    <<Val:Size, Rest/binary-unit:1>> = Bin,
+    {Val, Rest}.
 
 get_float(Bin, Size, little) ->
-    <<Val:Size/float-little,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/float-little, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_float(Bin, Size, native) ->
-    <<Val:Size/float-native,Rest/binary-unit:1>> = Bin,
-    {Val,Rest};
+    <<Val:Size/float-native, Rest/binary-unit:1>> = Bin,
+    {Val, Rest};
 get_float(Bin, Size, big) ->
-    <<Val:Size/float,Rest/binary-unit:1>> = Bin,
-    {Val,Rest}.
+    <<Val:Size/float, Rest/binary-unit:1>> = Bin,
+    {Val, Rest}.
 
 -spec guard(cerl:cerl(), bindings()) -> value().
 guard(Guard, Bindings) ->
@@ -575,10 +578,10 @@ eval_exp_field(Val, Size, Unit, float, big, _) ->
     <<Val:(Size*Unit)/float>>;
 eval_exp_field(Val, all, Unit, binary, _, _) ->
     case bit_size(Val) of
-	Size when Size rem Unit =:= 0 ->
-	    <<Val:Size/binary-unit:1>>;
-	_ ->
-	    raise(badarg)
+      Size when Size rem Unit =:= 0 ->
+        <<Val:Size/binary-unit:1>>;
+      _ ->
+        raise(badarg)
     end;
 eval_exp_field(Val, Size, Unit, binary, _, _) ->
     <<Val:(Size*Unit)/binary-unit:1>>.
