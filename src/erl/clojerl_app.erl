@@ -56,7 +56,7 @@ stacktrace_depth() ->
 io_options() ->
   %% Ensure encoding is unicode
   IoOpts = [{binary, true}, {encoding, unicode}],
-  ok = io:setopts(IoOpts).
+  ok = io:setopts(standard_io, IoOpts).
 
 %% Coverage analysis fails if the directory is sticky
 -ifdef(COVER).
