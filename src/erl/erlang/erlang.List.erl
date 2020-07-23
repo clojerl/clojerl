@@ -2,9 +2,10 @@
 
 -include("clojerl.hrl").
 
--behavior('clojerl.ICounted').
--behavior('clojerl.IEquiv').
 -behavior('clojerl.IColl').
+-behavior('clojerl.ICounted').
+-behavior('clojerl.IEncodeClojure').
+-behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
 -behavior('clojerl.ILookup').
 -behavior('clojerl.IReduce').
@@ -14,11 +15,12 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
--export([count/1]).
--export([equiv/2]).
 -export([ cons/2
         , empty/1
         ]).
+-export([count/1]).
+-export(['erl->clj'/2]).
+-export([equiv/2]).
 -export([hash/1]).
 -export([ get/2
         , get/3
@@ -42,9 +44,24 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
+%% clojerl.ICounted
+
 count(Items) -> length(Items).
 
+%% clojerl.IHash
+
 hash(List) -> clj_murmur3:ordered(List).
+
+%% clojerl.IEncodeErlang
+
+'erl->clj'(List, Recursive) ->
+  L = case Recursive of
+        true  -> [clj_rt:'erl->clj'(Item, true) || Item <- List];
+        false -> List
+      end,
+  'clojerl.List':?CONSTRUCTOR(L).
+
+%% clojerl.ILookup
 
 get(List, Key) ->
   get(List, Key, ?NIL).
@@ -54,6 +71,8 @@ get(List, Key, NotFound) ->
     {Key, Value} -> Value;
     false -> NotFound
   end.
+
+%% clojerl.IReduce
 
 reduce([], F) ->
   clj_rt:apply(F, []);
@@ -72,6 +91,8 @@ do_reduce(F, Acc, [First | Items]) ->
 do_reduce(_F, Acc, []) ->
   Acc.
 
+%% clojerl.IStringable
+
 str([]) ->
   <<"">>;
 str(Items) when is_list(Items) ->
@@ -80,10 +101,14 @@ str(Items) when is_list(Items) ->
     false -> clj_rt:print_str(Items)
   end.
 
+%% clojerl.ISeqable
+
 seq([]) -> ?NIL;
 seq(List) -> List.
 
 to_list(List) -> List.
+
+%% clojerl.ISeq
 
 first([]) -> ?NIL;
 first([First | _]) -> First.
@@ -95,11 +120,15 @@ next([]) -> ?NIL;
 next([_ | []]) -> ?NIL;
 next([_ | Rest]) -> Rest.
 
+%% clojerl.IStack
+
 peek([]) -> ?NIL;
 peek([X | _]) -> X.
 
 pop([]) -> [];
 pop([_ | Rest]) -> Rest.
+
+%% clojerl.IColl
 
 cons([], X) ->
   [X];
@@ -107,6 +136,8 @@ cons(Items, X) ->
   [X | Items].
 
 empty(_) -> [].
+
+%% clojerl.IEquiv
 
 equiv(X, Y) when is_list(X), is_list(Y) ->
   case length(X) =:= length(Y) of
