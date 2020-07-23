@@ -2781,7 +2781,7 @@ parse_segment(Segment0, Env0) ->
                ]
              ),
   Config0 = 'clojerl.Map':?CONSTRUCTOR(Rest),
-  Config  = clj_rt:'->erl'(Config0, true),
+  Config  = clj_rt:'clj->erl'(Config0, true),
   Type    = maps:get(type, Config, integer),
 
   {ValueExpr, Env1} = parse_segment_value(Value, Env0),

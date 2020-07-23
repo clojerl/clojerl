@@ -1373,7 +1373,7 @@ erlang_literal(Form, State) ->
         ErlListSym = clj_rt:symbol(<<"erl-list*">>),
         List       = clj_rt:to_list(Form),
         clj_rt:list([ErlListSym | List]);
-      IsMap    -> clj_rt:'->erl'(Form, false);
+      IsMap    -> clj_rt:'clj->erl'(Form, false);
       IsVector -> list_to_tuple('clojerl.Vector':to_list(Form));
       IsString -> clj_rt:list( [ clj_rt:symbol(<<"erl-list*">>)
                                | unicode:characters_to_list(Form)

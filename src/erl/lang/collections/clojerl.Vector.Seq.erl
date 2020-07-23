@@ -6,7 +6,7 @@
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
--behavior('clojerl.IErl').
+-behavior('clojerl.IEncodeErlang').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
@@ -22,7 +22,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
--export(['->erl'/2]).
+-export(['clj->erl'/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -89,12 +89,12 @@ equiv(#{?TYPE := ?M} = X, Y) ->
     false -> false
   end.
 
-%% clojerl.IErl
+%% clojerl.IEncodeErlang
 
-'->erl'(#{?TYPE := ?M} = X, Recursive) ->
+'clj->erl'(#{?TYPE := ?M} = X, Recursive) ->
   List0 = to_list(X),
   case Recursive of
-    true  -> [clj_rt:'->erl'(Item, true) || Item <- List0];
+    true  -> [clj_rt:'clj->erl'(Item, true) || Item <- List0];
     false -> List0
   end.
 

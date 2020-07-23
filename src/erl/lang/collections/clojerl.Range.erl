@@ -7,7 +7,7 @@
 -behavior('clojerl.IColl').
 -behavior('clojerl.IChunkedSeq').
 -behavior('clojerl.IEquiv').
--behavior('clojerl.IErl').
+-behavior('clojerl.IEncodeErlang').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IMeta').
 -behavior('clojerl.IReduce').
@@ -27,7 +27,7 @@
         , chunked_next/1
         ]).
 -export([equiv/2]).
--export(['->erl'/2]).
+-export(['clj->erl'/2]).
 -export([hash/1]).
 -export([ meta/1
         , with_meta/2
@@ -114,10 +114,10 @@ equiv(#{?TYPE := ?M} = X, Y) ->
     false -> false
   end.
 
-%% clojerl.IErl
+%% clojerl.IEncodeErlang
 
-'->erl'(#{?TYPE := ?M} = X, _Recursive) ->
-  %% A range will always have numbers, which must not implement IErl
+'clj->erl'(#{?TYPE := ?M} = X, _Recursive) ->
+  %% A range will always have numbers, which must not implement IEncodeErlang
   to_list(X).
 
 %% clojerl.IHash

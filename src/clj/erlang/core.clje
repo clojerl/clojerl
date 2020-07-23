@@ -13,7 +13,7 @@
                          (->> arities
                               (filter #(-> % meta :optional))
                               (map (fun-arity name))))
-        f              #(->> callbacks (map %) (apply concat) ->erl)]
+        f              #(->> callbacks (map %) (apply concat) clj->erl)]
     `(defn* ~'behaviour_info
        ([:callbacks] '~(f find-callbacks))
        ([:optional_callbacks] '~(f find-optional)))))

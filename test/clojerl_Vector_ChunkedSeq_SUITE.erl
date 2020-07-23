@@ -183,13 +183,13 @@ reduce(_Config) ->
 to_erl(_Config) ->
   Tuple1      = list_to_tuple(lists:seq(0, 63)),
   ChunkedSeq1 = chunked_seq(64),
-  Tuple1      = clj_rt:'->erl'(ChunkedSeq1, false),
-  Tuple1      = clj_rt:'->erl'(ChunkedSeq1, true),
+  Tuple1      = clj_rt:'clj->erl'(ChunkedSeq1, false),
+  Tuple1      = clj_rt:'clj->erl'(ChunkedSeq1, true),
 
   Array            = clj_vector:new([1, ChunkedSeq1]),
   ChunkedSeq2      = 'clojerl.Vector.ChunkedSeq':?CONSTRUCTOR(Array, 0, 0),
-  {1, ChunkedSeq1} = clj_rt:'->erl'(ChunkedSeq2, false),
-  {1, Tuple1}      = clj_rt:'->erl'(ChunkedSeq2, true),
+  {1, ChunkedSeq1} = clj_rt:'clj->erl'(ChunkedSeq2, false),
+  {1, Tuple1}      = clj_rt:'clj->erl'(ChunkedSeq2, true),
 
   {comments, ""}.
 

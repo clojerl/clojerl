@@ -327,8 +327,8 @@ by default when a new command-line REPL is started."} repl-requires
 (defn- ensure-io-opts
   "Ensure I/O handling is binary and unicode"
   []
-  (io/setopts (->erl '([:binary true]
-                       [:encoding :unicode]))))
+  (io/setopts (clj->erl '([:binary true]
+                          [:encoding :unicode]))))
 
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were

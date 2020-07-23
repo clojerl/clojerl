@@ -139,13 +139,13 @@ cons(_Config) ->
 to_erl(_Config) ->
   List1 = lists:reverse(lists:seq(0, 63)),
   RSeq1 = rseq(64),
-  List1 = clj_rt:'->erl'(RSeq1, false),
-  List1 = clj_rt:'->erl'(RSeq1, true),
+  List1 = clj_rt:'clj->erl'(RSeq1, false),
+  List1 = clj_rt:'clj->erl'(RSeq1, true),
 
   Vector = 'clojerl.Vector':?CONSTRUCTOR([1, RSeq1]),
   RSeq2 = 'clojerl.Vector.RSeq':?CONSTRUCTOR(Vector, 1),
-  [RSeq1, 1] = clj_rt:'->erl'(RSeq2, false),
-  [List1, 1] = clj_rt:'->erl'(RSeq2, true),
+  [RSeq1, 1] = clj_rt:'clj->erl'(RSeq2, false),
+  [List1, 1] = clj_rt:'clj->erl'(RSeq2, true),
 
   {comments, ""}.
 

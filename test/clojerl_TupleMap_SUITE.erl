@@ -250,15 +250,15 @@ to_erl(_Config) ->
   Value     = #{1 => 2},
 
   Map1     = tuple_map([1, 2]),
-  Value    = clj_rt:'->erl'(Map1, false),
-  Value    = clj_rt:'->erl'(Map1, true),
+  Value    = clj_rt:'clj->erl'(Map1, false),
+  Value    = clj_rt:'clj->erl'(Map1, true),
 
   Map2     = tuple_map([Map1, Map1]),
 
-  Map2Erl1 = clj_rt:'->erl'(Map2, false),
+  Map2Erl1 = clj_rt:'clj->erl'(Map2, false),
   Map1     = maps:get(Map1, Map2Erl1),
 
-  Map2Erl2 = clj_rt:'->erl'(Map2, true),
+  Map2Erl2 = clj_rt:'clj->erl'(Map2, true),
   Value    = maps:get(#{1 => 2}, Map2Erl2),
 
   {comments, ""}.
@@ -279,7 +279,7 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
-  #{a := b, 2 := 3} = 'clojerl.TupleMap':'->erl'(NotEmptyMap, false),
+  #{a := b, 2 := 3} = 'clojerl.TupleMap':'clj->erl'(NotEmptyMap, false),
 
   {comments, ""}.
 
