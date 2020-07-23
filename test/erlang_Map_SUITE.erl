@@ -17,6 +17,7 @@
         , hash/1
         , cons/1
         , associative/1
+        , to_clj/1
         , complete_coverage/1
         ]).
 
@@ -44,6 +45,7 @@ new(_Config) ->
 
   Map2 = #{},
   not_found = clj_rt:get(Map2, 3, not_found),
+  ?NIL = clj_rt:vals(Map2),
 
   {comments, ""}.
 
@@ -189,6 +191,18 @@ associative(_Config) ->
 
   TwoMap = clj_rt:dissoc(TwoMap, 3),
   OneMap = clj_rt:dissoc(TwoMap, 2),
+
+  {comments, ""}.
+
+-spec to_clj(config()) -> result().
+to_clj(_Config) ->
+  Map1    = #{a => 1, b => 2},
+  CljMap1 = clj_rt:'erl->clj'(Map1, true),
+  true    = clj_rt:equiv(CljMap1, clj_rt:hash_map([a, 1, b, 2])),
+
+  Map2    = #{{} => []},
+  CljMap2 = clj_rt:'erl->clj'(Map2, false),
+  true    = clj_rt:equiv(CljMap2, clj_rt:hash_map([{}, []])),
 
   {comments, ""}.
 

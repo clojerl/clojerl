@@ -18,6 +18,7 @@
         , equiv/1
         , cons/1
         , stack/1
+        , to_clj/1
         , reduce/1
         , complete_coverage/1
         ]).
@@ -183,6 +184,18 @@ stack(_Config) ->
   TwoList   = [2, 1],
   2         = clj_rt:peek(TwoList),
   OneList = clj_rt:pop(TwoList),
+
+  {comments, ""}.
+
+-spec to_clj(config()) -> result().
+to_clj(_Config) ->
+  List    = [1, 2, 3],
+  CljList = clj_rt:'erl->clj'(List, true),
+  true    = clj_rt:equiv(CljList, clj_rt:list([1, 2, 3])),
+
+  EmptyList    = [],
+  EmptyCljList = clj_rt:'erl->clj'(EmptyList, false),
+  true         = clj_rt:equiv(EmptyCljList, clj_rt:list([])),
 
   {comments, ""}.
 

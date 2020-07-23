@@ -15,6 +15,7 @@
         , nth/1
         , seq/1
         , str/1
+        , to_clj/1
         ]).
 
 -spec all() -> [atom()].
@@ -111,5 +112,17 @@ str(_Config) ->
 
   EmptyTuple = {},
   <<"#erl[]">> = clj_rt:str(EmptyTuple),
+
+  {comments, ""}.
+
+-spec to_clj(config()) -> result().
+to_clj(_Config) ->
+  Tuple  = {1, 2, 3, 4},
+  Vector = clj_rt:'erl->clj'(Tuple, true),
+  true   = clj_rt:equiv(Vector, clj_rt:vector([1, 2, 3, 4])),
+
+  EmptyTuple  = {},
+  EmptyVector = clj_rt:'erl->clj'(EmptyTuple, false),
+  true        = clj_rt:equiv(EmptyVector, clj_rt:vector([])),
 
   {comments, ""}.
