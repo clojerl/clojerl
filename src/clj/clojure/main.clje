@@ -324,10 +324,17 @@ by default when a new command-line REPL is started."} repl-requires
     (initialize args inits)
     (apply (ns-resolve (doto (symbol main-ns) require) '-main) args)))
 
+(defn- ensure-io-opts
+  "Ensure I/O handling is binary and unicode"
+  []
+  (io/setopts (->erl '([:binary true]
+                       [:encoding :unicode]))))
+
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
   present"
   [[_ & args] inits]
+  (ensure-io-opts)
   (when-not (some #(= eval-opt (init-dispatch (first %))) inits)
     (println "Clojure" (clojure-version)))
   (repl :init (fn []
