@@ -5,6 +5,7 @@
 -behavior('clojerl.IAssociative').
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
+-behavior('clojerl.IEncodeClojure').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
@@ -22,6 +23,7 @@
 -export([ cons/2
         , empty/1
         ]).
+-export(['erl->clj'/2]).
 -export([ equiv/2]).
 -export([ apply/2]).
 -export([ hash/1]).
@@ -80,6 +82,20 @@ cons(Map, X) ->
   end.
 
 empty(_) -> #{}.
+
+%% clojerl.IEncodeClojure
+
+'erl->clj'(Map, Recursive) ->
+  Fun = fun
+          (K0, V0, KVs) when Recursive ->
+            K1 = clj_rt:'erl->clj'(K0, Recursive),
+            V1 = clj_rt:'erl->clj'(V0, Recursive),
+            [K1, V1 | KVs];
+          (K0, V0, KVs) ->
+            [K0, V0 | KVs]
+        end,
+  L = maps:fold(Fun, [], Map),
+  'clojerl.Map':?CONSTRUCTOR(L).
 
 %% clojerl.IEquiv
 

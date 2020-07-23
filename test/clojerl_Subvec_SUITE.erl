@@ -315,12 +315,12 @@ associative(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   Subvec1 = subvec(1, 3, 0, 3),
-  {1, 2, 3} = clj_rt:'->erl'(Subvec1, false),
-  {1, 2, 3} = clj_rt:'->erl'(Subvec1, true),
+  {1, 2, 3} = clj_rt:'clj->erl'(Subvec1, false),
+  {1, 2, 3} = clj_rt:'clj->erl'(Subvec1, true),
 
   Subvec2 = subvec([1, Subvec1], 0, 2),
-  {1, Subvec1} = clj_rt:'->erl'(Subvec2, false),
-  {1, {1, 2, 3}} = clj_rt:'->erl'(Subvec2, true),
+  {1, Subvec1} = clj_rt:'clj->erl'(Subvec2, false),
+  {1, {1, 2, 3}} = clj_rt:'clj->erl'(Subvec2, true),
 
   {comments, ""}.
 

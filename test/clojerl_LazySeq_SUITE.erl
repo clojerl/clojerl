@@ -187,12 +187,12 @@ reduce(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   LazySeq1  = range(1, 3),
-  [1, 2, 3] = clj_rt:'->erl'(LazySeq1, false),
-  [1, 2, 3] = clj_rt:'->erl'(LazySeq1, true),
+  [1, 2, 3] = clj_rt:'clj->erl'(LazySeq1, false),
+  [1, 2, 3] = clj_rt:'clj->erl'(LazySeq1, true),
 
   LazySeq2       = 'clojerl.LazySeq':?CONSTRUCTOR(fun() -> [1, LazySeq1] end),
-  [1, LazySeq1]  = clj_rt:'->erl'(LazySeq2, false),
-  [1, [1, 2, 3]] = clj_rt:'->erl'(LazySeq2, true),
+  [1, LazySeq1]  = clj_rt:'clj->erl'(LazySeq2, false),
+  [1, [1, 2, 3]] = clj_rt:'clj->erl'(LazySeq2, true),
 
   {comments, ""}.
 

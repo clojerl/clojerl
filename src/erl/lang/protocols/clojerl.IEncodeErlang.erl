@@ -1,4 +1,4 @@
--module('clojerl.IErl').
+-module('clojerl.IEncodeErlang').
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
@@ -6,49 +6,49 @@
 -clojure(true).
 -protocol(true).
 
--export(['->erl'/2]).
+-export(['clj->erl'/2]).
 -export([?SATISFIES/1]).
 -export([?EXTENDS/1]).
 
--callback '->erl'(any(), any()) -> any().
--optional_callbacks(['->erl'/2]).
+-callback 'clj->erl'(any(), any()) -> any().
+-optional_callbacks(['clj->erl'/2]).
 
-'->erl'(X, Recursive) ->
+'clj->erl'(X, Recursive) ->
   case X of
     #{?TYPE := 'clojerl.ChunkedCons'} ->
-      'clojerl.ChunkedCons':'->erl'(X, Recursive);
+      'clojerl.ChunkedCons':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Cons'} ->
-      'clojerl.Cons':'->erl'(X, Recursive);
+      'clojerl.Cons':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.LazySeq'} ->
-      'clojerl.LazySeq':'->erl'(X, Recursive);
+      'clojerl.LazySeq':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.List'} ->
-      'clojerl.List':'->erl'(X, Recursive);
+      'clojerl.List':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Map'} ->
-      'clojerl.Map':'->erl'(X, Recursive);
+      'clojerl.Map':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Range'} ->
-      'clojerl.Range':'->erl'(X, Recursive);
+      'clojerl.Range':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Subvec'} ->
-      'clojerl.Subvec':'->erl'(X, Recursive);
+      'clojerl.Subvec':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.TupleMap'} ->
-      'clojerl.TupleMap':'->erl'(X, Recursive);
+      'clojerl.TupleMap':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Vector'} ->
-      'clojerl.Vector':'->erl'(X, Recursive);
+      'clojerl.Vector':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Vector.ChunkedSeq'} ->
-      'clojerl.Vector.ChunkedSeq':'->erl'(X, Recursive);
+      'clojerl.Vector.ChunkedSeq':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Vector.RSeq'} ->
-      'clojerl.Vector.RSeq':'->erl'(X, Recursive);
+      'clojerl.Vector.RSeq':'clj->erl'(X, Recursive);
     #{?TYPE := 'clojerl.Vector.Seq'} ->
-      'clojerl.Vector.Seq':'->erl'(X, Recursive);
+      'clojerl.Vector.Seq':'clj->erl'(X, Recursive);
     #{?TYPE := _} ->
-      clj_protocol:not_implemented(?MODULE, '->erl', X);
+      clj_protocol:not_implemented(?MODULE, 'clj->erl', X);
     X_ when erlang:is_binary(X_) ->
-      clj_protocol:not_implemented(?MODULE, '->erl', X);
+      clj_protocol:not_implemented(?MODULE, 'clj->erl', X);
     X_ when erlang:is_boolean(X_) ->
-      clj_protocol:not_implemented(?MODULE, '->erl', X);
+      clj_protocol:not_implemented(?MODULE, 'clj->erl', X);
     ?NIL ->
-      clj_protocol:not_implemented(?MODULE, '->erl', X);
+      clj_protocol:not_implemented(?MODULE, 'clj->erl', X);
     _ ->
-      clj_protocol:not_implemented(?MODULE, '->erl', X)
+      clj_protocol:not_implemented(?MODULE, 'clj->erl', X)
   end.
 
 ?SATISFIES(X) ->

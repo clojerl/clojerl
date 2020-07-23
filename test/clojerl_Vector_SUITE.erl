@@ -266,12 +266,12 @@ associative(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   Vector1   = clj_rt:vector([1, 2, 3]),
-  {1, 2, 3} = clj_rt:'->erl'(Vector1, false),
-  {1, 2, 3} = clj_rt:'->erl'(Vector1, true),
+  {1, 2, 3} = clj_rt:'clj->erl'(Vector1, false),
+  {1, 2, 3} = clj_rt:'clj->erl'(Vector1, true),
 
   Vector2        = clj_rt:vector([1, Vector1]),
-  {1, Vector1}   = clj_rt:'->erl'(Vector2, false),
-  {1, {1, 2, 3}} = clj_rt:'->erl'(Vector2, true),
+  {1, Vector1}   = clj_rt:'clj->erl'(Vector2, false),
+  {1, {1, 2, 3}} = clj_rt:'clj->erl'(Vector2, true),
 
   {comments, ""}.
 

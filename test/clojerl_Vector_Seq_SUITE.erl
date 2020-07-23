@@ -155,14 +155,14 @@ reduce(_Config) ->
 to_erl(_Config) ->
   List1 = lists:seq(0, 63),
   Seq1  = create_seq(64),
-  List1 = clj_rt:'->erl'(Seq1, false),
-  List1 = clj_rt:'->erl'(Seq1, true),
+  List1 = clj_rt:'clj->erl'(Seq1, false),
+  List1 = clj_rt:'clj->erl'(Seq1, true),
 
   Vector = 'clojerl.Vector':?CONSTRUCTOR([1 | List1]),
   Seq2   = 'clojerl.Vector.Seq':?CONSTRUCTOR(Vector),
   List2 = [1 | List1],
-  List2 = clj_rt:'->erl'(Seq2, false),
-  List2 = clj_rt:'->erl'(Seq2, true),
+  List2 = clj_rt:'clj->erl'(Seq2, false),
+  List2 = clj_rt:'clj->erl'(Seq2, true),
 
   {comments, ""}.
 

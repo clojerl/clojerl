@@ -9,7 +9,7 @@
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
--behavior('clojerl.IErl').
+-behavior('clojerl.IEncodeErlang').
 -behavior('clojerl.IFn').
 -behavior('clojerl.IHash').
 -behavior('clojerl.IKVReduce').
@@ -33,7 +33,7 @@
         , empty/1
         ]).
 -export([equiv/2]).
--export(['->erl'/2]).
+-export(['clj->erl'/2]).
 -export([apply/2]).
 -export([hash/1]).
 -export(['kv-reduce'/3]).
@@ -182,19 +182,19 @@ equiv(#{?TYPE := ?M, map := Map, count := Count}, Y) ->
     false -> false
   end.
 
-%% clojerl.IErl
+%% clojerl.IEncodeErlang
 
-'->erl'(#{?TYPE := ?M, map := Map}, Recursive) ->
+'clj->erl'(#{?TYPE := ?M, map := Map}, Recursive) ->
   ErlMapFun = fun
                 (_, {Key0, Val0}, MapAcc) when Recursive ->
-                  Key1 = clj_rt:'->erl'(Key0, Recursive),
-                  Val1 = clj_rt:'->erl'(Val0, Recursive),
+                  Key1 = clj_rt:'clj->erl'(Key0, Recursive),
+                  Val1 = clj_rt:'clj->erl'(Val0, Recursive),
                   MapAcc#{Key1 => Val1};
                 (_, {Key0, Val0}, MapAcc) ->
                   MapAcc#{Key0 => Val0};
                 (_, KVs0, MapAcc) when Recursive ->
-                  KVs1 = [ { clj_rt:'->erl'(K, Recursive)
-                           , clj_rt:'->erl'(V, Recursive)
+                  KVs1 = [ { clj_rt:'clj->erl'(K, Recursive)
+                           , clj_rt:'clj->erl'(V, Recursive)
                            }
                            || {K, V} <- KVs0
                          ],

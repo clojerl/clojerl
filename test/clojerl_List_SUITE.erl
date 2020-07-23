@@ -198,12 +198,12 @@ reduce(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   List1     = clj_rt:list([1, 2, 3]),
-  [1, 2, 3] = clj_rt:'->erl'(List1, false),
-  [1, 2, 3] = clj_rt:'->erl'(List1, true),
+  [1, 2, 3] = clj_rt:'clj->erl'(List1, false),
+  [1, 2, 3] = clj_rt:'clj->erl'(List1, true),
 
   List2          = clj_rt:list([1, List1]),
-  [1, List1]     = clj_rt:'->erl'(List2, false),
-  [1, [1, 2, 3]] = clj_rt:'->erl'(List2, true),
+  [1, List1]     = clj_rt:'clj->erl'(List2, false),
+  [1, [1, 2, 3]] = clj_rt:'clj->erl'(List2, true),
 
   {comments, ""}.
 

@@ -290,26 +290,26 @@ associative(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   EmptyMap = clj_rt:hash_map([]),
-  #{} = clj_rt:'->erl'(EmptyMap, false),
-  #{} = clj_rt:'->erl'(EmptyMap, true),
+  #{} = clj_rt:'clj->erl'(EmptyMap, false),
+  #{} = clj_rt:'clj->erl'(EmptyMap, true),
 
   Map1     = clj_rt:hash_map([EmptyMap, EmptyMap]),
 
-  Map1Erl1 = clj_rt:'->erl'(Map1, false),
+  Map1Erl1 = clj_rt:'clj->erl'(Map1, false),
   EmptyMap = maps:get(EmptyMap, Map1Erl1),
 
-  Map1Erl2 = clj_rt:'->erl'(Map1, true),
+  Map1Erl2 = clj_rt:'clj->erl'(Map1, true),
   Value    = maps:get(#{}, Map1Erl2),
   Value    = #{},
 
   EmptySet = clj_rt:hash_set([]),
   Map2     = clj_rt:hash_map([EmptyMap, map, EmptySet, set]),
 
-  Map2Erl1 = clj_rt:'->erl'(Map2, false),
+  Map2Erl1 = clj_rt:'clj->erl'(Map2, false),
   map      = maps:get(EmptyMap, Map2Erl1),
   set      = maps:get(EmptySet, Map2Erl1),
 
-  Map2Erl2 = clj_rt:'->erl'(Map2, true),
+  Map2Erl2 = clj_rt:'clj->erl'(Map2, true),
   map      = maps:get(#{}, Map2Erl2),
   set      = maps:get(EmptySet, Map2Erl2),
 
@@ -331,6 +331,6 @@ complete_coverage(_Config) ->
 
   Hash1 = 'clojerl.IHash':hash(NotEmptyMap),
 
-  #{a := b, 2 := 3} = 'clojerl.Map':'->erl'(NotEmptyMap, false),
+  #{a := b, 2 := 3} = 'clojerl.Map':'clj->erl'(NotEmptyMap, false),
 
   {comments, ""}.

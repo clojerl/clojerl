@@ -141,12 +141,12 @@ cons(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   Cons1     = range(1, 3),
-  [1, 2, 3] = clj_rt:'->erl'(Cons1, false),
-  [1, 2, 3] = clj_rt:'->erl'(Cons1, true),
+  [1, 2, 3] = clj_rt:'clj->erl'(Cons1, false),
+  [1, 2, 3] = clj_rt:'clj->erl'(Cons1, true),
 
   Cons2          = clj_rt:cons(1, clj_rt:cons(Cons1, ?NIL)),
-  [1, Cons1]     = clj_rt:'->erl'(Cons2, false),
-  [1, [1, 2, 3]] = clj_rt:'->erl'(Cons2, true),
+  [1, Cons1]     = clj_rt:'clj->erl'(Cons2, false),
+  [1, [1, 2, 3]] = clj_rt:'clj->erl'(Cons2, true),
 
   {comments, ""}.
 

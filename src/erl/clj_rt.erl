@@ -42,7 +42,7 @@
         , compare_fun/2
         , shuffle/1
         , hash/1
-        , '->erl'/2
+        , 'clj->erl'/2, 'erl->clj'/2
         ]).
 
 -spec type(any()) -> 'erlang.Type':type().
@@ -775,10 +775,18 @@ shuffle(Seq) ->
 hash(?NIL) -> 0;
 hash(X)    -> 'clojerl.IHash':hash(X).
 
--spec '->erl'(any(), boolean()) -> any().
-'->erl'(?NIL, _)      -> ?NIL;
-'->erl'(X, Recursive) ->
-  case 'clojerl.IErl':?SATISFIES(X) of
-    true  -> 'clojerl.IErl':'->erl'(X, Recursive);
+-spec 'clj->erl'(any(), boolean()) -> any().
+'clj->erl'(?NIL, _)      -> ?NIL;
+'clj->erl'(X, Recursive) ->
+  case 'clojerl.IEncodeErlang':?SATISFIES(X) of
+    true  -> 'clojerl.IEncodeErlang':'clj->erl'(X, Recursive);
+    false -> X
+  end.
+
+-spec 'erl->clj'(any(), boolean()) -> any().
+'erl->clj'(?NIL, _)      -> ?NIL;
+'erl->clj'(X, Recursive) ->
+  case 'clojerl.IEncodeClojure':?SATISFIES(X) of
+    true  -> 'clojerl.IEncodeClojure':'erl->clj'(X, Recursive);
     false -> X
   end.

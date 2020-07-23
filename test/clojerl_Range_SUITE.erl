@@ -219,8 +219,8 @@ reduce(_Config) ->
 -spec to_erl(config()) -> result().
 to_erl(_Config) ->
   Range1  = 'clojerl.Range':?CONSTRUCTOR(1, 4, 1),
-  [1, 2, 3] = clj_rt:'->erl'(Range1, false),
-  [1, 2, 3] = clj_rt:'->erl'(Range1, true),
+  [1, 2, 3] = clj_rt:'clj->erl'(Range1, false),
+  [1, 2, 3] = clj_rt:'clj->erl'(Range1, true),
 
   {comments, ""}.
 
