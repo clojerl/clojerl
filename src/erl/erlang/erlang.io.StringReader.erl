@@ -161,5 +161,7 @@ skip({cont, 0, Str}, _Data, Length) ->
   {done, Length, Str};
 skip({cont, Length, <<>>}, _Data, Length) ->
   {done, eof, <<>>};
+skip({cont, Missing, <<>>}, _Data, Length) ->
+  {done, Length - Missing, <<>>};
 skip({cont, Length, <<_/utf8, RestStr/binary>>}, _Data, _Length) ->
   {more, {cont, Length - 1, RestStr}}.

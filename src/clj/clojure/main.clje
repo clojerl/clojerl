@@ -70,32 +70,79 @@
 (defn compile-protocols-path []
   (getenv "clojerl.compile.protocols.path" (compile-path)))
 
+(defn input-buffer
+  "Returns the contents of the buffer when it is not empty, otherwise
+  reads a line from the reader and feeds it into the buffer."
+  [reader writer]
+  (let [buffer (.str writer)]
+    (if (empty? buffer)
+      ;; When the buffer is empty feed it
+      ;; with a line from stdin
+      (let [line (.read_line reader)]
+        (when-not (= line :eof)
+          (.write writer line))
+        line)
+      buffer)))
+
+;; Wrappper for standard_io to avoid extra output of characters (see #762)
+(deftype InputReaderBuffer [^erlang.io.IReader reader
+                            ^erlang.io.IWriter writer]
+  erlang.io.IReader
+  (read [this]
+    (let [buffer (input-buffer reader writer)]
+      (if-not (= buffer :eof)
+        (let* [#bin[[ch :type :utf8] [_ :type :binary]] buffer]
+          (.delete writer 0 1)
+          #bin[[ch :type :utf8]])
+        :eof)))
+  (read [this n]
+    (loop [n n res ""]
+      (if (pos? n)
+        (let [ch (.read this)]
+          (cond
+            (not= ch :eof)
+            (recur (dec n) (.append ^clojerl.String res ch))
+            (empty? res) :eof
+            :else res))
+        res)))
+  (read_line [this]
+    (let [buffer (input-buffer reader writer)]
+      (when-not (= buffer :eof)
+        (.delete writer 0 (count buffer)))
+      buffer))
+  (skip [this n]
+    (let [res (.read this n)]
+      (if (= :eof res)
+        :eof
+        (count res)))))
+
 (defmacro with-bindings
   "Executes body in the context of thread-local bindings for several vars
   that often need to be set!: *ns* *warn-on-infer* *math-context*
   *print-meta* *print-length* *print-level* *compile-path*
   *compile-protocols-path* *command-line-args* *1 *2 *3 *e *stacktrace"
   [& body]
-  `(binding [*ns* *ns*
-             *print-meta* *print-meta*
-             *print-length* *print-length*
-             *print-level* *print-level*
-             *print-namespace-maps* true
-             *read-eval* *read-eval*
-             *warn-on-infer* *warn-on-infer*
-             *data-readers* *data-readers*
-             *default-data-reader-fn* *default-data-reader-fn*
-             *compile-path* (compile-path)
-             *compile-protocols-path* (compile-protocols-path)
-             *command-line-args* *command-line-args*
-             *assert* *assert*
-             *in* (new erlang.io.PushbackReader *in*)
-             *1 nil
-             *2 nil
-             *3 nil
-             *e nil
-             *stacktrace nil]
-     ~@body))
+  `(with-open [w# (erlang.io.StringWriter.)]
+    (binding [*ns* *ns*
+               *print-meta* *print-meta*
+               *print-length* *print-length*
+               *print-level* *print-level*
+               *print-namespace-maps* true
+               *read-eval* *read-eval*
+               *warn-on-infer* *warn-on-infer*
+               *data-readers* *data-readers*
+               *default-data-reader-fn* *default-data-reader-fn*
+               *compile-path* (compile-path)
+               *compile-protocols-path* (compile-protocols-path)
+               *command-line-args* *command-line-args*
+               *assert* *assert*
+               *in* (new erlang.io.PushbackReader (InputReaderBuffer. *in* w#))
+               *1 nil
+               *2 nil
+               *3 nil
+               *e nil
+               *stacktrace nil]
+       ~@body)))
 
 (defn repl-prompt
   "Default :prompt hook for repl"
