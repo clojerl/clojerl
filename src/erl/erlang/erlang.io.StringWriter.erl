@@ -52,7 +52,6 @@ count(#{?TYPE := ?M, pid := Pid}) ->
     Count      -> Count
   end.
 
-
 str(#{?TYPE := ?M, pid := Pid}) ->
   case send_command(Pid, str) of
     {error, _} -> error(<<"Couldn't get string from erlang.io.StringWriter">>);
@@ -97,33 +96,26 @@ start_link(Str) ->
 
 init(Str) -> ?MODULE:loop(Str).
 
-loop(Str) ->
+loop(Str0) ->
   receive
     {io_request, From, ReplyAs, Request} ->
-      {Reply, NewStr} = request(Request, Str),
+      {Reply, Str1} = request(Request, Str0),
       reply(From, ReplyAs, Reply),
-      ?MODULE:loop(NewStr);
-    {From, Ref, str} ->
-      From ! {Ref, Str},
-      ?MODULE:loop(Str);
-    {From, Ref, count} ->
-      From ! {Ref, 'clojerl.String':count(Str)},
-      ?MODULE:loop(Str);
-    {From, Ref, {delete, Start, End}} ->
-      NewStr = try
-                 First  = 'clojerl.String':substring(Str, 0, Start),
-                 Second = 'clojerl.String':substring(Str, End),
-                 From ! {Ref, ok},
-                 <<First/binary, Second/binary>>
-               catch _:Reason ->
-                   From ! {Ref, {error, Reason}},
-                   Str
-               end,
-      ?MODULE:loop(NewStr);
+      ?MODULE:loop(Str1);
     {From, Ref, close} ->
       From ! {Ref, ok};
+    {From, Ref, Cmd} ->
+      Str2 = try
+               {Reply, Str1} = commands(Cmd, Str0),
+               From ! {Ref, Reply},
+               Str1
+             catch _:Reason ->
+                 From ! {Ref, {error, Reason}},
+                 Str0
+             end,
+      ?MODULE:loop(Str2);
     _Unknown ->
-      ?MODULE:loop(Str)
+      ?MODULE:loop(Str0)
   end.
 
 reply(From, ReplyAs, Reply) ->
@@ -141,3 +133,13 @@ request({put_chars, Encoding, Module, Function, Args}, State) ->
   end;
 request(_Other, State) ->
   {{error, request}, State}.
+
+-spec commands(tuple(), binary()) -> {any(), binary()}.
+commands(count, Str) ->
+  {'clojerl.String':count(Str), Str};
+commands({delete, Start, End}, Str) ->
+  First  = 'clojerl.String':substring(Str, 0, Start),
+  Second = 'clojerl.String':substring(Str, End),
+  {ok, <<First/binary, Second/binary>>};
+commands(str, Str) ->
+  {Str, Str}.
