@@ -107,6 +107,11 @@ skip(_Config) ->
 
   ?NIL = 'erlang.io.ICloseable':close(Reader),
 
+  Reader2 = 'erlang.io.StringReader':?CONSTRUCTOR(<<"foo">>),
+  3       = 'erlang.io.IReader':skip(Reader2, 4),
+  eof     = 'erlang.io.IReader':read_line(Reader2),
+  eof     = 'erlang.io.IReader':skip(Reader2, 1),
+
   {comments, ""}.
 
 -spec close(config()) -> result().
