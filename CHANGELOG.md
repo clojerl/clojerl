@@ -1,6 +1,60 @@
 # Changelog
 
-## [0.6.0](https://github.com/clojerl/clojerl/tree/0.6.0)
+## [0.7.0](https://github.com/clojerl/clojerl/tree/0.7.0)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.6.0...0.7.0)
+
+**Implemented enhancements:**
+
+- Remove rebar3 hook for 'clojerl compile' command [\#764](https://github.com/clojerl/clojerl/issues/764)
+- Imitate support from ClojureScript to encode/decode into/from Erlang value [\#759](https://github.com/clojerl/clojerl/issues/759)
+- Improve error reporting for erl-binary\* [\#752](https://github.com/clojerl/clojerl/issues/752)
+- clojure.core/load-lib: include original stacktrace when rethrowing error [\#749](https://github.com/clojerl/clojerl/issues/749)
+- Compiler option to output BEAM assembly [\#730](https://github.com/clojerl/clojerl/issues/730)
+
+**Fixed bugs:**
+
+- REPL started from an Erlang shell outputs extra characters [\#762](https://github.com/clojerl/clojerl/issues/762)
+- Starting a REPL fails when calling clojure.main/main from Erlang shell [\#758](https://github.com/clojerl/clojerl/issues/758)
+- Binary pattern fails when using a variable for :size [\#755](https://github.com/clojerl/clojerl/issues/755)
+- clojure.edn/read fails when using a PushbackReader [\#747](https://github.com/clojerl/clojerl/issues/747)
+- Can't compile on Windows [\#745](https://github.com/clojerl/clojerl/issues/745)
+- bin/clojerl script fails in Linux [\#741](https://github.com/clojerl/clojerl/issues/741)
+- Error when reloading namespace from a file that refers a var in another namespace [\#732](https://github.com/clojerl/clojerl/issues/732)
+- clojerl application should comply with OTP guidelines [\#728](https://github.com/clojerl/clojerl/issues/728)
+
+**Closed issues:**
+
+- Compile with Erlang/OTP 23 [\#753](https://github.com/clojerl/clojerl/issues/753)
+- Improve performance of clojure.core/last [\#738](https://github.com/clojerl/clojerl/issues/738)
+- Pin rebar3\_clojerl version before creating the next release [\#723](https://github.com/clojerl/clojerl/issues/723)
+- Reducers [\#248](https://github.com/clojerl/clojerl/issues/248)
+
+**Merged pull requests:**
+
+- \[\#764\] Remove pre-hook [\#765](https://github.com/clojerl/clojerl/pull/765) ([jfacorro](https://github.com/jfacorro))
+- \[\#762\] REPL from Erlang shell outputs extra characters [\#763](https://github.com/clojerl/clojerl/pull/763) ([jfacorro](https://github.com/jfacorro))
+- \[\#759\] Erlang and Clojure encoders [\#761](https://github.com/clojerl/clojerl/pull/761) ([jfacorro](https://github.com/jfacorro))
+- \[\#758\] Starting REPL from shell fails [\#760](https://github.com/clojerl/clojerl/pull/760) ([jfacorro](https://github.com/jfacorro))
+- \[\#753\] Compile with OTP 23 [\#757](https://github.com/clojerl/clojerl/pull/757) ([jfacorro](https://github.com/jfacorro))
+- \[\#755\] Don't parse :size as a pattern [\#756](https://github.com/clojerl/clojerl/pull/756) ([jfacorro](https://github.com/jfacorro))
+- \[\#752\] Improve error reporting for erl-binary\* [\#754](https://github.com/clojerl/clojerl/pull/754) ([jfacorro](https://github.com/jfacorro))
+- \[\#749\] Provide stacktrace to throw [\#751](https://github.com/clojerl/clojerl/pull/751) ([jfacorro](https://github.com/jfacorro))
+- \[\#749\] Include original stacktrace when throwing error [\#750](https://github.com/clojerl/clojerl/pull/750) ([jfacorro](https://github.com/jfacorro))
+- \[\#747\] Set the io-reader option when calling clj\_edn/read [\#748](https://github.com/clojerl/clojerl/pull/748) ([jfacorro](https://github.com/jfacorro))
+- \[\#745\] Munge namespace name for multimethod's map [\#746](https://github.com/clojerl/clojerl/pull/746) ([jfacorro](https://github.com/jfacorro))
+- Improve README [\#743](https://github.com/clojerl/clojerl/pull/743) ([jfacorro](https://github.com/jfacorro))
+- \[\#741\] Use pattern matching in case [\#742](https://github.com/clojerl/clojerl/pull/742) ([jfacorro](https://github.com/jfacorro))
+- \[\#248\] reducers benchmarks [\#740](https://github.com/clojerl/clojerl/pull/740) ([jfacorro](https://github.com/jfacorro))
+- \[\#738\] Improve performance of clojure.core/last [\#739](https://github.com/clojerl/clojerl/pull/739) ([jfacorro](https://github.com/jfacorro))
+- \[\#248\] Implement clojerl.Subvec and clojerl.Vector.Seq [\#737](https://github.com/clojerl/clojerl/pull/737) ([jfacorro](https://github.com/jfacorro))
+- \[\#284\] Rename the callback functions for marker protocols and remove their implementations [\#736](https://github.com/clojerl/clojerl/pull/736) ([jfacorro](https://github.com/jfacorro))
+- \[\#248\] Reducers [\#735](https://github.com/clojerl/clojerl/pull/735) ([jfacorro](https://github.com/jfacorro))
+- \[\#732\] Fix bug when checking for overriden vars [\#733](https://github.com/clojerl/clojerl/pull/733) ([jfacorro](https://github.com/jfacorro))
+- \[\#730\] Add option to compile to BEAM assembly [\#731](https://github.com/clojerl/clojerl/pull/731) ([jfacorro](https://github.com/jfacorro))
+- \[\#728\] Return top level supervisor pid [\#729](https://github.com/clojerl/clojerl/pull/729) ([jfacorro](https://github.com/jfacorro))
+
+## [0.6.0](https://github.com/clojerl/clojerl/tree/0.6.0) (2020-03-22)
 
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.5.1...0.6.0)
 
@@ -15,6 +69,7 @@
 
 **Fixed bugs:**
 
+- clje.user ns in REPL doesn't refer clojure.core when started from clean project [\#726](https://github.com/clojerl/clojerl/issues/726)
 - Wrong implementation of clojerl.Var:has\_root/1 [\#718](https://github.com/clojerl/clojerl/issues/718)
 - mix-collection-hash and hash of unordered set must be equal [\#702](https://github.com/clojerl/clojerl/issues/702)
 - Create clje.user ns during initialization [\#699](https://github.com/clojerl/clojerl/issues/699)
@@ -43,6 +98,7 @@
 
 **Merged pull requests:**
 
+- Prepare release 0.6.0 [\#727](https://github.com/clojerl/clojerl/pull/727) ([jfacorro](https://github.com/jfacorro))
 - \[\#310\] Native code compilation [\#722](https://github.com/clojerl/clojerl/pull/722) ([jfacorro](https://github.com/jfacorro))
 - \[\#720\] Record ops performance [\#721](https://github.com/clojerl/clojerl/pull/721) ([jfacorro](https://github.com/jfacorro))
 - \[\#718\] Fix implementation and update tests for clojerl.Var:has\_root/1 [\#719](https://github.com/clojerl/clojerl/pull/719) ([jfacorro](https://github.com/jfacorro))
