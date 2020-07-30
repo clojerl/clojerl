@@ -101,7 +101,7 @@
     (loop [line ""]
       (let [char (unwrap-result (gen_tcp/recv conn 1))]
         (if (= char "\n")
-          line
+          (str line "\n")
           (recur (str line char))))))
   (skip [this length]
     (let [skipped (unwrap-result (gen_tcp/recv conn length))]
