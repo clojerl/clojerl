@@ -17,7 +17,7 @@ On Windows:
 
     git clone https://github.com/clojerl/clojerl
     cd clojerl
-    rebar3 compile
+    rebar3 clojerl compile
 
 ## Getting Started
 
@@ -52,8 +52,8 @@ clje.user=>
 
 ### Local REPL
 
-Running `make repl` (on Windows `bin/clje.bat`) will start the REPL
-and show its prompt:
+Running `make repl` (on Windows first run `rebar3 clojerl compile` and
+then `bin/clje.bat`) will start the REPL and show its prompt:
 
     Clojure 0.6.0
     clje.user=>
