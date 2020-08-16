@@ -875,8 +875,16 @@ regex(ReadFun, ReadAllFun) ->
   Regex2 = 'erlang.util.Regex':?CONSTRUCTOR(<<"">>),
   Regex2 = ReadFun(<<"#\"\"">>),
 
+  Regex3 = 'erlang.util.Regex':?CONSTRUCTOR(<<"foo\\\"">>),
+  Regex3 = ReadFun(<<"#\"foo\\\"\"">>),
+
   ct:comment("EOF: unterminated regex"),
   ok = try ReadAllFun(<<"#\"a*">>)
+       catch _:_ -> ok
+       end,
+
+  ct:comment("EOF: unterminated regex"),
+  ok = try ReadAllFun(<<"#\"foo\\">>)
        catch _:_ -> ok
        end,
 
