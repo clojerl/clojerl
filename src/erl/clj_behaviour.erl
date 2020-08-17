@@ -1,3 +1,7 @@
+%% @doc Clojerl behaviour checks
+%%
+%% Implements the same checks done to Erlang modules when they specify
+%% they implement a behaviour.
 -module(clj_behaviour).
 
 -include("clojerl.hrl").
@@ -5,6 +9,10 @@
 
 -export([check/1]).
 
+%% @doc Check the module implements the behaviours it specifies.
+%%
+%% Shows warnings by printing to `clojure.core/*err*' if any issue is
+%% found.
 -spec check(cerl:c_module()) -> ok.
 check(Module) ->
   ExportsAsts = cerl:module_exports(Module),
