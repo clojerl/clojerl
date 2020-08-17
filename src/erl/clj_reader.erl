@@ -1034,6 +1034,13 @@ read_regex(#{src := <<"\""/utf8, _/binary>>, current := ?NIL} = State) ->
 read_regex(#{src := <<Ch/utf8, _/binary>>, current := ?NIL} = State) ->
   NewState = State#{current => <<Ch/utf8>>},
   read_regex(consume_char(NewState));
+read_regex(#{src := <<"\\"/utf8>>, current := Current} = State) ->
+  case check_reader(consume_char(State)) of
+    eof -> ?ERROR(<<"EOF while escaping char in regex">>, location(State));
+    {ok, NewState = #{src := <<Ch/utf8>>}} ->
+      NewCurrent = <<Current/binary, "\\"/utf8, Ch/utf8>>,
+      read_regex(consume_char(NewState#{current => NewCurrent}))
+  end;
 read_regex(#{ src     := <<"\\"/utf8, Ch/utf8, _/binary>>
             , current := Current
             } = State
