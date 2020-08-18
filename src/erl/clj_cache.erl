@@ -1,4 +1,4 @@
-%% @doc Generic cache module
+%% @doc Generic cache module.
 %%
 %% Implements the `gen_server' behaviour and on initialization creates
 %% an in-memory ETS table where to keep the cached values.
@@ -29,7 +29,7 @@
 %% Exported Functions
 %%------------------------------------------------------------------------------
 
-%% @doc Get the value for `Key' or `undefined' if not found.
+%% @doc Gets the value for `Key' or `undefined' if not found.
 -spec get(any()) -> undefined | {ok, any()}.
 get(Key) ->
   case ets:lookup(?MODULE, Key) of
@@ -37,7 +37,7 @@ get(Key) ->
     [{Key, Value}] -> {ok, Value}
   end.
 
-%% @doc Add or update the `Value' for `Key'.
+%% @doc Adds or updates the `Value' for `Key'.
 -spec put(any(), any()) -> ok.
 put(Key, Value) ->
   gen_server:call(?MODULE, {put, Key, Value}).

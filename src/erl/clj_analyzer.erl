@@ -1,4 +1,4 @@
-%% @doc Clojerl analyzer
+%% @doc Clojerl analyzer.
 %%
 %% Processes code in the form of data structures and transform them
 %% into AST nodes which get pushed to the `clj_env:env()'.
@@ -19,7 +19,7 @@
         , is_special/1
         ]).
 
-%% @doc Analyze `Form' and transform it into an `expr()'.
+%% @doc Analyzes `Form' and transforms it into an `expr()'.
 %%
 %% The analyzed `Form' gets pushed into the stack of expressions in
 %% `Env' and the updated environment is returned.
@@ -34,7 +34,7 @@ is_special(S) ->
   clj_rt:'symbol?'(S) andalso
     maps:is_key('clojerl.Symbol':str(S), special_forms()).
 
-%% @doc Macroexpand `Form' only once.
+%% @doc Macroexpands `Form' only once.
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
   case clj_rt:'seq?'(Form) of
@@ -42,7 +42,7 @@ macroexpand_1(Form, Env) ->
     false -> Form
   end.
 
-%% @doc Macroexpand `Form' until there are no further macro expansions.
+%% @doc Macroexpands `Form' until there are no further macro expansions.
 -spec macroexpand(any(), clj_env:env()) -> any().
 macroexpand(Form, Env) ->
   case macroexpand_1(Form, Env) of

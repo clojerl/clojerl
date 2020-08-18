@@ -1,6 +1,6 @@
-%% @doc Clojerl API
+%% @doc Clojerl API.
 %%
-%% User friendly API to interact with Clojerl from other BEAM
+%% User-friendly API to interact with Clojerl from other BEAM
 %% languages.
 -module(clojerl).
 
@@ -16,13 +16,13 @@
 -define(APP, clojerl).
 -define(STICKY_MODULES, ['clojure.core']).
 
-%% @doc Start the `clojerl' OTP application.
+%% @doc Starts the `clojerl' OTP application.
 -spec start() -> ok.
 start() ->
   {ok, _} = application:ensure_all_started(clojerl, permanent),
   ok.
 
-%% @doc Read a binary string and return a parsed Clojerl form.
+%% @doc Reads a binary string and returns a parsed Clojerl form.
 -spec read(binary()) -> any().
 read(Str) ->
   'clojure.edn':'read-string'(Str).

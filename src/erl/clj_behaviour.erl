@@ -1,4 +1,4 @@
-%% @doc Clojerl behaviour checks
+%% @doc Clojerl behaviour checks.
 %%
 %% Implements the same checks done to Erlang modules when they specify
 %% they implement a behaviour.
@@ -9,7 +9,8 @@
 
 -export([check/1]).
 
-%% @doc Check the module implements the behaviours it specifies.
+%% @doc Checks that the Core Erlang module implements the behaviours
+%% it specifies.
 %%
 %% Shows warnings by printing to `clojure.core/*err*' if any issue is
 %% found.
