@@ -12,9 +12,9 @@
   (:refer-clojure :exclude [read read-string]))
 
 (defn read
-  "Reads the next object from stream, which must be an instance of
-  java.io.PushbackReader or some derivee.  stream defaults to the
-  current value of *in*.
+  "Reads the next object from stream, which must be implement
+  erlang.io.PushbackReader. stream defaults to the current value
+  of *in*.
 
   Reads data in the edn format (subset of Clojure data):
   http://edn-format.org
@@ -32,7 +32,7 @@
   ([stream]
    (read {} stream))
   ([opts stream]
-   (clj_edn/read "" (clj->erl (assoc opts :io-reader stream)))))
+   (clj_edn/read stream (clj->erl opts))))
 
 (defn read-string
   "Reads one object from the string s. Returns nil when s is nil or empty.
@@ -43,4 +43,4 @@
   opts is a map as per clojure.edn/read"
   {:added "1.5"}
   ([s] (read-string {:eof nil} s))
-  ([opts s] (when s (clj_edn/read_string s opts))))
+  ([opts s] (when s (clj_edn/read_string s (clj->erl opts)))))
