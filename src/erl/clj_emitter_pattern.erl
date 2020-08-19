@@ -14,7 +14,7 @@ fold_guards([]) ->
   cerl:abstract(true);
 fold_guards([Guard0]) ->
   Guard0;
-fold_guards([Guard0, PatternGuards]) ->
+fold_guards([Guard0 | PatternGuards]) ->
   fold_guards(Guard0, PatternGuards).
 
 fold_guards(Guard0, PatternGuards) ->
