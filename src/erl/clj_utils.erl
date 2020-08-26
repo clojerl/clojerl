@@ -1,3 +1,4 @@
+%% @doc Utility functions.
 -module(clj_utils).
 
 -include("clojerl.hrl").
@@ -22,8 +23,6 @@
         , error_str/2
 
         , group_by/2
-        , nth/2
-        , nth/3
 
         , time/1
         , time/2
@@ -72,6 +71,9 @@
 %% Exported functions
 %%------------------------------------------------------------------------------
 
+%% @doc Parses a binary into an integer or a float.
+%%
+%% Generates an error when it can't parse the input into a either.
 -spec parse_number(binary(), [{number_type(), re:mp()}]) -> number().
 parse_number(Number, Types) ->
   Result = case number_type(Number, Types) of
@@ -86,6 +88,7 @@ parse_number(Number, Types) ->
 
   Result.
 
+%% @doc Parses a binary into a {@link 'clojerl.Symbol'}.
 -spec parse_symbol(binary()) ->
   {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()} | ?NIL.
 parse_symbol(<<>>) ->
@@ -119,6 +122,10 @@ verify_symbol_name({_, Name} = Result) ->
     false -> ?NIL
   end.
 
+%% @doc Checks if an `erl_fun' expression refers to an existing
+%% function in the code path.
+%%
+%% Shows a warning when the function can't be found.
 -spec check_erl_fun(erl_fun_expr()) -> ok.
 check_erl_fun(Expr) ->
   #{ op       := erl_fun
@@ -144,6 +151,10 @@ check_erl_fun(Expr) ->
             , clj_env:location(Env)
             ).
 
+%% @doc Parses a symbol assuming it refers to an erlang function.
+%%
+%% Returns a tuple with the parsed module, function and arity. Module
+%% and arity can be `undefined'.
 -spec parse_erl_fun('clojerl.Symbol':type()) ->
   {binary() | ?NIL, binary(), integer() | ?NIL}.
 parse_erl_fun(Symbol) ->
@@ -167,9 +178,13 @@ erl_fun_arity(Name) ->
       end
   end.
 
+%% @equiv char_type(X, undefined)
 -spec char_type(non_neg_integer()) -> char_type().
 char_type(X) -> char_type(X, ?NIL).
 
+%% @doc Returns the type of the char.
+%%
+%% The second argument can be used to take into account the next char.
 -spec char_type(non_neg_integer(), integer() | ?NIL) -> char_type().
 char_type(X, _)
   when X == $\n; X == $\t; X == $\r; X == $ ; X == $,->
@@ -200,6 +215,11 @@ char_type($%, _) -> arg;
 char_type($#, _) -> dispatch;
 char_type(_, _) -> symbol.
 
+%% @doc Transforms a sugared metadata value into its expanded form.
+%%
+%% Metadata in Clojure allows for some sugared syntax (e.g. `^:foo'
+%% means `^{:foo true}') which needs to be translated to the full map
+%% form.
 -spec desugar_meta('clojerl.Map':type() |
                    'clojerl.Keyword':type() |
                    'clojerl.Symbol':type() |
@@ -218,6 +238,10 @@ desugar_meta(Meta) ->
       ?THROW(<<"Metadata must be Symbol, Keyword, String or Map">>)
   end.
 
+%% @doc Compares two values returning an integer as the result.
+%%
+%% Returns a negative integer when `X < Y', 0 when `X == Y' and
+%% a positive integer when `X > Y'.
 -spec compare(any(), any()) -> integer().
 compare(X, Y) ->
   if
@@ -226,6 +250,8 @@ compare(X, Y) ->
     X >  Y -> 1
   end.
 
+%% @doc Returns the environment variables in a map with keys and
+%% values as binaries.
 -spec env_vars() -> #{binary() => binary()}.
 env_vars() ->
   Pairs = [ begin
@@ -237,6 +263,8 @@ env_vars() ->
           ],
   maps:from_list(Pairs).
 
+%% @doc Formats error messages including file location information
+%% when available.
 -spec format_error(any(), clj_reader:location() | ?NIL) -> binary().
 format_error(List, Location) when is_list(List) ->
   Reason = error_msg_to_binary(List),
@@ -247,11 +275,13 @@ format_error(Reason, Location) when is_binary(Reason) ->
 format_error(Reason, Location) ->
   iolist_to_binary(io_lib:format("~p", [{Location, Reason}])).
 
+%% @doc Prepends the module name to the error message.
 -spec error_str(module(), binary()) -> binary().
 error_str(Module, Message) ->
   ModuleBin = atom_to_binary(Module, utf8),
   <<ModuleBin/binary, ": ", Message/binary>>.
 
+%% @private
 -spec error_msg_to_binary(any()) -> binary().
 error_msg_to_binary(Message) when is_binary(Message) ->
   Message;
@@ -260,6 +290,8 @@ error_msg_to_binary(Message) when is_list(Message) ->
 error_msg_to_binary(Message) ->
   clj_rt:str(Message).
 
+%% @doc Groups the items in the list using the values returned by the
+%% `GroupBy' function.
 -spec group_by(fun((any()) -> any()), list()) -> map().
 group_by(GroupBy, List) ->
   Group = fun(Item, Acc) ->
@@ -271,24 +303,32 @@ group_by(GroupBy, List) ->
   ReverseValue = fun(_, V) -> lists:reverse(V) end,
   maps:map(ReverseValue, Map).
 
+%% @equiv time("Time", Fun)
 -spec time(function()) -> any().
 time(Fun) when is_function(Fun) ->
   time("Time", Fun).
 
+%% @equiv time(Label, Fun, [])
 -spec time(string(), function()) -> any().
 time(Label, Fun) when is_function(Fun) ->
   time(Label, Fun, []).
 
+%% @doc Calls `Fun' measuring and printing the time it takes to run.
+%%
+%% Returns the result of the function.
 -spec time(string(), function(), list()) -> any().
 time(Label, Fun, Args) ->
   {T, V} = timer:tc(fun() -> apply(Fun, Args) end),
   io:format("~s: ~p ms~n", [Label, erlang:trunc(T / 1000)]),
   V.
 
+%% @doc Stores a module's BEAM binary in `clj_cache'.
 -spec store_binary(module(), binary()) -> ok.
 store_binary(Name, Binary) ->
   clj_cache:put({beam, Name}, Binary).
 
+%% @doc Adds a chunk in the BEAM binary containing its Core Erlang
+%% representation.
 -spec add_core_to_binary(binary(), cerl:cerl()) -> binary().
 add_core_to_binary(BeamBinary, CoreModule) ->
   CoreAbstract        = erlang:term_to_binary(CoreModule, [compressed]),
@@ -298,6 +338,7 @@ add_core_to_binary(BeamBinary, CoreModule) ->
   {ok, NewBeamBinary} = beam_lib:build_module([CoreAbstractChunk | OldChunks1]),
   NewBeamBinary.
 
+%% @doc Adds a compile info chunk in the BEAM binary.
 -spec add_compile_info_to_binary(binary(), any()) -> binary().
 add_compile_info_to_binary(BeamBinary, CompileInfo) ->
   CompileInfoChunk    = { ?COMPILE_INFO_CHUNK
@@ -308,6 +349,10 @@ add_compile_info_to_binary(BeamBinary, CompileInfo) ->
   {ok, NewBeamBinary} = beam_lib:build_module([CompileInfoChunk | OldChunks1]),
   NewBeamBinary.
 
+%% @doc Returns the Core Erlang representation for a module.
+%%
+%% It tries to find it in a chunk in the module's BEAM binary. If the
+%% binary is not in `clj_cache' it is then fetches from disk.
 -spec code_from_binary(atom()) -> cerl:cerl() | {error, term()}.
 code_from_binary(Name) when is_atom(Name) ->
   %% First try to fetch the binary from memory
@@ -324,6 +369,7 @@ code_from_binary(Name) when is_atom(Name) ->
       end
   end.
 
+%% @private
 -spec core_from_binary(binary()) ->
   cerl:cerl() | {error, missing_abstract_code}.
 core_from_binary(Binary) ->
@@ -346,6 +392,7 @@ core_from_binary(Binary) ->
       erlang:binary_to_term(CoreModule)
   end.
 
+%% @private
 -spec core_chunk() -> string().
 core_chunk() -> ?CORE_CHUNK.
 
@@ -359,6 +406,98 @@ maybe_sys_pre_expand(Code) ->
     {error, _} ->
       {Code, []}
   end.
+
+%% @doc Returns the remainder of the division.
+-spec 'rem'(number(), number()) -> number().
+'rem'(X, Y) when is_integer(X), is_integer(Y) ->
+  X rem Y;
+'rem'(X, Y) ->
+  Q = trunc(X / Y),
+  X - Q * Y.
+
+%% @doc Returns the quotient of the division.
+-spec quotient(number(), number()) -> number().
+quotient(X, Y) when is_integer(X), is_integer(Y) ->
+  X div Y;
+quotient(X, Y) ->
+  quotient(trunc(X), trunc(Y)).
+
+%% @doc Returns the largest integer that is less than or equal to `X'.
+-spec floor(number()) -> integer().
+floor(X) when X < 0 ->
+  T = trunc(X),
+  case X - T == 0 of
+    true  -> T;
+    false -> T - 1
+  end;
+floor(X) ->
+  trunc(X).
+
+%% @doc Returns the lowest integer that is grater than or equal to `X'.
+-spec ceil(number()) -> integer().
+ceil(X) when X < 0 ->
+  trunc(X);
+ceil(X) ->
+  T = trunc(X),
+  case X - T == 0 of
+    true  -> T;
+    false -> T + 1
+  end.
+
+%% @doc Returns either -1 or 1 if `X' is negative or positive
+%% respectively.
+-spec signum(number()) -> number().
+signum(X) when X < 0 -> -1;
+signum(X) when X >= 0 -> 1.
+
+%% @equiv bnot(X band Y)
+-spec bnand(number(), number()) -> number().
+bnand(X, Y) -> bnot(X band Y).
+
+%% @doc Gets a value from an ETS table or returns `undefined' if it's
+%% not found.
+-spec ets_get(atom() | ets:tid(), term()) -> term().
+ets_get(Table, Id) ->
+  ets_get(Table, Id, ?NIL).
+
+%% @doc Gets a value from an ETS table or returns `Default' if it's
+%% not found.
+-spec ets_get(atom() | ets:tid(), term(), term()) -> term().
+ets_get(Table, Id, Default) ->
+  case ets:lookup(Table, Id) of
+    [] -> Default;
+    [Value] -> Value
+  end.
+
+%% @doc Stores a value in an ETS table.
+-spec ets_save(ets:tid() | atom(), term()) -> term().
+ets_save(Table, Value) ->
+  true = ets:insert(Table, Value),
+  Value.
+
+%% @doc Maps the name of a resource (as used by clojure.core/load) to
+%% a namespace.
+-spec resource_to_ns(binary()) -> binary().
+resource_to_ns(Resource) ->
+  Ns = binary:replace(Resource, <<"/">>, <<".">>, [global]),
+  binary:replace(Ns, <<"_">>, <<"-">>, [global]).
+
+%% @doc Maps the name of a namespace (as used by clojure.core/load) to
+%% a resource.
+-spec ns_to_resource(binary()) -> binary().
+ns_to_resource(NsName) ->
+  Resource = binary:replace(NsName, <<".">>, <<"/">>, [global]),
+  binary:replace(Resource, <<"-">>, <<"_">>, [global]).
+
+%% @doc Calculates the hash for the value of a Clojerl record.
+-spec record_hash(map()) -> integer().
+record_hash(#{?TYPE := _, '__extmap' := ExternalMap} = Record) ->
+  MapFields = maps:without([?TYPE, '__extmap', '__meta'], Record),
+  AllFields = case ExternalMap of
+                ?NIL -> MapFields;
+                _ -> maps:merge(MapFields, ExternalMap)
+              end,
+  clj_rt:hash(AllFields).
 
 %%------------------------------------------------------------------------------
 %% Internal helper functions
@@ -395,6 +534,14 @@ int_properties(Groups) ->
   Negate = hd(Groups) == "-",
   {Result, case Negate of true -> -1; false -> 1 end}.
 
+%% @doc Like lists:nth/2 but returns `Default' if `Index' is
+%% larger than the amount of elements in `List'.
+nth(Index, List, Default) ->
+  case Index =< length(List) of
+    true -> lists:nth(Index, List);
+    false -> Default
+  end.
+
 -spec parse_float([string()]) -> float().
 parse_float(Groups) ->
   %% When there is no decimal part we add it so we can use
@@ -427,20 +574,6 @@ do_number_type(Number, [{Type, RE} | Rest], ?NIL) ->
 do_number_type(_, _, Result) ->
   Result.
 
-%% @doc Like lists:nth/2 but returns nil if `Index' is
-%%      larger than the amount of elements in `List'.
-nth(Index, List) ->
-  case Index =< length(List) of
-    true  -> lists:nth(Index, List);
-    false -> ?ERROR(<<"Index out of bounds">>)
-  end.
-
-nth(Index, List, Default) ->
-  case Index =< length(List) of
-    true -> lists:nth(Index, List);
-    false -> Default
-  end.
-
 -spec location_to_binary(?NIL | clj_reader:location()) -> binary().
 location_to_binary(#{line := Line, column := Col, file := Filename})
   when is_integer(Line) andalso is_integer(Col) ->
@@ -459,81 +592,6 @@ location_to_binary(#{file := Filename})
   <<Filename/binary, ":?:?: ">>;
 location_to_binary(_) ->
   <<?NO_SOURCE, ":?:?: ">>.
-
--spec 'rem'(number(), number()) -> number().
-'rem'(X, Y) when is_integer(X), is_integer(Y) ->
-  X rem Y;
-'rem'(X, Y) ->
-  Q = trunc(X / Y),
-  X - Q * Y.
-
--spec quotient(number(), number()) -> number().
-quotient(X, Y) when is_integer(X), is_integer(Y) ->
-  X div Y;
-quotient(X, Y) ->
-  quotient(trunc(X), trunc(Y)).
-
--spec floor(number()) -> integer().
-floor(X) when X < 0 ->
-  T = trunc(X),
-  case X - T == 0 of
-    true  -> T;
-    false -> T - 1
-  end;
-floor(X) ->
-  trunc(X).
-
--spec ceil(number()) -> integer().
-ceil(X) when X < 0 ->
-  trunc(X);
-ceil(X) ->
-  T = trunc(X),
-  case X - T == 0 of
-    true  -> T;
-    false -> T + 1
-  end.
-
--spec signum(number()) -> number().
-signum(X) when X < 0 -> -1;
-signum(X) when X >= 0 -> 1.
-
--spec bnand(number(), number()) -> number().
-bnand(X, Y) -> bnot(X band Y).
-
--spec ets_get(atom() | ets:tid(), term()) -> term().
-ets_get(Table, Id) ->
-  ets_get(Table, Id, ?NIL).
-
--spec ets_get(atom() | ets:tid(), term(), term()) -> term().
-ets_get(Table, Id, Default) ->
-  case ets:lookup(Table, Id) of
-    [] -> Default;
-    [Value] -> Value
-  end.
-
--spec ets_save(ets:tid() | atom(), term()) -> term().
-ets_save(Table, Value) ->
-  true = ets:insert(Table, Value),
-  Value.
-
--spec resource_to_ns(binary()) -> binary().
-resource_to_ns(Resource) ->
-  Ns = binary:replace(Resource, <<"/">>, <<".">>, [global]),
-  binary:replace(Ns, <<"_">>, <<"-">>, [global]).
-
--spec ns_to_resource(binary()) -> binary().
-ns_to_resource(NsName) ->
-  Resource = binary:replace(NsName, <<".">>, <<"/">>, [global]),
-  binary:replace(Resource, <<"-">>, <<"_">>, [global]).
-
--spec record_hash(map()) -> integer().
-record_hash(#{?TYPE := _, '__extmap' := ExternalMap} = Record) ->
-  MapFields = maps:without([?TYPE, '__extmap', '__meta'], Record),
-  AllFields = case ExternalMap of
-                ?NIL -> MapFields;
-                _ -> maps:merge(MapFields, ExternalMap)
-              end,
-  clj_rt:hash(AllFields).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% The MIT License (MIT)
@@ -559,15 +617,18 @@ record_hash(#{?TYPE := _, '__extmap' := ExternalMap} = Record) ->
 %% SOFTWARE.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% @equiv format_stacktrace(Stacktrace, [{indent, 4}])
 -spec format_stacktrace([tuple()]) -> iolist().
 format_stacktrace(Stacktrace) ->
   format_stacktrace(Stacktrace, [{indent, 4}]).
 
+%% @doc Formats a stacktrace in a nice way.
 -spec format_stacktrace([tuple()], [{indent, integer()}]) -> iolist().
 format_stacktrace(Stacktrace, Options) ->
   Indent = lists:duplicate(proplists:get_value(indent, Options), <<" ">>),
   stacktrace_pretty(Indent, Stacktrace).
 
+%% @private
 -spec stacktrace_pretty(iolist(), [tuple()]) -> iolist().
 stacktrace_pretty(_Indent, []) ->
   [];
