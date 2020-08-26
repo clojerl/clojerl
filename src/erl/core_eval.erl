@@ -1,6 +1,8 @@
-%% Parts of this module are heavily inspired in erl_eval.erl
-%% and some helper functions (e.g. for binary matching and eval'ing)
-%% are copied directly from there.
+%% @doc An evaluator for Core Erlang abstract syntax.
+%%
+%% Parts of this module are heavily inspired in `erl_eval' and some
+%% helper functions (e.g. for binary matching and eval'ing) are copied
+%% directly from there.
 -module(core_eval).
 
 -export([exprs/1, expr/1, expr/2]).
@@ -15,15 +17,18 @@
 -define(STACKTRACE,
         element(2, erlang:process_info(self(), current_stacktrace))).
 
+%% @equiv expr(Expr, #{})
 -spec expr(cerl:cerl()) -> value().
 expr(Expr) ->
   expr(Expr, #{}).
 
+%% @doc Evaluate a Core Erlang expression.
 -spec expr(cerl:cerl(), bindings()) -> value().
 expr(Expr, Bindings) ->
   lint(Expr),
   expr_(Expr, Bindings).
 
+%% @doc Evaluate a list of Core Erlang expressions.
 -spec exprs([cerl:cerl()]) -> value().
 exprs([]) ->
   erlang:error(no_expressions);
