@@ -1,10 +1,15 @@
+%% @doc Clojerl reader.
+%%
+%% Reads an input string (or {@link 'erlang.io.IPushbackReader'}) and
+%% returns a Clojerl form.
 -module(clj_reader).
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -export([ read_fold/4
-        , read/1, read/2
+        , read/1
+        , read/2
         , location_meta/1
         , remove_location/1
         ]).
@@ -62,6 +67,56 @@
 -define(GENSYM_ENV, gensym_env).
 -define(SUPPRESS_READ, suppress_read).
 
+%% @doc Extracts the location information from `X''s metadata.
+-spec location_meta(any()) -> location() | ?NIL.
+location_meta(X) ->
+  case clj_rt:'meta?'(X) andalso clj_rt:meta(X) of
+    false -> ?NIL;
+    ?NIL  -> ?NIL;
+    Meta  ->
+      Meta1 = add_location_field(Meta, line, #{}),
+      Meta2 = add_location_field(Meta, column, Meta1),
+      Meta3 = add_location_field(Meta, file, Meta2),
+      case Meta3 =:= #{} of
+        true  -> ?NIL;
+        false -> Meta3
+      end
+  end.
+
+%% @doc Removes the location information from `Meta'.
+-spec remove_location(any()) -> any().
+remove_location(?NIL) ->
+  ?NIL;
+remove_location(Meta) ->
+  Meta1 = clj_rt:dissoc(Meta, file),
+  Meta2 = clj_rt:dissoc(Meta1, line),
+  Meta3 = clj_rt:dissoc(Meta2, column),
+  case clj_rt:'empty?'(Meta3) of
+    true  -> ?NIL;
+    false -> Meta3
+  end.
+
+%% @doc Read a form from the provided binary `Src'.
+-spec read(binary()) -> any().
+read(Src) ->
+  read(Src, #{}).
+
+%% @doc Reads the next form from the input. Returns the form
+%%      or throws if there is no form to read.
+-spec read(binary(), opts()) -> any().
+read(Src, Opts) ->
+  ok = clj_rt:reset_id(),
+  State = new_state(Src, clj_env:default(), Opts),
+  try
+    ensure_read(State)
+  catch
+    throw:{eof, Value, _} -> Value
+  end.
+
+%% @private
+%% @doc Folds over the forms read using `Env' as the accumulator.
+%%
+%% Used by {@link clj_compiler} to process all forms from the input.
 -spec read_fold(read_fold_fun(), binary(), opts(), clj_env:env()) ->
   clj_env:env().
 read_fold(Fun, Src, Opts0, Env) ->
@@ -72,6 +127,17 @@ read_fold(Fun, Src, Opts0, Env) ->
   ReadFun = read_fun(Opts),
   ok = clj_rt:reset_id(),
   read_fold_loop(Fun, ReadFun, State).
+
+%%------------------------------------------------------------------------------
+%% Internal functions
+%%------------------------------------------------------------------------------
+
+-spec add_location_field(any(), any(), map()) -> map().
+add_location_field(Meta, Name, Location) ->
+  case clj_rt:get(Meta, Name) of
+    ?NIL -> Location;
+    Value -> maps:put(Name, Value, Location)
+  end.
 
 -spec read_fun(opts()) -> function().
 read_fun(#{time := true}) ->
@@ -104,60 +170,6 @@ read_fold_loop(Fun, ReadFun, State0) ->
       Env1 = Fun(Form, Env0),
       read_fold_loop(Fun, ReadFun, State1#{env => Env1, forms => []})
   end.
-
--spec location_meta(any()) -> location() | ?NIL.
-location_meta(X) ->
-  case clj_rt:'meta?'(X) andalso clj_rt:meta(X) of
-    false -> ?NIL;
-    ?NIL  -> ?NIL;
-    Meta  ->
-      Meta1 = add_location_field(Meta, line, #{}),
-      Meta2 = add_location_field(Meta, column, Meta1),
-      Meta3 = add_location_field(Meta, file, Meta2),
-      case Meta3 =:= #{} of
-        true  -> ?NIL;
-        false -> Meta3
-      end
-  end.
-
--spec add_location_field(any(), any(), map()) -> map().
-add_location_field(Meta, Name, Location) ->
-  case clj_rt:get(Meta, Name) of
-    ?NIL -> Location;
-    Value -> maps:put(Name, Value, Location)
-  end.
-
--spec remove_location(any()) -> any().
-remove_location(?NIL) ->
-  ?NIL;
-remove_location(Meta) ->
-  Meta1 = clj_rt:dissoc(Meta, file),
-  Meta2 = clj_rt:dissoc(Meta1, line),
-  Meta3 = clj_rt:dissoc(Meta2, column),
-  case clj_rt:'empty?'(Meta3) of
-    true  -> ?NIL;
-    false -> Meta3
-  end.
-
--spec read(binary()) -> any().
-read(Src) ->
-  read(Src, #{}).
-
-%% @doc Reads the next form from the input. Returns the form
-%%      or throws if there is no form to read.
--spec read(binary(), opts()) -> any().
-read(Src, Opts) ->
-  ok = clj_rt:reset_id(),
-  State = new_state(Src, clj_env:default(), Opts),
-  try
-    ensure_read(State)
-  catch
-    throw:{eof, Value, _} -> Value
-  end.
-
-%%------------------------------------------------------------------------------
-%% Internal functions
-%%------------------------------------------------------------------------------
 
 -spec platform_features(opts() | ?NIL) -> opts().
 platform_features(#{?OPT_FEATURES := Features} = Opts) ->
