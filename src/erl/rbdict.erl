@@ -23,6 +23,8 @@
 %% ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
+%% @doc Dictionary implementation using a red-black tree.
+%% @private
 -module(rbdict).
 
 -include("clojerl.hrl").
