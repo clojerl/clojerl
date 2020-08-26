@@ -1,3 +1,4 @@
+%% @doc Murmur3 hash in Erlang.
 -module(clj_murmur3).
 
 -export([ ordered/1
@@ -18,27 +19,38 @@
 -define(UINT32(X), (X band ?MAX_UINT32)). %% Truncate to a 32 bit integer
 -define(ROTL(X, R), (?UINT32(X bsl R) bor ?UINT32(X bsr ?UINT32(32 - R)))).
 
+%% @doc Calculates the hash for an ordered seq.
 -spec ordered(any()) -> integer().
 ordered(Seq) ->
   List = clj_rt:to_list(Seq),
   Hashes = [clj_rt:hash(X) || X <- List],
   ordered_hashes(Hashes).
 
+%% @doc Calculates the hash for an unordered seq.
 -spec unordered(any()) -> integer().
 unordered(Seq) ->
   List = clj_rt:to_list(Seq),
   Hashes = [clj_rt:hash(X) || X <- List],
   unordered_hashes(Hashes).
 
+%% @doc Calculates the hash for an unordered list of hashes.
 -spec unordered_hashes([integer()]) -> integer().
 unordered_hashes(Hashes) ->
   Hash = do_unordered_hashes(Hashes, 0) ,
   mix_coll_hash(Hash, length(Hashes)).
 
+%% @doc Calculates the hash for an ordered list of hashes.
 -spec ordered_hashes([integer()]) -> integer().
 ordered_hashes(Hashes) ->
   Hash = do_ordered_hashes(Hashes, 1),
   mix_coll_hash(Hash, length(Hashes)).
+
+%% @doc Calculates the mix value for `Hash' assuming it comes from a
+%% collection of `Len' elements.
+mix_coll_hash(Hash, Len) ->
+  K1 = mix_k1(Hash),
+  H1 = mix_h1(?SEED, K1),
+  fmix(H1, Len).
 
 %%------------------------------------------------------------------------------
 %% Internal functions
@@ -53,11 +65,6 @@ do_unordered_hashes([], Hash) ->
   Hash;
 do_unordered_hashes([H | Hashes], Hash) ->
   do_unordered_hashes(Hashes, ?UINT32(Hash + H)).
-
-mix_coll_hash(Hash, Len) ->
-  K1 = mix_k1(Hash),
-  H1 = mix_h1(?SEED, K1),
-  fmix(H1, Len).
 
 mix_k1(K1_0) ->
   K1_1 = ?UINT32(K1_0 * ?C1),
