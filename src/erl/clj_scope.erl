@@ -1,3 +1,8 @@
+%% @doc Nested scopes.
+%%
+%% Implements nested scopes through nested maps. This is heavily used
+%% in all throughout the compilation process, from the reader to the
+%% emitter.
 -module(clj_scope).
 
 -include("clojerl.hrl").
@@ -19,35 +24,44 @@
                   , mappings => map()
                   }.
 
+%% @doc Creates a new empty scope.
 -spec new() -> scope().
 new() -> new(?NIL).
 
+%% @doc Creates a scope with an assigned parent.
 -spec new(scope() | ?NIL) -> scope().
 new(Parent) ->
  #{ parent   => Parent
   , mappings => #{}
   }.
 
+%% @doc Returns the parent of the current scope.
 -spec parent(scope()) -> scope() | ?NIL.
 parent(?NIL)  -> ?NIL;
 parent(Scope) -> maps:get(parent, Scope).
 
+%% @equiv get(Key, undefined, Scope)
 -spec get(any(), scope()) -> any().
 get(Key, Scope) ->
   get(Key, ?NIL, Scope).
 
+%% @doc Gets a value from the current scope or `Default' if not
+%% found.
 -spec get(any(), any(), scope()) -> any().
 get(Key, Default, Scope) ->
   do_get(Key, Default, Scope).
 
+%% @doc Checks whether `Key' is in the current scope.
 -spec contains(any(), scope()) -> boolean().
 contains(Key, Scope) ->
   do_contains(Key, Scope).
 
+%% @doc Adds a value to the current scope.
 -spec put(any(), any(), scope()) -> scope().
 put(Key, Value, Scope = #{mappings := Mappings}) ->
   Scope#{mappings => Mappings#{Key => Value}}.
 
+%% @doc Adds all values in `Map' to the current scope.
 -spec put(map(), scope()) -> scope().
 put(Map, Scope) ->
   PutFun = fun(Key, Acc) ->
@@ -55,14 +69,19 @@ put(Map, Scope) ->
            end,
   lists:foldl(PutFun, Scope, maps:keys(Map)).
 
+%% @doc Updates the value for `Key' if it is in the current scope or
+%% any of its parent scopes.
 -spec update(any(), any(), scope()) -> scope() | not_found.
 update(Key, Value, Scope) ->
   do_update(Key, Value, Scope).
 
+%% @doc Returns all values in the current scope and all its parent
+%% scopes.
 -spec values(scope()) -> [any()].
 values(Scope) ->
-  do_values([], Scope).
+  do_values(#{}, Scope).
 
+%% @doc Merges all mappings and returns them in a single map.
 -spec to_map(function(), scope()) -> any().
 to_map(Fun, Scope) ->
   do_to_map(Fun, #{}, Scope).
@@ -110,8 +129,9 @@ do_update(K, V, Scope = #{mappings := Mappings, parent := Parent}) ->
       end
   end.
 
--spec do_values([any()], scope()) -> [any()].
-do_values(Values, ?NIL) ->
-  Values;
-do_values(Values, #{mappings := Mappings, parent := Parent}) ->
-  do_values(maps:values(Mappings) ++ Values, Parent).
+%% @private
+-spec do_values(map(), scope()) -> [any()].
+do_values(MergedMappings, ?NIL) ->
+  maps:values(MergedMappings);
+do_values(MergedMappings, #{mappings := Mappings, parent := Parent}) ->
+  do_values(maps:merge(Mappings, MergedMappings), Parent).
