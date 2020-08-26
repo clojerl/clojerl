@@ -1,3 +1,8 @@
+%% @doc General functions used during runtime.
+%%
+%% This modules is analougous to the `clojure.lang.RT' class. The
+%% modules here are used in places where we can't yet rely on the
+%% `clojure.core' being there (e.g. {@link clj_reader}).
 -module(clj_rt).
 
 -include("clojerl.hrl").
@@ -45,10 +50,16 @@
         , 'clj->erl'/2, 'erl->clj'/2
         ]).
 
+%%------------------------------------------------------------------------------
+%% Type functions
+%%------------------------------------------------------------------------------
+
+%% @doc Returns the {@link 'erlang.Type'} for `X'.
 -spec type(any()) -> 'erlang.Type':type().
 type(X) ->
   'erlang.Type':?CONSTRUCTOR(type_module(X)).
 
+%% @doc Returns the module name for `X''s type.
 -spec type_module(any()) -> module().
 type_module(#{?TYPE := Name})       -> Name;
 type_module(X) when is_binary(X)    -> 'clojerl.String';
@@ -67,10 +78,22 @@ type_module(X) when is_pid(X)       -> 'erlang.Process';
 type_module(X) when is_reference(X) -> 'erlang.Reference';
 type_module(Value) -> throw({Value, <<" has an unsupported type">>}).
 
+%%------------------------------------------------------------------------------
+%% Load functions
+%%------------------------------------------------------------------------------
+
+%% @equiv load(ScriptBase, true)
 -spec load(binary()) -> ?NIL.
 load(ScriptBase) ->
   load(ScriptBase, true).
 
+%% @doc Attempts to load a Clojure script.
+%%
+%% `ScriptBase' is used to resolve the location of a file in the code
+%% path with either the `.clje' or `.cljc' extension.
+%%
+%% When `FailIfNotFound' is `true' generates an error if the file
+%% cannot be found.
 -spec load(binary(), boolean()) -> ?NIL.
 load(ScriptBase, FailIfNotFound) ->
   NsBin = clj_utils:resource_to_ns(ScriptBase),
@@ -90,6 +113,13 @@ load(ScriptBase, FailIfNotFound) ->
   end,
   ?NIL.
 
+%% @doc Attempts to load a Clojure script.
+%%
+%% `ScriptBase' is used to resolve the location of a file in the code
+%% path.
+%%
+%% When `FailIfNotFound' is `true' generates an error if the file
+%% cannot be found.
 -spec load_script(binary(), boolean()) -> any().
 load_script(ScriptName, FailIfNotFound) ->
   File = filename:basename(ScriptName),
@@ -106,6 +136,7 @@ load_script(ScriptName, FailIfNotFound) ->
   end,
   ?NIL.
 
+%% @private
 -spec load_ns(binary()) -> ok | error.
 load_ns(NsBin) ->
   case code:ensure_loaded(binary_to_atom(NsBin, utf8)) of
@@ -113,6 +144,7 @@ load_ns(NsBin) ->
     _           -> error
   end.
 
+%% @private
 -spec resolve_file(binary(), [binary()]) -> binary() | ?NIL.
 resolve_file(Path, Exts) ->
   Found =
@@ -128,10 +160,16 @@ resolve_file(Path, Exts) ->
     _ -> ?ERROR([<<"Found more than one ">>, Path])
   end.
 
+%%------------------------------------------------------------------------------
+%% Utility functions
+%%------------------------------------------------------------------------------
+
+%% @doc Returns the number of items in the collection.
 -spec count(any()) -> integer().
 count(?NIL) -> 0;
 count(Seq)       -> 'clojerl.ICounted':count(Seq).
 
+%% @doc Returns the value at the index.
 -spec nth(any(), integer()) -> any().
 nth(?NIL, _) -> ?NIL;
 nth([], _) -> ?NIL;
@@ -141,6 +179,7 @@ nth(Coll, N) ->
     false -> nth_from(Coll, N)
   end.
 
+%% @doc Returns the value at the index or `NotFound' of `N' is invalid.
 -spec nth(any(), integer(), any()) -> any().
 nth(?NIL, _, NotFound) -> NotFound;
 nth([], _, NotFound)        -> NotFound;
@@ -150,6 +189,7 @@ nth(Coll, N, NotFound) ->
     false -> nth_from(Coll, N, NotFound)
   end.
 
+%% @private
 -spec nth_from(any(), integer()) -> any().
 nth_from(Coll, N) ->
   case 'string?'(Coll) of
@@ -165,6 +205,7 @@ nth_from(Coll, N) ->
       end
   end.
 
+%% @private
 -spec nth_from(any(), integer(), any()) -> any().
 nth_from(Coll, N, NotFound) ->
   case 'string?'(Coll) of
@@ -180,6 +221,7 @@ nth_from(Coll, N, NotFound) ->
       end
   end.
 
+%% @private
 -spec nth_seq(non_neg_integer(), any()) -> any().
 nth_seq(Index, Seq) when Index < 0; Seq == ?NIL ->
   ?ERROR(<<"Index out of bounds">>);
@@ -188,6 +230,7 @@ nth_seq(0, Seq) ->
 nth_seq(N, Seq) ->
   nth_seq(N - 1, next(Seq)).
 
+%% @private
 -spec nth_seq(non_neg_integer(), any(), any()) -> any().
 nth_seq(Index, Seq, NotFound) when Index < 0; Seq == ?NIL ->
   NotFound;
@@ -196,18 +239,23 @@ nth_seq(0, Seq, _) ->
 nth_seq(N, Seq, NotFound) ->
   nth_seq(N - 1, next(Seq), NotFound).
 
+%% @doc Returns true if coll has no items.
 -spec 'empty?'(any()) -> boolean().
 'empty?'(?NIL) -> true;
 'empty?'(Seq)  -> 'clojerl.ISeqable':seq(Seq) == ?NIL.
 
+%% @doc Returns an empty collection of the same category as coll, or nil.
 -spec empty(any()) -> any().
 empty(Coll) ->
   'clojerl.IColl':empty(Coll).
 
+%% @doc Returns a seq on the collection.
 -spec seq(any()) -> any() | ?NIL.
 seq(?NIL)    -> ?NIL;
 seq(Seqable) -> 'clojerl.ISeqable':seq(Seqable).
 
+%% @doc Returns `Seqable' if applying {@link seq/1} is not `nil',
+%% otherwise returns `nil'.
 -spec seq_or_else(any()) -> any() | ?NIL.
 seq_or_else(Seqable) ->
   case seq(Seqable) of
@@ -215,12 +263,14 @@ seq_or_else(Seqable) ->
     _    -> Seqable
   end.
 
+%% @doc Converts the collection into an Erlang list.
 -spec to_list(any()) -> [any()].
 to_list(?NIL) -> [];
 to_list(List) when is_list(List) -> List;
 to_list(Seqable) ->
   'clojerl.ISeqable':to_list(Seqable).
 
+%% @doc Equality. Returns true if x equals y, false if not.
 -spec equiv(any(), any()) -> boolean().
 equiv(X, Y) ->
   case
@@ -231,22 +281,23 @@ equiv(X, Y) ->
     false -> X =:= Y
   end.
 
+%% @doc conj[oin]. Returns a new collection with the xs 'added'.
 -spec conj(any(), any()) -> any().
 conj(?NIL, Item) ->
   list([Item]);
 conj(Coll, Item) ->
   'clojerl.IColl':cons(Coll, Item).
 
+%% @doc disj[oin]. Returns a new set of the same (hashed/sorted) type,
+%% that does not contain key(s).
 -spec disj(any(), any()) -> any().
 disj(?NIL, _Item) ->
   ?NIL;
 disj(Coll, Item) ->
   'clojerl.ISet':disjoin(Coll, Item).
 
-%% @doc Clojure's cons builds a cons cell. In most cases it is just
-%%      a vanilla Erlang Head and Tail. When dealing with LazySeqs
-%%      it is a clojerl.Cons cell, so that the realization of values
-%%      can be postponed until they are used.
+%% @doc Returns a new seq where x is the first element and seq is the
+%% rest.
 -spec cons(any(), any()) -> 'clojerl.Cons':type() | 'clojerl.List':type().
 cons(Item, ?NIL) ->
   list([Item]);
@@ -256,6 +307,7 @@ cons(Item, Seq) ->
     false -> 'clojerl.Cons':?CONSTRUCTOR(Item, seq(Seq))
   end.
 
+%% @doc Returns the first item in the collection.
 -spec first(any()) -> any().
 first(?NIL) -> ?NIL;
 first(Seq) ->
@@ -269,6 +321,7 @@ first(Seq) ->
       end
   end.
 
+%% @doc Returns a seq of the items after the first.
 -spec next(any()) -> any().
 next(?NIL) -> ?NIL;
 next(Seq) ->
@@ -282,6 +335,7 @@ next(Seq) ->
       end
   end.
 
+%% @doc Returns a possibly empty seq of the items after the first.
 -spec rest(any()) -> any().
 rest(?NIL) -> [];
 rest(Seq) ->
@@ -294,143 +348,196 @@ rest(Seq) ->
       end
   end.
 
+%% @doc Same as (first (next x)).
 -spec second(any()) -> any().
 second(Seq) ->
   first(next(Seq)).
 
+%% @doc Same as (first (next (next x))).
 -spec third(any()) -> any().
 third(Seq) ->
   first(next(next(Seq))).
 
+%% @doc Same as (first (next (next (next x)))).
 -spec fourth(any()) -> any().
 fourth(Seq) ->
   first(next(next(next(Seq)))).
 
+%% @doc For a list or queue, same as first, for a vector, same as, but
+%% much more efficient than, last. If the collection is empty, returns
+%% nil.
 -spec peek(any()) -> any().
 peek(?NIL) -> ?NIL;
 peek(Stack)     -> 'clojerl.IStack':peek(Stack).
 
+%% @doc For a list or queue, returns a new list/queue without the
+%% first item, for a vector, returns a new vector without the last
+%% item. If the collection is empty, throws an exception. Note - not
+%% the same as next/butlast.
 -spec pop(any()) -> any().
 pop(?NIL)  -> ?NIL;
 pop(Stack) -> 'clojerl.IStack':pop(Stack).
 
+%% @doc Returns the name String of a string, symbol or keyword.
 -spec name(any()) -> binary() | ?NIL.
 name(X) when is_binary(X) -> X;
 name(X) -> 'clojerl.INamed':name(X).
 
+%% @doc Returns the namespace String of a symbol or keyword, or nil if
+%% not present.
 -spec namespace(any()) -> binary() | ?NIL.
 namespace(X) ->
   'clojerl.INamed':namespace(X).
 
+%% @doc Returns a Symbol with the given name.
 -spec symbol(binary()) -> 'clojerl.Symbol':type().
 symbol(Name) ->
   'clojerl.Symbol':?CONSTRUCTOR(Name).
 
+%% @doc Returns a Symbol with the given namespace and name.
 -spec symbol(binary(), binary()) -> 'clojerl.Symbol':type().
 symbol(Namespace, Name) ->
   'clojerl.Symbol':?CONSTRUCTOR(Namespace, Name).
 
+%% @doc Returns a keyword with the given name.
+%%
+%% Do not use : in the keyword strings, it will be added automatically.
 -spec keyword('clojerl.Symbol':type() | binary()) -> 'clojerl.Keyword':type().
 keyword(Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Name).
 
+%% @doc Returns a keyword with the given name.
+%%
+%% Do not use : in the keyword strings, it will be added automatically.
 -spec keyword(binary(), binary()) -> 'clojerl.Keyword':type().
 keyword(Namespace, Name) ->
   'clojerl.Keyword':?CONSTRUCTOR(Namespace, Name).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IColl'}.
 -spec 'coll?'(any()) -> boolean().
 'coll?'(X) ->
   'clojerl.IColl':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.ISequential'}.
 -spec 'sequential?'(any()) -> boolean().
 'sequential?'(X) ->
   'clojerl.ISequential':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IAssociative'}.
 -spec 'associative?'(any()) -> boolean().
 'associative?'(X) ->
   'clojerl.IAssociative':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.ISeq'}.
 -spec 'seq?'(any()) -> boolean().
 'seq?'(X) ->
   'clojerl.ISeq':?SATISFIES(X).
 
+%% @doc Returns true if `X' is a {@link 'clojerl.List'}.
 -spec 'list?'(any()) -> boolean().
 'list?'(X) ->
   type_module(X) == 'clojerl.List'.
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IVector'}.
 -spec 'vector?'(any()) -> boolean().
 'vector?'(X) ->
   'clojerl.IVector':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IMap'}.
 -spec 'map?'(any()) -> boolean().
 'map?'(X) ->
   'clojerl.IMap':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.ISet'}.
 -spec 'set?'(any()) -> boolean().
 'set?'(X) ->
   'clojerl.ISet':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IRecord'}.
 -spec 'record?'(any()) -> boolean().
 'record?'(X) ->
   'clojerl.IRecord':?SATISFIES(X).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IType'}.
 -spec 'type?'(any()) -> boolean().
 'type?'(X) ->
   'clojerl.IType':?SATISFIES(X).
 
+%% @doc Returns true if `X' is a {@link 'clojerl.Symbol'}.
 -spec 'symbol?'(any()) -> boolean().
 'symbol?'(X) ->
   type_module(X) == 'clojerl.Symbol'.
 
+%% @doc Returns true if `X' is a {@link 'clojerl.Keyword'}.
 -spec 'keyword?'(any()) -> boolean().
 'keyword?'(X) ->
   type_module(X) == 'clojerl.Keyword'.
 
+%% @doc Returns true if `X' is a number.
 -spec 'number?'(any()) -> boolean().
 'number?'(X) ->
   type_module(X) == 'clojerl.Integer'
     orelse type_module(X) == 'clojerl.Float'.
 
+%% @doc Returns true if `X' is a BEAM binary with a single UTF-8
+%% character.
 -spec 'char?'(any()) -> boolean().
 'char?'(<<_/utf8>>) -> true;
 'char?'(_)          -> false.
 
+%% @doc Returns true if `X' is a {@link 'clojerl.String'}.
 -spec 'string?'(any()) -> boolean().
 'string?'(X) -> type_module(X) == 'clojerl.String'.
 
+%% @doc Returns true if `X' is nil.
 -spec 'nil?'(any()) -> boolean().
 'nil?'(X) -> X =:= ?NIL.
 
+%% @doc Returns true if `X' is a {@link 'clojerl.Boolean'}.
 -spec 'boolean?'(any()) -> boolean().
 'boolean?'(X) -> type_module(X) == 'clojerl.Boolean'.
 
+%% @doc Returns true if `X' is a {@link 'erlang.util.Regex'}.
 -spec 'regex?'(any()) -> boolean().
 'regex?'(X) -> type_module(X) == 'erlang.util.Regex'.
 
+%% @doc Returns true if `X' is a {@link 'clojerl.Var'}.
 -spec 'var?'(any()) -> boolean().
 'var?'(X) ->
   type_module(X) == 'clojerl.Var'.
 
+%% @doc Fetches the value referenced by `X'.
+%%
+%% `X' needs to implement {@link 'clojerl.IDeref'} (e.g. {@link 'clojerl.Var'},
+%% {@link 'clojerl.Atom'} or {@link 'clojerl.Agent'}).
 -spec deref(any()) -> any().
 deref(X) ->
   'clojerl.IDeref':deref(X).
 
+%% @doc Changes the dynamically bound value for `Var'.
 -spec 'set!'('clojerl.Var':type(), any()) -> any().
 'set!'(Var, Value) ->
   'clojerl.Var':dynamic_binding(Var, Value).
 
+%% @doc Returns the metadata of obj, returns nil if there is no
+%% metadata.
 -spec meta(any()) -> any().
 meta(X) ->
   'clojerl.IMeta':meta(X).
 
+%% @doc Returns an object of the same type and value as `X', with map
+%% `Meta' as its metadata.
 -spec with_meta(T, 'clojerl.Map':type()) -> T.
 with_meta(X, Meta) ->
   'clojerl.IMeta':with_meta(X, Meta).
 
+%% @doc Returns true if `X' implements {@link 'clojerl.IMeta'}.
 -spec 'meta?'(any()) -> any().
 'meta?'(X) ->
   'clojerl.IMeta':?SATISFIES(X).
 
+%% @doc Returns true if key is present in the given collection,
+%% otherwise returns false.
 -spec 'contains?'(any(), any()) -> boolean().
 'contains?'(?NIL, _) ->
   false;
@@ -449,6 +556,8 @@ with_meta(X, Meta) ->
     true  -> ?ERROR([<<"contains? not supported on type: ">>, type(Coll)])
   end.
 
+%% @doc Returns the value mapped to `Key', or nil if `Key' is not
+%% present.
 -spec get(any(), any()) -> any().
 get(?NIL, _Key) -> ?NIL;
 get(X, Key) ->
@@ -457,6 +566,8 @@ get(X, Key) ->
     false -> ?NIL
   end.
 
+%% @doc Returns the value mapped to `Key', or `NotFound' if `Key' is not
+%% present.
 -spec get(any(), any(), any()) -> any().
 get(?NIL, _Key, NotFound) -> NotFound;
 get(X, Key, NotFound) ->
@@ -465,6 +576,10 @@ get(X, Key, NotFound) ->
     false -> NotFound
   end.
 
+%% @doc assoc[iate]. When applied to a map, returns a new map of the
+%% same (hashed/sorted) type, that contains the mapping of key(s) to
+%% val(s). When applied to a vector, returns a new vector that
+%% contains val at index.
 -spec assoc('clojerl.IAssociative':type(), any(), any()) ->
   'clojerl.IAssociative':type().
 assoc(?NIL, Key, Value) ->
@@ -472,12 +587,15 @@ assoc(?NIL, Key, Value) ->
 assoc(Map, Key, Value) ->
   'clojerl.IAssociative':assoc(Map, Key, Value).
 
+%% @doc dissoc[iate]. Returns a new map of the same (hashed/sorted)
+%% type, that does not contain a mapping for key(s).
 -spec dissoc('clojerl.IMap':type(), any()) -> 'clojerl.IMap':type().
 dissoc(?NIL, _Key) ->
   ?NIL;
 dissoc(Map, Key) ->
   'clojerl.IMap':without(Map, Key).
 
+%% @doc Returns the map entry for key, or nil if key not present.
 -spec find(any(), any()) -> any().
 find(?NIL, _) ->
   ?NIL;
@@ -487,6 +605,8 @@ find(Map, Key) ->
     false -> ?NIL
   end.
 
+%% @doc Returns a map that consists of the rest of the maps conj-ed
+%% onto the first.
 -spec merge([any()]) -> any().
 merge([]) ->
   ?NIL;
@@ -501,11 +621,13 @@ merge([First, Second | Rest]) ->
   Result = lists:foldl(ConjFun, First, to_list(Second)),
   merge([Result | Rest]).
 
+%% @doc Coerce to boolean.
 -spec boolean(any()) -> boolean().
 boolean(?NIL) -> false;
 boolean(false) -> false;
 boolean(_) -> true.
 
+%% @doc Coerce to byte.
 -spec byte(number()) -> integer().
 byte(X) when is_number(X), -128 =< X, X < 127 ->
   erlang:trunc(X);
@@ -513,6 +635,7 @@ byte(X) ->
   XStr = str(X),
   ?ERROR(<<"Value out of range for byte: ", XStr/binary>>).
 
+%% @doc Coerce to char.
 -spec char(integer()) -> binary().
 char(X) when is_number(X) ->
   case unicode:characters_to_binary([erlang:trunc(X)], utf8) of
@@ -520,6 +643,7 @@ char(X) when is_number(X) ->
     Error -> error(Error)
   end.
 
+%% @doc Coerce to short.
 -spec short(number()) -> integer().
 short(X) when is_number(X), -32768 =< X, X < 32768 ->
   erlang:trunc(X);
@@ -527,10 +651,15 @@ short(X) ->
   XStr = str(X),
   ?ERROR(<<"Value out of range for short: ", XStr/binary>>).
 
+%% @doc Returns the string representation of `X' by applying {@link
+%% 'clojerl.IStringable':str/1}.
 -spec str(any()) -> binary().
 str(?NIL) -> <<"">>;
 str(X)    -> 'clojerl.IStringable':str(X).
 
+%% @doc Returns the string representation of `X' using
+%% `clojure.core/pr-on' when initialized or a fallback implementation
+%% otherwise.
 -spec print_str(any()) -> ?NIL.
 print_str(X) ->
   Writer = 'erlang.io.StringWriter':?CONSTRUCTOR(),
@@ -541,6 +670,8 @@ print_str(X) ->
     'erlang.io.StringWriter':close(Writer)
   end.
 
+%% @doc Prints `X' to `Writer` using `clojure.core/pr-on' when
+%% initialized or a fallback implementation otherwise.
 -spec print(any(), 'erlang.io.IWriter':type()) -> ?NIL.
 print(X, Writer) ->
   case 'clojure.core':'print-initialized__val'() of
@@ -552,6 +683,7 @@ print(X, Writer) ->
       ?NIL
   end.
 
+%% @private
 -spec do_print(any(), atom(), boolean(), 'erlang.io.IWriter':type()) -> any().
 do_print(?NIL, _, _, Writer) ->
   'erlang.io.IWriter':write(Writer, <<"nil">>);
@@ -591,6 +723,7 @@ do_print(X, 'erlang.Tuple', _PrintReadably, Writer) ->
 do_print(X, _Type, _PrintReadably, Writer) ->
   'erlang.io.IWriter':write(Writer, str(X)).
 
+%% @private
 -spec do_print_string(binary(), 'erlang.io.IWriter':type()) -> any().
 do_print_string(<<>>, Writer) ->
   'erlang.io.IWriter':write(Writer, <<"\"">>);
@@ -608,6 +741,7 @@ do_print_string(<<X/utf8, Rest/binary>>, Writer) ->
   'erlang.io.IWriter':write(Writer, Ch),
   do_print_string(Rest, Writer).
 
+%% @private
 -spec do_print_seq(any(), binary(), binary(), 'erlang.io.IWriter':type()) ->
   any().
 do_print_seq(X, First, Last, Writer) ->
@@ -625,10 +759,12 @@ do_print_seq(X, First, Last, Writer) ->
   lists:foreach(PrintItem, Rest),
   'erlang.io.IWriter':write(Writer, Last).
 
+%% @private
 -spec do_print_map(any(), 'erlang.io.IWriter':type()) -> any().
 do_print_map(X, Writer) ->
   do_print_map(X, <<"{">>, <<"}">>, Writer).
 
+%% @private
 -spec do_print_map(any(), binary(), binary(), 'erlang.io.IWriter':type()) ->
   any().
 do_print_map(X, First, Last, Writer) ->
@@ -652,16 +788,20 @@ do_print_map(X, First, Last, Writer) ->
   lists:foreach(ConcatFun, Rest),
   'erlang.io.IWriter':write(Writer, Last).
 
+%% @doc Creates a new list containing the items.
 -spec 'list'(any()) -> 'clojerl.List':type().
 list(Items) ->
   'clojerl.List':?CONSTRUCTOR(Items).
 
+%% @doc Creates a new vector containing the items.
 -spec vector(list()) -> 'clojerl.Vector':type().
 vector(Items) when is_list(Items) ->
   'clojerl.Vector':?CONSTRUCTOR(Items);
 vector(Items) ->
   vector(to_list(Items)).
 
+%% @doc Returns a persistent vector of the items in vector from start
+%% (inclusive) to end (exclusive).
 -spec subvec('clojerl.Vector':type(), integer(), integer()) ->
   'clojerl.Vector':type().
 subvec(Vector, Start, End) ->
@@ -675,6 +815,7 @@ subvec(Vector, Start, End) ->
     _   -> 'clojerl.Subvec':?CONSTRUCTOR(Vector, Start, End)
   end.
 
+%% @doc Returns a new hash map with supplied mappings.
 -spec hash_map(list()) -> 'clojerl.Map':type().
 hash_map(Items) ->
   case count(Items) of
@@ -682,6 +823,7 @@ hash_map(Items) ->
     _ -> 'clojerl.Map':?CONSTRUCTOR(seq(Items))
   end.
 
+%% @doc Returns a new hash set with supplied items.
 -spec hash_set(list()) -> 'clojerl.Set':type().
 hash_set(Items) ->
   case count(Items) of
@@ -689,6 +831,8 @@ hash_set(Items) ->
     _ -> 'clojerl.Set':?CONSTRUCTOR(seq(Items))
   end.
 
+%% @doc Returns a sequence of the map's keys, in the same order as
+%% (seq map).
 -spec keys('clojerl.IMap':type()) -> list().
 keys(?NIL) -> ?NIL;
 keys(X) ->
@@ -701,6 +845,7 @@ keys(X) ->
       ?NIL
   end.
 
+%% @doc Returns a sequence of the map's values, in the same order as (seq map).
 -spec vals('clojerl.IMap':type()) -> list().
 vals(?NIL) -> ?NIL;
 vals(X) ->
@@ -713,20 +858,25 @@ vals(X) ->
       ?NIL
   end.
 
+%% @doc Returns true if n is even, throws an exception if n is not an integer
 -spec 'even?'(integer()) -> boolean().
 'even?'(X) ->
   (X band 1) == 0.
 
+%% @doc Applies the argument to the functions assuming `Fn' implements
+%% {@link 'clojerl.IFn'}.
 -spec apply('clojerl.IFn':type(), 'clojerl.ISequential':type()) -> any().
 apply(Fn, Args) ->
   'clojerl.IFn':apply(Fn, Args).
 
 -define(GENSYM_COUNT, '$__gensym_count__$').
 
+%% @doc Resets this local process gensym counter.
 -spec reset_id() -> ok.
 reset_id() ->
   erlang:erase(?GENSYM_COUNT), ok.
 
+%% @doc Returns the next id from the local process gensym counter.
 -spec next_id() -> integer().
 next_id() ->
   N = case erlang:get(?GENSYM_COUNT) of
@@ -736,15 +886,20 @@ next_id() ->
   erlang:put(?GENSYM_COUNT, N + 1),
   N.
 
+%% @equiv gensym(<<"G__">>)
 -spec gensym() -> 'clojer.Symbol':type().
 gensym() ->
   gensym(<<"G__">>).
 
+%% @doc Generates a new symbol unique to the current process using
+%% `Prefix'.
 -spec gensym(binary()) -> 'clojer.Symbol':type().
 gensym(Prefix) ->
   PartsBin = [Prefix, integer_to_list(next_id())],
   symbol(iolist_to_binary(PartsBin)).
 
+%% @doc Converts the provided `Fun' into a compatible `erlang' or
+%% `clojure' compare function.
 -spec compare_fun('erlang.Fn':type(), erlang | clojure) -> function().
 compare_fun(Fun, erlang) ->
   fun(X, Y) ->
@@ -766,15 +921,19 @@ compare_fun(Fun, clojure) ->
       end
   end.
 
+%% @doc Return a random permutation of coll
 -spec shuffle(any()) -> [any()].
 shuffle(Seq) ->
   Items = [{rand:uniform(), X} || X <- to_list(Seq)],
   [X || {_, X} <- lists:sort(Items)].
 
+%% @doc Returns the hash code of its argument.
 -spec hash(any()) -> integer().
 hash(?NIL) -> 0;
 hash(X)    -> 'clojerl.IHash':hash(X).
 
+%% @doc Returns the Erlang representation of x when it implements
+%% IEncodeErlang.
 -spec 'clj->erl'(any(), boolean()) -> any().
 'clj->erl'(?NIL, _)      -> ?NIL;
 'clj->erl'(X, Recursive) ->
@@ -783,6 +942,8 @@ hash(X)    -> 'clojerl.IHash':hash(X).
     false -> X
   end.
 
+%% @doc "Returns the Clojure representation of x when it implements
+%% IEncodeClojure.
 -spec 'erl->clj'(any(), boolean()) -> any().
 'erl->clj'(?NIL, _)      -> ?NIL;
 'erl->clj'(X, Recursive) ->
