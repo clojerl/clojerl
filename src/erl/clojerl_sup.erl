@@ -1,3 +1,5 @@
+%% @private
+%% @doc Clojerl OTP supervisor.
 -module(clojerl_sup).
 -behavior(supervisor).
 

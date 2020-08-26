@@ -1,3 +1,5 @@
+%% @private
+%% @doc Clojerl OTP application.
 -module(clojerl_app).
 
 -behavior(application).
@@ -9,6 +11,7 @@
 -define(APP, clojerl).
 -define(STICKY_MODULES, ['clojure.core']).
 
+%% @private
 -spec start(any(), any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_Type, _Args) ->
   {ok, Pid} = clojerl_sup:start_link(),
@@ -18,8 +21,15 @@ start(_Type, _Args) ->
   ok = init(),
   {ok, Pid}.
 
+%% @private
 -spec stop(any()) -> ok.
 stop(_State) -> ok.
+
+%% @doc Unstick the Clojerl modules.
+-spec unstick() -> ok.
+unstick() ->
+  [code:unstick_mod(M) || M <- ?STICKY_MODULES],
+  ok.
 
 %%==============================================================================
 %% Internal functions
@@ -68,8 +78,3 @@ stick() ->
   [code:stick_mod(M) || M <- ?STICKY_MODULES],
   ok.
 -endif.
-
--spec unstick() -> ok.
-unstick() ->
-  [code:unstick_mod(M) || M <- ?STICKY_MODULES],
-  ok.
