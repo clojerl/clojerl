@@ -1,3 +1,4 @@
+%% @doc Clojerl EDN (Extensible Data Notation) parser.
 -module(clj_edn).
 
 -include("clojerl.hrl").
@@ -42,20 +43,21 @@
                   , number_types  => [{clj_utils:number_type(), re:mp()}]
                   }.
 
-%% @doc Reads the next form from the input. Returns the form
-%%      or throws if there is no form to read.
--spec read(binary(), opts()) -> any().
-read(Src, Opts) ->
+%% @doc Reads the next form from the reader.
+-spec read('erlang.io.PushbackReader':type(), opts()) -> any().
+read(Reader, Opts0) ->
+  Opts = Opts0#{?OPT_IO_READER => Reader},
+  read_string(<<>>, Opts).
+
+%% @doc Reads the next form from the string.
+-spec read_string(binary(), opts()) -> any().
+read_string(Src, Opts) ->
   State = new_state(Src, Opts),
   try
     ensure_read(State)
   catch
     throw:{eof, Value, _} -> Value
   end.
-
--spec read_string(binary(), opts()) -> any().
-read_string(Src, Opts) ->
-  read(Src, Opts).
 
 %%------------------------------------------------------------------------------
 %% Internal functions

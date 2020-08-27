@@ -1,3 +1,7 @@
+%% @doc Clojerl API.
+%%
+%% User-friendly API to interact with Clojerl from other BEAM
+%% languages.
 -module(clojerl).
 
 -include("clojerl.hrl").
@@ -12,20 +16,24 @@
 -define(APP, clojerl).
 -define(STICKY_MODULES, ['clojure.core']).
 
+%% @doc Starts the `clojerl' OTP application.
 -spec start() -> ok.
 start() ->
   {ok, _} = application:ensure_all_started(clojerl, permanent),
   ok.
 
+%% @doc Reads a binary string and returns a parsed Clojerl form.
 -spec read(binary()) -> any().
 read(Str) ->
   'clojure.edn':'read-string'(Str).
 
--spec var(any()) -> 'clojerl.Var':type().
+%% @doc Returns the var described by `QualifiedName'.
+-spec var(binary() | 'clojerl.Symbol':type()) -> 'clojerl.Var':type().
 var(QualifiedName) ->
   QualifiedSymbol = as_symbol(QualifiedName),
   'clojerl.Var':find(QualifiedSymbol).
 
+%% @doc Returns the `Name' var in namespace `Ns'.
 -spec var(any(), any()) -> 'clojerl.Var':type().
 var(Ns, Name) ->
   NsStr   = 'clojerl.Symbol':str(as_symbol(Ns)),

@@ -1,3 +1,16 @@
+%% @doc Clojure multimethod.
+%%
+%% Implements the creation and update of a multimethod's dispatch map.
+%% The dispatch map is kept in its own BEAM module so that it can be
+%% updated at runtime independently. This eliminates the risk of
+%% killing processes that might be currently using the module where
+%% the dispatch map is kept.
+%%
+%% There is some name mangling when generating the name of the module
+%% for the dispatch map to avoid using invalid filename characters.
+%%
+%% The code in this module should only be used by the multimethod
+%% related functions in the `clojure.core' namespace.
 -module(clj_multimethod).
 
 -include("clojerl.hrl").
@@ -17,6 +30,7 @@
 %% API
 %%------------------------------------------------------------------------------
 
+%% @private
 -spec init('clojerl.Symbol':type()) -> ?NIL.
 init(MultiFnSym) ->
   DispatchMapVar = dispatch_map_var(MultiFnSym),
@@ -24,6 +38,7 @@ init(MultiFnSym) ->
   ok             = generate_dispatch_map(DispatchMapVar, EmptyMap),
   ?NIL.
 
+%% @private
 -spec is_init('clojerl.Symbol':type()) -> boolean().
 is_init(MultiFnSym) ->
   case 'clojerl.Namespace':find_var(MultiFnSym) of
@@ -31,10 +46,12 @@ is_init(MultiFnSym) ->
     Var  -> clj_rt:get('clojerl.Var':meta(Var), 'multi-method')
   end.
 
+%% @private
 -spec get_method('clojerl.Var':type(), any()) -> any().
 get_method(Var, Value) ->
   get_method(Var, Value, default, ?NIL).
 
+%% @private
 -spec get_method('clojerl.Var':type(), any(), any(), map() | ?NIL) -> any().
 get_method(MultiFnVar, Value, Default, _Hierarchy) ->
   Map = dispatch_map(MultiFnVar),
@@ -43,10 +60,12 @@ get_method(MultiFnVar, Value, Default, _Hierarchy) ->
     X -> X
   end.
 
+%% @private
 -spec get_method_table('clojerl.Var':type()) -> any().
 get_method_table(MultiFnVar) ->
   dispatch_map(MultiFnVar).
 
+%% @private
 -spec add_method('clojerl.Var':type(), any(), any()) -> 'clojerl.Var':type().
 add_method(MultiFnVar, DispatchValue, Method0) ->
   Assoc  = fun clj_rt:assoc/3,
@@ -59,20 +78,19 @@ add_method(MultiFnVar, DispatchValue, Method0) ->
   Args   = [DispatchValue, Method],
   update_dispatch_map(MultiFnVar, Assoc, Args).
 
+%% @private
 -spec remove_all('clojerl.Var':type()) -> 'clojerl.Var':type().
 remove_all(MultiFnVar) ->
   Fun    = fun(_) -> clj_rt:hash_map([]) end,
   update_dispatch_map(MultiFnVar, Fun, []).
 
+%% @private
 -spec remove_method('clojerl.Var':type(), any()) -> 'clojerl.Var':type().
 remove_method(MultiFnVar, DispatchValue) ->
   Dissoc = fun clj_rt:dissoc/2,
   update_dispatch_map(MultiFnVar, Dissoc, [DispatchValue]).
 
-%%------------------------------------------------------------------------------
-%% Internal functions
-%%------------------------------------------------------------------------------
-
+%% @private
 -spec dispatch_map_var('clojerl.INamed':type()) -> 'clojerl.Var':type().
 dispatch_map_var(VarOrSymbol) ->
   Ns      = case clj_rt:namespace(VarOrSymbol) of
@@ -86,6 +104,10 @@ dispatch_map_var(VarOrSymbol) ->
   MapNs   = munge(MapNs0),
   MapName = <<"map">>,
   'clojerl.Var':?CONSTRUCTOR(MapNs, MapName).
+
+%%------------------------------------------------------------------------------
+%% Internal functions
+%%------------------------------------------------------------------------------
 
 -spec update_dispatch_map('clojerl.Var':type(), function(), [any()]) -> any().
 update_dispatch_map(MultiFnVar, Fun, Args) ->

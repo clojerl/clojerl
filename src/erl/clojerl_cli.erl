@@ -1,3 +1,5 @@
+%% @private
+%% @doc Clojerl Command Line Interface.
 -module(clojerl_cli).
 
 -include("clojerl_int.hrl").

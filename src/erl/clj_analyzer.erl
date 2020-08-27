@@ -1,3 +1,10 @@
+%% @doc Clojerl analyzer.
+%%
+%% Processes code in the form of data structures and transform them
+%% into AST nodes which get pushed to the `clj_env:env()'.
+%%
+%% Also implements macroexpansion.
+
 -module(clj_analyzer).
 
 -dialyzer({nowarn_function, analyze_form/2}).
@@ -12,15 +19,22 @@
         , is_special/1
         ]).
 
+%% @doc Analyzes `Form' and transforms it into an `expr()'.
+%%
+%% The analyzed `Form' gets pushed into the stack of expressions in
+%% `Env' and the updated environment is returned.
 -spec analyze(any(), clj_env:env()) -> clj_env:env().
 analyze(Form, Env0) ->
   analyze_form(Form, Env0).
 
+%% @doc Returns `true' is the provided symbol is a special form
+%% `false' otherwise.
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
   clj_rt:'symbol?'(S) andalso
     maps:is_key('clojerl.Symbol':str(S), special_forms()).
 
+%% @doc Macroexpands `Form' only once.
 -spec macroexpand_1(any(), clj_env:env()) -> any().
 macroexpand_1(Form, Env) ->
   case clj_rt:'seq?'(Form) of
@@ -28,32 +42,17 @@ macroexpand_1(Form, Env) ->
     false -> Form
   end.
 
--spec safe_macroexpand_1(any(), clj_env:env()) -> any().
-safe_macroexpand_1(Form, Env) ->
-  try
-    do_macroexpand_1(Form, Env)
-  catch ?WITH_STACKTRACE(_, Error0, Stacktrace)
-    Location = error_location(Form, Env),
-    case 'clojerl.IError':?SATISFIES(Error0) of
-      true ->
-        Msg   = 'clojerl.IError':message(Error0),
-        Type  = clj_rt:type_module(Error0),
-        Error = apply( Type
-                     , ?CONSTRUCTOR
-                     , [clj_utils:format_error(Msg, Location)]
-                     ),
-        erlang:raise(error, Error, Stacktrace);
-      false ->
-        ?ERROR(clj_rt:str(Error0), Location, Stacktrace)
-    end
+%% @doc Macroexpands `Form' until there are no further macro expansions.
+-spec macroexpand(any(), clj_env:env()) -> any().
+macroexpand(Form, Env) ->
+  case macroexpand_1(Form, Env) of
+    Form     -> Form;
+    Expanded -> macroexpand(Expanded, Env)
   end.
 
--spec error_location(any(), clj_env:env()) -> any().
-error_location(Form, Env) ->
-  case clj_reader:location_meta(Form) of
-    ?NIL -> clj_env:location(Env);
-    Location -> Location
-  end.
+%%------------------------------------------------------------------------------
+%% Internal
+%%------------------------------------------------------------------------------
 
 -spec do_macroexpand_1(any(), clj_env:env()) -> any().
 do_macroexpand_1(Form, Env) ->
@@ -86,16 +85,32 @@ do_macroexpand_1(Form, Env) ->
               end,
   keep_location_meta(Expanded, Form).
 
--spec macroexpand(any(), clj_env:env()) -> any().
-macroexpand(Form, Env) ->
-  case macroexpand_1(Form, Env) of
-    Form     -> Form;
-    Expanded -> macroexpand(Expanded, Env)
+-spec safe_macroexpand_1(any(), clj_env:env()) -> any().
+safe_macroexpand_1(Form, Env) ->
+  try
+    do_macroexpand_1(Form, Env)
+  catch ?WITH_STACKTRACE(_, Error0, Stacktrace)
+    Location = error_location(Form, Env),
+    case 'clojerl.IError':?SATISFIES(Error0) of
+      true ->
+        Msg   = 'clojerl.IError':message(Error0),
+        Type  = clj_rt:type_module(Error0),
+        Error = apply( Type
+                     , ?CONSTRUCTOR
+                     , [clj_utils:format_error(Msg, Location)]
+                     ),
+        erlang:raise(error, Error, Stacktrace);
+      false ->
+        ?ERROR(clj_rt:str(Error0), Location, Stacktrace)
+    end
   end.
 
-%%------------------------------------------------------------------------------
-%% Internal
-%%------------------------------------------------------------------------------
+-spec error_location(any(), clj_env:env()) -> any().
+error_location(Form, Env) ->
+  case clj_reader:location_meta(Form) of
+    ?NIL -> clj_env:location(Env);
+    Location -> Location
+  end.
 
 -spec maybe_macroexpand_symbol(any(), 'clojerl.Symbol':type()) -> any().
 maybe_macroexpand_symbol(Form, OpSym) ->

@@ -1,3 +1,11 @@
+%% @doc Clojerl compilation module.
+%%
+%% Keeps the Core Erlang representation for the modules being
+%% compiled.
+%%
+%% It is mainly used by {@link clj_emitter} to register new
+%% modules and then add or update function as each form in the
+%% compiler is processed.
 -module(clj_module).
 
 -behavior(gen_server).
@@ -85,6 +93,12 @@
 %% Exported Functions
 %%------------------------------------------------------------------------------
 
+%% @doc Runs the function in a `clj_module' context.
+%%
+%% This is used by {@link clj_compiler} when evaluating or compiling
+%% an expression. It should be used in conjuntion with {@link
+%% in_context/0} when you need to find out if there is a `clj_module'
+%% being processed.
 -spec with_context(fun()) -> ok.
 with_context(Fun) ->
   try
@@ -94,18 +108,19 @@ with_context(Fun) ->
     erlang:erase(?CLJ_MODULE_CONTEXT)
   end.
 
+%% @doc Checks whether we are in a `clj_module' context.
 -spec in_context() -> boolean().
 in_context() ->
   erlang:get(?CLJ_MODULE_CONTEXT) =:= true.
 
 %% @doc Returns a list where each element is Core Erlang module.
-%% @end
 -spec all_modules() -> [cerl:c_module()].
 all_modules() ->
   Self     = erlang:self(),
   {_, All} = clj_utils:ets_get(?PID_TO_MODULES, Self, {Self, []}),
   lists:map(fun to_module/1, All).
 
+%% @doc Returns the Core Erlang module named `ModuleName'.
 -spec get_module(atom()) -> cerl:c_module().
 get_module(ModuleName) when is_atom(ModuleName) ->
   to_module(fetch_module(ModuleName)).
@@ -161,6 +176,9 @@ fake_fun(ModuleName, Function, Arity) ->
       end
   end.
 
+%% @private
+%% @doc Replaces all function calls to a currently loaded
+%% `clj_module' with a call to a {@link fake_fun/3}.
 -spec replace_calls( cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}
                    , module()
                    ) ->
@@ -168,6 +186,7 @@ fake_fun(ModuleName, Function, Arity) ->
 replace_calls(Ast, CurrentModule) ->
   replace_calls(Ast, CurrentModule, undefined).
 
+%% @doc Adds mappings from a symbol to a value.
 -spec add_mappings(['clojerl.Var':type()], module() | clj_module()) ->
   clj_module().
 add_mappings(_, ?NIL) -> error(badarg);
@@ -184,6 +203,7 @@ add_mappings(Mappings, Module) ->
   lists:foreach(AddFun, Mappings),
   Module.
 
+%% @doc Adds an alias symbol for a Clojerl namespace.
 -spec add_alias( 'clojerl.Symbol':type()
                , 'clojerl.Symbol':type()
                , module() | clj_module()
@@ -196,6 +216,7 @@ add_alias(AliasSym, AliasedNsSym, Module) ->
   clj_utils:ets_save(Module#module.aliases, {K, AliasedNsSym}),
   Module.
 
+%% @doc Adds arbitrary attributes to the module.
 -spec add_attributes([{cerl:cerl(), cerl:cerl()}], clj_module() | module()) ->
   clj_module().
 add_attributes(_, ?NIL) -> error(badarg);
@@ -208,6 +229,7 @@ add_attributes(Attrs, Module) ->
   ok = lists:foreach(AddAttr, Attrs),
   Module.
 
+%% @doc Adds exports of functions to the module.
 -spec add_exports([{atom(), non_neg_integer()}], clj_module() | module()) ->
   clj_module().
 add_exports(_, ?NIL) -> error(badarg);
@@ -220,6 +242,7 @@ add_exports(Exports, Module) ->
   ok = lists:foreach(AddExport, Exports),
   Module.
 
+%% @doc Adds functions to the module.
 -spec add_functions([{cerl:cerl(), cerl:cerl()}], module() | clj_module()) ->
   clj_module().
 add_functions(_, ?NIL) -> error(badarg);
@@ -234,6 +257,7 @@ add_functions(Funs, Module) ->
   lists:foreach(SaveFun, Funs),
   Module.
 
+%% @doc Remove all functions in the module.
 -spec remove_all_functions(module() | clj_module()) ->
   clj_module().
 remove_all_functions(?NIL) -> error(badarg);
@@ -244,6 +268,7 @@ remove_all_functions(Module) ->
   true = ets:delete_all_objects(Module#module.exports),
   Module.
 
+%% @doc Returns all functions in the module.
 -spec get_functions(module() | clj_module()) ->
   [{function_id(), {cerl:c_fname(), cerl:c_fun()}}].
 get_functions(?NIL) -> error(badarg);
@@ -252,6 +277,7 @@ get_functions(ModuleName) when is_atom(ModuleName)  ->
 get_functions(Module) ->
   ets:tab2list(Module#module.funs).
 
+%% @doc Adds an on_load expression to the module.
 -spec add_on_load(cerl:cerl(), module() | clj_module()) ->
   clj_module().
 add_on_load(_, ?NIL) -> error(badarg);
@@ -261,6 +287,7 @@ add_on_load(Expr, Module) ->
   clj_utils:ets_save(Module#module.on_load, {Expr, Expr}),
   Module.
 
+%% @doc Checks if the `Name' module is a Clojerl module.
 -spec is_clojure(module()) -> boolean().
 is_clojure(Name) ->
   Key = {?MODULE, is_clojure, Name},
@@ -274,6 +301,7 @@ is_clojure(Name) ->
       Value
   end.
 
+%% @doc Checks if the `Name' module is a Clojerl protocol.
 -spec is_protocol(module() | cerl:c_module()) -> boolean().
 is_protocol(Name) when is_atom(Name) ->
   Key = {?MODULE, is_protocol, Name},
@@ -295,9 +323,11 @@ is_protocol(CoreModule) ->
 %% gen_server callbacks
 %%------------------------------------------------------------------------------
 
+%% @private
 start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+%% @private
 init([]) ->
   ets:new(?MODULE, [named_table, set, protected, {keypos, 2}]),
   %% Keeps track of the modules loaded by pid.
@@ -309,6 +339,7 @@ init([]) ->
   ets:new(?MODULE_TO_FAKE_MODULES, [named_table, set, protected, {keypos, 1}]),
   {ok, #{}}.
 
+%% @private
 handle_call({load, Module}, {Pid, _}, State) ->
   Module = clj_utils:ets_save(?MODULE, Module),
   case clj_utils:ets_get(?PID_TO_MODULES, Pid) of
@@ -324,6 +355,7 @@ handle_call({fetch, ModuleName}, _From, State) ->
   Module = clj_utils:ets_get(?MODULE, ModuleName),
   {reply, Module, State}.
 
+%% @private
 handle_cast({fake_module, Module, FakeModule}, State) ->
   {_, FakeModules} = clj_utils:ets_get( ?MODULE_TO_FAKE_MODULES
                                       , Module
@@ -337,7 +369,8 @@ handle_cast({fake_module, Module, FakeModule}, State) ->
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
-%% Cleanup modules when the process dies
+%% @private
+%% @doc Cleans up modules when the process dies.
 handle_info({'DOWN', _MonitorRef, _Type, Pid, _Info}, State) ->
   {Pid, Modules} = clj_utils:ets_get(?PID_TO_MODULES, Pid, {Pid, []}),
 
@@ -349,9 +382,11 @@ handle_info({'DOWN', _MonitorRef, _Type, Pid, _Info}, State) ->
 handle_info(_Msg, State) ->
   {noreply, State}.
 
+%% @private
 terminate(_Msg, _State) ->
   ok.
 
+%% @private
 code_change(_Msg, _From, State) ->
   {ok, State}.
 
@@ -393,6 +428,7 @@ load(Path, Name) when is_binary(Path) ->
   ok = gen_server:call(?MODULE, {load, Module}),
   Module.
 
+%% @doc Checks if the Clojelr module `Name' is loaded.
 -spec is_loaded(module()) -> boolean().
 is_loaded(Name) ->
   ets:member(?MODULE, Name).
@@ -491,6 +527,7 @@ fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
   ApplyAst = cerl:ann_c_apply(Ann, VarAst, Args1),
 
   cerl:ann_c_let(Ann, [VarAst], CallAst, ApplyAst).
+
 
 %% @private
 -spec build_fake_fun(atom(), integer(), clj_module()) -> function().

@@ -1,3 +1,7 @@
+%% @doc Hash collision handling for data structures.
+%%
+%% Implements utility functions for dealing with the collision of
+%% hashes in data structures such as Clojure maps and sets.
 -module(clj_hash_collision).
 
 -include("clojerl.hrl").
@@ -8,10 +12,13 @@
         , equiv/2
         ]).
 
--type entry()    :: {any(), any()} | [{any(), any()}].
--type mappings() :: #{integer() => entry()}.
+-type entry()   :: {any(), any()} | [{any(), any()}].
+-type mapping() :: #{integer() => entry()}.
 
--spec get_entry(mappings(), integer(), any()) -> ?NIL | {any(), any()}.
+%% @doc Gets the entry for `Key' in `Map'.
+%%
+%% Returns `undefined' when the entry is not found.
+-spec get_entry(mapping(), integer(), any()) -> ?NIL | {any(), any()}.
 get_entry(Map, Hash, Key) ->
   case Map of
     #{Hash := {Key, V}} -> {Key, V};
@@ -25,8 +32,13 @@ get_entry(Map, Hash, Key) ->
     _ -> ?NIL
   end.
 
--spec create_entry(map(), integer(), any(), any()) ->
-  {0 | 1, {any(), any()} | [{any(), any()}]}.
+%% @doc Create a new entry.
+%%
+%% Returns a tuple with two elements. The first is either `0' (the
+%% value for the provided key already existed) or `1' (a new value was
+%% added to the entry). The second is the created entry.
+-spec create_entry(mapping(), integer(), any(), any()) ->
+  {0 | 1, entry()}.
 create_entry(Map, Hash, Key, Value) ->
   case Map of
     #{Hash := {K, V}} ->
@@ -39,21 +51,27 @@ create_entry(Map, Hash, Key, Value) ->
     _ -> {1, {Key, Value}}
   end.
 
--spec without_entry(map(), integer(), any()) -> {-1 | 0, map()}.
-without_entry(Map, Hash, Key) ->
-  case Map of
-    #{Hash := {_, _}} -> {-1, maps:remove(Hash, Map)};
+%% @doc Removes the entry for `Key'.
+%%
+%% Returns a tuple with two elements. The first is either `-1' (the
+%% `Key' was removed) or `0' (the `Key' was not found). The second is
+%% the updated mapping.
+-spec without_entry(mapping(), integer(), any()) -> {-1 | 0, mapping()}.
+without_entry(Mapping, Hash, Key) ->
+  case Mapping of
+    #{Hash := {_, _}} -> {-1, maps:remove(Hash, Mapping)};
     #{Hash := KVs0}   ->
       case remove_entry(KVs0, Key, []) of
-        {Diff, []}   -> {Diff, maps:remove(Hash, Map)};
-        {Diff, KVs1} -> {Diff, Map#{Hash => KVs1}}
+        {Diff, []}   -> {Diff, maps:remove(Hash, Mapping)};
+        {Diff, KVs1} -> {Diff, Mapping#{Hash => KVs1}}
       end;
-    _ -> {0, Map}
+    _ -> {0, Mapping}
   end.
 
--spec equiv(map(), map()) -> boolean().
-equiv(MapX, MapY) ->
-  do_equiv(maps:to_list(MapX), MapY).
+%% @doc Checks if the two mappings are equivalent.
+-spec equiv(mapping(), mapping()) -> boolean().
+equiv(MappingX, MappingY) ->
+  do_equiv(maps:to_list(MappingX), MappingY).
 
 %%------------------------------------------------------------------------------
 %% Helper functions
@@ -88,7 +106,7 @@ remove_entry([{K, V} | Rest], Key, Acc) ->
     false -> remove_entry(Rest, Key, [{K, V} | Acc])
   end.
 
--spec do_equiv([entry()], mappings()) -> boolean().
+-spec do_equiv([entry()], mapping()) -> boolean().
 do_equiv([], _) ->
   true;
 do_equiv([{Hash, {K, V}} | Rest], MapSet) ->
@@ -102,7 +120,7 @@ do_equiv([{Hash, KVs} | Rest], MapSet) ->
     _     -> do_equiv(Rest, MapSet)
   end.
 
--spec do_equiv_values([entry()], integer(), mappings()) -> boolean().
+-spec do_equiv_values([entry()], integer(), mapping()) -> boolean().
 do_equiv_values([], _Hash, _MapSet) ->
   true;
 do_equiv_values([{K, V} | Rest], Hash, MapSet) ->

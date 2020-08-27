@@ -4839,7 +4839,7 @@
   [coll] (not (seq coll)))
 
 (defn coll?
-  "Returns true if x implements IPersistentCollection"
+  "Returns true if x implements IColl"
   {:added "1.0"}
   [x] (satisfies? clojerl.IColl x))
 

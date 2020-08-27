@@ -1,3 +1,6 @@
+%% @doc Clojerl compiler's entrypoint.
+%%
+%% Provides functions to compile files, strings and forms.
 -module(clj_compiler).
 
 -include("clojerl.hrl").
@@ -57,22 +60,35 @@ default_options() ->
    , fake        => false
    }.
 
+%% @equiv file(File, default_options())
 -spec file(file:filename_all()) -> compiled_modules().
 file(File) when is_binary(File) ->
   file(File, default_options()).
 
+%% @doc Compiles the file whose path is `File' using the provided options.
+%%
+%% Returns a list of paths for the generated BEAM binaries. This can be
+%% used to keep track of the compiling dependency between files, which
+%% is useful for incremental compiling.
 -spec file(file:filename_all(), options()) -> compiled_modules().
 file(File, Opts) when is_binary(File) ->
   file(File, Opts, clj_env:default(), compiled_modules).
 
+%% @equiv string(Src, default_options())
 -spec string(binary()) -> clj_env:env().
 string(Src) when is_binary(Src) ->
   string(Src, default_options()).
 
+%% @doc Compiles the code in `Src' using the provided options.
+%%
+%% Returns a `clj_env:env()' compilation context.
 -spec string(binary(), options()) -> clj_env:env().
 string(Src, Opts) when is_binary(Src) ->
   string(Src, Opts, clj_env:default()).
 
+%% @doc Compiles and load code from avoid reader.
+%%
+%% Returns the value of the last expression.
 -spec load('erlang.io.PushbackReader':type()) -> any().
 load(PushbackReader) ->
   Opts        = default_options(),
@@ -81,40 +97,36 @@ load(PushbackReader) ->
   Env         = string(<<>>, Opts#{reader_opts => ReaderOpts1}),
   clj_env:get(eval, Env).
 
+%% @doc Compiles and load code from a file.
+%%
+%% Returns the value of the last expression.
 -spec load_file(binary()) -> any().
 load_file(Path) ->
   Env = file(Path, default_options(), clj_env:default(), env),
   clj_env:get(eval, Env).
 
+%% @doc Compiles and load code from a string.
+%%
+%% Returns the value of the last expression.
 -spec load_string(binary()) -> any().
 load_string(Src) ->
   Env = string(Src),
   clj_env:get(eval, Env).
 
--spec timed_string(binary(), options(), clj_env:env()) ->
-  compiled_modules().
-timed_string(Src, Opts, Env) when is_binary(Src) ->
-  File = maps:get(file, Opts, ?NO_SOURCE),
-  ok   = io:format("Compiling ~s~n", [File]),
-  clj_utils:time("Total", fun string/3, [Src, Opts, Env]).
-
--spec string(binary(), options(), clj_env:env()) -> clj_env:env().
-string(Src, Opts, Env) when is_binary(Src) ->
-  ProcDict = erlang:get(),
-  DoCompile = fun() ->
-                  copy_proc_dict(ProcDict),
-                  compile_string(Src, Opts, Env)
-              end,
-  run_monitored(DoCompile).
-
+%% @equiv eval(Form, default_options())
 -spec eval(any()) -> {any(), clj_env:env()}.
 eval(Form) ->
   eval(Form, default_options()).
 
+%% @doc Evaluates a form.
+%%
+%% Returns the evaluated value for the form and the resulting
+%% `clj_env:env()' compilation context.
 -spec eval(any(), options()) -> {any(), clj_env:env()}.
 eval(Form, Opts) ->
   eval(Form, Opts, clj_env:default()).
 
+%% @private
 -spec eval(any(), options(), clj_env:env()) -> {any(), clj_env:env()}.
 eval(Form, Opts, Env0) ->
   Fun  = fun(F, EnvAcc) -> eval1(F, Opts, EnvAcc) end,
@@ -134,10 +146,12 @@ eval1(Form, Opts, Env) ->
 
 %% Flags
 
+%% @private
 -spec no_warn_symbol_as_erl_fun(clj_env:env()) -> boolean().
 no_warn_symbol_as_erl_fun(Env) ->
   check_flag('no-warn-symbol-as-erl-fun', Env).
 
+%% @private
 -spec no_warn_dynamic_var_name(clj_env:env()) -> boolean().
 no_warn_dynamic_var_name(Env) ->
   check_flag('no-warn-dynamic-var-name', Env).
@@ -145,6 +159,25 @@ no_warn_dynamic_var_name(Env) ->
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+%% @doc Compile code from a string.
+%%
+%% Return the modified `clj_env:env()'.
+-spec string(binary(), options(), clj_env:env()) -> clj_env:env().
+string(Src, Opts, Env) when is_binary(Src) ->
+  ProcDict = erlang:get(),
+  DoCompile = fun() ->
+                  copy_proc_dict(ProcDict),
+                  compile_string(Src, Opts, Env)
+              end,
+  run_monitored(DoCompile).
+
+-spec timed_string(binary(), options(), clj_env:env()) ->
+  compiled_modules().
+timed_string(Src, Opts, Env) when is_binary(Src) ->
+  File = maps:get(file, Opts, ?NO_SOURCE),
+  ok   = io:format("Compiling ~s~n", [File]),
+  clj_utils:time("Total", fun string/3, [Src, Opts, Env]).
 
 -spec file( file:filename_all(), options(), clj_env:env(), return_type()) ->
   compiled_modules() | clj_env:env().
@@ -245,6 +278,7 @@ compile_string(Src, Opts0, Env0) when is_binary(Src) ->
 
 -define(CURRENT_FILE, '__current_file__').
 
+%% @private
 %% @doc Gets the current file that is being compiled if set
 -spec current_file() -> binary().
 current_file() ->
@@ -356,10 +390,12 @@ module_fun(#{time := true} = Opts) ->
 module_fun(Opts) ->
   fun(Module) -> module(Module, Opts) end.
 
+%% @private
 -spec module(cerl:c_module()) -> binary().
 module(Module) ->
   module(Module, #{}).
 
+%% @private
 -spec module(cerl:c_module(), options()) -> binary().
 module(Module, #{output := asm}) ->
   ok = output_asm(Module),
@@ -419,10 +455,12 @@ parse_compiler_options(Str) ->
     {error, {_, _, _Reason}, _} -> []
   end.
 
+%% @private
 -spec eval_expressions([cerl:cerl()]) -> [any()].
 eval_expressions(Expressions) ->
   eval_expressions(Expressions, true).
 
+%% @private
 -spec eval_expressions([cerl:cerl()], boolean()) -> [any()].
 eval_expressions(Expressions, true = _ReplaceExprs) ->
   CurrentNs     = 'clojerl.Namespace':current(),

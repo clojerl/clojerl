@@ -1,3 +1,4 @@
+%% @doc Clojerl protocol helper functions.
 -module(clj_protocol).
 
 -include("clojerl.hrl").
@@ -7,12 +8,16 @@
         , impl_module/2
         ]).
 
+%% @doc Returns the name of the module that implements `Protocol' for
+%% `Type'.
 -spec impl_module(atom() | binary(), atom() | binary()) -> atom().
-impl_module(ProtocolBin, TypeBin)
-  when is_binary(ProtocolBin),
-       is_binary(TypeBin) ->
-  binary_to_atom(<<ProtocolBin/binary, "__", TypeBin/binary>>, utf8).
+impl_module(Protocol, Type)
+  when is_binary(Protocol),
+       is_binary(Type) ->
+  binary_to_atom(<<Protocol/binary, "__", Type/binary>>, utf8).
 
+%% @doc Generates an error with information regarding an unimplemented
+%% protocol function.
 -spec not_implemented(module(), atom(), any()) -> no_return().
 not_implemented(Protocol, Function, Value) ->
   Type = clj_rt:type_module(Value),

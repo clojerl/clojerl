@@ -1,3 +1,15 @@
+%% @doc Clojure's persistent vector implementation in Erlang.
+%%
+%% This is an implementation of the persistent vector data structure
+%% found in Clojure JVM. A very nice series of posts explaining in
+%% detail the Clojure vector implementation can be found <a
+%% href="https://hypirion.com/musings/understanding-persistent-vector-pt-1">
+%% here</a>.
+%%
+%% The goal of implementing this data structure in Erlang was to
+%% compare its performance to the one provided by the `array' module.
+%% The results of the comparison can be found <a
+%% href="https://github.com/clojerl/clojerl/pull/629">here</a>.
 -module(clj_vector).
 
 -include("clojerl.hrl").
@@ -56,9 +68,11 @@
 -type offset()    :: non_neg_integer().
 -type vector()    :: #clj_vector{}.
 
+%% @doc Creates a new empty vector.
 new() ->
   new([]).
 
+%% @doc Creates a new vector containing the items.
 -spec new(list()) -> vector().
 new([]) ->
   ?EMPTY;
@@ -73,41 +87,18 @@ new(Items) when is_list(Items) ->
       from_list([], ?NODE_SIZE, ?EMPTY, Items)
   end.
 
--spec from_list(list(), index(), vector(), list()) -> vector().
-%% Node list is full with ?NODE_SIZE
-from_list(_NodeList, ?NODE_SIZE, Vector, []) ->
-  Vector;
-from_list(NodeList, 0, Vector0, Items) ->
-  Node = list_to_tuple(lists:reverse(NodeList)),
-  Vector1 = cons_node(Node, ?NODE_SIZE, Vector0),
-  from_list([], ?NODE_SIZE, Vector1, Items);
-%% Node list is not full but there are no more items
-from_list(NodeList, NodeSizeLeft, Vector, []) ->
-  NodeSize = ?NODE_SIZE - NodeSizeLeft,
-  IndexedValues = index_values(NodeList, NodeSize, []),
-  Node = erlang:make_tuple(?NODE_SIZE, ?NIL, IndexedValues),
-  cons_node(Node, NodeSize, Vector);
-from_list(NodeList, NodeSizeLeft, Vector, [Item | Items]) ->
-  from_list([Item | NodeList], NodeSizeLeft - 1, Vector, Items).
-
--spec index_values(list(), size(), list()) -> list().
-index_values([], _, Acc) ->
-  Acc;
-index_values([X | Rest], N, Acc) ->
-  index_values(Rest, N - 1, [{N, X} | Acc]).
-
--spec index_values_asc(list(), size(), list()) -> list().
-index_values_asc([], _, Acc) ->
-  Acc;
-index_values_asc([X | Rest], N, Acc) ->
-  index_values_asc(Rest, N + 1, [{N, X} | Acc]).
-
+%% @doc Returns an empty vector.
 -spec empty() -> vector().
 empty() -> ?EMPTY.
 
+%% @doc Returns the size of the vector.
 -spec size(vector()) -> size().
 size(#clj_vector{size = Size}) -> Size.
 
+%% @doc Reduces over the items in the vector.
+%%
+%% The behaviour of this function is analogous to
+%% `clojure.core/reduce'.
 -spec reduce(function(), vector()) -> any().
 reduce(F, #clj_vector{size = 0}) ->
   clj_rt:apply(F, []);
@@ -124,6 +115,10 @@ reduce( F
   Init = element(1, tuple_for(0, Shift, Root, Tail, TailOffset)),
   reduce_loop(F, Init, 1, Size, Shift, Root, Tail, TailOffset).
 
+%% @doc Reduces over the items in the vector using an initial value.
+%%
+%% The behaviour of this function is analogous to
+%% `clojure.core/reduce'.
 -spec reduce(function(), any(), vector()) -> any().
 reduce(_F, Init, #clj_vector{size = 0}) ->
   Init;
@@ -138,6 +133,7 @@ reduce( F
       ) ->
   reduce_loop(F, Init, 0, Size, Shift, Root, Tail, TailOffset).
 
+%% @doc Returns an Erlang list containing all items in the vector.
 -spec to_list(vector()) -> [any()].
 to_list(#clj_vector{size = 0}) ->
   [];
@@ -153,6 +149,7 @@ to_list(#clj_vector{ size    = Size
     false -> to_list_loop([], Size - 1, Shift, Root, Tail, TailOffset)
   end.
 
+%% @private
 -spec tuple_for(index(), vector()) -> tree_node().
 tuple_for( Index
          , #clj_vector{ shift   = Shift
@@ -162,6 +159,7 @@ tuple_for( Index
                       }) ->
   tuple_for(Index, Shift, Root, Tail, TailOffset).
 
+%% @doc Adds an item at the end of the vector.
 -spec cons(any(), vector()) -> vector().
 cons( Value
     , #clj_vector{ size    = Size
@@ -201,6 +199,7 @@ cons( Value
                  }
   end.
 
+%% @doc Returns the item at the `Index' position in the vector.
 -spec get(index(), vector()) -> any().
 get( Index
    , #clj_vector{ size    = Size
@@ -220,6 +219,7 @@ get( Index
 get(_Index, _Vector) ->
   ?ERROR(<<"Index out of bounds">>).
 
+%% @doc Sets the item at the `Index' position in the vector.
 -spec set(index(), any(), vector()) -> vector().
 set( Index
    , Value
@@ -245,6 +245,7 @@ set( Index
 set(_Index, _Value, _Vector) ->
   ?ERROR(<<"Index out of bounds">>).
 
+%% @doc Remove the item at the end of the vector.
 -spec pop(vector()) -> vector().
 pop(#clj_vector{size = 0}) ->
   ?ERROR(<<"Can't pop empty vector">>);
@@ -282,6 +283,36 @@ pop( #clj_vector{ size    = Size0
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+%% @private
+-spec from_list(list(), index(), vector(), list()) -> vector().
+%% Node list is full with ?NODE_SIZE
+from_list(_NodeList, ?NODE_SIZE, Vector, []) ->
+  Vector;
+from_list(NodeList, 0, Vector0, Items) ->
+  Node = list_to_tuple(lists:reverse(NodeList)),
+  Vector1 = cons_node(Node, ?NODE_SIZE, Vector0),
+  from_list([], ?NODE_SIZE, Vector1, Items);
+%% Node list is not full but there are no more items
+from_list(NodeList, NodeSizeLeft, Vector, []) ->
+  NodeSize = ?NODE_SIZE - NodeSizeLeft,
+  IndexedValues = index_values(NodeList, NodeSize, []),
+  Node = erlang:make_tuple(?NODE_SIZE, ?NIL, IndexedValues),
+  cons_node(Node, NodeSize, Vector);
+from_list(NodeList, NodeSizeLeft, Vector, [Item | Items]) ->
+  from_list([Item | NodeList], NodeSizeLeft - 1, Vector, Items).
+
+-spec index_values(list(), size(), list()) -> list().
+index_values([], _, Acc) ->
+  Acc;
+index_values([X | Rest], N, Acc) ->
+  index_values(Rest, N - 1, [{N, X} | Acc]).
+
+-spec index_values_asc(list(), size(), list()) -> list().
+index_values_asc([], _, Acc) ->
+  Acc;
+index_values_asc([X | Rest], N, Acc) ->
+  index_values_asc(Rest, N + 1, [{N, X} | Acc]).
 
 -spec new_path(shift(), tree_node()) -> tree_node().
 new_path(_Level = 0, Node) ->

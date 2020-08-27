@@ -1,3 +1,12 @@
+%% @doc Clojerl emitter.
+%%
+%% Emits Core Erlang from the expressions it receives from the
+%% analyzer.
+%%
+%% This is the third and last step in the compilation process.
+%%
+%% The generated Core Erlang modules are maintained and updated in
+%% memory through the usage of `clj_module'.
 -module(clj_emitter).
 
 -include("clojerl.hrl").
@@ -17,6 +26,7 @@
                   , force_remote_invoke => boolean()
                   }.
 
+%% @doc Emits Core Erlang from the expression found in `Env'.
 -spec emit(clj_env:env()) -> {[ast()], clj_env:env()}.
 emit(Env0) ->
   {Expr, Env} = clj_env:pop_expr(Env0),
@@ -24,16 +34,16 @@ emit(Env0) ->
   Asts  = lists:reverse(maps:get(asts, State)),
   {Asts, Env}.
 
+%%------------------------------------------------------------------------------
+%% Internal functions
+%%------------------------------------------------------------------------------
+
 -spec initial_state() -> state().
 initial_state() ->
   #{ asts                => []
    , lexical_renames     => clj_scope:new()
    , force_remote_invoke => false
    }.
-
-%%------------------------------------------------------------------------------
-%% Internal functions
-%%------------------------------------------------------------------------------
 
 -spec ast(expr(), state()) -> state().
 ast(#{op := constant, form := Form, env := Env}, State) when is_binary(Form) ->
@@ -1725,6 +1735,7 @@ clause({PatternExpr, BodyExpr}, StateAcc) ->
 
 %% ----- Functions -------
 
+%% @private
 -spec function_form(atom(), [term()], [ast()], ast()) ->
   {ast(), ast()}.
 function_form(Name, Ann, Args, Body) when is_atom(Name) ->
@@ -2235,6 +2246,7 @@ ann_from(Env) ->
 to_atom(Symbol) ->
   binary_to_atom('clojerl.Symbol':name(Symbol), utf8).
 
+%% @private
 -spec new_c_var(cerl:ann()) -> cerl:c_var().
 new_c_var(Ann) ->
   N = case erlang:get(local_var_counter) of

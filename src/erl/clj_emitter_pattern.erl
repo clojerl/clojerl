@@ -1,3 +1,14 @@
+%% @doc Utility functions for processing patterns in the Clojerl
+%% emitter.
+%%
+%% The code in this modules that does the actual work was copied from
+%% the `v3_core' module in the Erlang/OTP `compiler' application.
+%%
+%% Given a list of patterns, it generates the guards that apply to all of
+%% them when considered together and it also transforms the patterns.
+%%
+%% The exported functions present an API to facilitate the usage from
+%% `clj_emitter'.
 -module(clj_emitter_pattern).
 
 -export([ patterns/1
@@ -10,23 +21,31 @@
 
 -import(ordsets, [is_element/2, union/2, intersection/2, subtract/2]).
 
-fold_guards([]) ->
+-spec fold_guards([cerl:cerl()]) -> cerl:cerl().
+fold_guards([] = _Guards) ->
   cerl:abstract(true);
 fold_guards([Guard0]) ->
   Guard0;
-fold_guards([Guard0, PatternGuards]) ->
+fold_guards([Guard0 | PatternGuards]) ->
   fold_guards(Guard0, PatternGuards).
 
-fold_guards(Guard0, PatternGuards) ->
-  FoldGuards = fun(PatGuard, Guard) ->
-                   Ann = cerl:get_ann(Guard),
+%% @doc Combines `Guard' with a list of `PatternGuards' using the
+%% boolean `and' operator.
+%%
+%% This is used by the emitter to combine the user defined guard with
+%% the ones generated from the patterns in the expression. Since all
+%% of them need to be satisfied, they are all AND-ed together.
+-spec fold_guards(cerl:cerl(), [cerl:cerl()]) -> cerl:cerl().
+fold_guards(Guard, PatternGuards) ->
+  FoldGuards = fun(PatGuard, GuardAcc) ->
+                   Ann = cerl:get_ann(GuardAcc),
                    cerl:ann_c_call(Ann
                                   , cerl:c_atom(erlang)
                                   , cerl:c_atom('and')
-                                  , [PatGuard, Guard]
+                                  , [PatGuard, GuardAcc]
                                   )
                end,
-  lists:foldr(FoldGuards, Guard0, PatternGuards).
+  lists:foldr(FoldGuards, Guard, PatternGuards).
 
 -spec patterns([cerl:cerl()]) ->
   {[cerl:cerl()], [cerl:cerl()]}.
@@ -41,11 +60,7 @@ patterns(Patterns, KnownVars) ->
   {PatArgs, PatGuards}.
 
 %% -----------------------------------------------------------------------------
-%% All of the code that follows was copied from the `v3_core'
-%% module in the Erlang/OTP `compiler' application.
-%%
-%% Given a list of patterns, it generates the guards that apply to all of
-%% them when considered together and it also transforms the patterns.
+%% Internal Functions (code taken form `v3_core')
 %% -----------------------------------------------------------------------------
 
 pattern(#c_var{name='_', anno=Ann}, _) ->
