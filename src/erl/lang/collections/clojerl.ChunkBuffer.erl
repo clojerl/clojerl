@@ -1,3 +1,5 @@
+%% @doc ChunkBuffer is used when handling chunked seqs.
+%% @private
 -module('clojerl.ChunkBuffer').
 
 -include("clojerl.hrl").
