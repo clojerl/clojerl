@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.TupleChunk').
 
 -include("clojerl.hrl").

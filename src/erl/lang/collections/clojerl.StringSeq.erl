@@ -1,3 +1,7 @@
+%% @doc Wraps a string providing an implementation for collection and
+%% seq related protocols.
+
+%% @private
 -module('clojerl.StringSeq').
 
 -include("clojerl.hrl").

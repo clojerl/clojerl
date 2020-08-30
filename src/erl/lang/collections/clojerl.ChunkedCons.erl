@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.ChunkedCons').
 
 -include("clojerl.hrl").
