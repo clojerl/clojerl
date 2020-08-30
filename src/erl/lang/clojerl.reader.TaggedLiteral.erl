@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.reader.TaggedLiteral').
 
 -include("clojerl.hrl").

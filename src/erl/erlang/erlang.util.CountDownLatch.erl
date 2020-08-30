@@ -1,3 +1,8 @@
+%% @doc A synchronization aid that allows one or more processes to
+%% wait until a set of operations being performed in other processes
+%% completes. Used to coordinate `clojerl.Agent's.
+
+%% @private
 -module('erlang.util.CountDownLatch').
 
 -include("clojerl.hrl").

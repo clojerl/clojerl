@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.Vector.RSeq').
 
 -include("clojerl.hrl").

@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.reader.ReaderConditional').
 
 -include("clojerl.hrl").
