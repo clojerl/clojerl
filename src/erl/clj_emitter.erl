@@ -131,7 +131,10 @@ ast(#{op := def} = Expr, State) ->
         };
       _ ->
         {InitAst0, StateTemp} = pop_ast(ast(InitExpr, State)),
-        InitAst = case cerl:is_literal(InitAst0) of
+        InitAst = case
+                    cerl:is_literal(InitAst0)
+                    andalso cerl:is_literal_term(InitAst0)
+                  of
                      true  -> InitAst0;
                      false ->
                       Init = clj_compiler:eval_expressions([InitAst0]),
