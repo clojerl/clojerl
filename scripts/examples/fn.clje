@@ -362,3 +362,12 @@
 
 (def call-no-args-fn-with-one-arg
   (fn* [] (no-args-fn 1)))
+
+;; [#778] fn returned by macro
+
+(def ^{:macro true} return-fn
+  (fn* [_&form _&env & body]
+    (fn* [x] x)))
+
+(should-throw
+ (def def- (return-fn)))
