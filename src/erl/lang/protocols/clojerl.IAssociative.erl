@@ -1,3 +1,4 @@
+%%% Code generate by scripts/generate-protocols
 -module('clojerl.IAssociative').
 
 -include("clojerl.hrl").

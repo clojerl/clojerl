@@ -1,3 +1,4 @@
+%%% Code generate by scripts/generate-protocols
 -module('clojerl.IExceptionInfo').
 
 -include("clojerl.hrl").

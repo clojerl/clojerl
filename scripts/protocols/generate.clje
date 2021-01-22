@@ -277,7 +277,8 @@
                           ;; default clause for no implementation
                           STRING-TYPE     false})
                    (sort-by type-ordering))]
-    (str "-module('" proto-name "').\n\n"
+    (str "%%% Code generate by scripts/generate-protocols\n"
+         "-module('" proto-name "').\n\n"
          "-include(\"clojerl.hrl\").\n"
          "-include(\"clojerl_int.hrl\").\n\n"
          "-clojure(true).\n"

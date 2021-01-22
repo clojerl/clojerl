@@ -1,3 +1,4 @@
+%%% Code generate by scripts/generate-protocols
 -module('erlang.io.IPushbackReader').
 
 -include("clojerl.hrl").
