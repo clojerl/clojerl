@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.TransducerSeq').
 
 -include("clojerl.hrl").

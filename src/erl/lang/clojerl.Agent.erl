@@ -1,3 +1,4 @@
+%% @doc Clojure Agent.
 -module('clojerl.Agent').
 
 -include("clojerl.hrl").
@@ -77,6 +78,7 @@
 %% API
 %%------------------------------------------------------------------------------
 
+%% @private
 -spec ?CONSTRUCTOR(any()) -> type().
 ?CONSTRUCTOR(Value) ->
   UUID      = 'erlang.util.UUID':random(),
@@ -84,6 +86,7 @@
   {ok, Pid} = 'clojerl.Agent.Server':create(erlang:self(), Id, Value),
   build(Id, Pid).
 
+%% @doc Dispatch an action to an agent.
 -spec dispatch(type(), any(), any()) -> type().
 dispatch(#{?TYPE := ?M, id :=  Id, pid := Pid} = Agent, Fun, Args) ->
   case is_running_action() of
@@ -99,33 +102,40 @@ dispatch(#{?TYPE := ?M, id :=  Id, pid := Pid} = Agent, Fun, Args) ->
       end
   end.
 
+%% @doc Returns the error thrown during an asynchronous action of the
+%% agent if the agent is failed. Returns `undefined' if the agent is
+%% not failed.
 -spec error(type()) -> any().
-error(#{?TYPE := ?M, id := Id}) ->
+error(#{?TYPE := ?M, id := Id} = _Agent) ->
   field(Id, error).
 
+%% @doc Returns the error-handler of `Agent', or `undefined' if there
+%% is none.
 -spec error_handler(type()) -> function().
-error_handler(#{?TYPE := ?M, id := Id}) ->
+error_handler(#{?TYPE := ?M, id := Id} = _Agent) ->
   field(Id, error_handler).
 
+%% @doc Sets the error-handler of `Agent' a to `ErrorHandler'.
 -spec error_handler(type(), function()) -> any().
-error_handler(#{?TYPE := ?M, pid := Pid}, ErrorHandler) ->
+error_handler(#{?TYPE := ?M, pid := Pid} = _Agent, ErrorHandler) ->
   field(Pid, error_handler, ErrorHandler).
 
+%% @doc Returns the error-mode of `Agent'.
 -spec error_mode(type()) -> atom().
-error_mode(#{?TYPE := ?M, id := Id}) ->
+error_mode(#{?TYPE := ?M, id := Id} = _Agent) ->
   field(Id, error_mode).
 
--spec error_mode(type(), atom()) -> any().
-error_mode(#{?TYPE := ?M, pid := Pid}, ErrorMode) ->
+%% @doc Sets the error-mode of `Agent' a to `ErrorMode', which must be
+%% either `fail' or `continue'.
+-spec error_mode(type(), fail | continue) -> any().
+error_mode(#{?TYPE := ?M, pid := Pid} = _Agent, ErrorMode) ->
   field(Pid, error_mode, ErrorMode).
 
--spec build(binary(), pid()) -> type().
-build(Id, Pid) ->
-  #{ ?TYPE => ?M
-   , id    => Id
-   , pid   => Pid
-   }.
-
+%% @doc Normally, actions sent directly or indirectly during another
+%% action are held until the action completes (changes the agent's
+%% state). This function can be used to dispatch any pending sent
+%% actions immediately. If no action is occurring, does nothing.
+%% Returns the number of actions dispatched.
 -spec release_pending_sends() -> non_neg_integer().
 release_pending_sends() ->
   Pid = erlang:self(),
@@ -138,8 +148,13 @@ release_pending_sends() ->
       length(Pending)
   end.
 
+%% @doc When an agent is failed, changes the agent state to new-state
+%% and then un-fails the agent so that sends are allowed again.
 -spec restart(type(), any(), boolean()) -> any().
-restart(#{?TYPE := ?M, id := Id, pid := Pid}, NewValue, ClearActions) ->
+restart( #{?TYPE := ?M, id := Id, pid := Pid} = _Agent
+       , NewValue
+       , ClearActions
+       ) ->
   case field(Id, error) =:= ?NIL of
     true -> ?ERROR(<<"Agent does not need a restart">>);
     false ->
@@ -149,31 +164,33 @@ restart(#{?TYPE := ?M, id := Id, pid := Pid}, NewValue, ClearActions) ->
       end
   end.
 
+%% @doc Gets the validator function for the `Agent'.
 -spec validator(type()) -> any().
-validator(#{?TYPE := ?M, id := Id}) ->
+validator(#{?TYPE := ?M, id := Id} = _Agent) ->
   field(Id, validator).
 
+%% @doc Sets the validator function for the `Agent'.
 -spec validator(type(), function()) -> any().
-validator(#{?TYPE := ?M, pid := Pid}, Validator) ->
+validator(#{?TYPE := ?M, pid := Pid} = _Agent, Validator) ->
   field(Pid, validator, Validator).
 
 %%------------------------------------------------------------------------------
 %% Protocols
 %%------------------------------------------------------------------------------
 
-%% clojerl.ICloseable
-
+%% @see 'clojerl.ICloseable'
+%% @private
 close(#{?TYPE := ?M, pid := Pid}) ->
   ok = gen_server:stop(Pid),
   ?NIL.
 
-%% clojerl.IDeref
-
+%% @see 'clojerl.IDeref'
+%% @private
 deref(#{?TYPE := ?M, id := Id}) ->
   field(Id, value).
 
-%% clojerl.IEquiv
-
+%% @see 'clojerl.IEquiv'
+%% @private
 equiv( #{?TYPE := ?M, id := Id1}
      , #{?TYPE := ?M, id := Id2}
      ) ->
@@ -181,22 +198,24 @@ equiv( #{?TYPE := ?M, id := Id1}
 equiv(_, _) ->
   false.
 
-%% clojerl.IHash
-
+%% @see 'clojerl.IHash'
+%% @private
 hash(#{?TYPE := ?M, id := Id}) ->
   erlang:phash2(Id).
 
-%% clojerl.IMeta
-
+%% @see 'clojerl.IMeta'
+%% @private
 meta(#{?TYPE := ?M, id := Id}) ->
   field(Id, meta).
 
+%% @see 'clojerl.IMeta'
+%% @private
 with_meta(#{?TYPE := ?M, pid := Pid} = Agent, Meta) ->
   field(Pid, meta, Meta),
   Agent.
 
-%% clojerl.IReference
-
+%% @see 'clojerl.IReference'
+%% @private
 -spec alter_meta(type(), any(), any()) -> any().
 alter_meta(#{?TYPE := ?M, pid := Pid}, Fun, Args) ->
   case gen_server:call(Pid, {alter_meta, Fun, Args}) of
@@ -204,12 +223,14 @@ alter_meta(#{?TYPE := ?M, pid := Pid}, Fun, Args) ->
     {error, {Class, Reason}} -> erlang:raise(Class, Reason, [])
   end.
 
+%% @see 'clojerl.IReference'
+%% @private
 -spec reset_meta(type(), any()) -> any().
 reset_meta(#{?TYPE := ?M, pid := Pid}, Meta) ->
   field(Pid, meta, Meta).
 
-%% clojerl.IStringable
-
+%% @see 'clojerl.IStringable'
+%% @private
 str(#{?TYPE := ?M, id := Id}) ->
   <<"#<clojerl.Agent ", Id/binary, ">">>.
 
@@ -217,10 +238,12 @@ str(#{?TYPE := ?M, id := Id}) ->
 %% gen_server callbacks
 %%------------------------------------------------------------------------------
 
+%% @private
 -spec start_link(pid(), binary(), any()) -> {ok, pid()} | {error, any()}.
 start_link(Owner, Id, Value) ->
   gen_server:start_link(?MODULE, {Owner, Id, Value}, []).
 
+%% @private
 -spec init({pid(), binary(), any()}) -> {ok, state()}.
 init({Owner, Id, Value}) ->
   AgentState = default_state(Value),
@@ -233,6 +256,7 @@ init({Owner, Id, Value}) ->
                 },
   {ok, State}.
 
+%% @private
 -spec handle_call({restart, any(), boolean()}, any(), state()) ->
   {reply, any(), state()}.
 handle_call({restart, NewValue, ClearActions}, _From, #{id := Id} = State0) ->
@@ -276,6 +300,7 @@ handle_call({alter_meta, Fun, Args}, _From, #{id := Id} = State) ->
           end,
   {reply, Reply, State}.
 
+%% @private
 -spec handle_cast({send, function(), any()}, state()) ->
   {noreply, state()}.
 handle_cast({send, Fun, Args}, #{id := Id} = State0) ->
@@ -291,16 +316,19 @@ handle_cast({send, Fun, Args}, #{id := Id} = State0) ->
       {noreply, State1}
   end.
 
+%% @private
 -spec handle_info(any(), state()) -> {noreply, state()}.
 handle_info({'DOWN', Ref, _, _, Reason}, #{monitor := Ref} = State) ->
   {stop, Reason, State};
 handle_info(_Msg, State) ->
   {noreply, State}.
 
+%% @private
 -spec terminate(any(), state()) -> {ok, state()}.
 terminate(_Msg, State) ->
   {ok, State}.
 
+%% @private
 -spec code_change(any(), any(), state()) ->
   {ok, state()}.
 code_change(_Msg, _From, State) ->
@@ -318,6 +346,13 @@ default_state(Value) ->
    , error         => ?NIL
    , validator     => ?NIL
    , meta          => ?NIL
+   }.
+
+-spec build(binary(), pid()) -> type().
+build(Id, Pid) ->
+  #{ ?TYPE => ?M
+   , id    => Id
+   , pid   => Pid
    }.
 
 -spec init_pending_sends() -> ok.

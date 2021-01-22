@@ -1,3 +1,6 @@
+%% @doc Server process that creates and maintains an ETS table with
+%% the Clojure Agents information.
+%% @private
 -module('clojerl.Agent.Server').
 
 -include("clojerl_int.hrl").

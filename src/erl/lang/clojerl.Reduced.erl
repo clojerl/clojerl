@@ -1,3 +1,6 @@
+%% @doc Wraps a value in a reducing context to signal its termination.
+
+%% @private
 -module('clojerl.Reduced').
 
 -include("clojerl.hrl").

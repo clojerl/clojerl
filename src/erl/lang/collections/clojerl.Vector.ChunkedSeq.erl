@@ -1,3 +1,4 @@
+%% @private
 -module('clojerl.Vector.ChunkedSeq').
 
 -include("clojerl.hrl").

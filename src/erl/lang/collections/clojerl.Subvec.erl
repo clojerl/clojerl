@@ -1,3 +1,6 @@
+%% @doc Subvector implementation.
+
+%% @private
 -module('clojerl.Subvec').
 
 -include("clojerl.hrl").
