@@ -750,8 +750,8 @@
 (defn compare
   "Comparator. Returns a negative number, zero, or a positive number
   when x is logically 'less than', 'equal to', or 'greater than'
-  y. Compares numbers and collections in a type-independent manner. x
-  must implement Comparable"
+  y. Compares in a type-independent manner using the BEAM's comparison
+  criteria."
   {:added "1.0"}
   [x y]
   (clj_utils/compare x y))
@@ -4052,44 +4052,43 @@
                 coll (range (count coll)))
        (map #(if-let [e (find smap %)] (val e) %) coll))))
 
-#_(
-    (defn mk-bound-fn
-      {:private true}
-      [sc test key]
-      (fn [e]
-        (test (.. sc comparator (compare (. sc entryKey e) key)) 0)))
+(defn mk-bound-fn
+  {:private true}
+  [sc test key]
+  (fn [e]
+    (test ((. sc comparator) (. sc entryKey e) key) 0)))
 
-    (defn subseq
-      "sc must be a sorted collection, test(s) one of <, <=, > or
+(defn subseq
+  "sc must be a sorted collection, test(s) one of <, <=, > or
   >=. Returns a seq of those entries with keys ek for
   which (test (.. sc comparator (compare ek key)) 0) is true"
-      {:added "1.0"}
-      ([sc test key]
-       (let [include (mk-bound-fn sc test key)]
-         (if (#{> >=} test)
-           (when-let [[e :as s] (. sc seqFrom key true)]
-             (if (include e) s (next s)))
-           (take-while include (. sc seq true)))))
-      ([sc start-test start-key end-test end-key]
-       (when-let [[e :as s] (. sc seqFrom start-key true)]
-         (take-while (mk-bound-fn sc end-test end-key)
-                     (if ((mk-bound-fn sc start-test start-key) e) s (next s))))))
+  {:added "1.0"}
+  ([sc test key]
+   (let [include (mk-bound-fn sc test key)]
+     (if (#{> >=} test)
+       (when-let [[e :as s] (. sc seqFrom key true)]
+         (if (include e) s (next s)))
+       (take-while include (. sc seq true)))))
+  ([sc start-test start-key end-test end-key]
+   (when-let [[e :as s] (. sc seqFrom start-key true)]
+     (take-while (mk-bound-fn sc end-test end-key)
+                 (if ((mk-bound-fn sc start-test start-key) e) s (next s))))))
 
-    (defn rsubseq
-      "sc must be a sorted collection, test(s) one of <, <=, > or
+(defn rsubseq
+  "sc must be a sorted collection, test(s) one of <, <=, > or
   >=. Returns a reverse seq of those entries with keys ek for
   which (test (.. sc comparator (compare ek key)) 0) is true"
-      {:added "1.0"}
-      ([sc test key]
-       (let [include (mk-bound-fn sc test key)]
-         (if (#{< <=} test)
-           (when-let [[e :as s] (. sc seqFrom key false)]
-             (if (include e) s (next s)))
-           (take-while include (. sc seq false)))))
-      ([sc start-test start-key end-test end-key]
-       (when-let [[e :as s] (. sc seqFrom end-key false)]
-         (take-while (mk-bound-fn sc start-test start-key)
-                     (if ((mk-bound-fn sc end-test end-key) e) s (next s)))))))
+  {:added "1.0"}
+  ([sc test key]
+   (let [include (mk-bound-fn sc test key)]
+     (if (#{< <=} test)
+       (when-let [[e :as s] (. sc seqFrom key false)]
+         (if (include e) s (next s)))
+       (take-while include (. sc seq false)))))
+  ([sc start-test start-key end-test end-key]
+   (when-let [[e :as s] (. sc seqFrom end-key false)]
+     (take-while (mk-bound-fn sc start-test start-key)
+                 (if ((mk-bound-fn sc end-test end-key) e) s (next s))))))
 
 (defn repeatedly
   "Takes a function of no args, presumably with side effects, and

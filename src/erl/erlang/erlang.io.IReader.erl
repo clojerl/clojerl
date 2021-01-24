@@ -1,3 +1,4 @@
+%%% Code generate by scripts/generate-protocols
 -module('erlang.io.IReader').
 
 -include("clojerl.hrl").

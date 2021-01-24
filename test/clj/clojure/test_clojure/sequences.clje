@@ -1269,10 +1269,19 @@
 (deftest CLJ-1633
   (is (= ((fn [& args] (apply (fn [a & b] (apply list b)) args)) 1 2 3) '(2 3))))
 
-#_(deftest test-subseq
+(deftest test-subseq
   (let [s1 (range 100)
         s2 (into (sorted-set) s1)]
     (is (= s1 (seq s2)))
     (doseq [i (range 100)]
       (is (= s1 (concat (subseq s2 < i) (subseq s2 >= i))))
       (is (= (reverse s1) (concat (rsubseq s2 >= i) (rsubseq s2 < i)))))))
+
+(deftest test-subseq-sorted-map
+  (let [s1 (range 100)
+        m1 (apply sorted-map s1)
+        kvs (seq m1)]
+    (is (= kvs (partition 2 2 s1)))
+    (doseq [i (range 0 100 2)]
+      (is (= kvs (concat (subseq m1 < i) (subseq m1 >= i))))
+      (is (= (reverse kvs) (concat (rsubseq m1 >= i) (rsubseq m1 < i)))))))

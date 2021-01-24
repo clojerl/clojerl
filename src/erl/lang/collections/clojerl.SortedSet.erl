@@ -36,6 +36,11 @@
 -export([ seq/1
         , to_list/1
         ]).
+-export([ comparator/1
+        , entryKey/2
+        , seq/2
+        , seqFrom/3
+        ]).
 -export([str/1]).
 
 -import( clj_hash_collision
@@ -54,11 +59,11 @@
                  , meta   => ?NIL | any()
                  }.
 
--spec ?CONSTRUCTOR(list()) -> type().
-?CONSTRUCTOR(Values) when is_list(Values) ->
+-spec ?CONSTRUCTOR(list() | 'clojerl.ISeqable':type()) -> type().
+?CONSTRUCTOR(Values) ->
   ?CONSTRUCTOR(fun rbdict:default_compare/2, Values).
 
--spec ?CONSTRUCTOR(function(), list()) -> type().
+-spec ?CONSTRUCTOR(function(), 'clojerl.ISeqable':type()) -> type().
 ?CONSTRUCTOR(Compare, Values) when is_list(Values) ->
   {Count, Hashes} = lists:foldl(fun build_mappings/2, {0, #{}}, Values),
   Vals = maps:fold(fun ctor_fold/3, [], Hashes),
@@ -67,7 +72,9 @@
    , dict   => rbdict:from_list(Compare, Vals)
    , count  => Count
    , meta   => ?NIL
-   }.
+   };
+?CONSTRUCTOR(Compare, Values) ->
+  ?CONSTRUCTOR(Compare, clj_rt:to_list(Values)).
 
 -spec ctor_fold(integer(), {any(), any()} | [{any(), any()}], [any()]) ->
   [any()].
@@ -191,14 +198,31 @@ contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
 
 %% clojerl.ISeqable
 
-seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
-  case maps:size(Hashes) of
-    0 -> ?NIL;
-    _ -> to_list(Set)
-  end.
+seq(#{?TYPE := ?M, count := 0}) ->
+  ?NIL;
+seq(#{?TYPE := ?M} = Set) ->
+  to_list(Set).
 
 to_list(#{?TYPE := ?M, dict := Dict}) ->
   rbdict:fetch_keys(Dict).
+
+%% clojerl.ISorted
+
+comparator(#{?TYPE := ?M, dict := Dict}) ->
+  rbdict:compare_fun(Dict).
+
+entryKey(#{?TYPE := ?M}, Entry) ->
+  Entry.
+
+seq(#{?TYPE := ?M, count := 0}, _Ascending) ->
+  ?NIL;
+seq(#{?TYPE := ?M, dict := Dict}, Ascending) ->
+  rbdict:fetch_keys(Dict, Ascending).
+
+seqFrom(#{?TYPE := ?M, count := 0}, _Key, _Ascending) ->
+  ?NIL;
+seqFrom(#{?TYPE := ?M, dict := Dict}, Key, Ascending) ->
+  rbdict:fetch_keys_from(Dict, Key, Ascending).
 
 %% clojerl.IStringable
 
