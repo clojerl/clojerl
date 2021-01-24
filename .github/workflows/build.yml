@@ -1,0 +1,43 @@
+name: Build
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+        otp-version: [19.3, 20.3, 21.3, 22.2, 23.1]
+    runs-on: ${{ matrix.platform }}
+    container:
+      image: erlang:${{ matrix.otp-version }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Cache Hex packages
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/rebar3/hex/hexpm/packages
+        key: ${{ runner.os }}-hex-${{ hashFiles(format('{0}{1}', github.workspace, '/rebar.lock')) }}
+        restore-keys: |
+          ${{ runner.os }}-hex-
+    - name: Cache Dialyzer PLTs
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/rebar3/rebar3_*_plt
+        key: ${{ runner.os }}-dialyzer-${{ hashFiles(format('{0}{1}', github.workspace, '/rebar.config')) }}
+        restore-keys: |
+          ${{ runner.os }}-dialyzer-
+    - name: Compile
+      run: make ci
+    - name: Compile Native
+      run: make clean compile-native
+    - name: Generate Documentation
+      run: rebar3 docs
+    - name: Publish Documentation
+      uses: actions/upload-artifact@v1
+      with:
+        name: docs
+        path: doc
