@@ -69,11 +69,11 @@
                  , meta  => ?NIL | any()
                  }.
 
--spec ?CONSTRUCTOR([any()]) -> type().
-?CONSTRUCTOR(KeyValues) when is_list(KeyValues) ->
+-spec ?CONSTRUCTOR(list() | 'clojerl.ISeqable':type()) -> type().
+?CONSTRUCTOR(KeyValues) ->
   ?CONSTRUCTOR(fun rbdict:default_compare/2, KeyValues).
 
--spec ?CONSTRUCTOR(function(), [any()]) -> type().
+-spec ?CONSTRUCTOR(function(), list() | 'clojerl.ISeqable':type()) -> type().
 ?CONSTRUCTOR(Compare, KeyValues) when is_list(KeyValues) ->
   KeyValuePairs = build_key_values([], KeyValues),
   {Count, Keys0, Values0} = lists:foldl( fun build_mappings/2
@@ -87,7 +87,9 @@
    , vals  => Values2
    , count => Count
    , meta  => ?NIL
-   }.
+   };
+?CONSTRUCTOR(Compare, Values) ->
+  ?CONSTRUCTOR(Compare, clj_rt:to_list(Values)).
 
 -spec ctor_fold(integer(), {any(), any()} | [{any(), any()}], [any()]) ->
   [any()].
