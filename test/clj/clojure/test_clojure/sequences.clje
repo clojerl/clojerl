@@ -1276,3 +1276,12 @@
     (doseq [i (range 100)]
       (is (= s1 (concat (subseq s2 < i) (subseq s2 >= i))))
       (is (= (reverse s1) (concat (rsubseq s2 >= i) (rsubseq s2 < i)))))))
+
+(deftest test-subseq-sorted-map
+  (let [s1 (range 100)
+        m1 (apply sorted-map s1)
+        kvs (seq m1)]
+    (is (= kvs (partition 2 2 s1)))
+    (doseq [i (range 0 100 2)]
+      (is (= kvs (concat (subseq m1 < i) (subseq m1 >= i))))
+      (is (= (reverse kvs) (concat (rsubseq m1 >= i) (rsubseq m1 < i)))))))
