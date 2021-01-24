@@ -35,6 +35,8 @@
         , compare_fun/1
         , is_key/2
         , to_list/1
+        , to_list/2
+        , to_list_from/3
         , from_list/1
         , from_list/2
         , size/1
@@ -42,6 +44,8 @@
 -export([ fetch/2
         , find/2
         , fetch_keys/1
+        , fetch_keys/2
+        , fetch_keys_from/3
         , erase/2
         ]).
 -export([ store/3
@@ -107,11 +111,55 @@ is_key(K, {_, Left, K1, _, Right, Compare}) when K < K1 ->
 
 %% to_list(Dict) -> [{Key,Value}].
 
-to_list(T) -> to_list(T, []).
+-spec to_list(dict()) -> [{any(), any()}].
+to_list(T) -> to_list(T, true).
 
-to_list({empty, _}, List) -> List;
-to_list({_, A, Xk, Xv, B, _}, List) ->
-  to_list(A, [{Xk, Xv}|to_list(B, List)]).
+-spec to_list(dict(), boolean()) -> [{any(), any()}].
+to_list(T, Ascending) ->
+  to_list_order(T, Ascending, []).
+
+-spec to_list_order(dict(), boolean(), list()) -> [{any(), any()}].
+to_list_order({empty, _}, _Ascending, List) -> List;
+to_list_order({_, A, Xk, Xv, B, _}, true, List) ->
+  to_list_order(A, true, [{Xk, Xv} | to_list_order(B, true, List)]);
+to_list_order({_, A, Xk, Xv, B, _}, false, List) ->
+  to_list_order(B, false, [{Xk, Xv} | to_list_order(A, false, List)]).
+
+-spec to_list_from(dict(), any(), boolean()) -> [{any(), any()}].
+to_list_from(T, Key, Ascending) ->
+  to_list_from(T, Key, Ascending, []).
+
+to_list_from({empty, _Compare}, _Key, _Ascending, _Stack) ->
+  ?NIL;
+to_list_from( {_RB, L, K, _V, R, Compare} = Node
+               , Key
+               , Ascending
+               , Stack
+               ) ->
+  case Compare(Key, K) of
+    0  -> to_list_from_result([Node | Stack], Ascending, []);
+    -1 when Ascending -> to_list_from(L, Key, Ascending, [Node | Stack]);
+    1  when Ascending -> to_list_from(R, Key, Ascending, Stack);
+    -1 when not Ascending -> to_list_from(L, Key, Ascending, Stack);
+    1  when not Ascending -> to_list_from(R, Key, Ascending, [Node | Stack])
+  end.
+
+to_list_from_result([], _Ascending, Result) ->
+  lists:reverse(Result);
+to_list_from_result([{_, L, K, V, R, _} | Stack], Ascending, Result) ->
+  ChildNode = case Ascending of
+                true -> R;
+                false -> L
+              end,
+  NewStack = to_list_from_push(ChildNode, Stack, Ascending),
+  to_list_from_result(NewStack, Ascending, [{K, V} | Result]).
+
+to_list_from_push({empty, _}, Stack, _) ->
+  Stack;
+to_list_from_push({_, L, _, _, _, _} = Node, Stack, true) ->
+  to_list_from_push(L, [Node | Stack], true);
+to_list_from_push({_, _, _, _, R, _} = Node, Stack, false) ->
+  to_list_from_push(R, [Node | Stack], false).
 
 %% from_list([{Key, Value}]) -> Dict.
 
@@ -152,11 +200,23 @@ find(K, {_, Left, K1, Val, Right, Compare}) ->
 
 %% fetch_keys(Dict) -> [Key].
 
-fetch_keys(T) -> fetch_keys(T, []).
+fetch_keys(T) -> fetch_keys(T, true).
 
-fetch_keys({empty, _}, Tail) -> Tail;
-fetch_keys({_, L, K, _, R, _}, Tail) ->
-  fetch_keys(L, [K | fetch_keys(R, Tail)]).
+%% fetch_keys(Dict, Ascending) -> [Key].
+
+fetch_keys(T, Ascending) ->
+  fetch_keys_order(T, Ascending, []).
+
+fetch_keys_order({empty, _Compare}, _Ascending, Tail) -> Tail;
+fetch_keys_order({_RedBlack, L, K, _V, R, _Compare}, true, Tail) ->
+  fetch_keys_order(L, true, [K | fetch_keys_order(R, true, Tail)]);
+fetch_keys_order({_RedBlack, L, K, _V, R, _Compare}, false, Tail) ->
+  fetch_keys_order(R, false, [K | fetch_keys_order(L, false, Tail)]).
+
+%% fetch_keys_from(Dict, Key, Ascending) -> [Key].
+
+fetch_keys_from(Dict, Key, Ascending) ->
+  [K || {K, _} <- to_list_from(Dict, Key, Ascending)].
 
 %% store(Key, Val, Dict) -> Dict.
 

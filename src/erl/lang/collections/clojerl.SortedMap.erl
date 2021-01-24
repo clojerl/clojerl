@@ -46,6 +46,11 @@
 -export([ seq/1
         , to_list/1
         ]).
+-export([ comparator/1
+        , entryKey/2
+        , seq/2
+        , seqFrom/3
+        ]).
 -export([str/1]).
 
 -import( clj_hash_collision
@@ -292,6 +297,24 @@ to_list(#{?TYPE := ?M, vals := Vals}) ->
                   clj_rt:vector([Key, Val])
               end,
   lists:map(VectorFun, rbdict:to_list(Vals)).
+
+%% clojerl.ISorted
+
+comparator(#{?TYPE := ?M, vals := Vals}) ->
+  rbdict:compare_fun(Vals).
+
+entryKey(#{?TYPE := ?M}, {Key, _}) ->
+  Key.
+
+seq(#{?TYPE := ?M, count := 0}, _Ascending) ->
+  ?NIL;
+seq(#{?TYPE := ?M, vals := Vals}, Ascending) ->
+  rbdict:to_list(Vals, Ascending).
+
+seqFrom(#{?TYPE := ?M, count := 0}, _Key, _Ascending) ->
+  ?NIL;
+seqFrom(#{?TYPE := ?M, vals := Vals}, Key, Ascending) ->
+  rbdict:to_list_from(Vals, Key, Ascending).
 
 %% clojerl.IStringable
 

@@ -36,6 +36,11 @@
 -export([ seq/1
         , to_list/1
         ]).
+-export([ comparator/1
+        , entryKey/2
+        , seq/2
+        , seqFrom/3
+        ]).
 -export([str/1]).
 
 -import( clj_hash_collision
@@ -191,14 +196,31 @@ contains(#{?TYPE := ?M, hashes := Hashes}, Value) ->
 
 %% clojerl.ISeqable
 
-seq(#{?TYPE := ?M, hashes := Hashes} = Set) ->
-  case maps:size(Hashes) of
-    0 -> ?NIL;
-    _ -> to_list(Set)
-  end.
+seq(#{?TYPE := ?M, count := 0}) ->
+  ?NIL;
+seq(#{?TYPE := ?M} = Set) ->
+  to_list(Set).
 
 to_list(#{?TYPE := ?M, dict := Dict}) ->
   rbdict:fetch_keys(Dict).
+
+%% clojerl.ISorted
+
+comparator(#{?TYPE := ?M, dict := Dict}) ->
+  rbdict:compare_fun(Dict).
+
+entryKey(#{?TYPE := ?M}, Entry) ->
+  Entry.
+
+seq(#{?TYPE := ?M, count := 0}, _Ascending) ->
+  ?NIL;
+seq(#{?TYPE := ?M, dict := Dict}, Ascending) ->
+  rbdict:fetch_keys(Dict, Ascending).
+
+seqFrom(#{?TYPE := ?M, count := 0}, _Key, _Ascending) ->
+  ?NIL;
+seqFrom(#{?TYPE := ?M, dict := Dict}, Key, Ascending) ->
+  rbdict:fetch_keys_from(Dict, Key, Ascending).
 
 %% clojerl.IStringable
 
