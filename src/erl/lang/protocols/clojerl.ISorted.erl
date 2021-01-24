@@ -10,8 +10,11 @@
 -export([?SATISFIES/1]).
 -export([?EXTENDS/1]).
 
--callback '_ISorted'(any()) -> any().
--optional_callbacks(['_ISorted'/1]).
+-callback 'comparator'(any()) -> any().
+-callback 'entryKey'(any(), any()) -> any().
+-callback 'seq'(any(), any()) -> any().
+-callback 'seqFrom'(any(), any(), any()) -> any().
+-optional_callbacks(['comparator'/1, 'entryKey'/2, 'seq'/2, 'seqFrom'/3]).
 
 ?SATISFIES(X) ->
   case X of

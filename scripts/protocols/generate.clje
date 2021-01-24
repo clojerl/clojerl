@@ -82,7 +82,10 @@
     clojerl.ISequential    [_ISequential  [_]] ;; marker protocol
     clojerl.ISet           [disjoin       [Coll Item]
                             contains      [Coll Item]]
-    clojerl.ISorted        [_ISorted      [_]] ;; marker protocol
+    clojerl.ISorted        [comparator    [Sorted]
+                            entryKey      [Sorted Entry]
+                            seq           [Sorted Ascending]
+                            seqFrom       [Sorted Key Ascending]]
     clojerl.IStack         [peek          [Stack]
                             pop           [Stack]]
     clojerl.IStringable    [str           [X]]
