@@ -99,6 +99,23 @@
                            (recur (dec x))))
                        3)))))))
 
+(deftest test-no-recur-not-in-tail
+  (testing "don't allow recur as argument of function call"
+    (is (thrown-with-msg? :error #"Can only recur from tail position"
+                          (eval '(fn [x] (inc (recur 1)))))))
+  (testing "don't allow recur in let binding"
+    (is (thrown-with-msg? :error #"Can only recur from tail position"
+                          (eval '(fn [x] (let [x (recur 1)] x))))))
+  (testing "don't allow recur as argument to new"
+    (is (thrown-with-msg? :error #"Can only recur from tail position"
+                          (eval '(fn [x] (new erlang.util.Regex (recur 1)))))))
+  (testing "don't allow recur as argument to ."
+    (is (thrown-with-msg? :error #"Can only recur from tail position"
+                          (eval '(fn [x] (. x foo (recur 1)))))))
+  (testing "don't allow recur as init value to def"
+    (is (thrown-with-msg? :error #"Can only recur from tail position"
+                          (eval '(def x (recur 1)))))))
+
 (deftest test-CLJ-671-regression
   (testing "that the presence of hints does not cause the compiler to infinitely loop"
     (letfn [(gcd [x y]
