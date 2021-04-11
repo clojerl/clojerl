@@ -858,15 +858,16 @@ analyze_let(Form, Env0) ->
   BindingsList  = clj_rt:to_list(BindingsVec),
   BindingPairs  = PairUp(BindingsList, []),
 
-  Env1          = clj_env:add_locals_scope(Env0),
-  Env1a         = clj_env:push(#{pattern_locals => []}, Env1),
-
-  Env2 = lists:foldl( fun parse_binding/2
-                    , clj_env:put(is_loop, IsLoop, Env1a)
-                    , BindingPairs
-                    ),
+  Env1         = clj_env:add_locals_scope(Env0),
+  Env2         = clj_env:push(#{pattern_locals => []}, Env1),
+  Env3         = clj_env:push(#{context => expr}, Env2),
+  Env4         = lists:foldl( fun parse_binding/2
+                            , clj_env:put(is_loop, IsLoop, Env3)
+                            , BindingPairs
+                            ),
+  Env5        = clj_env:pop(Env4),
   BindingCount = length(BindingPairs),
-  {BindingsExprs, Env3} = clj_env:last_exprs(BindingCount, Env2),
+  {BindingsExprs, Env6} = clj_env:last_exprs(BindingCount, Env5),
 
   Mapping = case IsLoop of
               true ->
@@ -877,18 +878,18 @@ analyze_let(Form, Env0) ->
                 #{}
             end,
 
-  BodyEnv = clj_env:push(Mapping, Env3),
+  BodyEnv = clj_env:push(Mapping, Env6),
   Body    = clj_rt:rest(clj_rt:rest(Form)),
-  {BodyExpr, Env4} = clj_env:pop_expr(analyze_body(Body, BodyEnv)),
+  {BodyExpr, Env7} = clj_env:pop_expr(analyze_body(Body, BodyEnv)),
 
   LetExprExtra = #{ body     => BodyExpr
                   , bindings => BindingsExprs
                   , tag      => type_tag(BodyExpr)
                   },
 
-  Env5 = clj_env:remove_locals_scope(Env4),
-  Env6 = clj_env:pop(clj_env:pop(Env5)),
-  {LetExprExtra, Env6}.
+  Env8 = clj_env:remove_locals_scope(Env7),
+  Env9 = clj_env:pop(clj_env:pop(Env8)),
+  {LetExprExtra, Env9}.
 
 -spec parse_binding({any(), any()}, clj_env:env()) -> clj_env:env().
 parse_binding({Pattern, Init}, Env0) ->
@@ -1006,11 +1007,12 @@ parse_letfn(Form, Env0) ->
                    }
                end,
   {FnNamesExprs, Env1} = lists:foldr(BindingFun, {[], Env}, FnNames),
-  {FnsExprs, Env2}     = clj_env:last_exprs( length(FnNames)
-                                           , analyze_forms(FnForms, Env1)
+  Env2                 = clj_env:push(#{context => expr}, Env1),
+  {FnsExprs, Env3}     = clj_env:last_exprs( length(FnNames)
+                                           , analyze_forms(FnForms, Env2)
                                            ),
 
-  {BodyExpr, Env3} = clj_env:pop_expr(analyze_body(Body, Env2)),
+  {BodyExpr, Env4} = clj_env:pop_expr(analyze_body(Body, Env3)),
 
   LetFnExpr = #{ op   => letfn
                , env  => Env
@@ -1021,9 +1023,9 @@ parse_letfn(Form, Env0) ->
                , body => BodyExpr
                },
 
-  Env4 = clj_env:remove_locals_scope(Env3),
+  Env5 = clj_env:remove_locals_scope(clj_env:pop(Env4)),
 
-  clj_env:push_expr(LetFnExpr, Env4).
+  clj_env:push_expr(LetFnExpr, Env5).
 
 -spec partition_fun_defs([any()]) -> {[any()], [any()]}.
 partition_fun_defs(FnSpecs) ->
@@ -1459,9 +1461,9 @@ parse_import(Form, Env) ->
 
 -spec parse_new('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 parse_new(Form, Env) ->
+  Env0              = clj_env:push(#{context => expr}, Env),
   [_, Type | Args]  = clj_rt:to_list(Form),
-
-  {TypeExpr, Env1}  = clj_env:pop_expr(analyze_form(Type, Env)),
+  {TypeExpr, Env1}  = clj_env:pop_expr(analyze_form(Type, Env0)),
   {ArgsExprs, Env2} =
     clj_env:last_exprs(length(Args), analyze_forms(Args, Env1)),
 
@@ -1473,7 +1475,7 @@ parse_new(Form, Env) ->
              , tag  => TypeExpr
              },
 
-  clj_env:push_expr(NewExpr, Env2).
+  clj_env:push_expr(NewExpr, clj_env:pop(Env2)).
 
 %%------------------------------------------------------------------------------
 %% Parse deftype
@@ -1777,8 +1779,8 @@ parse_dot(Form, Env) ->
              ),
 
   [_Dot, Target | Args] = clj_rt:to_list(Form),
-
-  {TargetExpr, Env1} = clj_env:pop_expr(analyze_form(Target, Env)),
+  Env1                  = clj_env:push(#{context => expr}, Env),
+  {TargetExpr, Env2}    = clj_env:pop_expr(analyze_form(Target, Env1)),
 
   FirstArg = clj_rt:first(Args),
   {NameSym, ArgsList} =
@@ -1798,10 +1800,11 @@ parse_dot(Form, Env) ->
         }
     end,
 
-  {ArgsExprs, Env2} = clj_env:last_exprs( length(ArgsList)
-                                        , analyze_forms(ArgsList, Env1)
+  {ArgsExprs, Env3} = clj_env:last_exprs( length(ArgsList)
+                                        , analyze_forms(ArgsList, Env2)
                                         ),
-  {TagExpr, Env3}   = fetch_type_tag(Form, Env2),
+  {TagExpr, Env4}   = fetch_type_tag(Form, Env3),
+  Env5              = clj_env:pop(Env4),
 
   case TargetExpr of
     #{ op   := type
@@ -1818,7 +1821,7 @@ parse_dot(Form, Env) ->
                     , tag  => TagExpr
                     },
 
-      clj_env:push_expr(InvokeExpr, Env3);
+      clj_env:push_expr(InvokeExpr, Env5);
     _ ->
       Module          = type_tag_module(TargetExpr),
       Function        = clj_rt:keyword(NameSym),
@@ -1867,7 +1870,7 @@ parse_dot(Form, Env) ->
                          , args => [TargetExpr | ArgsExprs]
                          },
 
-      clj_env:push_expr(InvokeExpr, Env3)
+      clj_env:push_expr(InvokeExpr, Env5)
   end.
 
 %% @doc Adds the type tag of the provided form if it is other than ?NO_TAG
@@ -2219,13 +2222,12 @@ parse_var(List, Env) ->
 -spec analyze_invoke('clojerl.List':type(), clj_env:env()) -> clj_env:env().
 analyze_invoke(Form, Env) ->
   FSym          = clj_rt:first(Form),
-  {FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env)),
+  Env0          = clj_env:push(#{context => expr}, Env),
+  {FExpr, Env1} = clj_env:pop_expr(analyze_form(FSym, Env0)),
 
   Args          = clj_rt:to_list(clj_rt:rest(Form)),
   ArgCount      = length(Args),
-  {ArgsExpr, Env2} = clj_env:last_exprs( ArgCount
-                                       , analyze_forms(Args, Env1)
-                                       ),
+  {ArgsExpr, Env2} = clj_env:last_exprs(ArgCount, analyze_forms( Args, Env1)),
 
   {FormTagExpr, Env3} = fetch_type_tag(Form, Env2),
   {TagExpr, Env4} = case FExpr of
@@ -2249,7 +2251,7 @@ analyze_invoke(Form, Env) ->
 
   {InvokeExpr1, Env5} = add_type_tag(Form, InvokeExpr0, Env4),
 
-  clj_env:push_expr(InvokeExpr1, Env5).
+  clj_env:push_expr(InvokeExpr1, clj_env:pop(Env5)).
 
 -spec signature_tag( integer()
                    , expr() | ?NO_TAG
