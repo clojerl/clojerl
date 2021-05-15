@@ -678,7 +678,31 @@
          (edn/read-string "#:a{1 1, :b 2, :b/c 3, :_/d 4}")
          (edn/read-string "#:a {1 1, :b 2, :b/c 3, :_/d 4}"))))
 
-(defmacro ok [x] `#erl[:ok ~x])
+(defmacro create-tuple [x] `#erl[:ok ~x])
+(defmacro create-tuple-spliced [& xs] `#erl[~@xs])
+
+(defmacro create-erl-list [x y] `#erl(1 ~x 2 ~y))
+(defmacro create-erl-list-spliced [& xs] `#erl(~@xs))
+
+(defmacro create-erl-map [x y] `#erl{1 ~x 2 ~y})
 
 (deftest tuple-in-syntax-quote
-  (is (= #erl[:ok 42] (ok 42))))
+  (let [t (create-tuple 42)]
+    (is (= #erl[:ok 42] t))
+    (is (erlang/is_tuple t)))
+  (let [t (create-tuple-spliced 42 :forty-two "Forty Two")]
+    (is (= #erl[42 :forty-two "Forty Two"] t))
+    (is (erlang/is_tuple t))))
+
+(deftest erl-list-in-syntax-quote
+  (let [x (create-erl-list :one :two)]
+    (is (= #erl(1 :one 2 :two) x))
+    (is (erlang/is_list x)))
+  (let [x (create-erl-list-spliced :one :two :three)]
+    (is (= #erl(:one :two :three) x))
+    (is (erlang/is_list x))))
+
+(deftest erl-map-in-syntax-quote
+  (let [m (create-erl-map :one :two)]
+    (is (= #erl{1 :one 2 :two} m))
+    (is (erlang/is_map m))))

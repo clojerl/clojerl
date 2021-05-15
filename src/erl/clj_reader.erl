@@ -523,8 +523,8 @@ syntax_quote(Form) ->
   IsUnquote    = is_unquote(Form),
   IsUnquoteSpl = is_unquote_splicing(Form),
   IsColl       = clj_rt:'coll?'(Form),
-  IsTuple      = is_tuple(Form),
   IsLiteral    = is_literal(Form),
+  IsErlMap     = is_map(Form) andalso not maps:is_key(?TYPE, Form),
 
   QuoteSymbol = clj_rt:symbol(<<"quote">>),
   if
@@ -534,6 +534,18 @@ syntax_quote(Form) ->
       clj_rt:list([QuoteSymbol, Symbol]);
     IsUnquote    -> clj_rt:second(Form);
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
+    %% Erlang collections
+    is_list(Form) ->
+      ErlListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"erl-list">>),
+      syntax_quote_coll(Form, ErlListSymbol);
+    is_tuple(Form) ->
+      TupleSymbol = clj_rt:symbol(<<"clojure.core">>, <<"tuple">>),
+      syntax_quote_coll(tuple_to_list(Form), TupleSymbol);
+    IsErlMap ->
+      Flatten = fun(K, V, Acc) -> [K, V | Acc] end,
+      ErlMapSymbol = clj_rt:symbol(<<"clojure.core">>, <<"erl-map">>),
+      syntax_quote_coll(maps:fold(Flatten, [], Form), ErlMapSymbol);
+    %% Clojure collections
     IsColl ->
       IsMap = clj_rt:'map?'(Form),
       IsVector = clj_rt:'vector?'(Form),
@@ -555,9 +567,6 @@ syntax_quote(Form) ->
         true ->
           syntax_quote_coll(Form, ?NIL)
       end;
-    IsTuple ->
-      TupleSymbol = clj_rt:symbol(<<"clojure.core">>, <<"tuple">>),
-      syntax_quote_coll(Form, TupleSymbol);
     IsLiteral -> Form;
     true      -> clj_rt:list([QuoteSymbol, Form])
   end.
