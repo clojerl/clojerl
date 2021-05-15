@@ -677,3 +677,8 @@
   (is (= {1 1, :a/b 2, :b/c 3, :d 4}
          (edn/read-string "#:a{1 1, :b 2, :b/c 3, :_/d 4}")
          (edn/read-string "#:a {1 1, :b 2, :b/c 3, :_/d 4}"))))
+
+(defmacro ok [x] `#erl[:ok ~x])
+
+(deftest tuple-in-syntax-quote
+  (is (= #erl[:ok 42] (ok 42))))

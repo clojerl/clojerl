@@ -523,6 +523,7 @@ syntax_quote(Form) ->
   IsUnquote    = is_unquote(Form),
   IsUnquoteSpl = is_unquote_splicing(Form),
   IsColl       = clj_rt:'coll?'(Form),
+  IsTuple      = is_tuple(Form),
   IsLiteral    = is_literal(Form),
 
   QuoteSymbol = clj_rt:symbol(<<"quote">>),
@@ -554,6 +555,9 @@ syntax_quote(Form) ->
         true ->
           syntax_quote_coll(Form, ?NIL)
       end;
+    IsTuple ->
+      TupleSymbol = clj_rt:symbol(<<"clojure.core">>, <<"tuple">>),
+      syntax_quote_coll(Form, TupleSymbol);
     IsLiteral -> Form;
     true      -> clj_rt:list([QuoteSymbol, Form])
   end.
