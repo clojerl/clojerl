@@ -511,6 +511,12 @@
            (next more))
     acc))
 
+(defn any?
+  "Returns true given any argument."
+  {:tag clojerl.Boolean
+   :added "1.9"}
+  [x] true)
+
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
@@ -783,9 +789,9 @@
 ;;;;;;;;;;;;;;;;;;; sequence fns  ;;;;;;;;;;;;;;;;;;;;;;;
 (defn zero?
   "Returns true if num is zero, else false"
-  {:inline '(fn* [x] `(erlang/== ~x 0))
+  {:inline '(fn* [num] `(erlang/== ~num 0))
    :added "1.0"}
-  [x] (erlang/== x 0))
+  [num] (erlang/== num 0))
 
 (defn count
   "Returns the number of items in the collection. (count nil) returns
@@ -1313,6 +1319,47 @@
   [^clojerl.INamed x]
   (clj_rt/namespace x))
 
+(defn boolean
+  "Coerce to boolean"
+  {:inline '(fn* [x] `(clj_rt/boolean ~x))
+   :added "1.0"}
+  [x] (clj_rt/boolean x))
+
+(defn ident?
+  "Return true if x is a symbol or keyword"
+  {:added "1.9"}
+  [x] (or (keyword? x) (symbol? x)))
+
+(defn simple-ident?
+  "Return true if x is a symbol or keyword without a namespace"
+  {:added "1.9"}
+  [x] (and (ident? x) (nil? (namespace x))))
+
+(defn qualified-ident?
+  "Return true if x is a symbol or keyword with a namespace"
+  {:added "1.9"}
+  [x] (boolean (and (ident? x) (namespace x) true)))
+
+(defn simple-symbol?
+  "Return true if x is a symbol without a namespace"
+  {:added "1.9"}
+  [x] (and (symbol? x) (nil? (namespace x))))
+
+(defn qualified-symbol?
+  "Return true if x is a symbol with a namespace"
+  {:added "1.9"}
+  [x] (boolean (and (symbol? x) (namespace x) true)))
+
+(defn simple-keyword?
+  "Return true if x is a keyword without a namespace"
+  {:added "1.9"}
+  [x] (and (keyword? x) (nil? (namespace x))))
+
+(defn qualified-keyword?
+  "Return true if x is a keyword with a namespace"
+  {:added "1.9"}
+  [x] (boolean (and (keyword? x) (namespace x) true)))
+
 (defmacro ..
   "form => fieldName-symbol or (instanceMethodName-symbol args*)
   Expands into a member access (.) of the first member on the first
@@ -1419,7 +1466,8 @@
                       m)
         m           (if (meta mm-name)
                       (conj (meta mm-name) m)
-                      m)]
+                      m)
+        mm-name     (with-meta mm-name (assoc m :multi-method true))]
     (when (= (count options) 1)
       (throw (clojerl.Error. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")))
     (let [options   (apply hash-map options)
@@ -1430,7 +1478,7 @@
       (check-valid-options options :default :hierarchy)
       (when-not (clj_multimethod/is_init mm-name)
         (clj_multimethod/init mm-name)
-        `(defn ~(with-meta mm-name (assoc m :multi-method true))
+        `(defn ~mm-name
            [& args#]
            (let [val# (clojerl.IFn/apply ~dispatch-fn args#)
                  dispatch-map# ~mm-name-map
@@ -1940,6 +1988,17 @@
   ([^clojerl.Atom atom f x y & args]
    (.swap atom f x y args)))
 
+#_(defn swap-vals!
+  "Atomically swaps the value of atom to be:
+  (apply f current-value-of-atom args). Note that f may be called
+  multiple times, and thus should be free of side effects.
+  Returns [old new], the value of the atom before and after the swap."
+  {:added "1.9"}
+  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f] (.swapVals atom f))
+  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f x] (.swapVals atom f x))
+  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f x y] (.swapVals atom f x y))
+  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f x y & args] (.swapVals atom f x y args)))
+
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
   current value of the atom is identical to oldval. Returns true if
@@ -1954,6 +2013,12 @@
   {:added "1.0"}
   [^clojerl.Atom atom newval]
   (.reset atom newval))
+
+#_(defn reset-vals!
+  "Sets the value of atom to newval. Returns [old new], the value of the
+   atom before and after the reset."
+  {:added "1.9"}
+  ^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom newval] (.resetVals atom newval))
 
 (defn set-validator!
   "Sets the validator-fn for a var/agent/atom. validator-fn must be nil or a
@@ -2247,7 +2312,7 @@
 
 (defn filter
   "Returns a lazy sequence of the items in coll for which
-  (pred item) returns true. pred must be free of side-effects.
+  (pred item) returns logical true. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   {:added "1.0"}
   ([pred]
@@ -2279,7 +2344,7 @@
 
 (defn remove
   "Returns a lazy sequence of the items in coll for which
-  (pred item) returns false. pred must be free of side-effects.
+  (pred item) returns logical false. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   {:added "1.0"}
   ([pred] (filter (complement pred)))
@@ -2342,7 +2407,7 @@
 
 (defn take-while
   "Returns a lazy sequence of successive items from coll while
-  (pred item) returns true. pred must be free of side-effects.
+  (pred item) returns logical true. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   {:added "1.0"}
   ([pred]
@@ -2389,8 +2454,8 @@
 (defn drop-last
   "Return a lazy sequence of all but the last n (default 1) items in coll"
   {:added "1.0"}
-  ([s] (drop-last 1 s))
-  ([n s] (map (fn [x _] x) s (drop n s))))
+  ([coll] (drop-last 1 coll))
+  ([n coll] (map (fn [x _] x) coll (drop n coll))))
 
 (defn take-last
   "Returns a seq of the last n items in coll.  Depending on the type
@@ -2885,47 +2950,6 @@
   [x]
   (clj_rt/char x))
 
-(defn boolean
-  "Coerce to boolean"
-  {:inline '(fn* [x] `(clj_rt/boolean ~x))
-   :added "1.0"}
-  [x] (clj_rt/boolean x))
-
-(defn ident?
-  "Return true if x is a symbol or keyword"
-  {:added "1.9"}
-  [x] (or (keyword? x) (symbol? x)))
-
-(defn simple-ident?
-  "Return true if x is a symbol or keyword without a namespace"
-  {:added "1.9"}
-  [x] (and (ident? x) (nil? (namespace x))))
-
-(defn qualified-ident?
-  "Return true if x is a symbol or keyword with a namespace"
-  {:added "1.9"}
-  [x] (boolean (and (ident? x) (namespace x) true)))
-
-(defn simple-symbol?
-  "Return true if x is a symbol without a namespace"
-  {:added "1.9"}
-  [x] (and (symbol? x) (nil? (namespace x))))
-
-(defn qualified-symbol?
-  "Return true if x is a symbol with a namespace"
-  {:added "1.9"}
-  [x] (boolean (and (symbol? x) (namespace x) true)))
-
-(defn simple-keyword?
-  "Return true if x is a keyword without a namespace"
-  {:added "1.9"}
-  [x] (and (keyword? x) (nil? (namespace x))))
-
-(defn qualified-keyword?
-  "Return true if x is a keyword with a namespace"
-  {:added "1.9"}
-  [x] (boolean (and (keyword? x) (namespace x) true)))
-
 (defn number?
   "Returns true if x is a Number"
   {:inline '(fn* [x] `(erlang/is_number ~x))
@@ -3115,9 +3139,11 @@
     (let [gx (gensym)]
       `(let [~gx ~x]
          ~@(map (fn [f]
-                  (if (seq? f)
-                    `(~(first f) ~gx ~@(next f))
-                    `(~f ~gx)))
+                  (with-meta
+                    (if (seq? f)
+                      `(~(first f) ~gx ~@(next f))
+                      `(~f ~gx))
+                    (meta f)))
                 forms)
          ~gx)))
 
@@ -3448,42 +3474,45 @@
   ([& keyvals]
    (. clojerl.TupleMap (create_with_assoc (clj_rt/to_list keyvals)))))
 
-;redefine let and loop  with destructuring
+;;redefine let and loop  with destructuring
 (defn destructure [bindings]
   (let [bents (partition 2 bindings)
         pb (fn pb [bvec b v]
              (let [pvec
                    (fn [bvec b val]
                      (let [gvec (gensym "vec__")
-                           gvec-orig (gensym "vec__")]
-                       (loop [ret (-> bvec
-                                      (conj gvec) (conj val)
-                                      (conj gvec-orig) (conj gvec))
+                           gseq (gensym "seq__")
+                           gfirst (gensym "first__")
+                           has-rest (some #{'&} b)]
+                       (loop [ret (let [ret (conj bvec gvec val)]
+                                    (if has-rest
+                                      (conj ret gseq (list `seq gvec))
+                                      ret))
                               n 0
                               bs b
                               seen-rest? false]
                          (if (seq bs)
                            (let [firstb (first bs)]
                              (cond
-                               (= firstb '&) (recur (pb ret (second bs) (list `next gvec))
-                                                    n
-                                                    (nnext bs)
-                                                    true)
-                               (= firstb :as) (pb ret (second bs) gvec-orig)
-                               :else (if seen-rest?
-                                       (throw (clojerl.Error. "Unsupported binding form, only :as can follow & parameter"))
-                                       (recur (if (zero? n)
-                                                (pb (-> ret
-                                                        (conj gvec)
-                                                        (conj (list `seq gvec)))
-                                                    firstb (list `first gvec))
-                                                (pb (-> ret
-                                                        (conj gvec)
-                                                        (conj (list `seq (list `next gvec))))
-                                                    firstb (list `first gvec)))
-                                              (inc n)
-                                              (next bs)
-                                              seen-rest?))))
+                              (= firstb '&) (recur (pb ret (second bs) gseq)
+                                                   n
+                                                   (nnext bs)
+                                                   true)
+                              (= firstb :as) (pb ret (second bs) gvec)
+                              :else (if seen-rest?
+                                      (throw (clojerl.Error. "Unsupported binding form, only :as can follow & parameter"))
+                                      (recur (pb (if has-rest
+                                                   (conj ret
+                                                         gfirst `(first ~gseq)
+                                                         gseq `(next ~gseq))
+                                                   ret)
+                                                 firstb
+                                                 (if has-rest
+                                                   gfirst
+                                                   (list `nth gvec n nil)))
+                                             (inc n)
+                                             (next bs)
+                                             seen-rest?))))
                            ret))))
                    pmap
                    (fn [bvec b v]
@@ -3491,38 +3520,48 @@
                            gmapseq (with-meta gmap {:tag 'clojerl.ISeq})
                            defaults (:or b)]
                        (loop [ret (-> bvec (conj gmap) (conj v)
-                                      (conj gmap) (conj `(if (seq? ~gmap)
-                                                           (new clojerl.Map (clj_rt/to_list ~gmapseq))
-                                                           ~gmap))
+                                      (conj gmap) (conj `(if (seq? ~gmap) (new clojerl.Map (clj_rt/to_list ~gmapseq)) ~gmap))
                                       ((fn [ret]
                                          (if (:as b)
                                            (conj ret (:as b) gmap)
                                            ret))))
-                              bes (reduce
-                                   (fn [bes entry]
-                                     (reduce #(assoc %1 %2 ((val entry) %2))
-                                              (dissoc bes (key entry))
-                                              ((key entry) bes)))
-                                   (dissoc b :as :or)
-                                   {:keys #(if (keyword? %) % (keyword (str %))),
-                                    :strs str, :syms #(list `quote %)})]
+                              bes (let [transforms
+                                          (reduce
+                                            (fn [transforms mk]
+                                              (if (keyword? mk)
+                                                (let [mkns (namespace mk)
+                                                      mkn (name mk)]
+                                                  (cond (= mkn "keys") (assoc transforms mk #(keyword (or mkns (namespace %)) (name %)))
+                                                        (= mkn "syms") (assoc transforms mk #(list `quote (symbol (or mkns (namespace %)) (name %))))
+                                                        (= mkn "strs") (assoc transforms mk str)
+                                                        :else transforms))
+                                                transforms))
+                                            {}
+                                            (keys b))]
+                                    (reduce
+                                        (fn [bes entry]
+                                          (reduce #(assoc %1 %2 ((val entry) %2))
+                                                   (dissoc bes (key entry))
+                                                   ((key entry) bes)))
+                                        (dissoc b :as :or)
+                                        transforms))]
                          (if (seq bes)
                            (let [bb (key (first bes))
                                  bk (val (first bes))
-                                 bv (if (contains? defaults bb)
-                                      (list `get gmap bk (defaults bb))
+                                 local (if (satisfies? clojerl.INamed bb) (with-meta (symbol nil (name bb)) (meta bb)) bb)
+                                 bv (if (contains? defaults local)
+                                      (list `get gmap bk (defaults local))
                                       (list `get gmap bk))]
-                             (recur (cond
-                                      (symbol? bb) (-> ret (conj (if (namespace bb) (symbol (name bb)) bb)) (conj bv))
-                                      (keyword? bb) (-> ret (conj (symbol (name bb)) bv))
-                                      :else (pb ret bb bv))
+                             (recur (if (ident? bb)
+                                      (-> ret (conj local bv))
+                                      (pb ret bb bv))
                                     (next bes)))
                            ret))))]
                (cond
-                 (symbol? b) (-> bvec (conj b) (conj v))
-                 (vector? b) (pvec bvec b v)
-                 (map? b) (pmap bvec b v)
-                 :else (throw (clojerl.Error. (str "Unsupported binding form: " b))))))
+                (symbol? b) (-> bvec (conj b) (conj v))
+                (vector? b) (pvec bvec b v)
+                (map? b) (pmap bvec b v)
+                :else (throw (clojerl.Error. (str "Unsupported binding form: " b))))))
         process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
     (if (every? symbol? (map first bents))
       bindings
@@ -4008,20 +4047,42 @@
     (throw (clojerl.BadArgumentError. "re-matches must match against a string."))))
 
 (defn max-key
-  "Returns the x for which (k x), a number, is greatest."
+  "Returns the x for which (k x), a number, is greatest.
+
+  If there are multiple such xs, the last one is returned."
   {:added "1.0"}
   ([k x] x)
   ([k x y] (if (> (k x) (k y)) x y))
   ([k x y & more]
-   (reduce #(max-key k %1 %2) (max-key k x y) more)))
+   (let [kx (k x) ky (k y)
+         [v kv] (if (> kx ky) [x kx] [y ky])]
+     (loop [v v kv kv more more]
+       (if more
+         (let [w (first more)
+               kw (k w)]
+           (if (>= kw kv)
+             (recur w kw (next more))
+             (recur v kv (next more))))
+         v)))))
 
 (defn min-key
-  "Returns the x for which (k x), a number, is least."
+  "Returns the x for which (k x), a number, is least.
+
+  If there are multiple such xs, the last one is returned."
   {:added "1.0"}
   ([k x] x)
   ([k x y] (if (< (k x) (k y)) x y))
   ([k x y & more]
-   (reduce #(min-key k %1 %2) (min-key k x y) more)))
+   (let [kx (k x) ky (k y)
+         [v kv] (if (< kx ky) [x kx] [y ky])]
+     (loop [v v kv kv more more]
+       (if more
+         (let [w (first more)
+               kw (k w)]
+           (if (<= kw kv)
+             (recur w kw (next more))
+             (recur v kv (next more))))
+         v)))))
 
 (defn distinct
   "Returns a lazy sequence of the elements of coll with duplicates removed.
@@ -4691,9 +4752,11 @@
   'require loads a lib by loading its root resource. The root resource path
   is derived from the lib name in the following manner:
   Consider a lib named by the symbol 'x.y.z; it has the root directory
-  <codepath>/x/y/, and its root resource is <codepath>/x/y/z.clj. The root
-  resource should contain code to create the lib's namespace (usually by using
-  the ns macro) and load any additional lib resources.
+  <classpath>/x/y/, and its root resource is <classpath>/x/y/z.clj, or
+  <classpath>/x/y/z.cljc if <classpath>/x/y/z.clj does not exist. The
+  root resource should contain code to create the lib's
+  namespace (usually by using the ns macro) and load any additional
+  lib resources.
 
   Libspecs
 
@@ -4825,10 +4888,13 @@
   nested structure.  If any levels do not exist, hash-maps will be
   created."
   {:added "1.0"}
-  ([m [k & ks] f & args]
-   (if ks
-     (assoc m k (apply update-in (get m k) ks f args))
-     (assoc m k (apply f (get m k) args)))))
+  ([m ks f & args]
+     (let [up (fn up [m ks f args]
+                (let [[k & ks] ks]
+                  (if ks
+                    (assoc m k (up (get m k) ks f args))
+                    (assoc m k (apply f (get m k) args)))))]
+       (up m ks f args))))
 
 (defn update
   "'Updates' a value in an associative structure, where k is a
@@ -5387,6 +5453,8 @@
   "Returns a new coll consisting of to-coll with all of the items of
   from-coll conjoined. A transducer may be supplied."
   {:added "1.0"}
+  ([] [])
+  ([to] to)
   ([to from]
    (reduce conj to from))
   ([to xform from]
@@ -5410,7 +5478,7 @@
 
 (defn filterv
   "Returns a vector of the items in coll for which
-  (pred item) returns true. pred must be free of side-effects."
+  (pred item) returns logical true. pred must be free of side-effects."
   {:added "1.4"}
   [pred coll]
   (reduce (fn [v o] (if (pred o) (conj v o) v))
@@ -5430,7 +5498,8 @@
 (defn slurp
   "Opens a reader on f and reads all its contents, returning a string.
   See clojure.erlang.io/reader for a complete list of supported arguments."
-  {:added "1.0"}
+  {:added "1.0"
+   :tag clojerl.String}
   ([f & opts]
      (let [opts (normalize-slurp-opts opts)]
        (with-open [sw (new erlang.io.StringWriter)
@@ -5817,6 +5886,18 @@
                         (cons x (keepi (inc idx) (rest s)))))))))]
        (keepi 0 coll))))
 
+(defn bounded-count
+  "If coll is counted? returns its count, else will count at most the first n
+  elements of coll using its seq"
+  {:added "1.9"}
+  [n coll]
+  (if (counted? coll)
+    (count coll)
+    (loop [i 0 s (seq coll)]
+      (if (and s (< i n))
+        (recur (inc i) (next s))
+        i))))
+
 (defn every-pred
   "Takes a set of predicates and returns a function f that returns true if all of its
   composing predicates return a logical true value against all of its arguments, else it returns
@@ -6055,6 +6136,30 @@
       ([result input]
          (reduce rrf result input)))))
 
+(defn halt-when
+  "Returns a transducer that ends transduction when pred returns true
+  for an input. When retf is supplied it must be a fn of 2 arguments -
+  it will be passed the (completed) result so far and the input that
+  triggered the predicate, and its return value (if it does not throw
+  an exception) will be the return value of the transducer. If retf
+  is not supplied, the input that triggered the predicate will be
+  returned. If the predicate never returns true the transduction is
+  unaffected."
+  {:added "1.9"}
+  ([pred] (halt-when pred nil))
+  ([pred retf]
+     (fn [rf]
+       (fn
+         ([] (rf))
+         ([result]
+            (if (and (map? result) (contains? result ::halt))
+              (::halt result)
+              (rf result)))
+         ([result input]
+            (if (pred input)
+              (reduced {::halt (if retf (retf (rf result) input) input)})
+              (rf result input)))))))
+
 (defn dedupe
   "Returns a sequence removing consecutive duplicates in coll.
   Returns a transducer when no collection is provided.
@@ -6170,8 +6275,8 @@
   "Map from reader tag symbols to data reader Vars.
 
   When Clojure starts, it searches for files named 'data_readers.clj'
-  at the root of the codepath. Each such file must contain a literal
-  map of symbols, like this:
+  and 'data_readers.cljc' at the root of the classpath. Each such file
+  must contain a literal map of symbols, like this:
 
       {foo/bar my.project.foo/bar
        foo/baz my.project/baz}
@@ -6192,7 +6297,7 @@
   Reader tags without namespace qualifiers are reserved for
   Clojure. Default reader tags are defined in
   clojure.core/default-data-readers but may be overridden in
-  data_readers.clj or by rebinding this Var."
+  data_readers.clj, data_readers.cljc, or by rebinding this Var."
   {})
 
 (def ^{:added "1.5" :dynamic true} *default-data-reader-fn*
