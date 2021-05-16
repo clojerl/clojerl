@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        otp-version: [19.3, 20.3, 21.3, 22.2, 23.1]
+        otp-version: [19.3, 20.3, 21.3, 22.2, 23.3, 24.0]
     runs-on: ${{ matrix.platform }}
     container:
       image: erlang:${{ matrix.otp-version }}
@@ -30,7 +30,7 @@ jobs:
         key: ${{ runner.os }}-dialyzer-${{ hashFiles(format('{0}{1}', github.workspace, '/rebar.config')) }}
         restore-keys: |
           ${{ runner.os }}-dialyzer-
-    - name: Compile
+    - name: Compile, Test and Validate
       run: make ci
     - name: Compile Native
       run: make clean compile-native
