@@ -15,6 +15,7 @@
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.IStringable').
 
+-export([create/1]).
 -export([ contains_key/2
         , entry_at/2
         , assoc/3
@@ -39,6 +40,20 @@
         , to_list/1
         ]).
 -export([str/1]).
+
+-spec create(list()) -> map().
+create(KeyVals) when is_list(KeyVals) ->
+  KeyValuePairs = build_key_values([], KeyVals),
+  maps:from_list(KeyValuePairs);
+create(KeyVals) ->
+  create(clj_rt:to_list(KeyVals)).
+
+%% @private
+-spec build_key_values(list(), list()) -> [{any(), any()}].
+build_key_values(KeyValues, []) ->
+  lists:reverse(KeyValues);
+build_key_values(KeyValues, [K, V | Items]) ->
+  build_key_values([{K, V} | KeyValues], Items).
 
 %%------------------------------------------------------------------------------
 %% Protocols

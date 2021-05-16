@@ -2816,10 +2816,26 @@
    (-> (seq aseq) clj_rt/to_list.1 erlang/list_to_tuple.1)))
 
 (defn tuple
-  "Returns a tuple with items."
+  "Creates a new erlang tuple with items."
   {:added "1.8"}
   [& items]
   (into-tuple items))
+
+(defn erl-map
+  "keyval => key val
+  Returns a new erlang map with supplied mappings. If any keys are
+  equal, they are handled as if by repeated uses of assoc."
+  {:added "0.8.0-clojerl"}
+  ([] #erl{})
+  ([& keyvals]
+   (erlang.Map/create keyvals)))
+
+(defn erl-list
+  "Creates a new erlang list containing the items."
+  {:added "0.8.0-clojerl"}
+  ([] #erl())
+  ([& items]
+   (clj_rt/to_list items)))
 
 (defn type
   "Returns x's erlang.Type"
