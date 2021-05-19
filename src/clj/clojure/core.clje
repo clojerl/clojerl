@@ -1493,7 +1493,8 @@
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   {:added "1.0"}
   [^clojerl.Symbol multifn dispatch-val & fn-tail]
-  (let [fn-name (gensym (str (.name multifn) "_method_"))]
+  (let [uuid (erlang.util.UUID/random)
+        fn-name (symbol (str (.name multifn) "_method_" uuid))]
     `(do
        (defn- ~fn-name ~@fn-tail)
        (clj_multimethod/add_method ~multifn ~dispatch-val ~fn-name))))
