@@ -1989,16 +1989,16 @@
   ([^clojerl.Atom atom f x y & args]
    (.swap atom f x y args)))
 
-#_(defn swap-vals!
+(defn swap-vals!
   "Atomically swaps the value of atom to be:
   (apply f current-value-of-atom args). Note that f may be called
   multiple times, and thus should be free of side effects.
   Returns [old new], the value of the atom before and after the swap."
   {:added "1.9"}
-  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f] (.swapVals atom f))
-  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f x] (.swapVals atom f x))
-  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f x y] (.swapVals atom f x y))
-  (^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom f x y & args] (.swapVals atom f x y args)))
+  ([^clojerl.Atom atom f] (.swap_vals atom f))
+  ([^clojerl.Atom atom f x] (.swap_vals atom f x))
+  ([^clojerl.Atom atom f x y] (.swap_vals atom f x y))
+  ([^clojerl.Atom atom f x y & args] (.swap_vals atom f x y args)))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
@@ -2015,11 +2015,11 @@
   [^clojerl.Atom atom newval]
   (.reset atom newval))
 
-#_(defn reset-vals!
+(defn reset-vals!
   "Sets the value of atom to newval. Returns [old new], the value of the
    atom before and after the reset."
   {:added "1.9"}
-  ^clojure.lang.IPersistentVector [^clojure.lang.IAtom2 atom newval] (.resetVals atom newval))
+  [^clojerl.Atom atom newval] (.reset_vals atom newval))
 
 (defn set-validator!
   "Sets the validator-fn for a var/agent/atom. validator-fn must be nil or a
