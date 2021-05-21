@@ -216,7 +216,7 @@ str-or-pattern."
 
 (defn dir-fn
   "Returns a sorted seq of symbols naming public vars in
-  a namespace"
+  a namespace or namespace alias. Looks for aliases in *ns*"
   [ns]
   (sort (map (comp symbol first)
              (ns-publics (the-ns (get (ns-aliases *ns*) (str ns) ns))))))
