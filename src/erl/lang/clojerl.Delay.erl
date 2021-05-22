@@ -109,7 +109,10 @@ init([]) ->
   {ok, ?NIL}.
 
 handle_call({deref, Id, Fn}, _From, State) ->
-  {Id, Reply} = clj_utils:ets_save(?MODULE, {Id, eval(Fn)}),
+  {Id, Reply} = case clj_utils:ets_get(?MODULE, Id) of
+                  ?NIL -> clj_utils:ets_save(?MODULE, {Id, eval(Fn)});
+                  Value -> Value
+                end,
   {reply, Reply, State}.
 
 handle_cast(_Msg, State) ->
