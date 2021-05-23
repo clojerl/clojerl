@@ -629,7 +629,7 @@ boolean(_) -> true.
 
 %% @doc Coerce to byte.
 -spec byte(number()) -> integer().
-byte(X) when is_number(X), -128 =< X, X < 127 ->
+byte(X) when is_number(X), -128 =< X, X < 128 ->
   erlang:trunc(X);
 byte(X) ->
   XStr = str(X),

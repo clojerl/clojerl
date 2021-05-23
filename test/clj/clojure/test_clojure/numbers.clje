@@ -67,6 +67,29 @@
                          (float 2.0) 2.0M 2.00M])
   (all-pairs-equal #'== [(/ 3 2) (float 1.5) 1.50M 1.500M]))
 
+(def BYTE_MAX_VALUE 127)
+(def SHORT_MAX_VALUE 32767)
+(def INTEGER_MAX_VALUE 2147483648)
+(def FLOAT_MAX_VALUE 3.4028235E38)
+
+(def expected-casts
+  [
+   [:input           [-1            0           1           BYTE_MAX_VALUE  SHORT_MAX_VALUE  INTEGER_MAX_VALUE  FLOAT_MAX_VALUE      ]]
+   [char             [:error        (char 0)    (char 1)    (char 127)      (char 32767)     :error             :error               ]]
+   [byte             [-1            0           1           BYTE_MAX_VALUE  :error           :error             :error               ]]
+   [short            [-1            0           1           BYTE_MAX_VALUE  SHORT_MAX_VALUE  :error             :error               ]]
+   [int              [-1            0           1           BYTE_MAX_VALUE  SHORT_MAX_VALUE  INTEGER_MAX_VALUE  (int FLOAT_MAX_VALUE)]]
+   [float            [-1.0          0.0         1.0         127.0           32767.0          2.147483648E9      FLOAT_MAX_VALUE      ]]])
+
+(deftest test-expected-casts
+  (let [[[_ inputs] & expectations] expected-casts]
+    (doseq [[f vals] expectations]
+      (let [wrapped (fn [x]
+                      (try
+                       (f x)
+                       (catch :error e :error)))]
+        (is (= vals (map wrapped inputs)))))))
+
 ;; *** Functions ***
 
 (defonce DELTA 1e-12)
@@ -83,7 +106,7 @@
       (+ -1 +2 -3) -2
 
       (+ 1 -1) 0
-      (+ -1 1) 0 )
+      (+ -1 1) 0)
 
   (are [x y] (< (- x y) DELTA)
       (+ 1.2) 1.2
