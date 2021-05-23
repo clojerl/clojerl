@@ -42,15 +42,10 @@
   (refer 'clojure.core :rename '{with-open renamed-with-open})
 
   ; would have used `are` here, but :line meta on &form doesn't survive successive macroexpansions
-  (doseq [[msg-regex-str form] [["if-let .* in ~s:\\d+" '(if-let [a 5
-                                                                 b 6]
-                                                          true nil)]
-                                ["let .* in ~s:\\d+" '(let [a])]
-                                ["let .* in ~s:\\d+" '(let (a))]
-                                ["renamed-with-open .* in ~s:\\d+" '(renamed-with-open [a])]]]
+  (doseq [[msg-regex-str form] [["renamed-with-open" "(renamed-with-open [a])"]]]
     (is (thrown-with-msg? BadArgumentError
-                          (re-pattern (format msg-regex-str (str *ns*)))
-                          (macroexpand form)))))
+                          (re-pattern (format msg-regex-str))
+                          (macroexpand (read-string form))))))
 
 (deftest extract-ex-data
   (try
@@ -59,27 +54,26 @@
      (is (= {:foo 1} (ex-data t)))))
   (is (nil? (ex-data (Error. "example non ex-data")))))
 
-#_(deftest Throwable->map-test
+(deftest IError->map-test
   (testing "base functionality"
-    (let [{:keys [cause via trace]} (Throwable->map
-                                     (Error. "I am a string literal"))]
-      (is (= cause "I am a string literal"))
-      (is (= 1 (count via)))
-      (is (vector? via))
-      (is (= ["I am a string literal"] (map :message via)))))
-  (testing "causes"
-    (let [{:keys [cause via trace]} (Throwable->map
-                                     (Error. "I am not a number"
-                                             (Error. "double two")))]
-      (is (= cause "double two"))
-      (is (= ["I am not a number" "double two"]
-             (map :message via)))))
+    (let [{:keys [message data cause]} (IError->map
+                                        (Error. "I am a string literal"))]
+      (is (= "I am a string literal" message))
+      (is (= nil data))
+      (is (= nil cause))))
+  (testing "cause"
+    (let [{:keys [message data cause]} (IError->map
+                                        (ex-info "I am not a number"
+                                                 #{}
+                                                 (Error. "double two")))]
+      (is (= "I am not a number" message))
+      (is (= #{} data))
+      (is (= "double two" (:message cause)))))
   (testing "ex-data"
-    (let [{[{:keys [data]}] :via
-           data-top-level :data}
-          (Throwable->map (ex-info "ex-info"
-                                   {:some "data"}))]
-      (is (= data data-top-level {:some "data"})))))
+    (let [{data :data}
+          (IError->map (ex-info "ex-info"
+                                {:some "data"}))]
+      (is (= data {:some "data"})))))
 
 (deftest ex-info-disallows-nil-data
   (is (thrown? BadArgumentError (ex-info "message" nil)))
