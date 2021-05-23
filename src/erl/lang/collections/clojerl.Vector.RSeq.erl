@@ -2,7 +2,6 @@
 -module('clojerl.Vector.RSeq').
 
 -include("clojerl.hrl").
--include("clojerl_int.hrl").
 
 -behavior('clojerl.ICounted'). %
 -behavior('clojerl.IColl'). %

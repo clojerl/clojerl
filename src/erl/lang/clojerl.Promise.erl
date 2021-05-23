@@ -1,7 +1,6 @@
 -module('clojerl.Promise').
 
 -include("clojerl.hrl").
--include("clojerl_int.hrl").
 
 -behaviour(gen_server).
 

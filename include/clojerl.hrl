@@ -1,3 +1,7 @@
+-ifndef(CLOJERL).
+
+-define(CLOJERL, true).
+
 %% nil
 -define(NIL, undefined).
 
@@ -10,3 +14,5 @@
 -define(IS_TYPE(X), (is_map(X) andalso maps:is_key(?TYPE, X))).
 -define(MATCH_TYPE, #{?TYPE := _}).
 -define(MATCH_TYPE(X), #{?TYPE := X}).
+
+-endif.
