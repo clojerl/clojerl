@@ -3443,7 +3443,8 @@
    (vector? name-vals-vec) "a vector for its binding"
    (even? (count name-vals-vec)) "an even number of forms in binding vector")
   `(let [~@(interleave (take-nth 2 name-vals-vec)
-                       (repeat '(.. clojerl.Var create setDynamic)))]
+                       (repeat '(.. clojerl.Var create
+                                    (with_meta {:dynamic true}))))]
      (clojerl.Var/push_bindings (hash-map ~@name-vals-vec))
      (try
        ~@body

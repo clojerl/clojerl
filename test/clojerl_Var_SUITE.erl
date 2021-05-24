@@ -253,6 +253,27 @@ dynamic_bindings(_Config) ->
   'clojerl.Var':pop_bindings(),
   42 = clj_rt:deref(Var),
 
+  ct:comment("Create local var"),
+  LocalVar = 'clojerl.Var':create(),
+
+  ct:comment("Deref without pushing generates error"),
+  error    = try clj_rt:deref(LocalVar)
+             catch error:_ -> error
+             end,
+
+  ct:comment("Deref non-dynamic local var generates error"),
+  'clojerl.Var':push_bindings(#{LocalVar => 43}),
+  error    = try clj_rt:deref(LocalVar)
+             catch error:_ -> error
+             end,
+  'clojerl.Var':pop_bindings(),
+
+  ct:comment("Deref dynamic local var works"),
+  LocalDymamicVar = 'clojerl.Var':with_meta(LocalVar, #{dynamic => true}),
+  'clojerl.Var':push_bindings(#{LocalDymamicVar => 43}),
+  43 = clj_rt:deref(LocalDymamicVar),
+  'clojerl.Var':pop_bindings(),
+
   {comments, ""}.
 
 -spec find(config()) -> result().
