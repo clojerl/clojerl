@@ -5,7 +5,12 @@
 %% directly from there.
 -module(core_eval).
 
--export([exprs/1, expr/1, expr/2]).
+-export([ exprs/1
+        , expr/1
+        , expr/2
+        , add_binding/3
+        , add_bindings/3
+        ]).
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
@@ -16,6 +21,9 @@
 
 -define(STACKTRACE,
         element(2, erlang:process_info(self(), current_stacktrace))).
+
+%% Used to make the error type available in the `raise' primitive op.
+-define(ERROR_TYPE, '$_ERROR_TYPE_$').
 
 %% @equiv expr(Expr, #{})
 -spec expr(cerl:cerl()) -> value().
@@ -149,11 +157,11 @@ expr_(#c_module{}, _Bindings) ->
 expr_(#c_primop{name = Name, args = Args} = Expr, Bindings) ->
   NameValue  = expr_(Name, Bindings),
   ArgsValues = expr_list(Args, Bindings),
-  primitive_op(NameValue, ArgsValues, Expr);
+  primitive_op(NameValue, ArgsValues, Expr, Bindings);
 %% Receive ---------------------------------------------------------------------
 expr_( #c_receive{clauses = Clauses, timeout = Timeout, action = Action}
-    , Bindings
-    ) ->
+     , Bindings
+     ) ->
   receive_clauses(Clauses, Timeout, Action, Bindings);
 %% Sequence --------------------------------------------------------------------
 expr_(#c_seq{arg = Argument, body = Body}, Bindings) ->
@@ -175,7 +183,10 @@ expr_( #c_try{ arg = Arg
   catch ?WITH_STACKTRACE(Type, Error, Stack)
       EVarsNames = [cerl:var_name(Evar) || Evar <- EVars],
       Bindings2 = add_bindings(EVarsNames, [Type, Error, Stack], Bindings0),
-      expr_(Handler, Bindings2)
+      %% Make sure that if there is a call to the `raise' primitive op
+      %% the error type is the correct one.
+      Bindings3 = add_binding(?ERROR_TYPE, Type, Bindings2),
+      expr_(Handler, Bindings3)
   end;
 %% Tuple -----------------------------------------------------------------------
 expr_(#c_tuple{es = Elements}, Bindings) ->
@@ -764,14 +775,15 @@ eval_fun(Vars, Values, Body, Bindings0) ->
 %% Primitive Operation
 %% -----------------------------------------------------------------------------
 
--spec primitive_op(atom(), [term()], cerl:cerl()) -> term().
-primitive_op(raise, [X, Y], Expr) ->
-  raise(Y, X, Expr);
-primitive_op(match_fail, [Error], Expr) ->
+-spec primitive_op(atom(), [term()], cerl:cerl(), bindings()) -> term().
+primitive_op(raise, [Stack, Error], _Expr, Bindings) ->
+  Type = expr_(cerl:c_var(?ERROR_TYPE), Bindings),
+  erlang:raise(Type, Error, Stack);
+primitive_op(match_fail, [Error], Expr, _Bindings) ->
   raise(error, Error, Expr);
-primitive_op(build_stacktrace, [Stack], _Expr) ->
+primitive_op(build_stacktrace, [Stack], _Expr, _Bindings) ->
   Stack;
-primitive_op(Name, _, _Expr) ->
+primitive_op(Name, _, _Expr, _Bindings) ->
   raise({not_implemented, Name}).
 
 %% -----------------------------------------------------------------------------
