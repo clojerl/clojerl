@@ -366,13 +366,20 @@ map(_Config) ->
 
 primop(_Config) ->
   Foo       = cerl:abstract(foo),
-  Error     = cerl:abstract(error),
+  Stack     = cerl:abstract([]),
 
-  ct:comment("Raise"),
+  ct:comment("Raise Error"),
   Raise     = cerl:abstract(raise),
-  RaiseOp   = cerl:c_primop(Raise, [Foo, Error]),
-  error     = try core_eval:expr(RaiseOp)
+  RaiseOp   = cerl:c_primop(Raise, [Stack, Foo]),
+  Bindings1 = core_eval:add_binding('$_ERROR_TYPE_$', error, #{}),
+  error     = try core_eval:expr(RaiseOp, Bindings1)
               catch error:foo -> error
+              end,
+
+  ct:comment("Raise Throw"),
+  Bindings2 = core_eval:add_binding('$_ERROR_TYPE_$', throw, #{}),
+  throw     = try core_eval:expr(RaiseOp, Bindings2)
+              catch throw:foo -> throw
               end,
 
   ct:comment("Match fail"),
@@ -428,12 +435,40 @@ seq(_Config) ->
   1    = core_eval:expr(Try1),
 
   ct:comment("Throw error and catch it"),
-  Body = cerl:c_call( cerl:abstract(erlang)
+  Error = cerl:c_call( cerl:abstract(erlang)
                     , cerl:abstract(error)
                     , [cerl:abstract(foo)]
                     ),
-  Try2 = cerl:c_try(Val, [X], Body, [A, B, C], B),
-  foo  = core_eval:expr(Try2),
+  Try2  = cerl:c_try(Val, [X], Error, [A, B, C], B),
+  foo   = core_eval:expr(Try2),
+
+  ct:comment("Throw error, don't catch it, simulate primop"),
+  Raise        = cerl:abstract(raise),
+  Handler      = cerl:c_primop(Raise, [C, B]),
+  Try3         = cerl:c_try(Val, [X], Error, [A, B, C], Handler),
+  {error, foo} = try core_eval:expr(Try3)
+                 catch Type1:Error1 -> {Type1, Error1}
+                 end,
+
+  ct:comment("Throw, don't catch it, simulate primop"),
+  Throw        = cerl:c_call( cerl:abstract(erlang)
+                            , cerl:abstract(throw)
+                            , [cerl:abstract(foo)]
+                            ),
+  Try4         = cerl:c_try(Val, [X], Throw, [A, B, C], Handler),
+  {throw, foo} = try core_eval:expr(Try4)
+                 catch Type2:Error2 -> {Type2, Error2}
+                 end,
+
+  ct:comment("Throw exit, don't catch it, simulate primop"),
+  Exit        = cerl:c_call( cerl:abstract(erlang)
+                           , cerl:abstract(exit)
+                           , [cerl:abstract(foo)]
+                           ),
+  Try5        = cerl:c_try(Val, [X], Exit, [A, B, C], Handler),
+  {exit, foo} = try core_eval:expr(Try5)
+                catch Type3:Error3 -> {Type3, Error3}
+                end,
 
   {comments, ""}.
 

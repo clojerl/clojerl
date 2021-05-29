@@ -990,7 +990,7 @@ ast(#{op := 'try'} = Expr, State) ->
   Ann = ann_from(Env),
 
   {BodyAst, State1} = pop_ast(ast(BodyExpr, State)),
-  {Catches, State1} = pop_ast( lists:foldl(fun ast/2, State, CatchesExprs)
+  {Catches, State2} = pop_ast( lists:foldl(fun ast/2, State1, CatchesExprs)
                              , length(CatchesExprs)
                              , false
                              ),
@@ -1001,15 +1001,15 @@ ast(#{op := 'try'} = Expr, State) ->
                               ],
   RaiseAst          = cerl:c_primop(cerl:c_atom(raise), [Z, Y]),
 
-  %% A last catch-call clause is mandatory for when none of the previous
+  %% A last catch-all clause is mandatory for when none of the previous
   %% catch clauses were matched.
   CatchAllClause    = cerl:ann_c_clause(Ann, CatchVarsAsts, RaiseAst),
   { ClausesVars
   , CaseAst
   } = case_from_clauses(Ann, lists:reverse([CatchAllClause | Catches])),
 
-  {Finally, State2} = case FinallyExpr of
-                        ?NIL -> {?NIL, State1};
+  {Finally, State3} = case FinallyExpr of
+                        ?NIL -> {?NIL, State2};
                         _    -> pop_ast(ast(FinallyExpr, State))
                       end,
 
@@ -1046,7 +1046,7 @@ ast(#{op := 'try'} = Expr, State) ->
         cerl:ann_c_letrec(Ann, Defs, OuterTryAst)
     end,
 
-  push_ast(Ast, State2);
+  push_ast(Ast, State3);
 %%------------------------------------------------------------------------------
 %% catch
 %%------------------------------------------------------------------------------
