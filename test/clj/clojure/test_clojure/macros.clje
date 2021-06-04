@@ -114,3 +114,9 @@
 
 (deftest dotimes-with-underscore
   (is (nil? (dotimes [_ 5]))))
+
+(deftest local-binding
+  (is (= :one (eval '(do
+                       (defmacro m [_] (throw :error))
+                       (defn f [m] (m 1))
+                       (f {1 :one}))))))
