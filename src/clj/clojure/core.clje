@@ -3151,7 +3151,7 @@
   else returns form."
   {:added "1.0"}
   [form]
-  (clj_analyzer/macroexpand_1 form nil))
+  (clj_analyzer/macroexpand_1 form (clj_env/default)))
 
 (defn macroexpand
   "Repeatedly calls macroexpand-1 on form until it no longer

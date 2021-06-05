@@ -54,20 +54,36 @@ macroexpand(Form, Env) ->
 %% Internal
 %%------------------------------------------------------------------------------
 
+-spec is_macro('clojerl.Symbol':type(), clj_env:env()) ->
+  'clojerl.Var':type() | ?NIL.
+is_macro(Symbol, Env) ->
+  case resolve(Symbol, Env) of
+    {{local, _}, _} ->
+      ?NIL;
+    _ ->
+      case lookup_var(Symbol, false) of
+        ?NIL -> ?NIL;
+        Var ->
+          case 'clojerl.Var':is_macro(Var) of
+            true -> Var;
+            false -> ?NIL
+          end
+      end
+  end.
+
 -spec do_macroexpand_1(any(), clj_env:env()) -> any().
 do_macroexpand_1(Form, Env) ->
   Op        = clj_rt:first(Form),
   IsSymbol  = clj_rt:'symbol?'(Op),
   IsSpecial = is_special(Op),
   MacroVar  = case IsSymbol of
-                true  -> lookup_var(Op, false);
+                true  -> is_macro(Op, Env);
                 false -> ?NIL
               end,
 
   Expanded  = case
                 not IsSpecial
                 andalso MacroVar =/= ?NIL
-                andalso 'clojerl.Var':is_macro(MacroVar)
               of
                 true ->
                   Args = clj_rt:cons( Form
