@@ -345,41 +345,6 @@
 ;;; Initialize the pretty-writer instance
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftype PrettyWriter [fields]
-  clojerl.IDeref
-  (deref [_] fields)
-
-  erlang.io.IWriter
-  (write [this x]
-    (condp = (type x)
-      String
-      (let [^String s0 (write-initial-lines this x)
-            ^String s (.replace #"\s+$" s0 "")
-            white-space (.substring s0 (count s))
-            mode (getf :mode)]
-        (if (= mode :writing)
-          (do
-            (write-white-space this)
-            (write-to-base s)
-            (setf :trailing-white-space white-space))
-          (let [oldpos (getf :pos)
-                newpos (+ oldpos (count s0))]
-            (setf :pos newpos)
-            (add-to-buffer this (->buffer-blob s white-space oldpos newpos)))))
-
-      Integer
-      (p-write-char this x)))
-
-  PrettyFlush
-  (ppflush [this]
-    (if (= (getf :mode) :buffering)
-      (do
-        (write-tokens this (getf :buffer) true)
-        (setf :buffer []))
-      (write-white-space this))
-    ;; The original PrettyFlush is an interface that returns void
-    nil))
-
 (defn- pretty-writer [writer max-columns miser-width]
   (let [lb (->logical-block nil nil (atom 0) (atom 0) (atom false) (atom false)
                             nil nil nil nil)
@@ -394,7 +359,40 @@
                      :miser-width miser-width
                      :trailing-white-space nil
                      :pos 0})]
-    (PrettyWriter. fields)))
+    (reify
+      clojerl.IDeref
+      (deref [_] fields)
+
+      erlang.io.IWriter
+      (write [this x]
+        (condp = (type x)
+          String
+          (let [^String s0 (write-initial-lines this x)
+                ^String s (.replace #"\s+$" s0 "")
+                white-space (.substring s0 (count s))
+                mode (getf :mode)]
+            (if (= mode :writing)
+              (do
+                (write-white-space this)
+                (write-to-base s)
+                (setf :trailing-white-space white-space))
+              (let [oldpos (getf :pos)
+                    newpos (+ oldpos (count s0))]
+                (setf :pos newpos)
+                (add-to-buffer this (->buffer-blob s white-space oldpos newpos)))))
+
+          Integer
+          (p-write-char this x)))
+
+      PrettyFlush
+      (ppflush [this]
+        (if (= (getf :mode) :buffering)
+          (do
+            (write-tokens this (getf :buffer) true)
+            (setf :buffer []))
+          (write-white-space this))
+        ;; The original PrettyFlush is an interface that returns void
+        nil))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Methods for pretty-writer
