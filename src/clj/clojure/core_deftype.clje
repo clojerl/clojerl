@@ -49,6 +49,15 @@
       (throw (clojerl.BadArgumentError. (apply print-str "Unsupported option(s) -" bad-opts))))
     [interfaces methods opts]))
 
+(defn- reify-ensure-stringable-hash
+  [[interfaces methods]]
+  (let [interfaces (concat ['clojerl.IStringable 'clojerl.IHash]
+                           interfaces)
+        methods (concat [`(~'str [_#] "#<reify>")
+                         `(~'hash [_#] ~(hash (erlang/make_ref)))]
+                        methods)]
+    [interfaces methods]))
+
 (defmacro reify
   "reify is a macro with the following structure:
 
@@ -102,7 +111,8 @@
   == {:k :v}"
   {:added "1.2"}
   [& opts+specs]
-  (let [[interfaces methods] (parse-opts+specs opts+specs)]
+  (let [[interfaces methods] (-> (parse-opts+specs opts+specs)
+                                 reify-ensure-stringable-hash)]
     (with-meta `(reify* ~interfaces ~@methods) (meta &form))))
 
 (defn- imap-cons
