@@ -211,6 +211,7 @@ special_forms() ->
    , <<"deftype*">>     => fun parse_deftype/2
    , <<"defprotocol*">> => fun parse_defprotocol/2
    , <<"extend-type*">> => fun parse_extend_type/2
+   , <<"reify*">>       => fun parse_reify/2
 
    , <<".">>            => fun parse_dot/2
 
@@ -1762,6 +1763,58 @@ analyze_extend_methods([Proto | Methods], {ImplMapAcc, EnvAcc}) ->
   {MethodsExprs, EnvAcc3} = clj_env:last_exprs(length(Methods), EnvAcc2),
 
   {ImplMapAcc#{ProtoExpr => MethodsExprs}, EnvAcc3}.
+
+%%------------------------------------------------------------------------------
+%% Parse reify
+%%
+%% Translates into a do expression which contains:
+%%
+%% - deftype* that thakes all locals as arguments.
+%% - the creation of an instance of that type, which takes all locals
+%%   as arguments).
+%%------------------------------------------------------------------------------
+
+-spec parse_reify('clojerl.List':type(), clj_env:env()) -> clj_env:env().
+parse_reify(List, Env0) ->
+  [ _ % reify*
+  , Protocols
+  | Methods
+  ] = clj_rt:to_list(List),
+
+  UniqueId   = clj_rt:str(erlang:unique_integer([positive])),
+  UniqueName = clj_rt:symbol(<<"reify__", UniqueId/binary>>),
+
+  LocalsExprs = clj_env:get_locals(Env0),
+  LocalsNames = [maps:get(name, L) || L <- LocalsExprs],
+
+  DefType = [ deftype
+            , UniqueName
+            , UniqueName
+            , LocalsNames
+            , implements
+            , Protocols
+            | Methods
+            ],
+  {DefTypeExpr, Env1} = clj_env:pop_expr(parse_deftype(DefType, Env0)),
+
+  {TypeExpr, Env2} = clj_env:pop_expr(analyze_form(UniqueName, Env1)),
+  NewExpr  = #{ op   => new
+              , env  => Env0
+              , form => List
+              , type => TypeExpr
+              , args => LocalsExprs
+              , tag  => TypeExpr
+              },
+
+  DoExpr   = #{ op         => do
+              , env        => Env0
+              , form       => List
+              , tag        => type_tag(NewExpr)
+              , statements => [DefTypeExpr]
+              , ret        => NewExpr
+              },
+
+  clj_env:push_expr(DoExpr, Env2).
 
 %%------------------------------------------------------------------------------
 %% Parse behaviour

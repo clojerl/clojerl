@@ -82,13 +82,6 @@
   ([n combinef reducef coll]
      (coll-fold coll n combinef reducef)))
 
-(deftype Reducer [coll xf]
-  clojerl.IReduce
-  (reduce [this f1]
-    (.reduce ^clojerl.IReduce coll f1 (f1)))
-  (reduce [_ f1 init]
-    (.reduce ^clojerl.IReduce coll (xf f1) init)))
-
 (defn reducer
   "Given a reducible collection, and a transformation function xf,
   returns a reducible collection, where any supplied reducing
@@ -96,18 +89,12 @@
   reducing fn."
   {:added "1.5"}
   ([coll xf]
-   (Reducer. coll xf)))
-
-(deftype Folder [coll xf]
-  clojerl.IReduce
-  (reduce [_ f1]
-    (.reduce ^clojerl.IReduce coll (xf f1) (f1)))
-  (reduce [_ f1 init]
-    (.reduce ^clojerl.IReduce coll (xf f1) init))
-
-  CollFold
-  (coll-fold [_ n combinef reducef]
-    (coll-fold coll n combinef (xf reducef))))
+   (reify
+     clojerl.IReduce
+     (reduce [this f1]
+       (.reduce ^clojerl.IReduce coll f1 (f1)))
+     (reduce [_ f1 init]
+       (.reduce ^clojerl.IReduce coll (xf f1) init)))))
 
 (defn folder
   "Given a foldable collection, and a transformation function xf,
@@ -116,7 +103,16 @@
   reducing fn."
   {:added "1.5"}
   ([coll xf]
-   (Folder. coll xf)))
+   (reify
+     clojerl.IReduce
+     (reduce [_ f1]
+       (.reduce ^clojerl.IReduce coll (xf f1) (f1)))
+     (reduce [_ f1 init]
+       (.reduce ^clojerl.IReduce coll (xf f1) init))
+
+     CollFold
+     (coll-fold [_ n combinef reducef]
+       (coll-fold coll n combinef (xf reducef))))))
 
 (defn- do-curried
   [name doc meta args body]

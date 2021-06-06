@@ -1048,49 +1048,45 @@ string, or one character longer."
 ;;; that may block.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftype DowncaseWriter [writer]
-  erlang.io.ICloseable
-  (close [_] (.close ^erlang.io.ICloseable writer))
-
-  erlang.io.IWriter
-  (write [_ x]
-   (condp = (type x)
-     String
-     (let [^String s x]
-       (.write ^erlang.io.IWriter writer
-               (.to_lower s)))
-
-     Integer
-     (let [c x]
-       (.write ^erlang.io.IWriter writer
-               (.to_lower ^String (erlang/list_to_binary #erl[c])))))))
-
 (defn- downcase-writer
   "Returns a proxy that wraps writer, converting all characters to lower case"
   [writer]
-  (DowncaseWriter. writer))
+  (reify
+    erlang.io.ICloseable
+    (close [_] (.close ^erlang.io.ICloseable writer))
 
-(deftype UpcaseWriter [writer]
-  erlang.io.ICloseable
-  (close [_] (.close ^erlang.io.ICloseable writer))
+    erlang.io.IWriter
+    (write [_ x]
+      (condp = (type x)
+        String
+        (let [^String s x]
+          (.write ^erlang.io.IWriter writer
+                  (.to_lower s)))
 
-  erlang.io.IWriter
-  (write [_ x]
-   (condp = (type x)
-     String
-     (let [^String s x]
-       (.write ^erlang.io.IWriter writer
-               (.to_upper s)))
-
-     Integer
-     (let [c x]
-       (.write ^erlang.io.IWriter writer
-               (.to_upper ^String (erlang/list_to_binary #erl[c])))))))
+        Integer
+        (let [c x]
+          (.write ^erlang.io.IWriter writer
+                  (.to_lower ^String (erlang/list_to_binary #erl[c]))))))))
 
 (defn- upcase-writer
   "Returns a proxy that wraps writer, converting all characters to upper case"
   [^erlang.io.IWriter writer]
-  (UpcaseWriter. writer))
+  (reify
+    erlang.io.ICloseable
+    (close [_] (.close ^erlang.io.ICloseable writer))
+
+    erlang.io.IWriter
+    (write [_ x]
+      (condp = (type x)
+        String
+        (let [^String s x]
+          (.write ^erlang.io.IWriter writer
+                  (.to_upper s)))
+
+        Integer
+        (let [c x]
+          (.write ^erlang.io.IWriter writer
+                  (.to_upper ^String (erlang/list_to_binary #erl[c]))))))))
 
 (defn- capitalize-string
   "Capitalizes the words in a string. If first? is false, don't capitalize the
@@ -1115,66 +1111,62 @@ string, or one character longer."
                      [s nil]))))
              s)))))
 
-(deftype CapitalizeWordWriter [writer last-was-whitespace?]
-  erlang.io.ICloseable
-  (close [_] (.close ^erlang.io.ICloseable writer))
-
-  erlang.io.IWriter
-  (write [_ x]
-    (condp = (type x)
-      String
-      (let [^String s x]
-        (.write ^erlang.io.IWriter writer
-                (capitalize-string (.to_lower s) @last-was-whitespace?))
-        (when (pos? (.length s))
-          (reset! last-was-whitespace? (.is_whitespace ^String (nth s (dec (count s)))))))
-
-      Integer
-      (let [^String c (char x)]
-        (let [mod-c (if @last-was-whitespace? (.to_upper c) c)]
-          (.write ^erlang.io.IWriter writer mod-c)
-          (reset! last-was-whitespace? (.is_whitespace c)))))))
-
 (defn- capitalize-word-writer
   "Returns a proxy that wraps writer, capitalizing all words"
   [^erlang.io.IWriter writer]
   (let [last-was-whitespace? (atom true)]
-    (CapitalizeWordWriter. writer last-was-whitespace?)))
+    (reify
+      erlang.io.ICloseable
+      (close [_] (.close ^erlang.io.ICloseable writer))
 
-(deftype InitCapWriter [writer capped]
-  erlang.io.ICloseable
-  (close [_] (.close ^erlang.io.ICloseable writer))
+      erlang.io.IWriter
+      (write [_ x]
+        (condp = (type x)
+          String
+          (let [^String s x]
+            (.write ^erlang.io.IWriter writer
+                    (capitalize-string (.to_lower s) @last-was-whitespace?))
+            (when (pos? (.length s))
+              (reset! last-was-whitespace? (.is_whitespace ^String (nth s (dec (count s)))))))
 
-  erlang.io.IWriter
-  (write [_ x]
-    (condp = (type x)
-      String
-      (let [^String s (.to_lower ^String x)]
-        (if (not @capped)
-          (let [m (re-find #"\S" s)
-                offset (and m (.index_of s m))]
-            (if offset
-              (do (.write ^erlang.io.IWriter writer
-                          (str (subs s 0 offset)
-                               (.to_upper ^String (nth s offset))
-                               (.to_lower ^String (subs s (inc offset)))))
-                  (reset! capped true))
-              (.write ^erlang.io.IWriter writer s)))
-          (.write ^erlang.io.IWriter writer (.to_lower s))))
-
-      Integer
-      (let [^String c (char x)]
-        (if (and (not @capped) (.is_printable c))
-          (do
-            (reset! capped true)
-            (.write ^erlang.io.IWriter writer (.to_upper c)))
-          (.write ^erlang.io.IWriter writer (.to_lower c)))))))
+          Integer
+          (let [^String c (char x)]
+            (let [mod-c (if @last-was-whitespace? (.to_upper c) c)]
+              (.write ^erlang.io.IWriter writer mod-c)
+              (reset! last-was-whitespace? (.is_whitespace c)))))))))
 
 (defn- init-cap-writer
   "Returns a proxy that wraps writer, capitalizing the first word"
   [^erlang.io.IWriter writer]
   (let [capped (atom false)]
-    (InitCapWriter. writer capped)))
+    (reify
+      erlang.io.ICloseable
+      (close [_] (.close ^erlang.io.ICloseable writer))
+
+      erlang.io.IWriter
+      (write [_ x]
+        (condp = (type x)
+          String
+          (let [^String s (.to_lower ^String x)]
+            (if (not @capped)
+              (let [m (re-find #"\S" s)
+                    offset (and m (.index_of s m))]
+                (if offset
+                  (do (.write ^erlang.io.IWriter writer
+                              (str (subs s 0 offset)
+                                   (.to_upper ^String (nth s offset))
+                                   (.to_lower ^String (subs s (inc offset)))))
+                      (reset! capped true))
+                  (.write ^erlang.io.IWriter writer s)))
+              (.write ^erlang.io.IWriter writer (.to_lower s))))
+
+          Integer
+          (let [^String c (char x)]
+            (if (and (not @capped) (.is_printable c))
+              (do
+                (reset! capped true)
+                (.write ^erlang.io.IWriter writer (.to_upper c)))
+              (.write ^erlang.io.IWriter writer (.to_lower c)))))))))
 
 (defn- modify-case [make-writer params navigator offsets]
   (let [clause (first (:clauses params))]

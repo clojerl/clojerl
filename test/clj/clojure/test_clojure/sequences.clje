@@ -49,8 +49,8 @@
            (reduce #(and %1 %2) all-true)
            (reduce #(and %1 %2) true all-true)))))
 
-#_(deftest test-into-IReduceInit
-  (let [iri (reify clojure.lang.IReduceInit
+(deftest test-into-IReduceInit
+  (let [iri (reify clojerl.IReduce
               (reduce [_ f start]
                 (reduce f start (range 5))))]
     (is (= [0 1 2 3 4] (into [] iri)))))
