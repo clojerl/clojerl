@@ -97,6 +97,11 @@
           (foo 10))))
   (testing "protocols generate a corresponding interface using _ instead of - for method names"
     (is (= ["bar" "baz" "baz" "foo" "with-quux"] (method-names :clojure.test-clojure.protocols.examples))))
+  (testing "you can implement just part of a protocol if you want"
+    (let [obj (reify ExampleProtocol
+                     (baz [a b] "two-arg baz!"))]
+      (is (= "two-arg baz!" (baz obj nil)))
+      (is (thrown? :error (baz obj)))))
   (testing "error conditions checked when defining protocols"
     (is (thrown-with-msg?
          :error
@@ -108,7 +113,10 @@
          (eval '(defprotocol badprotdef (m [this arg]) (m [this arg1 arg2]))))))
   (testing "you can redefine a protocol with different methods"
     (eval '(defprotocol Elusive (old-method [x])))
-    (eval '(defprotocol Elusive (new-method [x])))))
+    (eval '(defprotocol Elusive (new-method [x])))
+    (is (= :new-method (eval '(new-method (reify Elusive (new-method [x] :new-method))))))
+    (is (fails-with-cause? :error #"undef"
+          (eval '(old-method (reify Elusive (new-method [x] :new-method))))))))
 
 (deftype HasMarkers []
   ExampleProtocol
@@ -522,6 +530,31 @@
     (is (= (RecordToTestBoolHint. true) (map->RecordToTestBoolHint {:a true})))
     (is (= (RecordToTestBoolHint. true) (->RecordToTestBoolHint true))))
   (testing "covariant hints -- deferred"))
+
+(deftest reify-test
+  (testing "of a protocol"
+    (let [r (reify
+             ExampleProtocol
+             (bar [this o] o)
+             (baz [this] 1)
+             (baz [this o] 2))]
+      (= :foo (.bar r :foo))
+      (= 1 (.baz r))
+      (= 2 (.baz r nil))))
+  (testing "destructuring in method def"
+    (let [r (reify
+             ExampleProtocol
+             (bar [this [_ _ item]] item))]
+      (= :c (.bar r [:a :b :c]))))
+  (testing "methods can recur"
+    (let [r (reify
+             clojerl.ILookup
+             (get [this index]
+                  (if (zero? index)
+                    :done
+                    (recur this (dec index)))))]
+      (is (= :done (.get r 0)))
+      (is (= :done (.get r 1))))))
 
 ; see CLJ-845
 (defprotocol SyntaxQuoteTestProtocol
