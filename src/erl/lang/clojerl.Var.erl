@@ -12,6 +12,7 @@
 -behavior('clojerl.IStringable').
 
 -export([ ?CONSTRUCTOR/2
+        , create/0
         , is_dynamic/1
         , is_macro/1
         , is_public/1
@@ -72,21 +73,27 @@
    , fake_fun  => false
    }.
 
+-spec create() -> type().
+create() ->
+  Ns   = 'erlang.util.UUID':random(),
+  Name = 'erlang.util.UUID':random(),
+  ?CONSTRUCTOR(clj_rt:str(Ns), clj_rt:str(Name)).
+
 -spec is_dynamic(type()) -> boolean().
 is_dynamic(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
-  maps:get(dynamic, Meta, false);
+  clj_rt:get(Meta, dynamic, false);
 is_dynamic(#{?TYPE := ?M}) ->
   false.
 
 -spec is_macro(type()) -> boolean().
 is_macro(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
-  maps:get(macro, Meta, false);
+  clj_rt:get(Meta, macro, false);
 is_macro(#{?TYPE := ?M}) ->
   false.
 
 -spec is_public(type()) -> boolean().
 is_public(#{?TYPE := ?M, meta := Meta}) when is_map(Meta) ->
-  not maps:get(private, Meta, false);
+  not clj_rt:get(Meta, private, false);
 is_public(#{?TYPE := ?M}) ->
   true.
 
@@ -219,7 +226,7 @@ deref(#{ ?TYPE    := ?M
        , ns_atom  := Module
        , val_atom := FunctionVal
        , fake_fun := FakeFun
-       }) ->
+       } = Var) ->
   try
     %% Make the call in case the module is not loaded and handle the case
     %% when it doesn't even exist gracefully.
@@ -227,12 +234,24 @@ deref(#{ ?TYPE    := ?M
   catch
     ?WITH_STACKTRACE(Type, undef, Stacktrace)
       case erlang:function_exported(Module, FunctionVal, 0) of
-        false -> throw(<<"Could not dereference ",
-                         Ns/binary, "/", Name/binary, ". "
-                         "There is no Erlang function "
-                         "to back it up.">>);
-        true  -> erlang:raise(Type, undef, Stacktrace)
+        false ->
+          case deref_dynamic(Var) of
+            {ok, Value} -> Value;
+            ?NIL        -> ?ERROR(<<"Could not dereference ",
+                                    Ns/binary, "/", Name/binary, ". "
+                                    "There is no Erlang function "
+                                    "to back it up.">>)
+          end;
+        true  ->
+          erlang:raise(Type, undef, Stacktrace)
       end
+  end.
+
+-spec deref_dynamic(type()) -> ?NIL | {ok, any()}.
+deref_dynamic(Var) ->
+  case is_dynamic(Var) of
+    true -> dynamic_binding(Var);
+    false -> ?NIL
   end.
 
 equiv( #{?TYPE := ?M, ns := Ns, name := Name}

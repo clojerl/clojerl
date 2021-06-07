@@ -1,7 +1,6 @@
 %% @doc Clojerl protocol helper functions.
 -module(clj_protocol).
 
--include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -export([ not_implemented/3

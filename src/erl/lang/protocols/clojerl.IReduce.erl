@@ -31,6 +31,8 @@
       'clojerl.Range':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'reduce'(Coll, Fun);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.Subvec'} ->
       'clojerl.Subvec':'reduce'(Coll, Fun);
     #{?TYPE := 'clojerl.TupleChunk'} ->
@@ -71,6 +73,8 @@
       'clojerl.Range':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Repeat'} ->
       'clojerl.Repeat':'reduce'(Coll, Fun, Init);
+    #{?TYPE := 'clojerl.StringSeq'} ->
+      'clojerl.StringSeq':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.Subvec'} ->
       'clojerl.Subvec':'reduce'(Coll, Fun, Init);
     #{?TYPE := 'clojerl.TupleChunk'} ->
@@ -104,6 +108,7 @@
     #{?TYPE := 'clojerl.List'} ->  true;
     #{?TYPE := 'clojerl.Range'} ->  true;
     #{?TYPE := 'clojerl.Repeat'} ->  true;
+    #{?TYPE := 'clojerl.StringSeq'} ->  true;
     #{?TYPE := 'clojerl.Subvec'} ->  true;
     #{?TYPE := 'clojerl.TupleChunk'} ->  true;
     #{?TYPE := 'clojerl.Vector'} ->  true;
@@ -126,6 +131,7 @@
     'clojerl.List' -> true;
     'clojerl.Range' -> true;
     'clojerl.Repeat' -> true;
+    'clojerl.StringSeq' -> true;
     'clojerl.Subvec' -> true;
     'clojerl.TupleChunk' -> true;
     'clojerl.Vector' -> true;

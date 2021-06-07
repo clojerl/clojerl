@@ -14,7 +14,12 @@
         , swap/3
         , swap/4
         , swap/5
+        , swap_vals/2
+        , swap_vals/3
+        , swap_vals/4
+        , swap_vals/5
         , reset/2
+        , reset_vals/2
         , compare_and_set/3
         ]).
 
@@ -68,9 +73,29 @@ swap(#{?TYPE := ?M, id := Id, value := Value}, Fun, X, Y) ->
 swap(#{?TYPE := ?M, id := Id, value := Value}, Fun, X, Y, Args) ->
   do_swap(Id, Value, Fun, [X, Y | clj_rt:to_list(Args)]).
 
+-spec swap_vals(type(), any()) -> any().
+swap_vals(#{?TYPE := ?M, id := Id, value := Value}, Fun) ->
+  do_swap_vals(Id, Value, Fun, []).
+
+-spec swap_vals(type(), any(), any()) -> any().
+swap_vals(#{?TYPE := ?M, id := Id, value := Value}, Fun, X) ->
+  do_swap_vals(Id, Value, Fun, [X]).
+
+-spec swap_vals(type(), any(), any(), any()) -> any().
+swap_vals(#{?TYPE := ?M, id := Id, value := Value}, Fun, X, Y) ->
+  do_swap_vals(Id, Value, Fun, [X, Y]).
+
+-spec swap_vals(type(), any(), any(), any(), any()) -> any().
+swap_vals(#{?TYPE := ?M, id := Id, value := Value}, Fun, X, Y, Args) ->
+  do_swap_vals(Id, Value, Fun, [X, Y | clj_rt:to_list(Args)]).
+
 -spec reset(type(), any()) -> any().
 reset(#{?TYPE := ?M, id := Id, value := Initial}, Value) ->
   do_reset(Id, Initial, Value).
+
+-spec reset_vals(type(), any()) -> any().
+reset_vals(#{?TYPE := ?M, id := Id, value := Initial}, Value) ->
+  do_reset_vals(Id, Initial, Value).
 
 -spec compare_and_set(type(), any(), any()) -> any().
 compare_and_set(#{?TYPE := ?M, id := Id}, Old, New) ->
@@ -92,12 +117,29 @@ do_swap(AtomId, Initial, Fun, Args) ->
     not_set -> do_swap(AtomId, Initial, Fun, Args)
   end.
 
+-spec do_swap_vals(binary(), any(), any(), [any()]) -> any().
+do_swap_vals(AtomId, Initial, Fun, Args) ->
+  Current = current(AtomId, Initial),
+  New = clj_rt:apply(Fun, [Current | Args]),
+  case do_compare_and_set(AtomId, Current, New) of
+    {ok, New} -> clj_rt:vector([Current, New]);
+    not_set -> do_swap_vals(AtomId, Initial, Fun, Args)
+  end.
+
 -spec do_reset(binary(), any(), any()) -> any().
 do_reset(AtomId, Initial, New) ->
   Current = current(AtomId, Initial),
   case do_compare_and_set(AtomId, Current, New) of
     {ok, New} -> New;
     not_set -> do_reset(AtomId, Initial, New)
+  end.
+
+-spec do_reset_vals(binary(), any(), any()) -> any().
+do_reset_vals(AtomId, Initial, New) ->
+  Current = current(AtomId, Initial),
+  case do_compare_and_set(AtomId, Current, New) of
+    {ok, New} -> clj_rt:vector([Current, New]);
+    not_set -> do_reset_vals(AtomId, Initial, New)
   end.
 
 -ifdef(ETS_CAS).

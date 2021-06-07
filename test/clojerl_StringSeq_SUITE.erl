@@ -16,6 +16,7 @@
         , seq/1
         , equiv/1
         , cons/1
+        , reduce/1
         , complete_coverage/1
         ]).
 
@@ -141,6 +142,33 @@ cons(_Config) ->
 
   2    = clj_rt:count(TwoList),
   true = clj_rt:equiv(TwoList, [2, 1]),
+
+  {comments, ""}.
+
+-spec reduce(config()) -> result().
+reduce(_Config) ->
+  Append    = fun
+                ([]) -> <<>>;
+                ([Acc, L]) -> <<L/binary, Acc/binary>>
+              end,
+  AppendFun = 'clojerl.Fn':?CONSTRUCTOR(Append),
+  Empty     = 'clojerl.StringSeq':?CONSTRUCTOR(<<>>),
+
+  <<>>      = 'clojerl.IReduce':reduce(Empty, AppendFun),
+  <<"foo">> = 'clojerl.IReduce':reduce(Empty, AppendFun, <<"foo">>),
+
+  Word      = 'clojerl.StringSeq':?CONSTRUCTOR(<<"word">>),
+  Drow      = <<"drow">>,
+  Drow      = 'clojerl.IReduce':reduce(Word, AppendFun),
+  Drows     = <<"drows">>,
+  Drows     = 'clojerl.IReduce':reduce(Word, AppendFun, <<"s">>),
+
+  UntilFun  = fun
+                (Acc, <<"r">>) -> 'clojerl.Reduced':?CONSTRUCTOR(Acc);
+                (Acc, L) -> <<L/binary, Acc/binary>>
+              end,
+  Ow        = <<"ow">>,
+  Ow        = 'clojerl.IReduce':reduce(Word, UntilFun),
 
   {comments, ""}.
 

@@ -1,3 +1,8 @@
+-ifndef(CLOJERL_EXPR).
+
+-define(CLOJERL_EXPR, true).
+
+-include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -type loop_type()      :: fn | fn_method | var | loop.
@@ -390,3 +395,5 @@
               | after_expr()
               | erl_alias_expr()
               | on_load_expr().
+
+-endif.

@@ -5,12 +5,12 @@
 -module('clojerl.StringSeq').
 
 -include("clojerl.hrl").
--include("clojerl_int.hrl").
 
 -behavior('clojerl.ICounted').
 -behavior('clojerl.IColl').
 -behavior('clojerl.IEquiv').
 -behavior('clojerl.IHash').
+-behavior('clojerl.IReduce').
 -behavior('clojerl.ISeq').
 -behavior('clojerl.ISeqable').
 -behavior('clojerl.ISequential').
@@ -24,6 +24,9 @@
         ]).
 -export([equiv/2]).
 -export([hash/1]).
+-export([ reduce/2
+        , reduce/3
+        ]).
 -export([ first/1
         , next/1
         , more/1
@@ -77,6 +80,25 @@ equiv(#{?TYPE := ?M, str := X}, Y) ->
 
 hash(#{?TYPE := ?M, str := Str}) ->
   clj_murmur3:ordered(to_list(Str, [])).
+
+%% clojerl.IReduce
+
+reduce(#{?TYPE := ?M, str := <<>>}, F) ->
+  clj_rt:apply(F, []);
+reduce(#{?TYPE := ?M, str := <<First/utf8, Rest/binary>>}, F) ->
+  do_reduce(F, <<First/utf8>>, Rest).
+
+reduce(#{?TYPE := ?M, str := Str}, F, Init) ->
+  do_reduce(F, Init, Str).
+
+do_reduce(F, Acc, <<First/utf8, Rest/binary>>) ->
+  Val = clj_rt:apply(F, [Acc, <<First/utf8>>]),
+  case 'clojerl.Reduced':is_reduced(Val) of
+    true  -> 'clojerl.Reduced':deref(Val);
+    false -> do_reduce(F, Val, Rest)
+  end;
+do_reduce(_F, Acc, <<>>) ->
+  Acc.
 
 %% clojerl.ISeq
 
