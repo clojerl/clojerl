@@ -49,16 +49,36 @@
       (throw (clojerl.BadArgumentError. (apply print-str "Unsupported option(s) -" bad-opts))))
     [interfaces methods opts]))
 
-(defn- reify-ensure-stringable-hash
-  [[interfaces methods]]
-  (let [interfaces (concat ['clojerl.IStringable 'clojerl.IHash]
-                           interfaces)
+(defn- emit-reify
+  [&form &env interfaces methods]
+  (let [reify-name (symbol (str "reify__"
+                                (erlang/unique_integer #erl(:positive))))
+        locals-names (map :name (clj_env/get_locals &env))
+        meta-name (gensym "meta__")
+        meta-arg (gensym "meta-arg__")
+        fields (cons meta-name locals-names)
         hash-value (hash (erlang/make_ref))
         str-value (str  "#<reify " hash-value">")
-        methods (concat [`(~'str [_#] ~str-value)
-                         `(~'hash [_#] ~hash-value)]
-                        methods)]
-    [interfaces methods]))
+        m (meta &form)]
+    (letfn [(ihash [[i m]]
+                [(conj i 'clojerl.IHash)
+                 (conj m
+                       `(~'hash [this#] ~hash-value))])
+            (imeta [[i m]]
+              [(conj i 'clojerl.IMeta)
+               (conj m
+                     `(~'meta [this#] ~meta-name)
+                     `(~'with_meta [this# ~meta-arg] (new ~reify-name ~@(replace {meta-name meta-arg} fields))))])
+            (istr [[i m]]
+                [(conj i 'clojerl.IStringable)
+                 (conj m
+                       `(~'str [this#] ~str-value))])]
+      (let [[interfaces methods] (-> [interfaces methods] ihash imeta istr)]
+        `(do
+           (deftype ~reify-name [~@fields]
+             ~@interfaces
+             ~@methods)
+           (new ~reify-name ~@(cons m locals-names)))))))
 
 (defmacro reify
   "reify is a macro with the following structure:
@@ -113,9 +133,8 @@
   == {:k :v}"
   {:added "1.2"}
   [& opts+specs]
-  (let [[interfaces methods] (-> (parse-opts+specs opts+specs)
-                                 reify-ensure-stringable-hash)]
-    (with-meta `(reify* ~interfaces ~@methods) (meta &form))))
+  (let [[interfaces methods] (parse-opts+specs opts+specs)]
+    (emit-reify &form &env interfaces methods)))
 
 (defn- imap-cons
   [this o]
