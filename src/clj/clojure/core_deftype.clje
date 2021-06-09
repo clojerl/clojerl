@@ -53,8 +53,10 @@
   [[interfaces methods]]
   (let [interfaces (concat ['clojerl.IStringable 'clojerl.IHash]
                            interfaces)
-        methods (concat [`(~'str [_#] "#<reify>")
-                         `(~'hash [_#] ~(hash (erlang/make_ref)))]
+        hash-value (hash (erlang/make_ref))
+        str-value (str  "#<reify " hash-value">")
+        methods (concat [`(~'str [_#] ~str-value)
+                         `(~'hash [_#] ~hash-value)]
                         methods)]
     [interfaces methods]))
 

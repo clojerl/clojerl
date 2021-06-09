@@ -1781,6 +1781,7 @@ parse_reify(List, Env0) ->
   | Methods
   ] = clj_rt:to_list(List),
 
+  %% This needs to be globally unique to ensure the type name is unique
   UniqueId   = clj_rt:str(erlang:unique_integer([positive])),
   UniqueName = clj_rt:symbol(<<"reify__", UniqueId/binary>>),
 
