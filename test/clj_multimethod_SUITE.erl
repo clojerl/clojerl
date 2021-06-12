@@ -48,68 +48,74 @@ end_per_suite(Config) -> Config.
 
 -spec init_per_testcase(atom(), config()) -> config().
 init_per_testcase(_, Config) ->
-  clj_multimethod:init(method_var()),
-  clj_multimethod:add_method(method_var(), default, default_method),
+  DispatchMapVar = clj_multimethod:init(method_var()),
+  clj_multimethod:add_method(method_var(DispatchMapVar), default, default_method),
 
   HelloSym     = clj_rt:symbol(<<"hello">>),
   HelloSymMeta = clj_rt:with_meta(HelloSym, #{private => true}),
-  clj_multimethod:add_method( method_var()
-                              , HelloSymMeta
-                              , symbol_method
-                              ),
+  clj_multimethod:add_method( method_var(DispatchMapVar)
+                            , HelloSymMeta
+                            , symbol_method
+                            ),
 
   Vector = clj_rt:vector([default, HelloSym]),
-  clj_multimethod:add_method( method_var()
-                              , Vector
-                              , vector_method
-                              ),
-  Config.
+  clj_multimethod:add_method( method_var(DispatchMapVar)
+                            , Vector
+                            , vector_method
+                            ),
+
+  MethodVar = method_var(DispatchMapVar),
+  [{method_var, MethodVar} | Config].
 
 -spec end_per_testcase(atom(), config()) -> config().
 end_per_testcase(_, Config) ->
-  clj_multimethod:remove_all(method_var()),
+  MethodVar = proplists:get_value(method_var, Config),
+  clj_multimethod:remove_all(MethodVar),
   Config.
 
 -spec method_var() -> 'clojerl.Var':type().
 method_var() ->
-  'clojerl.Var':?CONSTRUCTOR( <<"clj_multimethod_SUITE">>
-                            , <<"test-method">>
-                            ).
+  method_var(?NIL).
+
+-spec method_var('clojerl.Var':type()) -> 'clojerl.Var':type().
+method_var(DispatchMapVar) ->
+  Var = 'clojerl.Var':?CONSTRUCTOR( <<"clj_multimethod_SUITE">>
+                                  , <<"test-method">>
+                                  ),
+  Meta = clj_rt:assoc(#{}, 'dispatch-map-var', DispatchMapVar),
+  clj_rt:with_meta(Var, Meta).
 
 %%------------------------------------------------------------------------------
 %% Test Cases
 %%------------------------------------------------------------------------------
 
 -spec get_method(config()) -> result().
-get_method(_Config) ->
+get_method(Config) ->
+  MethodVar = proplists:get_value(method_var, Config),
   ct:comment("Method with keyword value"),
-  default_method = clj_multimethod:get_method(method_var(), default),
+  default_method = clj_multimethod:get_method(MethodVar, default),
 
   ct:comment("Method with symbol value"),
   HelloSym      = clj_rt:symbol(<<"hello">>),
   HelloSymMeta  = clj_rt:with_meta(HelloSym, #{private => true}),
-  symbol_method = clj_multimethod:get_method(method_var(), HelloSymMeta),
-  symbol_method = clj_multimethod:get_method(method_var(), HelloSym),
+  symbol_method = clj_multimethod:get_method(MethodVar, HelloSymMeta),
+  symbol_method = clj_multimethod:get_method(MethodVar, HelloSym),
 
   ct:comment("Method with vector value"),
   Vector      = clj_rt:vector([default, HelloSym]),
   VectorMeta  = clj_rt:with_meta(Vector, #{some => thing}),
   Vector2     = clj_rt:vector([default, HelloSymMeta]),
   VectorMeta2 = clj_rt:with_meta(Vector2, #{some => thing}),
-  vector_method = clj_multimethod:get_method(method_var(), Vector),
-  vector_method = clj_multimethod:get_method(method_var(), VectorMeta),
+  vector_method = clj_multimethod:get_method(MethodVar, Vector),
+  vector_method = clj_multimethod:get_method(MethodVar, VectorMeta),
 
   ct:comment("When elements differ in metadata the method should be found"),
-  true = vector_method =:= clj_multimethod:get_method( method_var()
-                                                       , Vector2
-                                                       ),
-  true = vector_method =:= clj_multimethod:get_method( method_var()
-                                                       , VectorMeta2
-                                                       ),
+  true = vector_method =:= clj_multimethod:get_method(MethodVar, Vector2),
+  true = vector_method =:= clj_multimethod:get_method(MethodVar, VectorMeta2),
 
   ct:comment("Some other value will return the default implementation"),
   default_method =
-    clj_multimethod:get_method(method_var(), hello, default, ?NIL),
+    clj_multimethod:get_method(MethodVar, hello, default, ?NIL),
 
 
   ct:comment("Try to get a non-existent method"),
@@ -121,8 +127,9 @@ get_method(_Config) ->
   {comments, ""}.
 
 -spec get_method_table(config()) -> result().
-get_method_table(_Config) ->
-  MethodTable = clj_multimethod:get_method_table(method_var()),
+get_method_table(Config) ->
+  MethodVar = proplists:get_value(method_var, Config),
+  MethodTable = clj_multimethod:get_method_table(MethodVar),
 
   HelloSym    = clj_rt:symbol(<<"hello">>),
   Vector      = clj_rt:vector([default, HelloSym]),
@@ -139,13 +146,14 @@ get_method_table(_Config) ->
   {comment, ""}.
 
 -spec remove_method(config()) -> result().
-remove_method(_Config) ->
-  MethodTable = clj_multimethod:get_method_table(method_var()),
+remove_method(Config) ->
+  MethodVar = proplists:get_value(method_var, Config),
+  MethodTable = clj_multimethod:get_method_table(MethodVar),
   3 = clj_rt:count(MethodTable),
 
-  _ = clj_multimethod:remove_method(method_var(), default),
+  _ = clj_multimethod:remove_method(MethodVar, default),
 
-  MethodTableAfter = clj_multimethod:get_method_table(method_var()),
+  MethodTableAfter = clj_multimethod:get_method_table(MethodVar),
   2 = clj_rt:count(MethodTableAfter),
   true = clj_rt:equiv(MethodTableAfter, clj_rt:dissoc(MethodTable, default)),
 
