@@ -10,7 +10,8 @@
         , end_per_testcase/2
         ]).
 
--export([ get_method/1
+-export([ get_dispatch_fun/1
+        , get_method/1
         , get_method_table/1
         , remove_method/1
         ]).
@@ -18,6 +19,7 @@
 -export([ 'test-method__val'/0
         , 'test-method'/0
         , 'test-method-map__val'/0
+        , 'test-method__dispatch-fn__'/0
         ]).
 
 -spec 'test-method__val'() -> any().
@@ -32,6 +34,10 @@
 
 -spec 'test-method'() -> any().
 'test-method'() -> 42.
+
+-spec 'test-method__dispatch-fn__'() -> any().
+'test-method__dispatch-fn__'() ->
+  fun erlang:self/0.
 
 %%------------------------------------------------------------------------------
 %% Common Test callbacks
@@ -48,23 +54,18 @@ end_per_suite(Config) -> Config.
 
 -spec init_per_testcase(atom(), config()) -> config().
 init_per_testcase(_, Config) ->
-  DispatchMapVar = clj_multimethod:init(method_var()),
-  clj_multimethod:add_method(method_var(DispatchMapVar), default, default_method),
+  #{'init-meta' := Meta} = clj_multimethod:init(method_var()),
+
+  MethodVar = method_var(Meta),
+  clj_multimethod:add_method(MethodVar, default, default_method),
 
   HelloSym     = clj_rt:symbol(<<"hello">>),
   HelloSymMeta = clj_rt:with_meta(HelloSym, #{private => true}),
-  clj_multimethod:add_method( method_var(DispatchMapVar)
-                            , HelloSymMeta
-                            , symbol_method
-                            ),
+  clj_multimethod:add_method(MethodVar, HelloSymMeta, symbol_method),
 
   Vector = clj_rt:vector([default, HelloSym]),
-  clj_multimethod:add_method( method_var(DispatchMapVar)
-                            , Vector
-                            , vector_method
-                            ),
+  clj_multimethod:add_method(MethodVar, Vector, vector_method),
 
-  MethodVar = method_var(DispatchMapVar),
   [{method_var, MethodVar} | Config].
 
 -spec end_per_testcase(atom(), config()) -> config().
@@ -77,17 +78,24 @@ end_per_testcase(_, Config) ->
 method_var() ->
   method_var(?NIL).
 
--spec method_var('clojerl.Var':type()) -> 'clojerl.Var':type().
-method_var(DispatchMapVar) ->
-  Var = 'clojerl.Var':?CONSTRUCTOR( <<"clj_multimethod_SUITE">>
-                                  , <<"test-method">>
-                                  ),
-  Meta = clj_rt:assoc(#{}, 'dispatch-map-var', DispatchMapVar),
-  clj_rt:with_meta(Var, Meta).
+-spec method_var(map() | ?NIL) -> 'clojerl.Var':type().
+method_var(Meta0) ->
+  Var   = 'clojerl.Var':?CONSTRUCTOR( <<"clj_multimethod_SUITE">>
+                                    , <<"test-method">>
+                                    ),
+  Meta1 = clj_rt:merge([#{}, Meta0]),
+  clj_rt:with_meta(Var, Meta1).
 
 %%------------------------------------------------------------------------------
 %% Test Cases
 %%------------------------------------------------------------------------------
+
+-spec get_dispatch_fun(config()) -> result().
+get_dispatch_fun(Config) ->
+  MethodVar  = proplists:get_value(method_var, Config),
+  DispatchFn = clj_multimethod:get_dispatch_fun(MethodVar),
+  DispatchFn = fun erlang:self/0,
+  ok.
 
 -spec get_method(config()) -> result().
 get_method(Config) ->

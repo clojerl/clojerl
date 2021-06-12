@@ -1475,20 +1475,23 @@
       (let [options   (apply hash-map options)
             default   (get options :default :default)
             hierarchy (get options :hierarchy #'global-hierarchy)
-            mm-name-var (clj_multimethod/init mm-name)
-            mm-name-map (symbol (namespace mm-name-var) (name mm-name-var))
-            mm-name (with-meta mm-name (assoc m :dispatch-map-var mm-name-var))]
+            mm-init   (clj_multimethod/init mm-name)
+            dispatch-map-name (:dispatch-map-name mm-init)
+            dispatch-fn-name (:dispatch-fn-name mm-init)
+            mm-name   (with-meta mm-name (clj_rt/merge #erl(m (:init-meta mm-init))))]
         (check-valid-options options :default :hierarchy)
-        `(defn ~mm-name
-           [& args#]
-           (let [val# (clojerl.IFn/apply ~dispatch-fn args#)
-                 dispatch-map# ~mm-name-map
-                 f#   (or (clojerl.Map/get dispatch-map# val#)
-                          (clojerl.Map/get dispatch-map# ~default)
-                          (throw
-                           (clojerl.Error. (str "No multimethod defined for dispatch value " val#
-                                                " in " '~mm-name))))]
-             (clojerl.IFn/apply f# args#)))))))
+        `(do
+           (defn ~dispatch-fn-name [] ~dispatch-fn)
+           (defn ~mm-name
+             [& args#]
+             (let [val# (clojerl.IFn/apply ~dispatch-fn args#)
+                   dispatch-map# ~dispatch-map-name
+                   f#   (or (clojerl.Map/get dispatch-map# val#)
+                            (clojerl.Map/get dispatch-map# ~default)
+                            (throw
+                             (clojerl.Error. (str "No multimethod defined for dispatch value " val#
+                                                  " in " '~mm-name))))]
+               (clojerl.IFn/apply f# args#))))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "

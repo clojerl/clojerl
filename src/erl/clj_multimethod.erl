@@ -20,26 +20,34 @@
         , get_method/2
         , get_method/4
         , get_method_table/1
+        , get_dispatch_fun/1
         , add_method/3
         , remove_all/1
         , remove_method/2
         ]).
 
 -define(DISPATCH_MAP_VAR, 'dispatch-map-var').
+-define(DISPATCH_FN_VAR, 'dispatch-fn-var').
 
 %%------------------------------------------------------------------------------
 %% API
 %%------------------------------------------------------------------------------
 
 %% @private
--spec init('clojerl.Symbol':type()) -> 'clojerl.Var':type().
+-spec init('clojerl.Symbol':type()) -> map().
 init(MultiFnSym0) ->
-  DispatchMapVar = build_var(MultiFnSym0, <<"map">>),
+  DispatchMapVar = build_var(MultiFnSym0, ?DISPATCH_MAP_VAR),
+  DispatchFnVar  = build_var(MultiFnSym0, ?DISPATCH_FN_VAR),
   EmptyMap       = 'clojerl.Map':?CONSTRUCTOR([]),
-  Meta           = #{?DISPATCH_MAP_VAR => DispatchMapVar},
+  Meta           = #{ ?DISPATCH_MAP_VAR => DispatchMapVar
+                    , ?DISPATCH_FN_VAR  => DispatchFnVar
+                    },
   MultiFnSym1    = clj_rt:with_meta(MultiFnSym0, Meta),
   ok             = generate_module(MultiFnSym1, EmptyMap),
-  DispatchMapVar.
+  #{ 'init-meta'         => Meta
+   , 'dispatch-map-name' => var_symbol(DispatchMapVar)
+   , 'dispatch-fn-name'  => var_symbol(DispatchFnVar)
+   }.
 
 %% @private
 -spec is_init('clojerl.Symbol':type()) -> boolean().
@@ -48,6 +56,12 @@ is_init(MultiFnSym) ->
     ?NIL -> false;
     Var  -> clj_rt:get('clojerl.Var':meta(Var), 'multi-method')
   end.
+
+%% @private
+-spec get_dispatch_fun('clojerl.Var':type()) -> any().
+get_dispatch_fun(MultiFnVar) ->
+  DispatchFnVar = var_meta(MultiFnVar, ?DISPATCH_FN_VAR),
+  'clojerl.IFn':apply(DispatchFnVar, []).
 
 %% @private
 -spec get_method('clojerl.Var':type(), any()) -> any().
@@ -97,18 +111,36 @@ remove_method(MultiFnVar, DispatchValue) ->
 %% Internal functions
 %%------------------------------------------------------------------------------
 
--spec build_var('clojerl.INamed':type(), binary()) -> 'clojerl.Var':type().
-build_var(VarOrSymbol, VarName) ->
-  Ns      = case clj_rt:namespace(VarOrSymbol) of
-              ?NIL ->
-                CurrentNs = 'clojerl.Namespace':current(),
-                'clojerl.Namespace':str(CurrentNs);
-              X -> X
-            end,
+-spec build_var( 'clojerl.INamed':type()
+               , ?DISPATCH_MAP_VAR | ?DISPATCH_FN_VAR
+               ) ->
+  'clojerl.Var':type().
+build_var(VarOrSymbol, ?DISPATCH_MAP_VAR) ->
+  Ns      = var_namespace(VarOrSymbol),
   Name    = clj_rt:name(VarOrSymbol),
   MapNs0  = <<Ns/binary, ".", Name/binary, "__dispatch__">>,
   MapNs   = munge(MapNs0),
-  'clojerl.Var':?CONSTRUCTOR(MapNs, VarName).
+  'clojerl.Var':?CONSTRUCTOR(MapNs, <<"map">>);
+build_var(VarOrSymbol, ?DISPATCH_FN_VAR) ->
+  Ns      = var_namespace(VarOrSymbol),
+  Prefix  = clj_rt:name(VarOrSymbol),
+  VarName = <<Prefix/binary, "__dispatch-fn__">>,
+  'clojerl.Var':?CONSTRUCTOR(Ns, VarName).
+
+-spec var_namespace('clojerl.INamed':type()) -> binary().
+var_namespace(VarOrSymbol) ->
+  case clj_rt:namespace(VarOrSymbol) of
+    ?NIL ->
+      CurrentNs = 'clojerl.Namespace':current(),
+      'clojerl.Namespace':str(CurrentNs);
+    X -> X
+  end.
+
+-spec var_symbol('clojerl.Var':type()) -> 'clojerl.Symbol':type().
+var_symbol(Var) ->
+  Name = clj_rt:name(Var),
+  Ns   = clj_rt:namespace(Var),
+  clj_rt:symbol(Ns, Name).
 
 -spec update_dispatch_map('clojerl.Var':type(), function(), [any()]) -> any().
 update_dispatch_map(MultiFnVar, Fun, Args) ->

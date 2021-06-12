@@ -236,3 +236,14 @@
     (is (ifn? (get-method simple3 'qualified/symbol)))
     (is (= 'qualified/symbol ((get-method simple3 'qualified/symbol) 1)))
     (is (nil? (get-method simple3 :c)))))
+
+(deftest get-dispatch-fn-test
+  (testing "The dispatch function can be retrieved from the method's metadata"
+    (defmulti simple4 identity)
+    (defmethod simple4 :a [x] :a)
+    (defmethod simple4 :b [x] :b)
+    (let [dispatch-fn-var (-> simple4 meta :dispatch-fn-var)
+          dispatch-fn (clj_multimethod/get_dispatch_fun simple4)]
+      (is (var? dispatch-fn-var))
+      (is (ifn? dispatch-fn))
+      (is (= identity dispatch-fn)))))
