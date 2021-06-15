@@ -11,7 +11,8 @@
 (ns ^{:doc "Top-level main function for Clojure REPL and scripts."
        :author "Stephen C. Gilardi and Rich Hickey"}
   clojure.main
-  (:refer-clojure :exclude [with-bindings]))
+  (:refer-clojure :exclude [with-bindings])
+  (:require [clojure.spec.alpha]))
 
 (declare main)
 
@@ -123,7 +124,7 @@
   *compile-protocols-path* *command-line-args* *1 *2 *3 *e *stacktrace"
   [& body]
   `(with-open [w# (erlang.io.StringWriter.)]
-    (binding [*ns* *ns*
+     (binding [*ns* *ns*
                *print-meta* *print-meta*
                *print-length* *print-length*
                *print-level* *print-level*
@@ -136,6 +137,7 @@
                *compile-protocols-path* (compile-protocols-path)
                *command-line-args* *command-line-args*
                *assert* *assert*
+               clojure.spec.alpha/*explain-out* clojure.spec.alpha/*explain-out*
                *in* (new erlang.io.PushbackReader (InputReaderBuffer. *in* w#))
                *1 nil
                *2 nil
