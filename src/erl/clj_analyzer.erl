@@ -355,12 +355,13 @@ maybe_inline(Op, List, Env0) ->
 -spec is_inline(any(), integer()) -> ?NIL | 'clojerl.List':type().
 is_inline(Meta, Arity) ->
   Inline = clj_rt:get(Meta, inline),
-  InlineArities = clj_rt:get(Meta, 'inline-arities'),
+  InlineArities0 = clj_rt:get(Meta, 'inline-arities'),
+  InlineArities1 = clj_module:replace_vars(InlineArities0, true),
   case Inline of
     ?NIL ->
       ?NIL;
-    Inline when InlineArities =/= ?NIL ->
-      Result = clj_rt:apply(InlineArities, [Arity]),
+    _ when InlineArities1 =/= ?NIL ->
+      Result = clj_rt:apply(InlineArities1, [Arity]),
       case clj_rt:boolean(Result) of
         true  -> Inline;
         false -> ?NIL
@@ -1328,10 +1329,11 @@ eval_var_meta(Var, Env) ->
   Env1           = analyze_form(VarMeta0, Env),
   {Exprs, _Env2} = clj_emitter:emit(Env1),
   VarMeta1       = clj_compiler:eval_expressions(Exprs, true),
+  VarMeta2       = clj_module:replace_vars(VarMeta1, false),
 
-  assert_only_literals(Var, VarMeta1, Env),
+  assert_only_literals(Var, VarMeta2, Env),
 
-  'clojerl.Var':with_meta(Var, VarMeta1).
+  'clojerl.Var':with_meta(Var, VarMeta2).
 
 -spec assert_only_literals('clojerl.Var':type(), any(), clj_env:env()) -> any().
 assert_only_literals(Var, Value, Env) ->

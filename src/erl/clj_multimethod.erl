@@ -156,8 +156,7 @@ var_meta(MultiFnVar, Key) ->
 
 -spec dispatch_map('clojerl.Var':type()) -> any().
 dispatch_map(MultiFnVar) ->
-  DispatchMapVar = var_meta(MultiFnVar, ?DISPATCH_MAP_VAR),
-  'clojerl.Var':deref('clojerl.Var':fake_fun(DispatchMapVar, false)).
+  'clojerl.Var':deref(var_meta(MultiFnVar, ?DISPATCH_MAP_VAR)).
 
 -spec generate_module('clojerl.Var':type(), any()) -> ok.
 generate_module(MultiFnSym, Map) ->

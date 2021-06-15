@@ -27,6 +27,7 @@
 
         , fake_fun/3
         , replace_calls/2
+        , replace_vars/2
 
         , add_mappings/2
         , add_alias/3
@@ -488,21 +489,25 @@ replace_calls(Ast, _Module, _FA) when is_map(Ast) ->
 replace_calls(Ast, _Module, _FA) ->
   Ast.
 
-%% @doc Adds the fake_fun flag to literal vars
 -spec replace_vars(T) -> T when T :: any().
-replace_vars(#{?TYPE := 'clojerl.Var'} = Var0) ->
-  'clojerl.Var':fake_fun(Var0, true);
-replace_vars(Map) when is_map(Map) ->
+replace_vars(X) ->
+  replace_vars(X, true).
+
+%% @doc Adds the fake_fun flag to literal vars
+-spec replace_vars(T, boolean()) -> T when T :: any().
+replace_vars(#{?TYPE := 'clojerl.Var'} = Var0, IsFakeFun) ->
+  'clojerl.Var':fake_fun(Var0, IsFakeFun);
+replace_vars(Map, IsFakeFun) when is_map(Map) ->
   Fun = fun(K0, V0, Acc) ->
-            {K1, V1} = replace_vars({K0, V0}),
+            {K1, V1} = replace_vars({K0, V0}, IsFakeFun),
             Acc#{K1 => V1}
         end,
   maps:fold(Fun, #{}, Map);
-replace_vars(X) when is_tuple(X) ->
-  list_to_tuple(replace_vars(tuple_to_list(X)));
-replace_vars(X) when is_list(X) ->
-  [replace_vars(Item) || Item <- X];
-replace_vars(X) ->
+replace_vars(X, IsFakeFun) when is_tuple(X) ->
+  list_to_tuple(replace_vars(tuple_to_list(X), IsFakeFun));
+replace_vars(X, IsFakeFun) when is_list(X) ->
+  [replace_vars(Item, IsFakeFun) || Item <- X];
+replace_vars(X, _IsFakeFun) ->
   X.
 
 -spec fake_fun_call( [term()]
