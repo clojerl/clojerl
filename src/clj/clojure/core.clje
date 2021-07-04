@@ -6385,3 +6385,8 @@
              elapsed# (int (/ (- end# start#) 1000000))]
          (~print-fn (str ~bs-str ", " ~expr-str ", "
                       ~iterations " runs, " elapsed# " msecs"))))))
+
+;; This has to be done once clojure.core is loaded and avaiable
+;; because clojure.spec.alpha relies on clojure.core
+(erl-on-load*
+  (clojerl_app/load_check_specs))

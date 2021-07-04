@@ -29,6 +29,9 @@
 %% Annotation used in detect emitted calls to locals functions
 -define(LOCAL, local).
 
+%% Environment to enable checking specs for macros
+-define(CHECK_SPECS, 'clojure.core.check-specs').
+
 %%------------------------------------------------------------------------------
 %% Reader constants
 %%------------------------------------------------------------------------------

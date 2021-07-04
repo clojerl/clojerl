@@ -4,7 +4,6 @@
 %% languages.
 -module(clojerl).
 
--include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
 -export([ start/0
@@ -12,9 +11,6 @@
         , var/1
         , var/2
         ]).
-
--define(APP, clojerl).
--define(STICKY_MODULES, ['clojure.core']).
 
 %% @doc Starts the `clojerl' OTP application.
 -spec start() -> ok.
