@@ -53,7 +53,7 @@ repl: compile
 	${V} ${RLWRAP} ${CLOJERL} -r
 
 docs:
-	rebar3 docs
+	rebar3 as docs docs
 
 # ------------------------------------------------------------------------------
 # Clojure Benchmarks
