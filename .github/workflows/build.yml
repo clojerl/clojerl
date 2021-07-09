@@ -5,7 +5,7 @@ on:
       - opened
       - synchronize
 jobs:
-  build:
+  linux:
     strategy:
       matrix:
         platform: [ubuntu-latest]
@@ -36,6 +36,26 @@ jobs:
       run: make ci
     - name: Generate Documentation
       run: make docs
+    - name: Publish Documentation
+      uses: actions/upload-artifact@v1
+      with:
+        name: docs
+        path: doc
+  windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Erlang
+      run: choco install -y erlang --version 22.3
+    - name: Install rebar3
+      run: choco install -y rebar3 --version 3.13.1
+    - name: Compile
+      run: bash -lc "make"
+    - name: Compile, Test and Validate
+      run: bash -lc "make ci"
+    - name: Generate Documentation
+      run: bash -lc "make docs"
     - name: Publish Documentation
       uses: actions/upload-artifact@v1
       with:
