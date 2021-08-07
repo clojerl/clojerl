@@ -1477,7 +1477,7 @@
             hierarchy (get options :hierarchy #'global-hierarchy)
             mm-init   (clj_multimethod/init mm-name)
             dispatch-map-name (:dispatch-map-name mm-init)
-            dispatch-fn-name (:dispatch-fn-name mm-init)
+            dispatch-fn-name (-> mm-init :dispatch-fn-name name symbol)
             mm-name   (with-meta mm-name (clj_rt/merge #erl(m (:init-meta mm-init))))]
         (check-valid-options options :default :hierarchy)
         `(do
