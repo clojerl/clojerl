@@ -35,7 +35,7 @@ jobs:
     - name: Compile Native
       run: make clean compile-native
     - name: Generate Documentation
-      run: rebar3 docs
+      run: make docs
     - name: Publish Documentation
       uses: actions/upload-artifact@v1
       with:
