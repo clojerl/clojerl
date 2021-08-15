@@ -53,7 +53,9 @@
   [&form &env interfaces methods]
   (let [reify-name (symbol (str "reify__"
                                 (erlang/unique_integer #erl(:positive))))
-        locals-names (map :name (clj_env/get_locals &env))
+        locals-names-hint (-> &form first meta :locals)
+        locals-names (or locals-names-hint
+                         (map :name (clj_env/get_locals &env)))
         meta-name (gensym "meta__")
         meta-arg (gensym "meta-arg__")
         fields (cons meta-name locals-names)
