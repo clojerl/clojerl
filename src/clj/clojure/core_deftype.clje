@@ -390,7 +390,10 @@
                                 (erlang/unique_integer #erl(:positive))))
         locals-names-hint (-> &form first meta :locals)
         locals-names (or locals-names-hint
-                         (map :name (clj_env/get_locals &env)))
+                         (->> (clj_env/get_locals &env)
+                              ;; exclude references to vars
+                              (filter #(not= :var (:op %)))
+                              (map :name)))
         meta-name (gensym "meta__")
         meta-arg (gensym "meta-arg__")
         fields (cons meta-name locals-names)
