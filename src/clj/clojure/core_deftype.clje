@@ -49,95 +49,6 @@
       (throw (clojerl.BadArgumentError. (apply print-str "Unsupported option(s) -" bad-opts))))
     [interfaces methods opts]))
 
-(defn- emit-reify
-  [&form &env interfaces methods]
-  (let [reify-name (symbol (str "reify__"
-                                (erlang/unique_integer #erl(:positive))))
-        locals-names-hint (-> &form first meta :locals)
-        locals-names (or locals-names-hint
-                         (map :name (clj_env/get_locals &env)))
-        meta-name (gensym "meta__")
-        meta-arg (gensym "meta-arg__")
-        fields (cons meta-name locals-names)
-        hash-value (hash (erlang/make_ref))
-        str-value (str  "#<reify " hash-value">")
-        m (meta &form)]
-    (letfn [(ihash [[i m]]
-                [(conj i 'clojerl.IHash)
-                 (conj m
-                       `(~'hash [this#] ~hash-value))])
-            (imeta [[i m]]
-              [(conj i 'clojerl.IMeta)
-               (conj m
-                     `(~'meta [this#] ~meta-name)
-                     `(~'with_meta [this# ~meta-arg] (new ~reify-name ~@(replace {meta-name meta-arg} fields))))])
-            (istr [[i m]]
-                [(conj i 'clojerl.IStringable)
-                 (conj m
-                       `(~'str [this#] ~str-value))])]
-      (let [[interfaces methods] (-> [interfaces methods] ihash imeta istr)]
-        `(do
-           (deftype ~reify-name [~@fields]
-             ~@interfaces
-             ~@methods)
-           (new ~reify-name ~@(cons m locals-names)))))))
-
-(defmacro reify
-  "reify is a macro with the following structure:
-
- (reify options* specs*)
-
-  Currently there are no options.
-
-  Each spec consists of the protocol or interface name followed by zero
-  or more method bodies:
-
-  protocol
-  (methodName [args+] body)*
-
-  Methods should be supplied for all methods of the desired
-  protocol(s) and interface(s). You can also define overrides for
-  methods of Object. Note that the first parameter must be supplied to
-  correspond to the target object ('this' in Java parlance). Thus
-  methods for interfaces will take one more argument than do the
-  interface declarations.  Note also that recur calls to the method
-  head should *not* pass the target object, it will be supplied
-  automatically and can not be substituted.
-
-  The return type can be indicated by a type hint on the method name,
-  and arg types can be indicated by a type hint on arg names. If you
-  leave out all hints, reify will try to match on same name/arity
-  method in the protocol(s)/interface(s) - this is preferred. If you
-  supply any hints at all, no inference is done, so all hints (or
-  default of Object) must be correct, for both arguments and return
-  type. If a method is overloaded in a protocol/interface, multiple
-  independent method definitions must be supplied.  If overloaded with
-  same arity in an interface you must specify complete hints to
-  disambiguate - a missing hint implies Object.
-
-  recur works to method heads The method bodies of reify are lexical
-  closures, and can refer to the surrounding local scope:
-
-  (str (let [f \"foo\"]
-       (reify clojerl.IStringable
-         (str [this] f))))
-  == \"foo\"
-
-  (seq (let [f \"foo\"]
-       (reify clojerl.Seqable
-         (seq [this] (seq f)))))
-  == (\\f \\o \\o))
-
-  reify always implements clojure.lang.IObj and transfers meta
-  data of the form to the created object.
-
-  (meta ^{:k :v} (reify Object (toString [this] \"foo\")))
-  == {:k :v}"
-  {:added "1.2"}
-  [& opts+specs]
-  (let [[interfaces methods] (parse-opts+specs opts+specs)]
-    (emit-reify &form &env interfaces methods)))
-
 (defn- imap-cons
   [this o]
   (cond
@@ -471,8 +382,94 @@
        ~(emit-deftype* name gname (vec hinted-fields) (vec interfaces) methods opts)
        (import ~typename)
        ~(build-positional-factory gname typename fields)
-       ;; Types are not reified so we just return the symbol.
-       '~typename)))
+       ~typename)))
+
+(defn- emit-reify
+  [&form &env interfaces methods]
+  (let [reify-name (symbol (str "reify__"
+                                (erlang/unique_integer #erl(:positive))))
+        locals-names-hint (-> &form first meta :locals)
+        locals-names (or locals-names-hint
+                         (map :name (clj_env/get_locals &env)))
+        meta-name (gensym "meta__")
+        meta-arg (gensym "meta-arg__")
+        fields (cons meta-name locals-names)
+        hash-value (hash (erlang/make_ref))
+        str-value (str  "#<reify " hash-value">")
+        m (meta &form)]
+    (letfn [(ihash [[i m]]
+                [(conj i 'clojerl.IHash)
+                 (conj m
+                       `(~'hash [this#] ~hash-value))])
+            (imeta [[i m]]
+              [(conj i 'clojerl.IMeta)
+               (conj m
+                     `(~'meta [this#] ~meta-name)
+                     `(~'with_meta [this# ~meta-arg] (new ~reify-name ~@(replace {meta-name meta-arg} fields))))])
+            (istr [[i m]]
+                [(conj i 'clojerl.IStringable)
+                 (conj m
+                       `(~'str [this#] ~str-value))])]
+      (let [[interfaces methods] (-> [interfaces methods] ihash imeta istr)]
+        `(do
+           ~(emit-deftype* reify-name reify-name fields interfaces methods {})
+           (new ~reify-name ~@(cons m locals-names)))))))
+
+(defmacro reify
+  "reify is a macro with the following structure:
+
+ (reify options* specs*)
+
+  Currently there are no options.
+
+  Each spec consists of the protocol or interface name followed by zero
+  or more method bodies:
+
+  protocol
+  (methodName [args+] body)*
+
+  Methods should be supplied for all methods of the desired
+  protocol(s) and interface(s). You can also define overrides for
+  methods of Object. Note that the first parameter must be supplied to
+  correspond to the target object ('this' in Java parlance). Thus
+  methods for interfaces will take one more argument than do the
+  interface declarations.  Note also that recur calls to the method
+  head should *not* pass the target object, it will be supplied
+  automatically and can not be substituted.
+
+  The return type can be indicated by a type hint on the method name,
+  and arg types can be indicated by a type hint on arg names. If you
+  leave out all hints, reify will try to match on same name/arity
+  method in the protocol(s)/interface(s) - this is preferred. If you
+  supply any hints at all, no inference is done, so all hints (or
+  default of Object) must be correct, for both arguments and return
+  type. If a method is overloaded in a protocol/interface, multiple
+  independent method definitions must be supplied.  If overloaded with
+  same arity in an interface you must specify complete hints to
+  disambiguate - a missing hint implies Object.
+
+  recur works to method heads The method bodies of reify are lexical
+  closures, and can refer to the surrounding local scope:
+
+  (str (let [f \"foo\"]
+       (reify clojerl.IStringable
+         (str [this] f))))
+  == \"foo\"
+
+  (seq (let [f \"foo\"]
+       (reify clojerl.Seqable
+         (seq [this] (seq f)))))
+  == (\\f \\o \\o))
+
+  reify always implements clojure.lang.IObj and transfers meta
+  data of the form to the created object.
+
+  (meta ^{:k :v} (reify Object (toString [this] \"foo\")))
+  == {:k :v}"
+  {:added "1.2"}
+  [& opts+specs]
+  (let [[interfaces methods] (parse-opts+specs opts+specs)]
+    (emit-reify &form &env interfaces methods)))
 
 ;;;;;;;;;;;;;;;;;;;;;;; protocols ;;;;;;;;;;;;;;;;;;;;;;;;
 
