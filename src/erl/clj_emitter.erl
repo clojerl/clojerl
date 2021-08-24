@@ -1122,15 +1122,16 @@ ast(#{op := on_load} = Expr, State) ->
    , env  := Env
    } = Expr,
 
-  {Ast, State1} = pop_ast(ast(BodyExpr, State)),
+  {Ast0, State1} = pop_ast(ast(BodyExpr, State)),
 
   CurrentNs  = 'clojerl.Namespace':current(),
   NameSym    = 'clojerl.Namespace':name(CurrentNs),
   ModuleName = to_atom(NameSym),
   ok         = clj_module:ensure_loaded(file_from(Env), ModuleName),
-  clj_module:add_on_load(Ast, ModuleName),
+  Ast1       = clj_module:replace_remote_calls(Ast0, ModuleName),
+  clj_module:add_on_load(Ast1, ModuleName),
 
-  push_ast(Ast, State1);
+  push_ast(Ast0, State1);
 %%------------------------------------------------------------------------------
 %% Erlang binary
 %%------------------------------------------------------------------------------

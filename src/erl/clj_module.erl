@@ -27,6 +27,7 @@
 
         , fake_fun/3
         , replace_calls/2
+        , replace_remote_calls/2
         , replace_vars/2
 
         , add_mappings/2
@@ -489,6 +490,37 @@ replace_calls(Ast, _Module, _FA) when is_map(Ast) ->
 replace_calls(Ast, _Module, _FA) ->
   Ast.
 
+-spec replace_remote_calls( cerl:cerl()
+                          | [cerl:cerl()]
+                          | {cerl:cerl(), cerl:cerl()}
+                          , module()
+                          ) ->
+  cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
+replace_remote_calls( #c_call{ module = ModuleAst
+                             , name   = FunctionAst
+                             , args   = ArgsAsts
+                             , anno   = Ann
+                             }
+                    , CurrentModule
+                    ) ->
+  case cerl:concrete(ModuleAst) of
+    CurrentModule  ->
+      ArgsAsts1 = replace_remote_calls(ArgsAsts, CurrentModule),
+      Name      = cerl:concrete(FunctionAst),
+      Arity     = length(ArgsAsts),
+      OpAst     = cerl:ann_c_fname(Ann, Name, Arity),
+      cerl:ann_c_apply(Ann, OpAst, ArgsAsts1);
+    _ ->
+      ArgsAsts1 = replace_remote_calls(ArgsAsts, CurrentModule),
+      cerl:ann_c_call(Ann, ModuleAst, FunctionAst, ArgsAsts1)
+  end;
+replace_remote_calls(Ast, Module) when is_tuple(Ast) ->
+  list_to_tuple(replace_remote_calls(tuple_to_list(Ast), Module));
+replace_remote_calls(Asts, Module) when is_list(Asts) ->
+  [replace_remote_calls(Item, Module) || Item <- Asts];
+replace_remote_calls(Ast, _Module) ->
+  Ast.
+
 -spec replace_vars(T) -> T when T :: any().
 replace_vars(X) ->
   replace_vars(X, true).
@@ -532,7 +564,6 @@ fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
   ApplyAst = cerl:ann_c_apply(Ann, VarAst, Args1),
 
   cerl:ann_c_let(Ann, [VarAst], CallAst, ApplyAst).
-
 
 %% @private
 -spec build_fake_fun(atom(), integer(), clj_module()) -> function().
