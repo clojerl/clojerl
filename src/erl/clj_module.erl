@@ -286,7 +286,8 @@ add_on_load(_, ?NIL) -> error(badarg);
 add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
   add_on_load(Expr, fetch_module(ModuleName));
 add_on_load(Expr, Module) ->
-  clj_utils:ets_save(Module#module.on_load, {Expr, Expr}),
+  Index = erlang:unique_integer([monotonic]),
+  clj_utils:ets_save(Module#module.on_load, {Index, Expr}),
   Module.
 
 %% @doc Checks if the `Name' module is a Clojerl module.
@@ -724,7 +725,7 @@ maybe_on_load(OnLoadTable, Name, Exports0, Attrs0, Defs0) ->
 %% @private
 -spec on_load_function(ets:tid()) -> empty | cerl:cerl().
 on_load_function(OnLoadTable) ->
-  [Head | Tail] = [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)],
+  [Head | Tail] = [Expr || {_, Expr} <- lists:sort(ets:tab2list(OnLoadTable))],
   SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
   Body   = lists:foldl(SeqFun, Head, Tail),
   cerl:c_fun([], cerl:c_seq(Body, cerl:c_atom(ok))).
