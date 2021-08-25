@@ -141,12 +141,9 @@ safe_macroexpand_1(Form, Env) ->
     Location = error_location(Form, Env),
     case 'clojerl.IError':?SATISFIES(Error0) of
       true ->
-        Msg   = 'clojerl.IError':message(Error0),
-        Type  = clj_rt:type_module(Error0),
-        Error = apply( Type
-                     , ?CONSTRUCTOR
-                     , [clj_utils:format_error(Msg, Location)]
-                     ),
+        Message0 = 'clojerl.IError':message(Error0),
+        Message  = clj_utils:format_error(Message0, Location),
+        Error    = 'clojerl.IError':message(Error0, Message),
         erlang:raise(error, Error, Stacktrace);
       false ->
         ?ERROR(clj_rt:str(Error0), Location, Stacktrace)

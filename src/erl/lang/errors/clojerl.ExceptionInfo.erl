@@ -8,10 +8,12 @@
 -behavior('clojerl.IHash').
 -behavior('clojerl.IStringable').
 
--export([?CONSTRUCTOR/1, ?CONSTRUCTOR/2, ?CONSTRUCTOR/3]).
+-export([?CONSTRUCTOR/2, ?CONSTRUCTOR/3]).
 
 -export([equiv/2]).
--export([message/1]).
+-export([ message/1
+        , message/2
+        ]).
 -export([ data/1
         , cause/1
         ]).
@@ -23,10 +25,6 @@
                  , data    => any()
                  , cause   => any()
                  }.
-
--spec ?CONSTRUCTOR(binary()) -> type().
-?CONSTRUCTOR(Message) when is_binary(Message) ->
-  ?CONSTRUCTOR(Message, {}, ?NIL).
 
 -spec ?CONSTRUCTOR(binary(), any()) -> type().
 ?CONSTRUCTOR(Message, Data) when is_binary(Message) ->
@@ -60,6 +58,9 @@ equiv(_, _) ->
 
 message(#{?TYPE := ?M, message := Msg}) ->
   Msg.
+
+message(#{?TYPE := ?M} = ExInfo, Msg) ->
+  ExInfo#{message := Msg}.
 
 %% clojerl.IExceptionInfo
 

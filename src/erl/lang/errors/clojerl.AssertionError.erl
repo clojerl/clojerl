@@ -10,7 +10,9 @@
 -export([?CONSTRUCTOR/1]).
 
 -export([equiv/2]).
--export([message/1]).
+-export([ message/1
+        , message/2
+        ]).
 -export([hash/1]).
 -export([str/1]).
 
@@ -39,6 +41,9 @@ equiv(_, _) ->
 
 message(#{?TYPE := ?M, message := Message}) ->
   Message.
+
+message(#{?TYPE := ?M} = Error, Msg) ->
+  Error#{message := Msg}.
 
 %% clojerl.IHash
 
