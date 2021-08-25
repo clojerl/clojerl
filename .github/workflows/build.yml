@@ -32,8 +32,6 @@ jobs:
           ${{ runner.os }}-dialyzer-
     - name: Compile, Test and Validate
       run: make ci
-    - name: Compile Native
-      run: make clean compile-native
     - name: Generate Documentation
       run: make docs
     - name: Publish Documentation
