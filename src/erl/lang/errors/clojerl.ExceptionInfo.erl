@@ -11,7 +11,9 @@
 -export([?CONSTRUCTOR/2, ?CONSTRUCTOR/3]).
 
 -export([equiv/2]).
--export([message/1]).
+-export([ message/1
+        , message/2
+        ]).
 -export([ data/1
         , cause/1
         ]).
@@ -56,6 +58,9 @@ equiv(_, _) ->
 
 message(#{?TYPE := ?M, message := Msg}) ->
   Msg.
+
+message(#{?TYPE := ?M} = ExInfo, Msg) ->
+  ExInfo#{message := Msg}.
 
 %% clojerl.IExceptionInfo
 

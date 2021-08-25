@@ -10,20 +10,27 @@
 -export([?CONSTRUCTOR/2]).
 
 -export([equiv/2]).
--export([message/1]).
+-export([ message/1
+        , message/2
+        ]).
 -export([hash/1]).
 -export([str/1]).
 
 -type type() :: #{ ?TYPE  => ?M
                  , actual => arity()
+                 , message => binary()
                  , name   => binary()
                  }.
 
 -spec ?CONSTRUCTOR(arity(), binary()) -> type().
 ?CONSTRUCTOR(Arity, Name) when is_integer(Arity), is_binary(Name) ->
-  #{ ?TYPE  => ?M
-   , actual => Arity
-   , name   => Name
+  ArityBin = integer_to_binary(Arity),
+  Message  = <<"Wrong number of args (", ArityBin/binary, ") ",
+               "passed to: ", Name/binary>>,
+  #{ ?TYPE   => ?M
+   , actual  => Arity
+   , message => Message
+   , name    => Name
    }.
 
 %%------------------------------------------------------------------------------
@@ -39,9 +46,11 @@ equiv(_, _) ->
 
 %% clojerl.IError
 
-message(#{?TYPE := ?M, actual := Actual, name := Name}) ->
-  ActualBin = integer_to_binary(Actual),
-  <<"Wrong number of args (", ActualBin/binary, ") passed to: ", Name/binary>>.
+message(#{?TYPE := ?M, message := Message}) ->
+  Message.
+
+message(#{?TYPE := ?M} = Error, Msg) ->
+  Error#{message := Msg}.
 
 %% clojerl.IHash
 

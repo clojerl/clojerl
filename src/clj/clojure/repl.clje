@@ -11,7 +11,8 @@
 (ns
   ^{:author "Chris Houser, Christophe Grand, Stephen Gilardi, Michel Salim"
     :doc "Utilities meant to be used interactively at the REPL"}
-  clojure.repl)
+  clojure.repl
+  (:require [clojure.spec.alpha :as spec]))
 
 (def ^:private special-doc-map
   '{. {:url "erlang_interop#dot"
@@ -100,7 +101,13 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     (println "Macro")
     spec
     (println "Spec"))
-  (when doc (println " " doc)))
+  (when doc (println " " doc))
+  (when n
+    (when-let [fnspec (spec/get-spec (symbol (str (ns-name n)) (name nm)))]
+      (println "Spec")
+      (doseq [role [:args :ret :fn]]
+        (when-let [spec (get fnspec role)]
+          (println " " (str (name role) ":") (spec/describe spec)))))))
 
 (defn find-doc
   "Prints documentation for any var whose documentation or name
@@ -127,7 +134,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     `(#'print-doc (#'special-doc '~special-name))
     (cond
       (special-doc-map name) `(#'print-doc (#'special-doc '~name))
-      ;; (keyword? name) `(#'print-doc {:spec '~name :doc '~(spec/describe name)})
+      (keyword? name) `(#'print-doc {:spec '~name :doc '~(spec/describe name)})
       (find-ns name) `(#'print-doc (#'namespace-doc (find-ns '~name)))
       (resolve name) `(#'print-doc (meta (var ~name))))))
 

@@ -7,12 +7,13 @@
 -clojure(true).
 -protocol(true).
 
--export(['message'/1]).
+-export(['message'/1, 'message'/2]).
 -export([?SATISFIES/1]).
 -export([?EXTENDS/1]).
 
 -callback 'message'(any()) -> any().
--optional_callbacks(['message'/1]).
+-callback 'message'(any(), any()) -> any().
+-optional_callbacks(['message'/1, 'message'/2]).
 
 'message'(Error) ->
   case Error of
@@ -30,6 +31,34 @@
       'clojerl.IOError':'message'(Error);
     #{?TYPE := 'clojerl.IllegalAccessError'} ->
       'clojerl.IllegalAccessError':'message'(Error);
+    #{?TYPE := _} ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error);
+    X_ when erlang:is_binary(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error);
+    X_ when erlang:is_boolean(X_) ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error);
+    ?NIL ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error);
+    _ ->
+      clj_protocol:not_implemented(?MODULE, 'message', Error)
+  end.
+
+'message'(Error, Message) ->
+  case Error of
+    #{?TYPE := 'clojerl.ArityError'} ->
+      'clojerl.ArityError':'message'(Error, Message);
+    #{?TYPE := 'clojerl.AssertionError'} ->
+      'clojerl.AssertionError':'message'(Error, Message);
+    #{?TYPE := 'clojerl.BadArgumentError'} ->
+      'clojerl.BadArgumentError':'message'(Error, Message);
+    #{?TYPE := 'clojerl.Error'} ->
+      'clojerl.Error':'message'(Error, Message);
+    #{?TYPE := 'clojerl.ExceptionInfo'} ->
+      'clojerl.ExceptionInfo':'message'(Error, Message);
+    #{?TYPE := 'clojerl.IOError'} ->
+      'clojerl.IOError':'message'(Error, Message);
+    #{?TYPE := 'clojerl.IllegalAccessError'} ->
+      'clojerl.IllegalAccessError':'message'(Error, Message);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'message', Error);
     X_ when erlang:is_binary(X_) ->

@@ -635,7 +635,7 @@
       `(do
          (def ~(vary-meta name assoc :test (list 'quote test-var-name))
            (fn [] (test-var (var ~name))))
-         (defn- ~test-var-name [] ~@body)))))
+         (defn- ~(-> test-var-name clojure.core/name symbol) [] ~@body)))))
 
 (defmacro deftest-
   "Like deftest but creates a private var."

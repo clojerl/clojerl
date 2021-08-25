@@ -13,43 +13,43 @@
 
 (deftest fn-error-checking
   (testing "bad arglist"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration a should be a vector"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn "a" a)))))
 
   (testing "treat first param as args"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration a should be a vector"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn "a" [])))))
 
   (testing "looks like listy signature, but malformed declaration"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration 1 should be a vector"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn (1))))))
 
   (testing "checks each signature"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration a should be a vector"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn
                    ([a] 1)
                    ("a" 2))))))
 
   (testing "correct name but invalid args"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration a should be a vector"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn a "a")))))
 
   (testing "first sig looks multiarity, rest of sigs should be lists"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Invalid signature \"\[a b\]\" should be a list"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn a
                    ([a] 1)
                    [a b])))))
 
   (testing "missing parameter declaration"
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration missing"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn a))))
-    (is (thrown-with-msg? clojerl.BadArgumentError
-          #"Parameter declaration missing"
+    (is (thrown-with-msg? clojerl.ExceptionInfo
+          #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn))))))

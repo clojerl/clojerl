@@ -27,6 +27,7 @@
 
         , fake_fun/3
         , replace_calls/2
+        , replace_remote_calls/2
         , replace_vars/2
 
         , add_mappings/2
@@ -285,7 +286,8 @@ add_on_load(_, ?NIL) -> error(badarg);
 add_on_load(Expr, ModuleName) when is_atom(ModuleName) ->
   add_on_load(Expr, fetch_module(ModuleName));
 add_on_load(Expr, Module) ->
-  clj_utils:ets_save(Module#module.on_load, {Expr, Expr}),
+  Index = erlang:unique_integer([monotonic]),
+  clj_utils:ets_save(Module#module.on_load, {Index, Expr}),
   Module.
 
 %% @doc Checks if the `Name' module is a Clojerl module.
@@ -489,6 +491,37 @@ replace_calls(Ast, _Module, _FA) when is_map(Ast) ->
 replace_calls(Ast, _Module, _FA) ->
   Ast.
 
+-spec replace_remote_calls( cerl:cerl()
+                          | [cerl:cerl()]
+                          | {cerl:cerl(), cerl:cerl()}
+                          , module()
+                          ) ->
+  cerl:cerl() | [cerl:cerl()] | {cerl:cerl(), cerl:cerl()}.
+replace_remote_calls( #c_call{ module = ModuleAst
+                             , name   = FunctionAst
+                             , args   = ArgsAsts
+                             , anno   = Ann
+                             }
+                    , CurrentModule
+                    ) ->
+  case cerl:concrete(ModuleAst) of
+    CurrentModule  ->
+      ArgsAsts1 = replace_remote_calls(ArgsAsts, CurrentModule),
+      Name      = cerl:concrete(FunctionAst),
+      Arity     = length(ArgsAsts),
+      OpAst     = cerl:ann_c_fname(Ann, Name, Arity),
+      cerl:ann_c_apply(Ann, OpAst, ArgsAsts1);
+    _ ->
+      ArgsAsts1 = replace_remote_calls(ArgsAsts, CurrentModule),
+      cerl:ann_c_call(Ann, ModuleAst, FunctionAst, ArgsAsts1)
+  end;
+replace_remote_calls(Ast, Module) when is_tuple(Ast) ->
+  list_to_tuple(replace_remote_calls(tuple_to_list(Ast), Module));
+replace_remote_calls(Asts, Module) when is_list(Asts) ->
+  [replace_remote_calls(Item, Module) || Item <- Asts];
+replace_remote_calls(Ast, _Module) ->
+  Ast.
+
 -spec replace_vars(T) -> T when T :: any().
 replace_vars(X) ->
   replace_vars(X, true).
@@ -532,7 +565,6 @@ fake_fun_call(Ann, CurrentModule, ModuleAst, FunctionAst, ArgsAsts) ->
   ApplyAst = cerl:ann_c_apply(Ann, VarAst, Args1),
 
   cerl:ann_c_let(Ann, [VarAst], CallAst, ApplyAst).
-
 
 %% @private
 -spec build_fake_fun(atom(), integer(), clj_module()) -> function().
@@ -693,7 +725,7 @@ maybe_on_load(OnLoadTable, Name, Exports0, Attrs0, Defs0) ->
 %% @private
 -spec on_load_function(ets:tid()) -> empty | cerl:cerl().
 on_load_function(OnLoadTable) ->
-  [Head | Tail] = [Expr || {_, Expr} <- ets:tab2list(OnLoadTable)],
+  [Head | Tail] = [Expr || {_, Expr} <- lists:sort(ets:tab2list(OnLoadTable))],
   SeqFun = fun(X, Acc) -> cerl:c_seq(Acc, X) end,
   Body   = lists:foldl(SeqFun, Head, Tail),
   cerl:c_fun([], cerl:c_seq(Body, cerl:c_atom(ok))).

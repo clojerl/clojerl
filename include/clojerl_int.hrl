@@ -29,6 +29,9 @@
 %% Annotation used in detect emitted calls to locals functions
 -define(LOCAL, local).
 
+%% Environment to enable checking specs for macros
+-define(CHECK_SPECS, 'clojure.core.check-specs').
+
 %%------------------------------------------------------------------------------
 %% Reader constants
 %%------------------------------------------------------------------------------
@@ -72,6 +75,8 @@
 -define(DEBUG(Term), ok).
 -define(DEBUG_WHEN(Pred, Term), ok).
 -endif.
+
+-define(TIME(X), clj_utils:time(fun() -> X end)).
 
 %%------------------------------------------------------------------------------
 %% ETS Tables

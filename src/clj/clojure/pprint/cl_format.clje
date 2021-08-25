@@ -1304,7 +1304,7 @@ not a pretty writer (which keeps track of columns), this function always outputs
 (defmacro ^{:private true}
   defdirectives
   [ & directives ]
-  `(defn- directive-table []
+  `(defn- ~'directive-table []
      (hash-map ~@(mapcat process-directive-table-element directives))))
 
 (defdirectives

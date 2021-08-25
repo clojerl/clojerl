@@ -4,7 +4,9 @@
 
 -behavior(application).
 
--export([unstick/0]).
+-include("clojerl_int.hrl").
+
+-export([unstick/0, load_check_specs/0]).
 
 -export([start/2, stop/1]).
 
@@ -31,14 +33,22 @@ unstick() ->
   [code:unstick_mod(M) || M <- ?STICKY_MODULES],
   ok.
 
+-spec load_check_specs() -> ok.
+load_check_specs() ->
+  %% Check if specs for macros should be skipped
+  SkipMacros = os:getenv("clojure.core.skip-macros", "false") =:= "true",
+  clj_cache:put(?CHECK_SPECS, not SkipMacros).
+
 %%==============================================================================
 %% Internal functions
 %%==============================================================================
 
 -spec init() -> ok.
 init() ->
+  %% Create clje.user namespace
   CljeUserSym = clj_rt:symbol(<<"clje.user">>),
   'clojure.core':'in-ns'(CljeUserSym),
+
   %% This will not be available during bootstrap
   case erlang:function_exported('clojure.core', refer, 2) of
     true ->

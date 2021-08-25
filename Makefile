@@ -17,14 +17,6 @@ all: compile
 compile:
 	${V} ${REBAR3} clojerl compile
 
-compile-native:
-	${V} if [[ ${OTP} =~ 2[^13] ]]; then \
-		echo "Compiling to native..."; \
-		ERL_COMPILER_OPTIONS="native" ${REBAR3} clojerl compile; \
-	else \
-		echo "Compiling to native not supported for Erlang/OTP ${OTP}"; \
-	fi;
-
 test-ct: clean
 	${V} ${REBAR3} do ct --cover, cover
 

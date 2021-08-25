@@ -54,6 +54,37 @@ macroexpand(Form, Env) ->
 %% Internal
 %%------------------------------------------------------------------------------
 
+-define(SPECS_LOADED, 'clojure.core.specs-loaded').
+-define(SPECS_LOADING, 'clojure.core.specs-loading').
+
+-spec ensure_specs_loaded() -> ok.
+ensure_specs_loaded() ->
+  case clj_cache:get(?SPECS_LOADED) =:= {ok, true} of
+    true ->
+      ok;
+    false ->
+      clj_cache:put(?SPECS_LOADING, true),
+      clj_rt:load(<<"clojure/spec/alpha">>),
+      clj_rt:load(<<"clojure/core/specs/alpha">>),
+      clj_cache:put(?SPECS_LOADED, true),
+      clj_cache:put(?SPECS_LOADING, false),
+      ok
+  end.
+
+-spec check_specs('clojerl.Var':type(), any()) -> ok.
+check_specs(Var, Form) ->
+  case
+    clj_cache:get(?CHECK_SPECS) =:= {ok, true}
+    andalso clj_cache:get(?SPECS_LOADING) =/= {ok, true}
+  of
+    true ->
+      ok = ensure_specs_loaded(),
+      'clojure.spec.alpha':'macroexpand-check'(Var, clj_rt:next(Form)),
+      ok;
+    false ->
+      ok
+  end.
+
 -spec is_macro('clojerl.Symbol':type(), clj_env:env()) ->
   'clojerl.Var':type() | ?NIL.
 is_macro(Symbol, Env) ->
@@ -86,6 +117,7 @@ do_macroexpand_1(Form, Env) ->
                 andalso MacroVar =/= ?NIL
               of
                 true ->
+                  check_specs(MacroVar, Form),
                   Args = clj_rt:cons( Form
                                     , clj_rt:cons( Env
                                                  , clj_rt:rest(Form)
@@ -109,12 +141,9 @@ safe_macroexpand_1(Form, Env) ->
     Location = error_location(Form, Env),
     case 'clojerl.IError':?SATISFIES(Error0) of
       true ->
-        Msg   = 'clojerl.IError':message(Error0),
-        Type  = clj_rt:type_module(Error0),
-        Error = apply( Type
-                     , ?CONSTRUCTOR
-                     , [clj_utils:format_error(Msg, Location)]
-                     ),
+        Message0 = 'clojerl.IError':message(Error0),
+        Message  = clj_utils:format_error(Message0, Location),
+        Error    = 'clojerl.IError':message(Error0, Message),
         erlang:raise(error, Error, Stacktrace);
       false ->
         ?ERROR(clj_rt:str(Error0), Location, Stacktrace)
