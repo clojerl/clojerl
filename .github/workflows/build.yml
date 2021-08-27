@@ -30,6 +30,8 @@ jobs:
         key: ${{ runner.os }}-dialyzer-${{ hashFiles(format('{0}{1}', github.workspace, '/rebar.config')) }}
         restore-keys: |
           ${{ runner.os }}-dialyzer-
+    - name: Compile
+      run: make
     - name: Compile, Test and Validate
       run: make ci
     - name: Generate Documentation
