@@ -1,9 +1,0 @@
-version: "{build}"
-image:
-  - Visual Studio 2019
-build: off
-clone_folder: c:\projects\clojerl
-install:
-  - ps: wget https://s3.amazonaws.com/rebar3/rebar3 -OutFile C:\msys64\usr\bin\rebar3
-test_script:
-  - cmd: C:\msys64\usr\bin\bash.exe --login -c "export PATH=/mingw64/bin:$PATH; cd /c/projects/clojerl; make ci"
