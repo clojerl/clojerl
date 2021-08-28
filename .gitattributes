@@ -1,1 +1,2 @@
-*.clje linguist-language=Clojure
+*.clje linguist-language=Clojure text eol=lf
+*.cljc text eol=lf
