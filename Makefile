@@ -25,7 +25,7 @@ test-clj: clean
 	${V} echo
 	${V} echo "Running test.generative tests..."
 	${V} echo
-	${V} scripts/run-test-generative test/clj
+	${V} rebar3 as test clojerl run -m clojure.test.generative.runner -- test/clj
 
 test: test-ct test-clj
 
