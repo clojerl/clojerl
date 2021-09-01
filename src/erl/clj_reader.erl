@@ -989,7 +989,7 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  ?ERROR_WHEN(erlang:get(?ARG_ENV) =/= undefined
+  ?ERROR_WHEN( erlang:get(?ARG_ENV) =/= undefined
              , <<"Nested #()s are not allowed">>
              , location(State)
              ),
@@ -1634,7 +1634,8 @@ do_consume( State = #{src := <<X/utf8, _/binary>>}
     true  ->
       State1 = consume_char(State),
       do_consume(State1, <<Acc/binary, X/utf8>>, Pred, Length - 1);
-    false -> {Acc, State}
+    false ->
+      {Acc, unread_char(State)}
   end;
 do_consume( State = #{src := <<X/utf8, Rest/binary>>}
           , Acc
@@ -1651,7 +1652,7 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
       State1 = consume_char(State),
       do_consume(State1, <<Acc/binary, X/utf8>>, Types, Length - 1);
     false ->
-      {Acc, State}
+      {Acc, unread_char(State)}
   end.
 
 -spec read_token(state()) -> {binary(), state()}.
@@ -1798,3 +1799,15 @@ check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
   end;
 check_reader(#{src := <<>>}) ->
   eof.
+
+-spec unread_char(state()) -> state().
+unread_char(#{src := <<>>} = State) ->
+  State;
+unread_char( #{ src := <<Ch/utf8, Rest/binary>>
+              , opts := #{?OPT_IO_READER := Reader}
+              } = State
+           ) ->
+  'erlang.io.IPushbackReader':unread(Reader, <<Ch/utf8>>),
+  State#{src => Rest};
+unread_char(State) ->
+  State.
