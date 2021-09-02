@@ -162,8 +162,11 @@ read_one_fold(State) ->
 read_fold_loop(Fun, ReadFun, State0) ->
   case ReadFun(State0) of
     %% Only finish when there is no more source to consume
-    #{src := <<>>, forms := [], env := Env0} ->
-      Env0;
+    #{src := <<>>, forms := [], env := Env0} = State1 ->
+      case check_reader(State1) of
+        {ok, State2} -> read_fold_loop(Fun, ReadFun, State2);
+        _ -> Env0
+      end;
     State1 = #{forms := []} ->
       read_fold_loop(Fun, ReadFun, State1);
     State1 = #{forms := [Form], env := Env0} ->
@@ -1095,7 +1098,7 @@ read_discard(#{forms := Forms, return_on := ReturnOn} = State0) ->
   %% Remove forms and return_on to avoid discarding something unintentionally.
   State1 = State0#{forms := [], return_on := ?NIL},
   {_, State2} = read_pop_one(State1),
-  %% Can't call read_one here because is might not be a top level form.
+  %% Can't call read_one here because it might not be a top level form.
   State2#{forms := Forms, return_on := ReturnOn}.
 
 %%------------------------------------------------------------------------------
