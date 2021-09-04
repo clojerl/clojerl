@@ -408,13 +408,16 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
   Keyword =
     case clj_utils:parse_symbol(Token) of
+      %% Auto-resolving keyword (e.g. ::foo)
       {?NIL, <<":", Name/binary>>} ->
         Ns    = 'clojerl.Namespace':current(),
         NsSym = 'clojerl.Namespace':name(Ns),
         Namespace = 'clojerl.Symbol':name(NsSym),
         clj_rt:keyword(Namespace, Name);
+      %% Keyword without namespace
       {?NIL, Name} ->
         clj_rt:keyword(Name);
+      %% Auto-resolving keyword with namespace (e.g. ::bar/foo)
       {<<":", Namespace/binary>>, Name} ->
         AliasSym  = clj_rt:symbol(Namespace),
         CurrentNs = 'clojerl.Namespace':current(),
@@ -424,6 +427,7 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
             NsSym = 'clojerl.Namespace':name(Ns),
             clj_rt:keyword('clojerl.Symbol':name(NsSym), Name)
         end;
+      %% Keyword with namespace
       {Namespace, Name} ->
         clj_rt:keyword(Namespace, Name);
       _ ->
