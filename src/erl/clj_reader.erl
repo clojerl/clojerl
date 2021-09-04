@@ -162,8 +162,11 @@ read_one_fold(State) ->
 read_fold_loop(Fun, ReadFun, State0) ->
   case ReadFun(State0) of
     %% Only finish when there is no more source to consume
-    #{src := <<>>, forms := [], env := Env0} ->
-      Env0;
+    #{src := <<>>, forms := [], env := Env0} = State1 ->
+      case check_reader(State1) of
+        {ok, State2} -> read_fold_loop(Fun, ReadFun, State2);
+        _ -> Env0
+      end;
     State1 = #{forms := []} ->
       read_fold_loop(Fun, ReadFun, State1);
     State1 = #{forms := [Form], env := Env0} ->
@@ -989,7 +992,7 @@ read_var(#{src := <<"'", _/binary>>} = State) ->
 
 -spec read_fn(state()) -> state().
 read_fn(State) ->
-  ?ERROR_WHEN(erlang:get(?ARG_ENV) =/= undefined
+  ?ERROR_WHEN( erlang:get(?ARG_ENV) =/= undefined
              , <<"Nested #()s are not allowed">>
              , location(State)
              ),
@@ -1095,7 +1098,7 @@ read_discard(#{forms := Forms, return_on := ReturnOn} = State0) ->
   %% Remove forms and return_on to avoid discarding something unintentionally.
   State1 = State0#{forms := [], return_on := ?NIL},
   {_, State2} = read_pop_one(State1),
-  %% Can't call read_one here because is might not be a top level form.
+  %% Can't call read_one here because it might not be a top level form.
   State2#{forms := Forms, return_on := ReturnOn}.
 
 %%------------------------------------------------------------------------------
@@ -1634,7 +1637,8 @@ do_consume( State = #{src := <<X/utf8, _/binary>>}
     true  ->
       State1 = consume_char(State),
       do_consume(State1, <<Acc/binary, X/utf8>>, Pred, Length - 1);
-    false -> {Acc, State}
+    false ->
+      {Acc, unread_char(State)}
   end;
 do_consume( State = #{src := <<X/utf8, Rest/binary>>}
           , Acc
@@ -1651,7 +1655,7 @@ do_consume( State = #{src := <<X/utf8, Rest/binary>>}
       State1 = consume_char(State),
       do_consume(State1, <<Acc/binary, X/utf8>>, Types, Length - 1);
     false ->
-      {Acc, State}
+      {Acc, unread_char(State)}
   end.
 
 -spec read_token(state()) -> {binary(), state()}.
@@ -1798,3 +1802,15 @@ check_reader(#{src := <<>>, opts := #{?OPT_IO_READER := Reader}} = State)
   end;
 check_reader(#{src := <<>>}) ->
   eof.
+
+-spec unread_char(state()) -> state().
+unread_char(#{src := <<>>} = State) ->
+  State;
+unread_char( #{ src := <<Ch/utf8, Rest/binary>>
+              , opts := #{?OPT_IO_READER := Reader}
+              } = State
+           ) ->
+  'erlang.io.IPushbackReader':unread(Reader, <<Ch/utf8>>),
+  State#{src => Rest};
+unread_char(State) ->
+  State.
