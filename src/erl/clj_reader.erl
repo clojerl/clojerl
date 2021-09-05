@@ -406,34 +406,56 @@ is_char_valid(_, _) -> false.
 -spec read_keyword(state()) -> state().
 read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
-  Keyword =
-    case clj_utils:parse_symbol(Token) of
-      %% Auto-resolving keyword (e.g. ::foo)
-      {?NIL, <<":", Name/binary>>} ->
-        Ns    = 'clojerl.Namespace':current(),
-        NsSym = 'clojerl.Namespace':name(Ns),
-        Namespace = 'clojerl.Symbol':name(NsSym),
-        clj_rt:keyword(Namespace, Name);
-      %% Keyword without namespace
-      {?NIL, Name} ->
-        clj_rt:keyword(Name);
-      %% Auto-resolving keyword with namespace (e.g. ::bar/foo)
-      {<<":", Namespace/binary>>, Name} ->
-        AliasSym  = clj_rt:symbol(Namespace),
-        CurrentNs = 'clojerl.Namespace':current(),
-        case 'clojerl.Namespace':alias(CurrentNs, AliasSym) of
-          ?NIL -> ?ERROR(<<"Invalid token: :", Token/binary>>, location(State));
-          Ns ->
-            NsSym = 'clojerl.Namespace':name(Ns),
-            clj_rt:keyword('clojerl.Symbol':name(NsSym), Name)
-        end;
-      %% Keyword with namespace
-      {Namespace, Name} ->
-        clj_rt:keyword(Namespace, Name);
-      _ ->
-        ?ERROR(<<"Invalid token: :", Token/binary>>, location(State))
-    end,
+  Keyword = case clj_utils:parse_symbol(Token) of
+              ?NIL       -> ?NIL;
+              {Ns, Name} -> parse_keyword(Ns, Name, reader_resolver())
+            end,
+
+  ?ERROR_WHEN( Keyword =:= ?NIL
+             , <<"Invalid token: :", Token/binary>>
+             , location(State)
+             ),
+
   push_form(Keyword, State).
+
+-spec parse_keyword( Ns       :: ?NIL | binary()
+                   , Name     :: ?NIL | binary()
+                   , Resolver :: ?NIL | 'clojerl.Resolver':type()
+                   ) -> Keyword :: ?NIL | atom().
+parse_keyword(?NIL, <<":", Name/binary>>, Resolver) ->
+  %% Auto-resolving keyword (e.g. ::foo)
+  NsSym = case Resolver of
+            ?NIL ->
+              Ns = 'clojerl.Namespace':current(),
+              'clojerl.Namespace':name(Ns);
+            _ ->
+              'clojerl.IResolver':current_ns(Resolver)
+          end,
+  Namespace = 'clojerl.Symbol':name(NsSym),
+  clj_rt:keyword(Namespace, Name);
+parse_keyword(?NIL, Name, _) ->
+  %% Keyword without namespace
+  clj_rt:keyword(Name);
+parse_keyword(<<":", Namespace/binary>>, Name, Resolver) ->
+  %% Auto-resolving keyword with namespace (e.g. ::bar/foo)
+  AliasSym  = clj_rt:symbol(Namespace),
+  CurrentNs = 'clojerl.Namespace':current(),
+  NsSym = case Resolver of
+            ?NIL ->
+              case 'clojerl.Namespace':alias(CurrentNs, AliasSym) of
+                ?NIL -> ?NIL;
+                Ns   -> 'clojerl.Namespace':name(Ns)
+              end;
+            _ ->
+              'clojerl.IResolver':resolve_alias(Resolver, AliasSym)
+          end,
+  case NsSym of
+    ?NIL -> ?NIL;
+    _    -> clj_rt:keyword('clojerl.Symbol':name(NsSym), Name)
+  end;
+parse_keyword(Namespace, Name, _) ->
+  %% Keyword with namespace
+  clj_rt:keyword(Namespace, Name).
 
 %%------------------------------------------------------------------------------
 %% Symbol
@@ -1818,3 +1840,7 @@ unread_char( #{ src := <<Ch/utf8, Rest/binary>>
   State#{src => Rest};
 unread_char(State) ->
   State.
+
+-spec reader_resolver() -> ?NIL | 'clojure.IResolver':type().
+reader_resolver() ->
+  'clojerl.Var':dynamic_binding(<<"#'clojure.core/*reader-resolver*">>).
