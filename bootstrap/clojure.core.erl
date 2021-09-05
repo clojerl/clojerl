@@ -183,6 +183,7 @@
                 , val_atom  => '*print-readably*__val'
                 , meta      => #{dynamic => true}
                 }
+
             , <<"*data-readers*">> =>
                #{ ?TYPE     => 'clojerl.Var'
                 , ns        => <<"clojure.core">>
@@ -210,6 +211,16 @@
                 , val_atom  => '*default-data-reader-fn*__val'
                 , meta      => #{dynamic => true}
                 }
+           , <<"*reader-resolver*">> =>
+               #{ ?TYPE     => 'clojerl.Var'
+                , ns        => <<"clojure.core">>
+                , name      => <<"*reader-resolver*">>
+                , ns_atom   => 'clojure.core'
+                , name_atom => '*reader-resolver*'
+                , val_atom  => '*reader-resolver*__val'
+                , meta      => #{dynamic => true}
+                }
+
            , <<"*warn-on-infer*">> =>
                #{ ?TYPE     => 'clojerl.Var'
                 , ns        => <<"clojure.core">>
@@ -249,6 +260,7 @@
         , '*data-readers*__val'/0
         , 'default-data-readers__val'/0
         , '*default-data-reader-fn*__val'/0
+        , '*reader-resolver*__val'/0
 
         , '*warn-on-infer*__val'/0
         ]).
@@ -356,6 +368,9 @@ ns__val() ->
 
 '*default-data-reader-fn*__val'() ->
   var_value(<<"#'clojure.core/*default-data-reader-fn*">>, ?NIL).
+
+'*reader-resolver*__val'() ->
+  var_value(<<"#'clojure.core/*reader-resolver*">>, ?NIL).
 
 '*warn-on-infer*__val'() ->
   var_value(<<"#'clojure.core/*warn-on-infer*">>, false).
