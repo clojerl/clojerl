@@ -87,9 +87,10 @@ unread(#{?TYPE := ?M, pid := Pid} = Reader, Str) ->
 %% writing operations.
 %%------------------------------------------------------------------------------
 
--type state() :: #{ reader        => 'erlang.io.IReader':type()
-                  , buffer        => binary()
-                  , at_line_start => boolean()
+-type state() :: #{ reader             => 'erlang.io.IReader':type()
+                  , buffer             => binary()
+                  , at_line_start      => boolean()
+                  , at_line_start_prev => boolean()
                   }.
 
 -spec send_command(pid(), any()) -> any().
@@ -110,9 +111,10 @@ start_link(Reader) ->
 
 -spec init('erlang.io.IReader':type()) -> no_return().
 init(Reader) ->
-  State = #{ reader        => Reader
-           , buffer        => <<>>
-           , at_line_start => true
+  State = #{ reader             => Reader
+           , buffer             => <<>>
+           , at_line_start      => true
+           , at_line_start_prev => true
            },
   ?MODULE:loop(State).
 
@@ -168,8 +170,10 @@ maybe_encode_result(_, X) ->
   X.
 
 -spec update_at_line_start(binary(), state()) -> state().
-update_at_line_start(Result, State) ->
-  State#{at_line_start := 'clojerl.String':ends_with(Result, <<"\n">>)}.
+update_at_line_start(Result, #{at_line_start := AtLineStart} = State) ->
+  State#{ at_line_start      := 'clojerl.String':ends_with(Result, <<"\n">>)
+        , at_line_start_prev := AtLineStart
+        }.
 
 -spec get_chars(integer(), state()) -> {binary() | eof, state()}.
 get_chars(N, #{reader := Reader, buffer := <<>>} = State) ->
@@ -237,10 +241,13 @@ skip( {cont, Length, #{buffer := <<_/utf8, RestStr/binary>>} = State}
   {more, {cont, Length - 1, State#{buffer := RestStr}}}.
 
 -spec unread_buffer(state(), binary()) -> {ok | {error, term()}, state()}.
-unread_buffer(State = #{buffer := Buffer}, Str) ->
+unread_buffer(State0 = #{buffer := Buffer, at_line_start_prev := Prev}, Str) ->
   try
-    {ok, State#{buffer := <<Str/binary, Buffer/binary>>}}
+    State1 = State0#{ buffer        := <<Str/binary, Buffer/binary>>
+                    , at_line_start := Prev
+                    },
+    {ok, State1}
   catch
     _:Reason ->
-      {{error, Reason}, State}
+      {{error, Reason}, State0}
   end.
