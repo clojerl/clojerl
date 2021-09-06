@@ -46,22 +46,12 @@
      :vars vars
      :records records}))
 
-(deftype Delay [x f]
-  clojerl.IDeref
-  (deref [_]
-    (when-not @x (reset! x (f)))
-    @x)
-  clojerl.IStringable
-  (str [_] "#<Delay>"))
-
-(defmacro delay [& body]
-  (let [f (gensym "f_")]
-    `(do
-       (def ~f (fn [] ~@body))
-       (Delay. (atom nil) ~f))))
+(defn shared-generation-fn
+  []
+  (generate-namespaces {:nses 5 :vars-per-ns 5 :records-per-ns 5}))
 
 (def shared-generation
-  (delay (generate-namespaces {:nses 5 :vars-per-ns 5 :records-per-ns 5})))
+  (clojerl.Delay. shared-generation-fn))
 
 (defn namespace
   []
@@ -75,9 +65,13 @@
   []
   (gen/rand-nth (:records @shared-generation)))
 
+(defn keyword-pool-fn
+  []
+  (gen/with-seed 42
+    (into [] (repeatedly 1000 gen/keyword))))
+
 (def keyword-pool
-  (delay (gen/with-seed 42
-           (into [] (repeatedly 1000 gen/keyword)))))
+  (clojerl.Delay. keyword-pool-fn))
 
 (defn keyword-from-pool
   []
