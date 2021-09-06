@@ -48,7 +48,11 @@
 
 (defn shared-generation-fn
   []
-  (generate-namespaces {:nses 5 :vars-per-ns 5 :records-per-ns 5}))
+  (generate-namespaces {:nses 5
+                        :vars-per-ns 5
+                        ;; Avoid generating records since it takes
+                        ;; a considerable time and is not being used
+                        :records-per-ns 0}))
 
 (def shared-generation
   (clojerl.Delay. shared-generation-fn))
