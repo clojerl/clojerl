@@ -1330,21 +1330,35 @@ is_auto_namespaced_map(Char, State0) ->
   {false, Symbol, State1}.
 
 -spec resolve_namespaced_map(boolean(), 'clojerl.Symbol':type(), state()) ->
-  'clojerl.Symbol':type().
+  binary().
 resolve_namespaced_map(true, ?NIL, _State) ->
-  Ns   = 'clojerl.Namespace':current(),
-  Name = 'clojerl.Namespace':name(Ns),
+  Name = case reader_resolver() of
+           ?NIL ->
+             Ns = 'clojerl.Namespace':current(),
+             'clojerl.Namespace':name(Ns);
+           Resolver ->
+             'clojerl.IResolver':current_ns(Resolver)
+         end,
   clj_rt:name(Name);
 resolve_namespaced_map(true, Symbol, State) ->
   validate_namespaced_name(Symbol, State),
-  Ns = 'clojerl.Namespace':current(),
-  case 'clojerl.Namespace':alias(Ns, Symbol) of
-    ?NIL ->
-      ?ERROR(<<"Unknown auto-resolved namespace alias">>, location(State));
-    ResolvedNs ->
-      Name = 'clojerl.Namespace':name(ResolvedNs),
-      clj_rt:name(Name)
-  end;
+  Name = case reader_resolver() of
+           ?NIL ->
+             Ns = 'clojerl.Namespace':current(),
+             case 'clojerl.Namespace':alias(Ns, Symbol) of
+               ?NIL       -> ?NIL;
+               ResolvedNs -> 'clojerl.Namespace':name(ResolvedNs)
+             end;
+           Resolver ->
+             'clojerl.IResolver':resolve_alias(Resolver, Symbol)
+         end,
+
+  ?ERROR_WHEN( Name == ?NIL
+             , <<"Unknown auto-resolved namespace alias">>
+             , location(State)
+             ),
+
+  clj_rt:name(Name);
 resolve_namespaced_map(false, Symbol, State) ->
   validate_namespaced_name(Symbol, State),
   clj_rt:name(Symbol).
