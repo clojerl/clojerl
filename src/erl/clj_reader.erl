@@ -616,14 +616,31 @@ flatten_map(MapSeq, Vector) ->
 
 -spec syntax_quote_symbol(any()) -> any().
 syntax_quote_symbol(Symbol) ->
-  NamespaceStr = 'clojerl.Symbol':namespace(Symbol),
-  NameStr      = 'clojerl.Symbol':name(Symbol),
-  IsGenSym     = 'clojerl.String':ends_with(NameStr, <<"#">>),
-  case {NamespaceStr, IsGenSym} of
-    {?NIL, true} ->
+  NamespaceStr  = 'clojerl.Symbol':namespace(Symbol),
+  NameStr       = 'clojerl.Symbol':name(Symbol),
+  IsGenSym      = 'clojerl.String':ends_with(NameStr, <<"#">>),
+  EndsWithDot   = 'clojerl.String':ends_with(NameStr, <<".">>),
+  StartsWithDot = 'clojerl.String':starts_with(NameStr, <<".">>),
+  case {NamespaceStr, IsGenSym, EndsWithDot, StartsWithDot} of
+    {?NIL, true, _, _} ->
       register_gensym(Symbol);
+    {?NIL, _, true, _} ->
+      NameLength  = 'clojerl.String':count(NameStr),
+      ClassName   = 'clojerl.String':substring(NameStr, 0, NameLength - 1),
+      ClassSym    = 'clojerl.Symbol':?CONSTRUCTOR(ClassName),
+      ResolvedSym = case reader_resolver() of
+                      ?NIL ->
+                        resolve_symbol(?NIL, ClassSym);
+                      Resolver ->
+                        'clojerl.IResolver':resolve_class(Resolver, ClassSym)
+                    end,
+      ResolvedName = 'clojerl.Symbol':name(ResolvedSym),
+      'clojerl.Symbol':?CONSTRUCTOR(<<ResolvedName/binary, ".">>);
+    {?NIL, _, _, true} ->
+      %% Simply quote method names.
+      Symbol;
     _ ->
-      resolve_symbol(Symbol)
+      resolve_symbol(reader_resolver(), Symbol)
   end.
 
 -spec register_gensym(any()) -> any().
@@ -650,8 +667,8 @@ register_gensym(Symbol) ->
       GenSym
   end.
 
--spec resolve_symbol(any()) -> any().
-resolve_symbol(Symbol) ->
+-spec resolve_symbol('clojerl.IResolver':type() | ?NIL, any()) -> any().
+resolve_symbol(?NIL, Symbol) ->
   HasDot = binary:match('clojerl.Symbol':str(Symbol), <<"\.">>) =/= nomatch,
   case HasDot orelse 'clojerl.Namespace':find_var(Symbol) of
     true -> Symbol;
@@ -672,6 +689,38 @@ resolve_symbol(Symbol) ->
       Name      = 'clojerl.Var':name(Var),
       Meta      = clj_rt:meta(Symbol),
       clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta)
+  end;
+resolve_symbol(Resolver, Symbol) ->
+  case 'clojerl.Symbol':namespace(Symbol) of
+    ?NIL ->
+      RSym = case 'clojerl.IResolver':resolve_class(Resolver, Symbol) of
+               ?NIL -> 'clojerl.IResolver':resolve_var(Resolver, Symbol);
+               RSym_ -> RSym_
+             end,
+      case RSym of
+        ?NIL ->
+          Ns = 'clojerl.IResolver':current_ns(Resolver),
+          NsStr   = 'clojerl.Symbol':name(Ns),
+          NameStr = 'clojerl.Symbol':name(Symbol),
+          'clojerl.Symbol':?CONSTRUCTOR(NsStr, NameStr);
+        _    ->
+          RSym
+      end;
+    NsName ->
+      Alias  = 'clojerl.Symbol':?CONSTRUCTOR(NsName),
+      NsSym0 = 'clojerl.IResolver':resolve_class(Resolver, Alias),
+      NsSym1 = case NsSym0 of
+                 ?NIL -> 'clojerl.IResolver':resolve_alias(Resolver, Alias);
+                 _    -> NsSym0
+               end,
+      case NsSym1 of
+        ?NIL ->
+          ?NIL;
+        _ ->
+          NsStr   = 'clojerl.Symbol':name(NsSym1),
+          NameStr = 'clojerl.Symbol':name(Symbol),
+          'clojerl.Symbol':?CONSTRUCTOR(NsStr, NameStr)
+      end
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type()) -> any().
