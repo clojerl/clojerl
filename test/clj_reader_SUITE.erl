@@ -567,13 +567,17 @@ syntax_quote(Config) ->
   ?assertEquiv(HelloWorldWithDot, HelloWorldWithDotCheck),
 
   ct:comment("Generated symbol in nested structure keeps meta"),
-  FooSymbol  = clj_rt:symbol(<<"foo">>),
-  GenSym0    = ReadFun(<<"`(^foo w#)">>),
-  GenSym1    = clj_rt:third(GenSym0),
-  GenSym2    = clj_rt:second(GenSym1),
-  GenSym3    = clj_rt:second(clj_rt:second(GenSym2)),
-  GenSymMeta = clj_rt:meta(GenSym3),
-  ?assertEquiv(clj_rt:get(GenSymMeta, tag), FooSymbol),
+  SymbolWithMeta = ReadFun(<<"`(^foo bar)">>),
+  SymbolWithMetaCheck =
+    ReadFun(<<"(clojure.core/concat"
+              " (clojure.core/list"
+              "   (clojure.core/with-meta"
+              "     (quote clojure.core/bar)"
+              "     (clojure.core/apply clojure.core/hash-map"
+              "       (clojure.core/concat"
+              "         (clojure.core/list :tag)"
+              "         (clojure.core/list (quote clojure.core/foo)))))))">>),
+  ?assertEquiv(clj_rt:third(SymbolWithMeta), SymbolWithMetaCheck),
 
   ct:comment("Read Erlang tuple"),
   ClojureCoreTuple = ReadFun(<<"clojure.core/tuple">>),

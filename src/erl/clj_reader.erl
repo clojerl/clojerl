@@ -681,16 +681,14 @@ resolve_symbol(?NIL, Symbol) ->
           NameSym   = 'clojerl.Namespace':name(CurrentNs),
           Namespace = 'clojerl.Symbol':name(NameSym),
           Name      = 'clojerl.Symbol':name(Symbol),
-          Meta      = 'clojerl.Symbol':meta(Symbol),
-          clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta);
+          clj_rt:symbol(Namespace, Name);
         _ ->
           Symbol
       end;
     Var ->
       Namespace = 'clojerl.Var':namespace(Var),
       Name      = 'clojerl.Var':name(Var),
-      Meta      = clj_rt:meta(Symbol),
-      clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta)
+      clj_rt:symbol(Namespace, Name)
   end;
 resolve_symbol(Resolver, Symbol) ->
   case 'clojerl.Symbol':namespace(Symbol) of
@@ -759,7 +757,8 @@ expand_list(List, Result) ->
                    clj_rt:second(Item);
                  _ ->
                    QuotedForm = syntax_quote(Item),
-                   clj_rt:list([ListSymbol, QuotedForm])
+                   QuotedFormWithMeta = add_meta(Item, QuotedForm),
+                   clj_rt:list([ListSymbol, QuotedFormWithMeta])
                end,
   expand_list(clj_rt:next(List), [NewItem | Result]).
 
