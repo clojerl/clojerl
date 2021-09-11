@@ -1189,6 +1189,11 @@ erl_literals(Config) ->
        catch _:_ -> ok
        end,
 
+  ct:comment("Read an Erlang function"),
+  DisplayFun = ReadFun(<<"#erl erlang/display.1">>),
+  DisplayFunCheck = ReadFun(<<"(erl-fun* :erlang :display 1)">>),
+  ?assertEquiv(DisplayFun, DisplayFunCheck),
+
   {comments, ""}.
 
 erl_binary(Config) ->
