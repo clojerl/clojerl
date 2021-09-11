@@ -3,8 +3,12 @@
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
 -include("clj_test_utils.hrl").
+-include_lib("common_test/include/ct.hrl").
 
 -export([ all/0
+        , groups/0
+        , init_per_group/2
+        , end_per_group/2
         , init_per_suite/1
         , end_per_suite/1
         ]).
@@ -42,7 +46,30 @@
         ]).
 
 -spec all() -> [atom()].
-all() -> clj_test_utils:all(?MODULE).
+all() -> [{group, read}, {group, read_io}].
+
+-spec groups() -> [atom()].
+groups() ->
+  [ {read, [], clj_test_utils:all(?MODULE)}
+  , {read_io, [], clj_test_utils:all(?MODULE)}
+  ].
+
+-spec init_per_group(atom(), config()) -> config().
+init_per_group(read, Config) ->
+  [ {read_fun, fun read/1}
+  , {read_fun2, fun read/2}
+  , {read_all_fun, fun read_all/1}
+  | Config
+  ];
+init_per_group(read_io, Config) ->
+  [ {read_fun, fun read_io/1}
+  , {read_fun2, fun read_io/2}
+  , {read_all_fun, fun read_all_io/1}
+  | Config
+  ].
+
+-spec end_per_group(atom(), config()) -> ok.
+end_per_group(_, _Config) -> ok.
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(Config) -> clj_test_utils:init_per_suite(Config).
@@ -54,10 +81,9 @@ end_per_suite(Config) -> Config.
 %% Test Cases
 %%------------------------------------------------------------------------------
 
-eof(Config) when is_list(Config) ->
-  eof(fun read/1),
-  eof(fun read_io/1);
-eof(ReadFun) when is_function(ReadFun) ->
+eof(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   ct:comment("Read empty binary"),
   ok = try ReadFun(<<"">>)
        catch _:_ -> ok end,
@@ -70,11 +96,10 @@ eof(ReadFun) when is_function(ReadFun) ->
 
   {comments, ""}.
 
-number(_Config) ->
-  number(fun read/1, fun read_all/1),
-  number(fun read_io/1, fun read_all_io/1).
+number(Config) ->
+  ReadFun = ?config(read_fun, Config),
+  ReadAllFun = ?config(read_all_fun, Config),
 
-number(ReadFun, ReadAllFun) ->
   0   = ReadFun(<<"0">>),
   0.0 = ReadFun(<<"0.0">>),
 
@@ -106,10 +131,9 @@ number(ReadFun, ReadAllFun) ->
 
   {comments, ""}.
 
-string(Config) when is_list(Config) ->
-  string(fun read/1),
-  string(fun read_io/1);
-string(ReadFun) ->
+string(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   <<"">> = ReadFun(<<"\"\"">>),
 
   <<"hello">> = ReadFun(<<"\"hello\"">>),
@@ -156,10 +180,9 @@ string(ReadFun) ->
 
   {comments, ""}.
 
-keyword(Config) when is_list(Config) ->
-  keyword(fun read/1),
-  keyword(fun read_io/1);
-keyword(ReadFun) ->
+keyword(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   FooSym   = clj_rt:symbol(<<"foo">>),
   FooNs    = 'clojerl.Namespace':find_or_create(FooSym),
   SomeSym  = clj_rt:symbol(<<"some">>),
@@ -210,10 +233,9 @@ keyword(ReadFun) ->
 
   {comments, ""}.
 
-symbol(Config) when is_list(Config) ->
-  symbol(fun read/1),
-  symbol(fun read_io/1);
-symbol(ReadFun) ->
+symbol(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   Symbol1 = clj_rt:symbol(<<"hello-world">>),
   ?assertEquiv(ReadFun(<<"hello-world">>), Symbol1),
 
@@ -250,10 +272,9 @@ symbol(ReadFun) ->
 
   {comments, ""}.
 
-comment(Config) when is_list(Config) ->
-  comment(fun read_all/1),
-  comment(fun read_all_io/1);
-comment(ReadAllFun) ->
+comment(Config) ->
+  ReadAllFun = ?config(read_all_fun, Config),
+
   BlaKeyword = clj_rt:keyword(<<"bla">>),
 
   ct:comment("Single semi-colon"),
@@ -279,10 +300,9 @@ comment(ReadAllFun) ->
 
   {comments, ""}.
 
-quote(Config) when is_list(Config) ->
-  quote(fun read/1),
-  quote(fun read_io/1);
-quote(ReadFun) ->
+quote(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   QuoteSymbol = clj_rt:symbol(<<"quote">>),
   ListSymbol = clj_rt:symbol(<<"list">>),
 
@@ -304,11 +324,10 @@ quote(ReadFun) ->
 
   {comments, ""}.
 
-deref(Config) when is_list(Config) ->
-  deref(fun read/1, fun read_all/1),
-  deref(fun read_io/1, fun read_all_io/1).
+deref(Config) ->
+  ReadFun = ?config(read_fun, Config),
+  ReadAllFun = ?config(read_all_fun, Config),
 
-deref(ReadFun, ReadAllFun) ->
   DerefSymbol = clj_rt:symbol(<<"clojure.core">>, <<"deref">>),
   ListSymbol = clj_rt:symbol(<<"list">>),
 
@@ -331,10 +350,9 @@ deref(ReadFun, ReadAllFun) ->
 
   {comments, ""}.
 
-meta(Config) when is_list(Config) ->
-  meta(fun read/1),
-  meta(fun read_io/1);
-meta(ReadFun) ->
+meta(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   MetadataKw = ReadFun(<<"{:private true}">>),
   MetadataSym = ReadFun(<<"{:tag private}">>),
 
@@ -408,10 +426,9 @@ meta(ReadFun) ->
 
   {comments, ""}.
 
-syntax_quote(Config) when is_list(Config) ->
-  syntax_quote(fun read/1),
-  syntax_quote(fun read_io/1);
-syntax_quote(ReadFun) ->
+syntax_quote(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   QuoteSym = clj_rt:symbol(<<"quote">>),
   QuoteFun = fun(X) -> clj_rt:list([QuoteSym, X]) end,
 
@@ -545,10 +562,9 @@ syntax_quote(ReadFun) ->
 
   {comments, ""}.
 
-unquote(Config) when is_list(Config) ->
-  unquote(fun read/1),
-  unquote(fun read_io/1);
-unquote(ReadFun) ->
+unquote(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   UnquoteSymbol = clj_rt:symbol(<<"clojure.core">>, <<"unquote">>),
   UnquoteSplicingSymbol = clj_rt:symbol(<<"clojure.core">>,
                                                <<"unquote-splicing">>),
@@ -570,10 +586,9 @@ unquote(ReadFun) ->
 
   {comments, ""}.
 
-list(Config) when is_list(Config) ->
-  list(fun read/1),
-  list(fun read_io/1);
-list(ReadFun) ->
+list(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
@@ -599,10 +614,9 @@ list(ReadFun) ->
 
   {comments, ""}.
 
-vector(Config) when is_list(Config) ->
-  vector(fun read/1),
-  vector(fun read_io/1);
-vector(ReadFun) ->
+vector(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
@@ -619,10 +633,9 @@ vector(ReadFun) ->
 
   {comments, ""}.
 
-map(Config) when is_list(Config) ->
-  map(fun read/1),
-  map(fun read_io/1);
-map(ReadFun) ->
+map(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
@@ -649,10 +662,9 @@ map(ReadFun) ->
 
   {comments, ""}.
 
-set(Config) when is_list(Config) ->
-  set(fun read/1),
-  set(fun read_io/1);
-set(ReadFun) ->
+set(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   HelloWorldKeyword = clj_rt:keyword(<<"hello-world">>),
   HelloWorldSymbol = clj_rt:symbol(<<"hello-world">>),
 
@@ -668,10 +680,9 @@ set(ReadFun) ->
 
   {comments, ""}.
 
-unmatched_delim(Config) when is_list(Config) ->
-  unmatched_delim(fun read_all/1),
-  unmatched_delim(fun read_all_io/1);
-unmatched_delim(ReadAllFun) ->
+unmatched_delim(Config) ->
+  ReadAllFun = ?config(read_all_fun, Config),
+
   ct:comment("Single closing paren"),
   ok = try ReadAllFun(<<"{1 42.0} )">>)
        catch _:_ -> ok
@@ -689,11 +700,10 @@ unmatched_delim(ReadAllFun) ->
 
   {comments, ""}.
 
-char(Config) when is_list(Config) ->
-  char(fun read/1, fun read_all/1),
-  char(fun read_io/1, fun read_all_io/1).
+char(Config) ->
+  ReadFun = ?config(read_fun, Config),
+  ReadAllFun = ?config(read_all_fun, Config),
 
-char(ReadFun, ReadAllFun) ->
   ct:comment("Read single char"),
   <<"a">>  = ReadFun(<<"\\a">>),
 
@@ -732,10 +742,9 @@ char(ReadFun, ReadAllFun) ->
 
   {comments, ""}.
 
-fn(Config) when is_list(Config) ->
-  fn(fun read/1),
-  fn(fun read_io/1);
-fn(ReadFun) ->
+fn(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   FnSymbol = clj_rt:symbol(<<"fn*">>),
   EmptyVector = clj_rt:vector([]),
   EmptyList = clj_rt:list([]),
@@ -785,11 +794,10 @@ fn(ReadFun) ->
 
   {comments, ""}.
 
-arg(Config) when is_list(Config) ->
-  arg(fun read/1, fun read_all/1),
-  arg(fun read_io/1, fun read_all_io/1).
+arg(Config) ->
+  ReadFun = ?config(read_fun, Config),
+  ReadAllFun = ?config(read_all_fun, Config),
 
-arg(ReadFun, ReadAllFun) ->
   ct:comment("Read % as a symbol"),
   ArgSymbol = clj_rt:symbol(<<"%">>),
   ?assertEquiv(ReadFun(<<"%">>), ArgSymbol),
@@ -836,10 +844,9 @@ arg(ReadFun, ReadAllFun) ->
 
   {comments, ""}.
 
-eval(Config) when is_list(Config) ->
-  eval(fun read/1),
-  eval(fun read_io/1);
-eval(ReadFun) ->
+eval(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   ct:comment("Read eval 1"),
   1 = ReadFun(<<"#=1">>),
 
@@ -851,10 +858,9 @@ eval(ReadFun) ->
 
   {comments, ""}.
 
-var(Config) when is_list(Config) ->
-  var(fun read/1),
-  var(fun read_io/1);
-var(ReadFun) ->
+var(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   VarSymbol = clj_rt:symbol(<<"var">>),
   ListSymbol = clj_rt:symbol(<<"list">>),
 
@@ -864,11 +870,10 @@ var(ReadFun) ->
 
   {comments, ""}.
 
-regex(Config) when is_list(Config) ->
-  regex(fun read/1, fun read_all/1),
-  regex(fun read_io/1, fun read_all_io/1).
+regex(Config) ->
+  ReadFun = ?config(read_fun, Config),
+  ReadAllFun = ?config(read_all_fun, Config),
 
-regex(ReadFun, ReadAllFun) ->
   Regex1 = 'erlang.util.Regex':?CONSTRUCTOR(<<".?el\\.lo">>),
   Regex1 = ReadFun(<<"#\".?el\\.lo\"">>),
 
@@ -890,10 +895,9 @@ regex(ReadFun, ReadAllFun) ->
 
   {comments, ""}.
 
-unreadable_form(Config) when is_list(Config) ->
-  unreadable_form(fun read/1),
-  unreadable_form(fun read_io/1);
-unreadable_form(ReadFun) ->
+unreadable_form(Config) ->
+  ReadFun = ?config(read_fun, Config),
+
   ct:comment("Read unreadable"),
   ok = try ReadFun(<<"#<1>">>)
        catch error:Error1 ->
@@ -904,11 +908,10 @@ unreadable_form(ReadFun) ->
 
   {comments, ""}.
 
-discard(Config) when is_list(Config) ->
-  discard(fun read/1, fun read_all/1),
-  discard(fun read_io/1, fun read_all_io/1).
+discard(Config) ->
+  ReadFun = ?config(read_fun, Config),
+  ReadAllFun = ?config(read_all_fun, Config),
 
-discard(ReadFun, ReadAllFun) ->
   [1] = ReadAllFun(<<"#_ :hello 1">>),
 
   1 = ReadFun(<<"#_ :hello 1">>),
@@ -927,10 +930,9 @@ discard(ReadFun, ReadAllFun) ->
   {comments, ""}.
 
 'cond'(Config) when is_list(Config) ->
-  'cond'(fun read/1, fun read/2),
-  'cond'(fun read_io/1, fun read_io/2).
+  ReadFun  = ?config(read_fun, Config),
+  ReadFun2 = ?config(read_fun2, Config),
 
-'cond'(ReadFun, ReadFun2) ->
   AllowOpts = #{'read-cond' => allow},
   AllowCljFeatureOpts = #{'read-cond' => allow,
                           features => ReadFun(<<"#{:clj}">>)},
@@ -1067,10 +1069,8 @@ discard(ReadFun, ReadAllFun) ->
 
   {comments, ""}.
 
-unsupported_reader(Config) when is_list(Config) ->
-  unsupported_reader(fun read/1),
-  unsupported_reader(fun read_io/1);
-unsupported_reader(ReadFun) ->
+unsupported_reader(Config) ->
+  ReadFun  = ?config(read_fun, Config),
   ct:comment("Try unsupported reader"),
   ok = try ReadFun(<<"#-:something">>)
        catch _:_ -> ok
@@ -1078,10 +1078,9 @@ unsupported_reader(ReadFun) ->
 
   {comments, ""}.
 
-erl_literals(Config) when is_list(Config) ->
-  erl_literals(fun read/1),
-  erl_literals(fun read_io/1);
-erl_literals(ReadFun) ->
+erl_literals(Config) ->
+  ReadFun  = ?config(read_fun, Config),
+
   %% Tuple
   ct:comment("Read an empty tuple"),
   {} = ReadFun(<<"#erl []">>),
@@ -1153,10 +1152,9 @@ erl_literals(ReadFun) ->
 
   {comments, ""}.
 
-erl_binary(Config) when is_list(Config) ->
-  erl_binary(fun read/1),
-  erl_binary(fun read_io/1);
-erl_binary(ReadFun) ->
+erl_binary(Config) ->
+  ReadFun  = ?config(read_fun, Config),
+
   ErlBinarySym = clj_rt:symbol(<<"erl-binary*">>),
   EmptyBinary  = clj_rt:list([ErlBinarySym]),
 
@@ -1169,10 +1167,9 @@ erl_binary(ReadFun) ->
 
   {comments, ""}.
 
-erl_alias(Config) when is_list(Config) ->
-  erl_alias(fun read/1),
-  erl_alias(fun read_io/1);
-erl_alias(ReadFun) ->
+erl_alias(Config) ->
+  ReadFun  = ?config(read_fun, Config),
+
   ErlAliasSym = clj_rt:symbol(<<"erl-alias*">>),
   XSym        = clj_rt:symbol(<<"x">>),
   AliasList   = clj_rt:list([ErlAliasSym, XSym, 1]),
@@ -1182,10 +1179,9 @@ erl_alias(ReadFun) ->
 
   {comments, ""}.
 
-tagged(Config) when is_list(Config) ->
-  tagged(fun read/1),
-  tagged(fun read_io/1);
-tagged(ReadFun) ->
+tagged(Config) ->
+  ReadFun  = ?config(read_fun, Config),
+
   UUIDBin = <<"de305d54-75b4-431b-adb2-eb6b9e546014">>,
 
   ct:comment("Use bootstraped default readers implementation"),
