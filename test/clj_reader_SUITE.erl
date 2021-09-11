@@ -44,6 +44,7 @@
         , erl_alias/1
         , tagged/1
         , reader_resolver/1
+        , namespaced_map/1
         ]).
 
 -spec all() -> [atom()].
@@ -1330,6 +1331,19 @@ reader_resolver(Config) ->
                        after 'clojerl.Var':pop_bindings()
                        end,
   ?assertEquiv(NamespacedMap2, NamespacedMap2Check),
+
+  {comments, ""}.
+
+namespaced_map(Config) ->
+  ReadFun  = ?config(read_fun, Config),
+
+  ct:comment("Simple keyword"),
+  Map1 = #{'foo/a' => 1},
+  ?assertEquiv(Map1, ReadFun(<<"#:foo{:a 1}">>)),
+
+  ct:comment("Auto-resolved map"),
+  Map2 = #{'clojure.core/a' => 1},
+  ?assertEquiv(Map2, ReadFun(<<"#::{:a 1}">>)),
 
   {comments, ""}.
 
