@@ -22,9 +22,7 @@
 %% Protocols
 %%------------------------------------------------------------------------------
 
-current_ns(_) ->
-  Ns = 'clojerl.Namespace':current(),
-  'clojerl.Namespace':name(Ns).
+current_ns(_) -> clj_rt:symbol(<<"dummy">>).
 
 resolve_class(_, Symbol) -> Symbol.
 

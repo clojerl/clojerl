@@ -43,6 +43,7 @@
         , erl_binary/1
         , erl_alias/1
         , tagged/1
+        , reader_resolver/1
         ]).
 
 -spec all() -> [atom()].
@@ -1248,26 +1249,98 @@ tagged(Config) ->
   ok  = 'clojerl.Var':pop_bindings(),
 
   ct:comment("Don't provide a symbol"),
-  ok = try ReadFun(<<"#1">>), error
-       catch error:Error1 ->
-           Msg1 = 'clojerl.IError':message(Error1),
-           <<?NO_SOURCE, ":1:2: Reader tag must be a symbol">> = Msg1,
-           ok
-       end,
+  try
+    ReadFun(<<"#1">>),
+    ?ERROR(<<"Expected an error">>)
+  catch error:Error1 ->
+      assert_error_message(Error1, ":1:2: Reader tag must be a symbol")
+  end,
 
   ct:comment("Provide a missing reader"),
-  ok = try ReadFun(<<"#bla 1">>), error
-       catch error:Error2 ->
-           Msg2 = 'clojerl.IError':message(Error2),
-           <<?NO_SOURCE, ":1:2: No reader function for tag bla">> = Msg2,
-           ok
-       end,
+  try
+    ReadFun(<<"#bla 1">>),
+    ?ERROR(<<"Expected an error">>)
+  catch error:Error2 ->
+      assert_error_message(Error2, ":1:2: No reader function for tag bla")
+  end,
+
+  {comments, ""}.
+
+reader_resolver(Config) ->
+  ReadFun  = ?config(read_fun, Config),
+  Resolver = 'clojerl.DummyResolver':?CONSTRUCTOR(),
+  Bindings = #{<<"#'clojure.core/*reader-resolver*">> => Resolver},
+
+  ct:comment("Reading auto-resolved keyword"),
+  'clojerl.Var':push_bindings(Bindings),
+  'dummy/foo' = try ReadFun(<<"::foo">>)
+                after 'clojerl.Var':pop_bindings()
+                end,
+
+  ct:comment("Reading auto-resolved keyword with namespace"),
+  %% Without resolver
+  try ReadFun(<<"::foo/bar">>)
+  catch error:Error1 ->
+    assert_error_message(Error1, "Invalid token")
+  end,
+  %% With resolver
+  'clojerl.Var':push_bindings(Bindings),
+  'foo/bar' = try ReadFun(<<"::foo/bar">>)
+              after 'clojerl.Var':pop_bindings()
+              end,
+
+  ct:comment("Reading constructor type symbol in syntax quote"),
+  QuoteSym = clj_rt:symbol(<<"quote">>),
+  QuoteFun = fun(X) -> clj_rt:list([QuoteSym, X]) end,
+  StringTypeSym = clj_rt:symbol(<<"clojerl.String.">>),
+  QuotedStringTypeSym = QuoteFun(StringTypeSym),
+  'clojerl.Var':push_bindings(Bindings),
+  QuotedStringTypeSym = try ReadFun(<<"`clojerl.String.">>)
+                        after 'clojerl.Var':pop_bindings()
+                        end,
+
+  ct:comment("Syntax quote unqualified symbol"),
+  FooSym = clj_rt:symbol(<<"foo">>),
+  QuoteFooSym = QuoteFun(FooSym),
+  'clojerl.Var':push_bindings(Bindings),
+  QuoteFooSym = try ReadFun(<<"`foo">>)
+                after 'clojerl.Var':pop_bindings()
+                end,
+
+  ct:comment("Syntax quote qualified symbol"),
+  FooBarSym = clj_rt:symbol(<<"foo/bar">>),
+  QuoteFooBarSym = QuoteFun(FooBarSym),
+  'clojerl.Var':push_bindings(Bindings),
+  QuoteFooBarSym = try ReadFun(<<"`foo/bar">>)
+                   after 'clojerl.Var':pop_bindings()
+                   end,
+
+  ct:comment("Namespaced map auto-resolved"),
+  NamespacedMap1 = #{'dummy/a' => 1},
+  'clojerl.Var':push_bindings(Bindings),
+  NamespacedMap1Check = try ReadFun(<<"#::{:a 1}">>)
+                        after 'clojerl.Var':pop_bindings()
+                        end,
+  ?assertEquiv(NamespacedMap1, NamespacedMap1Check),
+
+  ct:comment("Namespaced map auto-resolved"),
+  NamespacedMap2 = #{'foo/a' => 1},
+  'clojerl.Var':push_bindings(Bindings),
+  NamespacedMap2Check = try ReadFun(<<"#::foo{:a 1}">>)
+                       after 'clojerl.Var':pop_bindings()
+                       end,
+  ?assertEquiv(NamespacedMap2, NamespacedMap2Check),
 
   {comments, ""}.
 
 %%------------------------------------------------------------------------------
 %% Helper functions
 %%------------------------------------------------------------------------------
+
+-spec assert_error_message('clojerl.IError':type(), binary()) -> ok.
+assert_error_message(Error, MessageRegex) ->
+  Msg = 'clojerl.IError':message(Error),
+  {match, _} = re:run(Msg, MessageRegex).
 
 -spec read_io(binary()) -> any().
 read_io(Src) ->

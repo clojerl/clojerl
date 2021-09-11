@@ -1907,4 +1907,7 @@ unread_char(State) ->
 
 -spec reader_resolver() -> ?NIL | 'clojure.IResolver':type().
 reader_resolver() ->
-  'clojerl.Var':dynamic_binding(<<"#'clojure.core/*reader-resolver*">>).
+  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*reader-resolver*">>) of
+    ?NIL -> ?NIL;
+    {ok, Resolver} -> Resolver
+  end.
