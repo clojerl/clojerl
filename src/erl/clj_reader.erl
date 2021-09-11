@@ -564,9 +564,11 @@ syntax_quote(Form) ->
     IsUnquote    -> clj_rt:second(Form);
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     %% Erlang collections
-    is_list(Form) ->
-      ErlListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"erl-list">>),
-      syntax_quote_coll(Form, ErlListSymbol);
+    %% Note: As long as the reader transforms #erl() to an expression
+    %% using erl-list*, `Form` will never be an Erlang list.
+    %% is_list(Form) ->
+    %%   ErlListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"erl-list">>),
+    %%   syntax_quote_coll(Form, ErlListSymbol);
     is_tuple(Form) ->
       TupleSymbol = clj_rt:symbol(<<"clojure.core">>, <<"tuple">>),
       syntax_quote_coll(tuple_to_list(Form), TupleSymbol);

@@ -471,6 +471,21 @@ syntax_quote(Config) ->
   SomeNsHelloSyntaxQuote = ReadFun(<<"`some-ns/hello">>),
   ?assertEquiv( SomeNsHelloSyntaxQuote, QuoteFun(SomeNsHelloSym)),
 
+  ct:comment("Read qualified symbol mapping to existing var"),
+  ResolverSym = clj_rt:symbol(<<"clojure.core">>, <<"*reader-resolver*">>),
+  ResolverSymSyntaxQuote = ReadFun(<<"`clojure.core/*reader-resolver*">>),
+  ?assertEquiv(ResolverSymSyntaxQuote, QuoteFun(ResolverSym)),
+
+  ct:comment("Read constructor type symbol"),
+  ConstructorTypeSym = clj_rt:symbol(<<"clojerl.String.">>),
+  ConstructorTypeSyntaxQuote = ReadFun(<<"`clojerl.String.">>),
+  ?assertEquiv(ConstructorTypeSyntaxQuote, QuoteFun(ConstructorTypeSym)),
+
+  ct:comment("Read type function name symbol"),
+  FunctionNameSym = clj_rt:symbol(<<".str">>),
+  FunctionNameSyntaxQuote = ReadFun(<<"`.str">>),
+  ?assertEquiv(FunctionNameSyntaxQuote, QuoteFun(FunctionNameSym)),
+
   ct:comment("Read auto-gen symbol"),
   ListGenSym = ReadFun(<<"`hello#">>),
   QuotedGenSym = clj_rt:second(ListGenSym),
@@ -559,6 +574,24 @@ syntax_quote(Config) ->
   GenSym3    = clj_rt:second(clj_rt:second(GenSym2)),
   GenSymMeta = clj_rt:meta(GenSym3),
   ?assertEquiv(clj_rt:get(GenSymMeta, tag), FooSymbol),
+
+  ct:comment("Read Erlang tuple"),
+  ClojureCoreTuple = ReadFun(<<"clojure.core/tuple">>),
+  ErlTupleHello = ReadFun(<<"`#erl[hello :world]">>),
+  ErlTupleHelloCheck = ReadFun(<<"(clojure.core/concat"
+                                "  (clojure.core/list 'clojure.core/hello)"
+                                "  (clojure.core/list :world))">>),
+  ?assertEquiv(clj_rt:second(ErlTupleHello), ClojureCoreTuple),
+  ?assertEquiv(clj_rt:third(ErlTupleHello), ErlTupleHelloCheck),
+
+  ct:comment("Read Erlang map"),
+  ClojureCoreErlMap = ReadFun(<<"clojure.core/erl-map">>),
+  ErlMapHello = ReadFun(<<"`#erl{hello :world}">>),
+  ErlMapHelloCheck = ReadFun(<<"(clojure.core/concat"
+                               "  (clojure.core/list 'clojure.core/hello)"
+                               "  (clojure.core/list :world))">>),
+  ?assertEquiv(clj_rt:second(ErlMapHello), ClojureCoreErlMap),
+  ?assertEquiv(clj_rt:third(ErlMapHello), ErlMapHelloCheck),
 
   {comments, ""}.
 
