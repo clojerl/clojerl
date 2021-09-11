@@ -19,6 +19,8 @@
 
 'current_ns'(Resolver) ->
   case Resolver of
+    #{?TYPE := 'clojerl.DummyResolver'} ->
+      'clojerl.DummyResolver':'current_ns'(Resolver);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'current_ns', Resolver);
     X_ when erlang:is_binary(X_) ->
@@ -33,6 +35,8 @@
 
 'resolve_class'(Resolver, _Symbol) ->
   case Resolver of
+    #{?TYPE := 'clojerl.DummyResolver'} ->
+      'clojerl.DummyResolver':'resolve_class'(Resolver, _Symbol);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'resolve_class', Resolver);
     X_ when erlang:is_binary(X_) ->
@@ -47,6 +51,8 @@
 
 'resolve_alias'(Resolver, _Symbol) ->
   case Resolver of
+    #{?TYPE := 'clojerl.DummyResolver'} ->
+      'clojerl.DummyResolver':'resolve_alias'(Resolver, _Symbol);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'resolve_alias', Resolver);
     X_ when erlang:is_binary(X_) ->
@@ -61,6 +67,8 @@
 
 'resolve_var'(Resolver, _Symbol) ->
   case Resolver of
+    #{?TYPE := 'clojerl.DummyResolver'} ->
+      'clojerl.DummyResolver':'resolve_var'(Resolver, _Symbol);
     #{?TYPE := _} ->
       clj_protocol:not_implemented(?MODULE, 'resolve_var', Resolver);
     X_ when erlang:is_binary(X_) ->
@@ -75,6 +83,7 @@
 
 ?SATISFIES(X) ->
   case X of
+    #{?TYPE := 'clojerl.DummyResolver'} ->  true;
     #{?TYPE := _} ->  false;
     X_ when erlang:is_binary(X_) ->  false;
     X_ when erlang:is_boolean(X_) ->  false;
@@ -84,5 +93,6 @@
 
 ?EXTENDS(X) ->
   case X of
+    'clojerl.DummyResolver' -> true;
     _ -> false
   end.
