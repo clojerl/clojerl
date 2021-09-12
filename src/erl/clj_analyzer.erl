@@ -31,8 +31,7 @@ analyze(Form, Env0) ->
 %% `false' otherwise.
 -spec is_special('clojerl.Symbol':type()) -> boolean().
 is_special(S) ->
-  clj_rt:'symbol?'(S) andalso
-    maps:is_key('clojerl.Symbol':str(S), special_forms()).
+  maps:is_key('clojerl.Symbol':str(S), special_forms()).
 
 %% @doc Macroexpands `Form' only once.
 -spec macroexpand_1(any(), clj_env:env()) -> any().
@@ -106,7 +105,7 @@ is_macro(Symbol, Env) ->
 do_macroexpand_1(Form, Env) ->
   Op        = clj_rt:first(Form),
   IsSymbol  = clj_rt:'symbol?'(Op),
-  IsSpecial = is_special(Op),
+  IsSpecial = IsSymbol andalso is_special(Op),
   MacroVar  = case IsSymbol of
                 true  -> is_macro(Op, Env);
                 false -> ?NIL
@@ -210,7 +209,7 @@ keep_location_meta(Expanded, Form) ->
       Expanded
   end.
 
--spec special_forms() -> #{'clojerl.Symbol':type() => fun() | ?NIL}.
+-spec special_forms() -> #{binary() => fun() | ?NIL}.
 special_forms() ->
   #{ <<"def">>          => fun parse_def/2
    , <<"quote">>        => fun parse_quote/2
@@ -752,7 +751,8 @@ analyze_method_params(IsVariadic, Arity, Params, Env0) ->
   {_, Env1} = lists:foldl(ParamExprFun, {0, Env0}, Params),
   Env1.
 
--spec analyze_body('clojerl.List':type(), clj_env:env()) -> clj_env:env().
+-spec analyze_body('clojerl.List':type() | [any()], clj_env:env()) ->
+  clj_env:env().
 analyze_body(List, Env) ->
   DoSym = clj_rt:symbol(<<"do">>),
   DoForm = clj_rt:cons(DoSym, List),
@@ -2416,10 +2416,7 @@ var_expr(Var, Symbol, Env0) ->
                      },
   {VarExpr, Env1}.
 
--spec type_expr( 'clojerl.Symbol':type()
-               , 'clojerl.Symbol':type()
-               , clj_env:env()
-               ) ->
+-spec type_expr('erlang.Type':type(), 'clojerl.Symbol':type(), clj_env:env()) ->
   expr().
 type_expr(Type, Symbol, Env) ->
  #{ op   => type

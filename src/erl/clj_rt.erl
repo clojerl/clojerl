@@ -527,7 +527,7 @@ meta(X) ->
 
 %% @doc Returns an object of the same type and value as `X', with map
 %% `Meta' as its metadata.
--spec with_meta(T, 'clojerl.Map':type()) -> T.
+-spec with_meta(T, map()) -> T.
 with_meta(X, Meta) ->
   'clojerl.IMeta':with_meta(X, Meta).
 

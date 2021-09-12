@@ -262,7 +262,7 @@
                               , env        => clj_env:env()
                               , form       => any()
                               , tag        => expr()
-                              , class      => 'clojerl.Symbol':type()
+                              , class      => expr()
                               , local      => binding_expr()
                               , stacktrace => binding_expr() | ?NIL
                               , guard      => expr()

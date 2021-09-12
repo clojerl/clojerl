@@ -90,7 +90,7 @@ parse_number(Number, Types) ->
 
 %% @doc Parses a binary into a {@link 'clojerl.Symbol'}.
 -spec parse_symbol(binary()) ->
-  {Ns :: 'clojerl.Symbol':type(), Name :: 'clojerl.Symbol':type()} | ?NIL.
+  {Ns :: binary() | ?NIL, Name :: binary()} | ?NIL.
 parse_symbol(<<>>) ->
   ?NIL;
 parse_symbol(<<"::"/utf8, _/binary>>) ->
@@ -113,6 +113,8 @@ parse_symbol(Str) ->
       end
   end.
 
+-spec verify_symbol_name({binary() | ?NIL, binary()}) ->
+  {binary() | ?NIL, binary()} | ?NIL.
 verify_symbol_name({_, Name} = Result) ->
   NoEndColon = fun(X) -> binary:last(X) =/= $: end,
   NoDoubleSlash = fun(X) -> re:run(X, <<"/.*?/">>) == nomatch end,

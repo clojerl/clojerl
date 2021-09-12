@@ -340,8 +340,7 @@ mapping(#{?TYPE := ?M, mappings := Mappings}, Symbol) ->
     ?NIL -> ?NIL
   end.
 
--spec alias(type(), 'clojerl.Symbol':type()) ->
-  'clojerl.Symbol':type() | ?NIL.
+-spec alias(type(), 'clojerl.Symbol':type()) -> type() | ?NIL.
 alias(#{?TYPE := ?M, aliases := Aliases}, Symbol) ->
   ?ERROR_WHEN( not clj_rt:'symbol?'(Symbol)
              , <<"Argument must be a symbol">>
