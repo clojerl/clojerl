@@ -21,6 +21,7 @@
 
 -export([delete/3]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , pid   => pid()
                  }.

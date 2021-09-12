@@ -6,6 +6,9 @@
 -export([str/1]).
 -export([hash/1]).
 
+-export_type([type/0]).
+-type type() :: reference().
+
 %% clojerl.IStringable
 
 str(Ref) when is_reference(Ref) ->

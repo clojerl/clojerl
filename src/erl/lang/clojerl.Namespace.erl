@@ -57,6 +57,7 @@
         , code_change/3
         ]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE    => ?M
                  , id       => any()
                  , name     => 'clojerl.Symbol':type()

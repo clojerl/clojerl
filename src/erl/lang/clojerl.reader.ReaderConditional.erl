@@ -17,6 +17,7 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE       => ?M
                  , list        => any()
                  , is_splicing => boolean()

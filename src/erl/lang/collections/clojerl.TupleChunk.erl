@@ -19,6 +19,7 @@
 -export([nth/2, nth/3]).
 -export([reduce/2, reduce/3]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE  => ?M
                  , tuple  => tuple()
                  , offset => non_neg_integer()

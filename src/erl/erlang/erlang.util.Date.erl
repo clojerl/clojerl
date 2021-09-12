@@ -24,6 +24,7 @@
 %% EPOCH = calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}}).
 -define(EPOCH, 62167219200).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , date  => calendar:datetime()
                  }.

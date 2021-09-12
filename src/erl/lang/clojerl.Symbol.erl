@@ -22,6 +22,7 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , ns    => ?NIL | binary()
                  , name  => binary()

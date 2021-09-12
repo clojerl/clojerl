@@ -53,6 +53,7 @@
 
 -define(PENDING_SENDS,  '__pending_sends__').
 
+-export_type([type/0]).
 -type type()        :: #{ ?TYPE => ?M
                         , id    => binary()
                         , pid   => pid()
