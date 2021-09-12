@@ -171,13 +171,13 @@ get_bindings_map() ->
 reset_bindings(Bindings) ->
   erlang:put(dynamic_bindings, Bindings).
 
--spec dynamic_binding('clojerl.Var':type() | binary()) -> any().
+-spec dynamic_binding('clojerl.Var':type() | binary()) -> {ok, any()} | ?NIL.
 dynamic_binding(Key) when is_binary(Key) ->
   clj_scope:get(Key, get_bindings());
 dynamic_binding(Var) ->
   dynamic_binding(str(Var)).
 
--spec dynamic_binding('clojerl.Var':type() | binary(), any()) -> any().
+-spec dynamic_binding('clojerl.Var':type() | binary(), any()) -> {ok, any()} | ?NIL.
 dynamic_binding(Key, Value) when is_binary(Key) ->
   case get_bindings() of
     ?NIL -> push_bindings(#{});

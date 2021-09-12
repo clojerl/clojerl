@@ -406,30 +406,56 @@ is_char_valid(_, _) -> false.
 -spec read_keyword(state()) -> state().
 read_keyword(#{src := <<":", _/binary>>} = State0) ->
   {Token, State} = read_token(consume_char(State0)),
-  Keyword =
-    case clj_utils:parse_symbol(Token) of
-      {?NIL, <<":", Name/binary>>} ->
-        Ns    = 'clojerl.Namespace':current(),
-        NsSym = 'clojerl.Namespace':name(Ns),
-        Namespace = 'clojerl.Symbol':name(NsSym),
-        clj_rt:keyword(Namespace, Name);
-      {?NIL, Name} ->
-        clj_rt:keyword(Name);
-      {<<":", Namespace/binary>>, Name} ->
-        AliasSym  = clj_rt:symbol(Namespace),
-        CurrentNs = 'clojerl.Namespace':current(),
-        case 'clojerl.Namespace':alias(CurrentNs, AliasSym) of
-          ?NIL -> ?ERROR(<<"Invalid token: :", Token/binary>>, location(State));
-          Ns ->
-            NsSym = 'clojerl.Namespace':name(Ns),
-            clj_rt:keyword('clojerl.Symbol':name(NsSym), Name)
-        end;
-      {Namespace, Name} ->
-        clj_rt:keyword(Namespace, Name);
-      _ ->
-        ?ERROR(<<"Invalid token: :", Token/binary>>, location(State))
-    end,
+  Keyword = case clj_utils:parse_symbol(Token) of
+              ?NIL       -> ?NIL;
+              {Ns, Name} -> parse_keyword(Ns, Name, reader_resolver())
+            end,
+
+  ?ERROR_WHEN( Keyword =:= ?NIL
+             , <<"Invalid token: :", Token/binary>>
+             , location(State)
+             ),
+
   push_form(Keyword, State).
+
+-spec parse_keyword( Ns       :: ?NIL | binary()
+                   , Name     :: ?NIL | binary()
+                   , Resolver :: ?NIL | 'clojerl.Resolver':type()
+                   ) -> Keyword :: ?NIL | atom().
+parse_keyword(?NIL, <<":", Name/binary>>, Resolver) ->
+  %% Auto-resolving keyword (e.g. ::foo)
+  NsSym = case Resolver of
+            ?NIL ->
+              Ns = 'clojerl.Namespace':current(),
+              'clojerl.Namespace':name(Ns);
+            _ ->
+              'clojerl.IResolver':current_ns(Resolver)
+          end,
+  Namespace = 'clojerl.Symbol':name(NsSym),
+  clj_rt:keyword(Namespace, Name);
+parse_keyword(?NIL, Name, _) ->
+  %% Keyword without namespace
+  clj_rt:keyword(Name);
+parse_keyword(<<":", Namespace/binary>>, Name, Resolver) ->
+  %% Auto-resolving keyword with namespace (e.g. ::bar/foo)
+  AliasSym  = clj_rt:symbol(Namespace),
+  CurrentNs = 'clojerl.Namespace':current(),
+  NsSym = case Resolver of
+            ?NIL ->
+              case 'clojerl.Namespace':alias(CurrentNs, AliasSym) of
+                ?NIL -> ?NIL;
+                Ns   -> 'clojerl.Namespace':name(Ns)
+              end;
+            _ ->
+              'clojerl.IResolver':resolve_alias(Resolver, AliasSym)
+          end,
+  case NsSym of
+    ?NIL -> ?NIL;
+    _    -> clj_rt:keyword('clojerl.Symbol':name(NsSym), Name)
+  end;
+parse_keyword(Namespace, Name, _) ->
+  %% Keyword with namespace
+  clj_rt:keyword(Namespace, Name).
 
 %%------------------------------------------------------------------------------
 %% Symbol
@@ -538,9 +564,11 @@ syntax_quote(Form) ->
     IsUnquote    -> clj_rt:second(Form);
     IsUnquoteSpl -> throw(<<"unquote-splice not in list">>);
     %% Erlang collections
-    is_list(Form) ->
-      ErlListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"erl-list">>),
-      syntax_quote_coll(Form, ErlListSymbol);
+    %% Note: As long as the reader transforms #erl() to an expression
+    %% using erl-list*, `Form` will never be an Erlang list.
+    %% is_list(Form) ->
+    %%   ErlListSymbol = clj_rt:symbol(<<"clojure.core">>, <<"erl-list">>),
+    %%   syntax_quote_coll(Form, ErlListSymbol);
     is_tuple(Form) ->
       TupleSymbol = clj_rt:symbol(<<"clojure.core">>, <<"tuple">>),
       syntax_quote_coll(tuple_to_list(Form), TupleSymbol);
@@ -590,14 +618,31 @@ flatten_map(MapSeq, Vector) ->
 
 -spec syntax_quote_symbol(any()) -> any().
 syntax_quote_symbol(Symbol) ->
-  NamespaceStr = 'clojerl.Symbol':namespace(Symbol),
-  NameStr      = 'clojerl.Symbol':name(Symbol),
-  IsGenSym     = 'clojerl.String':ends_with(NameStr, <<"#">>),
-  case {NamespaceStr, IsGenSym} of
-    {?NIL, true} ->
+  NamespaceStr  = 'clojerl.Symbol':namespace(Symbol),
+  NameStr       = 'clojerl.Symbol':name(Symbol),
+  IsGenSym      = 'clojerl.String':ends_with(NameStr, <<"#">>),
+  EndsWithDot   = 'clojerl.String':ends_with(NameStr, <<".">>),
+  StartsWithDot = 'clojerl.String':starts_with(NameStr, <<".">>),
+  case {NamespaceStr, IsGenSym, EndsWithDot, StartsWithDot} of
+    {?NIL, true, _, _} ->
       register_gensym(Symbol);
+    {?NIL, _, true, _} ->
+      NameLength  = 'clojerl.String':count(NameStr),
+      ClassName   = 'clojerl.String':substring(NameStr, 0, NameLength - 1),
+      ClassSym    = 'clojerl.Symbol':?CONSTRUCTOR(ClassName),
+      ResolvedSym = case reader_resolver() of
+                      ?NIL ->
+                        resolve_symbol(?NIL, ClassSym);
+                      Resolver ->
+                        'clojerl.IResolver':resolve_class(Resolver, ClassSym)
+                    end,
+      ResolvedName = 'clojerl.Symbol':name(ResolvedSym),
+      'clojerl.Symbol':?CONSTRUCTOR(<<ResolvedName/binary, ".">>);
+    {?NIL, _, _, true} ->
+      %% Simply quote method names.
+      Symbol;
     _ ->
-      resolve_symbol(Symbol)
+      resolve_symbol(reader_resolver(), Symbol)
   end.
 
 -spec register_gensym(any()) -> any().
@@ -624,8 +669,8 @@ register_gensym(Symbol) ->
       GenSym
   end.
 
--spec resolve_symbol(any()) -> any().
-resolve_symbol(Symbol) ->
+-spec resolve_symbol('clojerl.IResolver':type() | ?NIL, any()) -> any().
+resolve_symbol(?NIL, Symbol) ->
   HasDot = binary:match('clojerl.Symbol':str(Symbol), <<"\.">>) =/= nomatch,
   case HasDot orelse 'clojerl.Namespace':find_var(Symbol) of
     true -> Symbol;
@@ -636,16 +681,46 @@ resolve_symbol(Symbol) ->
           NameSym   = 'clojerl.Namespace':name(CurrentNs),
           Namespace = 'clojerl.Symbol':name(NameSym),
           Name      = 'clojerl.Symbol':name(Symbol),
-          Meta      = 'clojerl.Symbol':meta(Symbol),
-          clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta);
+          clj_rt:symbol(Namespace, Name);
         _ ->
           Symbol
       end;
     Var ->
       Namespace = 'clojerl.Var':namespace(Var),
       Name      = 'clojerl.Var':name(Var),
-      Meta      = clj_rt:meta(Symbol),
-      clj_rt:with_meta(clj_rt:symbol(Namespace, Name), Meta)
+      clj_rt:symbol(Namespace, Name)
+  end;
+resolve_symbol(Resolver, Symbol) ->
+  case 'clojerl.Symbol':namespace(Symbol) of
+    ?NIL ->
+      RSym = case 'clojerl.IResolver':resolve_class(Resolver, Symbol) of
+               ?NIL -> 'clojerl.IResolver':resolve_var(Resolver, Symbol);
+               RSym_ -> RSym_
+             end,
+      case RSym of
+        ?NIL ->
+          Ns = 'clojerl.IResolver':current_ns(Resolver),
+          NsStr   = 'clojerl.Symbol':name(Ns),
+          NameStr = 'clojerl.Symbol':name(Symbol),
+          'clojerl.Symbol':?CONSTRUCTOR(NsStr, NameStr);
+        _    ->
+          RSym
+      end;
+    NsName ->
+      Alias  = 'clojerl.Symbol':?CONSTRUCTOR(NsName),
+      NsSym0 = 'clojerl.IResolver':resolve_class(Resolver, Alias),
+      NsSym1 = case NsSym0 of
+                 ?NIL -> 'clojerl.IResolver':resolve_alias(Resolver, Alias);
+                 _    -> NsSym0
+               end,
+      case NsSym1 of
+        ?NIL ->
+          ?NIL;
+        _ ->
+          NsStr   = 'clojerl.Symbol':name(NsSym1),
+          NameStr = 'clojerl.Symbol':name(Symbol),
+          'clojerl.Symbol':?CONSTRUCTOR(NsStr, NameStr)
+      end
   end.
 
 -spec syntax_quote_coll(any(), 'clojerl.Symbol':type()) -> any().
@@ -682,7 +757,8 @@ expand_list(List, Result) ->
                    clj_rt:second(Item);
                  _ ->
                    QuotedForm = syntax_quote(Item),
-                   clj_rt:list([ListSymbol, QuotedForm])
+                   QuotedFormWithMeta = add_meta(Item, QuotedForm),
+                   clj_rt:list([ListSymbol, QuotedFormWithMeta])
                end,
   expand_list(clj_rt:next(List), [NewItem | Result]).
 
@@ -1304,21 +1380,35 @@ is_auto_namespaced_map(Char, State0) ->
   {false, Symbol, State1}.
 
 -spec resolve_namespaced_map(boolean(), 'clojerl.Symbol':type(), state()) ->
-  'clojerl.Symbol':type().
+  binary().
 resolve_namespaced_map(true, ?NIL, _State) ->
-  Ns   = 'clojerl.Namespace':current(),
-  Name = 'clojerl.Namespace':name(Ns),
+  Name = case reader_resolver() of
+           ?NIL ->
+             Ns = 'clojerl.Namespace':current(),
+             'clojerl.Namespace':name(Ns);
+           Resolver ->
+             'clojerl.IResolver':current_ns(Resolver)
+         end,
   clj_rt:name(Name);
 resolve_namespaced_map(true, Symbol, State) ->
   validate_namespaced_name(Symbol, State),
-  Ns = 'clojerl.Namespace':current(),
-  case 'clojerl.Namespace':alias(Ns, Symbol) of
-    ?NIL ->
-      ?ERROR(<<"Unknown auto-resolved namespace alias">>, location(State));
-    ResolvedNs ->
-      Name = 'clojerl.Namespace':name(ResolvedNs),
-      clj_rt:name(Name)
-  end;
+  Name = case reader_resolver() of
+           ?NIL ->
+             Ns = 'clojerl.Namespace':current(),
+             case 'clojerl.Namespace':alias(Ns, Symbol) of
+               ?NIL       -> ?NIL;
+               ResolvedNs -> 'clojerl.Namespace':name(ResolvedNs)
+             end;
+           Resolver ->
+             'clojerl.IResolver':resolve_alias(Resolver, Symbol)
+         end,
+
+  ?ERROR_WHEN( Name == ?NIL
+             , <<"Unknown auto-resolved namespace alias">>
+             , location(State)
+             ),
+
+  clj_rt:name(Name);
 resolve_namespaced_map(false, Symbol, State) ->
   validate_namespaced_name(Symbol, State),
   clj_rt:name(Symbol).
@@ -1814,3 +1904,10 @@ unread_char( #{ src := <<Ch/utf8, Rest/binary>>
   State#{src => Rest};
 unread_char(State) ->
   State.
+
+-spec reader_resolver() -> ?NIL | 'clojure.IResolver':type().
+reader_resolver() ->
+  case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*reader-resolver*">>) of
+    ?NIL -> ?NIL;
+    {ok, Resolver} -> Resolver
+  end.
