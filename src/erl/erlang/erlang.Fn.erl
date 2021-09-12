@@ -11,6 +11,9 @@
         , str/1
         ]).
 
+-export_type([type/0]).
+-type type() :: function().
+
 apply(Fun, Args) when is_list(Args) ->
   erlang:apply(Fun, Args);
 apply(Fun, Args) ->

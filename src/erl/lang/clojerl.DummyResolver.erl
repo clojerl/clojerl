@@ -5,7 +5,6 @@
 -behavior('clojerl.IResolver').
 
 -export([?CONSTRUCTOR/0]).
--export_type([type/0]).
 
 -export([ 'current_ns'/1
         , 'resolve_class'/2
@@ -13,6 +12,7 @@
         , 'resolve_var'/2
         ]).
 
+-export_type([type/0]).
 -type type() :: #{?TYPE => ?M}.
 
 ?CONSTRUCTOR() ->

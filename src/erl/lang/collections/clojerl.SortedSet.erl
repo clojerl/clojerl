@@ -52,6 +52,7 @@
 
 -type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE  => ?M
                  , hashes => mappings()
                  , dict   => any()

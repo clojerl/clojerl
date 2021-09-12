@@ -189,7 +189,9 @@ replace_calls(Ast, CurrentModule) ->
   replace_calls(Ast, CurrentModule, undefined).
 
 %% @doc Adds mappings from a symbol to a value.
--spec add_mappings(['clojerl.Var':type()], module() | clj_module()) ->
+-spec add_mappings( ['clojerl.Var':type() | {binary(), 'erlang.Type':type()}]
+                  , module() | clj_module()
+                  ) ->
   clj_module().
 add_mappings(_, ?NIL) -> error(badarg);
 add_mappings(Mappings, ModuleName) when is_atom(ModuleName)  ->

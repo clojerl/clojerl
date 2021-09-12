@@ -20,6 +20,7 @@
 -export([hash/1]).
 -export([str/1]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE   => ?M
                  , message => binary()
                  , data    => any()

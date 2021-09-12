@@ -21,6 +21,8 @@
         , code_change/3
         ]).
 
+-export_type([type/0]).
+
 -type state() :: #{ count   => integer()
                   , cycle   => integer()
                   , waiting => [any()]

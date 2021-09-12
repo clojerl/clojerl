@@ -62,6 +62,7 @@
 -type entry()    :: clj_hash_collision:entry().
 -type mappings() :: #{integer() => entry()}.
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , map   => mappings()
                  , count => non_neg_integer()

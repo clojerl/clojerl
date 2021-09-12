@@ -41,6 +41,9 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
+-type type() :: map().
+
 -spec create(list()) -> map().
 create(KeyVals) when is_list(KeyVals) ->
   KeyValuePairs = build_key_values([], KeyVals),

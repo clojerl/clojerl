@@ -38,6 +38,9 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
+-type type() :: binary().
+
 -spec substring(binary(), integer()) -> binary().
 substring(Str, Start) when is_binary(Str), Start >= 0 ->
   do_substring(Str, Start, count(Str), 0, []).

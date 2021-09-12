@@ -31,6 +31,7 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
 -type type() :: atom().
 
 -spec ?CONSTRUCTOR('clojerl.Symbol':type() | binary()) -> type().

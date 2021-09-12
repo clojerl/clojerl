@@ -41,6 +41,7 @@
         , code_change/3
         ]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , id    => binary()
                  , value => any()

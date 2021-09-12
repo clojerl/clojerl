@@ -44,6 +44,7 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , chunk => 'clojerl.TupleChunk':type()
                  , more  => any()

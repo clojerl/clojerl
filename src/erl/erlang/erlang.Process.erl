@@ -6,6 +6,9 @@
 -export([str/1]).
 -export([hash/1]).
 
+-export_type([type/0]).
+-type type() :: pid().
+
 %% clojerl.IStringable
 
 str(Pid) when is_pid(Pid) ->

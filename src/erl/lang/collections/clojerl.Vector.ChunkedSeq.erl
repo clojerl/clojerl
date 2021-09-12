@@ -45,6 +45,7 @@
         ]).
 -export([str/1]).
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE     => ?M
                  , vector    => clj_vector:vector()
                  , size      => non_neg_integer()

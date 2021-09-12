@@ -15,6 +15,8 @@
 
 -export([loop/1]).
 
+-export_type([type/0]).
+
 -type state() :: #{ count   => integer()
                   , waiting => [{pid(), reference()}]
                   }.

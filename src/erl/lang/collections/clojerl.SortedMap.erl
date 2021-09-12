@@ -62,6 +62,7 @@
 
 -type mappings() :: #{integer() => {any(), true} | [{any(), true}]}.
 
+-export_type([type/0]).
 -type type() :: #{ ?TYPE => ?M
                  , keys  => mappings()
                  , vals  => rbdict:dict()

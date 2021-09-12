@@ -6,6 +6,9 @@
 -export([hash/1]).
 -export([str/1]).
 
+-export_type([type/0]).
+-type type() :: float().
+
 %% clojerl.IStringable
 
 str(Float) when is_float(Float) ->

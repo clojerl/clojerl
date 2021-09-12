@@ -547,8 +547,8 @@ read_syntax_quote(#{src := <<"`"/utf8, _/binary>>} = State) ->
 
 -spec syntax_quote(any()) -> any().
 syntax_quote(Form) ->
-  IsSpecial    = clj_analyzer:is_special(Form),
   IsSymbol     = clj_rt:'symbol?'(Form),
+  IsSpecial    = IsSymbol andalso clj_analyzer:is_special(Form),
   IsUnquote    = is_unquote(Form),
   IsUnquoteSpl = is_unquote_splicing(Form),
   IsColl       = clj_rt:'coll?'(Form),
@@ -723,7 +723,7 @@ resolve_symbol(Resolver, Symbol) ->
       end
   end.
 
--spec syntax_quote_coll(any(), 'clojerl.Symbol':type()) -> any().
+-spec syntax_quote_coll(any(), 'clojerl.Symbol':type() | ?NIL) -> any().
 syntax_quote_coll(List, ?NIL) ->
   syntax_quote_coll(List);
 syntax_quote_coll(List, FunSymbol) ->
@@ -777,16 +777,19 @@ add_meta(Form, Result) ->
       end
   end.
 
+-spec is_unquote(any()) -> boolean().
 is_unquote(Form) ->
   clj_rt:'seq?'(Form) andalso
     clj_rt:first(Form) == clj_rt:symbol(<<"clojure.core">>, <<"unquote">>).
 
+-spec is_unquote_splicing(any()) -> boolean().
 is_unquote_splicing(Form) ->
   clj_rt:'seq?'(Form) andalso
     clj_rt:first(Form) == clj_rt:symbol( <<"clojure.core">>
                                        , <<"unquote-splicing">>
                                        ).
 
+-spec is_literal(any()) -> boolean().
 is_literal(Form) ->
   clj_rt:'keyword?'(Form)
     orelse clj_rt:'number?'(Form)
