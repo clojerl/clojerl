@@ -12,6 +12,6 @@
       , {"Website", "http://clojerl.org"}
       , {"Try Online", "http://try.clojerl.online"}
       ]
-  }
+    }
   ]
 }.

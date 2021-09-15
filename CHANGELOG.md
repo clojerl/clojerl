@@ -1,6 +1,112 @@
 # Changelog
 
-## [0.7.0](https://github.com/clojerl/clojerl/tree/0.7.0)
+## [0.9.0](https://github.com/clojerl/clojerl/tree/0.9.0)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.8.0...0.9.0)
+
+**Implemented enhancements:**
+
+- Export type/0 in all clojerl.\* Erlang modules where there is one [\#832](https://github.com/clojerl/clojerl/issues/832)
+- Create a profile for generating docs [\#818](https://github.com/clojerl/clojerl/issues/818)
+- Use GitHub actions for building in Windows [\#816](https://github.com/clojerl/clojerl/issues/816)
+- Create docs profile which includes rebar3\_docs plugin [\#814](https://github.com/clojerl/clojerl/issues/814)
+
+**Fixed bugs:**
+
+- PushbackReader reports wrong value for at\_line\_start [\#828](https://github.com/clojerl/clojerl/issues/828)
+- Different behaviour of reader for invalid token expression [\#826](https://github.com/clojerl/clojerl/issues/826)
+
+**Closed issues:**
+
+- Enable erlang-ls when spinning up a gitpod workspace [\#820](https://github.com/clojerl/clojerl/issues/820)
+- Add gitpod configuration [\#812](https://github.com/clojerl/clojerl/issues/812)
+- Provide a way to get the dispatch function for multimethods [\#808](https://github.com/clojerl/clojerl/issues/808)
+
+**Merged pull requests:**
+
+- \[\#832\] Export type in all clojerl types [\#834](https://github.com/clojerl/clojerl/pull/834) ([jfacorro](https://github.com/jfacorro))
+- \[\#793\] clojure 1.9.0 reader resolver [\#833](https://github.com/clojerl/clojerl/pull/833) ([jfacorro](https://github.com/jfacorro))
+- Improve performance empty list creation [\#831](https://github.com/clojerl/clojerl/pull/831) ([jfacorro](https://github.com/jfacorro))
+- Improve generative tests runtime [\#830](https://github.com/clojerl/clojerl/pull/830) ([jfacorro](https://github.com/jfacorro))
+- \[\#828\] Keep the previous at\_line\_start value to restore it when char is unread [\#829](https://github.com/clojerl/clojerl/pull/829) ([jfacorro](https://github.com/jfacorro))
+- \[\#826\] reader unexpected value after invalid token [\#827](https://github.com/clojerl/clojerl/pull/827) ([jfacorro](https://github.com/jfacorro))
+- Bump rebar3\_clojerl plugin [\#825](https://github.com/clojerl/clojerl/pull/825) ([jfacorro](https://github.com/jfacorro))
+- \[\#816\] Remove AppVeyor [\#824](https://github.com/clojerl/clojerl/pull/824) ([jfacorro](https://github.com/jfacorro))
+- \[\#793\] Include test.check explicitly [\#823](https://github.com/clojerl/clojerl/pull/823) ([jfacorro](https://github.com/jfacorro))
+- \[\#793\] include spec.alpha for clojure 1.9.0 [\#822](https://github.com/clojerl/clojerl/pull/822) ([jfacorro](https://github.com/jfacorro))
+- \[\#820\] Use custom dockerfile [\#821](https://github.com/clojerl/clojerl/pull/821) ([jfacorro](https://github.com/jfacorro))
+- \[\#814\] Bump rebar3\_clojerl plugin [\#819](https://github.com/clojerl/clojerl/pull/819) ([jfacorro](https://github.com/jfacorro))
+- \[\#816\] Add windows platform in CI pipeline [\#817](https://github.com/clojerl/clojerl/pull/817) ([jfacorro](https://github.com/jfacorro))
+- \[\#814\] Create docs profile which includes rebar3\_docs plugin [\#815](https://github.com/clojerl/clojerl/pull/815) ([jfacorro](https://github.com/jfacorro))
+- \[\#812\] Add gitpod configuration file [\#813](https://github.com/clojerl/clojerl/pull/813) ([jfacorro](https://github.com/jfacorro))
+- \[\#808\] Ensure false fake\_fun in the vars in metadata [\#811](https://github.com/clojerl/clojerl/pull/811) ([jfacorro](https://github.com/jfacorro))
+- \[\#808\] Ensure the var is not marked as fake [\#810](https://github.com/clojerl/clojerl/pull/810) ([jfacorro](https://github.com/jfacorro))
+- \[\#808\] multi-method dispatch fn [\#809](https://github.com/clojerl/clojerl/pull/809) ([jfacorro](https://github.com/jfacorro))
+- \[\#803\] reify implement IMeta [\#807](https://github.com/clojerl/clojerl/pull/807) ([jfacorro](https://github.com/jfacorro))
+- \[\#793\] Apply changes from clojure 1.9.0 [\#806](https://github.com/clojerl/clojerl/pull/806) ([jfacorro](https://github.com/jfacorro))
+
+## [0.8.0](https://github.com/clojerl/clojerl/tree/0.8.0) (2021-06-06)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.7.1...0.8.0)
+
+**Implemented enhancements:**
+
+- Include OTP 24.0 in CI build [\#791](https://github.com/clojerl/clojerl/issues/791)
+- Migrate from Travis CI to GitHub actions [\#783](https://github.com/clojerl/clojerl/issues/783)
+- Use 0.8.4 of rebar3\_clojerl plugin to support latest non-released rebar3 changes [\#771](https://github.com/clojerl/clojerl/issues/771)
+- Generate and publish documentation  [\#766](https://github.com/clojerl/clojerl/issues/766)
+- Investigate why using OTP 19.3 gives better benchmark results than 21.1 [\#588](https://github.com/clojerl/clojerl/issues/588)
+
+**Fixed bugs:**
+
+- Macro is resolved even when local binding exists [\#800](https://github.com/clojerl/clojerl/issues/800)
+- throw in try expression returns :badarg in the REPL instead of generating exception [\#796](https://github.com/clojerl/clojerl/issues/796)
+- Symbols in REPL are identical [\#795](https://github.com/clojerl/clojerl/issues/795)
+- Tuples are not processed corrected in a syntax quote [\#788](https://github.com/clojerl/clojerl/issues/788)
+- Build failing on OTP 18.3 [\#776](https://github.com/clojerl/clojerl/issues/776)
+
+**Closed issues:**
+
+- Implement missing reify special form [\#802](https://github.com/clojerl/clojerl/issues/802)
+- Update benchmark results using OTP 24 [\#798](https://github.com/clojerl/clojerl/issues/798)
+- subseq and rsubseq [\#734](https://github.com/clojerl/clojerl/issues/734)
+- Create asdf installer for Clojerl [\#672](https://github.com/clojerl/clojerl/issues/672)
+
+**Merged pull requests:**
+
+- \[\#802\] Ensure that reify implements IStringable and IHash [\#804](https://github.com/clojerl/clojerl/pull/804) ([jfacorro](https://github.com/jfacorro))
+- \[\#802\] Implement reify [\#803](https://github.com/clojerl/clojerl/pull/803) ([jfacorro](https://github.com/jfacorro))
+- \[\#800\] macro resolved instead of local [\#801](https://github.com/clojerl/clojerl/pull/801) ([jfacorro](https://github.com/jfacorro))
+- \[\#798\] Update benchmarks using OTP 24 [\#799](https://github.com/clojerl/clojerl/pull/799) ([jfacorro](https://github.com/jfacorro))
+- \[\#796\] Correctly handle throw expression in try expression through core\_eval [\#797](https://github.com/clojerl/clojerl/pull/797) ([jfacorro](https://github.com/jfacorro))
+- \[\#791\] Add Erlang/OTP 24.0 to CI build [\#792](https://github.com/clojerl/clojerl/pull/792) ([jfacorro](https://github.com/jfacorro))
+- \[\#788\] compilation error with tuples in syntax quote [\#789](https://github.com/clojerl/clojerl/pull/789) ([jfacorro](https://github.com/jfacorro))
+- \[\#786\] Set expr context where missing [\#787](https://github.com/clojerl/clojerl/pull/787) ([jfacorro](https://github.com/jfacorro))
+- \[\#783\] GitHub Actions build badge [\#785](https://github.com/clojerl/clojerl/pull/785) ([jfacorro](https://github.com/jfacorro))
+- \[\#783\] Add GitHub actions and remove Travis CI [\#784](https://github.com/clojerl/clojerl/pull/784) ([jfacorro](https://github.com/jfacorro))
+- \[\#734\] Implement subseq and rsubseq [\#782](https://github.com/clojerl/clojerl/pull/782) ([jfacorro](https://github.com/jfacorro))
+- \[\#766\] documentation type and protocol modules [\#781](https://github.com/clojerl/clojerl/pull/781) ([jfacorro](https://github.com/jfacorro))
+- \[\#778\] Correctly handle fn returned by macro and used as root binding for var [\#779](https://github.com/clojerl/clojerl/pull/779) ([jfacorro](https://github.com/jfacorro))
+- \[\#776\] Remove support for Erlang/OTP 18.3 [\#777](https://github.com/clojerl/clojerl/pull/777) ([jfacorro](https://github.com/jfacorro))
+- \[\#766\] Add documentation [\#775](https://github.com/clojerl/clojerl/pull/775) ([jfacorro](https://github.com/jfacorro))
+- \[\#771\] Bump rebar3\_clojerl version to 0.8.4 [\#774](https://github.com/clojerl/clojerl/pull/774) ([jfacorro](https://github.com/jfacorro))
+
+## [0.7.1](https://github.com/clojerl/clojerl/tree/0.7.1) (2020-08-17)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.7.0...0.7.1)
+
+**Fixed bugs:**
+
+- Invalid regexp if trying to match " [\#772](https://github.com/clojerl/clojerl/issues/772)
+- Clojerl socket REPL is behaving strangely when sending multi-lines [\#768](https://github.com/clojerl/clojerl/issues/768)
+
+**Merged pull requests:**
+
+- \[\#772\] Handle empty reader buffer when processing escaped chars in regex [\#773](https://github.com/clojerl/clojerl/pull/773) ([jfacorro](https://github.com/jfacorro))
+- Update instructions for building and/or starting the REPL on Windows [\#770](https://github.com/clojerl/clojerl/pull/770) ([jfacorro](https://github.com/jfacorro))
+- Fixed missing \n when reading from a Socket [\#769](https://github.com/clojerl/clojerl/pull/769) ([mauricioszabo](https://github.com/mauricioszabo))
+
+## [0.7.0](https://github.com/clojerl/clojerl/tree/0.7.0) (2020-07-27)
 
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.6.0...0.7.0)
 
@@ -32,6 +138,7 @@
 
 **Merged pull requests:**
 
+- Prepare release 0.7.0 [\#767](https://github.com/clojerl/clojerl/pull/767) ([jfacorro](https://github.com/jfacorro))
 - \[\#764\] Remove pre-hook [\#765](https://github.com/clojerl/clojerl/pull/765) ([jfacorro](https://github.com/jfacorro))
 - \[\#762\] REPL from Erlang shell outputs extra characters [\#763](https://github.com/clojerl/clojerl/pull/763) ([jfacorro](https://github.com/jfacorro))
 - \[\#759\] Erlang and Clojure encoders [\#761](https://github.com/clojerl/clojerl/pull/761) ([jfacorro](https://github.com/jfacorro))
@@ -88,8 +195,6 @@
 - Implement an Erlang Clojure API [\#681](https://github.com/clojerl/clojerl/issues/681)
 - Generate cover reports [\#677](https://github.com/clojerl/clojerl/issues/677)
 - Create issue templates [\#673](https://github.com/clojerl/clojerl/issues/673)
-- Inquiry: can Cider IDE be used with Clojerl? [\#671](https://github.com/clojerl/clojerl/issues/671)
-- State of Clojerl? [\#667](https://github.com/clojerl/clojerl/issues/667)
 - Xenial in Travis CI doesn't support OTP 18 [\#663](https://github.com/clojerl/clojerl/issues/663)
 - Use Erlang macros from Clojerl code [\#662](https://github.com/clojerl/clojerl/issues/662)
 - Better behaviour support [\#661](https://github.com/clojerl/clojerl/issues/661)
@@ -172,16 +277,21 @@
 
 **Implemented enhancements:**
 
+- Build with Erlang/OTP 22.0 [\#634](https://github.com/clojerl/clojerl/issues/634)
 - Improve performance of calling anonymous fns [\#631](https://github.com/clojerl/clojerl/issues/631)
 - Cycle, Iterate and Repeat [\#630](https://github.com/clojerl/clojerl/issues/630)
 - Experiment with Clojure vector implementation [\#628](https://github.com/clojerl/clojerl/issues/628)
 - Run benchmarks comparing them against Clojure JVM [\#589](https://github.com/clojerl/clojerl/issues/589)
+- Build with OTP 21.1 [\#585](https://github.com/clojerl/clojerl/issues/585)
 
 **Fixed bugs:**
 
+- Avoid calling constructor function for empty literal collections [\#622](https://github.com/clojerl/clojerl/issues/622)
 - extend-type for default doesn't work as expected [\#616](https://github.com/clojerl/clojerl/issues/616)
 - Using clojure.core/nth in an inifinite lazy seq never returns [\#607](https://github.com/clojerl/clojerl/issues/607)
+- Dispatch value in defmethod can't be a qualified symbol [\#605](https://github.com/clojerl/clojerl/issues/605)
 - Hash collisions generate wrong behaviour for set [\#590](https://github.com/clojerl/clojerl/issues/590)
+- \(/ 1\) throws an undef exception [\#583](https://github.com/clojerl/clojerl/issues/583)
 - str function for namespaces returns unexpected result [\#581](https://github.com/clojerl/clojerl/issues/581)
 - Eduction should implement ISeqable [\#562](https://github.com/clojerl/clojerl/issues/562)
 
@@ -189,15 +299,8 @@
 
 - Embed type dispatch in the protocol module [\#644](https://github.com/clojerl/clojerl/issues/644)
 - Improve implementation of clojure.core/str and clojure.string/capitalize [\#637](https://github.com/clojerl/clojerl/issues/637)
-- Build with Erlang/OTP 22.0 [\#634](https://github.com/clojerl/clojerl/issues/634)
 - Performance degradation when reducing a vector [\#625](https://github.com/clojerl/clojerl/issues/625)
-- Avoid calling constructor function for empty literal collections [\#622](https://github.com/clojerl/clojerl/issues/622)
-- Examples? [\#618](https://github.com/clojerl/clojerl/issues/618)
-- Bad break character in clje rlwrap command [\#610](https://github.com/clojerl/clojerl/issues/610)
-- Dispatch value in defmethod can't be a qualified symbol [\#605](https://github.com/clojerl/clojerl/issues/605)
 - Migrate the rest of clojure.test-clojure.\* from Clojure upstream [\#587](https://github.com/clojerl/clojerl/issues/587)
-- Build with OTP 21.1 [\#585](https://github.com/clojerl/clojerl/issues/585)
-- \(/ 1\) throws an undef exception [\#583](https://github.com/clojerl/clojerl/issues/583)
 - Stateful Transducers [\#249](https://github.com/clojerl/clojerl/issues/249)
 
 **Merged pull requests:**
@@ -281,7 +384,6 @@
 
 **Closed issues:**
 
-- Unable to \< make repl \>  [\#577](https://github.com/clojerl/clojerl/issues/577)
 - clojure.edn [\#550](https://github.com/clojerl/clojerl/issues/550)
 
 **Merged pull requests:**
@@ -398,9 +500,7 @@
 - Stack trace pretty printing fails when args are provided instead of arity [\#483](https://github.com/clojerl/clojerl/issues/483)
 - REPL no longer starting when clje script doesn't get arguments [\#481](https://github.com/clojerl/clojerl/issues/481)
 - Using -e in clje script fails [\#478](https://github.com/clojerl/clojerl/issues/478)
-- Don't crash the VM when running clojure.main and there's an error [\#475](https://github.com/clojerl/clojerl/issues/475)
 - Unexpected behaviour using \_ when pattern matching in case\* [\#464](https://github.com/clojerl/clojerl/issues/464)
-- clojure.core/spit should also work for raw binary [\#463](https://github.com/clojerl/clojerl/issues/463)
 - Remove references to class and add missing type? function [\#455](https://github.com/clojerl/clojerl/issues/455)
 - Using a fn inside a def for initializing its value results in error [\#453](https://github.com/clojerl/clojerl/issues/453)
 - Running benchmarks fails [\#448](https://github.com/clojerl/clojerl/issues/448)
@@ -476,13 +576,17 @@
 - Rename and re-organize type and modules [\#366](https://github.com/clojerl/clojerl/issues/366)
 - Move internal definitions in clojerl.hrl to an internal header file [\#363](https://github.com/clojerl/clojerl/issues/363)
 - unread shouldn't be part of clojerl.IReader protocol [\#358](https://github.com/clojerl/clojerl/issues/358)
+- Build with OTP 20.0 [\#330](https://github.com/clojerl/clojerl/issues/330)
 - clojure.repl/source is not implemented [\#321](https://github.com/clojerl/clojerl/issues/321)
 - Compile with OTP 20 [\#316](https://github.com/clojerl/clojerl/issues/316)
 - assert-args returns an unreadable error message [\#314](https://github.com/clojerl/clojerl/issues/314)
 - Time benchmark [\#308](https://github.com/clojerl/clojerl/issues/308)
+- Fix elvis warnings [\#300](https://github.com/clojerl/clojerl/issues/300)
+- Add .clje as clojure extension for github [\#297](https://github.com/clojerl/clojerl/issues/297)
 - Replace the mention of forms for modules [\#296](https://github.com/clojerl/clojerl/issues/296)
 - The context value in env is not used  [\#295](https://github.com/clojerl/clojerl/issues/295)
 - Erlang 19.3 Common Test requires end\_per\_\* when init\_per\_\* is there [\#277](https://github.com/clojerl/clojerl/issues/277)
+- Improve build  [\#274](https://github.com/clojerl/clojerl/issues/274)
 - Make dialyzer happy [\#266](https://github.com/clojerl/clojerl/issues/266)
 - Move clojure source files to src/clj and test files to test/clj [\#265](https://github.com/clojerl/clojerl/issues/265)
 - Make some clojerl modules sticky, like clojure.core [\#264](https://github.com/clojerl/clojerl/issues/264)
@@ -516,6 +620,7 @@
 - Avoid having to compile the whole module multiple times during compilation [\#86](https://github.com/clojerl/clojerl/issues/86)
 - Avoid multiple passes for parse\_def and parse\_fn [\#66](https://github.com/clojerl/clojerl/issues/66)
 - Remove erl\_fun reader dispatch [\#64](https://github.com/clojerl/clojerl/issues/64)
+- Test all data types [\#52](https://github.com/clojerl/clojerl/issues/52)
 - clojerl.Var: maybe change internal representation of ns and name from symbol to binary  [\#40](https://github.com/clojerl/clojerl/issues/40)
 - Integration with Travis CI [\#35](https://github.com/clojerl/clojerl/issues/35)
 - Integrate with Travis CI [\#26](https://github.com/clojerl/clojerl/issues/26)
@@ -531,11 +636,8 @@
 - Vars defined with defn have :arglists as \#erl\(\) [\#426](https://github.com/clojerl/clojerl/issues/426)
 - Wrong IStringable implementation for Erlang strings [\#422](https://github.com/clojerl/clojerl/issues/422)
 - Include compiler as a dependency in .app file [\#419](https://github.com/clojerl/clojerl/issues/419)
-- Avoid having to load all related modules during application start [\#413](https://github.com/clojerl/clojerl/issues/413)
 - Type defined with deftype can't be used in the implementation functions [\#411](https://github.com/clojerl/clojerl/issues/411)
 - Namespace import and aliases should also be kept as modules attributes  [\#407](https://github.com/clojerl/clojerl/issues/407)
-- Improve help text in bin/clojerl [\#404](https://github.com/clojerl/clojerl/issues/404)
-- nil should not implement protocols by default [\#402](https://github.com/clojerl/clojerl/issues/402)
 - Macro-expansion of dot syntax doesn't keep tag [\#396](https://github.com/clojerl/clojerl/issues/396)
 - Generated symbol in syntax quote doesn't keep meta [\#394](https://github.com/clojerl/clojerl/issues/394)
 - Adding a type hint to a list doesn't have any effect [\#381](https://github.com/clojerl/clojerl/issues/381)
@@ -549,22 +651,16 @@
 - Printing readably does not work for vectors and other types [\#335](https://github.com/clojerl/clojerl/issues/335)
 - count should be O\(1\) for clojerl.List [\#326](https://github.com/clojerl/clojerl/issues/326)
 - Some type hints are ignored [\#323](https://github.com/clojerl/clojerl/issues/323)
-- Compile with OTP 20 [\#316](https://github.com/clojerl/clojerl/issues/316)
-- assert-args returns an unreadable error message [\#314](https://github.com/clojerl/clojerl/issues/314)
 - Add clojure.test-clojure.compilation tests [\#305](https://github.com/clojerl/clojerl/issues/305)
 - Don't generate an on\_load function if there are no expressions. [\#304](https://github.com/clojerl/clojerl/issues/304)
 - benchmark target is broken [\#302](https://github.com/clojerl/clojerl/issues/302)
-- Replace the mention of forms for modules [\#296](https://github.com/clojerl/clojerl/issues/296)
 - Missing location information for symbol [\#293](https://github.com/clojerl/clojerl/issues/293)
 - Binary file for clje.user is not written by design in clojure.main  [\#289](https://github.com/clojerl/clojerl/issues/289)
 - Handle \_ and - correctly when loading files [\#287](https://github.com/clojerl/clojerl/issues/287)
 - Include full path for clje/cljc files  [\#286](https://github.com/clojerl/clojerl/issues/286)
-- Erlang 19.3 Common Test requires end\\_per\\_\\* when init\\_per\\_\\* is there [\#277](https://github.com/clojerl/clojerl/issues/277)
 - Modify extension from .clj to .clje [\#271](https://github.com/clojerl/clojerl/issues/271)
 - Print Erlang printable lists as \#erl"" [\#268](https://github.com/clojerl/clojerl/issues/268)
 - Consider no namespace when identifying special forms [\#257](https://github.com/clojerl/clojerl/issues/257)
-- Items in LazySeqs evaluated multiple times   [\#246](https://github.com/clojerl/clojerl/issues/246)
-- Remove any mention of Java in docstrings [\#245](https://github.com/clojerl/clojerl/issues/245)
 - :arglists metadata in Vars gets converted into an Erlang list [\#242](https://github.com/clojerl/clojerl/issues/242)
 - Non-printable strings can't be printed readably [\#239](https://github.com/clojerl/clojerl/issues/239)
 - Metadata for Vars needs to be analyzed [\#218](https://github.com/clojerl/clojerl/issues/218)
@@ -583,19 +679,16 @@
 - Reader \(and clojure.core/read function\) should comply to original [\#160](https://github.com/clojerl/clojerl/issues/160)
 - Vars metadata: add :name, :ns, :line and :column information [\#159](https://github.com/clojerl/clojerl/issues/159)
 - Metadata should be analysed and emitted  [\#158](https://github.com/clojerl/clojerl/issues/158)
-- Can't use values with metadata as keys because equality doesn't work [\#148](https://github.com/clojerl/clojerl/issues/148)
 - Using 'var' with a private var shows error about it being private  [\#145](https://github.com/clojerl/clojerl/issues/145)
 - multi-method: symbol as a dispatch value doesn't get dispatched [\#144](https://github.com/clojerl/clojerl/issues/144)
 - clojure.core/re-matches fails to match string [\#142](https://github.com/clojerl/clojerl/issues/142)
 - Setting the value for a dynamic var doesn't check if there is already a binding [\#140](https://github.com/clojerl/clojerl/issues/140)
-- clj\\_util:throw\\* should be clj\\_utils:error\\* in most cases [\#138](https://github.com/clojerl/clojerl/issues/138)
 - Using nil as a value for a dynamic binding doesn't work  [\#135](https://github.com/clojerl/clojerl/issues/135)
 - clj\_compiler\_SUITE is failing [\#132](https://github.com/clojerl/clojerl/issues/132)
 - Multimethods implementation functions accumulate after repeated compilations [\#128](https://github.com/clojerl/clojerl/issues/128)
 - Expressions inside literal tuples are not analyzed [\#108](https://github.com/clojerl/clojerl/issues/108)
 - Conflict with var names, unwanted matching performed [\#94](https://github.com/clojerl/clojerl/issues/94)
 - Macros defined in a namespace can't currently be used in the same ns [\#70](https://github.com/clojerl/clojerl/issues/70)
-- Avoid multiple passes for parse\\_def and parse\\_fn [\#66](https://github.com/clojerl/clojerl/issues/66)
 - HOF that return anonymous functions not working [\#65](https://github.com/clojerl/clojerl/issues/65)
 - Symbols that get resolved to an erl\_fun might actually be vars that have not been defined yet [\#56](https://github.com/clojerl/clojerl/issues/56)
 - Metadata: what happens if you use a symbol with metadata as a key in a map?  [\#39](https://github.com/clojerl/clojerl/issues/39)
@@ -603,22 +696,15 @@
 
 **Closed issues:**
 
-- An error occurred while compiling clojerl [\#387](https://github.com/clojerl/clojerl/issues/387)
 - List available, missing and/or unsupported features [\#369](https://github.com/clojerl/clojerl/issues/369)
 - Try map representation for types instead of tuples [\#364](https://github.com/clojerl/clojerl/issues/364)
-- Build failed [\#356](https://github.com/clojerl/clojerl/issues/356)
 - Remove handling of ratio [\#353](https://github.com/clojerl/clojerl/issues/353)
 - ExceptionInfo, ex-info and ex-data [\#352](https://github.com/clojerl/clojerl/issues/352)
 - Keep on\_load expressions when modifying a module [\#343](https://github.com/clojerl/clojerl/issues/343)
-- Build with OTP 20.0 [\#330](https://github.com/clojerl/clojerl/issues/330)
 - ArrayMaps \(TupleMaps\) missing [\#327](https://github.com/clojerl/clojerl/issues/327)
-- Does Clojerl have emacs plugins? [\#315](https://github.com/clojerl/clojerl/issues/315)
 - Using underscores as argument generates errors if the argument is used [\#312](https://github.com/clojerl/clojerl/issues/312)
-- Fix elvis warnings [\#300](https://github.com/clojerl/clojerl/issues/300)
-- Add .clje as clojure extension for github [\#297](https://github.com/clojerl/clojerl/issues/297)
 - Add License [\#284](https://github.com/clojerl/clojerl/issues/284)
 - Basic introductory documentation [\#283](https://github.com/clojerl/clojerl/issues/283)
-- Improve build  [\#274](https://github.com/clojerl/clojerl/issues/274)
 - clojure.instant: printable dates and reader related tests [\#262](https://github.com/clojerl/clojerl/issues/262)
 - Comparable, sort and sort-by [\#261](https://github.com/clojerl/clojerl/issues/261)
 - Erlang alias operator [\#252](https://github.com/clojerl/clojerl/issues/252)
@@ -667,7 +753,6 @@
 - Simple REPL [\#57](https://github.com/clojerl/clojerl/issues/57)
 - Use line and column information in all errors shown, when possible [\#54](https://github.com/clojerl/clojerl/issues/54)
 - If a var is not in the Env when analyzing try to get it from the module's attribute [\#53](https://github.com/clojerl/clojerl/issues/53)
-- Test all data types [\#52](https://github.com/clojerl/clojerl/issues/52)
 - compiler: provide options such as the output dir and compiler flags [\#49](https://github.com/clojerl/clojerl/issues/49)
 - Declare dummy ISequential behavior to avoid warning [\#46](https://github.com/clojerl/clojerl/issues/46)
 - clojure.core/require [\#44](https://github.com/clojerl/clojerl/issues/44)
@@ -689,7 +774,7 @@
 - analyzer: fn\* [\#6](https://github.com/clojerl/clojerl/issues/6)
 - analyzer: quote [\#5](https://github.com/clojerl/clojerl/issues/5)
 - analyzer: def [\#3](https://github.com/clojerl/clojerl/issues/3)
-- analyzer: add `context` to env and `top\_level` to expressions when applicable [\#2](https://github.com/clojerl/clojerl/issues/2)
+- analyzer: add `context` to env and `top_level` to expressions when applicable [\#2](https://github.com/clojerl/clojerl/issues/2)
 - reader: implement missing reader dispatches  [\#1](https://github.com/clojerl/clojerl/issues/1)
 
 **Merged pull requests:**
@@ -830,32 +915,6 @@
 - \[Closes \#160\] Fix clojure.core/read [\#186](https://github.com/clojerl/clojerl/pull/186) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#175\] Remove already compiled modules [\#182](https://github.com/clojerl/clojerl/pull/182) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#102\] defprotocol [\#180](https://github.com/clojerl/clojerl/pull/180) ([jfacorro](https://github.com/jfacorro))
-- \[\#177\] clojure.string [\#178](https://github.com/clojerl/clojerl/pull/178) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#174\] import [\#176](https://github.com/clojerl/clojerl/pull/176) ([jfacorro](https://github.com/jfacorro))
-- \[\#124\] deftype and defrecord [\#173](https://github.com/clojerl/clojerl/pull/173) ([jfacorro](https://github.com/jfacorro))
-- \[Close \#159\] Add missing metadata to vars [\#169](https://github.com/clojerl/clojerl/pull/169) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#158\] Metadata analyzed and emitted [\#167](https://github.com/clojerl/clojerl/pull/167) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#165\] Check if the protocol function doesn't exist [\#166](https://github.com/clojerl/clojerl/pull/166) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#163\] Remove protocol prefix [\#164](https://github.com/clojerl/clojerl/pull/164) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#84\] Implement inst and uuid default readers [\#157](https://github.com/clojerl/clojerl/pull/157) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#129\] Add clojure.test and all necessary namespaces [\#155](https://github.com/clojerl/clojerl/pull/155) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#105\] IO feature [\#154](https://github.com/clojerl/clojerl/pull/154) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#148\] Metadata ruins comparison [\#152](https://github.com/clojerl/clojerl/pull/152) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#149\] Simple benchmarks [\#150](https://github.com/clojerl/clojerl/pull/150) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#144\] Strip meta of dispatch value when registering and when dispatching [\#147](https://github.com/clojerl/clojerl/pull/147) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#145\] Don't check if var is private when resolving for 'var' [\#146](https://github.com/clojerl/clojerl/pull/146) ([jfacorro](https://github.com/jfacorro))
-- \[Fix \#142\] Handle the case where a string is returned from re-find [\#143](https://github.com/clojerl/clojerl/pull/143) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#140\] Add update function in scope that only modifies existing key [\#141](https://github.com/clojerl/clojerl/pull/141) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#82\] Use \_ to catch all classes of exceptions [\#137](https://github.com/clojerl/clojerl/pull/137) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#135\] Store value in dynamic bindings as an {ok, Value} tuple [\#136](https://github.com/clojerl/clojerl/pull/136) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#128\] Add dispatch value as the suffix [\#134](https://github.com/clojerl/clojerl/pull/134) ([jfacorro](https://github.com/jfacorro))
-- \[Fixes \#132\] Fixed bugs [\#133](https://github.com/clojerl/clojerl/pull/133) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#130\] Regex functions [\#131](https://github.com/clojerl/clojerl/pull/131) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#73\] Private defn [\#127](https://github.com/clojerl/clojerl/pull/127) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#123\] case [\#126](https://github.com/clojerl/clojerl/pull/126) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#92\] Multimethods [\#125](https://github.com/clojerl/clojerl/pull/125) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#99\] File and line information in emitted forms [\#112](https://github.com/clojerl/clojerl/pull/112) ([jfacorro](https://github.com/jfacorro))
-- \[Closes \#38\] Allow pattern matching or destructuring [\#110](https://github.com/clojerl/clojerl/pull/110) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#108\] Wrong analysis on tuples [\#109](https://github.com/clojerl/clojerl/pull/109) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#89\] fully functional ns macro [\#107](https://github.com/clojerl/clojerl/pull/107) ([jfacorro](https://github.com/jfacorro))
 - \[\#89\] Fully functional ns macro namespaces ets [\#106](https://github.com/clojerl/clojerl/pull/106) ([jfacorro](https://github.com/jfacorro))
@@ -902,4 +961,4 @@
 
 
 
-* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*
+\* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*
