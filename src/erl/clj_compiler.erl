@@ -430,7 +430,7 @@ erl_compiler_options(Opts) ->
 
 %% @doc Parse ERL_COMPILER_OPTIONS env variable.
 %% Copied from the compile module because this function is
-%% not avaialble for older Erlang/OTP releases (i.e. 18).
+%% not available for older Erlang/OTP releases (i.e. 18).
 -spec env_compiler_options() -> [term()].
 env_compiler_options() ->
   Key = "ERL_COMPILER_OPTIONS",

@@ -98,7 +98,7 @@ file(_Config) ->
 
   check_var_value(<<"examples.simple-2">>, <<"x">>, 1),
 
-  ct:comment("Compile all scripts/examples/*.clje files succesfully"),
+  ct:comment("Compile all scripts/examples/*.clje files successfully"),
   Wildcard2 = clj_test_utils:relative_path(<<"scripts/examples/**/*.clje">>),
   Files2    = filelib:wildcard(binary_to_list(Wildcard2)),
   Exclude   = [clj_test_utils:relative_path(Path) || Path <- ?EXCLUDE_FILES],

@@ -87,7 +87,7 @@
   (are [x s] (= s (binding [*print-dup* true] (print-str x)))
        1 "1"
        1.0 "1.0"
-       1N "1" ;; all integers are arbritrary precision
+       1N "1" ;; all integers are arbitrary precision
        1M "1.0" ;; there is no bigdecimal type
        "hi" "\"hi\""))
 

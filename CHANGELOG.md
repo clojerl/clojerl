@@ -157,7 +157,7 @@
 - \[\#248\] Implement clojerl.Subvec and clojerl.Vector.Seq [\#737](https://github.com/clojerl/clojerl/pull/737) ([jfacorro](https://github.com/jfacorro))
 - \[\#284\] Rename the callback functions for marker protocols and remove their implementations [\#736](https://github.com/clojerl/clojerl/pull/736) ([jfacorro](https://github.com/jfacorro))
 - \[\#248\] Reducers [\#735](https://github.com/clojerl/clojerl/pull/735) ([jfacorro](https://github.com/jfacorro))
-- \[\#732\] Fix bug when checking for overriden vars [\#733](https://github.com/clojerl/clojerl/pull/733) ([jfacorro](https://github.com/jfacorro))
+- \[\#732\] Fix bug when checking for overridden vars [\#733](https://github.com/clojerl/clojerl/pull/733) ([jfacorro](https://github.com/jfacorro))
 - \[\#730\] Add option to compile to BEAM assembly [\#731](https://github.com/clojerl/clojerl/pull/731) ([jfacorro](https://github.com/jfacorro))
 - \[\#728\] Return top level supervisor pid [\#729](https://github.com/clojerl/clojerl/pull/729) ([jfacorro](https://github.com/jfacorro))
 
@@ -167,9 +167,9 @@
 
 **Implemented enhancements:**
 
-- Improve performace of getting from a Clojure map [\#714](https://github.com/clojerl/clojerl/issues/714)
+- Improve performance of getting from a Clojure map [\#714](https://github.com/clojerl/clojerl/issues/714)
 - case thrown "No match" error - stacktrace doesn't show where the violating code \(plus line number\) is in [\#711](https://github.com/clojerl/clojerl/issues/711)
-- Add line number of where compile error occured [\#706](https://github.com/clojerl/clojerl/issues/706)
+- Add line number of where compile error occurred [\#706](https://github.com/clojerl/clojerl/issues/706)
 - clj\_module should remove modules when process that loaded them dies [\#704](https://github.com/clojerl/clojerl/issues/704)
 - Output .core file to the same dir as .beam [\#694](https://github.com/clojerl/clojerl/issues/694)
 - Compile to native code [\#310](https://github.com/clojerl/clojerl/issues/310)
@@ -288,7 +288,7 @@
 
 - Avoid calling constructor function for empty literal collections [\#622](https://github.com/clojerl/clojerl/issues/622)
 - extend-type for default doesn't work as expected [\#616](https://github.com/clojerl/clojerl/issues/616)
-- Using clojure.core/nth in an inifinite lazy seq never returns [\#607](https://github.com/clojerl/clojerl/issues/607)
+- Using clojure.core/nth in an infinite lazy seq never returns [\#607](https://github.com/clojerl/clojerl/issues/607)
 - Dispatch value in defmethod can't be a qualified symbol [\#605](https://github.com/clojerl/clojerl/issues/605)
 - Hash collisions generate wrong behaviour for set [\#590](https://github.com/clojerl/clojerl/issues/590)
 - \(/ 1\) throws an undef exception [\#583](https://github.com/clojerl/clojerl/issues/583)
@@ -445,7 +445,7 @@
 
 - Add example for letfn [\#546](https://github.com/clojerl/clojerl/pull/546) ([jfacorro](https://github.com/jfacorro))
 - \[Fixes \#525\] Handle multiple contiguous discards [\#544](https://github.com/clojerl/clojerl/pull/544) ([jfacorro](https://github.com/jfacorro))
-- Remove unnecesary code from RSeq implementation and improve test coverage [\#543](https://github.com/clojerl/clojerl/pull/543) ([jfacorro](https://github.com/jfacorro))
+- Remove unnecessary code from RSeq implementation and improve test coverage [\#543](https://github.com/clojerl/clojerl/pull/543) ([jfacorro](https://github.com/jfacorro))
 - \[Fixes \#541\] Check for a binary with a single utf8 character in char? [\#542](https://github.com/clojerl/clojerl/pull/542) ([jfacorro](https://github.com/jfacorro))
 - Represent UUID with lower case letters [\#540](https://github.com/clojerl/clojerl/pull/540) ([jfacorro](https://github.com/jfacorro))
 - \[Fixes \#538\] rseq return nil for empty vectors [\#539](https://github.com/clojerl/clojerl/pull/539) ([jfacorro](https://github.com/jfacorro))
@@ -957,7 +957,7 @@
 - \[Closes \#5\] analyzer: parse quote [\#17](https://github.com/clojerl/clojerl/pull/17) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#11\] analyzer tests [\#14](https://github.com/clojerl/clojerl/pull/14) ([jfacorro](https://github.com/jfacorro))
 - \[Closes \#2\] Add context and top level attr [\#12](https://github.com/clojerl/clojerl/pull/12) ([jfacorro](https://github.com/jfacorro))
-- \[\#3\] Analyer def [\#4](https://github.com/clojerl/clojerl/pull/4) ([jfacorro](https://github.com/jfacorro))
+- \[\#3\] Analyser def [\#4](https://github.com/clojerl/clojerl/pull/4) ([jfacorro](https://github.com/jfacorro))
 
 
 
