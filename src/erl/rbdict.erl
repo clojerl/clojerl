@@ -328,7 +328,7 @@ update_counter1(K, I, {RB, A, Xk, Xv, B, Compare}) ->
 
 %% lbalance(Colour, Left, Key, Val, Right).
 %% rbalance(Colour, Left, Key, Val, Right).
-%% Balance a tree afer (possibly) adding a node to the left/right.
+%% Balance a tree after (possibly) adding a node to the left/right.
 
 lbalance(b, {r, {r, A, Xk, Xv, B, F}, Yk, Yv, C, F}, Zk, Zv, D, F) ->
   {r, {b, A, Xk, Xv, B, F}, Yk, Yv, {b, C, Zk, Zv, D, F}, F};

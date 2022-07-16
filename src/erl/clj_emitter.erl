@@ -288,7 +288,7 @@ ast(#{op := deftype} = Expr, State0) ->
                            , AllFieldsAsts
                            ),
 
-  %% Create a constructor that doesn't include the hidded fields.
+  %% Create a constructor that doesn't include the hidden fields.
   CtorAst   = constructor_function( Module
                                   , Ann
                                   , AllFieldsAsts

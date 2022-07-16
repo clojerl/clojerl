@@ -98,7 +98,7 @@
 %% @doc Runs the function in a `clj_module' context.
 %%
 %% This is used by {@link clj_compiler} when evaluating or compiling
-%% an expression. It should be used in conjuntion with {@link
+%% an expression. It should be used in conjunction with {@link
 %% in_context/0} when you need to find out if there is a `clj_module'
 %% being processed.
 -spec with_context(fun()) -> ok.
