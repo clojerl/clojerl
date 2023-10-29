@@ -32,14 +32,18 @@
 (defn compare
   [{expr-clj :expr t-clj :time runs :runs}
    {expr-clje :expr t-clje :time}]
-  (let [ratio (if t-clje (-> (/ t-clje t-clj) float) "-")]
+  (let [ratio (if (and t-clje t-clj (pos? t-clj))
+                (-> (/ t-clje t-clj) float)
+                "-")]
     {:clj       expr-clj
      :clje      expr-clje
      :runs      runs
      :time-clj  t-clj
      :time-clje t-clje
      :ratio-num ratio
-     :ratio     (format "~.2f" ratio)}))
+     :ratio     (if (string? ratio)
+                  ratio
+                  (format "~.2f" ratio))}))
 
 (defn -main [& [clj clje]]
   (let [items-clj  (-> (slurp clj) make-report)
