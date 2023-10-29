@@ -15,6 +15,9 @@
 -callback 'to_list'(any()) -> any().
 -optional_callbacks(['seq'/1, 'to_list'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _} | list(any()).
+
 'seq'(X) ->
   case X of
     #{?TYPE := 'clojerl.ChunkedCons'} ->

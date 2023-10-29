@@ -17,6 +17,9 @@
 -callback 'resolve_var'(any(), any()) -> any().
 -optional_callbacks(['current_ns'/1, 'resolve_class'/2, 'resolve_alias'/2, 'resolve_var'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'current_ns'(Resolver) ->
   case Resolver of
     #{?TYPE := 'clojerl.DummyResolver'} ->

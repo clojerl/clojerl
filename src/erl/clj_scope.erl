@@ -24,6 +24,8 @@
                   , mappings => map()
                   }.
 
+-export_type([scope/0]).
+
 %% @doc Creates a new empty scope.
 -spec new() -> scope().
 new() -> new(?NIL).

@@ -6,6 +6,7 @@
 -include("clojerl_expr.hrl").
 
 -compile({no_auto_import, [throw/1, error/1]}).
+-dialyzer({nowarn_function, maybe_sys_pre_expand/1}).
 
 -export([ char_type/1
         , char_type/2
@@ -67,6 +68,10 @@
 
 -type number_type() :: int | float.
 
+-type mp() :: {re_pattern, _, _, _, _}.
+
+-export_type([char_type/0, number_type/0, mp/0]).
+
 %%------------------------------------------------------------------------------
 %% Exported functions
 %%------------------------------------------------------------------------------
@@ -74,7 +79,7 @@
 %% @doc Parses a binary into an integer or a float.
 %%
 %% Generates an error when it can't parse the input into a either.
--spec parse_number(binary(), [{number_type(), re:mp()}]) -> number().
+-spec parse_number(binary(), [{number_type(), mp()}]) -> number().
 parse_number(Number, Types) ->
   Result = case number_type(Number, Types) of
              {int, Groups}   -> parse_int(Groups);
@@ -556,13 +561,13 @@ parse_float(Groups) ->
   FloatBin = iolist_to_binary(FloatStr),
   binary_to_float(FloatBin).
 
--spec number_type(binary(), [{number_type(), re:mp()}]) ->
+-spec number_type(binary(), [{number_type(), mp()}]) ->
   {number_type(), [string()]} | ?NIL.
 number_type(Number, Types) ->
   do_number_type(Number, Types, ?NIL).
 
 -spec do_number_type( binary()
-                    , [{number_type(), re:mp()}]
+                    , [{number_type(), mp()}]
                     , number_type() | ?NIL
                     ) ->
   {number_type(), [string()]} | ?NIL.

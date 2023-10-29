@@ -274,7 +274,7 @@ remove_all_functions(Module) ->
 
 %% @doc Returns all functions in the module.
 -spec get_functions(module() | clj_module()) ->
-  [{function_id(), {cerl:c_fname(), cerl:c_fun()}}].
+  [{function_id(), {cerl:c_var(), cerl:c_fun()}}].
 get_functions(?NIL) -> error(badarg);
 get_functions(ModuleName) when is_atom(ModuleName)  ->
   get_functions(fetch_module(ModuleName));
@@ -698,9 +698,9 @@ module_info_funs(Name) ->
 
 %% @doc Only add an on_load function if there are any expressions to be added.
 -spec maybe_on_load( ets:tid()
-                   , cerl:c_atom()
+                   , cerl:c_literal()
                    , [cerl:c_var()]
-                   , [{cerl:c_atom(), cerl:cerl()}]
+                   , [{cerl:c_literal(), cerl:cerl()}]
                    , [cerl:c_fun()]
                    ) ->
   cerl:c_module().
@@ -798,8 +798,8 @@ new(CoreModule) ->
 function_id({Name, _}) ->
   {cerl:fname_id(Name), cerl:fname_arity(Name)}.
 
--spec extract_attrs([{cerl:c_atom(), cerl:cerl()}], [atom()]) ->
-  {[{cerl:c_atom(), cerl:cerl()}], map()}.
+-spec extract_attrs([{cerl:c_literal(), cerl:cerl()}], [atom()]) ->
+  {[{cerl:c_literal(), cerl:cerl()}], map()}.
 extract_attrs(Attrs, Names) ->
   do_extract_attrs(Attrs, Names, [], #{}).
 

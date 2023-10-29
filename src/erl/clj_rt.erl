@@ -5,6 +5,8 @@
 %% `clojure.core' being there (e.g. {@link clj_reader}).
 -module(clj_rt).
 
+-dialyzer({nowarn_function, print/2}).
+
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
 
@@ -887,13 +889,13 @@ next_id() ->
   N.
 
 %% @equiv gensym(<<"G__">>)
--spec gensym() -> 'clojer.Symbol':type().
+-spec gensym() -> 'clojerl.Symbol':type().
 gensym() ->
   gensym(<<"G__">>).
 
 %% @doc Generates a new symbol unique to the current process using
 %% `Prefix'.
--spec gensym(binary()) -> 'clojer.Symbol':type().
+-spec gensym(binary()) -> 'clojerl.Symbol':type().
 gensym(Prefix) ->
   PartsBin = [Prefix, integer_to_list(next_id())],
   symbol(iolist_to_binary(PartsBin)).

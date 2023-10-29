@@ -13,6 +13,9 @@
 -callback '_IVector'(any()) -> any().
 -optional_callbacks(['_IVector'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := 'clojerl.Subvec'} ->  true;

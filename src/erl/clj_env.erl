@@ -141,7 +141,7 @@ remove_locals_scope(Env = #{locals := Locals}) ->
 %%
 %% The saved local variables can be restored using {@link
 %% restore_locals_scope/1}.
--spec save_locals_scope(env()) -> clj_scope:scope().
+-spec save_locals_scope(env()) -> env().
 save_locals_scope(#{locals := Locals} = Env) ->
   Env#{locals := clj_scope:new(), saved_locals := Locals}.
 

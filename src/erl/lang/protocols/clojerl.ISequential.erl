@@ -13,6 +13,9 @@
 -callback '_ISequential'(any()) -> any().
 -optional_callbacks(['_ISequential'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _} | list(any()).
+
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := 'clojerl.ChunkedCons'} ->  true;

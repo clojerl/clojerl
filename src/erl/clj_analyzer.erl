@@ -7,7 +7,11 @@
 
 -module(clj_analyzer).
 
--dialyzer({nowarn_function, analyze_form/2}).
+-dialyzer({ nowarn_function
+          , [ analyze_form/2
+            , check_specs/2
+            ]
+          }).
 
 -include("clojerl.hrl").
 -include("clojerl_int.hrl").
@@ -2433,7 +2437,7 @@ type_expr(Value, Env) ->
   TypeSym    = clj_rt:symbol(atom_to_binary(TypeModule, utf8)),
   type_expr(Type, TypeSym, Env).
 
--spec resolve('clojerl.Symbol':env(), clj_env:env()) ->
+-spec resolve('clojerl.Symbol':type(), clj_env:env()) ->
   { {var, 'clojerl.Var':type()}
     | {erl_fun, erl_fun_expr()}
     | {local, expr()}
@@ -2444,7 +2448,7 @@ type_expr(Value, Env) ->
 resolve(Symbol, Env) ->
   resolve(Symbol, true, Env).
 
--spec resolve('clojerl.Symbol':env(), boolean(), clj_env:env()) ->
+-spec resolve('clojerl.Symbol':type(), boolean(), clj_env:env()) ->
   { {var , 'clojerl.Var':type()}
     | {erl_fun, erl_fun_expr()}
     | {local, expr()}

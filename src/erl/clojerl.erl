@@ -12,6 +12,8 @@
         , var/2
         ]).
 
+-dialyzer({nowarn_function, read/1}).
+
 %% @doc Starts the `clojerl' OTP application.
 -spec start() -> ok.
 start() ->
