@@ -19,3 +19,4 @@ result.prev.txt
 erlang_ls.config
 .lsp/
 .clj-kondo/
+.calva/
