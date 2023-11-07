@@ -14,6 +14,9 @@
 -callback 'count'(any()) -> any().
 -optional_callbacks(['count'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'count'(Seq) ->
   case Seq of
     #{?TYPE := 'clojerl.ChunkedCons'} ->

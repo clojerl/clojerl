@@ -14,6 +14,9 @@
 -callback 'erl->clj'(any(), any()) -> any().
 -optional_callbacks(['erl->clj'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'erl->clj'(X, Recursive) ->
   case X of
     #{?TYPE := _} ->

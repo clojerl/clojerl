@@ -14,6 +14,9 @@
 -callback 'deref'(any(), any(), any()) -> any().
 -optional_callbacks(['deref'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'deref'(Ref, TimeoutMs, TimeoutValue) ->
   case Ref of
     #{?TYPE := 'clojerl.Future'} ->

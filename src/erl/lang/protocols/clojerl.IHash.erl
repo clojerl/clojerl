@@ -14,6 +14,9 @@
 -callback 'hash'(any()) -> any().
 -optional_callbacks(['hash'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'hash'(X) ->
   case X of
     #{?TYPE := 'clojerl.Agent'} ->

@@ -14,6 +14,9 @@
 -callback 'drop_first'(any()) -> any().
 -optional_callbacks(['drop_first'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'drop_first'(Chunk) ->
   case Chunk of
     #{?TYPE := 'clojerl.TupleChunk'} ->

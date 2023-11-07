@@ -15,6 +15,9 @@
 -callback 'nth'(any(), any(), any()) -> any().
 -optional_callbacks(['nth'/2, 'nth'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'nth'(Coll, N) ->
   case Coll of
     #{?TYPE := 'clojerl.Subvec'} ->

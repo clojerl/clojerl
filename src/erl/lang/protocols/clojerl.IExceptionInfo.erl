@@ -15,6 +15,9 @@
 -callback 'cause'(any()) -> any().
 -optional_callbacks(['data'/1, 'cause'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'data'(ExInfo) ->
   case ExInfo of
     #{?TYPE := 'clojerl.ExceptionInfo'} ->

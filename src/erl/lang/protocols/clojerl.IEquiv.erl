@@ -14,6 +14,9 @@
 -callback 'equiv'(any(), any()) -> any().
 -optional_callbacks(['equiv'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'equiv'(X, Y) ->
   case X of
     #{?TYPE := 'clojerl.Agent'} ->

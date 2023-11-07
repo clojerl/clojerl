@@ -15,6 +15,9 @@
 -callback 'reduce'(any(), any(), any()) -> any().
 -optional_callbacks(['reduce'/2, 'reduce'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'reduce'(Coll, Fun) ->
   case Coll of
     #{?TYPE := 'clojerl.ChunkedCons'} ->

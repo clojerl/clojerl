@@ -15,6 +15,9 @@
 -callback 'reset_meta'(any(), any()) -> any().
 -optional_callbacks(['alter_meta'/3, 'reset_meta'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'alter_meta'(Ref, Fun, Args) ->
   case Ref of
     #{?TYPE := 'clojerl.Agent'} ->

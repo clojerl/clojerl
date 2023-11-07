@@ -14,7 +14,7 @@
 -optional_callbacks(['_ISequential'/1]).
 
 -export_type([type/0]).
--type type() :: #{_ => _} | list(any()).
+-type type() :: #{_ => _} | [any()].
 
 ?SATISFIES(X) ->
   case X of

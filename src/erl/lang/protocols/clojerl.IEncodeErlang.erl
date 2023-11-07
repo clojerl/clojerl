@@ -14,6 +14,9 @@
 -callback 'clj->erl'(any(), any()) -> any().
 -optional_callbacks(['clj->erl'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'clj->erl'(X, Recursive) ->
   case X of
     #{?TYPE := 'clojerl.ChunkedCons'} ->

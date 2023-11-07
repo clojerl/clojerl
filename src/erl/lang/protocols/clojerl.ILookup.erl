@@ -15,6 +15,9 @@
 -callback 'get'(any(), any(), any()) -> any().
 -optional_callbacks(['get'/2, 'get'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'get'(X, Key) ->
   case X of
     #{?TYPE := 'clojerl.Map'} ->

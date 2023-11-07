@@ -14,6 +14,9 @@
 -callback 'kv-reduce'(any(), any(), any()) -> any().
 -optional_callbacks(['kv-reduce'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'kv-reduce'(Coll, Fun, Init) ->
   case Coll of
     #{?TYPE := 'clojerl.Map'} ->

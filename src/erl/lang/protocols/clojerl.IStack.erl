@@ -15,6 +15,9 @@
 -callback 'pop'(any()) -> any().
 -optional_callbacks(['peek'/1, 'pop'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'peek'(Stack) ->
   case Stack of
     #{?TYPE := 'clojerl.List'} ->

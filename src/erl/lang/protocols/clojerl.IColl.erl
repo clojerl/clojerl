@@ -15,6 +15,9 @@
 -callback 'empty'(any()) -> any().
 -optional_callbacks(['cons'/2, 'empty'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'cons'(Coll, Item) ->
   case Coll of
     #{?TYPE := 'clojerl.ChunkedCons'} ->

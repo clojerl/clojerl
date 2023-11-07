@@ -15,6 +15,9 @@
 -callback 'message'(any(), any()) -> any().
 -optional_callbacks(['message'/1, 'message'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'message'(Error) ->
   case Error of
     #{?TYPE := 'clojerl.ArityError'} ->
