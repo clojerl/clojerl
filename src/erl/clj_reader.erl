@@ -58,7 +58,7 @@
                     %% Compiled regexes for numbers
                   , current       => binary() | ?NIL
                     %% Pre-compiled regular expressions for numbers
-                  , number_types  => [{clj_utils:number_type(), re:mp()}]
+                  , number_types  => [{clj_utils:number_type(), clj_utils:mp()}]
                   }.
 
 -type read_fold_fun() :: fun((any(), any()) -> any()).
@@ -420,7 +420,7 @@ read_keyword(#{src := <<":", _/binary>>} = State0) ->
 
 -spec parse_keyword( Ns       :: ?NIL | binary()
                    , Name     :: ?NIL | binary()
-                   , Resolver :: ?NIL | 'clojerl.Resolver':type()
+                   , Resolver :: ?NIL | 'clojerl.IResolver':type()
                    ) -> Keyword :: ?NIL | atom().
 parse_keyword(?NIL, <<":", Name/binary>>, Resolver) ->
   %% Auto-resolving keyword (e.g. ::foo)
@@ -1657,7 +1657,7 @@ read_tagged(Symbol, Form, Location, State) ->
              end,
   push_form(ReadForm, State).
 
--spec tagged_literal(any(), any()) -> 'clojerl.reader.Taggedliteral':type().
+-spec tagged_literal(any(), any()) -> 'clojerl.reader.TaggedLiteral':type().
 tagged_literal(Tag, Form) ->
   'clojerl.reader.TaggedLiteral':?CONSTRUCTOR(Tag, Form).
 
@@ -1908,7 +1908,7 @@ unread_char( #{ src := <<Ch/utf8, Rest/binary>>
 unread_char(State) ->
   State.
 
--spec reader_resolver() -> ?NIL | 'clojure.IResolver':type().
+-spec reader_resolver() -> ?NIL | 'clojerl.IResolver':type().
 reader_resolver() ->
   case 'clojerl.Var':dynamic_binding(<<"#'clojure.core/*reader-resolver*">>) of
     ?NIL -> ?NIL;

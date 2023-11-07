@@ -14,6 +14,9 @@
 -callback 'apply'(any(), any()) -> any().
 -optional_callbacks(['apply'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'apply'(Fn, Args) ->
   case Fn of
     #{?TYPE := 'clojerl.Fn'} ->

@@ -40,7 +40,7 @@
                     %% Used when reading a string
                   , current       => binary() | ?NIL
                     %% Compiled regexes for numbers
-                  , number_types  => [{clj_utils:number_type(), re:mp()}]
+                  , number_types  => [{clj_utils:number_type(), clj_utils:mp()}]
                   }.
 
 %% @doc Reads the next form from the reader.

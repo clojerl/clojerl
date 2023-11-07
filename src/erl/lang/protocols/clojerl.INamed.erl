@@ -15,6 +15,9 @@
 -callback 'namespace'(any()) -> any().
 -optional_callbacks(['name'/1, 'namespace'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'name'(X) ->
   case X of
     #{?TYPE := 'clojerl.Symbol'} ->

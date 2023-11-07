@@ -14,6 +14,9 @@
 -callback 'close'(any()) -> any().
 -optional_callbacks(['close'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'close'(X) ->
   case X of
     #{?TYPE := 'clojerl.Agent'} ->

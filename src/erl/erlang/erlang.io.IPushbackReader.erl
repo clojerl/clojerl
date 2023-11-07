@@ -14,6 +14,9 @@
 -callback 'unread'(any(), any()) -> any().
 -optional_callbacks(['unread'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'unread'(Reader, Ch) ->
   case Reader of
     #{?TYPE := 'erlang.io.PushbackReader'} ->

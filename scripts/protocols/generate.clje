@@ -105,8 +105,8 @@
                                read_line [Reader]
                                skip      [Reader N]]
     erlang.io.IPushbackReader [unread    [Reader Ch]]
-    erlang.io.ICloseable      [close     [X]]
-    })
+    erlang.io.ICloseable      [close     [X]]})
+
 
 (def UNDERSCORE '_)
 
@@ -117,18 +117,19 @@
 (def BOOLEAN-TYPE "clojerl.Boolean")
 
 ;; These are protocols only used as markers. They need to include at
-;; least one clalback function, otherwise dialyzer complains. The
+;; least one callback function, otherwise dialyzer complains. The
 ;; callback functions are all named different in each protocol to
 ;; avoid warnings of conflicts between behaviours.
-(def marker-protocols
+(def marker-protocol?
   '#{clojerl.IRecord
      clojerl.ISequential
      clojerl.ISorted
      clojerl.IType
      clojerl.IVector})
 
-(defn marker-protocol? [proto-name]
-  (marker-protocols proto-name))
+(def list-protocol?
+ '#{clojerl.ISequential
+    clojerl.ISeqable})
 
 (defn underscore?
   [x]
@@ -262,6 +263,11 @@
             (apply str))
        "]).\n"))
 
+(defn type-and-export [proto-name]
+  (let [or-list (when (list-protocol? proto-name) " | [any()]")]
+    (str "-export_type([type/0]).\n"
+         "-type type() :: #{_ => _}" or-list ".\n\n")))
+
 (defn type-ordering
   [[type _]]
   (if (underscore? type)
@@ -298,6 +304,7 @@
          (callbacks fns)
          (optional-callbacks fns)
          "\n"
+         (type-and-export proto-name)
          (proto-functions proto-name fns types)
          (satisfies?-function types)
          "\n"
@@ -317,8 +324,8 @@
     (-> proto-name
         (module fns)
         ;; println
-        (write-module proto-name)
-        )))
+        (write-module proto-name))))
+
 
 (defn -main []
   (write-protocols protocols))

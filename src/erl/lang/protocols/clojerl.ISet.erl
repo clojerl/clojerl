@@ -15,6 +15,9 @@
 -callback 'contains'(any(), any()) -> any().
 -optional_callbacks(['disjoin'/2, 'contains'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'disjoin'(Coll, Item) ->
   case Coll of
     #{?TYPE := 'clojerl.Set'} ->

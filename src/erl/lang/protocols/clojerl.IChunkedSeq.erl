@@ -16,6 +16,9 @@
 -callback 'chunked_more'(any()) -> any().
 -optional_callbacks(['chunked_first'/1, 'chunked_next'/1, 'chunked_more'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'chunked_first'(Seq) ->
   case Seq of
     #{?TYPE := 'clojerl.ChunkedCons'} ->

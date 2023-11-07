@@ -14,6 +14,9 @@
 -callback 'rseq'(any()) -> any().
 -optional_callbacks(['rseq'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'rseq'(Seq) ->
   case Seq of
     #{?TYPE := 'clojerl.Subvec'} ->

@@ -16,6 +16,9 @@
 -callback 'assoc'(any(), any(), any()) -> any().
 -optional_callbacks(['contains_key'/2, 'entry_at'/2, 'assoc'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'contains_key'(Assoc, Key) ->
   case Assoc of
     #{?TYPE := 'clojerl.Map'} ->

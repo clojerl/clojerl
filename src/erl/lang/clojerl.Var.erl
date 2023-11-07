@@ -152,7 +152,7 @@ pop_bindings() ->
   erlang:put(dynamic_bindings, Parent),
   ok.
 
--spec get_bindings() -> clj_scope:scope().
+-spec get_bindings() -> clj_scope:scope() | ?NIL.
 get_bindings() ->
   case erlang:get(dynamic_bindings) of
     undefined -> ?NIL;

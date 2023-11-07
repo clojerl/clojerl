@@ -14,6 +14,9 @@
 -callback 'deref'(any()) -> any().
 -optional_callbacks(['deref'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'deref'(Ref) ->
   case Ref of
     #{?TYPE := 'clojerl.Agent'} ->

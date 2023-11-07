@@ -15,6 +15,8 @@
 -type entry()   :: {any(), any()} | [{any(), any()}].
 -type mapping() :: #{integer() => entry()}.
 
+-export_type([entry/0, mapping/0]).
+
 %% @doc Gets the entry for `Key' in `Map'.
 %%
 %% Returns `undefined' when the entry is not found.

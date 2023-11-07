@@ -15,6 +15,9 @@
 -callback 'write'(any(), any(), any()) -> any().
 -optional_callbacks(['write'/2, 'write'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'write'(Writer, Str) ->
   case Writer of
     #{?TYPE := 'erlang.io.File'} ->

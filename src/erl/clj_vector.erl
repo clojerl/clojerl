@@ -68,6 +68,8 @@
 -type offset()    :: non_neg_integer().
 -type vector()    :: #clj_vector{}.
 
+-export_type([vector/0]).
+
 %% @doc Creates a new empty vector.
 new() ->
   new([]).

@@ -15,6 +15,8 @@
                     , version       => boolean()
                     }.
 
+-dialyzer({nowarn_function, run_commands/1}).
+
 -spec start() -> no_return().
 start() ->
   Args = init:get_plain_arguments(),

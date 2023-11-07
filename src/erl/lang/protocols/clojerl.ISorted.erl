@@ -16,6 +16,9 @@
 -callback 'seqFrom'(any(), any(), any()) -> any().
 -optional_callbacks(['comparator'/1, 'entryKey'/2, 'seq'/2, 'seqFrom'/3]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 ?SATISFIES(X) ->
   case X of
     #{?TYPE := 'clojerl.SortedMap'} ->  true;

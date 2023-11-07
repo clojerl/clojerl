@@ -1408,7 +1408,7 @@ default_types() ->
   ].
 
 -spec protocol_function(any(), module(), any()) ->
-  {cerl:c_fname(), cerl:c_fun()}.
+  {cerl:c_var(), cerl:c_fun()}.
 protocol_function(Sig, Module, Ann) ->
   MethodSym      = clj_rt:first(Sig),
   Arity          = clj_rt:second(Sig),
@@ -1431,7 +1431,7 @@ protocol_function(Sig, Module, Ann) ->
   }.
 
 -spec satisfies_function(any()) ->
-  {cerl:c_fname(), cerl:c_fun()}.
+  {cerl:c_var(), cerl:c_fun()}.
 satisfies_function(Ann) ->
   FalseBody   = cerl:abstract(false),
   Clauses     = [ protocol_clause(TagOrType, FalseBody)
@@ -1445,7 +1445,7 @@ satisfies_function(Ann) ->
   }.
 
 -spec extends_function(any()) ->
-  {cerl:c_fname(), cerl:c_fun()}.
+  {cerl:c_var(), cerl:c_fun()}.
 extends_function(Ann) ->
   Arg         = new_c_var(Ann),
 
@@ -1458,7 +1458,7 @@ extends_function(Ann) ->
   }.
 
 -spec behaviour_info_function(any(), [{atom(), arity()}]) ->
-  {cerl:c_fname(), cerl:c_fun()}.
+  {cerl:c_var(), cerl:c_fun()}.
 behaviour_info_function(Ann, FunArityList) ->
   Arg          = new_c_var(Ann),
 
@@ -1492,11 +1492,11 @@ protocol_add_type(TypeModule, ImplModule, ProtocolModule, Opts) ->
   ok.
 
 -spec protocol_function_add_type( { {atom(), arity()}
-                                  , {cerl:c_fname(), cerl:c_fun()}
+                                  , {cerl:c_var(), cerl:c_fun()}
                                   }
                                 , module()
                                 , module()
-                                ) -> {cerl:c_fname(), cerl:c_fun()}.
+                                ) -> {cerl:c_var(), cerl:c_fun()}.
 protocol_function_add_type({{Name, _}, X}, _TypeModule, _ImplModule)
   when Name =:= module_info;
        Name =:= behavior_info;
@@ -1584,8 +1584,8 @@ should_replace(Clause) ->
     _ -> false
   end.
 
--spec case_add_type(atom(), cerl:cerl(), cerl:c_case(), function()) ->
-  cerl:c_case().
+-spec case_add_type(atom(), cerl:cerl(), cerl:cerl(), function()) ->
+  cerl:cerl().
 case_add_type(?DEFAULT_TYPE, Case, ClauseBody, CreateClause) ->
   Arg         = cerl:case_arg(Case),
   Clauses0    = cerl:case_clauses(Case),
@@ -1753,15 +1753,15 @@ function_signature({FName, _}) ->
 
 %% ----- Methods -------
 
--spec method_to_function_clause(clj_analyzer:expr(), state()) -> state().
+-spec method_to_function_clause(expr(), state()) -> state().
 method_to_function_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, function).
 
--spec method_to_case_clause(clj_analyzer:expr(), state()) -> state().
+-spec method_to_case_clause(expr(), state()) -> state().
 method_to_case_clause(MethodExpr, State) ->
   method_to_clause(MethodExpr, State, 'case').
 
--spec method_to_clause(clj_analyzer:expr(), state(), function | 'case') ->
+-spec method_to_clause(expr(), state(), function | 'case') ->
   state().
 method_to_clause(MethodExpr, State0, ClauseFor) ->
   #{ op     := fn_method
@@ -2251,7 +2251,7 @@ to_atom(Symbol) ->
   binary_to_atom('clojerl.Symbol':name(Symbol), utf8).
 
 %% @private
--spec new_c_var(cerl:ann()) -> cerl:c_var().
+-spec new_c_var([term()]) -> cerl:c_var().
 new_c_var(Ann) ->
   N = case erlang:get(local_var_counter) of
         ?NIL -> 0;

@@ -17,6 +17,9 @@
 -callback 'skip'(any(), any()) -> any().
 -optional_callbacks(['read'/1, 'read'/2, 'read_line'/1, 'skip'/2]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'read'(Reader) ->
   case Reader of
     #{?TYPE := 'erlang.io.File'} ->

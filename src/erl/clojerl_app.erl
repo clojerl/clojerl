@@ -13,6 +13,8 @@
 -define(APP, clojerl).
 -define(STICKY_MODULES, ['clojure.core']).
 
+-dialyzer({nowarn_function, init/0}).
+
 %% @private
 -spec start(any(), any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_Type, _Args) ->

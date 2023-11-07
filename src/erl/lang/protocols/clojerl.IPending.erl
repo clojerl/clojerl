@@ -14,6 +14,9 @@
 -callback 'realized?'(any()) -> any().
 -optional_callbacks(['realized?'/1]).
 
+-export_type([type/0]).
+-type type() :: #{_ => _}.
+
 'realized?'(X) ->
   case X of
     #{?TYPE := 'clojerl.Delay'} ->
