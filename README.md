@@ -23,7 +23,7 @@ On Windows:
 
 ### Documentation and Resources
 
-There is more information regarding Clojerl in [clojerl.org][clojerl], where you
+There is more information regarding Clojerl in [clojerl.io][clojerl], where you
 can find what [features][features] does Clojerl include and [how it differs from
 Clojure][diff-with-clojure].
 
@@ -218,14 +218,13 @@ mailing lists.
 Any feedback, comment and/or suggestion is welcome!
 
 [rebar3]: https://github.com/erlang/rebar3
-[try-clojerl]: http://try.clojerl.online/
+[try-clojerl]: http://try.clojerl.io/
 [examples]: scripts/examples
 [example-web-app]: https://github.com/clojerl/example-web-app/
 [rebar3_clojerl]:https://github.com/clojerl/rebar3_clojerl
-[diffs-with-clojure]: https://clojerl.github.io/differences-with-clojure/
-[clojerl]: http://clojerl.org/
-[features]: http://clojerl.org/available-features
-[diff-with-clojure]: http://clojerl.org/differences-with-clojure
+[clojerl]: http://clojerl.io/
+[features]: http://clojerl.io/available-features
+[diff-with-clojure]: http://clojerl.io/differences-with-clojure
 [clojerl-mailing-list]: https://groups.google.com/forum/#!forum/clojerl
 [clojerl-slack]: https://erlanger.slack.com
 [clojerl-twitter]: https://twitter.com/clojerl
