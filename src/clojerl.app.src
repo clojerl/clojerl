@@ -9,8 +9,8 @@
   , {include_files, ["bin", "bootstrap"]}
   , { links
     , [ {"GitHub", "https://github.com/clojerl/clojerl"}
-      , {"Website", "http://clojerl.org"}
-      , {"Try Online", "http://try.clojerl.online"}
+      , {"Website", "http://clojerl.io"}
+      , {"Try Online", "http://try.clojerl.io"}
       ]
     }
   ]
