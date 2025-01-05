@@ -490,7 +490,7 @@ do(_Config) ->
   #{op := 'if',
     test := Test1,
     then := Then1,
-    else := Else1
+    'else' := Else1
    } = analyze_one(<<"(if true :then)">>),
 
   #{op := constant,
@@ -507,7 +507,7 @@ do(_Config) ->
   #{op := 'if',
     test := Test2,
     then := Then2,
-    else := Else2
+    'else' := Else2
    } = analyze_one(<<"(if true :then :else)">>),
 
   #{op := constant,

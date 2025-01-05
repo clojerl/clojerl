@@ -37,7 +37,7 @@
 %%------------------------------------------------------------------------------
 
 -define(PLATFORM_FEATURES, [clje]).
--define(RESERVED_FEATURES, [else, none]).
+-define(RESERVED_FEATURES, ['else', none]).
 -define(DEFAULT_FEATURE, default).
 
 -define(OPT_EOF, eof).

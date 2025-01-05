@@ -854,7 +854,7 @@ parse_if(Form, Env0) ->
             , env  => Env0
             , test => TestExpr
             , then => ThenExpr
-            , else => ElseExpr
+            , 'else' => ElseExpr
             , tag  => TagExpr
             },
 
