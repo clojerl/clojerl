@@ -103,7 +103,7 @@ number(Config) ->
   ReadAllFun = ?config(read_all_fun, Config),
 
   0   = ReadFun(<<"0">>),
-  0.0 = ReadFun(<<"0.0">>),
+  +0.0 = ReadFun(<<"0.0">>),
 
   1    = ReadFun(<<"1">>),
   1    = ReadFun(<<"+1">>),
