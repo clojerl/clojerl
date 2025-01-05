@@ -51,9 +51,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Install Erlang
-      run: choco install -y erlang --version 22.3
+      run: choco install -y erlang --version 27.1.2
     - name: Install rebar3
-      run: choco install -y rebar3 --version 3.13.1
+      run: choco install -y rebar3 --version 3.23.0
     - name: Compile
       run: bash -lc "make"
     - name: Compile, Test and Validate
