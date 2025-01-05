@@ -44,6 +44,7 @@ jobs:
       with:
         name: docs
         path: doc
+        overwrite: true
   windows:
     runs-on: windows-latest
     steps:
@@ -64,3 +65,4 @@ jobs:
       with:
         name: docs
         path: doc
+        overwrite: true
