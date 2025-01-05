@@ -85,7 +85,7 @@
                            , tag  => expr()
                            , test => expr()
                            , then => expr()
-                           , else => expr()
+                           , 'else' => expr()
                            }.
 
 -type let_expr()       :: #{ op       => 'let'

@@ -782,7 +782,7 @@ ast(#{op := 'if'} = Expr, State) ->
   ?DEBUG('if'),
   #{ test := TestExpr
    , then := ThenExpr
-   , else := ElseExpr
+   , 'else' := ElseExpr
    , env  := Env
    } = Expr,
 
