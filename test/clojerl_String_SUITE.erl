@@ -156,6 +156,7 @@ substring(_Config) ->
 split(_Config) ->
   [<<"h">>, <<"llo">>] = 'clojerl.String':split(<<"hello">>, <<"e">>),
   [<<"1">>, <<"2">>, <<"3">>] = 'clojerl.String':split(<<"1,2,3">>, <<",">>),
+  [<<>>] = 'clojerl.String':split(<<>>, <<",">>),
 
   {comments, ""}.
 

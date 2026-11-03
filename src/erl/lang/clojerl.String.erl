@@ -169,6 +169,8 @@ length(Str) ->
   end.
 
 -spec split(binary(), binary()) -> [binary()].
+split(<<>>, _Pattern) ->
+  [<<>>];
 split(Str, Pattern) ->
   split(Str, Pattern, [{return, binary}]).
 

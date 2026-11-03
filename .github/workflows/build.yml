@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        otp-version: [24, 25, 26, 27]
+        otp-version: [24, 25, 26, 27, 28]
     runs-on: ${{ matrix.platform }}
     container:
       image: erlang:${{ matrix.otp-version }}
@@ -20,14 +20,14 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Cache Hex packages
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: ~/.cache/rebar3/hex/hexpm/packages
         key: ${{ runner.os }}-hex-${{ hashFiles(format('{0}{1}', github.workspace, '/rebar.lock')) }}
         restore-keys: |
           ${{ runner.os }}-hex-
     - name: Cache Dialyzer PLTs
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: ~/.cache/rebar3/rebar3_*_plt
         key: ${{ runner.os }}-dialyzer-${{ hashFiles(format('{0}{1}', github.workspace, '/rebar.config')) }}

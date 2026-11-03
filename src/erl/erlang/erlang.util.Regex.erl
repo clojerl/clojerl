@@ -18,15 +18,15 @@
 -export_type([type/0]).
 -type type() :: #{ ?TYPE   => ?M
                  , pattern => binary()
-                 , regex   => any()
+                 , regex   => binary()
                  }.
 
 -spec ?CONSTRUCTOR(binary()) -> type().
 ?CONSTRUCTOR(Pattern) when is_binary(Pattern) ->
-  {ok, Regex} = re:compile(Pattern),
+  {ok, _} = re:compile(Pattern),
   #{ ?TYPE   => ?M
    , pattern => Pattern
-   , regex   => Regex
+   , regex   => Pattern
    }.
 
 -spec run(type(), binary(), [term()]) ->
