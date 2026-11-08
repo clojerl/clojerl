@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.1](https://github.com/clojerl/clojerl/tree/0.9.1) (2026-11-07)
+
+[Full Changelog](https://github.com/clojerl/clojerl/compare/0.9.0...0.9.1)
+
+This release makes clojerl build and run on Erlang/OTP 25, 26, 27 and 28.
+
+**Merged pull requests:**
+
+- Support Erlang/OTP 28 [\#856](https://github.com/clojerl/clojerl/pull/856) ([antlobach](https://github.com/antlobach))
+  - Regex literals store the source pattern, not the compiled pattern. This is a temporary workaround.
+- Update domains in URLs [\#852](https://github.com/clojerl/clojerl/pull/852) ([jfacorro](https://github.com/jfacorro))
+- Support Erlang/OTP 27 [\#848](https://github.com/clojerl/clojerl/pull/848) ([jfacorro](https://github.com/jfacorro))
+- Support Erlang/OTP 26 [\#842](https://github.com/clojerl/clojerl/pull/842) ([jfacorro](https://github.com/jfacorro))
+- Support Erlang/OTP 25 [\#837](https://github.com/clojerl/clojerl/pull/837) ([jfacorro](https://github.com/jfacorro))
+
 ## [0.9.0](https://github.com/clojerl/clojerl/tree/0.9.0)
 
 [Full Changelog](https://github.com/clojerl/clojerl/compare/0.8.0...0.9.0)
