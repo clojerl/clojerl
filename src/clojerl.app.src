@@ -5,7 +5,7 @@
   , {mod, {clojerl_app, []}}
   , {modules, []}
   , {registered, []}
-  , {licenses, ["EPL v1.0"]}
+  , {licenses, ["EPL-1.0"]}
   , {include_files, ["bin", "bootstrap"]}
   , { links
     , [ {"GitHub", "https://github.com/clojerl/clojerl"}
