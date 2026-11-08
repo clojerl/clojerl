@@ -7,7 +7,7 @@ Clojure implemented on the Erlang VM.
 
 ## Building
 
-Building `clojerl` requires *Erlang/OTP 21+* and [*rebar3*][rebar3].
+Building `clojerl` requires *Erlang/OTP 24+* and [*rebar3*][rebar3].
 
     git clone https://github.com/clojerl/clojerl
     cd clojerl
@@ -205,15 +205,8 @@ fact, most of Clojure's core namespaces were ported from the original
 
 ## Discussion
 
-Join the conversation in the [Clojerl][clojerl-mailing-list] mailing
-list or in the [`#clojerl` Slack channel][clojerl-slack]!
-
-You can also find news and updates through [@clojerl][clojerl-twitter].
-Or if you have any questions you can find me [@jfacorro][jfacorro-twitter] or lurking
-on [Clojure](https://groups.google.com/forum/?hl=en#!forum/clojure)'s
-and
-[Erlang](https://groups.google.com/forum/?hl=en#!forum/erlang-programming)'s
-mailing lists.
+Join the conversation in the [`#clojerl` Slack channel][clojerl-slack]!
+If you do not have an account, [join Clojurians Slack][clojurians-join].
 
 Any feedback, comment and/or suggestion is welcome!
 
@@ -225,7 +218,5 @@ Any feedback, comment and/or suggestion is welcome!
 [clojerl]: http://clojerl.io/
 [features]: http://clojerl.io/available-features
 [diff-with-clojure]: http://clojerl.io/differences-with-clojure
-[clojerl-mailing-list]: https://groups.google.com/forum/#!forum/clojerl
-[clojerl-slack]: https://erlanger.slack.com
-[clojerl-twitter]: https://twitter.com/clojerl
-[jfacorro-twitter]: https://twitter.com/jfacorro
+[clojerl-slack]: https://clojurians.slack.com/archives/C02NH9S8MPB
+[clojurians-join]: https://clojurians.net
